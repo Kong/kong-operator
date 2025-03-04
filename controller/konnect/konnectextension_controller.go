@@ -3,9 +3,11 @@ package konnect
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -28,6 +30,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -93,6 +96,12 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 			),
 			builder.WithPredicates(
 				labelSelectorPredicate,
+			),
+		).
+		Watches(
+			&konnectv1alpha1.KonnectGatewayControlPlane{},
+			handler.EnqueueRequestsFromMapFunc(
+				enqueueKonnectExtensionsForKonnectGatewayControlPlane(mgr.GetClient()),
 			),
 		).
 		Complete(r)
@@ -185,8 +194,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	apiAuthRef, err := getKonnectAPIAuthRefNN(ctx, r.Client, &ext)
-	// returning an error here instead of setting status conditions, as no error is returned at all
-	// once https://github.com/Kong/gateway-operator/issues/889#issue-2695605217 is implemented.
+
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -219,7 +227,49 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		sdkops.SDKToken(token),
 	)
 
-	cp, err := ops.GetControlPlaneByID(ctx, sdk.GetControlPlaneSDK(), *ext.Spec.KonnectControlPlane.ControlPlaneRef.KonnectID)
+	var konnectCPID string
+	switch ext.Spec.KonnectControlPlane.ControlPlaneRef.Type {
+	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
+		cpRef := ext.Spec.KonnectControlPlane.ControlPlaneRef.KonnectNamespacedRef
+		cpNamepace := ext.Namespace
+		// TODO: get namespace from cpRef.Namespace when allowed to reference CP from another namespace.
+		kgcp := &konnectv1alpha1.KonnectGatewayControlPlane{}
+		err := r.Client.Get(ctx, client.ObjectKey{
+			Namespace: cpNamepace,
+			Name:      cpRef.Name,
+		}, kgcp)
+
+		if err != nil {
+			_, errPatch := patch.StatusWithCondition(
+				ctx, r.Client, &ext,
+				consts.ConditionType(konnectv1alpha1.ControlPlaneRefValidConditionType),
+				metav1.ConditionFalse,
+				consts.ConditionReason(konnectv1alpha1.ControlPlaneRefReasonInvalid),
+				err.Error(),
+			)
+			return ctrl.Result{}, errPatch
+		}
+
+		if !lo.ContainsBy(kgcp.Status.Conditions, func(cond metav1.Condition) bool {
+			return cond.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+				cond.Status == metav1.ConditionTrue
+		}) {
+			_, errPatch := patch.StatusWithCondition(
+				ctx, r.Client, &ext,
+				consts.ConditionType(konnectv1alpha1.ControlPlaneRefValidConditionType),
+				metav1.ConditionFalse,
+				consts.ConditionReason(konnectv1alpha1.ControlPlaneRefReasonInvalid),
+				fmt.Sprintf("Konnect control plane %s/%s not programmed yet", cpNamepace, cpRef.Name),
+			)
+			// Update of KonnectGatewayControlPlane will trigger reconciliation of KonnectExtension.
+			return ctrl.Result{}, errPatch
+		}
+		konnectCPID = kgcp.GetKonnectID()
+	case commonv1alpha1.ControlPlaneRefKonnectID:
+		konnectCPID = *ext.Spec.KonnectControlPlane.ControlPlaneRef.KonnectID
+	}
+
+	cp, err := ops.GetControlPlaneByID(ctx, sdk.GetControlPlaneSDK(), konnectCPID)
 	if err != nil {
 		_, err := patch.StatusWithCondition(
 			ctx, r.Client, &ext,
@@ -293,19 +343,33 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return ctrl.Result{}, nil
 }
 
-func getKonnectAPIAuthRefNN(_ context.Context, _ client.Client, ext *konnectv1alpha1.KonnectExtension) (types.NamespacedName, error) {
-	// In case the KonnectConfiguration is not set, we fetch the KonnectGatewayControlPlane
-	// and get the KonnectConfiguration from there. KonnectGatewayControlPlane reference and KonnectConfiguration
-	// are mutually exclusive in the KonnectExtension API.
-	if ext.Spec.KonnectConfiguration == nil {
-		// TODO: https://github.com/Kong/gateway-operator/issues/889
-		return types.NamespacedName{}, errors.New("KonnectGatewayControlPlane references not supported yet")
+func getKonnectAPIAuthRefNN(ctx context.Context, cl client.Client, ext *konnectv1alpha1.KonnectExtension) (types.NamespacedName, error) {
+
+	if ext.Spec.KonnectConfiguration != nil {
+		// TODO: handle cross namespace refs when supported.
+		return types.NamespacedName{
+			Namespace: ext.Namespace,
+			Name:      ext.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+		}, nil
 	}
 
-	// TODO: handle cross namespace refs
-	return types.NamespacedName{
+	// In case the KonnectConfiguration is not set, we fetch the KonnectGatewayControlPlane
+	// and get the KonnectConfiguration from `spec.konnectControlPlane.controlPlane.konnectNamespacedRef`.
+	// KonnectGatewayControlPlane reference and KonnectConfiguration
+	// are mutually exclusive in the KonnectExtension API.
+	cpRef := ext.Spec.KonnectControlPlane.ControlPlaneRef.KonnectNamespacedRef
+	kgcp := &konnectv1alpha1.KonnectGatewayControlPlane{}
+	err := cl.Get(ctx, client.ObjectKey{
+		// TODO: handle cross namespace refs to KonnectGatewayControlPlane when referencing CP from another namespace is supported.
 		Namespace: ext.Namespace,
-		Name:      ext.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+		Name:      cpRef.Name,
+	}, kgcp)
+	if err != nil {
+		return types.NamespacedName{}, err
+	}
+	return types.NamespacedName{
+		Namespace: kgcp.Namespace,
+		Name:      kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
 	}, nil
 }
 
