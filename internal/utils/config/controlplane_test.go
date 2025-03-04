@@ -81,6 +81,10 @@ func TestKICInKonnectDefaults(t *testing.T) {
 					Value: "true",
 				},
 				{
+					Name:  "CONTROLLER_FEATURE_GATES",
+					Value: "FillIDs=true",
+				},
+				{
 					Name: "CONTROLLER_KONNECT_TLS_CLIENT_KEY",
 					ValueFrom: &corev1.EnvVarSource{
 						SecretKeyRef: &corev1.SecretKeySelector{

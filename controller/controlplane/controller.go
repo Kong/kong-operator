@@ -27,6 +27,7 @@ import (
 	"github.com/kong/gateway-operator/controller"
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/extensions"
+	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
@@ -288,15 +289,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	_ = controlplane.SetDefaults(
 		&cp.Spec.ControlPlaneOptions,
 		defaultArgs)
-	stop, requeue, err := extensions.ApplyExtensions(ctx, r.Client, logger, cp, r.KonnectEnabled)
+	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, logger, cp, r.KonnectEnabled)
 	if err != nil {
-		if !requeue {
+		if extensionserrors.IsKonnectExtensionError(err) {
 			log.Debug(logger, "failed to apply extensions", "err", err)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
-	if stop {
+	if stop || !result.IsZero() {
 		return ctrl.Result{}, nil
 	}
 
@@ -421,7 +422,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	markAsProvisioned(cp)
 	k8sutils.SetReady(cp)
 
-	result, err := r.patchStatus(ctx, logger, cp)
+	result, err = r.patchStatus(ctx, logger, cp)
 	if err != nil {
 		log.Debug(logger, "unable to patch ControlPlane status", "error", err)
 		return ctrl.Result{}, err

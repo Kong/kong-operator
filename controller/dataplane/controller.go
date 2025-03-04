@@ -15,6 +15,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/pkg/ctxinjector"
 	"github.com/kong/gateway-operator/controller/pkg/extensions"
+	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
@@ -82,16 +83,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "applying extensions")
-	stop, requeue, err := extensions.ApplyExtensions(ctx, r.Client, logger, dataplane, r.KonnectEnabled)
+	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, logger, dataplane, r.KonnectEnabled)
 	if err != nil {
-		if !requeue {
+		if extensionserrors.IsKonnectExtensionError(err) {
 			log.Debug(logger, "failed to apply extensions", "err", err)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
-	if stop {
-		return ctrl.Result{}, nil
+	if stop || !result.IsZero() {
+		return result, nil
 	}
 
 	log.Trace(logger, "exposing DataPlane deployment admin API via headless service")

@@ -58,7 +58,7 @@ var kongInKonnectClusterTypeControlPlaneDefaults = map[string]string{
 }
 
 var kongInKonnectClusterTypeIngressController = map[string]string{
-	"KONG_ROLE":                          "data_plane",
+	"KONG_ROLE":                          "traditional",
 	"KONG_CLUSTER_MTLS":                  "pki",
 	"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "<TELEMETRY-ENDPOINT>:443",
 	"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "<TELEMETRY-ENDPOINT>",

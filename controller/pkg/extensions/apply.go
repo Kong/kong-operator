@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
@@ -41,11 +42,11 @@ type withExtensions interface {
 //   - requeue: a boolean indicating if the dataplane should be requeued. If the error was unexpected (e.g., because of API server error), the dataplane should be requeued.
 //     In case the error is related to a misconfiguration, the dataplane does not need to be requeued, and feedback is provided into the dataplane status.
 //   - err: an error in case of failure.
-func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, logger logr.Logger, o t, konnectEnabled bool) (stop bool, requeue bool, err error) {
+func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, logger logr.Logger, o t, konnectEnabled bool) (stop bool, res ctrl.Result, err error) {
 	// extensionsCondition can be nil. In that case, no extensions are referenced by the object.
 	extensionsCondition := validateExtensions(o)
 	if extensionsCondition == nil {
-		return false, false, nil
+		return false, ctrl.Result{}, nil
 	}
 
 	if res, err := patch.StatusWithCondition(
@@ -57,54 +58,57 @@ func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, logge
 		consts.ConditionReason(extensionsCondition.Reason),
 		extensionsCondition.Message,
 	); err != nil || !res.IsZero() {
-		return true, true, err
+		return true, res, err
 	}
 	if extensionsCondition.Status == metav1.ConditionFalse {
-		return false, false, errors.New(extensionsCondition.Message)
+		return false, ctrl.Result{}, extensionserrors.ErrInvalidExtensions
 	}
 
 	// the konnect extension is the only one implemented at the moment. In case konnect is not enabled, we return early.
 	if !konnectEnabled {
-		return false, false, nil
+		return false, ctrl.Result{}, nil
 	}
 
 	// in case the extensionsCondition is true, let's apply the extensions.
-	konnectExtensionCondition := k8sutils.NewConditionWithGeneration(consts.KonnectExtensionAppliedType, metav1.ConditionTrue, consts.KonnectExtensionAppliedReason, "The Konnect extension has been successsfully applied", o.GetGeneration())
+	konnectExtensionApplied := k8sutils.NewConditionWithGeneration(consts.KonnectExtensionAppliedType, metav1.ConditionTrue, consts.KonnectExtensionAppliedReason, "The Konnect extension has been successsfully applied", o.GetGeneration())
 	if extensionsCondition.Status == metav1.ConditionTrue {
 		var (
-			found bool
-			err   error
+			extensionRefFound bool
+			err               error
 		)
+
 		switch obj := any(o).(type) {
 		case *operatorv1beta1.DataPlane:
-			found, err = konnect.ApplyDataPlaneKonnectExtension(ctx, cl, obj)
+			extensionRefFound, err = konnect.ApplyDataPlaneKonnectExtension(ctx, cl, obj)
 		case *operatorv1beta1.ControlPlane:
-			found, err = konnect.ApplyControlPlaneKonnectExtension(ctx, cl, obj)
-		}
-		if !found {
-			return false, false, nil
+			extensionRefFound, err = konnect.ApplyControlPlaneKonnectExtension(ctx, cl, obj)
+		default:
+			return false, ctrl.Result{}, errors.New("unsupported object type")
 		}
 		if err != nil {
 			switch {
 			case errors.Is(err, extensionserrors.ErrCrossNamespaceReference):
-				konnectExtensionCondition.Status = metav1.ConditionFalse
-				konnectExtensionCondition.Reason = string(consts.RefNotPermittedReason)
-				konnectExtensionCondition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
+				konnectExtensionApplied.Status = metav1.ConditionFalse
+				konnectExtensionApplied.Reason = string(consts.RefNotPermittedReason)
+				konnectExtensionApplied.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
 			case errors.Is(err, extensionserrors.ErrKonnectExtensionNotFound):
-				konnectExtensionCondition.Status = metav1.ConditionFalse
-				konnectExtensionCondition.Reason = string(consts.InvalidExtensionRefReason)
-				konnectExtensionCondition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
+				konnectExtensionApplied.Status = metav1.ConditionFalse
+				konnectExtensionApplied.Reason = string(consts.InvalidExtensionRefReason)
+				konnectExtensionApplied.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
 			case errors.Is(err, extensionserrors.ErrClusterCertificateNotFound):
-				konnectExtensionCondition.Status = metav1.ConditionFalse
-				konnectExtensionCondition.Reason = string(consts.InvalidSecretRefReason)
-				konnectExtensionCondition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
+				konnectExtensionApplied.Status = metav1.ConditionFalse
+				konnectExtensionApplied.Reason = string(consts.InvalidSecretRefReason)
+				konnectExtensionApplied.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
 			case errors.Is(err, extensionserrors.ErrKonnectExtensionNotReady):
-				konnectExtensionCondition.Status = metav1.ConditionFalse
-				konnectExtensionCondition.Reason = string(consts.KonnectExtensionNotReadyReason)
-				konnectExtensionCondition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
+				konnectExtensionApplied.Status = metav1.ConditionFalse
+				konnectExtensionApplied.Reason = string(consts.KonnectExtensionNotReadyReason)
+				konnectExtensionApplied.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
 			default:
-				return true, false, err
+				return true, ctrl.Result{}, err
 			}
+		}
+		if !extensionRefFound {
+			return false, ctrl.Result{}, nil
 		}
 	}
 
@@ -112,13 +116,13 @@ func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, logge
 		ctx,
 		cl,
 		o,
-		consts.ConditionType(extensionsCondition.Type),
-		extensionsCondition.Status,
-		consts.ConditionReason(extensionsCondition.Reason),
-		extensionsCondition.Message,
+		consts.ConditionType(konnectExtensionApplied.Type),
+		konnectExtensionApplied.Status,
+		consts.ConditionReason(konnectExtensionApplied.Reason),
+		konnectExtensionApplied.Message,
 	); err != nil || !res.IsZero() {
-		return true, true, err
+		return true, res, err
 	}
 
-	return false, false, err
+	return false, ctrl.Result{}, err
 }

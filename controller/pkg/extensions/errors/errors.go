@@ -11,4 +11,15 @@ var (
 	ErrClusterCertificateNotFound = errors.New("cluster certificate not found")
 	// ErrKonnectExtensionNotReady is returned when a Konnect extension is not ready.
 	ErrKonnectExtensionNotReady = errors.New("konnect extension is not ready")
+	// ErrInvalidExtensions is returned when an invalid extension is referenced.
+	ErrInvalidExtensions = errors.New("invalid extensions")
 )
+
+// IsKonnectExtensionError returns true if the error is a Konnect extension error.
+func IsKonnectExtensionError(err error) bool {
+	return errors.Is(err, ErrCrossNamespaceReference) ||
+		errors.Is(err, ErrKonnectExtensionNotFound) ||
+		errors.Is(err, ErrClusterCertificateNotFound) ||
+		errors.Is(err, ErrKonnectExtensionNotReady) ||
+		errors.Is(err, ErrInvalidExtensions)
+}

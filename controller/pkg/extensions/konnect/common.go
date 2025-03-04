@@ -31,9 +31,8 @@ func getExtension(ctx context.Context, cl client.Client, objNamespace string, ex
 	}, &konnectExt); err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, errors.Join(extensionserrors.ErrKonnectExtensionNotFound, fmt.Errorf("the extension %s/%s is not found", objNamespace, extRef.Name))
-		} else {
-			return nil, err
 		}
+		return nil, err
 	}
 	if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectExtensionReadyConditionType, &konnectExt) {
 		return nil, errors.Join(extensionserrors.ErrKonnectExtensionNotReady, fmt.Errorf("the extension %s/%s is not ready", objNamespace, extRef.Name))
