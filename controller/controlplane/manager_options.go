@@ -42,6 +42,13 @@ func WithKongAdminInitializationRetryDelay(delay time.Duration) managercfg.Opt {
 	}
 }
 
+// WithKongAdminInitializationRetryAttempts sets the Kong Admin initialization retry attempts for the manager.
+func WithKongAdminInitializationRetryAttempts(attempts uint) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.KongAdminInitializationRetries = attempts
+	}
+}
+
 // WithGatewayToReconcile sets the gateway to reconcile for the manager.
 func WithGatewayToReconcile(gateway types.NamespacedName) managercfg.Opt {
 	return func(c *managercfg.Config) {

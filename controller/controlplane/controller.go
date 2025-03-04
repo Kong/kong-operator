@@ -241,7 +241,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 					Namespace: cp.Namespace,
 				}),
 				WithKongAdminServicePortName(consts.DataPlaneAdminServicePortName),
-				WithKongAdminInitializationRetryDelay(5*time.Second),
+				// Don't retry when Kong Admin API is not available to not block the reconciliation.
+				WithKongAdminInitializationRetryAttempts(1),
 				WithGatewayToReconcile(types.NamespacedName{
 					Namespace: cp.Namespace,
 					Name:      defaultArgs.OwnedByGateway,
