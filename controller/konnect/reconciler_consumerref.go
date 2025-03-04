@@ -107,8 +107,8 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		ctrllog.FromContext(ctx).Info("failed to check if KongConsumer has owner reference", "error", err)
 	} else if ok {
 		// Make sure there is no ownership between the consumer and the entity by removing
-		// a reference if found. Such references may have been added by older versions 
-		// of KGO (< 1.5). 
+		// a reference if found. Such references may have been added by older versions
+		// of KGO (< 1.5).
 		// TODO: remove this after a couple of minor versions.
 		old := ent.DeepCopyObject().(TEnt)
 		if err := controllerutil.RemoveOwnerReference(&consumer, ent, cl.Scheme()); err != nil {
