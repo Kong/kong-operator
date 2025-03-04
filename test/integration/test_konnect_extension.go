@@ -1,8 +1,6 @@
 package integration
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -14,11 +12,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/gateway-operator/pkg/consts"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -89,12 +89,14 @@ func TestKonnectExtensionKonnectGatewayControlPlaneNamespacedRef(t *testing.T) {
 	)
 	// Create a KonnectExtension attaching to the CP by its ID.
 	t.Logf("Creating a KonnectExtension and waiting for Konnect control plane ref resolved")
-	ke := deploy.KonnectExtensionWithAPIAuthRefAndCPID(
+	ke = deploy.KonnectExtension(
 		t, ctx, clientNamespaced,
-		konnectv1alpha1.KonnectAPIAuthConfigurationRef{
-			Name: authCfg.Name,
-		},
-		cp.GetKonnectID(),
+		deploy.WithKonnectConfiguration[*konnectv1alpha1.KonnectExtension](konnectv1alpha1.KonnectConfiguration{
+			APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+				Name: authCfg.Name,
+			},
+		}),
+		setKonnectExtensionKonnectIDControlPlaneRef(t, cp.GetKonnectID()),
 		setKonnectExtensionDPCertSecretRef(t, s),
 	)
 
@@ -126,6 +128,19 @@ func TestKonnectExtensionKonnectGatewayControlPlaneNamespacedRef(t *testing.T) {
 
 }
 
+func setKonnectExtensionKonnectIDControlPlaneRef(t *testing.T, cpID string) deploy.ObjOption {
+	return func(obj client.Object) {
+		ke, ok := obj.(*konnectv1alpha1.KonnectExtension)
+		require.True(t, ok)
+		// TODO: use `WithKonnectIDControlPlaneRef` after KonnectExtension support `SetControlPlaneRef`:
+		// https://github.com/Kong/kubernetes-configuration/issues/328
+		ke.Spec.KonnectControlPlane.ControlPlaneRef = commonv1alpha1.ControlPlaneRef{
+			Type:      commonv1alpha1.ControlPlaneRefKonnectID,
+			KonnectID: lo.ToPtr(cpID),
+		}
+	}
+}
+
 func setKonnectExtensionDPCertSecretRef(t *testing.T, s *corev1.Secret) func(client.Object) {
 	return func(obj client.Object) {
 		ke, ok := obj.(*konnectv1alpha1.KonnectExtension)
@@ -145,25 +160,10 @@ func checkKonnectExtensionConditions(t *assert.CollectT, ke *konnectv1alpha1.Kon
 	err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: ke.Name, Namespace: ke.Namespace}, ke)
 	require.NoError(t, err)
 
-	checkConditionTypes := []string{
+	checkConditionTypes := []consts.ConditionType{
 		konnectv1alpha1.ControlPlaneRefValidConditionType,
 		konnectv1alpha1.DataPlaneCertificateProvisionedConditionType,
 		konnectv1alpha1.KonnectExtensionReadyConditionType,
 	}
-	failedConditionTypes := make([]string, 0, len(checkConditionTypes))
-	conditionMap := lo.SliceToMap(ke.Status.Conditions, func(condition metav1.Condition) (string, metav1.ConditionStatus) {
-		return condition.Type, condition.Status
-	})
-
-	for _, conditionType := range checkConditionTypes {
-		status, ok := conditionMap[conditionType]
-		if !ok || status != metav1.ConditionTrue {
-			failedConditionTypes = append(failedConditionTypes, conditionType)
-		}
-	}
-
-	if len(failedConditionTypes) > 0 {
-		return false, fmt.Sprintf("condition(s) %s not set to True", strings.Join(failedConditionTypes, ", "))
-	}
-	return true, ""
+	return helpers.CheckAllConditionsTrue(ke, checkConditionTypes)
 }
