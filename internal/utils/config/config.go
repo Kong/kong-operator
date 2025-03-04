@@ -47,7 +47,7 @@ func FillContainerEnvs(existing []corev1.EnvVar, podTemplateSpec *corev1.PodTemp
 	sort.Sort(k8sutils.SortableEnvVars(container.Env))
 }
 
-// EnvVarMapToSlice converts a map of environment variables to a slice of environment variables.
+// EnvVarMapToSlice converts a map[string]string to a slice of environment variables.
 // Note: this function should be used only when the env var slice is made of simple key-value pairs.
 // in case of more complex env vars, don't rely on maps.
 func EnvVarMapToSlice(envMap map[string]string) []corev1.EnvVar {
