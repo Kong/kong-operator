@@ -22,7 +22,7 @@ const (
 // Utils - Config
 // -----------------------------------------------------------------------------
 
-// FillContainerEnvMap updates the environment variables by taking a slice of env vars as an input.
+// FillContainerEnvMap updates the environment variables in the provided PodTemplateSpec's container by taking a slice of env vars as an input.
 func FillContainerEnvs(existing []corev1.EnvVar, podTemplateSpec *corev1.PodTemplateSpec, containerName string, envSet []corev1.EnvVar) {
 	if podTemplateSpec == nil {
 		return
