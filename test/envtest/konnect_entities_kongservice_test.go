@@ -152,64 +152,6 @@ func TestKongService(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 	})
 
-	t.Run("should handle konnectID control plane references", func(t *testing.T) {
-		const (
-			upstreamID = "kup-12345"
-			serviceID  = "service-12345"
-			host       = "example.com"
-			port       = int64(8081)
-		)
-
-		t.Log("Creating a KongUpstream and setting it to programmed")
-		upstream := deploy.KongUpstream(t, ctx, clientNamespaced,
-			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-		)
-		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
-
-		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
-
-		t.Log("Setting up SDK expectations on Service creation")
-		sdk.ServicesSDK.EXPECT().
-			CreateService(
-				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ServiceInput) bool {
-					return req.Host == host
-				}),
-			).
-			Return(
-				&sdkkonnectops.CreateServiceResponse{
-					Service: &sdkkonnectcomp.Service{
-						ID: lo.ToPtr(serviceID),
-					},
-				},
-				nil,
-			)
-
-		t.Log("Creating a KongService with ControlPlaneRef type=konnectID")
-		createdService := deploy.KongService(t, ctx, clientNamespaced,
-			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-			func(obj client.Object) {
-				s := obj.(*configurationv1alpha1.KongService)
-				s.Spec.KongServiceAPISpec.Host = host
-			},
-			deploy.WithKonnectIDControlPlaneRef(cp),
-		)
-
-		t.Log("Waiting for Service to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongService) bool {
-			if kt.GetName() != createdService.GetName() {
-				return false
-			}
-			if kt.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
-				return false
-			}
-			return kt.GetKonnectID() == serviceID && k8sutils.IsProgrammed(kt)
-		}, "KongService didn't get Programmed status condition or didn't get the correct (service-12345) Konnect ID assigned")
-
-		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
-	})
-
 	t.Run("trying to attach KongService to KonnectGatewayControlPlane of type KIC fails (due to CP being read only)", func(t *testing.T) {
 		const (
 			upstreamID = "kup-kic-12345"
@@ -315,9 +257,9 @@ func TestKongService(t *testing.T) {
 				nil,
 			)
 
-		t.Log("Creating a KongService with ControlPlaneRef type=konnectID")
+		t.Log("Creating a KongService")
 		created := deploy.KongService(t, ctx, clientNamespaced,
-			deploy.WithKonnectIDControlPlaneRef(cp),
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongService)
 				s.Spec.KongServiceAPISpec.Host = host
