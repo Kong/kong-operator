@@ -197,24 +197,19 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// then remove the finalizer and let the deletion proceed without trying to delete the entity from Konnect
 		// as the KongConsumer deletion will (or already has - in case of the consumer being gone)
 		// take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongConsumerDoesNotExist{}) ||
-			errors.As(err, &ReferencedKongConsumerIsBeingDeleted{}) {
-			if ok, errRef := objectHasDeletedKongConsumerOwner(ent, r.Client.Scheme(), err); errRef != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to check if object has KongConsumer owner: %w", errRef)
-			} else if ok {
-				if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-					if err := r.Client.Update(ctx, ent); err != nil {
-						if k8serrors.IsConflict(err) {
-							return ctrl.Result{Requeue: true}, nil
-						}
-						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+		if errors.As(err, &ReferencedKongConsumerDoesNotExist{}) {
+			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+				if err := r.Client.Update(ctx, ent); err != nil {
+					if k8serrors.IsConflict(err) {
+						return ctrl.Result{Requeue: true}, nil
 					}
-					log.Debug(logger, "finalizer removed as the owning KongConsumer is being deleted or is already gone",
-						"finalizer", KonnectCleanupFinalizer,
-					)
+					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
-				return ctrl.Result{}, nil
+				log.Debug(logger, "finalizer removed as the owning KongConsumer is being deleted or is already gone",
+					"finalizer", KonnectCleanupFinalizer,
+				)
 			}
+			return ctrl.Result{}, nil
 		}
 
 		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
@@ -235,28 +230,25 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}, nil
 		}
 
-		// If the referenced KongUpstream is not found or is being deleted
-		// and the object is being deleted, remove the finalizer and let the
-		// deletion proceed without trying to delete the entity from Konnect
-		// as the KongUpstream deletion will take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongUpstreamIsBeingDeleted{}) ||
-			errors.As(err, &ReferencedKongUpstreamDoesNotExist{}) {
-			if !ent.GetDeletionTimestamp().IsZero() {
-				if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-					if err := r.Client.Update(ctx, ent); err != nil {
-						if k8serrors.IsConflict(err) {
-							return ctrl.Result{Requeue: true}, nil
-						}
-						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+		// If the referenced KongUpstream is not found then remove the finalizer
+		// and let the deletion proceed without trying to delete the entity from Konnect
+		// as the KongUpstream deletion will (or already has - in case of the upstream being gone)
+		// take care of it on the Konnect side.
+		if errors.As(err, &ReferencedKongUpstreamDoesNotExist{}) {
+			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+				if err := r.Client.Update(ctx, ent); err != nil {
+					if k8serrors.IsConflict(err) {
+						return ctrl.Result{Requeue: true}, nil
 					}
-					log.Debug(logger, "finalizer removed as the owning KongUpstream is being deleted or is already gone",
-						"finalizer", KonnectCleanupFinalizer,
-					)
+					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
+				log.Debug(logger, "finalizer removed as the owning KongUpstream is being deleted or is already gone",
+					"finalizer", KonnectCleanupFinalizer,
+				)
 			}
 		}
 
-		return ctrl.Result{}, err
+		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if !res.IsZero() {
 		return res, nil
 	}
@@ -278,23 +270,21 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// and the object is being deleted, remove the finalizer and let the
 		// deletion proceed without trying to delete the entity from Konnect
 		// as the KongCertificate deletion will take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongCertificateIsBeingDeleted{}) ||
-			errors.As(err, &ReferencedKongCertificateDoesNotExist{}) {
-			if !ent.GetDeletionTimestamp().IsZero() {
-				if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-					if err := r.Client.Update(ctx, ent); err != nil {
-						if k8serrors.IsConflict(err) {
-							return ctrl.Result{Requeue: true}, nil
-						}
-						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+		if errors.As(err, &ReferencedKongCertificateDoesNotExist{}) {
+			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+				if err := r.Client.Update(ctx, ent); err != nil {
+					if k8serrors.IsConflict(err) {
+						return ctrl.Result{Requeue: true}, nil
 					}
-					log.Debug(logger, "finalizer removed as the owning KongCertificate is being deleted or is already gone",
-						"finalizer", KonnectCleanupFinalizer,
-					)
+					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
+				log.Debug(logger, "finalizer removed as the owning KongCertificate is being deleted or is already gone",
+					"finalizer", KonnectCleanupFinalizer,
+				)
 			}
 		}
-		return ctrl.Result{}, nil
+
+		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if res.Requeue {
 		return res, nil
 	}
