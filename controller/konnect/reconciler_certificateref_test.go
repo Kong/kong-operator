@@ -201,9 +201,9 @@ func TestHandleCertificateRef(t *testing.T) {
 					}), "KongSNI does not have ControlPlaneRefValid condition set to True"
 				},
 				func(ks *configurationv1alpha1.KongSNI) (bool, string) {
-					return lo.ContainsBy(ks.OwnerReferences, func(o metav1.OwnerReference) bool {
+					return !lo.ContainsBy(ks.OwnerReferences, func(o metav1.OwnerReference) bool {
 						return o.Kind == "KongCertificate" && o.Name == "cert-ok"
-					}), "OwnerReference of KongSNI is not set"
+					}), "OwnerReference of KongSNI is set but shouldn't"
 				},
 			},
 		},
