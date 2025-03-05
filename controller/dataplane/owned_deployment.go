@@ -17,7 +17,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
-	dputils "github.com/kong/gateway-operator/internal/utils/dataplane"
+	"github.com/kong/gateway-operator/internal/utils/config"
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -141,7 +141,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 		return nil, op.Noop, err
 	}
 	// apply default envvars and restore the hacked-out ones
-	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, dputils.KongDefaults)
+	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, config.KongDefaults)
 
 	// push the complete Deployment to Kubernetes
 	res, deployment, err := reconcileDataPlaneDeployment(ctx, d.client, d.logger,
@@ -202,7 +202,7 @@ func applyEnvForDataPlane(
 	deployment *k8sresources.Deployment,
 	envSet map[string]string,
 ) *k8sresources.Deployment {
-	dputils.FillDataPlaneProxyContainerEnvs(existing, &deployment.Spec.Template, envSet)
+	config.FillContainerEnvs(existing, &deployment.Spec.Template, consts.DataPlaneProxyContainerName, config.EnvVarMapToSlice(envSet))
 	return deployment
 }
 

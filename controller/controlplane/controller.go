@@ -26,6 +26,8 @@ import (
 
 	"github.com/kong/gateway-operator/controller"
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
+	"github.com/kong/gateway-operator/controller/pkg/extensions"
+	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
@@ -46,6 +48,7 @@ type Reconciler struct {
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
 	DevelopmentMode          bool
+	KonnectEnabled           bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -269,6 +272,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "configuring ControlPlane resource")
+
 	defaultArgs := controlplane.DefaultsArgs{
 		Namespace:                   cp.Namespace,
 		ControlPlaneName:            cp.Name,
@@ -282,20 +286,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			continue
 		}
 	}
-	changed := controlplane.SetDefaults(
+	_ = controlplane.SetDefaults(
 		&cp.Spec.ControlPlaneOptions,
 		defaultArgs)
-	if changed {
-		log.Debug(logger, "updating ControlPlane resource after defaults are set since resource has changed")
-		err := r.Client.Update(ctx, cp)
-		if err != nil {
-			if k8serrors.IsConflict(err) {
-				log.Debug(logger, "conflict found when updating ControlPlane resource, retrying")
-				return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
-			}
-			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane: %w", err)
+	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, logger, cp, r.KonnectEnabled)
+	if err != nil {
+		if extensionserrors.IsKonnectExtensionError(err) {
+			log.Debug(logger, "failed to apply extensions", "err", err)
+			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
+		return ctrl.Result{}, err
+	}
+	if stop || !result.IsZero() {
+		return ctrl.Result{}, nil
 	}
 
 	log.Trace(logger, "validating that the ControlPlane's DataPlane configuration is up to date")
@@ -419,7 +422,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	markAsProvisioned(cp)
 	k8sutils.SetReady(cp)
 
-	result, err := r.patchStatus(ctx, logger, cp)
+	result, err = r.patchStatus(ctx, logger, cp)
 	if err != nil {
 		log.Debug(logger, "unable to patch ControlPlane status", "error", err)
 		return ctrl.Result{}, err

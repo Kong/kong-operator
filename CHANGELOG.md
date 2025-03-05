@@ -105,6 +105,8 @@
 - Supported `KonnectExtension` to attach to Konnect control planes by setting
   namespace and name of `KonnectGatewayControlPlane` in `spec.konnectControlPlane`.
   [#1254](https://github.com/Kong/gateway-operator/pull/1254)
+- Added support for `KonnectExtension`s on `ControlPlane`s.
+  [#1262](https://github.com/Kong/gateway-operator/pull/1262)
 
 ### Changed
 

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/samber/lo"
@@ -17,15 +16,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+	"github.com/kong/gateway-operator/controller/pkg/extensions"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -78,7 +76,11 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 		For(&konnectv1alpha1.KonnectExtension{}).
 		Watches(
 			&operatorv1beta1.DataPlane{},
-			handler.EnqueueRequestsFromMapFunc(r.listDataPlaneExtensionsReferenced),
+			handler.EnqueueRequestsFromMapFunc(listExtendableReferencedExtensions[*operatorv1beta1.DataPlane]()),
+		).
+		Watches(
+			&operatorv1beta1.ControlPlane{},
+			handler.EnqueueRequestsFromMapFunc(listExtendableReferencedExtensions[*operatorv1beta1.ControlPlane]()),
 		).
 		Watches(
 			&konnectv1alpha1.KonnectAPIAuthConfiguration{},
@@ -107,43 +109,35 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 		Complete(r)
 }
 
-// listDataPlaneExtensionsReferenced returns a list of all the KonnectExtensions referenced by the DataPlane object.
+// listExtendableReferencedExtensions returns a list of all the KonnectExtensions referenced by the Extendable object.
 // Maximum one reference is expected.
-func (r *KonnectExtensionReconciler) listDataPlaneExtensionsReferenced(ctx context.Context, obj client.Object) []reconcile.Request {
-	logger := ctrllog.FromContext(ctx)
-	dataPlane, ok := obj.(*operatorv1beta1.DataPlane)
-	if !ok {
-		logger.Error(
-			operatorerrors.ErrUnexpectedObject,
-			"failed to run map funcs",
-			"expected", "DataPlane", "found", reflect.TypeOf(obj),
-		)
-		return nil
-	}
-
-	if len(dataPlane.Spec.Extensions) == 0 {
-		return nil
-	}
-
-	recs := []reconcile.Request{}
-
-	for _, ext := range dataPlane.Spec.Extensions {
-		if ext.Group != operatorv1alpha1.SchemeGroupVersion.Group ||
-			ext.Kind != konnectv1alpha1.KonnectExtensionKind {
-			continue
+func listExtendableReferencedExtensions[t extensions.ExtendableT]() func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		o := obj.(t)
+		if len(o.GetExtensions()) == 0 {
+			return nil
 		}
-		namespace := dataPlane.Namespace
-		if ext.Namespace != nil && *ext.Namespace != namespace {
-			continue
+
+		recs := []reconcile.Request{}
+
+		for _, ext := range o.GetExtensions() {
+			if ext.Group != operatorv1alpha1.SchemeGroupVersion.Group ||
+				ext.Kind != konnectv1alpha1.KonnectExtensionKind {
+				continue
+			}
+			namespace := obj.GetNamespace()
+			if ext.Namespace != nil && *ext.Namespace != namespace {
+				continue
+			}
+			recs = append(recs, reconcile.Request{
+				NamespacedName: client.ObjectKey{
+					Namespace: namespace,
+					Name:      ext.Name,
+				},
+			})
 		}
-		recs = append(recs, reconcile.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: namespace,
-				Name:      ext.Name,
-			},
-		})
+		return recs
 	}
-	return recs
 }
 
 // Reconcile reconciles a KonnectExtension object.
@@ -154,19 +148,28 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	logger := log.GetLogger(ctx, konnectv1alpha1.KonnectExtensionKind, r.developmentMode)
-	var dataPlaneList operatorv1beta1.DataPlaneList
+
+	var (
+		dataPlaneList    operatorv1beta1.DataPlaneList
+		controlPlaneList operatorv1beta1.ControlPlaneList
+	)
 	if err := r.List(ctx, &dataPlaneList, client.MatchingFields{
+		index.KonnectExtensionIndex: client.ObjectKeyFromObject(&ext).String(),
+	}); err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := r.List(ctx, &controlPlaneList, client.MatchingFields{
 		index.KonnectExtensionIndex: client.ObjectKeyFromObject(&ext).String(),
 	}); err != nil {
 		return ctrl.Result{}, err
 	}
 
 	var updated bool
-	switch len(dataPlaneList.Items) {
+	switch len(dataPlaneList.Items) + len(controlPlaneList.Items) {
 	case 0:
-		updated = controllerutil.RemoveFinalizer(&ext, consts.DataPlaneExtensionFinalizer)
+		updated = controllerutil.RemoveFinalizer(&ext, consts.ExtensionInUseFinalizer)
 	default:
-		updated = controllerutil.AddFinalizer(&ext, consts.DataPlaneExtensionFinalizer)
+		updated = controllerutil.AddFinalizer(&ext, consts.ExtensionInUseFinalizer)
 	}
 	if updated {
 		if err := r.Client.Update(ctx, &ext); err != nil {

@@ -48,27 +48,30 @@ spec:
       name: konnect-api-auth-dev-1
 ---
 apiVersion: gateway-operator.konghq.com/v1beta1
-kind: DataPlane
+kind: ControlPlane
 metadata:
-  name: konnect-extension-example
+  name: controlplane-example
 spec:
-  extensions:
-  - kind: KonnectExtension
-    name: my-konnect-config
-    group: gateway-operator.konghq.com
+  dataplane: dataplane-example
+  gatewayClass: kong
   deployment:
-    replicas: 3
     podTemplateSpec:
       metadata:
         labels:
-          dataplane-pod-label: example
-        annotations:
-          dataplane-pod-annotation: example
+          controlplane-pod-label: example
       spec:
         containers:
-        - name: proxy
+        - name: controller
           # renovate: datasource=docker versioning=docker
-          image: kong/kong-gateway:3.9
+          image: kong/kubernetes-ingress-controller:3.4.3
           readinessProbe:
             initialDelaySeconds: 1
-            periodSeconds: 1
+            periodSeconds: 3
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+
