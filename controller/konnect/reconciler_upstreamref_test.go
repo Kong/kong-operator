@@ -237,9 +237,9 @@ func TestHandleUpstreamRef(t *testing.T) {
 					}), "KongTarget does not have ControlPlaneRefValid condition set to True"
 				},
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
-					return lo.ContainsBy(kt.OwnerReferences, func(o metav1.OwnerReference) bool {
+					return !lo.ContainsBy(kt.OwnerReferences, func(o metav1.OwnerReference) bool {
 						return o.Kind == "KongUpstream" && o.Name == "upstream-ok"
-					}), "OwnerReference of KongTarget is not set"
+					}), "OwnerReference of KongTarget is set but shouldn't"
 				},
 			},
 		},

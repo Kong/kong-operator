@@ -106,6 +106,11 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
 	}
 
+	res, err := RemoveOwnerRefIfSet(ctx, cl, ent, kongUpstream)
+	if err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	// TODO: make this more generic.
 	if target, ok := any(ent).(*configurationv1alpha1.KongTarget); ok {
 		if target.Status.Konnect == nil {
