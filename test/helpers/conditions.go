@@ -13,7 +13,7 @@ import (
 // CheckAllConditionsTrue returns true if all the conditions with given type in `conditionTypes` are set to `True` in the given resource.
 // If it returns `false`, the second return value contains a message to tell what conditions are not `True`.
 func CheckAllConditionsTrue(resource k8sutils.ConditionsAware, conditionTypes []consts.ConditionType) (bool, string) {
-	failedConditions := make([]string, 0, len(conditionTypes))
+	var failedConditions []string
 	lo.ForEach(conditionTypes, func(conditionType consts.ConditionType, _ int) {
 		if !k8sutils.HasConditionTrue(conditionType, resource) {
 			failedConditions = append(failedConditions, string(conditionType))

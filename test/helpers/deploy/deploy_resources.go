@@ -1083,34 +1083,6 @@ func WithKonnectConfiguration[T ObjectSupportingKonnectConfiguration](
 	}
 }
 
-// KonnectExtensionWithAPIAuthRefAndCPID deploys a KonnectExtension attaching to control plane
-// by the CP's ID and the API auth configuration to the Konnect server where the CP is in.
-func KonnectExtensionWithAPIAuthRefAndCPID(
-	t *testing.T,
-	ctx context.Context,
-	cl client.Client,
-	apiAuth konnectv1alpha1.KonnectAPIAuthConfigurationRef,
-	cpID string,
-	opts ...ObjOption,
-) *konnectv1alpha1.KonnectExtension {
-	opts = append(opts, func(obj client.Object) {
-		ke, ok := obj.(*konnectv1alpha1.KonnectExtension)
-		require.Truef(t, ok, "Expect object %s/%s to be a KonnectExtension, actual type %T",
-			obj.GetNamespace(), obj.GetName(), obj)
-		ke.Spec.KonnectConfiguration = &konnectv1alpha1.KonnectConfiguration{
-			APIAuthConfigurationRef: apiAuth,
-		}
-		ke.Spec.KonnectControlPlane.ControlPlaneRef = commonv1alpha1.ControlPlaneRef{
-			Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-			KonnectID: lo.ToPtr(cpID),
-		}
-	})
-	return KonnectExtension(
-		t, ctx, cl,
-		opts...,
-	)
-}
-
 func logObjectCreate[
 	T interface {
 		client.Object
