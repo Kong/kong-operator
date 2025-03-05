@@ -116,8 +116,8 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 			expectedServiceType:      corev1.ServiceTypeLoadBalancer,
 			expectedServicePorts:     k8sresources.DefaultDataPlaneIngressServicePorts,
 			expectedAnnotations: map[string]string{
-				"foo": "bar",
-				// "foo2":                      "bar2", // this one should be removed
+				"foo":                       "bar",
+				"foo2":                      "bar2", // This one should be preserved as some other controller might have added it
 				"added-by-other-controller": "just-preserve-it",
 				// should be annotated with last applied annotations
 				consts.AnnotationLastAppliedAnnotations: `{"foo":"bar"}`,

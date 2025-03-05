@@ -143,6 +143,11 @@ type ensureDeploymentParams struct {
 	ServiceAccountName             string
 	AdminMTLSCertSecretName        string
 	AdmissionWebhookCertSecretName string
+	// EnforceConfig is a flag to enforce the configuration of the Deployment.
+	// If set to true, the Deployment will be updated even if the spec hash matches.
+	// This is useful when the Deployment has been manually modified by something
+	// other than the operator to prevent the operator from endless reconciliation.
+	EnforceConfig bool
 }
 
 // ensureDeployment ensures that a Deployment is created for the
@@ -195,8 +200,25 @@ func (r *Reconciler) ensureDeployment(
 	}
 
 	if count == 1 {
-		var updated bool
 		existingDeployment := &deployments[0]
+
+		// If the enforceConfig flag is not set, we compare the spec hash of the
+		// existing Deployment with the spec hash of the desired Deployment. If
+		// the hashes match, we skip the update.
+		if !params.EnforceConfig {
+			hash, err := k8sresources.CalculateHash(params.ControlPlane.Spec.Deployment.PodTemplateSpec)
+			if err != nil {
+				return op.Noop, nil, fmt.Errorf("failed to calculate hash spec from ControlPlane: %w", err)
+			}
+			if h, ok := existingDeployment.GetAnnotations()[consts.AnnotationPodTemplateSpecHash]; ok && h == hash {
+				log.Debug(logger, "ControlPlane Deployment spec hash matches existing Deployment, skipping update", "hash", hash)
+				return op.Noop, existingDeployment, nil
+			}
+			// If the spec hash does not match, we need to enforce the configuration
+			// so fall through to the update logic.
+		}
+
+		var updated bool
 		oldExistingDeployment := existingDeployment.DeepCopy()
 
 		// ensure that object metadata is up to date

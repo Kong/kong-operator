@@ -89,6 +89,7 @@ func (d *DeploymentBuilder) WithOpts(opts ...k8sresources.DeploymentOpt) *Deploy
 func (d *DeploymentBuilder) BuildAndDeploy(
 	ctx context.Context,
 	dataplane *operatorv1beta1.DataPlane,
+	enforceConfig bool,
 	developmentMode bool,
 ) (*appsv1.Deployment, op.Result, error) {
 	// run any preparatory callbacks
@@ -143,8 +144,12 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	// apply default envvars and restore the hacked-out ones
 	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, config.KongDefaults)
 
+	if err := k8sresources.AnnotatePodTemplateSpecHash(desiredDeployment.Unwrap(), dataplane.Spec.Deployment.PodTemplateSpec); err != nil {
+		return nil, op.Noop, err
+	}
+
 	// push the complete Deployment to Kubernetes
-	res, deployment, err := reconcileDataPlaneDeployment(ctx, d.client, d.logger,
+	res, deployment, err := reconcileDataPlaneDeployment(ctx, d.client, d.logger, enforceConfig,
 		dataplane, existingDeployment, desiredDeployment.Unwrap())
 	if err != nil {
 		return nil, op.Noop, err
@@ -273,11 +278,29 @@ func reconcileDataPlaneDeployment(
 	ctx context.Context,
 	cl client.Client,
 	logger logr.Logger,
+	enforceConfig bool,
 	dataplane *operatorv1beta1.DataPlane,
 	existing *appsv1.Deployment,
 	desired *appsv1.Deployment,
 ) (res op.Result, deploy *appsv1.Deployment, err error) {
 	if existing != nil {
+
+		// If the enforceConfig flag is not set, we compare the spec hash of the
+		// existing Deployment with the spec hash of the desired Deployment. If
+		// the hashes match, we skip the update.
+		if !enforceConfig {
+			hash, err := k8sresources.CalculateHash(dataplane.Spec.Deployment.PodTemplateSpec)
+			if err != nil {
+				return op.Noop, nil, fmt.Errorf("failed to calculate hash spec from DataPlane: %w", err)
+			}
+			if h, ok := existing.GetAnnotations()[consts.AnnotationPodTemplateSpecHash]; ok && h == hash {
+				log.Debug(logger, "DataPlane Deployment spec hash matches existing Deployment, skipping update", "hash", hash)
+				return op.Noop, existing, nil
+			}
+			// If the spec hash does not match, we need to enforce the configuration
+			// so fall through to the update logic.
+		}
+
 		var updated bool
 		original := existing.DeepCopy()
 

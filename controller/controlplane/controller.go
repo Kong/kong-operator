@@ -53,6 +53,7 @@ type Reconciler struct {
 	ClusterCAKeyConfig       secrets.KeyConfig
 	DevelopmentMode          bool
 	KonnectEnabled           bool
+	EnforceConfig            bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -383,6 +384,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		ControlPlane:            cp,
 		ServiceAccountName:      controlplaneServiceAccount.Name,
 		AdminMTLSCertSecretName: adminCertificate.Name,
+		EnforceConfig:           r.EnforceConfig,
 	}
 
 	admissionWebhookCertificateSecretName, res, err := r.ensureWebhookResources(ctx, logger, cp)

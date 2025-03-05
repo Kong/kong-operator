@@ -127,6 +127,10 @@ func GenerateNewDeploymentForControlPlane(params GenerateNewDeploymentForControl
 	// it with what's in the cluster.
 	pkgapisappsv1.SetDefaults_Deployment(deployment)
 
+	if err := AnnotatePodTemplateSpecHash(deployment, params.ControlPlane.Spec.Deployment.PodTemplateSpec); err != nil {
+		return nil, err
+	}
+
 	return deployment, nil
 }
 
@@ -463,8 +467,7 @@ func ClusterCertificateVolumeMount() corev1.VolumeMount {
 type Deployment appsv1.Deployment
 
 func (d *Deployment) Unwrap() *appsv1.Deployment {
-	casted := appsv1.Deployment(*d)
-	return &casted
+	return (*appsv1.Deployment)(d)
 }
 
 // The various ApplyConfig types used in SSA (see

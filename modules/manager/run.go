@@ -72,6 +72,7 @@ type Config struct {
 	ClusterCAKeyType         mgrconfig.KeyType
 	ClusterCAKeySize         int
 	LoggerOpts               *zap.Options
+	EnforceConfig            bool
 
 	// controllers for standard APIs and features
 	GatewayControllerEnabled            bool

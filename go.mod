@@ -237,6 +237,7 @@ require (
 
 require (
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/gohugoio/hashstructure v0.5.0
 	github.com/google/btree v1.1.3 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
