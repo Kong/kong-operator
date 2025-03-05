@@ -26,15 +26,15 @@ func init() {
 	SchemeBuilder.Register(&GatewayConfiguration{}, &GatewayConfigurationList{})
 }
 
+// GatewayConfiguration is the Schema for the gatewayconfigurations API.
+//
 // +genclient
+// +apireference:kgo:include
+// +kong:channels=gateway-operator
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=kogc,categories=kong;all
-// +kubebuilder:validation:XValidation:message="Extension not allowed for DataPlane config options",rule="has(self.spec.dataPlaneOptions.extensions) ? self.spec.dataPlaneOptions.extensions.all(e, e.group == 'gateway-operator.konghq.com' && e.kind == 'KonnectExtension') : true"
-
-// GatewayConfiguration is the Schema for the gatewayconfigurations API
-// +apireference:kgo:include
-// +kong:channels=gateway-operator
+// +kubebuilder:validation:XValidation:message="Extension not allowed for GatewayConfiguration",rule="has(self.spec.extensions) ? self.spec.extensions.all(e, e.group == 'konnect.konghq.com' && e.kind == 'KonnectExtension') : true"
 type GatewayConfiguration struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -45,6 +45,8 @@ type GatewayConfiguration struct {
 
 // GatewayConfigurationSpec defines the desired state of GatewayConfiguration
 // +apireference:kgo:include
+// +kubebuilder:validation:XValidation:message="KonnectExtension must be set at the Gateway level",rule="has(self.dataPlaneOptions.extensions) ? self.dataPlaneOptions.extensions.all(e, (e.group != 'konnect.konghq.com' && e.group != 'gateway-operator.konghq.com') || e.kind != 'KonnectExtension') : true"
+// +kubebuilder:validation:XValidation:message="KonnectExtension must be set at the Gateway level",rule="has(self.controlPlaneOptions.extensions) ? self.controlPlaneOptions.extensions.all(e, (e.group != 'konnect.konghq.com' && e.group != 'gateway-operator.konghq.com') || e.kind != 'KonnectExtension') : true"
 type GatewayConfigurationSpec struct {
 	// DataPlaneOptions is the specification for configuration
 	// overrides for DataPlane resources that will be created for the Gateway.
@@ -73,6 +75,7 @@ type GatewayConfigurationSpec struct {
 // GatewayConfigDataPlaneOptions indicates the specific information needed to
 // configure and deploy a DataPlane object.
 // +apireference:kgo:include
+// +kubebuilder:validation:XValidation:message="Extension not allowed for DataPlane",rule="has(self.extensions) ? self.extensions.all(e, (e.group == 'konnect.konghq.com' || e.group == 'gateway-operator.konghq.com') && e.kind == 'KonnectExtension') : true"
 type GatewayConfigDataPlaneOptions struct {
 	// +optional
 	Deployment DataPlaneDeploymentOptions `json:"deployment"`
@@ -88,6 +91,7 @@ type GatewayConfigDataPlaneOptions struct {
 	// +kubebuilder:validation:MinItems=0
 	// +kubebuilder:validation:MaxItems=1
 	Extensions []commonv1alpha1.ExtensionRef `json:"extensions,omitempty"`
+
 	// PluginsToInstall is a list of KongPluginInstallation resources that
 	// will be installed and available in the Gateways (DataPlanes) that
 	// use this GatewayConfig.
@@ -155,4 +159,9 @@ func (g *GatewayConfiguration) GetConditions() []metav1.Condition {
 // SetConditions sets the GatewayConfiguration Status Condition
 func (g *GatewayConfiguration) SetConditions(conditions []metav1.Condition) {
 	g.Status.Conditions = conditions
+}
+
+// GetExtensions retrieves the GatewayConfiguration Extensions
+func (g *GatewayConfiguration) GetExtensions() []commonv1alpha1.ExtensionRef {
+	return g.Spec.Extensions
 }

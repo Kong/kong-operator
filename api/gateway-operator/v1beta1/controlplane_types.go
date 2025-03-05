@@ -35,7 +35,7 @@ func init() {
 // +kubebuilder:resource:shortName=kocp,categories=kong;all
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Provisioned",description="The Resource is provisioned",type=string,JSONPath=`.status.conditions[?(@.type=='Provisioned')].status`
-// +kubebuilder:validation:XValidation:message="ControlPlane requires an image to be set on controller container",rule="has(self.spec.deployment.podTemplateSpec) && has(self.spec.deployment.podTemplateSpec.spec.containers) && self.spec.deployment.podTemplateSpec.spec.containers.exists(c, c.name == 'controller' && has(c.image))"
+// +kubebuilder:validation:XValidation:message="ControlPlane requires an image to be set on controller container",rule="((has(self.spec.deployment) && has(self.spec.deployment.podTemplateSpec) && has(self.spec.deployment.podTemplateSpec.spec)) ? self.spec.deployment.podTemplateSpec.spec.containers.exists(c, c.name == 'controller' && has(c.image)) : true)"
 
 // ControlPlane is the Schema for the controlplanes API
 // +apireference:kgo:include
@@ -89,6 +89,7 @@ type ControlPlaneSpec struct {
 // ControlPlaneOptions indicates the specific information needed to
 // deploy and connect a ControlPlane to a DataPlane object.
 // +apireference:kgo:include
+// +kubebuilder:validation:XValidation:message="Extension not allowed for ControlPlane",rule="has(self.extensions) ? self.extensions.all(e, (e.group == 'konnect.konghq.com' && e.kind == 'KonnectExtension') || (e.group == 'gateway-operator.konghq.com' && e.kind == 'DataPlaneMetricsExtension')) : true"
 type ControlPlaneOptions struct {
 	// +optional
 	Deployment ControlPlaneDeploymentOptions `json:"deployment"`
@@ -104,6 +105,8 @@ type ControlPlaneOptions struct {
 	// resources to influence or enhance functionality.
 	//
 	// +optional
+	// +kubebuilder:validation:MinItems=0
+	// +kubebuilder:validation:MaxItems=2
 	Extensions []commonv1alpha1.ExtensionRef `json:"extensions,omitempty"`
 }
 
