@@ -175,6 +175,8 @@
   [#1279](https://github.com/Kong/gateway-operator/pull/1279)
 - Remove the owner relationship between `KongCertificate` and `KongSNI`.
   [#1285](https://github.com/Kong/gateway-operator/pull/1285)
+- Remove the owner relationship between `KongKey`s and `KongKeysSet`s and `KonnectGatewayControlPlane`s.
+  [#1291](https://github.com/Kong/gateway-operator/pull/1291)
 - Check whether an error from calling Konnect API is a validation error by
   HTTP status code in Konnect entity controller. If the HTTP status code is
   `400`, we consider the error as a validation error and do not try to requeue

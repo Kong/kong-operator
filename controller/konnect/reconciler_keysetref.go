@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
@@ -51,16 +50,11 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 					return ctrl.Result{}, fmt.Errorf("failed to patch status: %w", err)
 				}
 
-				// Transfer the ownership back to the ControlPlane if it's resolved.
-				cpRef, hasCPRef := getControlPlaneRef(ent).Get()
-				if hasCPRef {
-					cp, err := getCPForRef(ctx, cl, cpRef, key.GetNamespace())
-					if err != nil {
-						return ctrl.Result{}, fmt.Errorf("failed to get ControlPlane: %w", err)
-					}
-					if res, err := passOwnershipExclusivelyTo(ctx, cl, key, cp); err != nil || !res.IsZero() {
-						return res, fmt.Errorf("failed to transfer ownership to ControlPlane: %w", err)
-					}
+				// Check if the entity has a ControlPlaneRef as not having it as well as not having
+				// a KeySetRef is an error.
+				_, hasCPRef := getControlPlaneRef(ent).Get()
+				if !hasCPRef {
+					return ctrl.Result{}, fmt.Errorf("key doesn't have neither a KeySet ref not a ControlPlane ref")
 				}
 			}
 		}
@@ -122,12 +116,8 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Transfer the ownership of the entity exclusively to the KongKeySet to make sure it will get garbage collected
-	// when the KongKeySet is deleted. This is to follow the behavior on the Konnect API that deletes KongKeys associated
-	// with a KongKeySet once it's deleted.
-	// The ownership needs to be transferred *exclusively* to the KongKeySet because a Kubernetes object gets garbage
-	// collected only when all its owner references are removed.
-	if res, err := passOwnershipExclusivelyTo(ctx, cl, ent, &keySet); err != nil || !res.IsZero() {
+	res, err := RemoveOwnerRefIfSet(ctx, cl, ent, &keySet)
+	if err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -150,7 +140,7 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 		fmt.Sprintf("Referenced KongKeySet %s programmed", nn),
 	)
 
-	_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
+	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
 	if err != nil {
 		if k8serrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil
@@ -173,33 +163,4 @@ func getKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constraints.Ent
 	default:
 		return mo.None[configurationv1alpha1.KeySetRef]()
 	}
-}
-
-// passOwnershipExclusivelyTo transfers the ownership of the entity exclusively to the given owner, removing all other
-// owner references.
-func passOwnershipExclusivelyTo[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
-	ctx context.Context,
-	cl client.Client,
-	ent TEnt,
-	to metav1.Object,
-) (ctrl.Result, error) {
-	old := ent.DeepCopyObject().(TEnt)
-
-	// Cleanup the old owner references.
-	ent.SetOwnerReferences(nil)
-
-	// Set the owner reference.
-	if err := controllerutil.SetOwnerReference(to, ent, cl.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
-	}
-
-	// Patch the spec
-	if _, _, err := patch.ApplyPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old, true); err != nil {
-		if k8serrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("failed to patch: %w", err)
-	}
-
-	return ctrl.Result{}, nil
 }
