@@ -20,7 +20,7 @@ func conditionsAreSetWhenReferencedControlPlaneIsMissing[
 		if obj.GetName() != objToMatch.GetName() {
 			return false
 		}
-		if obj.GetControlPlaneRef().Type != commonv1alpha1.ControlPlaneRefKonnectID {
+		if obj.GetControlPlaneRef().Type != commonv1alpha1.ControlPlaneRefKonnectNamespacedRef {
 			return false
 		}
 		condCpRef, okCPRef := k8sutils.GetCondition(konnectv1alpha1.ControlPlaneRefValidConditionType, obj)
@@ -33,7 +33,7 @@ func conditionsAreSetWhenReferencedControlPlaneIsMissing[
 	}
 }
 
-func conditionProgrammedIsSetToTrueAndCPRefIsKonnectID[
+func conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef[
 	T interface {
 		client.Object
 		k8sutils.ConditionsAware
@@ -45,7 +45,7 @@ func conditionProgrammedIsSetToTrueAndCPRefIsKonnectID[
 		if obj.GetName() != objToMatch.GetName() {
 			return false
 		}
-		if obj.GetControlPlaneRef().Type != commonv1alpha1.ControlPlaneRefKonnectID {
+		if obj.GetControlPlaneRef().Type != commonv1alpha1.ControlPlaneRefKonnectNamespacedRef {
 			return false
 		}
 		if obj.GetKonnectID() != id {
