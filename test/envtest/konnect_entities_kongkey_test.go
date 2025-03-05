@@ -228,13 +228,9 @@ func TestKongKey(t *testing.T) {
 					condition.Status == metav1.ConditionTrue
 			})
 			keySetIDPopulated := c.Status.Konnect != nil && c.Status.Konnect.KeySetID != ""
-			exactlyOneOwnerReference := len(c.GetOwnerReferences()) == 1
-			if !exactlyOneOwnerReference {
-				return false
-			}
+			exactlyZeroOwnerReference := len(c.GetOwnerReferences()) == 0
 
-			hasOwnerRefToKeySet := c.GetOwnerReferences()[0].Name == keySet.GetName()
-			return programmed && associated && keySetIDPopulated && hasOwnerRefToKeySet
+			return programmed && associated && keySetIDPopulated && exactlyZeroOwnerReference
 		}, "KongKey's Programmed and KeySetRefValid conditions should be true eventually")
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
@@ -255,10 +251,12 @@ func TestKongKey(t *testing.T) {
 			if c.GetName() != createdKey.GetName() {
 				return false
 			}
-			exactlyOneOwnerReference := len(c.GetOwnerReferences()) == 1
-			hasOwnerReferenceToCP := c.GetOwnerReferences()[0].Name == cp.GetName()
 
-			return exactlyOneOwnerReference && hasOwnerReferenceToCP
+			if c.Spec.KeySetRef != nil {
+				return false
+			}
+
+			return len(c.GetOwnerReferences()) == 0
 		}, "KongKey should be deattached from KongKeySet eventually")
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)

@@ -302,29 +302,25 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}, nil
 		}
 
-		// If the referenced KongKeySet is not found or is being deleted
-		// and the object is being deleted, remove the finalizer and let the
-		// deletion proceed without trying to delete the entity from Konnect
+		// If the referenced KongKeySet is not found, remove the finalizer and let the
+		// user delete the resource without trying to delete the entity from Konnect
 		// as the KongKeySet deletion will take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongKeySetIsBeingDeleted{}) ||
-			errors.As(err, &ReferencedKongKeySetDoesNotExist{}) {
-			if !ent.GetDeletionTimestamp().IsZero() {
-				if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-					if err := r.Client.Update(ctx, ent); err != nil {
-						if k8serrors.IsConflict(err) {
-							return ctrl.Result{Requeue: true}, nil
-						}
-						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+		if errors.As(err, &ReferencedKongKeySetDoesNotExist{}) {
+			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+				if err := r.Client.Update(ctx, ent); err != nil {
+					if k8serrors.IsConflict(err) {
+						return ctrl.Result{Requeue: true}, nil
 					}
-					log.Debug(logger, "finalizer removed as the owning KongKeySet is being deleted or is already gone",
-						"finalizer", KonnectCleanupFinalizer,
-					)
-					return ctrl.Result{}, nil
+					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
+				log.Debug(logger, "finalizer removed as the owning KongKeySet is being deleted or is already gone",
+					"finalizer", KonnectCleanupFinalizer,
+				)
+				return ctrl.Result{}, nil
 			}
 		}
 
-		return res, err
+		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
