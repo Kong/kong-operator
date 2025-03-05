@@ -3,7 +3,6 @@ package konnect
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -31,8 +30,6 @@ import (
 	konnectresource "github.com/kong/gateway-operator/pkg/utils/konnect/resources"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -179,10 +176,10 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	var updated, cleanup bool
 
-	// if the extension is marked for deletion and no dataplane is using it, we can proceed with the cleanup.
+	// if the extension is marked for deletion and no object is using it, we can proceed with the cleanup.
 	if !ext.DeletionTimestamp.IsZero() &&
 		ext.DeletionTimestamp.Before(lo.ToPtr(metav1.Now())) &&
-		len(dataPlaneList.Items) == 0 {
+		len(dataPlaneList.Items)+len(controlPlaneList.Items) == 0 {
 		cleanup = true
 	}
 
@@ -322,79 +319,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		sdkops.SDKToken(token),
 	)
 
-	var konnectCPID string
-	switch ext.Spec.KonnectControlPlane.ControlPlaneRef.Type {
-	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-		cpRef := ext.Spec.KonnectControlPlane.ControlPlaneRef.KonnectNamespacedRef
-		cpNamepace := ext.Namespace
-		// TODO: get namespace from cpRef.Namespace when allowed to reference CP from another namespace.
-		kgcp := &konnectv1alpha1.KonnectGatewayControlPlane{}
-		err := r.Client.Get(ctx, client.ObjectKey{
-			Namespace: cpNamepace,
-			Name:      cpRef.Name,
-		}, kgcp)
-
-		if err != nil {
-			_, errPatch := patch.StatusWithCondition(
-				ctx, r.Client, &ext,
-				kcfgconsts.ConditionType(konnectv1alpha1.ControlPlaneRefValidConditionType),
-				metav1.ConditionFalse,
-				kcfgconsts.ConditionReason(konnectv1alpha1.ControlPlaneRefReasonInvalid),
-				err.Error(),
-			)
-			return ctrl.Result{}, errPatch
-		}
-
-		if !lo.ContainsBy(kgcp.Status.Conditions, func(cond metav1.Condition) bool {
-			return cond.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-				cond.Status == metav1.ConditionTrue
-		}) {
-			_, errPatch := patch.StatusWithCondition(
-				ctx, r.Client, &ext,
-				kcfgconsts.ConditionType(konnectv1alpha1.ControlPlaneRefValidConditionType),
-				metav1.ConditionFalse,
-				kcfgconsts.ConditionReason(konnectv1alpha1.ControlPlaneRefReasonInvalid),
-				fmt.Sprintf("Konnect control plane %s/%s not programmed yet", cpNamepace, cpRef.Name),
-			)
-			// Update of KonnectGatewayControlPlane will trigger reconciliation of KonnectExtension.
-			return ctrl.Result{}, errPatch
-		}
-		konnectCPID = kgcp.GetKonnectID()
-	case commonv1alpha1.ControlPlaneRefKonnectID:
-		konnectCPID = *ext.Spec.KonnectControlPlane.ControlPlaneRef.KonnectID
-	}
-
-	controlPlaneRefValidCond := metav1.Condition{
-		Type:    konnectv1alpha1.ControlPlaneRefValidConditionType,
-		Status:  metav1.ConditionTrue,
-		Reason:  konnectv1alpha1.ControlPlaneRefReasonValid,
-		Message: "ControlPlaneRef is valid",
-	}
-
-	cp, err := ops.GetControlPlaneByID(ctx, sdk.GetControlPlaneSDK(), konnectCPID)
-	if err != nil {
-		controlPlaneRefValidCond.Status = metav1.ConditionFalse
-		controlPlaneRefValidCond.Reason = konnectv1alpha1.ControlPlaneRefReasonInvalid
-		controlPlaneRefValidCond.Message = err.Error()
-		if res, updated, err := patch.StatusWithConditions(
-			ctx,
-			r.Client,
-			&ext,
-			readyCondition,
-			controlPlaneRefValidCond,
-		); err != nil || updated || !res.IsZero() {
-			return res, err
-		}
-		log.Debug(logger, "ControlPlane retrieval failed in Konnect")
-		return ctrl.Result{RequeueAfter: r.syncPeriod}, nil
-	}
-
-	if res, updated, err := patch.StatusWithConditions(
-		ctx,
-		r.Client,
-		&ext,
-		controlPlaneRefValidCond,
-	); err != nil || updated || !res.IsZero() {
+	// get the Konnect Control Plane
+	cp, res, err := r.getKonnectControlPlane(ctx, logger, sdk.GetControlPlaneSDK(), ext)
+	if err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -406,6 +333,8 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		Reason:  konnectv1alpha1.DataPlaneCertificateProvisionedReasonProvisioned,
 		Message: "DataPlane client certificate is provisioned",
 	}
+
+	// get the Kubernetes secret holding the certificate.
 	certificateSecret, err := getCertificateSecret(ctx, r.Client, ext)
 	if err != nil {
 		certProvisionedCond.Status = metav1.ConditionFalse
@@ -424,6 +353,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, err
 	}
 
+	// check if the secret contains a valid tls certificate
 	certData, ok := certificateSecret.Data[consts.TLSCRT]
 	if !ok {
 		certProvisionedCond.Status = metav1.ConditionFalse
@@ -442,6 +372,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, nil
 	}
 
+	// enforce a finalizer on the secret to prevent it from being deleted while in use.
 	updated = controllerutil.AddFinalizer(certificateSecret, consts.SecretKonnectExtensionFinalizer) ||
 		controllerutil.AddFinalizer(certificateSecret, KonnectCleanupFinalizer)
 	if updated {
@@ -458,6 +389,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	log.Debug(logger, "DataPlane certificate validity checked")
 
+	// get the list of DataPlane client certificates in Konnect
 	dpCertificates, err := ops.ListKongDataPlaneClientCertificates(ctx, sdk.GetDataPlaneCertificatesSDK(), cp.ID)
 	if err != nil {
 		certProvisionedCond.Status = metav1.ConditionFalse
@@ -495,6 +427,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return "", false
 	})
 
+	// update the secret annotation with the IDs of the mapped certificates
 	newMappedIDsStr := strings.Join(mappedIDs, ",")
 	if certificateSecret.Annotations[certificateIDsAnnotationKey] != newMappedIDsStr {
 		if certificateSecret.Annotations == nil {
