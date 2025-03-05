@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -40,9 +41,7 @@ func TestHelmUpgrade(t *testing.T) {
 
 		waitTime = 3 * time.Minute
 	)
-
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
+	ctx := t.Context()
 
 	// createEnvironment will queue up environment cleanup if necessary
 	// and dumping diagnostics if the test fails.
@@ -201,7 +200,7 @@ func TestHelmUpgrade(t *testing.T) {
 				{
 					Name: "DataPlane deployment is not patched after operator upgrade",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-latestminor-current=true")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-latestminor-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
@@ -212,8 +211,6 @@ func TestHelmUpgrade(t *testing.T) {
 				},
 			},
 		},
-		/**
-		// TODO(Jintao): This test is disabled. After a new nightly image is available which uses KIC 3.4.1, we can enable it.
 		{
 			name:             "upgrade from nightly to current",
 			fromVersion:      "nightly",
@@ -274,7 +271,7 @@ func TestHelmUpgrade(t *testing.T) {
 				{
 					Name: "DataPlane deployment is not patched after operator upgrade",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
@@ -285,7 +282,6 @@ func TestHelmUpgrade(t *testing.T) {
 				},
 			},
 		},
-		**/
 	}
 
 	var (
@@ -304,8 +300,10 @@ func TestHelmUpgrade(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			// Repository is different for OSS and Enterprise images and it should be set accordingly.
 			kgoImageRepository := "docker.io/kong/gateway-operator-oss"
+			kgoImageRepositoryNightly := "docker.io/kong/nightly-gateway-operator-oss"
 			if helpers.GetDefaultDataPlaneBaseImage() == consts.DefaultDataPlaneBaseEnterpriseImage {
 				kgoImageRepository = "docker.io/kong/gateway-operator"
+				kgoImageRepositoryNightly = "docker.io/kong/nightly-gateway-operator"
 			}
 			var (
 				tag              string
@@ -329,6 +327,9 @@ func TestHelmUpgrade(t *testing.T) {
 				tagInReleaseName = tag[:8]
 			}
 			releaseName := strings.ReplaceAll(fmt.Sprintf("kgo-%s-to-%s", tc.fromVersion, tagInReleaseName), ".", "-")
+			if strings.Contains(tc.fromVersion, "nightly") {
+				kgoImageRepository = kgoImageRepositoryNightly
+			}
 			values := map[string]string{
 				"image.tag":                          tc.fromVersion,
 				"image.repository":                   kgoImageRepository,
@@ -380,7 +381,21 @@ func TestHelmUpgrade(t *testing.T) {
 			for _, obj := range tc.objectsToDeploy {
 				require.NoError(t, cl.Create(ctx, obj))
 				t.Cleanup(func() {
+					// Ensure that every object is properly deleted (the finalizer must
+					// be executed, it requires some time) before the Helm chart is uninstalled.
+					ctx, cancel := context.WithTimeout(ctx, waitTime)
+					defer cancel()
 					require.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, obj)))
+					require.EventuallyWithT(
+						t,
+						func(c *assert.CollectT) {
+							require.Truef(
+								c,
+								k8serrors.IsNotFound(cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)),
+								"object %q is not deleted successfully ", client.ObjectKeyFromObject(obj),
+							)
+						}, waitTime, 500*time.Millisecond,
+					)
 				})
 			}
 
@@ -546,7 +561,7 @@ func gatewayDataPlaneDeploymentHasImageSetTo(
 	})
 }
 
-func gatewayDataPlaneDeploymentIsNotPatched( //nolint:unused
+func gatewayDataPlaneDeploymentIsNotPatched(
 	gatewayLabelSelector string,
 ) func(context.Context, *assert.CollectT, client.Client) {
 	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {
