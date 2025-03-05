@@ -4,10 +4,10 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	"github.com/samber/lo"
 )
 
 const (
