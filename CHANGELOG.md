@@ -114,6 +114,9 @@
 - Added support for `KonnectExtension`'s `status` `controlPlaneRefs` and `dataPlaneRefs`
   fields.
   [#1297](https://github.com/Kong/gateway-operator/pull/1297)
+- Added support for `KonnectExtension`s on `Gateway`s via `GatewayConfiguration`
+  extensibility.
+  [#1292](https://github.com/Kong/gateway-operator/pull/1292)
 
 ### Changed
 

@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/gateway-operator/controller"
@@ -32,6 +33,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
@@ -39,6 +41,7 @@ import (
 
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // Reconciler reconciles a ControlPlane object
@@ -70,7 +73,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		return r.validatingWebhookConfigurationHasControlPlaneOwner(e.ObjectOld)
 	}
 
-	return ctrl.NewControllerManagedBy(mgr).
+	builder := ctrl.NewControllerManagedBy(mgr).
 		// watch ControlPlane objects
 		For(&operatorv1beta1.ControlPlane{}).
 		// watch for changes in Secrets created by the controlplane controller
@@ -114,8 +117,21 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		// status gets updated accordingly, leading to a reconciliation loop trigger)
 		Watches(
 			&appsv1.Deployment{},
-			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlaneDeployment)).
-		Complete(r)
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlaneDeployment))
+
+	if r.KonnectEnabled {
+		// Watch for changes in KonnectExtension objects that are referenced by ControlPlane objects.
+		// They may trigger reconciliation of DataPlane resources.
+		builder.WatchesRawSource(
+			source.Kind(
+				mgr.GetCache(),
+				&konnectv1alpha1.KonnectExtension{},
+				handler.TypedEnqueueRequestsFromMapFunc(index.ListObjectsReferencingKonnectExtension(mgr.GetClient(), &operatorv1beta1.DataPlaneList{})),
+			),
+		)
+	}
+
+	return builder.Complete(r)
 }
 
 // Reconcile moves the current state of an object to the intended state.

@@ -8,6 +8,7 @@ import (
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -21,12 +22,14 @@ import (
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
+	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -118,6 +121,27 @@ func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client
 	return
 }
 
+// listGatewaysForKonnectExtension is a watch predicate which finds all Gateways
+// that use a GatewayConfiguration that references a specific KonnectExtension.
+func (r *Reconciler) listGatewaysForKonnectExtension(ctx context.Context, ext *konnectv1alpha1.KonnectExtension) []reconcile.Request {
+	gatewayConfigurationsRequests := index.ListObjectsReferencingKonnectExtension(r.Client, &operatorv1beta1.GatewayConfigurationList{})(ctx, ext)
+	gatewayConfigurations := lo.Map(gatewayConfigurationsRequests, func(req reconcile.Request, _ int) operatorv1beta1.GatewayConfiguration {
+		return operatorv1beta1.GatewayConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: req.Namespace,
+				Name:      req.Name,
+			},
+		}
+	})
+	affectedGateways := make([]reconcile.Request, 0)
+	for _, gwConf := range gatewayConfigurations {
+		affectedGateways = append(affectedGateways, r.listGatewaysForGatewayConfig(ctx, &gwConf)...)
+	}
+	return affectedGateways
+}
+
+// listGatewaysForGatewayConfig is a watch predicate which finds all Gateways
+// that use a specific GatewayConfiguration.
 func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := ctrllog.FromContext(ctx)
 
@@ -331,7 +355,7 @@ func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 		// This change will not be saved in the API server (i.e. user applied resource
 		// will not be changed) - which is the desired behavior - since the caller
 		// only uses the changed GatewayConfiguration to generate ControlPlane resource.
-		container = lo.ToPtr[corev1.Container](k8sresources.GenerateControlPlaneContainer(
+		container = lo.ToPtr(k8sresources.GenerateControlPlaneContainer(
 			k8sresources.GenerateContainerForControlPlaneParams{
 				Image: consts.DefaultControlPlaneImage,
 			},
@@ -349,7 +373,6 @@ func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 			OwnedByGateway:              gateway.Name,
 			ControlPlaneName:            controlPlaneName,
 			AnonymousReportsEnabled:     controlplane.DeduceAnonymousReportsEnabled(r.DevelopmentMode, gatewayConfig.Spec.ControlPlaneOptions),
-		})
-
-	setControlPlaneOptionsDefaults(gatewayConfig.Spec.ControlPlaneOptions)
+		},
+	)
 }
