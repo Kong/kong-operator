@@ -94,6 +94,7 @@ func ExtendableOnKonnectExtension[t extensions.ExtendableT](ctx context.Context,
 		KonnectExtensionIndex,
 		func(o client.Object) []string {
 			result := []string{}
+			obj := o.(t)
 			if len(obj.GetExtensions()) > 0 {
 				for _, ext := range obj.GetExtensions() {
 					namespace := obj.GetNamespace()

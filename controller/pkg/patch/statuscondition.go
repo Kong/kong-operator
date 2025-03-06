@@ -17,6 +17,7 @@ import (
 // SetStatusWithConditionIfDifferent sets the status of the provided object with the
 // given condition if the condition is different from the current one.
 // It does not take LastTransitionTime into account.
+// The return value tells whether status needs an update.
 func SetStatusWithConditionIfDifferent[T interface {
 	client.Object
 	k8sutils.ConditionsAware
@@ -50,6 +51,44 @@ func SetStatusWithConditionIfDifferent[T interface {
 		ent,
 	)
 	return true
+}
+
+// StatusWithConditions patches the status of the provided object with the
+// given conditions.
+func StatusWithConditions[T interface {
+	client.Object
+	k8sutils.ConditionsAware
+}](
+	ctx context.Context,
+	cl client.Client,
+	ent T,
+	conditions ...metav1.Condition,
+) (res ctrl.Result, updated bool, err error) {
+	old := ent.DeepCopyObject().(T)
+	var needsUpdate bool
+	for _, condition := range conditions {
+		if SetStatusWithConditionIfDifferent(ent,
+			kcfgconsts.ConditionType(condition.Type),
+			condition.Status,
+			kcfgconsts.ConditionReason(condition.Reason),
+			condition.Message,
+		) {
+			needsUpdate = true
+		}
+	}
+
+	if needsUpdate {
+		if err := cl.Status().Patch(ctx, ent, client.MergeFrom(old)); err != nil {
+			if k8serrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, false, nil
+			}
+			return ctrl.Result{}, false, fmt.Errorf("failed to patch status with conditions %v: %w", conditions, err)
+		}
+		return ctrl.Result{}, true, nil
+	}
+
+	return ctrl.Result{}, false, nil
+
 }
 
 // StatusWithCondition patches the status of the provided object with the
