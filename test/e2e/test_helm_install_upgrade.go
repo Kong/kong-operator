@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/kong/gateway-operator/controller/controlplane"
 	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -141,7 +142,6 @@ func TestHelmUpgrade(t *testing.T) {
 		},
 		{
 			name:             "upgrade from latest minor to current",
-			skip:             "ControlPlane assertions have to be adjusted to KIC as a library approach (https://github.com/Kong/gateway-operator/issues/1188)",
 			fromVersion:      "1.4.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release. It's needed for the chart to properly render
@@ -203,13 +203,14 @@ func TestHelmUpgrade(t *testing.T) {
 				{
 					Name: "DataPlane deployment is not patched after operator upgrade",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-latestminor-current=true")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-latestminor-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
-					Name: "Cluster wide resources owned by the ControlPlane get the proper set of labels",
+					Name: "ControlPlane has no cluster-wide resources owned",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						clusterWideResourcesAreProperlyManaged("gw-upgrade-latestminor-current=true")(ctx, c, cl.MgrClient)
+						controlPlaneHasOnlyCPInstanceFinalizer("gw-upgrade-latestminor-current=true")(ctx, c, cl.MgrClient)
+						controlPlaneHasNoClusterWideResourcesOwned("gw-upgrade-latestminor-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 			},
@@ -538,7 +539,7 @@ func gatewayDataPlaneDeploymentHasImageSetTo(
 	})
 }
 
-func gatewayDataPlaneDeploymentIsNotPatched( //nolint:unused
+func gatewayDataPlaneDeploymentIsNotPatched(
 	gatewayLabelSelector string,
 ) func(context.Context, *assert.CollectT, client.Client) {
 	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {
@@ -617,18 +618,17 @@ func listDataPlaneDeploymentsForGateway(
 }
 
 func clusterWideResourcesAreProperlyManaged(gatewayLabelSelector string) func(ctx context.Context, c *assert.CollectT, cl client.Client) {
-	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
-		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, c, cl)
-		if !assert.NotNil(c, gw) {
+	return func(ctx context.Context, t *assert.CollectT, cl client.Client) {
+		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, t, cl)
+		if !assert.NotNil(t, gw) {
 			return
 		}
-
 		controlplanes, err := gateway.ListControlPlanesForGateway(ctx, cl, gw)
 		if err != nil {
-			c.Errorf("failed to list ControlPlanes for Gateway %q: %v", client.ObjectKeyFromObject(gw), err)
+			t.Errorf("failed to list ControlPlanes for Gateway %q: %v", client.ObjectKeyFromObject(gw), err)
 			return
 		}
-		if !assert.Len(c, controlplanes, 1) {
+		if !assert.Len(t, controlplanes, 1) {
 			return
 		}
 		cp := &controlplanes[0]
@@ -640,25 +640,83 @@ func clusterWideResourcesAreProperlyManaged(gatewayLabelSelector string) func(ct
 			cl,
 			client.MatchingLabels(managedByLabelSet),
 		)
-		require.NoError(c, err)
-		assert.Len(c, clusterRoles, 1)
+		require.NoError(t, err)
+		assert.Len(t, clusterRoles, 1)
 
 		clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
 			ctx,
 			cl,
 			client.MatchingLabels(managedByLabelSet),
 		)
-		require.NoError(c, err)
+		require.NoError(t, err)
 
-		assert.Len(c, clusterRoleBindings, 1)
+		assert.Len(t, clusterRoleBindings, 1)
 
 		validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
 			ctx,
 			cl,
 			client.MatchingLabels(managedByLabelSet),
 		)
-		require.NoError(c, err)
+		require.NoError(t, err)
 
-		assert.Len(c, validatingWebhookConfigurations, 1)
+		assert.Len(t, validatingWebhookConfigurations, 1)
+	}
+}
+
+func controlPlaneHasOnlyCPInstanceFinalizer(gatewayLabelSelector string) func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+	return func(ctx context.Context, t *assert.CollectT, cl client.Client) {
+		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, t, cl)
+		require.NotNil(t, gw)
+
+		controlplanes, err := gateway.ListControlPlanesForGateway(ctx, cl, gw)
+		require.NoError(t, err)
+		require.Len(t, controlplanes, 1)
+
+		cp := &controlplanes[0]
+
+		// Check there are no finalizers left for the old resources owned by the ControlPlane.
+		require.ElementsMatch(t, cp.GetFinalizers(), []string{
+			string(controlplane.ControlPlaneFinalizerCPInstanceTeardown),
+		})
+	}
+}
+
+func controlPlaneHasNoClusterWideResourcesOwned(gatewayLabelSelector string) func(ctx context.Context, t *assert.CollectT, cl client.Client) {
+	return func(ctx context.Context, t *assert.CollectT, cl client.Client) {
+		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, t, cl)
+		require.NotNil(t, gw)
+
+		controlplanes, err := gateway.ListControlPlanesForGateway(ctx, cl, gw)
+		require.NoError(t, err)
+		require.Len(t, controlplanes, 1)
+
+		cp := &controlplanes[0]
+
+		// Check there are no cluster-wide resources owned by the ControlPlane.
+		managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
+
+		clusterRoles, err := k8sutils.ListClusterRoles(
+			ctx,
+			cl,
+			client.MatchingLabels(managedByLabelSet),
+		)
+		require.NoError(t, err)
+		assert.Empty(t, clusterRoles)
+
+		clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
+			ctx,
+			cl,
+			client.MatchingLabels(managedByLabelSet),
+		)
+		require.NoError(t, err)
+		assert.Empty(t, clusterRoleBindings)
+
+		validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
+			ctx,
+			cl,
+			client.MatchingLabels(managedByLabelSet),
+		)
+		require.NoError(t, err)
+		assert.Empty(t, validatingWebhookConfigurations)
 	}
 }

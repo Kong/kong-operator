@@ -15,7 +15,7 @@ func SetupTelepresence(ctx context.Context) (func(), error) {
 	telepresenceExecutable := os.Getenv(telepresenceBin)
 	if telepresenceExecutable == "" {
 		telepresenceExecutable = "telepresence"
-		fmt.Printf("WARN: environment variable %s is not set, try to fallback to a system wide 'telepresnce'", telepresenceBin)
+		fmt.Printf("WARN: environment variable %s is not set, try to fallback to a system wide 'telepresence'\n", telepresenceBin)
 	} else {
 		fmt.Printf("INFO: path to binary from %s environment variable is %s\n", telepresenceBin, telepresenceExecutable)
 	}

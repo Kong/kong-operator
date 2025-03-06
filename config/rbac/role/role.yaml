@@ -52,11 +52,27 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - serviceaccounts
+  verbs:
+  - delete
+  - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
   - services/status
   verbs:
   - get
   - patch
   - update
+- apiGroups:
+  - admissionregistration.k8s.io
+  resources:
+  - validatingwebhookconfigurations
+  verbs:
+  - delete
+  - list
+  - watch
 - apiGroups:
   - apiextensions.k8s.io
   resources:
@@ -387,11 +403,20 @@ rules:
   - konnectcloudgatewaydataplanegroupconfigurations/status
   - konnectcloudgatewaynetworks/finalizers
   - konnectcloudgatewaynetworks/status
+  - konnectextensions/finalizers
   - konnectgatewaycontrolplanes/finalizers
   - konnectgatewaycontrolplanes/status
   verbs:
   - patch
   - update
+- apiGroups:
+  - konnect.konghq.com
+  resources:
+  - konnectextensions
+  verbs:
+  - get
+  - list
+  - watch
 - apiGroups:
   - networking.k8s.io
   resources:
@@ -432,4 +457,13 @@ rules:
   - list
   - patch
   - update
+  - watch
+- apiGroups:
+  - rbac.authorization.k8s.io
+  resources:
+  - clusterrolebindings
+  - clusterroles
+  verbs:
+  - delete
+  - list
   - watch

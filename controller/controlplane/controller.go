@@ -18,16 +18,22 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/multiinstance"
+	admregv1 "k8s.io/api/admissionregistration/v1"
+	appsv1 "k8s.io/api/apps/v1"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/gateway-operator/controller"
@@ -57,7 +63,41 @@ type Reconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&operatorv1beta1.ControlPlane{}).Complete(r)
+	return ctrl.NewControllerManagedBy(mgr).
+		For(&operatorv1beta1.ControlPlane{}).
+		// Watch for changes in the ControlPlane's owned resources despite the fact we no longer create them.
+		// This is to ensure we clean up old resources that were created by the controller in previous versions.
+		// TODO: remove after a few releases.
+		Owns(&corev1.Secret{}).
+		Owns(&corev1.ServiceAccount{}).
+		Owns(&appsv1.Deployment{}).
+		Owns(&corev1.Service{}).
+
+		// Watch for changes in the ControlPlane's cluster-wide owned resources. We no longer create them,
+		// but we need to clean up old resources that were created by the controller in previous versions.
+		// TODO: remove after a few releases.
+		Watches(
+			&admregv1.ValidatingWebhookConfiguration{},
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlaneForValidatingWebhookConfiguration),
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.validatingWebhookConfigurationHasControlPlaneOwner)),
+		).
+		Watches(
+			&rbacv1.ClusterRole{},
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlaneForClusterRole),
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.clusterRoleHasControlPlaneOwner))).
+		Watches(
+			&rbacv1.ClusterRoleBinding{},
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlaneForClusterRoleBinding),
+			builder.WithPredicates(predicate.NewPredicateFuncs(r.clusterRoleBindingHasControlPlaneOwner))).
+
+		// Watch DataPlane-related resources to trigger reconciliation when they change.
+		Watches(
+			&operatorv1beta1.DataPlane{},
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlane)).
+		Watches(
+			&appsv1.Deployment{},
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlaneDeployment)).
+		Complete(r)
 }
 
 // Reconcile moves the current state of an object to the intended state.
@@ -68,6 +108,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	cp := new(operatorv1beta1.ControlPlane)
 	if err := r.Client.Get(ctx, req.NamespacedName, cp); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
+	}
+
+	// Ensure that old owned resources are deleted before proceeding with the reconciliation.
+	// KGO <= 1.4 used to create Secrets, ServiceAccounts, Deployments, Services, ValidatingWebhookConfigurations,
+	// ClusterRoles, and ClusterRoleBindings for each ControlPlane resource. This is to ensure we do not leave them
+	// behind.
+	// TODO: remove after a few releases.
+	if err := r.ensureOldOwnedResourcesDeleted(ctx, logger, cp); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to ensure old owned resources are deleted: %w", err)
 	}
 
 	mgrID, err := manager.NewID(cp.Name)
