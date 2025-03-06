@@ -20,7 +20,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.48.2
 	github.com/kong/kubernetes-configuration v1.2.0-rc.1.0.20250304144339-0c11c19c20c9
-	github.com/kong/kubernetes-telemetry v0.1.8
+	github.com/kong/kubernetes-telemetry v0.1.9
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
