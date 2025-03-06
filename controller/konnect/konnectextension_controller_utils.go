@@ -12,6 +12,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -155,7 +156,7 @@ func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 			return refToStr(refs[i]) < refToStr(refs[j])
 		})
 	}
-	hasExetensionAppliedCondition := func(conditions []metav1.Condition) bool {
+	hasExtensionAppliedCondition := func(conditions []metav1.Condition) bool {
 		return lo.ContainsBy(conditions, func(cond metav1.Condition) bool {
 			return cond.Type == string(konnect.KonnectExtensionAppliedType) &&
 				cond.Status == metav1.ConditionTrue
@@ -168,7 +169,7 @@ func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 	var dpRefs []commonv1alpha1.NamespacedRef
 	for _, dp := range dps.Items {
 		// Only add DataPlanes with the KonnectExtensionApplied condition set to true.
-		if !hasExetensionAppliedCondition(dp.Status.Conditions) {
+		if !hasExtensionAppliedCondition(dp.Status.Conditions) {
 			continue
 		}
 		dpRefs = append(dpRefs, commonv1alpha1.NamespacedRef{
@@ -183,7 +184,7 @@ func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 	var cpRefs []commonv1alpha1.NamespacedRef
 	for _, cp := range cps.Items {
 		// Only add ControlPlanes with the KonnectExtensionApplied condition set to true.
-		if !hasExetensionAppliedCondition(cp.Status.Conditions) {
+		if !hasExtensionAppliedCondition(cp.Status.Conditions) {
 			continue
 		}
 		cpRefs = append(cpRefs, commonv1alpha1.NamespacedRef{
@@ -199,6 +200,10 @@ func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 	}
 
 	if err := r.Client.Status().Update(ctx, ext); err != nil {
+		if k8serrors.IsConflict(err) {
+			// Gracefully requeue in case of conflict.
+			return ctrl.Result{Requeue: true}, nil
+		}
 		return ctrl.Result{}, fmt.Errorf("failed to update KonnectExtension ControlPlane and DataPlane references in status: %w", err)
 	}
 	return ctrl.Result{Requeue: true}, nil
