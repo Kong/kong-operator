@@ -580,7 +580,14 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 	if updateExtensionStatus {
 		log.Debug(logger, "updating KonnectExtension status")
-		return ctrl.Result{}, r.Client.Status().Update(ctx, &ext)
+		err := r.Client.Status().Update(ctx, &ext)
+		if k8serrors.IsConflict(err) {
+			// in case the err is of type conflict, don't return it and instead trigger
+			// another reconciliation.
+			// This is just to prevent spamming of conflict errors.
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, err
 	}
 
 	readyCondition = metav1.Condition{
@@ -599,6 +606,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return res, err
 	}
 
+	// NOTE: We requeue here to keep enforcing the state of the resource in Konnect.
+	// Konnect does not allow subscribing to changes so we need to keep pushing the
+	// desired state periodically.
 	log.Debug(logger, "reconciled")
 	return ctrl.Result{
 		RequeueAfter: r.syncPeriod,
