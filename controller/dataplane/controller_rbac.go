@@ -9,7 +9,7 @@ package dataplane
 // +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=dataplanes/finalizers,verbs=update
 // +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=konnectextensions,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=konnectextensions/status,verbs=update;patch
-// +kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectextensions,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectextensions,verbs=get;list;watch
 // +kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectextensions/status,verbs=update;patch
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=create;get;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=create;get;list;watch;update;patch;delete
