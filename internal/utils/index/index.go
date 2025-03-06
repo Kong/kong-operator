@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -12,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/gateway-operator/controller/pkg/extensions"
-	"github.com/samber/lo"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -145,7 +145,7 @@ func ListObjectsReferencingKonnectExtension[t ExtendableObjectListT](
 		if err := c.List(ctx, objList, client.MatchingFields{
 			KonnectExtensionIndex: ext.Namespace + "/" + ext.Name,
 		}); err != nil {
-			logger.Error(err, "Failed to list  in watch", "extensionKind", konnectv1alpha1.KonnectExtensionKind)
+			logger.Error(err, "Failed to list in watch", "extensionKind", konnectv1alpha1.KonnectExtensionKind)
 			return nil
 		}
 
