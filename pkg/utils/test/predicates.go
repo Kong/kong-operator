@@ -24,13 +24,13 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	"github.com/kong/gateway-operator/controller/controlplane"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
+	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
@@ -92,7 +92,7 @@ func HPAPredicate(
 func ControlPlaneIsScheduled(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, operatorClient *clientset.Clientset) func() bool {
 	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv1beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(controlplane.ConditionTypeProvisioned) {
+			if condition.Type == string(kcfgcontrolplane.ConditionTypeProvisioned) {
 				return true
 			}
 		}
@@ -120,9 +120,9 @@ func DataPlaneIsReady(t *testing.T, ctx context.Context, dataplane types.Namespa
 func ControlPlaneDetectedNoDataPlane(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
 	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv1beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(controlplane.ConditionTypeProvisioned) &&
+			if condition.Type == string(kcfgcontrolplane.ConditionTypeProvisioned) &&
 				condition.Status == metav1.ConditionFalse &&
-				condition.Reason == string(controlplane.ConditionReasonNoDataPlane) {
+				condition.Reason == string(kcfgcontrolplane.ConditionReasonNoDataPlane) {
 				return true
 			}
 		}
@@ -136,7 +136,7 @@ func ControlPlaneDetectedNoDataPlane(t *testing.T, ctx context.Context, controlP
 func ControlPlaneIsProvisioned(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
 	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv1beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(controlplane.ConditionTypeProvisioned) &&
+			if condition.Type == string(kcfgcontrolplane.ConditionTypeProvisioned) &&
 				condition.Status == metav1.ConditionTrue {
 				return true
 			}
@@ -796,7 +796,7 @@ func GatewayControlPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway
 				return false
 			}
 			for _, condition := range controlPlanes[0].Status.Conditions {
-				if condition.Type == string(controlplane.ConditionTypeProvisioned) &&
+				if condition.Type == string(kcfgcontrolplane.ConditionTypeProvisioned) &&
 					condition.Status == metav1.ConditionTrue {
 					return true
 				}

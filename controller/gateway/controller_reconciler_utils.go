@@ -34,6 +34,7 @@ import (
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
+	kcfggateway "github.com/kong/kubernetes-configuration/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -877,7 +878,7 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 		}
 		// We currently do not support more that one listener certificate.
 		if len(listener.TLS.CertificateRefs) != 1 {
-			resolvedRefsCondition.Reason = string(ListenerReasonTooManyTLSSecrets)
+			resolvedRefsCondition.Reason = string(kcfggateway.ListenerReasonTooManyTLSSecrets)
 			message = conditionMessage(message, "Only one certificate per listener is supported")
 		} else {
 			isValidGroupKind := true

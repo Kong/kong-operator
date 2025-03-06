@@ -226,7 +226,7 @@ func verifyKPIReadinessForDataPlane(
 	if err := c.Get(ctx, kpiNN, &kpi); err != nil {
 		if k8serrors.IsNotFound(err) {
 			msg := fmt.Sprintf("referenced KongPluginInstallation %s not found", kpiNN)
-			markErr := ensureDataPlaneIsMarkedNotReady(ctx, logger, c, dataplane, DataPlaneConditionReferencedResourcesNotAvailable, msg)
+			markErr := ensureDataPlaneIsMarkedNotReady(ctx, logger, c, dataplane, kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable, msg)
 			return kpi, false, markErr
 		} else {
 			return kpi, true, err
@@ -239,7 +239,7 @@ func verifyKPIReadinessForDataPlane(
 	}) {
 		msgPending := fmt.Sprintf("please wait, referenced KongPluginInstallation %s has not been fully reconciled yet", kpiNN)
 		markErr := ensureDataPlaneIsMarkedNotReady(
-			ctx, logger, c, dataplane, DataPlaneConditionReferencedResourcesNotAvailable, msgPending,
+			ctx, logger, c, dataplane, kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable, msgPending,
 		)
 		return kpi, false, markErr
 	}
@@ -250,7 +250,7 @@ func verifyKPIReadinessForDataPlane(
 	}) {
 		msgFailed := fmt.Sprintf("something wrong with referenced KongPluginInstallation %s, please check it", kpiNN)
 		markErr := ensureDataPlaneIsMarkedNotReady(
-			ctx, logger, c, dataplane, DataPlaneConditionReferencedResourcesNotAvailable, msgFailed,
+			ctx, logger, c, dataplane, kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable, msgFailed,
 		)
 		return kpi, false, markErr
 	}

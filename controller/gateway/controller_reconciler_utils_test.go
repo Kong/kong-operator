@@ -22,6 +22,7 @@ import (
 	"github.com/kong/gateway-operator/test/helpers"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
+	kcfggateway "github.com/kong/kubernetes-configuration/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -912,7 +913,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			expectedResolvedRefsCondition: metav1.Condition{
 				Type:               string(gatewayv1.ListenerConditionResolvedRefs),
 				Status:             metav1.ConditionFalse,
-				Reason:             string(ListenerReasonTooManyTLSSecrets),
+				Reason:             string(kcfggateway.ListenerReasonTooManyTLSSecrets),
 				Message:            "Only one certificate per listener is supported.",
 				ObservedGeneration: generation,
 			},
