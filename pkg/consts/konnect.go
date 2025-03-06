@@ -27,7 +27,7 @@ const (
 const (
 	// DataPlaneCertificateIDLabelKey is the label key used to store the certificate IDs
 	// associated with the secret resource. Since multiple Konnect Certificates can be
-	// created out a single secret, this label is used to store the certificate ID
+	// created out of a single secret, this label is used to store the certificate ID
 	// of all the certificates created out of the secret, separated by commas.
 	// Example: konnect.konghq.com/certificate-ids: "xxxxxx,yyyyyy,zzzzzz"
 	DataPlaneCertificateIDLabelKey = "konnect.konghq.com/certificate-ids"

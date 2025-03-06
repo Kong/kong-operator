@@ -16,10 +16,10 @@ import (
 )
 
 // handleAPIAuthStatusCondition handles the status conditions for the APIAuthConfiguration reference.
-// The last variadic parameter is related to the optional depending conditions, which is set only in case
-// some check fails and the related condition gets marked as False.
+// The last variadic parameter is related to the optional depending conditions. This parameter is set only when
+// a check fails and the related condition gets marked as False.
 // Example: The KonnectExtension resource has a ready condition that must be set to False if any of the
-// conditions set here are false. Passing it as a depending condition will ensure that the ready condition
+// conditions set here are false. Passing it as a depending condition will ensure that the it
 // is set to False if any of the conditions set here are false.
 func handleAPIAuthStatusCondition[T interface {
 	client.Object
