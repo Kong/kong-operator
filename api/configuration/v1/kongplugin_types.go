@@ -17,9 +17,10 @@ limitations under the License.
 package v1
 
 import (
-	"github.com/kong/go-kong/kong"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/go-kong/kong"
 )
 
 // KongPlugin is the Schema for the kongplugins API.
@@ -29,7 +30,7 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
-// +kubebuilder:resource:shortName=kp,categories=kong-ingress-controller
+// +kubebuilder:resource:shortName=kp,categories=kong-ingress-controller;kong
 // +kubebuilder:printcolumn:name="Plugin-Type",type=string,JSONPath=`.plugin`,description="Name of the plugin"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Disabled",type=boolean,JSONPath=`.disabled`,description="Indicates if the plugin is disabled",priority=1

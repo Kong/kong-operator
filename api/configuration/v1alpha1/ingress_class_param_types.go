@@ -39,7 +39,7 @@ type IngressClassParametersList struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:storageversion
-// +kubebuilder:resource:categories=kong-ingress-controller
+// +kubebuilder:resource:categories=kong-ingress-controller;kong
 // +kubebuilder:resource:path=ingressclassparameterses
 
 // IngressClassParameters is the Schema for the IngressClassParameters API.

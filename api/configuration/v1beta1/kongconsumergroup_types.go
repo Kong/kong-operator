@@ -30,7 +30,7 @@ import (
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
-// +kubebuilder:resource:shortName=kcg,categories=kong-ingress-controller
+// +kubebuilder:resource:shortName=kcg,categories=kong-ingress-controller;kong
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
 // +kubebuilder:validation:XValidation:rule="(!has(oldSelf.spec) || !has(oldSelf.spec.controlPlaneRef)) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"

@@ -17,13 +17,15 @@ limitations under the License.
 package v1
 
 import (
-	"github.com/kong/go-kong/kong"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/go-kong/kong"
 )
 
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
+// +kubebuilder:resource:categories=kong
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:resource:shortName=ki,categories=kong-ingress-controller

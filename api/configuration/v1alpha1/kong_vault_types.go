@@ -37,7 +37,7 @@ const (
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster,shortName=kv,categories=kong-ingress-controller,path=kongvaults
+// +kubebuilder:resource:scope=Cluster,shortName=kv,categories=kong-ingress-controller;kong,path=kongvaults
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Backend Type",type=string,JSONPath=`.spec.backend`,description="Name of the backend of the vault"

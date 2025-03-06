@@ -45,6 +45,7 @@ const (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:categories=kong
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Plugin-kind",type=string,JSONPath=`.spec.pluginRef.kind`,description="Kind of the plugin"

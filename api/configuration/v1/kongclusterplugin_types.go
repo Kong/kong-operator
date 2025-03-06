@@ -17,16 +17,17 @@ limitations under the License.
 package v1
 
 import (
-	"github.com/kong/go-kong/kong"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/go-kong/kong"
 )
 
 // +genclient
 // +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Cluster,shortName=kcp,categories=kong-ingress-controller
+// +kubebuilder:resource:scope=Cluster,shortName=kcp,categories=kong-ingress-controller;kong
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Plugin-Type",type=string,JSONPath=`.plugin`,description="Name of the plugin"

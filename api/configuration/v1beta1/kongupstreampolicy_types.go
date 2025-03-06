@@ -37,7 +37,7 @@ func init() {
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced,shortName=kup,categories=kong-ingress-controller
+// +kubebuilder:resource:scope=Namespaced,shortName=kup,categories=kong-ingress-controller;kong
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:metadata:labels=gateway.networking.k8s.io/policy=direct

@@ -31,6 +31,7 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:categories=kong
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Host",type=string,JSONPath=`.spec.host`,description="Host of the service"
