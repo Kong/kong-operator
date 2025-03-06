@@ -35,8 +35,6 @@ func getCPForRef(
 	namespace string,
 ) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
 	switch cpRef.Type {
-	case commonv1alpha1.ControlPlaneRefKonnectID:
-		return getCPForKonnectID(ctx, cl, cpRef)
 	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
 		return getCPForNamespacedRef(ctx, cl, cpRef, namespace)
 	default:

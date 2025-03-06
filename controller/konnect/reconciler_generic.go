@@ -505,29 +505,6 @@ func setStatusServerURLAndOrgID(
 	ent.GetKonnectStatus().OrgID = orgID
 }
 
-func getCPForKonnectID(
-	ctx context.Context,
-	cl client.Client,
-	cpRef commonv1alpha1.ControlPlaneRef,
-) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
-	var l konnectv1alpha1.KonnectGatewayControlPlaneList
-	if err := cl.List(ctx, &l,
-		client.MatchingFields{
-			IndexFieldKonnectGatewayControlPlaneOnKonnectID: *cpRef.KonnectID,
-		},
-	); err != nil {
-		return nil, fmt.Errorf("failed to list ControlPlanes: %w", err)
-	}
-
-	if len(l.Items) == 0 {
-		return nil, ReferencedControlPlaneDoesNotExistError{
-			Reference: cpRef,
-			Err:       errors.New("no KonnectControlPlane with given status.konnectID found"),
-		}
-	}
-	return &l.Items[0], nil
-}
-
 func getCPForNamespacedRef(
 	ctx context.Context,
 	cl client.Client,

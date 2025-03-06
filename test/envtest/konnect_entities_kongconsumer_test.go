@@ -343,6 +343,7 @@ func TestKongConsumer(t *testing.T) {
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
+		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/922")
 		const (
 			consumerID = "consumer-with-cp-konnect-id"
 			username   = "user-with-cp-konnect-id"
@@ -434,7 +435,7 @@ func TestKongConsumer(t *testing.T) {
 			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
 
 		created := deploy.KongConsumer(t, ctx, clientNamespaced, name,
-			deploy.WithKonnectIDControlPlaneRef(cp),
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				cert := obj.(*configurationv1.KongConsumer)
 				cert.Username = name
@@ -442,7 +443,7 @@ func TestKongConsumer(t *testing.T) {
 		)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
+		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("Consumer didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
@@ -562,11 +563,11 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				nil,
 			)
 
-		t.Log("Creating KongConsumer with ControlPlaneRef type=konnectID")
+		t.Log("Creating KongConsumerf")
 		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
 		wBasicAuth := setupWatch[configurationv1alpha1.KongCredentialBasicAuthList](t, ctx, cl, client.InNamespace(ns.Name))
 		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
-			deploy.WithKonnectIDControlPlaneRef(cp),
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				consumer := obj.(*configurationv1.KongConsumer)
 				consumer.Credentials = []string{
@@ -580,7 +581,6 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			assertsAnd(
 				objectMatchesName(createdConsumer),
 				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
-				objectHasCPRefKonnectID[*configurationv1.KongConsumer](),
 			),
 			"KongConsumer's Programmed condition should be true eventually",
 		)
@@ -651,9 +651,9 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				nil,
 			)
 
-		t.Log("Creating KongConsumer with ControlPlaneRef type=konnectID")
+		t.Log("Creating KongConsumer")
 		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
-			deploy.WithKonnectIDControlPlaneRef(cp),
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				consumer := obj.(*configurationv1.KongConsumer)
 				consumer.Credentials = []string{
@@ -669,7 +669,6 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			assertsAnd(
 				objectMatchesName(createdConsumer),
 				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
-				objectHasCPRefKonnectID[*configurationv1.KongConsumer](),
 			),
 			"KongConsumer's Programmed condition should be true eventually",
 		)
@@ -740,9 +739,9 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				nil,
 			)
 
-		t.Log("Creating KongConsumer with ControlPlaneRef type=konnectID")
+		t.Log("Creating KongConsumer")
 		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
-			deploy.WithKonnectIDControlPlaneRef(cp),
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				consumer := obj.(*configurationv1.KongConsumer)
 				consumer.Credentials = []string{
@@ -758,15 +757,9 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		wACL := setupWatch[configurationv1alpha1.KongCredentialACLList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		watchFor(t, ctx, wConsumer, apiwatch.Modified,
-			objectHasCPRefKonnectID[*configurationv1.KongConsumer](),
-			"KongConsumer's Programmed condition should be true eventually",
-		)
-
-		watchFor(t, ctx, wConsumer, apiwatch.Modified,
 			assertsAnd(
 				objectMatchesName(createdConsumer),
 				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
-				objectHasCPRefKonnectID[*configurationv1.KongConsumer](),
 			),
 			"KongConsumer's Programmed condition should be true eventually",
 		)
@@ -840,9 +833,9 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				},
 				nil,
 			)
-		t.Log("Creating KongConsumer with ControlPlaneRef type=konnectID")
+		t.Log("Creating KongConsumer")
 		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
-			deploy.WithKonnectIDControlPlaneRef(cp),
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				consumer := obj.(*configurationv1.KongConsumer)
 				consumer.Credentials = []string{
@@ -858,7 +851,6 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			assertsAnd(
 				objectMatchesName(createdConsumer),
 				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
-				objectHasCPRefKonnectID[*configurationv1.KongConsumer](),
 			),
 			"KongConsumer's Programmed condition should be true eventually",
 		)
@@ -930,11 +922,11 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				},
 				nil,
 			)
-		t.Log("Creating KongConsumer with ControlPlaneRef type=konnectID")
+		t.Log("Creating KongConsumer")
 		wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
 		wHMAC := setupWatch[configurationv1alpha1.KongCredentialHMACList](t, ctx, cl, client.InNamespace(ns.Name))
 		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
-			deploy.WithKonnectIDControlPlaneRef(cp),
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				consumer := obj.(*configurationv1.KongConsumer)
 				consumer.Credentials = []string{
@@ -948,7 +940,6 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			assertsAnd(
 				objectMatchesName(createdConsumer),
 				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
-				objectHasCPRefKonnectID[*configurationv1.KongConsumer](),
 			),
 			"KongConsumer's Programmed condition should be true eventually",
 		)

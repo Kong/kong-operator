@@ -67,7 +67,7 @@ func TestKonnectEntities(t *testing.T) {
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	ks := deploy.KongService(t, ctx, clientNamespaced,
-		deploy.WithKonnectIDControlPlaneRef(cp),
+		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		deploy.WithTestIDLabel(testID),
 	)
 

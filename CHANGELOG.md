@@ -56,9 +56,6 @@
   owning service. Currently specifying ingress service of `DataPlane` is
   supported.
   [#966](https://github.com/Kong/gateway-operator/pull/966)
-- Added support for `ControlPlaneRef`s with `type` equal to `konnectID` for
-  all Konnect entities that refer to a `ControlPlane`.
-  [#985](https://github.com/Kong/gateway-operator/pull/985)
 - Added support for global plugins with `KongPluginBinding`'s `scope` field.
   The default value is `OnlyTargets` which means that the plugin will be
   applied only to the targets specified in the `targets` field. The new
