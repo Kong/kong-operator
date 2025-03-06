@@ -349,10 +349,21 @@ func TestHelmUpgrade(t *testing.T) {
 					RestConfig: e.Environment.Cluster().Config(),
 				},
 				SetValues: values,
+				ExtraArgs: map[string][]string{
+					"install": {
+						"--devel",
+					},
+					"upgrade": {
+						"--devel",
+					},
+				},
 			}
 
 			require.NoError(t, helm.AddRepoE(t, opts, "kong", "https://charts.konghq.com"))
 			require.NoError(t, helm.InstallE(t, opts, chart, releaseName))
+			out, err := helm.RunHelmCommandAndGetOutputE(t, opts, "list")
+			require.NoError(t, err)
+			t.Logf("Helm list output after install:\n  %s", out)
 			t.Cleanup(func() {
 				out, err := helm.RunHelmCommandAndGetOutputE(t, opts, "uninstall", releaseName)
 				if !assert.NoError(t, err) {
@@ -387,6 +398,9 @@ func TestHelmUpgrade(t *testing.T) {
 			opts.SetValues["image.repository"] = targetRepository
 
 			require.NoError(t, helm.UpgradeE(t, opts, chart, releaseName))
+			out, err = helm.RunHelmCommandAndGetOutputE(t, opts, "list")
+			require.NoError(t, err)
+			t.Logf("Helm list output after upgrade:\n  %s", out)
 			require.NoError(t, waitForOperatorDeployment(t, ctx, e.Namespace.Name, e.Clients.K8sClient, waitTime,
 				deploymentAssertConditions(t, deploymentReadyConditions()...),
 			),
