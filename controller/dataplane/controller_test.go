@@ -114,7 +114,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(consts.ReadyType),
+							Type:   string(kcfgdataplane.ReadyType),
 							Status: metav1.ConditionTrue,
 						},
 					},
@@ -229,7 +229,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					Service: "svc-proxy-to-delete",
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(consts.ReadyType),
+							Type:   string(kcfgdataplane.ReadyType),
 							Status: metav1.ConditionTrue,
 						},
 					},
@@ -319,7 +319,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(consts.ReadyType),
+							Type:   string(kcfgdataplane.ReadyType),
 							Status: metav1.ConditionTrue,
 						},
 					},
@@ -435,7 +435,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(consts.ReadyType),
+							Type:   string(kcfgdataplane.ReadyType),
 							Status: metav1.ConditionTrue,
 						},
 					},

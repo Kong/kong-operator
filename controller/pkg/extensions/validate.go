@@ -6,8 +6,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
-
+	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -20,8 +19,8 @@ func validateExtensions[t ExtendableT](obj t) *metav1.Condition {
 
 	condition := metav1.Condition{
 		Status:             metav1.ConditionTrue,
-		Type:               string(consts.AcceptedExtensionsType),
-		Reason:             string(consts.AcceptedExtensionsReason),
+		Type:               string(kcfgkonnect.AcceptedExtensionsType),
+		Reason:             string(kcfgkonnect.AcceptedExtensionsReason),
 		Message:            "All extensions are accepted",
 		ObservedGeneration: obj.GetGeneration(),
 		LastTransitionTime: metav1.Now(),
@@ -45,7 +44,7 @@ func validateExtensions[t ExtendableT](obj t) *metav1.Condition {
 	}
 	if messageBuilder.Len() > 0 {
 		condition.Status = metav1.ConditionFalse
-		condition.Reason = string(consts.NotSupportedExtensionsReason)
+		condition.Reason = string(kcfgkonnect.NotSupportedExtensionsReason)
 		condition.Message = messageBuilder.String()
 	}
 

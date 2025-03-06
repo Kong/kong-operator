@@ -23,6 +23,7 @@ import (
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
 
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -384,9 +385,9 @@ func TestDataPlaneUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		isNotReady := dataPlaneConditionPredicate(t, &metav1.Condition{
-			Type:               string(consts.ReadyType),
+			Type:               string(kcfgdataplane.ReadyType),
 			Status:             metav1.ConditionFalse,
-			Reason:             string(consts.WaitingToBecomeReadyReason),
+			Reason:             string(kcfgdataplane.WaitingToBecomeReadyReason),
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
@@ -422,9 +423,9 @@ func TestDataPlaneUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
-			Type:               string(consts.ReadyType),
+			Type:               string(kcfgdataplane.ReadyType),
 			Status:             metav1.ConditionTrue,
-			Reason:             string(consts.ResourceReadyReason),
+			Reason:             string(kcfgdataplane.ResourceReadyReason),
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
@@ -459,9 +460,9 @@ func TestDataPlaneUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
-			Type:               string(consts.ReadyType),
+			Type:               string(kcfgdataplane.ReadyType),
 			Status:             metav1.ConditionTrue,
-			Reason:             string(consts.ResourceReadyReason),
+			Reason:             string(kcfgdataplane.ResourceReadyReason),
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
@@ -496,9 +497,9 @@ func TestDataPlaneUpdate(t *testing.T) {
 		require.NoError(t, err)
 
 		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
-			Type:               string(consts.ReadyType),
+			Type:               string(kcfgdataplane.ReadyType),
 			Status:             metav1.ConditionTrue,
-			Reason:             string(consts.ResourceReadyReason),
+			Reason:             string(kcfgdataplane.ResourceReadyReason),
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,

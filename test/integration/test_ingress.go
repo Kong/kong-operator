@@ -30,6 +30,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/vars"
 	"github.com/kong/gateway-operator/test/helpers"
 
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -95,7 +96,7 @@ func TestIngressEssentials(t *testing.T) {
 		}
 		if len(dataplanes) == 1 {
 			for _, condition := range dataplanes[0].Status.Conditions {
-				if condition.Type == string(consts.ReadyType) && condition.Status == metav1.ConditionTrue {
+				if condition.Type == string(kcfgdataplane.ReadyType) && condition.Status == metav1.ConditionTrue {
 					dataplane = &dataplanes[0]
 					return true
 				}
