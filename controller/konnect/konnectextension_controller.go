@@ -36,8 +36,6 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-const certificateIDsAnnotationKey = "konnect.konghq.com/certificate-ids"
-
 // KonnectExtensionReconciler reconciles a KonnectExtension object.
 type KonnectExtensionReconciler struct {
 	client.Client
@@ -429,11 +427,11 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// update the secret annotation with the IDs of the mapped certificates
 	newMappedIDsStr := strings.Join(mappedIDs, ",")
-	if certificateSecret.Annotations[certificateIDsAnnotationKey] != newMappedIDsStr {
+	if certificateSecret.Annotations[consts.DataPlaneCertificateIDAnnotationKey] != newMappedIDsStr {
 		if certificateSecret.Annotations == nil {
 			certificateSecret.Annotations = map[string]string{}
 		}
-		certificateSecret.Annotations[certificateIDsAnnotationKey] = newMappedIDsStr
+		certificateSecret.Annotations[consts.DataPlaneCertificateIDAnnotationKey] = newMappedIDsStr
 		if err := r.Client.Update(ctx, certificateSecret); err != nil {
 			return ctrl.Result{}, err
 		}

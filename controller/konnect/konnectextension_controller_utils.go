@@ -38,15 +38,16 @@ func (r *KonnectExtensionReconciler) getKonnectControlPlane(
 	ext konnectv1alpha1.KonnectExtension,
 	dependingConditions ...metav1.Condition,
 ) (cp *sdkkonnectcomp.ControlPlane, res ctrl.Result, err error) {
-	var konnectCPID string
-
-	// init the controlPlaneRefValidCond with the assumption that the ControlPlaneRef is valid
-	controlPlaneRefValidCond := metav1.Condition{
-		Type:    konnectv1alpha1.ControlPlaneRefValidConditionType,
-		Status:  metav1.ConditionTrue,
-		Reason:  konnectv1alpha1.ControlPlaneRefReasonValid,
-		Message: "ControlPlaneRef is valid",
-	}
+	var (
+		konnectCPID string
+		// init the controlPlaneRefValidCond with the assumption that the ControlPlaneRef is valid
+		controlPlaneRefValidCond = metav1.Condition{
+			Type:    konnectv1alpha1.ControlPlaneRefValidConditionType,
+			Status:  metav1.ConditionTrue,
+			Reason:  konnectv1alpha1.ControlPlaneRefReasonValid,
+			Message: "ControlPlaneRef is valid",
+		}
+	)
 
 	switch ext.Spec.KonnectControlPlane.ControlPlaneRef.Type {
 	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
