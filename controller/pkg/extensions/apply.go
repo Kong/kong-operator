@@ -5,7 +5,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,14 +35,14 @@ type withExtensions interface {
 	GetExtensions() []commonv1alpha1.ExtensionRef
 }
 
-// applyExtensions patches the dataplane or controlplane spec by taking into account customizations from the referenced extensions.
+// ApplyExtensions patches the dataplane or controlplane spec by taking into account customizations from the referenced extensions.
 // In case any extension is referenced, it adds a resolvedRefs condition to the dataplane, indicating the status of the
 // extension reference. it returns 3 values:
 //   - stop: a boolean indicating if the caller must return. It's true when the dataplane status has been patched.
 //   - res: a ctrl.Result indicating if the dataplane should be requeued. If the error was unexpected (e.g., because of API server error), the dataplane should be requeued.
 //     In case the error is related to a misconfiguration, the dataplane does not need to be requeued, and feedback is provided into the dataplane status.
 //   - err: an error in case of failure.
-func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, logger logr.Logger, o t, konnectEnabled bool) (stop bool, res ctrl.Result, err error) {
+func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, o t, konnectEnabled bool) (stop bool, res ctrl.Result, err error) {
 	// extensionsCondition can be nil. In that case, no extensions are referenced by the object.
 	extensionsCondition := validateExtensions(o)
 	if extensionsCondition == nil {

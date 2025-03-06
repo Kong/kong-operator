@@ -44,7 +44,7 @@ type KonnectExtensionReconciler struct {
 	syncPeriod      time.Duration
 }
 
-// NewKonnectAPIAuthConfigurationReconciler creates a new KonnectAPIAuthConfigurationReconciler.
+// NewKonnectExtensionReconciler creates a new KonnectExtensionReconciler.
 func NewKonnectExtensionReconciler(
 	sdkFactory sdkops.SDKFactory,
 	developmentMode bool,
@@ -81,11 +81,11 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 		For(&konnectv1alpha1.KonnectExtension{}).
 		Watches(
 			&operatorv1beta1.DataPlane{},
-			handler.EnqueueRequestsFromMapFunc(listExtendableReferencedExtensions[*operatorv1beta1.DataPlane]()),
+			handler.EnqueueRequestsFromMapFunc(listExtendableReferencedExtensions[*operatorv1beta1.DataPlane]),
 		).
 		Watches(
 			&operatorv1beta1.ControlPlane{},
-			handler.EnqueueRequestsFromMapFunc(listExtendableReferencedExtensions[*operatorv1beta1.ControlPlane]()),
+			handler.EnqueueRequestsFromMapFunc(listExtendableReferencedExtensions[*operatorv1beta1.ControlPlane]),
 		).
 		Watches(
 			&konnectv1alpha1.KonnectAPIAuthConfiguration{},
@@ -116,33 +116,31 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 
 // listExtendableReferencedExtensions returns a list of all the KonnectExtensions referenced by the Extendable object.
 // Maximum one reference is expected.
-func listExtendableReferencedExtensions[t extensions.ExtendableT]() func(ctx context.Context, obj client.Object) []reconcile.Request {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		o := obj.(t)
-		if len(o.GetExtensions()) == 0 {
-			return nil
-		}
-
-		recs := []reconcile.Request{}
-
-		for _, ext := range o.GetExtensions() {
-			if ext.Group != operatorv1alpha1.SchemeGroupVersion.Group ||
-				ext.Kind != konnectv1alpha1.KonnectExtensionKind {
-				continue
-			}
-			namespace := obj.GetNamespace()
-			if ext.Namespace != nil && *ext.Namespace != namespace {
-				continue
-			}
-			recs = append(recs, reconcile.Request{
-				NamespacedName: client.ObjectKey{
-					Namespace: namespace,
-					Name:      ext.Name,
-				},
-			})
-		}
-		return recs
+func listExtendableReferencedExtensions[t extensions.ExtendableT](_ context.Context, obj client.Object) []reconcile.Request {
+	o := obj.(t)
+	if len(o.GetExtensions()) == 0 {
+		return nil
 	}
+
+	recs := []reconcile.Request{}
+
+	for _, ext := range o.GetExtensions() {
+		if ext.Group != operatorv1alpha1.SchemeGroupVersion.Group ||
+			ext.Kind != konnectv1alpha1.KonnectExtensionKind {
+			continue
+		}
+		namespace := obj.GetNamespace()
+		if ext.Namespace != nil && *ext.Namespace != namespace {
+			continue
+		}
+		recs = append(recs, reconcile.Request{
+			NamespacedName: client.ObjectKey{
+				Namespace: namespace,
+				Name:      ext.Name,
+			},
+		})
+	}
+	return recs
 }
 
 // Reconcile reconciles a KonnectExtension object.
@@ -603,6 +601,10 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		&ext,
 		readyCondition,
 	); err != nil || updated || !res.IsZero() {
+		return res, err
+	}
+
+	if res, err := r.ensureExtendablesReferencesInStatus(ctx, &ext, dataPlaneList, controlPlaneList); err != nil || !res.IsZero() {
 		return res, err
 	}
 

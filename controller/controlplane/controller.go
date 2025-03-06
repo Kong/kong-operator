@@ -290,7 +290,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	_ = controlplane.SetDefaults(
 		&cp.Spec.ControlPlaneOptions,
 		defaultArgs)
-	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, logger, cp, r.KonnectEnabled)
+	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, cp, r.KonnectEnabled)
 	if err != nil {
 		if extensionserrors.IsKonnectExtensionError(err) {
 			log.Debug(logger, "failed to apply extensions", "err", err)

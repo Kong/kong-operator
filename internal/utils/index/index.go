@@ -81,7 +81,7 @@ func KongPluginInstallationsOnDataPlane(ctx context.Context, c cache.Cache) erro
 
 // ExtendableOnKonnectExtension indexes the Object .spec.extensions field
 // on the "KonnectExtension" key.
-func ExtendableOnKonnectExtension[t extensions.ExtendableT](ctx context.Context, c cache.Cache, obj t) error {
+func ExtendableOnKonnectExtension[T extensions.ExtendableT](ctx context.Context, c cache.Cache, obj T) error {
 	if _, err := c.GetInformer(ctx, obj); err != nil {
 		if meta.IsNoMatchError(err) {
 			return nil
@@ -93,8 +93,12 @@ func ExtendableOnKonnectExtension[t extensions.ExtendableT](ctx context.Context,
 		obj,
 		KonnectExtensionIndex,
 		func(o client.Object) []string {
+			obj, ok := o.(T)
+			if !ok {
+				return nil
+			}
+
 			result := []string{}
-			obj := o.(t)
 			if len(obj.GetExtensions()) > 0 {
 				for _, ext := range obj.GetExtensions() {
 					namespace := obj.GetNamespace()
