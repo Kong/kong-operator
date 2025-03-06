@@ -14,7 +14,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/kong/gateway-operator/modules/manager/scheme"
-	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
@@ -154,7 +153,7 @@ func TestPatchStatusWithCondition(t *testing.T) {
 						{
 							Type:               string(kcfgdataplane.ReadyType),
 							Status:             metav1.ConditionFalse,
-							Reason:             string(consts.ResourceReadyReason),
+							Reason:             string(kcfgdataplane.ResourceReadyReason),
 							Message:            "",
 							ObservedGeneration: 1,
 						},

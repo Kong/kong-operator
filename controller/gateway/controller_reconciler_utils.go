@@ -33,6 +33,7 @@ import (
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -545,7 +546,7 @@ func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus()
 			kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed),
 			metav1.ConditionFalse,
 			kcfgconsts.ConditionReason(gatewayv1.GatewayReasonPending),
-			consts.DependenciesNotReadyMessage,
+			kcfgdataplane.DependenciesNotReadyMessage,
 			g.Generation),
 		g)
 	for i := range g.Spec.Listeners {

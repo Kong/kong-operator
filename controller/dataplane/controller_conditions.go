@@ -1,6 +1,8 @@
 package dataplane
 
-import "github.com/kong/gateway-operator/pkg/consts"
+import (
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
+)
 
 // -----------------------------------------------------------------------------
 // DataPlane - Status Condition Reasons
@@ -9,10 +11,10 @@ import "github.com/kong/gateway-operator/pkg/consts"
 const (
 	// DataPlaneConditionValidationFailed is a reason which indicates validation of
 	// a dataplane is failed.
-	DataPlaneConditionValidationFailed consts.ConditionReason = "ValidationFailed"
+	DataPlaneConditionValidationFailed kcfgconsts.ConditionReason = "ValidationFailed"
 
 	// DataPlaneConditionReferencedResourcesNotAvailable is a reason which indicates
 	// that the referenced resources in DataPlane configuration (e.g. KongPluginInstallation)
 	// are not available.
-	DataPlaneConditionReferencedResourcesNotAvailable consts.ConditionReason = "ReferencedResourcesNotAvailable"
+	DataPlaneConditionReferencedResourcesNotAvailable kcfgconsts.ConditionReason = "ReferencedResourcesNotAvailable"
 )

@@ -6,10 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
-
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -42,8 +41,8 @@ func TestValidateExtensions(t *testing.T) {
 			},
 			expected: &metav1.Condition{
 				Status:  metav1.ConditionTrue,
-				Type:    string(consts.AcceptedExtensionsType),
-				Reason:  string(consts.AcceptedExtensionsReason),
+				Type:    string(kcfgkonnect.AcceptedExtensionsType),
+				Reason:  string(kcfgkonnect.AcceptedExtensionsReason),
 				Message: "All extensions are accepted",
 			},
 		},
@@ -63,8 +62,8 @@ func TestValidateExtensions(t *testing.T) {
 			},
 			expected: &metav1.Condition{
 				Status:             metav1.ConditionFalse,
-				Type:               string(consts.AcceptedExtensionsType),
-				Reason:             string(consts.NotSupportedExtensionsReason),
+				Type:               string(kcfgkonnect.AcceptedExtensionsType),
+				Reason:             string(kcfgkonnect.NotSupportedExtensionsReason),
 				Message:            "Extension unsupported.group/UnsupportedKind is not supported",
 				ObservedGeneration: 1,
 			},
@@ -89,8 +88,8 @@ func TestValidateExtensions(t *testing.T) {
 			},
 			expected: &metav1.Condition{
 				Status:  metav1.ConditionFalse,
-				Type:    string(consts.AcceptedExtensionsType),
-				Reason:  string(consts.NotSupportedExtensionsReason),
+				Type:    string(kcfgkonnect.AcceptedExtensionsType),
+				Reason:  string(kcfgkonnect.NotSupportedExtensionsReason),
 				Message: "Extension konnect.konghq.com/KonnectExtension is duplicated",
 			},
 		},

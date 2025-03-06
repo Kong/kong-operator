@@ -47,6 +47,12 @@
 - Support for the `konnect-extension.gateway-operator.konghq.com` CRD has been interrupted. The new
   API `konnect-extension.konnect.konghq.com` must be used instead.
   [#1183](https://github.com/Kong/gateway-operator/pull/1183)
+- Migrate KGO CRDs conditions to the kubernetes-configuration repo.
+  With this migration process, we have moved all conditions from the KGO repo to [kubernetes-configuration](kubernetes-configuration).
+  This is a breaking change which requires manual action for projects that use operator's Go conditions types.
+  In order to migrate please use the import paths from the [kong/kubernetes-configuration](kubernetes-configuration) repo instead.
+  [#1281](https://github.com/Kong/gateway-operator/pull/1281)
+  [#1305](https://github.com/Kong/gateway-operator/pull/1305)
 
 [kubernetes-configuration]: https://github.com/Kong/kubernetes-configuration
 

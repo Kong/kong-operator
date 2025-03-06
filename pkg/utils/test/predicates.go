@@ -31,6 +31,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 )
@@ -105,7 +106,7 @@ func ControlPlaneIsScheduled(t *testing.T, ctx context.Context, controlPlane typ
 func DataPlaneIsReady(t *testing.T, ctx context.Context, dataplane types.NamespacedName, operatorClient *clientset.Clientset) func() bool {
 	return DataPlanePredicate(t, ctx, dataplane, func(c *operatorv1beta1.DataPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(consts.ReadyType) && condition.Status == metav1.ConditionTrue {
+			if condition.Type == string(kcfgdataplane.ReadyType) && condition.Status == metav1.ConditionTrue {
 				return true
 			}
 		}
@@ -150,7 +151,7 @@ func ControlPlaneIsProvisioned(t *testing.T, ctx context.Context, controlPlane t
 func ControlPlaneIsNotReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
 	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(consts.ReadyType) &&
+			if condition.Type == string(kcfgdataplane.ReadyType) &&
 				condition.Status == metav1.ConditionFalse {
 				return true
 			}
@@ -165,7 +166,7 @@ func ControlPlaneIsNotReady(t *testing.T, ctx context.Context, controlplane type
 func ControlPlaneIsReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
 	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv1beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(consts.ReadyType) &&
+			if condition.Type == string(kcfgdataplane.ReadyType) &&
 				condition.Status == metav1.ConditionTrue {
 				return true
 			}
@@ -773,7 +774,7 @@ func GatewayDataPlaneIsReady(t *testing.T, ctx context.Context, gateway *gwtypes
 				return false
 			}
 			for _, condition := range dataplanes[0].Status.Conditions {
-				if condition.Type == string(consts.ReadyType) &&
+				if condition.Type == string(kcfgdataplane.ReadyType) &&
 					condition.Status == metav1.ConditionTrue {
 					return true
 				}

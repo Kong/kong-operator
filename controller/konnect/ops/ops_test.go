@@ -18,8 +18,8 @@ import (
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/internal/metrics"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
-	"github.com/kong/gateway-operator/pkg/consts"
 
+	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -96,7 +96,7 @@ func TestCreate(t *testing.T) {
 			assertions: func(t *testing.T, ent *konnectv1alpha1.KonnectGatewayControlPlane) {
 				require.Len(t, ent.Status.Conditions, 1)
 				assert.Equal(t, metav1.ConditionFalse, ent.Status.Conditions[0].Status)
-				assert.EqualValues(t, consts.KonnectEntitiesFailedToCreateReason, ent.Status.Conditions[0].Reason)
+				assert.EqualValues(t, kcfgkonnect.KonnectEntitiesFailedToCreateReason, ent.Status.Conditions[0].Reason)
 				assert.Equal(t,
 					`failed to create KonnectGatewayControlPlane test-ns/test-cp: {"status":400,"title":"Invalid Request","instance":"","detail":"Invalid Parameters","invalid_parameters":[{"field":"labels","rule":"is_label","reason":"Label value exceeds maximum of 63 characters"}]}`,
 					ent.Status.Conditions[0].Message)
@@ -157,7 +157,7 @@ func TestCreate(t *testing.T) {
 				assert.Equal(t, metav1.ConditionFalse, ent.Status.Conditions[0].Status,
 					"Expected Programmed condition to be set to false",
 				)
-				assert.EqualValues(t, consts.KonnectEntitiesFailedToCreateReason, ent.Status.Conditions[0].Reason,
+				assert.EqualValues(t, kcfgkonnect.KonnectEntitiesFailedToCreateReason, ent.Status.Conditions[0].Reason,
 					"Expected Programmed condition's reason to be set to FailedToCreate",
 				)
 				assert.Equal(t,
@@ -205,7 +205,7 @@ func TestCreate(t *testing.T) {
 				assert.Equal(t, metav1.ConditionFalse, ent.Status.Conditions[0].Status,
 					"Expected Programmed condition to be set to false",
 				)
-				assert.EqualValues(t, consts.KonnectEntitiesFailedToCreateReason, ent.Status.Conditions[0].Reason,
+				assert.EqualValues(t, kcfgkonnect.KonnectEntitiesFailedToCreateReason, ent.Status.Conditions[0].Reason,
 					"Expected Programmed condition's reason to be set to FailedToCreate",
 				)
 				assert.Equal(t,
