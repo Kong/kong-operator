@@ -5,6 +5,7 @@ import (
 
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -15,9 +16,9 @@ func markAsProvisioned[T *operatorv1beta1.ControlPlane](resource T) {
 	if ok {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				ConditionTypeProvisioned,
+				kcfgcontrolplane.ConditionTypeProvisioned,
 				metav1.ConditionTrue,
-				ConditionReasonPodsReady,
+				kcfgcontrolplane.ConditionReasonPodsReady,
 				"pods for all Deployments are ready",
 				cp.Generation,
 			),

@@ -9,9 +9,10 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
-	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/vars"
+
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 )
 
 // Get returns a decorated GatewayClass object for the provided GatewayClass name. If the GatewayClass is
@@ -35,7 +36,7 @@ func Get(ctx context.Context, cl client.Client, gatewayClassName string) (*Decor
 			vars.ControllerName(),
 		))
 	}
-	acceptedCondition, found := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayClassConditionStatusAccepted), gwc)
+	acceptedCondition, found := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.GatewayClassConditionStatusAccepted), gwc)
 	if !found || acceptedCondition.Status != metav1.ConditionTrue {
 		return nil, operatorerrors.NewErrNotAcceptedGatewayClass(gatewayClassName, acceptedCondition)
 	}

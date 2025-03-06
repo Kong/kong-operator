@@ -17,7 +17,10 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
 )
 
 func TestPatchStatusWithCondition(t *testing.T) {
@@ -28,9 +31,9 @@ func TestPatchStatusWithCondition(t *testing.T) {
 			GetConditions() []metav1.Condition
 			SetConditions([]metav1.Condition)
 		}
-		conditionType      consts.ConditionType
+		conditionType      kcfgconsts.ConditionType
 		conditionStatus    metav1.ConditionStatus
-		conditionReason    consts.ConditionReason
+		conditionReason    kcfgconsts.ConditionReason
 		conditionMessage   string
 		expectedResult     ctrl.Result
 		expectedConditions []metav1.Condition
@@ -47,25 +50,25 @@ func TestPatchStatusWithCondition(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:               string(consts.ReadyType),
+							Type:               string(kcfgdataplane.ReadyType),
 							Status:             metav1.ConditionTrue,
-							Reason:             string(consts.KonnectExtensionAppliedReason),
+							Reason:             string(kcfgkonnect.KonnectExtensionAppliedReason),
 							Message:            "Resource is available",
 							ObservedGeneration: 1,
 						},
 					},
 				},
 			},
-			conditionType:    consts.ReadyType,
+			conditionType:    kcfgdataplane.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
-			conditionReason:  consts.KonnectExtensionAppliedReason,
+			conditionReason:  kcfgkonnect.KonnectExtensionAppliedReason,
 			conditionMessage: "Resource is available",
 			expectedResult:   ctrl.Result{},
 			expectedConditions: []metav1.Condition{
 				{
-					Type:               string(consts.ReadyType),
+					Type:               string(kcfgdataplane.ReadyType),
 					Status:             metav1.ConditionTrue,
-					Reason:             string(consts.KonnectExtensionAppliedReason),
+					Reason:             string(kcfgkonnect.KonnectExtensionAppliedReason),
 					Message:            "Resource is available",
 					ObservedGeneration: 1,
 				},
@@ -81,25 +84,25 @@ func TestPatchStatusWithCondition(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:               string(consts.ReadyType),
+							Type:               string(kcfgdataplane.ReadyType),
 							Status:             metav1.ConditionFalse,
-							Reason:             string(consts.KonnectExtensionAppliedReason),
+							Reason:             string(kcfgkonnect.KonnectExtensionAppliedReason),
 							Message:            "",
 							ObservedGeneration: 1,
 						},
 					},
 				},
 			},
-			conditionType:    consts.ReadyType,
+			conditionType:    kcfgdataplane.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
-			conditionReason:  consts.KonnectExtensionAppliedReason,
+			conditionReason:  kcfgkonnect.KonnectExtensionAppliedReason,
 			conditionMessage: "",
 			expectedResult:   ctrl.Result{},
 			expectedConditions: []metav1.Condition{
 				{
-					Type:               string(consts.ReadyType),
+					Type:               string(kcfgdataplane.ReadyType),
 					Status:             metav1.ConditionTrue,
-					Reason:             string(consts.KonnectExtensionAppliedReason),
+					Reason:             string(kcfgkonnect.KonnectExtensionAppliedReason),
 					Message:            "",
 					ObservedGeneration: 1,
 				},
@@ -115,25 +118,25 @@ func TestPatchStatusWithCondition(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:               string(consts.ReadyType),
+							Type:               string(kcfgdataplane.ReadyType),
 							Status:             metav1.ConditionTrue,
-							Reason:             string(consts.KonnectExtensionAppliedReason),
+							Reason:             string(kcfgkonnect.KonnectExtensionAppliedReason),
 							Message:            "",
 							ObservedGeneration: 1,
 						},
 					},
 				},
 			},
-			conditionType:    consts.ReadyType,
+			conditionType:    kcfgdataplane.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
-			conditionReason:  consts.KonnectExtensionAppliedReason,
+			conditionReason:  kcfgkonnect.KonnectExtensionAppliedReason,
 			conditionMessage: "",
 			expectedResult:   ctrl.Result{},
 			expectedConditions: []metav1.Condition{
 				{
-					Type:               string(consts.ReadyType),
+					Type:               string(kcfgdataplane.ReadyType),
 					Status:             metav1.ConditionTrue,
-					Reason:             string(consts.KonnectExtensionAppliedReason),
+					Reason:             string(kcfgkonnect.KonnectExtensionAppliedReason),
 					Message:            "",
 					ObservedGeneration: 2,
 				},
@@ -149,7 +152,7 @@ func TestPatchStatusWithCondition(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:               string(consts.ReadyType),
+							Type:               string(kcfgdataplane.ReadyType),
 							Status:             metav1.ConditionFalse,
 							Reason:             string(consts.ResourceReadyReason),
 							Message:            "",
@@ -158,16 +161,16 @@ func TestPatchStatusWithCondition(t *testing.T) {
 					},
 				},
 			},
-			conditionType:    consts.ReadyType,
+			conditionType:    kcfgdataplane.ReadyType,
 			conditionStatus:  metav1.ConditionFalse,
-			conditionReason:  consts.DependenciesNotReadyReason,
+			conditionReason:  kcfgdataplane.DependenciesNotReadyReason,
 			conditionMessage: "",
 			expectedResult:   ctrl.Result{},
 			expectedConditions: []metav1.Condition{
 				{
-					Type:               string(consts.ReadyType),
+					Type:               string(kcfgdataplane.ReadyType),
 					Status:             metav1.ConditionFalse,
-					Reason:             string(consts.DependenciesNotReadyReason),
+					Reason:             string(kcfgdataplane.DependenciesNotReadyReason),
 					Message:            "",
 					ObservedGeneration: 1,
 				},
@@ -182,16 +185,16 @@ func TestPatchStatusWithCondition(t *testing.T) {
 				},
 				Status: operatorv1beta1.DataPlaneStatus{},
 			},
-			conditionType:    consts.ReadyType,
+			conditionType:    kcfgdataplane.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
-			conditionReason:  consts.KonnectExtensionAppliedReason,
+			conditionReason:  kcfgkonnect.KonnectExtensionAppliedReason,
 			conditionMessage: "Resource is available",
 			expectedResult:   ctrl.Result{},
 			expectedConditions: []metav1.Condition{
 				{
-					Type:               string(consts.ReadyType),
+					Type:               string(kcfgdataplane.ReadyType),
 					Status:             metav1.ConditionTrue,
-					Reason:             string(consts.KonnectExtensionAppliedReason),
+					Reason:             string(kcfgkonnect.KonnectExtensionAppliedReason),
 					Message:            "Resource is available",
 					ObservedGeneration: 1,
 				},
@@ -206,9 +209,9 @@ func TestPatchStatusWithCondition(t *testing.T) {
 				},
 				Status: operatorv1beta1.DataPlaneStatus{},
 			},
-			conditionType:    consts.ReadyType,
+			conditionType:    kcfgdataplane.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
-			conditionReason:  consts.KonnectExtensionAppliedReason,
+			conditionReason:  kcfgkonnect.KonnectExtensionAppliedReason,
 			conditionMessage: "Resource is available",
 			expectedResult: ctrl.Result{
 				Requeue: true,
@@ -233,9 +236,9 @@ func TestPatchStatusWithCondition(t *testing.T) {
 				},
 				Status: operatorv1beta1.DataPlaneStatus{},
 			},
-			conditionType:    consts.ReadyType,
+			conditionType:    kcfgdataplane.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
-			conditionReason:  consts.KonnectExtensionAppliedReason,
+			conditionReason:  kcfgkonnect.KonnectExtensionAppliedReason,
 			conditionMessage: "Resource is available",
 			expectedError:    true,
 			interceptorFunc: interceptor.Funcs{
@@ -275,7 +278,7 @@ func TestPatchStatusWithCondition(t *testing.T) {
 			require.NoError(t, err)
 
 			for _, expectedCond := range tt.expectedConditions {
-				actualCond, ok := k8sutils.GetCondition(consts.ConditionType(expectedCond.Type), tt.obj)
+				actualCond, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(expectedCond.Type), tt.obj)
 				if !ok {
 					t.Fatalf("condition %s not found", expectedCond.Type)
 				}

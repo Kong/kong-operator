@@ -22,8 +22,8 @@ import (
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/internal/metrics"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
-	"github.com/kong/gateway-operator/pkg/consts"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -645,7 +645,7 @@ func TestSetGroupMembers(t *testing.T) {
 		sdk                     func(t *testing.T) *sdkmocks.MockControlPlaneGroupSDK
 		expectedErr             bool
 		memberRefResolvedStatus metav1.ConditionStatus
-		memberRefResolvedReason consts.ConditionReason
+		memberRefResolvedReason kcfgconsts.ConditionReason
 	}{
 		{
 			name: "no members",

@@ -1,9 +1,11 @@
 package consts
 
+import kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
+
 const (
 	// DataPlaneConditionTypeRolledOut is a condition type indicating whether or
 	// not, DataPlane's rollout has been successful or not.
-	DataPlaneConditionTypeRolledOut ConditionType = "RolledOut"
+	DataPlaneConditionTypeRolledOut kcfgconsts.ConditionType = "RolledOut"
 )
 
 const (
@@ -12,32 +14,32 @@ const (
 	// If this Reason is present and no automated rollout is disabled, user can
 	// use the preview services and deployment to inspect the state of those
 	// make a judgement call if the promotion should happen.
-	DataPlaneConditionReasonRolloutAwaitingPromotion ConditionReason = "AwaitingPromotion"
+	DataPlaneConditionReasonRolloutAwaitingPromotion kcfgconsts.ConditionReason = "AwaitingPromotion"
 
 	// DataPlaneConditionReasonRolloutFailed is a reason which indicates a DataPlane
 	// has failed to roll out. This may be caused for example by a Deployment or
 	// a Service failing to get created during a rollout.
-	DataPlaneConditionReasonRolloutFailed ConditionReason = "Failed"
+	DataPlaneConditionReasonRolloutFailed kcfgconsts.ConditionReason = "Failed"
 
 	// DataPlaneConditionReasonRolloutProgressing is a reason which indicates a DataPlane's
 	// new version is being rolled out.
-	DataPlaneConditionReasonRolloutProgressing ConditionReason = "Progressing"
+	DataPlaneConditionReasonRolloutProgressing kcfgconsts.ConditionReason = "Progressing"
 
 	// DataPlaneConditionReasonRolloutWaitingForChange is a reason which indicates a DataPlane
 	// is waiting for a change to trigger new version to be made available before promotion.
-	DataPlaneConditionReasonRolloutWaitingForChange ConditionReason = "WaitingForChange"
+	DataPlaneConditionReasonRolloutWaitingForChange kcfgconsts.ConditionReason = "WaitingForChange"
 
 	// DataPlaneConditionReasonRolloutPromotionInProgress is a reason which
 	// indicates that a promotion is in progress.
-	DataPlaneConditionReasonRolloutPromotionInProgress ConditionReason = "PromotionInProgress"
+	DataPlaneConditionReasonRolloutPromotionInProgress kcfgconsts.ConditionReason = "PromotionInProgress"
 
 	// DataPlaneConditionReasonRolloutPromotionFailed is a reason which indicates
 	// a DataPlane has failed to promote. This may be caused for example by
 	// a failure in updating a live Service.
-	DataPlaneConditionReasonRolloutPromotionFailed ConditionReason = "PromotionFailed"
+	DataPlaneConditionReasonRolloutPromotionFailed kcfgconsts.ConditionReason = "PromotionFailed"
 
 	// DataPlaneConditionReasonRolloutPromotionDone is a reason which indicates that a promotion is done.
-	DataPlaneConditionReasonRolloutPromotionDone ConditionReason = "PromotionDone"
+	DataPlaneConditionReasonRolloutPromotionDone kcfgconsts.ConditionReason = "PromotionDone"
 )
 
 const (

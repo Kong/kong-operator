@@ -7,6 +7,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/gateway-operator/pkg/consts"
+
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 )
 
 type TestResource struct {
@@ -73,7 +75,7 @@ func TestGetCondition(t *testing.T) {
 			resource := &TestResource{
 				Conditions: tt.conditions,
 			}
-			current, exists := GetCondition(consts.ConditionType(tt.condition), resource)
+			current, exists := GetCondition(kcfgconsts.ConditionType(tt.condition), resource)
 			assert.Equal(t, tt.expected, current)
 			assert.Equal(t, tt.expectedFound, exists)
 		})
@@ -332,7 +334,7 @@ func TestIsValidCondition(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			current := HasConditionTrue(consts.ConditionType(tt.input), resource)
+			current := HasConditionTrue(kcfgconsts.ConditionType(tt.input), resource)
 			assert.Equal(t, tt.expected, current)
 		})
 	}

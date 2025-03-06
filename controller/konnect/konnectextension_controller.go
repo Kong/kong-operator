@@ -28,6 +28,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -187,9 +188,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		cond.ObservedGeneration != ext.GetGeneration() {
 		if res, err := patch.StatusWithCondition(
 			ctx, r.Client, &ext,
-			consts.ConditionType(konnectv1alpha1.KonnectExtensionReadyConditionType),
+			kcfgconsts.ConditionType(konnectv1alpha1.KonnectExtensionReadyConditionType),
 			metav1.ConditionFalse,
-			consts.ConditionReason(konnectv1alpha1.KonnectExtensionReadyReasonProvisioning),
+			kcfgconsts.ConditionReason(konnectv1alpha1.KonnectExtensionReadyReasonProvisioning),
 			"provisioning in progress",
 		); err != nil || !res.IsZero() {
 			return res, err
@@ -245,9 +246,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if err != nil {
 			_, errPatch := patch.StatusWithCondition(
 				ctx, r.Client, &ext,
-				consts.ConditionType(konnectv1alpha1.ControlPlaneRefValidConditionType),
+				kcfgconsts.ConditionType(konnectv1alpha1.ControlPlaneRefValidConditionType),
 				metav1.ConditionFalse,
-				consts.ConditionReason(konnectv1alpha1.ControlPlaneRefReasonInvalid),
+				kcfgconsts.ConditionReason(konnectv1alpha1.ControlPlaneRefReasonInvalid),
 				err.Error(),
 			)
 			return ctrl.Result{}, errPatch
@@ -259,9 +260,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}) {
 			_, errPatch := patch.StatusWithCondition(
 				ctx, r.Client, &ext,
-				consts.ConditionType(konnectv1alpha1.ControlPlaneRefValidConditionType),
+				kcfgconsts.ConditionType(konnectv1alpha1.ControlPlaneRefValidConditionType),
 				metav1.ConditionFalse,
-				consts.ConditionReason(konnectv1alpha1.ControlPlaneRefReasonInvalid),
+				kcfgconsts.ConditionReason(konnectv1alpha1.ControlPlaneRefReasonInvalid),
 				fmt.Sprintf("Konnect control plane %s/%s not programmed yet", cpNamepace, cpRef.Name),
 			)
 			// Update of KonnectGatewayControlPlane will trigger reconciliation of KonnectExtension.
@@ -276,18 +277,18 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if err != nil {
 		_, err := patch.StatusWithCondition(
 			ctx, r.Client, &ext,
-			consts.ConditionType(konnectv1alpha1.ControlPlaneRefValidConditionType),
+			kcfgconsts.ConditionType(konnectv1alpha1.ControlPlaneRefValidConditionType),
 			metav1.ConditionFalse,
-			consts.ConditionReason(konnectv1alpha1.ControlPlaneRefReasonInvalid),
+			kcfgconsts.ConditionReason(konnectv1alpha1.ControlPlaneRefReasonInvalid),
 			err.Error(),
 		)
 		return ctrl.Result{}, err
 	}
 	if res, err := patch.StatusWithCondition(
 		ctx, r.Client, &ext,
-		consts.ConditionType(konnectv1alpha1.ControlPlaneRefValidConditionType),
+		kcfgconsts.ConditionType(konnectv1alpha1.ControlPlaneRefValidConditionType),
 		metav1.ConditionTrue,
-		consts.ConditionReason(konnectv1alpha1.ControlPlaneRefReasonValid),
+		kcfgconsts.ConditionReason(konnectv1alpha1.ControlPlaneRefReasonValid),
 		"ControlPlaneRef is valid",
 	); err != nil || !res.IsZero() {
 		return res, err
@@ -297,18 +298,18 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	if err != nil {
 		_, err := patch.StatusWithCondition(
 			ctx, r.Client, &ext,
-			consts.ConditionType(konnectv1alpha1.DataPlaneCertificateProvisionedConditionType),
+			kcfgconsts.ConditionType(konnectv1alpha1.DataPlaneCertificateProvisionedConditionType),
 			metav1.ConditionFalse,
-			consts.ConditionReason(konnectv1alpha1.DataPlaneCertificateProvisionedReasonRefNotFound),
+			kcfgconsts.ConditionReason(konnectv1alpha1.DataPlaneCertificateProvisionedReasonRefNotFound),
 			err.Error(),
 		)
 		return ctrl.Result{}, err
 	}
 	if res, err := patch.StatusWithCondition(
 		ctx, r.Client, &ext,
-		consts.ConditionType(konnectv1alpha1.DataPlaneCertificateProvisionedConditionType),
+		kcfgconsts.ConditionType(konnectv1alpha1.DataPlaneCertificateProvisionedConditionType),
 		metav1.ConditionTrue,
-		consts.ConditionReason(konnectv1alpha1.DataPlaneCertificateProvisionedReasonProvisioned),
+		kcfgconsts.ConditionReason(konnectv1alpha1.DataPlaneCertificateProvisionedReasonProvisioned),
 		"DataPlane client certificate is provisioned",
 	); err != nil || !res.IsZero() {
 		return res, err
@@ -335,9 +336,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	if res, err := patch.StatusWithCondition(
 		ctx, r.Client, &ext,
-		consts.ConditionType(konnectv1alpha1.KonnectExtensionReadyConditionType),
+		kcfgconsts.ConditionType(konnectv1alpha1.KonnectExtensionReadyConditionType),
 		metav1.ConditionTrue,
-		consts.ConditionReason(konnectv1alpha1.KonnectExtensionReadyReasonReady),
+		kcfgconsts.ConditionReason(konnectv1alpha1.KonnectExtensionReadyReasonReady),
 		"KonnectExtension is ready",
 	); err != nil || !res.IsZero() {
 		return res, err
