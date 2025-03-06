@@ -28,6 +28,8 @@ func init() {
 	SchemeBuilder.Register(&ControlPlane{}, &ControlPlaneList{})
 }
 
+// ControlPlane is the Schema for the controlplanes API
+//
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
@@ -35,9 +37,7 @@ func init() {
 // +kubebuilder:resource:shortName=kocp,categories=kong;all
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Provisioned",description="The Resource is provisioned",type=string,JSONPath=`.status.conditions[?(@.type=='Provisioned')].status`
-// +kubebuilder:validation:XValidation:message="ControlPlane requires an image to be set on controller container",rule="((has(self.spec.deployment) && has(self.spec.deployment.podTemplateSpec) && has(self.spec.deployment.podTemplateSpec.spec)) ? self.spec.deployment.podTemplateSpec.spec.containers.exists(c, c.name == 'controller' && has(c.image)) : true)"
-
-// ControlPlane is the Schema for the controlplanes API
+// +kubebuilder:validation:XValidation:message="ControlPlane requires an image to be set on controller container",rule="has(self.spec.deployment.podTemplateSpec) && has(self.spec.deployment.podTemplateSpec.spec.containers) && self.spec.deployment.podTemplateSpec.spec.containers.exists(c, c.name == 'controller' && has(c.image))"
 // +apireference:kgo:include
 // +kong:channels=gateway-operator
 type ControlPlane struct {

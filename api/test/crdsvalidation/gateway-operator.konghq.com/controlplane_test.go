@@ -96,6 +96,7 @@ func TestControlPlane(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta,
 					Spec:       operatorv1beta1.ControlPlaneSpec{},
 				},
+				ExpectedErrorMessage: lo.ToPtr("ControlPlane requires an image to be set on controller container"),
 			},
 			{
 				Name: "with deploymentSpec",
@@ -107,6 +108,7 @@ func TestControlPlane(t *testing.T) {
 						},
 					},
 				},
+				ExpectedErrorMessage: lo.ToPtr("ControlPlane requires an image to be set on controller container"),
 			},
 			{
 				Name: "missing container",

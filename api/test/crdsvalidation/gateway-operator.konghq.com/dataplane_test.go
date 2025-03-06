@@ -70,6 +70,7 @@ func TestDataplane(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta,
 					Spec:       operatorv1beta1.DataPlaneSpec{},
 				},
+				ExpectedErrorMessage: lo.ToPtr("DataPlane requires an image to be set on proxy container"),
 			},
 			{
 				Name: "with deploymentSpec",
@@ -83,6 +84,7 @@ func TestDataplane(t *testing.T) {
 						},
 					},
 				},
+				ExpectedErrorMessage: lo.ToPtr("DataPlane requires an image to be set on proxy container"),
 			},
 			{
 				Name: "missing container",
