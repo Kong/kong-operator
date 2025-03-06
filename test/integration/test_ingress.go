@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/controller/controlplane"
 	"github.com/kong/gateway-operator/internal/annotations"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -30,6 +29,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/vars"
 	"github.com/kong/gateway-operator/test/helpers"
 
+	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
@@ -115,7 +115,7 @@ func TestIngressEssentials(t *testing.T) {
 		}
 		if len(controlplanes) == 1 {
 			for _, condition := range controlplanes[0].Status.Conditions {
-				if condition.Type == string(controlplane.ConditionTypeProvisioned) && condition.Status == metav1.ConditionTrue {
+				if condition.Type == string(kcfgcontrolplane.ConditionTypeProvisioned) && condition.Status == metav1.ConditionTrue {
 					controlPlane = &controlplanes[0]
 					return true
 				}

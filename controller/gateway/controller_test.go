@@ -29,6 +29,7 @@ import (
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
+	kcfggateway "github.com/kong/kubernetes-configuration/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -277,10 +278,10 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				var currentGateway gwtypes.Gateway
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
 				require.False(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
-				condition, found := k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
+				condition, found := k8sutils.GetCondition(kcfggateway.GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, metav1.ConditionFalse, condition.Status)
-				require.Equal(t, GatewayReasonServiceError, kcfgconsts.ConditionReason(condition.Reason))
+				require.Equal(t, kcfggateway.GatewayReasonServiceError, kcfgconsts.ConditionReason(condition.Reason))
 				require.Empty(t, currentGateway.Status.Addresses)
 
 				t.Log("adding a ClusterIP to the dataplane service")
@@ -296,7 +297,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				// the dataplane service now has a clusterIP assigned, the gateway must be ready
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
 				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
-				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
+				condition, found = k8sutils.GetCondition(kcfggateway.GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, metav1.ConditionTrue, condition.Status)
 				require.Equal(t, kcfgdataplane.ResourceReadyReason, kcfgconsts.ConditionReason(condition.Reason))
@@ -330,7 +331,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err, "reconciliation returned an error")
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
 				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
-				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
+				condition, found = k8sutils.GetCondition(kcfggateway.GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, metav1.ConditionTrue, condition.Status)
 				require.Equal(t, kcfgdataplane.ResourceReadyReason, kcfgconsts.ConditionReason(condition.Reason))
@@ -363,7 +364,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err, "reconciliation returned an error")
 				require.NoError(t, reconciler.Client.Get(ctx, gatewayReq.NamespacedName, &currentGateway))
 				require.True(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
-				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
+				condition, found = k8sutils.GetCondition(kcfggateway.GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, metav1.ConditionTrue, condition.Status)
 				require.Equal(t, kcfgdataplane.ResourceReadyReason, kcfgconsts.ConditionReason(condition.Reason))
@@ -385,10 +386,10 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				// the dataplane service has no clusterIP assigned, the gateway must be not ready
 				// and no addresses must be assigned
 				require.False(t, k8sutils.IsProgrammed(gatewayConditionsAndListenersAware(&currentGateway)))
-				condition, found = k8sutils.GetCondition(GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
+				condition, found = k8sutils.GetCondition(kcfggateway.GatewayServiceType, gatewayConditionsAndListenersAware(&currentGateway))
 				require.True(t, found)
 				require.Equal(t, metav1.ConditionFalse, condition.Status)
-				require.Equal(t, GatewayReasonServiceError, kcfgconsts.ConditionReason(condition.Reason))
+				require.Equal(t, kcfggateway.GatewayReasonServiceError, kcfgconsts.ConditionReason(condition.Reason))
 				require.Empty(t, currentGateway.Status.Addresses)
 			},
 		},

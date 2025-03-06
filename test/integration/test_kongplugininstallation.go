@@ -21,7 +21,6 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/gateway-operator/controller/dataplane"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
 
@@ -78,7 +77,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 	attachKPI(t, gatewayConfigNN, kpiPublicNN)
 	t.Log("ensure that status of the DataPlane is not ready with proper description of the issue")
 	checkDataPlaneStatus(
-		t, namespace.Name, metav1.ConditionFalse, dataplane.DataPlaneConditionReferencedResourcesNotAvailable,
+		t, namespace.Name, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable,
 		fmt.Sprintf("something wrong with referenced KongPluginInstallation %s, please check it", client.ObjectKeyFromObject(kpiPublic)),
 	)
 
@@ -142,7 +141,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 		)
 		attachKPI(t, gatewayConfigNN, kpiPrivateNN)
 		checkDataPlaneStatus(
-			t, namespace.Name, metav1.ConditionFalse, dataplane.DataPlaneConditionReferencedResourcesNotAvailable,
+			t, namespace.Name, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable,
 			fmt.Sprintf("something wrong with referenced KongPluginInstallation %s, please check it", client.ObjectKeyFromObject(kpiPrivate)),
 		)
 
@@ -177,7 +176,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 			fmt.Sprintf(`referenced Secret "%s/%s" not found`, *secretRef.Namespace, secretRef.Name),
 		)
 		checkDataPlaneStatus(
-			t, namespace.Name, metav1.ConditionFalse, dataplane.DataPlaneConditionReferencedResourcesNotAvailable,
+			t, namespace.Name, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable,
 			fmt.Sprintf("something wrong with referenced KongPluginInstallation %s, please check it", client.ObjectKeyFromObject(kpiPrivate)),
 		)
 
