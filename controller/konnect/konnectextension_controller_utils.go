@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -21,6 +24,8 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	"github.com/kong/kubernetes-configuration/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -132,6 +137,76 @@ func (r *KonnectExtensionReconciler) getKonnectControlPlane(
 	}
 
 	return konnectCP, ctrl.Result{}, err
+}
+
+// ensureExtendablesReferencesInStatus ensures that the KonnectExtension references to DataPlane and ControlPlane are up-to-date.
+// Only DataPlanes and ControlPlanes with the condition KonnectExtensionApplied=True are added to the status.
+func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
+	ctx context.Context,
+	ext *konnectv1alpha1.KonnectExtension,
+	dps operatorv1beta1.DataPlaneList,
+	cps operatorv1beta1.ControlPlaneList,
+) (ctrl.Result, error) {
+	sortRefs := func(refs []commonv1alpha1.NamespacedRef) {
+		refToStr := func(ref commonv1alpha1.NamespacedRef) string {
+			// We can safely assume that the namespace is not nil, as we fill it when mapping refs.
+			return fmt.Sprintf("%s/%s", *ref.Namespace, ref.Name)
+		}
+		sort.Slice(refs, func(i, j int) bool {
+			return refToStr(refs[i]) < refToStr(refs[j])
+		})
+	}
+	hasExtensionAppliedCondition := func(conditions []metav1.Condition) bool {
+		return lo.ContainsBy(conditions, func(cond metav1.Condition) bool {
+			return cond.Type == string(konnect.KonnectExtensionAppliedType) &&
+				cond.Status == metav1.ConditionTrue
+		})
+	}
+
+	extOld := ext.DeepCopy()
+
+	// Ensure DataPlaneRefs are up-to-date.
+	var dpRefs []commonv1alpha1.NamespacedRef
+	for _, dp := range dps.Items {
+		// Only add DataPlanes with the KonnectExtensionApplied condition set to true.
+		if !hasExtensionAppliedCondition(dp.Status.Conditions) {
+			continue
+		}
+		dpRefs = append(dpRefs, commonv1alpha1.NamespacedRef{
+			Name:      dp.Name,
+			Namespace: &dp.Namespace,
+		})
+	}
+	sortRefs(dpRefs)
+	ext.Status.DataPlaneRefs = dpRefs
+
+	// Ensure ControlPlaneRefs are up-to-date.
+	var cpRefs []commonv1alpha1.NamespacedRef
+	for _, cp := range cps.Items {
+		// Only add ControlPlanes with the KonnectExtensionApplied condition set to true.
+		if !hasExtensionAppliedCondition(cp.Status.Conditions) {
+			continue
+		}
+		cpRefs = append(cpRefs, commonv1alpha1.NamespacedRef{
+			Name:      cp.Name,
+			Namespace: &cp.Namespace,
+		})
+	}
+	sortRefs(cpRefs)
+	ext.Status.ControlPlaneRefs = cpRefs
+
+	if shouldUpdate := !cmp.Equal(ext.Status, extOld.Status); !shouldUpdate {
+		return ctrl.Result{}, nil
+	}
+
+	if err := r.Client.Status().Update(ctx, ext); err != nil {
+		if k8serrors.IsConflict(err) {
+			// Gracefully requeue in case of conflict.
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("failed to update KonnectExtension ControlPlane and DataPlane references in status: %w", err)
+	}
+	return ctrl.Result{Requeue: true}, nil
 }
 
 func getKonnectAPIAuthRefNN(ctx context.Context, cl client.Client, ext *konnectv1alpha1.KonnectExtension) (types.NamespacedName, error) {
