@@ -35,7 +35,7 @@ WORKDIR /workspace
 
 RUN --mount=type=cache,target=$GOPATH/pkg/mod \
     --mount=type=cache,target=$GOCACHE \
-    go install github.com/go-delve/delve/cmd/dlv@v1.22.1
+    go install github.com/go-delve/delve/cmd/dlv@v1.24.0
 
 # Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
 # layers when using COPY instructions for go.mod and go.sum.
