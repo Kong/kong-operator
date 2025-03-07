@@ -30,7 +30,7 @@ func EnsureObjectMetaIsUpdated(
 ) (toUpdate bool, updatedMeta metav1.ObjectMeta) {
 	var metaToUpdate bool
 
-	// compare and enforce annotations. Take into account the fact that we don't
+	// Compare and enforce annotations. Take into account the fact that we don't
 	// want to compare all annotations as some might be added by other controllers.
 	// We only want to compare the annotations that are added by the operator.
 	if generatedMeta.Annotations != nil {
