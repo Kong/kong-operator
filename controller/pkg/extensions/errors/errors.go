@@ -1,6 +1,8 @@
 package errors
 
-import "errors"
+import (
+	"errors"
+)
 
 var (
 	// ErrCrossNamespaceReference is returned when a Konnect extension references a different namespace.
@@ -13,6 +15,9 @@ var (
 	ErrKonnectExtensionNotReady = errors.New("konnect extension is not ready")
 	// ErrInvalidExtensions is returned when an invalid extension is referenced.
 	ErrInvalidExtensions = errors.New("invalid extensions")
+
+	// ErrKonnectGatewayControlPlaneNotProgrammed is returned when a control plane is not programmed.
+	ErrKonnectGatewayControlPlaneNotProgrammed = errors.New("konnect control plane is not programmed yet")
 )
 
 // IsKonnectExtensionError returns true if the error is a Konnect extension error.

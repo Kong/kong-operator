@@ -20,6 +20,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 
@@ -80,7 +81,7 @@ func (r *KonnectExtensionReconciler) getKonnectControlPlane(
 			); errPatch != nil || !res.IsZero() {
 				return nil, res, errPatch
 			}
-			return nil, ctrl.Result{}, nil
+			return nil, ctrl.Result{}, err
 		}
 
 		// set the controlPlaneRefValidCond to false in case the KonnectGatewayControlPlane is not programmed yet
@@ -99,7 +100,7 @@ func (r *KonnectExtensionReconciler) getKonnectControlPlane(
 			); errPatch != nil || !res.IsZero() {
 				return nil, res, errPatch
 			}
-			return nil, ctrl.Result{}, nil
+			return nil, ctrl.Result{}, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed
 		}
 		konnectCPID = kgcp.GetKonnectID()
 	case commonv1alpha1.ControlPlaneRefKonnectID:
