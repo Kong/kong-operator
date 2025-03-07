@@ -33,11 +33,13 @@ func EnsureObjectMetaIsUpdated(
 	// compare and enforce annotations. Take into account the fact that we don't
 	// want to compare all annotations as some might be added by other controllers.
 	// We only want to compare the annotations that are added by the operator.
+	if generatedMeta.Annotations != nil {
+		if existingMeta.Annotations == nil {
+			existingMeta.Annotations = make(map[string]string, len(generatedMeta.Annotations))
+		}
+	}
 	for key, value := range generatedMeta.Annotations {
 		if existingValue, ok := existingMeta.Annotations[key]; !ok || existingValue != value {
-			if existingMeta.Annotations == nil {
-				existingMeta.Annotations = make(map[string]string, len(generatedMeta.Annotations))
-			}
 			existingMeta.Annotations[key] = value
 			metaToUpdate = true
 		}
