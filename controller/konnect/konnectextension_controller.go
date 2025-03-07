@@ -32,7 +32,6 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -126,7 +125,7 @@ func listExtendableReferencedExtensions[t extensions.ExtendableT](_ context.Cont
 	recs := []reconcile.Request{}
 
 	for _, ext := range o.GetExtensions() {
-		if ext.Group != operatorv1alpha1.SchemeGroupVersion.Group ||
+		if ext.Group != konnectv1alpha1.SchemeGroupVersion.Group ||
 			ext.Kind != konnectv1alpha1.KonnectExtensionKind {
 			continue
 		}
@@ -224,8 +223,8 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					return ctrl.Result{}, err
 				}
 				log.Debug(logger, "Secret-in-use finalizer removed from Secret")
+				return ctrl.Result{}, nil
 			}
-			return ctrl.Result{}, nil
 		}
 
 		// if the certificate does not exist, or the cleanup in Konnect has been performed, we can remove the konnect-cleanup finalizer from the konnectExtension.
@@ -266,10 +265,12 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return res, err
 		}
 	}
-
 	apiAuthRef, err := getKonnectAPIAuthRefNN(ctx, r.Client, &ext)
 	if err != nil {
-		return ctrl.Result{}, err
+		if client.IgnoreNotFound(err) != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{}, nil
 	}
 
 	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
@@ -323,10 +324,10 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// get the Konnect Control Plane
 	cp, res, err := r.getKonnectControlPlane(ctx, logger, sdk.GetControlPlaneSDK(), ext)
 	if err != nil || !res.IsZero() {
-		if !k8serrors.IsNotFound(err) || !errors.Is(err, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed) {
+		if !k8serrors.IsNotFound(err) && !errors.Is(err, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed) {
 			return res, err
 		}
-		log.Debug(logger, "controlPlane not ready")
+		log.Debug(logger, "controlPlane not ready yet")
 		return res, nil
 	}
 
@@ -411,7 +412,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 
 		log.Debug(logger, "DataPlane client certificate list retrieval failed in Konnect")
-		return ctrl.Result{RequeueAfter: r.syncPeriod}, err
+		// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
+		// if the syncPeriod is set to zero, the controller won't requeue.
+		return ctrl.Result{Requeue: true, RequeueAfter: r.syncPeriod}, err
 	}
 
 	var (
@@ -475,7 +478,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				); err != nil || updated || !res.IsZero() {
 					return res, err
 				}
-				return ctrl.Result{RequeueAfter: r.syncPeriod}, err
+				// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
+				// if the syncPeriod is set to zero, the controller won't requeue.
+				return ctrl.Result{Requeue: true, RequeueAfter: r.syncPeriod}, err
 			}
 		}
 		updated, res, err := patch.WithFinalizer(ctx, r.Client, &ext, KonnectCleanupFinalizer)
@@ -524,7 +529,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					return res, err
 				}
 				// In case of an error in the Konnect ops, the resync period will take care of a new creation attempt.
-				return ctrl.Result{RequeueAfter: r.syncPeriod}, err
+				// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
+				// if the syncPeriod is set to zero, the controller won't requeue.
+				return ctrl.Result{Requeue: true, RequeueAfter: r.syncPeriod}, err
 			}
 		}
 
@@ -617,8 +624,11 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// NOTE: We requeue here to keep enforcing the state of the resource in Konnect.
 	// Konnect does not allow subscribing to changes so we need to keep pushing the
 	// desired state periodically.
+	// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
+	// if the syncPeriod is set to zero, the controller won't requeue.
 	log.Debug(logger, "reconciled")
 	return ctrl.Result{
+		Requeue:      true,
 		RequeueAfter: r.syncPeriod,
 	}, nil
 }
