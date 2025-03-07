@@ -268,7 +268,6 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	apiAuthRef, err := getKonnectAPIAuthRefNN(ctx, r.Client, &ext)
-
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -479,15 +478,12 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				return ctrl.Result{RequeueAfter: r.syncPeriod}, err
 			}
 		}
-		updated = controllerutil.AddFinalizer(&ext, KonnectCleanupFinalizer)
+		updated, res, err := patch.WithFinalizer(ctx, r.Client, &ext, KonnectCleanupFinalizer)
+		if err != nil || !res.IsZero() {
+			return res, err
+		}
 		if updated {
-			if err := r.Client.Update(ctx, &ext); err != nil {
-				if k8serrors.IsConflict(err) {
-					return ctrl.Result{Requeue: true}, nil
-				}
-				return ctrl.Result{}, err
-			}
-			log.Info(logger, "konnectCleanup finalizer addded on konnectExtension")
+			log.Info(logger, "KonnectExtension finalizer addded", "finalizer", KonnectCleanupFinalizer)
 			return ctrl.Result{}, nil
 		}
 	case cleanup:

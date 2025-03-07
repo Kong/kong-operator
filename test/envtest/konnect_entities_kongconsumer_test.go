@@ -9,6 +9,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -437,8 +438,8 @@ func TestKongConsumer(t *testing.T) {
 		created := deploy.KongConsumer(t, ctx, clientNamespaced, name,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
-				cert := obj.(*configurationv1.KongConsumer)
-				cert.Username = name
+				c := obj.(*configurationv1.KongConsumer)
+				c.Username = name
 			},
 		)
 
@@ -455,6 +456,103 @@ func TestKongConsumer(t *testing.T) {
 		watchFor(t, ctx, w, apiwatch.Modified,
 			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongConsumer didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
+		)
+	})
+
+	t.Run("detaching and reattaching the referenced CP correctly removes and readds the konnect cleanup finalizer", func(t *testing.T) {
+		const (
+			id   = "abc-1234567"
+			name = "name-2"
+		)
+
+		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
+		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+
+		w := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on KongConsumer creation")
+		sdk.ConsumersSDK.EXPECT().
+			CreateConsumer(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.ConsumerInput) bool {
+					return req.Username != nil && *req.Username == name
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateConsumerResponse{
+					Consumer: &sdkkonnectcomp.Consumer{
+						ID:       lo.ToPtr(id),
+						Username: lo.ToPtr(name),
+					},
+				},
+				nil,
+			)
+
+		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
+		sdk.ConsumerGroupSDK.EXPECT().
+			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
+				ConsumerID:     id,
+				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
+			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
+
+		created := deploy.KongConsumer(t, ctx, clientNamespaced, name,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				c := obj.(*configurationv1.KongConsumer)
+				c.Username = name
+			},
+		)
+
+		t.Log("Waiting for object to be programmed and get Konnect ID")
+		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
+			fmt.Sprintf("Consumer didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
+
+		t.Log("Deleting KonnectGatewayControlPlane")
+		require.NoError(t, clientNamespaced.Delete(ctx, cp))
+
+		t.Log("Waiting for object to be get Programmed and ControlPlaneRefValid conditions with status=False and konnect cleanup finalizer removed")
+		watchFor(t, ctx, w, apiwatch.Modified,
+			assertsAnd(
+				assertNot(objectHasFinalizer[*configurationv1.KongConsumer](konnect.KonnectCleanupFinalizer)),
+				conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+			),
+			"Object didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
+		)
+
+		id2 := uuid.New().String()
+		t.Log("Setting up SDK expectations on KongConsumer update (after KonnectGatewayControlPlane deletion)")
+		sdk.ConsumersSDK.EXPECT().
+			UpsertConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertConsumerRequest) bool {
+				return r.ConsumerID == id
+			})).
+			Return(&sdkkonnectops.UpsertConsumerResponse{
+				Consumer: &sdkkonnectcomp.Consumer{
+					ID: lo.ToPtr(id2),
+				},
+			}, nil)
+
+		cp = deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth,
+			func(obj client.Object) {
+				cpNew := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+				cpNew.Name = cp.Name
+			},
+		)
+		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
+		sdk.ConsumerGroupSDK.EXPECT().
+			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
+				ConsumerID:     id,
+				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
+			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
+
+		t.Log("Waiting for object to be get Programmed with status=True and konnect cleanup finalizer re added")
+		watchFor(t, ctx, w, apiwatch.Modified,
+			assertsAnd(
+				objectHasConditionProgrammedSetToTrue[*configurationv1.KongConsumer](),
+				objectHasFinalizer[*configurationv1.KongConsumer](konnect.KonnectCleanupFinalizer),
+			),
+			"Object didn't get Programmed set to True",
 		)
 	})
 }
