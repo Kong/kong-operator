@@ -683,6 +683,25 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 				},
 				ExpectedUpdateErrorMessage: lo.ToPtr("spec.cluster_type is immutable"),
 			},
+			{
+				Name: "cannot set cloud_gateway for cluster_type CLUSTER_TYPE_K8S_INGRESS_CONTROLLER",
+				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							Name:         "cp-1",
+							ClusterType:  sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
+							CloudGateway: lo.ToPtr(true),
+						},
+						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+								Name: "name-1",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("cloud_gateway cannot be set for cluster_type 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'"),
+			},
 		}.Run(t)
 	})
 }
