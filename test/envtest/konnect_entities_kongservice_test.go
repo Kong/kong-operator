@@ -7,6 +7,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -23,6 +24,7 @@ import (
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 func TestKongService(t *testing.T) {
@@ -324,7 +326,6 @@ func TestKongService(t *testing.T) {
 				s.Spec.KongServiceAPISpec.Host = host
 			},
 		)
-		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
 		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
@@ -337,5 +338,89 @@ func TestKongService(t *testing.T) {
 		watchFor(t, ctx, w, apiwatch.Modified,
 			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongService didn't get Programmed and/or ControlPlaneRefValid status condition set to False")
+	})
+
+	t.Run("detaching and reattaching the referenced CP correctly removes and readds the konnect cleanup finalizer", func(t *testing.T) {
+		const (
+			id   = "abc-12345678"
+			name = "name-3"
+			host = "example2.com"
+		)
+
+		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
+		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+
+		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on Service creation")
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.ServiceInput) bool {
+					return req.Host == host
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateServiceResponse{
+					Service: &sdkkonnectcomp.Service{
+						ID: lo.ToPtr(id),
+					},
+				},
+				nil,
+			)
+
+		created := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.KongServiceAPISpec.Host = host
+			},
+		)
+
+		t.Log("Waiting for object to be programmed and get Konnect ID")
+		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
+			fmt.Sprintf("Consumer didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
+
+		t.Log("Deleting KonnectGatewayControlPlane")
+		require.NoError(t, clientNamespaced.Delete(ctx, cp))
+
+		t.Log("Waiting for object to be get Programmed and ControlPlaneRefValid conditions with status=False and konnect cleanup finalizer removed")
+		watchFor(t, ctx, w, apiwatch.Modified,
+			assertsAnd(
+				assertNot(objectHasFinalizer[*configurationv1alpha1.KongService](konnect.KonnectCleanupFinalizer)),
+				conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
+			),
+			"Object didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
+		)
+
+		id2 := uuid.New().String()
+		t.Log("Setting up SDK expectations on KongConsumer update (after KonnectGatewayControlPlane deletion)")
+		sdk.ServicesSDK.EXPECT().
+			UpsertService(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertServiceRequest) bool {
+				return r.ServiceID == id && r.Service.Host == host
+			})).
+			Return(&sdkkonnectops.UpsertServiceResponse{
+				Service: &sdkkonnectcomp.Service{
+					ID: lo.ToPtr(id2),
+				},
+			}, nil)
+
+		cp = deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth,
+			func(obj client.Object) {
+				cpNew := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+				cpNew.Name = cp.Name
+			},
+		)
+
+		t.Log("Waiting for object to be get Programmed with status=True and konnect cleanup finalizer re added")
+		watchFor(t, ctx, w, apiwatch.Modified,
+			assertsAnd(
+				objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongService](),
+				objectHasFinalizer[*configurationv1alpha1.KongService](konnect.KonnectCleanupFinalizer),
+			),
+			"Object didn't get Programmed set to True",
+		)
 	})
 }

@@ -420,23 +420,8 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// set then:
 		// - add the finalizer so that the resource can be cleaned up from Konnect on deletion...
 		if status != nil && status.ID != "" {
-			objWithFinalizer := ent.DeepCopyObject().(client.Object)
-			if controllerutil.AddFinalizer(objWithFinalizer, KonnectCleanupFinalizer) {
-				if errUpd := r.Client.Patch(ctx, objWithFinalizer, client.MergeFrom(ent)); errUpd != nil {
-					if k8serrors.IsConflict(errUpd) {
-						return ctrl.Result{Requeue: true}, nil
-					}
-					if err != nil {
-						return ctrl.Result{}, fmt.Errorf(
-							"failed to update finalizer %s: %w, object create operation failed against Konnect API: %w",
-							KonnectCleanupFinalizer, errUpd, err,
-						)
-					}
-					return ctrl.Result{}, fmt.Errorf(
-						"failed to update finalizer %s: %w",
-						KonnectCleanupFinalizer, errUpd,
-					)
-				}
+			if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
+				return res, err
 			}
 
 			// ...
@@ -484,6 +469,14 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		logger.Error(err, "failed to update")
 	} else if !res.IsZero() {
 		return res, nil
+	}
+
+	// Ensure that successfully reonciled object has the cleanup finalizer.
+	// This can happen when the finalizer was removed e.g. when the referenced
+	// object was removed, breaking the reference chaing in Konnect and thus making
+	// the delete operation on the Konnect side impossible.
+	if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
+		return res, err
 	}
 
 	// NOTE: We requeue here to keep enforcing the state of the resource in Konnect.
