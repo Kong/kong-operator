@@ -1,4 +1,4 @@
-name: govulncheck
+name: govulncheck schedule
 
 concurrency:
   # Run only for most recent commit in PRs but for all tags and commits on main
@@ -7,10 +7,8 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  push:
-    branches:
-      - main
-      - release/*
+  schedule:
+    - cron: '42 1 * * *'
   workflow_dispatch: {}
 
 permissions:
@@ -22,9 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        branch:
+        - main
+        - release/1.4.x
     steps:
     - uses: ./.github/workflows/__govulncheck.yaml
       with:
-        ref: ${{ github.event.inputs.ref || github.ref }}
-
-
+        ref: ${{ matrix.branch }}
