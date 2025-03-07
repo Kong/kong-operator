@@ -11,13 +11,12 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/pkg/consts"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -74,7 +73,7 @@ func TestKonnectExtension(t *testing.T) {
 				Name: authCfg.Name,
 			},
 		}),
-		setKonnectExtensionKonnectIDControlPlaneRef(t, cp.GetKonnectID()),
+		deploy.WithKonnectIDControlPlaneRef(cp),
 		setKonnectExtensionDPCertSecretRef(t, s),
 	)
 
@@ -97,7 +96,7 @@ func TestKonnectExtension(t *testing.T) {
 	keWithNamespacedCPRef := deploy.KonnectExtension(
 		t, ctx,
 		clientNamespaced,
-		setKonnectExtesionKonnectNamespacedRefControlPlaneRef(t, cp),
+		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		setKonnectExtensionDPCertSecretRef(t, s),
 	)
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithNamespacedCPRef.DeepCopy()))
@@ -116,37 +115,6 @@ func TestKonnectExtension(t *testing.T) {
 	// TODO: Create DataPlanes using the KonnectExtensions after DP certifcates provisioning is done:
 	// https://github.com/Kong/gateway-operator/issues/874
 
-}
-
-func setKonnectExtensionKonnectIDControlPlaneRef(t *testing.T, cpID string) deploy.ObjOption {
-	return func(obj client.Object) {
-		ke, ok := obj.(*konnectv1alpha1.KonnectExtension)
-		require.True(t, ok)
-		// TODO: use `WithKonnectIDControlPlaneRef` after KonnectExtension support `SetControlPlaneRef`:
-		// https://github.com/Kong/kubernetes-configuration/issues/328
-		ke.Spec.KonnectControlPlane.ControlPlaneRef = commonv1alpha1.ControlPlaneRef{
-			Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-			KonnectID: lo.ToPtr(cpID),
-		}
-	}
-}
-
-func setKonnectExtesionKonnectNamespacedRefControlPlaneRef(
-	t *testing.T, cp *konnectv1alpha1.KonnectGatewayControlPlane,
-) deploy.ObjOption {
-	return func(obj client.Object) {
-		ke, ok := obj.(*konnectv1alpha1.KonnectExtension)
-		require.True(t, ok)
-		// TODO: use `WithKonnectIDControlPlaneRef` after KonnectExtension support `SetControlPlaneRef`:
-		// https://github.com/Kong/kubernetes-configuration/issues/328
-		ke.Spec.KonnectControlPlane.ControlPlaneRef = commonv1alpha1.ControlPlaneRef{
-			Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-			KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-				Name:      cp.Name,
-				Namespace: cp.Namespace,
-			},
-		}
-	}
 }
 
 func setKonnectExtensionDPCertSecretRef(t *testing.T, s *corev1.Secret) deploy.ObjOption {
@@ -168,7 +136,7 @@ func checkKonnectExtensionConditions(t *assert.CollectT, ke *konnectv1alpha1.Kon
 	err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: ke.Name, Namespace: ke.Namespace}, ke)
 	require.NoError(t, err)
 
-	checkConditionTypes := []consts.ConditionType{
+	checkConditionTypes := []kcfgconsts.ConditionType{
 		konnectv1alpha1.ControlPlaneRefValidConditionType,
 		konnectv1alpha1.DataPlaneCertificateProvisionedConditionType,
 		konnectv1alpha1.KonnectExtensionReadyConditionType,
@@ -185,11 +153,11 @@ func checkKonnectExtensionStatus(
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: ke.Name, Namespace: ke.Namespace}, ke)
 		require.NoError(t, err)
 		// Check Konnect control plane ID
-		assert.NotNil(t, ke.Status.Konnect, "status.konnect should be present")
+		require.NotNil(t, ke.Status.Konnect, "status.konnect should be present")
 		assert.Equal(t, expectedKonnectCPID, ke.Status.Konnect.ControlPlaneID, "Konnect control plane ID should be set in status")
 		// Check dataplane client auth
-		assert.NotNil(t, ke.Status.DataPlaneClientAuth, "status.dataPlaneClientAuth should be present")
-		assert.NotNil(t, ke.Status.DataPlaneClientAuth.CertificateSecretRef, "status.dataPlaneClientAuth.certiifcateSecretRef should be present")
+		require.NotNil(t, ke.Status.DataPlaneClientAuth, "status.dataPlaneClientAuth should be present")
+		require.NotNil(t, ke.Status.DataPlaneClientAuth.CertificateSecretRef, "status.dataPlaneClientAuth.certiifcateSecretRef should be present")
 		assert.Equal(t, expectedDPCertificateSecretName, ke.Status.DataPlaneClientAuth.CertificateSecretRef.Name,
 			"status.dataPlaneClientAuth.certiifcateSecretRef should have the expected secret name")
 	}
