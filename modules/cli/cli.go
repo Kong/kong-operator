@@ -39,7 +39,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.BoolVar(&deferCfg.DisableLeaderElection, "no-leader-election", false,
 		"Disable leader election for controller manager. Disabling this will not ensure there is only one active controller manager.")
 	flagSet.BoolVar(&cfg.EnforceConfig, "enforce-config", true,
-		"Enforce the configuration on generated in cluster resources. If set to false, the operator will only enforce the configuration when the owner resource spec changes.")
+		"Enforce the configuration on the generated cluster resources. If set to false, the operator will only enforce the configuration when the owner resource spec changes.")
 
 	flagSet.StringVar(&cfg.ControllerName, "controller-name", "", "Controller name to use if other than the default, only needed for multi-tenancy.")
 	flagSet.StringVar(&cfg.ClusterCASecretName, "cluster-ca-secret", "kong-operator-ca", "Name of the Secret containing the cluster CA certificate.")
