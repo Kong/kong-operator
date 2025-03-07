@@ -283,13 +283,13 @@ func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, e
 				Name:      ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name,
 			}, certificateSecret)
 		}
-	case *ext.Spec.DataPlaneClientAuth.CertificateSecret.Provisioning == konnectv1alpha1.ManualSecretProvisioning:
+	case *ext.Spec.ClientAuth.CertificateSecret.Provisioning == konnectv1alpha1.ManualSecretProvisioning:
 		// No need to check CertificateSecretRef is nil, as it is enforced at the CRD level.
 		err = r.Get(ctx, types.NamespacedName{
 			Namespace: ext.Namespace,
-			Name:      ext.Spec.DataPlaneClientAuth.CertificateSecret.CertificateSecretRef.Name,
+			Name:      ext.Spec.ClientAuth.CertificateSecret.CertificateSecretRef.Name,
 		}, certificateSecret)
-	case *ext.Spec.DataPlaneClientAuth.CertificateSecret.Provisioning == konnectv1alpha1.AutomaticSecretProvisioning:
+	case *ext.Spec.ClientAuth.CertificateSecret.Provisioning == konnectv1alpha1.AutomaticSecretProvisioning:
 		res, certificateSecret, err = r.ensureCertificateSecret(ctx, &ext)
 	}
 	return res, certificateSecret, err
