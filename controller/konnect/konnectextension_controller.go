@@ -23,6 +23,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/extensions"
+	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	"github.com/kong/gateway-operator/internal/utils/index"
@@ -318,7 +319,11 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// get the Konnect Control Plane
 	cp, res, err := r.getKonnectControlPlane(ctx, logger, sdk.GetControlPlaneSDK(), ext)
 	if err != nil || !res.IsZero() {
-		return res, err
+		if !k8serrors.IsNotFound(err) || !errors.Is(err, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed) {
+			return res, err
+		}
+		log.Debug(logger, "controlPlane not ready")
+		return res, nil
 	}
 
 	log.Debug(logger, "controlPlane reference validity checked")
