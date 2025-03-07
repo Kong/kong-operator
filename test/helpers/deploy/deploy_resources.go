@@ -1076,7 +1076,7 @@ func WithKonnectConfiguration[T ObjectSupportingKonnectConfiguration](
 		case *konnectv1alpha1.KonnectGatewayControlPlane:
 			o.Spec.KonnectConfiguration = konnectConfiguration
 		case *konnectv1alpha1.KonnectExtension:
-			o.Spec.KonnectConfiguration = lo.ToPtr(konnectConfiguration)
+			o.Spec.Konnect.Configuration = lo.ToPtr(konnectConfiguration)
 		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 			o.Spec.KonnectConfiguration = konnectConfiguration
 		}

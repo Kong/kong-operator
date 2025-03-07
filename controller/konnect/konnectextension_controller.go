@@ -140,7 +140,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	logger := log.GetLogger(ctx, konnectv1alpha1.KonnectExtensionKind, r.DevelopmentMode)
+	logger := log.GetLogger(ctx, konnectv1alpha1.KonnectExtensionKind, r.DevelopmentMode).WithValues("konnectExtension", req.NamespacedName)
 
 	var (
 		dataPlaneList    operatorv1beta1.DataPlaneList
