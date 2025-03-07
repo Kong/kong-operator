@@ -20,15 +20,17 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: "test-konnect-control-plane",
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
 								},
 							},
 						},
-						DataPlaneClientAuth: &konnectv1alpha1.DataPlaneClientAuth{
+						ClientAuth: &konnectv1alpha1.KonnectExtensionClientAuth{
 							CertificateSecret: konnectv1alpha1.CertificateSecret{
 								Provisioning: lo.ToPtr(konnectv1alpha1.ManualSecretProvisioning),
 								CertificateSecretRef: &konnectv1alpha1.SecretRef{
@@ -44,17 +46,19 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: "test-konnect-control-plane",
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
 								},
 							},
-						},
-						KonnectConfiguration: &konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
-								Name: "name-1",
+							Configuration: &konnectv1alpha1.KonnectConfiguration{
+								APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+									Name: "name-1",
+								},
 							},
 						},
 					},
@@ -69,15 +73,17 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: "test-konnect-control-plane",
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
 								},
 							},
 						},
-						DataPlaneClientAuth: &konnectv1alpha1.DataPlaneClientAuth{
+						ClientAuth: &konnectv1alpha1.KonnectExtensionClientAuth{
 							CertificateSecret: konnectv1alpha1.CertificateSecret{
 								Provisioning: lo.ToPtr(konnectv1alpha1.ManualSecretProvisioning),
 								CertificateSecretRef: &konnectv1alpha1.SecretRef{
@@ -96,15 +102,17 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: "test-konnect-control-plane",
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
 								},
 							},
 						},
-						DataPlaneClientAuth: &konnectv1alpha1.DataPlaneClientAuth{
+						ClientAuth: &konnectv1alpha1.KonnectExtensionClientAuth{
 							CertificateSecret: konnectv1alpha1.CertificateSecret{
 								Provisioning: lo.ToPtr(konnectv1alpha1.ManualSecretProvisioning),
 							},
@@ -121,15 +129,17 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: "test-konnect-control-plane",
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
 								},
 							},
 						},
-						DataPlaneClientAuth: &konnectv1alpha1.DataPlaneClientAuth{
+						ClientAuth: &konnectv1alpha1.KonnectExtensionClientAuth{
 							CertificateSecret: konnectv1alpha1.CertificateSecret{
 								Provisioning: lo.ToPtr(konnectv1alpha1.AutomaticSecretProvisioning),
 								CertificateSecretRef: &konnectv1alpha1.SecretRef{
@@ -146,9 +156,11 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKIC,
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKIC,
+								},
 							},
 						},
 					},
@@ -160,15 +172,17 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type:      configurationv1alpha1.ControlPlaneRefKonnectID,
-								KonnectID: lo.ToPtr("xyz"),
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type:      configurationv1alpha1.ControlPlaneRefKonnectID,
+									KonnectID: lo.ToPtr("xyz"),
+								},
 							},
-						},
-						KonnectConfiguration: &konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
-								Name: "name-1",
+							Configuration: &konnectv1alpha1.KonnectConfiguration{
+								APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+									Name: "name-1",
+								},
 							},
 						},
 					},
@@ -179,10 +193,12 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type:      configurationv1alpha1.ControlPlaneRefKonnectID,
-								KonnectID: lo.ToPtr("xyz"),
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type:      configurationv1alpha1.ControlPlaneRefKonnectID,
+									KonnectID: lo.ToPtr("xyz"),
+								},
 							},
 						},
 					},
@@ -191,23 +207,27 @@ func TestKonnectExtension(t *testing.T) {
 			},
 		}.Run(t)
 	})
-	t.Run("dataPlaneLabels", func(t *testing.T) {
+	t.Run("dataPlane labels", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.KonnectExtension]{
 			{
 				Name: "valid labels",
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: "test-konnect-control-plane",
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
 								},
 							},
-						},
-						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
-							"valid-key": "valid.value",
+							DataPlane: &konnectv1alpha1.KonnectExtensionDataPlane{
+								Labels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+									"valid-key": "valid.value",
+								},
+							},
 						},
 					},
 				},
@@ -217,16 +237,20 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: "test-konnect-control-plane",
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
 								},
 							},
-						},
-						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
-							"valid-key": ".invalid.value",
+							DataPlane: &konnectv1alpha1.KonnectExtensionDataPlane{
+								Labels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+									"valid-key": ".invalid.value",
+								},
+							},
 						},
 					},
 				},
@@ -237,16 +261,20 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: "test-konnect-control-plane",
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
 								},
 							},
-						},
-						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
-							"valid-key": "invalid.value.",
+							DataPlane: &konnectv1alpha1.KonnectExtensionDataPlane{
+								Labels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+									"valid-key": "invalid.value.",
+								},
+							},
 						},
 					},
 				},
@@ -257,16 +285,20 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: "test-konnect-control-plane",
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
 								},
 							},
-						},
-						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
-							"valid-key": "invalid$value.",
+							DataPlane: &konnectv1alpha1.KonnectExtensionDataPlane{
+								Labels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+									"valid-key": "invalid$value.",
+								},
+							},
 						},
 					},
 				},
@@ -277,16 +309,20 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: "test-konnect-control-plane",
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
 								},
 							},
-						},
-						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
-							"valid-key": "Xv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqIXv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqI",
+							DataPlane: &konnectv1alpha1.KonnectExtensionDataPlane{
+								Labels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+									"valid-key": "Xv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqIXv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqI",
+								},
+							},
 						},
 					},
 				},
@@ -297,16 +333,20 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: "test-konnect-control-plane",
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
 								},
 							},
-						},
-						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
-							".invalid.key": "valid.value",
+							DataPlane: &konnectv1alpha1.KonnectExtensionDataPlane{
+								Labels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+									".invalid.key": "valid.value",
+								},
+							},
 						},
 					},
 				},
@@ -317,16 +357,20 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: "test-konnect-control-plane",
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
 								},
 							},
-						},
-						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
-							"invalid.key.": "valid.value",
+							DataPlane: &konnectv1alpha1.KonnectExtensionDataPlane{
+								Labels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+									"invalid.key.": "valid.value",
+								},
+							},
 						},
 					},
 				},
@@ -337,16 +381,20 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: "test-konnect-control-plane",
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
 								},
 							},
-						},
-						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
-							"invalid$key": "valid.value",
+							DataPlane: &konnectv1alpha1.KonnectExtensionDataPlane{
+								Labels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+									"invalid$key": "valid.value",
+								},
+							},
 						},
 					},
 				},
@@ -357,16 +405,20 @@ func TestKonnectExtension(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectExtensionSpec{
-						KonnectControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-							ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
-								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: "test-konnect-control-plane",
+						Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.ControlPlaneRef{
+									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-konnect-control-plane",
+									},
 								},
 							},
-						},
-						DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
-							"Xv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqIXv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqI": "valid.value",
+							DataPlane: &konnectv1alpha1.KonnectExtensionDataPlane{
+								Labels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+									"Xv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqIXv9gTq2LmNZp4WJdCYKfRB86oAhsMEytkPUOQGV7Dbx53cHFnwzjL1rS0vqI": "valid.value",
+								},
+							},
 						},
 					},
 				},

@@ -39,9 +39,9 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:object:generate=true
 // +kubebuilder:subresource:status
-// +kubebuilder:validation:XValidation:rule="oldSelf.spec.konnectControlPlane.controlPlaneRef == self.spec.konnectControlPlane.controlPlaneRef", message="spec.konnectControlPlane.controlPlaneRef is immutable."
-// +kubebuilder:validation:XValidation:rule="self.spec.konnectControlPlane.controlPlaneRef.type == 'konnectID' ? has(self.spec.konnect) : true",message="konnect must be set when ControlPlaneRef is set to KonnectID."
-// +kubebuilder:validation:XValidation:rule="self.spec.konnectControlPlane.controlPlaneRef.type == 'konnectNamespacedRef' ? !has(self.spec.konnect) : true",message="konnect must be unset when ControlPlaneRef is set to konnectNamespacedRef."
+// +kubebuilder:validation:XValidation:rule="oldSelf.spec.konnect.controlPlane.ref == self.spec.konnect.controlPlane.ref", message="spec.konnect.controlPlane.ref is immutable."
+// +kubebuilder:validation:XValidation:rule="self.spec.konnect.controlPlane.ref.type == 'konnectID' ? has(self.spec.konnect.configuration) : true",message="konnect must be set when ControlPlaneRef is set to KonnectID."
+// +kubebuilder:validation:XValidation:rule="self.spec.konnect.controlPlane.ref.type == 'konnectNamespacedRef' ? !has(self.spec.konnect.configuration) : true",message="konnect must be unset when ControlPlaneRef is set to konnectNamespacedRef."
 // +apireference:kgo:include
 // +kong:channels=gateway-operator
 type KonnectExtension struct {
@@ -69,41 +69,57 @@ type KonnectExtensionList struct {
 
 // KonnectExtensionSpec defines the desired state of KonnectExtension.
 type KonnectExtensionSpec struct {
-	// KonnectControlPlane is the configuration for the Konnect Control Plane.
+	// Konnect holds the konnect-related configuration
 	//
 	// +kubebuilder:validation:Required
-	KonnectControlPlane KonnectExtensionControlPlane `json:"konnectControlPlane"`
+	Konnect KonnectExtensionKonnectSpec `json:"konnect"`
 
-	// DataPlaneClientAuth is the configuration for the client certificate authentication for the DataPlane.
+	// ClientAuth is the configuration for the client certificate authentication.
 	// In case the ControlPlaneRef is of type KonnectID, it is required to set up the connection with the
 	// Konnect Platform.
 	//
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={certificateSecret:{provisioning: Automatic}}
-	DataPlaneClientAuth *DataPlaneClientAuth `json:"dataPlaneClientAuth,omitempty"`
+	ClientAuth *KonnectExtensionClientAuth `json:"clientAuth,omitempty"`
+}
 
-	// KonnectConfiguration holds the information needed to setup the Konnect Configuration.
+// KonnectExtensionKonnectSpec holds the konnect-related configuration.
+type KonnectExtensionKonnectSpec struct {
+	// ControlPlane is the configuration for the Konnect Control Plane.
+	//
+	// +kubebuilder:validation:Required
+	ControlPlane KonnectExtensionControlPlane `json:"controlPlane"`
+
+	// DataPlane is the configuration for the Konnect DataPlane.
 	//
 	// +kubebuilder:validation:Optional
-	KonnectConfiguration *KonnectConfiguration `json:"konnect,omitempty"`
+	DataPlane *KonnectExtensionDataPlane `json:"dataPlane,omitempty"`
 
-	// DataPlaneLabels is a set of labels that will be applied to the Konnect DataPlane.
+	// Configuration holds the information needed to set up the Konnect Configuration.
+	//
+	// +kubebuilder:validation:Optional
+	Configuration *KonnectConfiguration `json:"configuration,omitempty"`
+}
+
+// KonnectExtensionControlPlane is the configuration for the Konnect Control Plane.
+type KonnectExtensionControlPlane struct {
+	// Ref is a reference to a Konnect ControlPlane this KonnectExtension is associated with.
+	//
+	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:XValidation:rule="self.type != 'kic'", message="kic type not supported as controlPlaneRef."
+	Ref commonv1alpha1.ControlPlaneRef `json:"ref"`
+}
+
+// KonnectExtensionDataPlane is the configuration for the Konnect DataPlane.
+type KonnectExtensionDataPlane struct {
+	// Labels is a set of labels that will be applied to the Konnect DataPlane.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=5
 	// +kubebuilder:validation:XValidation:rule="self.all(key, key.matches('^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'))",message="keys must match the pattern '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'."
 	// +kubebuilder:validation:XValidation:rule="self.all(key, !(key.startsWith('kong') || key.startsWith('konnect') || key.startsWith('insomnia') || key.startsWith('mesh') || key.startsWith('kic') || key.startsWith('_')))",message="keys must not start with 'kong', 'konnect', 'insomnia', 'mesh', 'kic', or '_'."
 	// +kubebuilder:validation:XValidation:rule="self.all(key, size(key) > 0 && size(key) < 64)",message="Too long: may not be more than 63 bytes"
-	DataPlaneLabels map[string]DataPlaneLabelValue `json:"dataPlaneLabels,omitempty"`
-}
-
-// KonnectExtensionControlPlane is the configuration for the Konnect Control Plane.
-type KonnectExtensionControlPlane struct {
-	// ControlPlaneRef is a reference to a Konnect ControlPlane this KonnectExtension is associated with.
-	//
-	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:XValidation:rule="self.type != 'kic'", message="kic type not supported as controlPlaneRef."
-	ControlPlaneRef commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
+	Labels map[string]DataPlaneLabelValue `json:"labels,omitempty"`
 }
 
 // DataPlaneLabelValue is the type that defines the value of a label that will be applied to the Konnect DataPlane.
@@ -113,13 +129,13 @@ type KonnectExtensionControlPlane struct {
 // +kubebuilder:validation:Pattern="^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$"
 type DataPlaneLabelValue string
 
-// DataPlaneClientAuth contains the configuration for the client authentication for the DataPlane.
+// KonnectExtensionClientAuth contains the configuration for the client authentication for the DataPlane.
 // At the moment authentication is only supported through client certificate, but it might be extended in the future,
 // with e.g., token-based authentication.
 //
 // +kubebuilder:validation:XValidation:rule="self.certificateSecret.provisioning == 'Manual' ? has(self.certificateSecret.secretRef) : true",message="secretRef must be set when provisioning is set to Manual."
 // +kubebuilder:validation:XValidation:rule="self.certificateSecret.provisioning == 'Automatic' ? !has(self.certificateSecret.secretRef) : true",message="secretRef must not be set when provisioning is set to Automatic."
-type DataPlaneClientAuth struct {
+type KonnectExtensionClientAuth struct {
 	// CertificateSecret contains the information to access the client certificate.
 	//
 	// +kubebuilder:validation:Required
