@@ -30,6 +30,18 @@ func SecretWithLabel(k, v string) func(s *corev1.Secret) {
 	}
 }
 
+// WithAnnotation adds an annotation to an object.
+func WithAnnotation[T client.Object](k, v string) func(d T) {
+	return func(obj T) {
+		anns := obj.GetAnnotations()
+		if anns == nil {
+			anns = make(map[string]string)
+		}
+		anns[k] = v
+		obj.SetAnnotations(anns)
+	}
+}
+
 type controlPlaneOrDataPlane interface {
 	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane
 }

@@ -117,6 +117,9 @@
 - Added support for `KonnectExtension`s on `Gateway`s via `GatewayConfiguration`
   extensibility.
   [#1292](https://github.com/Kong/gateway-operator/pull/1292)
+- Added `-enforce-config` flag to enforce the configuration of the `ControlPlane`
+  and `DataPlane` `Deployment`s.
+  [#1307](https://github.com/Kong/gateway-operator/pull/1307)
 
 ### Changed
 

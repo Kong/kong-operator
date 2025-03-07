@@ -73,6 +73,8 @@ type BlueGreenReconciler struct {
 	DefaultImage string
 
 	KonnectEnabled bool
+
+	EnforceConfig bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -533,7 +535,7 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 		WithDefaultImage(r.DefaultImage).
 		WithAdditionalLabels(deploymentLabels)
 
-	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.DevelopmentMode)
+	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.DevelopmentMode)
 	if err != nil {
 		return nil, op.Noop, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", err)
 	}

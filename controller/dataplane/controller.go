@@ -44,6 +44,7 @@ type Reconciler struct {
 	ContextInjector          ctxinjector.CtxInjector
 	DefaultImage             string
 	KonnectEnabled           bool
+	EnforceConfig            bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -207,7 +208,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		WithDefaultImage(r.DefaultImage).
 		WithAdditionalLabels(deploymentLabels)
 
-	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.DevelopmentMode)
+	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.DevelopmentMode)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("could not build Deployment for DataPlane %s: %w", dpNn, err)
 	}
