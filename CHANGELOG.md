@@ -54,6 +54,7 @@
   [#1281](https://github.com/Kong/gateway-operator/pull/1281)
   [#1305](https://github.com/Kong/gateway-operator/pull/1305)
   [#1306](https://github.com/Kong/gateway-operator/pull/1306)
+  [#1318](https://github.com/Kong/gateway-operator/pull/1318)
 
 [kubernetes-configuration]: https://github.com/Kong/kubernetes-configuration
 

@@ -244,7 +244,7 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, reconciler.Client.Get(ctx, dpNN, dp))
 				require.NotNil(t, dp.Status.RolloutStatus)
 				require.Len(t, dp.Status.RolloutStatus.Conditions, 1)
-				require.EqualValues(t, consts.DataPlaneConditionTypeRolledOut, dp.Status.RolloutStatus.Conditions[0].Type)
+				require.EqualValues(t, kcfgdataplane.DataPlaneConditionTypeRolledOut, dp.Status.RolloutStatus.Conditions[0].Type)
 				require.Equal(t, metav1.ConditionFalse, dp.Status.RolloutStatus.Conditions[0].Status)
 
 				// Update the DataPlane deployment options to trigger rollout.
@@ -322,11 +322,11 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 				t.Logf("DataPlane rollout status should have the Ready status condition set to true")
 				require.NotNil(t, dp.Status.RolloutStatus)
 				require.Len(t, dp.Status.RolloutStatus.Conditions, 1)
-				require.EqualValues(t, consts.DataPlaneConditionTypeRolledOut, dp.Status.RolloutStatus.Conditions[0].Type)
+				require.EqualValues(t, kcfgdataplane.DataPlaneConditionTypeRolledOut, dp.Status.RolloutStatus.Conditions[0].Type)
 				require.Equal(t, metav1.ConditionFalse, dp.Status.RolloutStatus.Conditions[0].Status,
 					"DataPlane's Ready rollout status condition should be set to true when preview Deployment has Ready replicas",
 				)
-				require.EqualValues(t, consts.DataPlaneConditionReasonRolloutAwaitingPromotion, dp.Status.RolloutStatus.Conditions[0].Reason)
+				require.EqualValues(t, kcfgdataplane.DataPlaneConditionReasonRolloutAwaitingPromotion, dp.Status.RolloutStatus.Conditions[0].Reason)
 			},
 		},
 	}
