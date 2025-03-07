@@ -20,10 +20,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	controlplanecontroller "github.com/kong/gateway-operator/controller/pkg/controlplane"
+	"github.com/kong/gateway-operator/controller/pkg/extensions"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
@@ -44,6 +46,7 @@ import (
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	kcfggateway "github.com/kong/kubernetes-configuration/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -56,6 +59,7 @@ type Reconciler struct {
 	Scheme                *runtime.Scheme
 	DevelopmentMode       bool
 	DefaultDataPlaneImage string
+	KonnectEnabled        bool
 }
 
 // provisionDataPlaneFailRequeueAfter is the time duration after which we retry provisioning
@@ -64,7 +68,7 @@ const provisionDataPlaneFailRetryAfter = 5 * time.Second
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	builder := ctrl.NewControllerManagedBy(mgr).
 		// watch Gateway objects, filtering out any Gateways which are not configured with
 		// a supported GatewayClass controller name.
 		For(&gwtypes.Gateway{},
@@ -103,8 +107,20 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		// This is required to properly support Gateway's listeners.allowedRoutes.namespaces.selector.
 		Watches(
 			&corev1.Namespace{},
-			handler.EnqueueRequestsFromMapFunc(r.listManagedGatewaysInNamespace)).
-		Complete(r)
+			handler.EnqueueRequestsFromMapFunc(r.listManagedGatewaysInNamespace))
+
+	if r.KonnectEnabled {
+		// Watch for changes in KonnectExtension objects that are referenced by GatewayConfigurations used by Gateways objects.
+		// They may trigger reconciliation of DataPlane resources.
+		builder.WatchesRawSource(
+			source.Kind(
+				mgr.GetCache(),
+				&konnectv1alpha1.KonnectExtension{},
+				handler.TypedEnqueueRequestsFromMapFunc(r.listGatewaysForKonnectExtension),
+			),
+		)
+	}
+	return builder.Complete(r)
 }
 
 // Reconcile moves the current state of an object to the intended state.
@@ -213,6 +229,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// condition to the Gateway status if the dataplane is ready. If not ready
 	// the status DataPlaneReady=False will be set instead.
 	dataplane, provisionErr := r.provisionDataPlane(ctx, logger, &gateway, gatewayConfig)
+
 	// Set the DataPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no DataPlaneReady condition in the old gateway, or
 	// * the new status is false and the previous status was true
@@ -333,7 +350,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
 	// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false.
 	controlplane := r.provisionControlPlane(ctx, logger, gwc.GatewayClass, &gateway, gatewayConfig, dataplane, ingressServices[0], adminServices[0])
-
 	// Set the ControlPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no ControlPlaneReady condition in the gateway
 	// * the new status is false and the previous status was true
@@ -482,6 +498,8 @@ func (r *Reconciler) provisionDataPlane(
 		return nil, errWrap
 	}
 
+	expectedDataPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, expectedDataPlaneOptions.Extensions)
+
 	if !dataplaneSpecDeepEqual(&dataplane.Spec.DataPlaneOptions, expectedDataPlaneOptions) {
 		log.Trace(logger, "dataplane config is out of date")
 		oldDataPlane := dataplane.DeepCopy()
@@ -583,6 +601,8 @@ func (r *Reconciler) provisionControlPlane(
 	}
 	// Don't require setting defaults for ControlPlane when using Gateway CRD.
 	setControlPlaneOptionsDefaults(expectedControlPlaneOptions)
+
+	expectedControlPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, expectedControlPlaneOptions.Extensions)
 
 	if !controlplanecontroller.SpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, expectedControlPlaneOptions) {
 		log.Trace(logger, "controlplane config is out of date")
@@ -704,7 +724,7 @@ func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1beta1.DataPlaneOptions) bool
 		return false
 	}
 
-	return true
+	return reflect.DeepEqual(spec1.Extensions, spec2.Extensions)
 }
 
 func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVarsToIgnore ...string) bool {

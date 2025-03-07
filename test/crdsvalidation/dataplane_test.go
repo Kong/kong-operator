@@ -12,7 +12,7 @@ import (
 	"github.com/kong/gateway-operator/test/envtest"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	kcfgcrdsvalidation "github.com/kong/kubernetes-configuration/test/crdsvalidation"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation/common"
 )
 
 func TestDataPlane(t *testing.T) {
@@ -26,7 +26,7 @@ func TestDataPlane(t *testing.T) {
 	}
 
 	t.Run("spec", func(t *testing.T) {
-		kcfgcrdsvalidation.TestCasesGroup[*operatorv1beta1.DataPlane]{
+		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
 			{
 				Name: "not providing image fails",
 				TestObject: &operatorv1beta1.DataPlane{

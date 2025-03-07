@@ -14,7 +14,7 @@ import (
 	"github.com/kong/gateway-operator/test/helpers/kustomize"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	kcfgcrdsvalidation "github.com/kong/kubernetes-configuration/test/crdsvalidation"
+	"github.com/kong/kubernetes-configuration/test/crdsvalidation/common"
 )
 
 const (
@@ -22,7 +22,7 @@ const (
 	KustomizePathValidatingPolicies = "config/default/validating_policies/"
 )
 
-var sharedEventuallyConfig = kcfgcrdsvalidation.EventuallyConfig{
+var sharedEventuallyConfig = common.EventuallyConfig{
 	Timeout: 15 * time.Second,
 	Period:  100 * time.Millisecond,
 }
@@ -43,7 +43,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 	kustomize.Apply(ctx, t, cfg, KustomizePathValidatingPolicies)
 
 	t.Run("ports", func(t *testing.T) {
-		kcfgcrdsvalidation.TestCasesGroup[*operatorv1beta1.DataPlane]{
+		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
 			{
 				Name: "not providing spec fails",
 				TestObject: &operatorv1beta1.DataPlane{

@@ -213,17 +213,6 @@ func AreAllConditionsHaveTrueStatus(resource ConditionsAware) bool {
 	return true
 }
 
-// IsAccepted evaluates whether a resource is in Accepted state, meaning
-// that all its listeners are accepted.
-func IsAccepted(resource ConditionsAware) bool {
-	for _, condition := range resource.GetConditions() {
-		if condition.Type == string(gatewayv1.GatewayConditionAccepted) {
-			return condition.Status == metav1.ConditionTrue
-		}
-	}
-	return false
-}
-
 // IsReady evaluates whether a resource is in Ready state, meaning
 // that all its conditions are in the True state.
 func IsReady(resource ConditionsAware) bool {

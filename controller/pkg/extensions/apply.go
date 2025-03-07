@@ -28,7 +28,8 @@ type ExtendableT interface {
 	k8sutils.ConditionsAware
 
 	*operatorv1beta1.DataPlane |
-		*operatorv1beta1.ControlPlane
+		*operatorv1beta1.ControlPlane |
+		*operatorv1beta1.GatewayConfiguration
 }
 
 type withExtensions interface {

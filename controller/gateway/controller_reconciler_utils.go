@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/kong/gateway-operator/controller/pkg/extensions"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -59,6 +60,9 @@ func (r *Reconciler) createDataPlane(ctx context.Context,
 	if err := setDataPlaneIngressServicePorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners); err != nil {
 		return nil, err
 	}
+
+	dataplane.Spec.DataPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, dataplane.Spec.DataPlaneOptions.Extensions)
+
 	k8sutils.SetOwnerForObject(dataplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(dataplane)
 	err := r.Client.Create(ctx, dataplane)
@@ -90,6 +94,8 @@ func (r *Reconciler) createControlPlane(
 	if controlplane.Spec.DataPlane == nil {
 		controlplane.Spec.DataPlane = &dataplaneName
 	}
+
+	controlplane.Spec.ControlPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, controlplane.Spec.ControlPlaneOptions.Extensions)
 
 	setControlPlaneOptionsDefaults(&controlplane.Spec.ControlPlaneOptions)
 	k8sutils.SetOwnerForObject(controlplane, gateway)
@@ -129,7 +135,8 @@ func (r *Reconciler) getGatewayAddresses(
 }
 
 func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
-	gatewayConfigNamespace string, opts operatorv1beta1.GatewayConfigDataPlaneOptions,
+	gatewayConfigNamespace string,
+	opts operatorv1beta1.GatewayConfigDataPlaneOptions,
 ) *operatorv1beta1.DataPlaneOptions {
 	// When Namespace is not provided, the GatewayConfiguration's namespace is assumed.
 	pluginsToInstall := lo.Map(opts.PluginsToInstall, func(pluginReference operatorv1beta1.NamespacedName, _ int) operatorv1beta1.NamespacedName {
@@ -141,6 +148,7 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 
 	dataPlaneOptions := &operatorv1beta1.DataPlaneOptions{
 		Deployment:       opts.Deployment,
+		Extensions:       opts.Extensions,
 		PluginsToInstall: pluginsToInstall,
 	}
 

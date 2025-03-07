@@ -190,6 +190,9 @@ func setupIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 			if err := index.ExtendableOnKonnectExtension(ctx, mgr.GetCache(), &operatorv1beta1.ControlPlane{}); err != nil {
 				return fmt.Errorf("failed to setup index for ControlPlanes on KonnectExtensions: %w", err)
 			}
+			if err := index.ExtendableOnKonnectExtension(ctx, mgr.GetCache(), &operatorv1beta1.GatewayConfiguration{}); err != nil {
+				return fmt.Errorf("failed to setup index for ControlPlanes on KonnectExtensions: %w", err)
+			}
 		}
 	}
 	return nil
@@ -420,6 +423,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				Scheme:                mgr.GetScheme(),
 				DevelopmentMode:       c.DevelopmentMode,
 				DefaultDataPlaneImage: consts.DefaultDataPlaneImage,
+				KonnectEnabled:        c.KonnectControllersEnabled,
 			},
 		},
 		// ControlPlane controller
