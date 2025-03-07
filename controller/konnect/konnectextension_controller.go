@@ -209,10 +209,10 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if client.IgnoreNotFound(err) != nil {
 			return ctrl.Result{}, err
 		}
+		certExists := !k8serrors.IsNotFound(err)
 
-		// if the secret does not have the konnect-cleanup finalizer, the certificate has been properly cleaned up
-		// in Konnect.
-		if !controllerutil.ContainsFinalizer(certificateSecret, KonnectCleanupFinalizer) {
+		// if the certificate exists and the cleanup in Konnect has been performed, we can remove the secret-in-use finalizer from the secret.
+		if certExists && !controllerutil.ContainsFinalizer(certificateSecret, KonnectCleanupFinalizer) {
 			// remove the secret-in-use finalizer from the secret.
 			updated = controllerutil.RemoveFinalizer(certificateSecret, consts.SecretKonnectExtensionFinalizer)
 			if updated {
@@ -224,6 +224,11 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				}
 				log.Debug(logger, "Secret-in-use finalizer removed from Secret")
 			}
+			return ctrl.Result{}, nil
+		}
+
+		// if the certificate does not exist, or the cleanup in Konnect has been performed, we can remove the konnect-cleanup finalizer from the konnectExtension.
+		if !certExists || !controllerutil.ContainsFinalizer(certificateSecret, KonnectCleanupFinalizer) {
 			// remove the konnect-cleanup finalizer from the KonnectExtension.
 			updated = controllerutil.RemoveFinalizer(&ext, KonnectCleanupFinalizer)
 			if updated {
