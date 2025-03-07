@@ -24,6 +24,7 @@ import (
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
 
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -151,8 +152,8 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 			}
 		}
 		isAwaitingPromotion := dataPlaneRolloutStatusConditionPredicate(&metav1.Condition{
-			Type:   string(consts.DataPlaneConditionTypeRolledOut),
-			Reason: string(consts.DataPlaneConditionReasonRolloutAwaitingPromotion),
+			Type:   string(kcfgdataplane.DataPlaneConditionTypeRolledOut),
+			Reason: string(kcfgdataplane.DataPlaneConditionReasonRolloutAwaitingPromotion),
 			Status: metav1.ConditionFalse,
 		})
 		require.Eventually(t,
