@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/google/uuid"
@@ -47,8 +48,6 @@ func TestKonnectExtension(t *testing.T) {
 		deploy.WithTestIDLabel(testID),
 	)
 
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
-
 	t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
@@ -57,11 +56,16 @@ func TestKonnectExtension(t *testing.T) {
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	// Create a secret used as dataplane certificate for the KonnectExtension.
+	caCert := helpers.CreateCA(t)
+
 	s := deploy.Secret(
 		t, ctx, clientNamespaced,
-		// TODO: Fill real certificate data here after DP certifcates provisioning is done:
-		// https://github.com/Kong/gateway-operator/issues/874
-		map[string][]byte{},
+		helpers.TLSSecretData(t, caCert,
+			helpers.CreateCert(t,
+				fmt.Sprintf("*.test-konnect-extension.%s.svc", ns.Name),
+				caCert.Cert, caCert.Key),
+		),
+		deploy.WithLabel("konghq.com/konnect-dp-cert", "true"),
 	)
 
 	// Tests on KonnectExtension with KonnectID control plane ref.
@@ -77,8 +81,6 @@ func TestKonnectExtension(t *testing.T) {
 		setKonnectExtensionDPCertSecretRef(t, s),
 	)
 
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
-
 	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", keWithKonnectIDCPRef.Namespace, keWithKonnectIDCPRef.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		ok, msg := checkKonnectExtensionConditions(t, keWithKonnectIDCPRef)
@@ -91,7 +93,6 @@ func TestKonnectExtension(t *testing.T) {
 		testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	// Tests on KonnectExtension with KonnectNamespacedRef control plane ref.
-	// REVIEW: should we separate the KonnectExtensions with different control plane refs to different cases?
 	t.Logf("Creating a KonnectExtension with KonnectNamespacedRef typed control plane ref")
 	keWithNamespacedCPRef := deploy.KonnectExtension(
 		t, ctx,
@@ -99,7 +100,6 @@ func TestKonnectExtension(t *testing.T) {
 		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		setKonnectExtensionDPCertSecretRef(t, s),
 	)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithNamespacedCPRef.DeepCopy()))
 
 	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", keWithNamespacedCPRef.Namespace, keWithNamespacedCPRef.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
@@ -112,8 +112,10 @@ func TestKonnectExtension(t *testing.T) {
 		checkKonnectExtensionStatus(keWithNamespacedCPRef, cp.GetKonnectID(), s.Name),
 		testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
-	// TODO: Create DataPlanes using the KonnectExtensions after DP certifcates provisioning is done:
-	// https://github.com/Kong/gateway-operator/issues/874
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithNamespacedCPRef.DeepCopy()))
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, s.DeepCopy()))
 
 }
 
