@@ -25,7 +25,9 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/extensions"
 	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
+	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/consts"
 	konnectresource "github.com/kong/gateway-operator/pkg/utils/konnect/resources"
@@ -39,24 +41,12 @@ import (
 // KonnectExtensionReconciler reconciles a KonnectExtension object.
 type KonnectExtensionReconciler struct {
 	client.Client
-	developmentMode bool
-	sdkFactory      sdkops.SDKFactory
-	syncPeriod      time.Duration
-}
-
-// NewKonnectExtensionReconciler creates a new KonnectExtensionReconciler.
-func NewKonnectExtensionReconciler(
-	sdkFactory sdkops.SDKFactory,
-	developmentMode bool,
-	client client.Client,
-	syncPeriod time.Duration,
-) *KonnectExtensionReconciler {
-	return &KonnectExtensionReconciler{
-		Client:          client,
-		sdkFactory:      sdkFactory,
-		developmentMode: developmentMode,
-		syncPeriod:      syncPeriod,
-	}
+	DevelopmentMode          bool
+	SdkFactory               sdkops.SDKFactory
+	SyncPeriod               time.Duration
+	ClusterCASecretName      string
+	ClusterCASecretNamespace string
+	ClusterCAKeyConfig       secrets.KeyConfig
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -150,7 +140,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	logger := log.GetLogger(ctx, konnectv1alpha1.KonnectExtensionKind, r.developmentMode)
+	logger := log.GetLogger(ctx, konnectv1alpha1.KonnectExtensionKind, r.DevelopmentMode)
 
 	var (
 		dataPlaneList    operatorv1beta1.DataPlaneList
@@ -205,16 +195,19 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}, nil
 		}
 
-		certificateSecret, err := getCertificateSecret(ctx, r.Client, ext)
+		res, certificateSecret, err := r.getCertificateSecret(ctx, ext, true)
 		if client.IgnoreNotFound(err) != nil {
 			return ctrl.Result{}, err
 		}
-		certExists := !k8serrors.IsNotFound(err)
+		if res != op.Noop {
+			return ctrl.Result{}, nil
+		}
 
+		certExists := !k8serrors.IsNotFound(err)
 		// if the certificate exists and the cleanup in Konnect has been performed, we can remove the secret-in-use finalizer from the secret.
 		if certExists && !controllerutil.ContainsFinalizer(certificateSecret, KonnectCleanupFinalizer) {
 			// remove the secret-in-use finalizer from the secret.
-			updated = controllerutil.RemoveFinalizer(certificateSecret, consts.SecretKonnectExtensionFinalizer)
+			updated = controllerutil.RemoveFinalizer(certificateSecret, consts.KonnectExtensionSecretInUseFinalizer)
 			if updated {
 				if err := r.Client.Update(ctx, certificateSecret); err != nil {
 					if k8serrors.IsConflict(err) {
@@ -239,8 +232,8 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					return ctrl.Result{}, err
 				}
 				log.Debug(logger, "Konnect-cleanup finalizer removed from KonnectExtension")
+				return ctrl.Result{}, nil
 			}
-			return ctrl.Result{}, nil
 		}
 	}
 
@@ -316,7 +309,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// NOTE: We need to create a new SDK instance for each reconciliation
 	// because the token is retrieved in runtime through KonnectAPIAuthConfiguration.
 	serverURL := ops.NewServerURL[*konnectv1alpha1.KonnectExtension](apiAuth.Spec.ServerURL)
-	sdk := r.sdkFactory.NewKonnectSDK(
+	sdk := r.SdkFactory.NewKonnectSDK(
 		serverURL.String(),
 		sdkops.SDKToken(token),
 	)
@@ -341,7 +334,13 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// get the Kubernetes secret holding the certificate.
-	certificateSecret, err := getCertificateSecret(ctx, r.Client, ext)
+	opRes, certificateSecret, err := r.getCertificateSecret(ctx, ext, false)
+	if client.IgnoreNotFound(err) != nil {
+		return ctrl.Result{}, err
+	}
+	if opRes != op.Noop {
+		return ctrl.Result{}, nil
+	}
 	if err != nil {
 		certProvisionedCond.Status = metav1.ConditionFalse
 		certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonRefNotFound
@@ -378,10 +377,8 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, nil
 	}
 
-	// enforce a finalizer on the secret to prevent it from being deleted while in use.
-	updated = controllerutil.AddFinalizer(certificateSecret, consts.SecretKonnectExtensionFinalizer) ||
-		controllerutil.AddFinalizer(certificateSecret, KonnectCleanupFinalizer)
-	if updated {
+	// Enforce a finalizer on the secret to prevent it from being deleted while in use.
+	if controllerutil.AddFinalizer(certificateSecret, consts.KonnectExtensionSecretInUseFinalizer) {
 		if err := r.Client.Update(ctx, certificateSecret); err != nil {
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
@@ -389,7 +386,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{}, err
 		}
 
-		log.Info(logger, "secret-in-use finalizer on the referenced secret updated")
+		log.Info(logger, "finalizer on the referenced secret updated")
 		return ctrl.Result{}, nil
 	}
 
@@ -414,7 +411,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		log.Debug(logger, "DataPlane client certificate list retrieval failed in Konnect")
 		// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
 		// if the syncPeriod is set to zero, the controller won't requeue.
-		return ctrl.Result{Requeue: true, RequeueAfter: r.syncPeriod}, err
+		return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
 	}
 
 	var (
@@ -448,8 +445,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, nil
 	}
 
+	secretCleanup := certificateSecret.DeletionTimestamp != nil && certificateSecret.DeletionTimestamp.Before(&metav1.Time{Time: time.Now()})
 	switch {
-	case !cleanup:
+	case !cleanup && !secretCleanup:
 		if !certFound {
 			log.Debug(logger, "DataPlane client certificate enforced in Konnect")
 			dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
@@ -480,7 +478,20 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				}
 				// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
 				// if the syncPeriod is set to zero, the controller won't requeue.
-				return ctrl.Result{Requeue: true, RequeueAfter: r.syncPeriod}, err
+				return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
+			}
+			if controllerutil.AddFinalizer(certificateSecret, KonnectCleanupFinalizer) {
+				if err := r.Client.Update(ctx, certificateSecret); err != nil {
+					if k8serrors.IsConflict(err) {
+						return ctrl.Result{Requeue: true}, nil
+					}
+					return ctrl.Result{}, err
+				}
+
+				log.Info(logger, "konnect-cleanup finalizer on the referenced secret updated")
+				// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
+				// if the syncPeriod is set to zero, the controller won't requeue.
+				return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
 			}
 		}
 		updated, res, err := patch.WithFinalizer(ctx, r.Client, &ext, KonnectCleanupFinalizer)
@@ -491,7 +502,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			log.Info(logger, "KonnectExtension finalizer addded", "finalizer", KonnectCleanupFinalizer)
 			return ctrl.Result{}, nil
 		}
-	case cleanup:
+	case cleanup || secretCleanup:
 		if certFound {
 			// This should never happen, but checking to make the dereference below bullet-proof
 			if cert.ID == nil {
@@ -531,8 +542,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				// In case of an error in the Konnect ops, the resync period will take care of a new creation attempt.
 				// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
 				// if the syncPeriod is set to zero, the controller won't requeue.
-				return ctrl.Result{Requeue: true, RequeueAfter: r.syncPeriod}, err
+				return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
 			}
+			return ctrl.Result{Requeue: true}, err
 		}
 
 		// in case no IDs are mapped to the secret, we can remove the finalizer from the secret.
@@ -629,6 +641,6 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	log.Debug(logger, "reconciled")
 	return ctrl.Result{
 		Requeue:      true,
-		RequeueAfter: r.syncPeriod,
+		RequeueAfter: r.SyncPeriod,
 	}, nil
 }

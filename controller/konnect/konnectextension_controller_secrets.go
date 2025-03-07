@@ -8,6 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -30,26 +32,43 @@ func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *cor
 		return nil, err
 	}
 
+	for _, ownerRef := range s.GetOwnerReferences() {
+		if ownerRef.Controller != nil && *ownerRef.Controller {
+			owner := &konnectv1alpha1.KonnectExtension{}
+			err := cl.Get(ctx, k8stypes.NamespacedName{
+				Namespace: s.Namespace,
+				Name:      ownerRef.Name,
+			}, owner)
+			if err != nil {
+				return nil, err
+			}
+			if owner.UID == ownerRef.UID {
+				l.Items = append(l.Items, *owner)
+			}
+		}
+	}
+
 	return l.Items, nil
 
 }
 
 func enqueueKonnectExtensionsForSecret(cl client.Client) func(context.Context, client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		s, ok := obj.(*corev1.Secret)
+		secret, ok := obj.(*corev1.Secret)
 		if !ok {
 			return nil
 		}
-		konnectExtensions, err := listKonnectExtensionsBySecret(ctx, cl, s)
+		konnectExtensions, err := listKonnectExtensionsBySecret(ctx, cl, secret)
 		if err != nil {
 			return nil
 		}
 
 		reqs := make([]reconcile.Request, 0, len(konnectExtensions))
 		for _, ke := range konnectExtensions {
-			if ke.Spec.ClientAuth != nil &&
-				ke.Spec.ClientAuth.CertificateSecret.CertificateSecretRef != nil &&
-				ke.Spec.ClientAuth.CertificateSecret.CertificateSecretRef.Name == obj.GetName() {
+			if (ke.Spec.DataPlaneClientAuth != nil &&
+				ke.Spec.DataPlaneClientAuth.CertificateSecret.CertificateSecretRef != nil &&
+				ke.Spec.DataPlaneClientAuth.CertificateSecret.CertificateSecretRef.Name == obj.GetName()) ||
+				k8sutils.IsOwnedByRefUID(secret, ke.UID) {
 				reqs = append(reqs, reconcile.Request{
 					NamespacedName: k8stypes.NamespacedName{
 						Namespace: ke.Namespace,

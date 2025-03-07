@@ -11,6 +11,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -42,28 +43,32 @@ func WithAnnotation[T client.Object](k, v string) func(d T) {
 	}
 }
 
-type controlPlaneOrDataPlane interface {
-	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane
+type controlPlaneDataPlaneOrKonnectExtension interface {
+	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane | *konnectv1alpha1.KonnectExtension
 }
 
-func getPrefixForOwner[T controlPlaneOrDataPlane](owner T) string {
+func getPrefixForOwner[T controlPlaneDataPlaneOrKonnectExtension](owner T) string {
 	switch any(owner).(type) {
 	case *operatorv1beta1.ControlPlane:
 		return consts.ControlPlanePrefix
 	case *operatorv1beta1.DataPlane:
 		return consts.DataPlanePrefix
+	case *konnectv1alpha1.KonnectExtension:
+		return consts.KonnectExtensionPrefix
 	default:
 		return ""
 	}
 }
 
 // addLabelForOwner labels the provided object as managed by the provided owner.
-func addLabelForOwner[T controlPlaneOrDataPlane](obj client.Object, owner T) {
+func addLabelForOwner[T controlPlaneDataPlaneOrKonnectExtension](obj client.Object, owner T) {
 	switch any(owner).(type) {
 	case *operatorv1beta1.ControlPlane:
 		LabelObjectAsControlPlaneManaged(obj)
 	case *operatorv1beta1.DataPlane:
 		LabelObjectAsDataPlaneManaged(obj)
+	case *konnectv1alpha1.KonnectExtension:
+		LabelObjectAsKonnectExtensionManaged(obj)
 	}
 }
 
@@ -72,7 +77,7 @@ func addLabelForOwner[T controlPlaneOrDataPlane](obj client.Object, owner T) {
 // It accepts a list of options that can change the generated Secret.
 func GenerateNewTLSSecret[
 	T interface {
-		controlPlaneOrDataPlane
+		controlPlaneDataPlaneOrKonnectExtension
 		client.Object
 	},
 ](

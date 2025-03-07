@@ -36,6 +36,7 @@ import (
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -176,7 +177,7 @@ func IsTLSSecretValid(secret *corev1.Secret) bool {
 // any failures it encountered.
 func EnsureCertificate[
 	T interface {
-		*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane
+		*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane | *konnectv1alpha1.KonnectExtension
 		client.Object
 	},
 ](
@@ -269,7 +270,7 @@ func matchingLabelsToSecretOpt(ml client.MatchingLabels) k8sresources.SecretOpt 
 
 // getPreDeleteHooks returns a list of pre-delete hooks for the given object type.
 func getPreDeleteHooks[T interface {
-	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane
+	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane | *konnectv1alpha1.KonnectExtension
 	client.Object
 },
 ](obj T,
@@ -284,7 +285,7 @@ func getPreDeleteHooks[T interface {
 
 // getSecretOpts returns a list of SecretOpt for the given object type.
 func getSecretOpts[T interface {
-	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane
+	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane | *konnectv1alpha1.KonnectExtension
 	client.Object
 },
 ](obj T,

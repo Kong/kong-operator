@@ -580,12 +580,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 
 			KonnectExtensionControllerName: {
 				Enabled: (c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled) && c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectExtensionReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-					c.KonnectSyncPeriod,
-				),
+				Controller: &konnect.KonnectExtensionReconciler{
+					SdkFactory:               sdkFactory,
+					DevelopmentMode:          c.DevelopmentMode,
+					Client:                   mgr.GetClient(),
+					SyncPeriod:               c.KonnectSyncPeriod,
+					ClusterCASecretName:      c.ClusterCASecretName,
+					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+					ClusterCAKeyConfig:       clusterCAKeyConfig,
+				},
 			},
 
 			// Controllers responsible for cleaning up KongPluginBinding cleanup finalizers.
