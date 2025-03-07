@@ -144,7 +144,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	// apply default envvars and restore the hacked-out ones
 	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, config.KongDefaults)
 
-	if err := k8sresources.AnnotatePodTemplateSpecHash(desiredDeployment.Unwrap(), dataplane.Spec.Deployment.PodTemplateSpec); err != nil {
+	if err := k8sresources.AnnotateObjWithHash(desiredDeployment.Unwrap(), dataplane.Spec); err != nil {
 		return nil, op.Noop, err
 	}
 
@@ -289,7 +289,7 @@ func reconcileDataPlaneDeployment(
 		// existing Deployment with the spec hash of the desired Deployment. If
 		// the hashes match, we skip the update.
 		if !enforceConfig {
-			hash, err := k8sresources.CalculateHash(dataplane.Spec.Deployment.PodTemplateSpec)
+			hash, err := k8sresources.CalculateHash(dataplane.Spec)
 			if err != nil {
 				return op.Noop, nil, fmt.Errorf("failed to calculate hash spec from DataPlane: %w", err)
 			}

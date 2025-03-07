@@ -206,7 +206,7 @@ func (r *Reconciler) ensureDeployment(
 		// existing Deployment with the spec hash of the desired Deployment. If
 		// the hashes match, we skip the update.
 		if !params.EnforceConfig {
-			hash, err := k8sresources.CalculateHash(params.ControlPlane.Spec.Deployment.PodTemplateSpec)
+			hash, err := k8sresources.CalculateHash(params.ControlPlane.Spec)
 			if err != nil {
 				return op.Noop, nil, fmt.Errorf("failed to calculate hash spec from ControlPlane: %w", err)
 			}

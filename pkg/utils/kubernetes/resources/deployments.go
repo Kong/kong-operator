@@ -127,7 +127,7 @@ func GenerateNewDeploymentForControlPlane(params GenerateNewDeploymentForControl
 	// it with what's in the cluster.
 	pkgapisappsv1.SetDefaults_Deployment(deployment)
 
-	if err := AnnotatePodTemplateSpecHash(deployment, params.ControlPlane.Spec.Deployment.PodTemplateSpec); err != nil {
+	if err := AnnotateObjWithHash(deployment, params.ControlPlane.Spec); err != nil {
 		return nil, err
 	}
 
