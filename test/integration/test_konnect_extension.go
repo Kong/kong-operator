@@ -58,7 +58,7 @@ func TestKonnectExtension(t *testing.T) {
 	// Create a secret used as dataplane certificate for the KonnectExtension.
 	caCert := helpers.CreateCA(t)
 
-	s := deploy.Secret(
+	dpCert1 := deploy.Secret(
 		t, ctx, clientNamespaced,
 		helpers.TLSSecretData(t, caCert,
 			helpers.CreateCert(t,
@@ -78,7 +78,7 @@ func TestKonnectExtension(t *testing.T) {
 			},
 		}),
 		deploy.WithKonnectIDControlPlaneRef(cp),
-		setKonnectExtensionDPCertSecretRef(t, s),
+		setKonnectExtensionDPCertSecretRef(t, dpCert1),
 	)
 
 	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", keWithKonnectIDCPRef.Namespace, keWithKonnectIDCPRef.Name)
@@ -89,16 +89,25 @@ func TestKonnectExtension(t *testing.T) {
 
 	t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s/%s", keWithKonnectIDCPRef.Namespace, keWithKonnectIDCPRef.Name)
 	require.EventuallyWithT(t,
-		checkKonnectExtensionStatus(keWithKonnectIDCPRef, cp.GetKonnectID(), s.Name),
+		checkKonnectExtensionStatus(keWithKonnectIDCPRef, cp.GetKonnectID(), dpCert1.Name),
 		testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	// Tests on KonnectExtension with KonnectNamespacedRef control plane ref.
+	dpCert2 := deploy.Secret(
+		t, ctx, clientNamespaced,
+		helpers.TLSSecretData(t, caCert,
+			helpers.CreateCert(t,
+				fmt.Sprintf("*.test-konnect-extension.%s.svc", ns.Name),
+				caCert.Cert, caCert.Key),
+		),
+		deploy.WithLabel("konghq.com/konnect-dp-cert", "true"),
+	)
 	t.Logf("Creating a KonnectExtension with KonnectNamespacedRef typed control plane ref")
 	keWithNamespacedCPRef := deploy.KonnectExtension(
 		t, ctx,
 		clientNamespaced,
 		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-		setKonnectExtensionDPCertSecretRef(t, s),
+		setKonnectExtensionDPCertSecretRef(t, dpCert2),
 	)
 
 	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", keWithNamespacedCPRef.Namespace, keWithNamespacedCPRef.Name)
@@ -109,13 +118,17 @@ func TestKonnectExtension(t *testing.T) {
 
 	t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s/%s", keWithNamespacedCPRef.Namespace, keWithNamespacedCPRef.Name)
 	require.EventuallyWithT(t,
-		checkKonnectExtensionStatus(keWithNamespacedCPRef, cp.GetKonnectID(), s.Name),
+		checkKonnectExtensionStatus(keWithNamespacedCPRef, cp.GetKonnectID(), dpCert2.Name),
 		testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
+	// Order of deleting objects with finalizers:
+	// KonnectExtension -> Secret -> KonnectGatewayControlPlane.
+	// After they are all deleted, the namespace can be deleted in the final clean up.
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, dpCert1.DeepCopy()))
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, dpCert2.DeepCopy()))
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithNamespacedCPRef.DeepCopy()))
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, s.DeepCopy()))
 
 }
 
