@@ -238,7 +238,7 @@ func getKonnectAPIAuthRefNN(ctx context.Context, cl client.Client, ext *konnectv
 	}, nil
 }
 
-func getCertificateSecret(ctx context.Context, cl client.Client, ext konnectv1alpha1.KonnectExtension) (secret *corev1.Secret, exists bool, err error) {
+func getCertificateSecret(ctx context.Context, cl client.Client, ext konnectv1alpha1.KonnectExtension) (*corev1.Secret, error) {
 	var certificateSecret corev1.Secret
 	switch *ext.Spec.DataPlaneClientAuth.CertificateSecret.Provisioning {
 	case konnectv1alpha1.ManualSecretProvisioning:
@@ -247,12 +247,12 @@ func getCertificateSecret(ctx context.Context, cl client.Client, ext konnectv1al
 			Namespace: ext.Namespace,
 			Name:      ext.Spec.DataPlaneClientAuth.CertificateSecret.CertificateSecretRef.Name,
 		}, &certificateSecret); err != nil {
-			return nil, false, err
+			return nil, err
 		}
 	default:
-		return nil, false, errors.New("automatic secret provisioning not supported yet")
+		return nil, errors.New("automatic secret provisioning not supported yet")
 	}
-	return &certificateSecret, true, nil
+	return &certificateSecret, nil
 }
 
 func konnectClusterTypeToCRDClusterType(clusterType sdkkonnectcomp.ControlPlaneClusterType) konnectv1alpha1.KonnectExtensionClusterType {

@@ -205,10 +205,11 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			}, nil
 		}
 
-		certificateSecret, certExists, err := getCertificateSecret(ctx, r.Client, ext)
+		certificateSecret, err := getCertificateSecret(ctx, r.Client, ext)
 		if client.IgnoreNotFound(err) != nil {
 			return ctrl.Result{}, err
 		}
+		certExists := !k8serrors.IsNotFound(err)
 
 		// if the certificate exists and the cleanup in Konnect has been performed, we can remove the secret-in-use finalizer from the secret.
 		if certExists && !controllerutil.ContainsFinalizer(certificateSecret, KonnectCleanupFinalizer) {
@@ -335,7 +336,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	// get the Kubernetes secret holding the certificate.
-	certificateSecret, _, err := getCertificateSecret(ctx, r.Client, ext)
+	certificateSecret, err := getCertificateSecret(ctx, r.Client, ext)
 	if err != nil {
 		certProvisionedCond.Status = metav1.ConditionFalse
 		certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonRefNotFound
