@@ -724,7 +724,7 @@ func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1beta1.DataPlaneOptions) bool
 		return false
 	}
 
-	return reflect.DeepEqual(spec1.Extensions, spec2.Extensions) {
+	return reflect.DeepEqual(spec1.Extensions, spec2.Extensions)
 }
 
 func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVarsToIgnore ...string) bool {
