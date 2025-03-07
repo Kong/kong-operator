@@ -147,7 +147,7 @@ type ensureDeploymentParams struct {
 	// If set to true, the Deployment will be updated even if the spec hash matches.
 	// This is useful when the Deployment has been manually modified by something
 	// other than the operator to prevent the operator from endless reconciliation
-	// (typically mutation webhook that enforces some cluster-wide policy, 
+	// (typically mutation webhook that enforces some cluster-wide policy,
 	// typically for resources or security).
 	EnforceConfig bool
 }
