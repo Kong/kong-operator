@@ -56,7 +56,11 @@ func ApplyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, dataP
 	d.WithVolumeMount(kongInKonnectClusterVolumeMount(), consts.DataPlaneProxyContainerName)
 
 	// KonnectID is the only supported type for now, and its presence is guaranteed by a proper CEL rule.
-	envSet := config.KongInKonnectDefaults(konnectExtension.Spec.DataPlaneLabels, konnectExtension.Status)
+	var dataplaneLabels map[string]konnectv1alpha1.DataPlaneLabelValue
+	if konnectExtension.Spec.Konnect.DataPlane != nil {
+		dataplaneLabels = konnectExtension.Spec.Konnect.DataPlane.Labels
+	}
+	envSet := config.KongInKonnectDefaults(dataplaneLabels, konnectExtension.Status)
 
 	config.FillContainerEnvs(nil, &d.Spec.Template, consts.DataPlaneProxyContainerName, config.EnvVarMapToSlice(envSet))
 	dataPlane.Spec.Deployment.PodTemplateSpec = &d.Spec.Template

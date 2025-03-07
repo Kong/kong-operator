@@ -297,9 +297,13 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: konnectv1alpha1.KonnectExtensionSpec{
-					DataPlaneLabels: map[string]konnectv1alpha1.DataPlaneLabelValue{
-						"environment": "prod",
-						"region":      "us-west",
+					Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
+						DataPlane: &konnectv1alpha1.KonnectExtensionDataPlane{
+							Labels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+								"environment": "prod",
+								"region":      "us-west",
+							},
+						},
 					},
 				},
 				Status: konnectExtensionStatus,
@@ -407,11 +411,16 @@ func getKongInKonnectEnvVars(
 	konnectExt konnectv1alpha1.KonnectExtension,
 ) []corev1.EnvVar {
 	envSet := []corev1.EnvVar{}
-	for k, v := range config.KongInKonnectDefaults(konnectExt.Spec.DataPlaneLabels, konnectExt.Status) {
+	var dataplaneLabels map[string]konnectv1alpha1.DataPlaneLabelValue
+	if konnectExt.Spec.Konnect.DataPlane != nil {
+		dataplaneLabels = konnectExt.Spec.Konnect.DataPlane.Labels
+	}
+	for k, v := range config.KongInKonnectDefaults(dataplaneLabels, konnectExt.Status) {
 		envSet = append(envSet, corev1.EnvVar{
 			Name:  k,
 			Value: v,
 		})
 	}
+
 	return envSet
 }

@@ -55,11 +55,11 @@ func (r *KonnectExtensionReconciler) getKonnectControlPlane(
 		}
 	)
 
-	switch ext.Spec.KonnectControlPlane.ControlPlaneRef.Type {
+	switch ext.Spec.Konnect.ControlPlane.Ref.Type {
 	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
 		// in case the ControlPlaneRef is a KonnectNamespacedRef, we fetch the KonnectGatewayControlPlane
 		// and get the KonnectID from `status.konnectID`.
-		cpRef := ext.Spec.KonnectControlPlane.ControlPlaneRef.KonnectNamespacedRef
+		cpRef := ext.Spec.Konnect.ControlPlane.Ref.KonnectNamespacedRef
 		cpNamepace := ext.Namespace
 		// TODO: get namespace from cpRef.Namespace when allowed to reference CP from another namespace.
 		kgcp := &konnectv1alpha1.KonnectGatewayControlPlane{}
@@ -105,7 +105,7 @@ func (r *KonnectExtensionReconciler) getKonnectControlPlane(
 		konnectCPID = kgcp.GetKonnectID()
 	case commonv1alpha1.ControlPlaneRefKonnectID:
 		// in case the ControlPlaneRef is a KonnectID, we use it directly.
-		konnectCPID = *ext.Spec.KonnectControlPlane.ControlPlaneRef.KonnectID
+		konnectCPID = *ext.Spec.Konnect.ControlPlane.Ref.KonnectID
 	}
 
 	// get the Konnect Control Plane from Konnect
@@ -211,11 +211,11 @@ func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 }
 
 func getKonnectAPIAuthRefNN(ctx context.Context, cl client.Client, ext *konnectv1alpha1.KonnectExtension) (types.NamespacedName, error) {
-	if ext.Spec.KonnectConfiguration != nil {
+	if ext.Spec.Konnect.Configuration != nil {
 		// TODO: handle cross namespace refs when supported.
 		return types.NamespacedName{
 			Namespace: ext.Namespace,
-			Name:      ext.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+			Name:      ext.Spec.Konnect.Configuration.APIAuthConfigurationRef.Name,
 		}, nil
 	}
 
@@ -223,7 +223,7 @@ func getKonnectAPIAuthRefNN(ctx context.Context, cl client.Client, ext *konnectv
 	// and get the KonnectConfiguration from `spec.konnectControlPlane.controlPlane.konnectNamespacedRef`.
 	// KonnectGatewayControlPlane reference and KonnectConfiguration
 	// are mutually exclusive in the KonnectExtension API.
-	cpRef := ext.Spec.KonnectControlPlane.ControlPlaneRef.KonnectNamespacedRef
+	cpRef := ext.Spec.Konnect.ControlPlane.Ref.KonnectNamespacedRef
 	kgcp := &konnectv1alpha1.KonnectGatewayControlPlane{}
 	err := cl.Get(ctx, client.ObjectKey{
 		// TODO: handle cross namespace refs to KonnectGatewayControlPlane when referencing CP from another namespace is supported.
@@ -241,12 +241,12 @@ func getKonnectAPIAuthRefNN(ctx context.Context, cl client.Client, ext *konnectv
 
 func getCertificateSecret(ctx context.Context, cl client.Client, ext konnectv1alpha1.KonnectExtension) (*corev1.Secret, error) {
 	var certificateSecret corev1.Secret
-	switch *ext.Spec.DataPlaneClientAuth.CertificateSecret.Provisioning {
+	switch *ext.Spec.ClientAuth.CertificateSecret.Provisioning {
 	case konnectv1alpha1.ManualSecretProvisioning:
 		// No need to check CertificateSecretRef is nil, as it is enforced at the CRD level.
 		if err := cl.Get(ctx, types.NamespacedName{
 			Namespace: ext.Namespace,
-			Name:      ext.Spec.DataPlaneClientAuth.CertificateSecret.CertificateSecretRef.Name,
+			Name:      ext.Spec.ClientAuth.CertificateSecret.CertificateSecretRef.Name,
 		}, &certificateSecret); err != nil {
 			return nil, err
 		}

@@ -452,7 +452,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
 				certificateSecret.Name,
 				certificateSecret.Namespace,
-				&ext.Spec.KonnectControlPlane.ControlPlaneRef,
+				&ext.Spec.Konnect.ControlPlane.Ref,
 				string(certificateSecret.Data[consts.TLSCRT]),
 				func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) {
 					dpCert.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
@@ -495,7 +495,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
 				certificateSecret.Name,
 				certificateSecret.Namespace,
-				&ext.Spec.KonnectControlPlane.ControlPlaneRef,
+				&ext.Spec.Konnect.ControlPlane.Ref,
 				string(certificateSecret.Data[consts.TLSCRT]),
 				func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) {
 					dpCert.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{

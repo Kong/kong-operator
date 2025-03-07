@@ -47,9 +47,9 @@ func enqueueKonnectExtensionsForSecret(cl client.Client) func(context.Context, c
 
 		reqs := make([]reconcile.Request, 0, len(konnectExtensions))
 		for _, ke := range konnectExtensions {
-			if ke.Spec.DataPlaneClientAuth != nil &&
-				ke.Spec.DataPlaneClientAuth.CertificateSecret.CertificateSecretRef != nil &&
-				ke.Spec.DataPlaneClientAuth.CertificateSecret.CertificateSecretRef.Name == obj.GetName() {
+			if ke.Spec.ClientAuth != nil &&
+				ke.Spec.ClientAuth.CertificateSecret.CertificateSecretRef != nil &&
+				ke.Spec.ClientAuth.CertificateSecret.CertificateSecretRef.Name == obj.GetName() {
 				reqs = append(reqs, reconcile.Request{
 					NamespacedName: k8stypes.NamespacedName{
 						Namespace: ke.Namespace,

@@ -43,11 +43,11 @@ func konnectExtensionAPIAuthConfigurationRef(object client.Object) []string {
 		return nil
 	}
 
-	if ext.Spec.KonnectConfiguration == nil {
+	if ext.Spec.Konnect.Configuration == nil {
 		return nil
 	}
 
-	return []string{ext.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name}
+	return []string{ext.Spec.Konnect.Configuration.APIAuthConfigurationRef.Name}
 }
 
 func konnectExtensionSecretRef(obj client.Object) []string {
@@ -56,12 +56,12 @@ func konnectExtensionSecretRef(obj client.Object) []string {
 		return nil
 	}
 
-	if ext.Spec.DataPlaneClientAuth == nil ||
-		ext.Spec.DataPlaneClientAuth.CertificateSecret.CertificateSecretRef == nil {
+	if ext.Spec.ClientAuth == nil ||
+		ext.Spec.ClientAuth.CertificateSecret.CertificateSecretRef == nil {
 		return nil
 	}
 
-	return []string{ext.Spec.DataPlaneClientAuth.CertificateSecret.CertificateSecretRef.Name}
+	return []string{ext.Spec.ClientAuth.CertificateSecret.CertificateSecretRef.Name}
 }
 
 func konnectExtensionControlPlaneRef(obj client.Object) []string {
@@ -70,9 +70,9 @@ func konnectExtensionControlPlaneRef(obj client.Object) []string {
 		return nil
 	}
 
-	if ext.Spec.KonnectControlPlane.ControlPlaneRef.Type != commonv1alpha1.ControlPlaneRefKonnectNamespacedRef {
+	if ext.Spec.Konnect.ControlPlane.Ref.Type != commonv1alpha1.ControlPlaneRefKonnectNamespacedRef {
 		return nil
 	}
 	// TODO: add namespace to index when cross namespace reference is supported.
-	return []string{ext.Spec.KonnectControlPlane.ControlPlaneRef.KonnectNamespacedRef.Name}
+	return []string{ext.Spec.Konnect.ControlPlane.Ref.KonnectNamespacedRef.Name}
 }
