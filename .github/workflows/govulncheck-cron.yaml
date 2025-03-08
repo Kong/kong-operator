@@ -16,17 +16,15 @@ permissions:
 
 jobs:
   analyze:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
-    runs-on: ubuntu-latest
-    permissions:
-      security-events: write
+    uses: ./.github/workflows/__govulncheck.yaml
     strategy:
       fail-fast: false
       matrix:
         branch:
         - main
         - release/1.4.x
-    steps:
-    - uses: ./.github/workflows/__govulncheck.yaml
-      with:
-        ref: ${{ matrix.branch }}
+    with:
+      ref: ${{ matrix.branch }}
+    permissions:
+      security-events: write
+      contents: read
