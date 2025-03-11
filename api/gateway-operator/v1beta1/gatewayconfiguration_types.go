@@ -34,7 +34,7 @@ func init() {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=kogc,categories=kong;all
-// +kubebuilder:validation:XValidation:message="Extension not allowed for GatewayConfiguration",rule="has(self.spec.extensions) ? self.spec.extensions.all(e, e.group == 'konnect.konghq.com' && e.kind == 'KonnectExtension') : true"
+// +kubebuilder:validation:XValidation:message="Extension not allowed for GatewayConfiguration",rule="has(self.spec.extensions) ? self.spec.extensions.all(e, (e.group == 'konnect.konghq.com' && e.kind == 'KonnectExtension') || (e.group == 'gateway-operator.konghq.com' && e.kind == 'DataPlaneMetricsExtension')) : true"
 type GatewayConfiguration struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
