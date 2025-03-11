@@ -143,7 +143,7 @@ func TestKonnectExtension(t *testing.T) {
 				)
 				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
 
-				params := KonnectExtensiontestBodyParams{
+				params := KonnectExtensionTestBodyParams{
 					konnectControlPlane: cp,
 					konnectExtension:    keWithKonnectIDCPRef,
 					secret:              secretCert,
@@ -166,7 +166,7 @@ func TestKonnectExtension(t *testing.T) {
 					deploy.WithKonnectIDControlPlaneRef(cp),
 				)
 				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
-				params := KonnectExtensiontestBodyParams{
+				params := KonnectExtensionTestBodyParams{
 					konnectControlPlane: cp,
 					konnectExtension:    keWithKonnectIDCPRef,
 					secret:              nil, // automatic provisioning
@@ -199,7 +199,7 @@ func TestKonnectExtension(t *testing.T) {
 				)
 				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
 
-				params := KonnectExtensiontestBodyParams{
+				params := KonnectExtensionTestBodyParams{
 					konnectControlPlane: cp,
 					konnectExtension:    keWithKonnectIDCPRef,
 					secret:              secretCert,
@@ -217,7 +217,7 @@ func TestKonnectExtension(t *testing.T) {
 					deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 				)
 				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
-				params := KonnectExtensiontestBodyParams{
+				params := KonnectExtensionTestBodyParams{
 					konnectControlPlane: cp,
 					konnectExtension:    keWithKonnectIDCPRef,
 					secret:              nil, // automatic provisioning
@@ -243,7 +243,7 @@ type KonnectExtensionTestBodyParams struct {
 
 // konnectExtensionTestBody is a function that runs the test body for KonnectExtension.
 // The logic herein defined is shared between all the dataplane KonnectExtension tests.
-func konnectExtensionTestBody(t *testing.T, p KonnectExtensiontestBodyParams) {
+func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
 	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", p.konnectExtension.Namespace, p.konnectExtension.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		ok, msg := checkKonnectExtensionConditions(t, p.konnectExtension)
