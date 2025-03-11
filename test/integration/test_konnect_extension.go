@@ -16,6 +16,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/gateway-operator/controller/pkg/builder"
 	"github.com/kong/gateway-operator/pkg/consts"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test"
@@ -26,7 +27,6 @@ import (
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -143,7 +143,7 @@ func TestKonnectExtension(t *testing.T) {
 				)
 				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
 
-				params := testBodyParams{
+				params := KonnectExtensiontestBodyParams{
 					konnectControlPlane: cp,
 					konnectExtension:    keWithKonnectIDCPRef,
 					secret:              secretCert,
@@ -166,7 +166,7 @@ func TestKonnectExtension(t *testing.T) {
 					deploy.WithKonnectIDControlPlaneRef(cp),
 				)
 				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
-				params := testBodyParams{
+				params := KonnectExtensiontestBodyParams{
 					konnectControlPlane: cp,
 					konnectExtension:    keWithKonnectIDCPRef,
 					secret:              nil, // automatic provisioning
@@ -199,7 +199,7 @@ func TestKonnectExtension(t *testing.T) {
 				)
 				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
 
-				params := testBodyParams{
+				params := KonnectExtensiontestBodyParams{
 					konnectControlPlane: cp,
 					konnectExtension:    keWithKonnectIDCPRef,
 					secret:              secretCert,
@@ -217,7 +217,7 @@ func TestKonnectExtension(t *testing.T) {
 					deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 				)
 				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
-				params := testBodyParams{
+				params := KonnectExtensiontestBodyParams{
 					konnectControlPlane: cp,
 					konnectExtension:    keWithKonnectIDCPRef,
 					secret:              nil, // automatic provisioning
@@ -231,8 +231,8 @@ func TestKonnectExtension(t *testing.T) {
 	})
 }
 
-// testBodyParams is a struct that holds the parameters for the test body function.
-type testBodyParams struct {
+// KonnectExtensiontestBodyParams is a struct that holds the parameters for the test body function.
+type KonnectExtensiontestBodyParams struct {
 	konnectControlPlane *konnectv1alpha1.KonnectGatewayControlPlane
 	konnectExtension    *konnectv1alpha1.KonnectExtension
 	secret              *corev1.Secret
@@ -243,7 +243,7 @@ type testBodyParams struct {
 
 // konnectExtensionTestBody is a function that runs the test body for KonnectExtension.
 // The logic herein defined is shared between all the dataplane KonnectExtension tests.
-func konnectExtensionTestBody(t *testing.T, p testBodyParams) {
+func konnectExtensionTestBody(t *testing.T, p KonnectExtensiontestBodyParams) {
 	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", p.konnectExtension.Namespace, p.konnectExtension.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		ok, msg := checkKonnectExtensionConditions(t, p.konnectExtension)
@@ -256,52 +256,44 @@ func konnectExtensionTestBody(t *testing.T, p testBodyParams) {
 		testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	t.Logf("Creating a DataPlane using the KonnectExtension %s/%s", p.konnectExtension.Namespace, p.konnectExtension.Name)
-	dp := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
+	dataPlane := builder.NewDataPlaneBuilder().
+		WithObjectMeta(metav1.ObjectMeta{
 			Namespace: p.namespace,
-			Name:      "test-konnect-extension-dp-1",
-		},
-		Spec: operatorv1beta1.DataPlaneSpec{
-			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
-				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						Replicas: lo.ToPtr(int32(1)),
-						PodTemplateSpec: &corev1.PodTemplateSpec{
-							Spec: corev1.PodSpec{
-								Containers: []corev1.Container{
-									{
-										Name:  consts.DataPlaneProxyContainerName,
-										Image: helpers.GetDefaultDataPlaneEnterpriseImage(),
-										Env: []corev1.EnvVar{
-											{
-												Name:  "KONG_LOG_LEVEL",
-												Value: "debug",
-											},
-										},
-									},
-								},
+			Name:      "test-konnect-extension",
+		}).
+		WithPodTemplateSpec(&corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:  consts.DataPlaneProxyContainerName,
+						Image: helpers.GetDefaultDataPlaneEnterpriseImage(),
+						Env: []corev1.EnvVar{
+							{
+								Name:  "KONG_LOG_LEVEL",
+								Value: "debug",
 							},
 						},
 					},
 				},
-				Extensions: []commonv1alpha1.ExtensionRef{
-					{
-						Group: konnectv1alpha1.GroupVersion.Group,
-						Kind:  "KonnectExtension",
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: p.konnectExtension.Name,
-						},
+			},
+		}).
+		WithExtensions(
+			[]commonv1alpha1.ExtensionRef{
+				{
+					Group: konnectv1alpha1.GroupVersion.Group,
+					Kind:  "KonnectExtension",
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name: p.konnectExtension.Name,
 					},
 				},
 			},
-		},
-	}
-	require.NoError(t, p.client.Create(ctx, dp))
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, dp))
+		).Build()
+	require.NoError(t, p.client.Create(ctx, dataPlane))
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, dataPlane))
 
 	dpName := k8stypes.NamespacedName{
-		Namespace: dp.Namespace,
-		Name:      dp.Name,
+		Namespace: dataPlane.Namespace,
+		Name:      dataPlane.Name,
 	}
 
 	t.Log("verifying dataplane gets marked provisioned")
