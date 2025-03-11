@@ -67,19 +67,19 @@ func TestOperatorLogs(t *testing.T) {
 	ctx := t.Context()
 	if imageLoad == "" && imageOverride == "" {
 		t.Skipf("No KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE nor KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD" +
-			" env specified. Please specify the image to upgrade to in order to run this test.")
+			" env specified. Please specify the image to use in order to run this test.")
 	}
 	var image string
 	if imageLoad != "" {
-		t.Logf("KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD set to %q, using it to upgrade", imageLoad)
+		t.Logf("KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD set to %q, using it for this test", imageLoad)
 		image = imageLoad
 	} else {
-		t.Logf("KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE set to %q, using it to upgrade", imageOverride)
+		t.Logf("KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE set to %q, using it for this test", imageOverride)
 		image = imageOverride
 	}
 
 	// createEnvironment will queue up environment cleanup if necessary
-	// and dumping diagnostics if the test fails.
+	// and dump diagnostics if the test fails.
 	e := CreateEnvironment(t, ctx, WithOperatorImage(image), WithInstallViaKustomize())
 	clients, testNamespace, cleaner := e.Clients, e.Namespace, e.Cleaner
 
@@ -120,7 +120,7 @@ func TestOperatorLogs(t *testing.T) {
 			structuredLine := &structuredLogLine{}
 			// we cannot assert that all the log lines respect the same format, hence we work on a best effort basis:
 			// if the unmarshaling succeeds, the log line complies with the format we expect and we check the message severity,
-			// otherwise, no reason to make the test failing when the unmershaling fails
+			// otherwise, no reason to make the test failing when the unmarshaling fails
 			if err := json.Unmarshal(message, structuredLine); err != nil {
 				continue
 			}
@@ -157,7 +157,7 @@ func TestOperatorLogs(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
-	t.Logf("deploying %d Gateway resourcess", parallelGateways)
+	t.Logf("deploying %d Gateway resources", parallelGateways)
 	for i := range parallelGateways {
 		gatewayNN := types.NamespacedName{
 			Name:      uuid.NewString(),

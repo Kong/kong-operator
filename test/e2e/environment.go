@@ -118,6 +118,10 @@ func WithInstallViaKustomize() TestEnvOption {
 
 var loggerOnce sync.Once
 
+// AdditionalKustomizeDir is a path to additional kustomize configuration to deploy to the test cluster.
+// It is applied after all configuration from this repository is applied.
+var AdditionalKustomizeDir string
+
 // CreateEnvironment creates a new independent testing environment for running isolated e2e test.
 // When running with Helm, the caller is responsible for cleaning up the environment.
 func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption) TestEnvironment {
@@ -242,11 +246,18 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 		t.Log("creating system namespaces and serviceaccounts")
 		require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
 
-		t.Log("deploying operator CRDs to test cluster via kustomize")
+		t.Logf("deploying operator CRDs to test cluster via kustomize (%s)", kustomizeDir.CRD())
 		require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizeDir.CRD(), "--server-side"))
 
-		t.Log("deploying operator to test cluster via kustomize")
+		t.Logf("deploying operator to test cluster via kustomize (%s)", kustomizeDir.Tests())
 		require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kustomizeDir.Tests(), "--server-side"))
+
+		if AdditionalKustomizeDir != "" {
+			t.Logf("deploying additional configuration to test cluster via kustomize (%s)", AdditionalKustomizeDir)
+			require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), AdditionalKustomizeDir))
+		} else {
+			t.Log("no additional additional configuration provided")
+		}
 
 		t.Log("waiting for operator deployment to complete")
 		require.NoError(t, waitForOperatorDeployment(t, ctx, "kong-system", clients.K8sClient, waitTime))
