@@ -34,7 +34,7 @@ func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *cor
 		return nil, err
 	}
 
-	// Add all the secrets automatically for the KonnectExtensions.
+	// Add all the konnectExtensions that own the secret.
 	for _, ownerRef := range s.GetOwnerReferences() {
 		if ownerRef.Controller != nil &&
 			*ownerRef.Controller &&
@@ -48,6 +48,7 @@ func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *cor
 			if err != nil {
 				return nil, err
 			}
+			l.Items = append(l.Items, *owner)
 		}
 	}
 
