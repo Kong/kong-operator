@@ -3,10 +3,12 @@ package resources
 import (
 	"testing"
 
-	"github.com/kong/gateway-operator/pkg/consts"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/gateway-operator/pkg/consts"
+
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 func TestLabelObjectAsKonnectExtensionManaged(t *testing.T) {

@@ -18,6 +18,12 @@ import (
 // Secret generators
 // -----------------------------------------------------------------------------
 
+// ControlPlaneOrDataPlaneOrKonnectExtension is a type that can be either a ControlPlane, a DataPlane or a KonnectExtension.
+// It is used to infer the types that can own secret resources.
+type ControlPlaneOrDataPlaneOrKonnectExtension interface {
+	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane | *konnectv1alpha1.KonnectExtension
+}
+
 // SecretOpt is an option function for a Secret.
 type SecretOpt func(*corev1.Secret)
 
@@ -43,11 +49,7 @@ func WithAnnotation[T client.Object](k, v string) func(d T) {
 	}
 }
 
-type controlPlaneOrDataPlaneOrKonnectExtension interface {
-	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane | *konnectv1alpha1.KonnectExtension
-}
-
-func getPrefixForOwner[T controlPlaneOrDataPlaneOrKonnectExtension](owner T) string {
+func getPrefixForOwner[T ControlPlaneOrDataPlaneOrKonnectExtension](owner T) string {
 	switch any(owner).(type) {
 	case *operatorv1beta1.ControlPlane:
 		return consts.ControlPlanePrefix
@@ -61,7 +63,7 @@ func getPrefixForOwner[T controlPlaneOrDataPlaneOrKonnectExtension](owner T) str
 }
 
 // addLabelForOwner labels the provided object as managed by the provided owner.
-func addLabelForOwner[T controlPlaneOrDataPlaneOrKonnectExtension](obj client.Object, owner T) {
+func addLabelForOwner[T ControlPlaneOrDataPlaneOrKonnectExtension](obj client.Object, owner T) {
 	switch any(owner).(type) {
 	case *operatorv1beta1.ControlPlane:
 		LabelObjectAsControlPlaneManaged(obj)
@@ -77,7 +79,7 @@ func addLabelForOwner[T controlPlaneOrDataPlaneOrKonnectExtension](obj client.Ob
 // It accepts a list of options that can change the generated Secret.
 func GenerateNewTLSSecret[
 	T interface {
-		controlPlaneOrDataPlaneOrKonnectExtension
+		ControlPlaneOrDataPlaneOrKonnectExtension
 		client.Object
 	},
 ](
