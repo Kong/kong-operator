@@ -30,7 +30,7 @@ func init() {
 		TestIngressEssentials,
 		TestKongPluginInstallationEssentials,
 		TestKonnectEntities,
-		TestKonnectExtensionKonnectGatewayControlPlaneNamespacedRef,
+		TestKonnectExtension,
 		TestManualGatewayUpgradesAndDowngrades,
 		TestScalingDataPlaneThroughGatewayConfiguration,
 	)
