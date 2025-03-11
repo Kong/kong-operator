@@ -6,6 +6,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -27,7 +29,7 @@ func validateExtensions[t ExtendableT](obj t) *metav1.Condition {
 	}
 	var messageBuilder strings.Builder
 	for i, ext := range obj.GetExtensions() {
-		if ext.Group != konnectv1alpha1.SchemeGroupVersion.Group || ext.Kind != konnectv1alpha1.KonnectExtensionKind {
+		if !(isKonnectExtension(ext) || isDataPlaneMetricsExtension(ext)) {
 			buildMessage(&messageBuilder, fmt.Sprintf("Extension %s/%s is not supported", ext.Group, ext.Kind))
 			continue
 		}
@@ -56,4 +58,12 @@ func buildMessage(messageBuilder *strings.Builder, message string) {
 		messageBuilder.WriteString(" - ")
 	}
 	messageBuilder.WriteString(message)
+}
+
+func isKonnectExtension(ext commonv1alpha1.ExtensionRef) bool {
+	return ext.Group == konnectv1alpha1.SchemeGroupVersion.Group && ext.Kind == konnectv1alpha1.KonnectExtensionKind
+}
+
+func isDataPlaneMetricsExtension(ext commonv1alpha1.ExtensionRef) bool {
+	return ext.Group == operatorv1alpha1.SchemeGroupVersion.Group && ext.Kind == operatorv1alpha1.DataPlaneMetricsExtensionKind
 }
