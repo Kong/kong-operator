@@ -25,6 +25,8 @@ permissions:
 
 jobs:
   release:
+    permissions:
+      contents: write
     uses: ./.github/workflows/__release-workflow.yaml
     secrets:
       dockerhub-push-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
