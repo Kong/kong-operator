@@ -2,7 +2,6 @@ package konnect
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -11,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,7 +22,10 @@ import (
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
+	"github.com/kong/gateway-operator/controller/pkg/secrets"
+	"github.com/kong/gateway-operator/pkg/consts"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -126,7 +129,7 @@ func (r *KonnectExtensionReconciler) getKonnectControlPlane(
 		log.Debug(logger, "ControlPlane retrieval failed in Konnect")
 		// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
 		// if the syncPeriod is set to zero, the controller won't requeue.
-		return nil, ctrl.Result{Requeue: true, RequeueAfter: r.syncPeriod}, nil
+		return nil, ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, nil
 	}
 
 	// set the controlPlaneRefValidCond to true in case the Control Plane is found in Konnect
@@ -241,21 +244,55 @@ func getKonnectAPIAuthRefNN(ctx context.Context, cl client.Client, ext *konnectv
 	}, nil
 }
 
-func getCertificateSecret(ctx context.Context, cl client.Client, ext konnectv1alpha1.KonnectExtension) (*corev1.Secret, error) {
-	var certificateSecret corev1.Secret
-	switch *ext.Spec.ClientAuth.CertificateSecret.Provisioning {
-	case konnectv1alpha1.ManualSecretProvisioning:
+func (r *KonnectExtensionReconciler) ensureCertificateSecret(ctx context.Context, ext *konnectv1alpha1.KonnectExtension) (op.Result, *corev1.Secret, error) {
+	usages := []certificatesv1.KeyUsage{
+		certificatesv1.UsageKeyEncipherment,
+		certificatesv1.UsageDigitalSignature,
+		certificatesv1.UsageClientAuth,
+	}
+	matchingLabels := client.MatchingLabels{
+		consts.SecretProvisioningLabelKey:      consts.SecretProvisioningAutomaticLabelValue,
+		SecretKonnectDataPlaneCertificateLabel: "true",
+	}
+	return secrets.EnsureCertificate(ctx,
+		ext,
+		fmt.Sprintf("%s.%s", ext.Name, ext.Namespace),
+		types.NamespacedName{
+			Namespace: r.ClusterCASecretNamespace,
+			Name:      r.ClusterCASecretName,
+		},
+		usages,
+		r.ClusterCAKeyConfig,
+		r.Client,
+		matchingLabels,
+	)
+}
+
+func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, ext konnectv1alpha1.KonnectExtension, cleanup bool) (op.Result, *corev1.Secret, error) {
+	var (
+		certificateSecret = &corev1.Secret{}
+		err               error
+		res               = op.Noop
+	)
+
+	switch {
+	case cleanup:
+		if ext.Status.DataPlaneClientAuth != nil && ext.Status.DataPlaneClientAuth.CertificateSecretRef != nil {
+			err = r.Get(ctx, types.NamespacedName{
+				Namespace: ext.Namespace,
+				Name:      ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name,
+			}, certificateSecret)
+		}
+	case *ext.Spec.ClientAuth.CertificateSecret.Provisioning == konnectv1alpha1.ManualSecretProvisioning:
 		// No need to check CertificateSecretRef is nil, as it is enforced at the CRD level.
-		if err := cl.Get(ctx, types.NamespacedName{
+		err = r.Get(ctx, types.NamespacedName{
 			Namespace: ext.Namespace,
 			Name:      ext.Spec.ClientAuth.CertificateSecret.CertificateSecretRef.Name,
-		}, &certificateSecret); err != nil {
-			return nil, err
-		}
-	default:
-		return nil, errors.New("automatic secret provisioning not supported yet")
+		}, certificateSecret)
+	case *ext.Spec.ClientAuth.CertificateSecret.Provisioning == konnectv1alpha1.AutomaticSecretProvisioning:
+		res, certificateSecret, err = r.ensureCertificateSecret(ctx, &ext)
 	}
-	return &certificateSecret, nil
+	return res, certificateSecret, err
 }
 
 func konnectClusterTypeToCRDClusterType(clusterType sdkkonnectcomp.ControlPlaneClusterType) konnectv1alpha1.KonnectExtensionClusterType {

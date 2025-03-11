@@ -121,6 +121,8 @@
 - Added `-enforce-config` flag to enforce the configuration of the `ControlPlane`
   and `DataPlane` `Deployment`s.
   [#1307](https://github.com/Kong/gateway-operator/pull/1307)
+- Added Automatic secret provisioning for `KonnectExtension` certificates.
+  [#1304](https://github.com/Kong/gateway-operator/pull/1304)
 
 ### Changed
 

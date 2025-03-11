@@ -176,7 +176,7 @@ func IsTLSSecretValid(secret *corev1.Secret) bool {
 // any failures it encountered.
 func EnsureCertificate[
 	T interface {
-		*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane
+		k8sresources.ControlPlaneOrDataPlaneOrKonnectExtension
 		client.Object
 	},
 ](
@@ -269,7 +269,7 @@ func matchingLabelsToSecretOpt(ml client.MatchingLabels) k8sresources.SecretOpt 
 
 // getPreDeleteHooks returns a list of pre-delete hooks for the given object type.
 func getPreDeleteHooks[T interface {
-	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane
+	k8sresources.ControlPlaneOrDataPlaneOrKonnectExtension
 	client.Object
 },
 ](obj T,
@@ -284,7 +284,7 @@ func getPreDeleteHooks[T interface {
 
 // getSecretOpts returns a list of SecretOpt for the given object type.
 func getSecretOpts[T interface {
-	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane
+	k8sresources.ControlPlaneOrDataPlaneOrKonnectExtension
 	client.Object
 },
 ](obj T,

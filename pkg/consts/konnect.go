@@ -1,6 +1,15 @@
 package consts
 
 // -----------------------------------------------------------------------------
+// Consts - KonnectExtension Generic Parameters
+// -----------------------------------------------------------------------------
+
+const (
+	// KonnectExtensionPrefix is used as a name prefix to generate KonnectExtension-owned objects' name
+	KonnectExtensionPrefix = "konnect-extension"
+)
+
+// -----------------------------------------------------------------------------
 // Consts - Finalizers
 // -----------------------------------------------------------------------------
 
@@ -18,12 +27,29 @@ const (
 	// DataPlaneKonnectExtensionFinalizer is the finalizer added to the secret
 	// referenced by KonnectExtension to ensure that the secret is not deleted
 	// when in use by an active KonnectExtension.
-	SecretKonnectExtensionFinalizer = "gateway.konghq.com/secret-in-use"
+	KonnectExtensionSecretInUseFinalizer = "gateway.konghq.com/secret-in-use"
+)
+
+// -----------------------------------------------------------------------------
+// Consts - Labels
+// -----------------------------------------------------------------------------
+
+const (
+	// SecretProvisioningLabelKey is the label key used to store the provisioning method
+	// of the secret resource.
+	SecretProvisioningLabelKey = "gateway.konghq.com/secret-provisioning"
+	// SecretProvisioningAutomaticLabelValue indicates that the secret resource is
+	// automatically provisioned by the controller.
+	SecretProvisioningAutomaticLabelValue = "automatic"
+	// KonnectExtensionManagedByLabelValue indicates that an object's lifecycle is managed
+	// by the KonnectExtension controller.
+	KonnectExtensionManagedByLabelValue = "konnect-extension"
 )
 
 // -----------------------------------------------------------------------------
 // Consts - Annotations
 // -----------------------------------------------------------------------------
+
 const (
 	// DataPlaneCertificateIDAnnotationKey is the label key used to store the certificate IDs
 	// associated with the secret resource. Since multiple Konnect Certificates can be
