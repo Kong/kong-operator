@@ -65,6 +65,9 @@ jobs:
         GOLANGCI_LINT_FLAGS: "--fix=false"
       run: make lint
 
+    - name: run lint.actions
+      run: make lint.actions
+
   govulncheck:
     runs-on: ubuntu-latest
     steps:

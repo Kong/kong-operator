@@ -1,4 +1,5 @@
 name: govulncheck
+run-name: govulncheck ${{ github.head_ref }}
 
 concurrency:
   # Run only for most recent commit in PRs but for all tags and commits on main
@@ -18,13 +19,9 @@ permissions:
 
 jobs:
   analyze:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/__govulncheck.yaml
+    with:
+      ref: ${{ github.ref_name }}
     permissions:
       security-events: write
-    steps:
-    - uses: ./.github/workflows/__govulncheck.yaml
-      with:
-        ref: ${{ github.event.inputs.ref || github.ref }}
-
-
+      contents: read
