@@ -6,6 +6,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -98,5 +99,17 @@ func (b *testDataPlaneBuilder) initDeploymentRolloutBlueGreen() {
 func (b *testDataPlaneBuilder) WithPromotionStrategy(promotionStrategy operatorv1beta1.PromotionStrategy) *testDataPlaneBuilder {
 	b.initDeploymentRolloutBlueGreen()
 	b.dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen.Promotion.Strategy = promotionStrategy
+	return b
+}
+
+// WithTemplateSpec sets the PodTemplateSpec of the DataPlane object.
+func (b *testDataPlaneBuilder) WithPodTemplateSpec(podSpec *corev1.PodTemplateSpec) *testDataPlaneBuilder {
+	b.dataplane.Spec.Deployment.PodTemplateSpec = podSpec
+	return b
+}
+
+// WithExtensions sets the extensions of the DataPlane object.
+func (b *testDataPlaneBuilder) WithExtensions(extensions []commonv1alpha1.ExtensionRef) *testDataPlaneBuilder {
+	b.dataplane.Spec.Extensions = extensions
 	return b
 }

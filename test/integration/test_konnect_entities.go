@@ -252,6 +252,9 @@ func TestKonnectEntities(t *testing.T) {
 // It's designed to be used with t.Cleanup() to ensure the object is properly deleted (it's not stuck with finalizers, etc.).
 func deleteObjectAndWaitForDeletionFn(t *testing.T, obj client.Object) func() {
 	return func() {
+		t.Logf("Deleting %s/%s and waiting for it gone",
+			obj.GetNamespace(), obj.GetName(),
+		)
 		err := GetClients().MgrClient.Delete(GetCtx(), obj)
 		require.NoError(t, err)
 

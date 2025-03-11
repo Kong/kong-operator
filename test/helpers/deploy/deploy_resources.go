@@ -1060,6 +1060,29 @@ func KonnectExtensionReferencingKonnectGatewayControlPlane(
 	)
 }
 
+// ObjectSupportingKonnectConfiguration defines the interface of types supporting setting `KonnectConfiguration`.
+type ObjectSupportingKonnectConfiguration interface {
+	*konnectv1alpha1.KonnectGatewayControlPlane |
+		*konnectv1alpha1.KonnectExtension |
+		*konnectv1alpha1.KonnectCloudGatewayNetwork
+}
+
+// WithKonnectConfiguration returns an option function that sets the `KonnectConfiguration` in the object.
+func WithKonnectConfiguration[T ObjectSupportingKonnectConfiguration](
+	konnectConfiguration konnectv1alpha1.KonnectConfiguration,
+) ObjOption {
+	return func(obj client.Object) {
+		switch o := any(obj).(type) {
+		case *konnectv1alpha1.KonnectGatewayControlPlane:
+			o.Spec.KonnectConfiguration = konnectConfiguration
+		case *konnectv1alpha1.KonnectExtension:
+			o.Spec.Konnect.Configuration = lo.ToPtr(konnectConfiguration)
+		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
+			o.Spec.KonnectConfiguration = konnectConfiguration
+		}
+	}
+}
+
 func logObjectCreate[
 	T interface {
 		client.Object
