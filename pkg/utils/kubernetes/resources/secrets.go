@@ -43,11 +43,11 @@ func WithAnnotation[T client.Object](k, v string) func(d T) {
 	}
 }
 
-type controlPlaneDataPlaneOrKonnectExtension interface {
+type controlPlaneOrDataPlaneOrKonnectExtension interface {
 	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane | *konnectv1alpha1.KonnectExtension
 }
 
-func getPrefixForOwner[T controlPlaneDataPlaneOrKonnectExtension](owner T) string {
+func getPrefixForOwner[T controlPlaneOrDataPlaneOrKonnectExtension](owner T) string {
 	switch any(owner).(type) {
 	case *operatorv1beta1.ControlPlane:
 		return consts.ControlPlanePrefix
@@ -61,7 +61,7 @@ func getPrefixForOwner[T controlPlaneDataPlaneOrKonnectExtension](owner T) strin
 }
 
 // addLabelForOwner labels the provided object as managed by the provided owner.
-func addLabelForOwner[T controlPlaneDataPlaneOrKonnectExtension](obj client.Object, owner T) {
+func addLabelForOwner[T controlPlaneOrDataPlaneOrKonnectExtension](obj client.Object, owner T) {
 	switch any(owner).(type) {
 	case *operatorv1beta1.ControlPlane:
 		LabelObjectAsControlPlaneManaged(obj)
@@ -77,7 +77,7 @@ func addLabelForOwner[T controlPlaneDataPlaneOrKonnectExtension](obj client.Obje
 // It accepts a list of options that can change the generated Secret.
 func GenerateNewTLSSecret[
 	T interface {
-		controlPlaneDataPlaneOrKonnectExtension
+		controlPlaneOrDataPlaneOrKonnectExtension
 		client.Object
 	},
 ](

@@ -20,6 +20,8 @@ const (
 )
 
 func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *corev1.Secret) ([]konnectv1alpha1.KonnectExtension, error) {
+
+	// Get all the secrets explicitly referenced by KonnectExtensions in the spec.
 	l := &konnectv1alpha1.KonnectExtensionList{}
 	err := cl.List(
 		ctx, l,
@@ -32,8 +34,12 @@ func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *cor
 		return nil, err
 	}
 
+	// Add all the secrets automatically for the KonnectExtensions.
 	for _, ownerRef := range s.GetOwnerReferences() {
-		if ownerRef.Controller != nil && *ownerRef.Controller {
+		if ownerRef.Controller != nil &&
+			*ownerRef.Controller &&
+			ownerRef.Kind == konnectv1alpha1.KonnectExtensionKind &&
+			ownerRef.APIVersion == konnectv1alpha1.GroupVersion.String() {
 			owner := &konnectv1alpha1.KonnectExtension{}
 			err := cl.Get(ctx, k8stypes.NamespacedName{
 				Namespace: s.Namespace,
@@ -41,9 +47,6 @@ func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *cor
 			}, owner)
 			if err != nil {
 				return nil, err
-			}
-			if owner.UID == ownerRef.UID {
-				l.Items = append(l.Items, *owner)
 			}
 		}
 	}
