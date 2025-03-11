@@ -21,7 +21,7 @@ on:
         - release
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   release:
