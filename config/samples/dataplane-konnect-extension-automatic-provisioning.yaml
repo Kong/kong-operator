@@ -14,13 +14,14 @@ metadata:
   name: my-konnect-config
   namespace: default
 spec:
-  konnectControlPlane:
-    controlPlaneRef:
-      type: konnectID
-      konnectID: a6554c4c-79a6-4db7-b7a4-201c0cf746ba 
   konnect:
-    authRef:
-      name: konnect-api-auth-dev-1
+    controlPlane:
+      ref:
+        type: konnectID
+        konnectID: a6554c4c-79a6-4db7-b7a4-201c0cf746ba 
+    configuration:
+      authRef:
+        name: konnect-api-auth-dev-1
 ---
 apiVersion: gateway-operator.konghq.com/v1beta1
 kind: DataPlane
