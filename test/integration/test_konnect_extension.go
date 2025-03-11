@@ -231,8 +231,8 @@ func TestKonnectExtension(t *testing.T) {
 	})
 }
 
-// KonnectExtensiontestBodyParams is a struct that holds the parameters for the test body function.
-type KonnectExtensiontestBodyParams struct {
+// KonnectExtensionTestBodyParams is a struct that holds the parameters for the test body function.
+type KonnectExtensionTestBodyParams struct {
 	konnectControlPlane *konnectv1alpha1.KonnectGatewayControlPlane
 	konnectExtension    *konnectv1alpha1.KonnectExtension
 	secret              *corev1.Secret
