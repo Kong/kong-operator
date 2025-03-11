@@ -27,7 +27,7 @@
 
 ## [v1.5.0]
 
-> Release date: 2025-3-11
+> Release date: 2025-03-11
 
 ### Breaking Changes
 
