@@ -8,9 +8,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/gateway-operator/modules/manager/scheme"
-	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/test/envtest"
 
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	"github.com/kong/kubernetes-configuration/test/crdsvalidation/common"
 )
@@ -183,7 +183,7 @@ func TestDataPlane(t *testing.T) {
 								{
 									Type:               "RolledOut",
 									Status:             "True",
-									Reason:             string(consts.DataPlaneConditionReasonRolloutPromotionInProgress),
+									Reason:             string(kcfgdataplane.DataPlaneConditionReasonRolloutPromotionInProgress),
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -230,7 +230,7 @@ func TestDataPlane(t *testing.T) {
 								{
 									Type:               "RolledOut",
 									Status:             "True",
-									Reason:             string(consts.DataPlaneConditionReasonRolloutWaitingForChange),
+									Reason:             string(kcfgdataplane.DataPlaneConditionReasonRolloutWaitingForChange),
 									LastTransitionTime: metav1.Now(),
 								},
 							},

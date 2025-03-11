@@ -124,7 +124,9 @@ func (r *KonnectExtensionReconciler) getKonnectControlPlane(
 			return nil, res, errPatch
 		}
 		log.Debug(logger, "ControlPlane retrieval failed in Konnect")
-		return nil, ctrl.Result{RequeueAfter: r.syncPeriod}, nil
+		// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
+		// if the syncPeriod is set to zero, the controller won't requeue.
+		return nil, ctrl.Result{Requeue: true, RequeueAfter: r.syncPeriod}, nil
 	}
 
 	// set the controlPlaneRefValidCond to true in case the Control Plane is found in Konnect
