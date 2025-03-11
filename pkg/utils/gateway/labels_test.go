@@ -13,20 +13,20 @@ import (
 
 func TestLabelObjForGateway(t *testing.T) {
 	for _, tt := range []struct {
-		name   string
-		input  map[string]string
-		output map[string]string
+		name     string
+		input    map[string]string
+		expected map[string]string
 	}{
 		{
 			name: "a dataplane with empty labels receives a gateway managed label",
-			output: map[string]string{
+			expected: map[string]string{
 				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
 			},
 		},
 		{
 			name:  "a dataplane with no labels receives a gateway managed label",
 			input: make(map[string]string),
-			output: map[string]string{
+			expected: map[string]string{
 				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
 			},
 		},
@@ -35,7 +35,7 @@ func TestLabelObjForGateway(t *testing.T) {
 			input: map[string]string{
 				"url": "konghq.com",
 			},
-			output: map[string]string{
+			expected: map[string]string{
 				"url":                                "konghq.com",
 				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
 			},
@@ -48,7 +48,7 @@ func TestLabelObjForGateway(t *testing.T) {
 				"test3": "3",
 				"test4": "4",
 			},
-			output: map[string]string{
+			expected: map[string]string{
 				"test1":                              "1",
 				"test2":                              "2",
 				"test3":                              "3",
@@ -62,7 +62,7 @@ func TestLabelObjForGateway(t *testing.T) {
 				"test1":                              "1",
 				consts.GatewayOperatorManagedByLabel: "other",
 			},
-			output: map[string]string{
+			expected: map[string]string{
 				"test1":                              "1",
 				consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
 			},
@@ -75,7 +75,7 @@ func TestLabelObjForGateway(t *testing.T) {
 				},
 			}
 			LabelObjectAsGatewayManaged(dataplane)
-			assert.Equal(t, tt.output, dataplane.GetLabels())
+			assert.Equal(t, tt.expected, dataplane.GetLabels())
 		})
 	}
 }
