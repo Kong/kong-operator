@@ -1047,8 +1047,8 @@ func KonnectExtensionRefencingKonnectGatewayControlPlane(
 			ke, ok := obj.(*konnectv1alpha1.KonnectExtension)
 			require.Truef(t, ok, "Expect object %s/%s to be a KonnectExtension, actual type %T",
 				obj.GetNamespace(), obj.GetName(), obj)
-			ke.Spec.KonnectControlPlane = konnectv1alpha1.KonnectExtensionControlPlane{
-				ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
+			ke.Spec.Konnect.ControlPlane = konnectv1alpha1.KonnectExtensionControlPlane{
+				Ref: commonv1alpha1.ControlPlaneRef{
 					Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 					KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 						Name:      cp.Name,

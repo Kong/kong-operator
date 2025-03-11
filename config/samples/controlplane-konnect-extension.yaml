@@ -37,18 +37,19 @@ metadata:
   annotations:
     konghq.com/override: "true"
 spec:
-  konnectControlPlane:
-    controlPlaneRef:
-      type: konnectID
-      konnectID: c846c30c-77da-40e6-b0c8-66ed7e16c497
-  dataPlaneClientAuth:
+  konnect:
+    controlPlane:
+      ref:
+        type: konnectID
+        konnectID: c846c30c-77da-40e6-b0c8-66ed7e16c497
+    configuration:
+      authRef:
+        name: konnect-api-auth-dev-1
+  clientAuth:
     certificateSecret:
       provisioning: Manual
       secretRef:
-        name: konnect-client-tls
-  konnect:
-    authRef:
-      name: konnect-api-auth-dev-1
+        name: konnect-client-tls    
 ---
 apiVersion: gateway-operator.konghq.com/v1beta1
 kind: ControlPlane
