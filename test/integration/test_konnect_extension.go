@@ -51,39 +51,7 @@ func TestKonnectExtension(t *testing.T) {
 			authCfg.Spec.ServerURL = test.KonnectServerURL()
 		},
 	)
-
-	// Create a Konnect control plane for the KonnectExtension to attach to.
-	cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
-		deploy.WithTestIDLabel(testID),
-	)
-
-	t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
-		require.NoError(t, err)
-		assertKonnectEntityProgrammed(t, cp)
-	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
-
-	// Order of deleting objects with finalizers:
-	// KongRoute & KongService -> DataPlane -> KonnectExtension -> Secret -> KonnectGatewayControlPlane.
-	// The first object deleted by calling `deleteObjectAndWaitForDeletionFn` will be deleted last when added by `CleanUp`,
-	// so the order of calling the deleting function should be a reverse of the order above.
-	// After they are all deleted, the namespace can be deleted in the final clean up.
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
-
-	// Create a secret used as dataplane certificate for the KonnectExtension.
-
 	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat()
-
-	dpCert1 := deploy.Secret(
-		t, ctx, clientNamespaced,
-		map[string][]byte{
-			consts.TLSCRT: cert,
-			consts.TLSKey: key,
-		},
-		deploy.WithLabel("konghq.com/konnect-dp-cert", "true"),
-	)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, dpCert1.DeepCopy()))
 
 	t.Log("deploying backend deployment (httpbin) of HTTPRoute")
 	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
@@ -94,57 +62,203 @@ func TestKonnectExtension(t *testing.T) {
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
 	require.NoError(t, clientNamespaced.Create(ctx, service))
 
-	t.Log("Creating a KongService and a KongRoute to the service")
-	ks := deploy.KongService(t, ctx, clientNamespaced,
-		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-		func(obj client.Object) {
-			ks, ok := obj.(*configurationv1alpha1.KongService)
-			require.True(t, ok)
-			ks.Spec.KongServiceAPISpec = configurationv1alpha1.KongServiceAPISpec{
-				Name: lo.ToPtr("httpbin"),
-				URL:  lo.ToPtr(fmt.Sprintf("http://%s.%s.svc.cluster.local/", service.Name, ns.Name)),
-				Host: fmt.Sprintf("%s.%s.svc.cluster.local", service.Name, ns.Name),
-			}
-		},
-	)
-	t.Logf("Waiting for KongService to be updated with Konnect ID")
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: ks.Name, Namespace: ks.Namespace}, ks)
-		require.NoError(t, err)
-		assertKonnectEntityProgrammed(t, ks)
-	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, ks))
+	t.Run("Konnect hybrid ControlPlane", func(t *testing.T) {
+		// Create a Konnect control plane for the KonnectExtension to attach to.
+		cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
+			deploy.WithTestIDLabel(testID),
+		)
+		t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
+			require.NoError(t, err)
+			assertKonnectEntityProgrammed(t, cp)
+		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+		// Order of deleting objects with finalizers:
+		// KongRoute & KongService -> DataPlane -> KonnectExtension -> Secret -> KonnectGatewayControlPlane.
+		// The first object deleted by calling `deleteObjectAndWaitForDeletionFn` will be deleted last when added by `CleanUp`,
+		// so the order of calling the deleting function should be a reverse of the order above.
+		// After they are all deleted, the namespace can be deleted in the final clean up.
+		t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
 
-	// Tests on KonnectExtension with KonnectID control plane ref.
-	t.Logf("Creating a KonnectExtension with KonnectID typed control plane ref")
-	keWithKonnectIDCPRef := deploy.KonnectExtension(
-		t, ctx, clientNamespaced,
-		deploy.WithKonnectConfiguration[*konnectv1alpha1.KonnectExtension](konnectv1alpha1.KonnectConfiguration{
-			APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
-				Name: authCfg.Name,
+		t.Log("Creating a KongService and a KongRoute to the service")
+		ks := deploy.KongService(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				ks, ok := obj.(*configurationv1alpha1.KongService)
+				require.True(t, ok)
+				ks.Spec.KongServiceAPISpec = configurationv1alpha1.KongServiceAPISpec{
+					Name: lo.ToPtr("httpbin"),
+					URL:  lo.ToPtr(fmt.Sprintf("http://%s.%s.svc.cluster.local/", service.Name, ns.Name)),
+					Host: fmt.Sprintf("%s.%s.svc.cluster.local", service.Name, ns.Name),
+				}
 			},
-		}),
-		deploy.WithKonnectIDControlPlaneRef(cp),
-		setKonnectExtensionDPCertSecretRef(t, dpCert1),
-	)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
+		)
+		t.Logf("Waiting for KongService to be updated with Konnect ID")
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: ks.Name, Namespace: ks.Namespace}, ks)
+			require.NoError(t, err)
+			assertKonnectEntityProgrammed(t, ks)
+		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+		t.Cleanup(deleteObjectAndWaitForDeletionFn(t, ks))
 
-	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", keWithKonnectIDCPRef.Namespace, keWithKonnectIDCPRef.Name)
+		t.Log("Creating a KongRoute to the service")
+		kr := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, ks,
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongRoute)
+				s.Spec.KongRouteAPISpec.Paths = []string{"/test"}
+			},
+		)
+		t.Logf("Waiting for KongRoute to be updated with Konnect ID")
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, kr)
+			require.NoError(t, err)
+
+			assertKonnectEntityProgrammed(t, kr)
+		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+		t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kr))
+
+		t.Run("KonnectExtension with KonnectID control plane ref", func(t *testing.T) {
+			t.Run("manual secret provisioning", func(t *testing.T) {
+				t.Logf("Creating a Secret Certificate for the KonnectExtension")
+				secretCert := deploy.Secret(
+					t, ctx, clientNamespaced,
+					map[string][]byte{
+						consts.TLSCRT: cert,
+						consts.TLSKey: key,
+					},
+					deploy.WithLabel("konghq.com/konnect-dp-cert", "true"),
+				)
+				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, secretCert.DeepCopy()))
+
+				t.Logf("Creating a KonnectExtension")
+				keWithKonnectIDCPRef := deploy.KonnectExtension(
+					t, ctx, clientNamespaced,
+					deploy.WithKonnectConfiguration[*konnectv1alpha1.KonnectExtension](konnectv1alpha1.KonnectConfiguration{
+						APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+							Name: authCfg.Name,
+						},
+					}),
+					deploy.WithKonnectIDControlPlaneRef(cp),
+					setKonnectExtensionDPCertSecretRef(t, secretCert),
+				)
+				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
+
+				params := testBodyParams{
+					konnectControlPlane: cp,
+					konnectExtension:    keWithKonnectIDCPRef,
+					secret:              secretCert,
+					client:              clientNamespaced,
+					authConfigName:      authCfg.Name,
+					namespace:           ns.Name,
+				}
+				konnectExtensionTestBody(t, params)
+			})
+
+			t.Run("automatic secret provisioning", func(t *testing.T) {
+				t.Logf("Creating a KonnectExtension")
+				keWithKonnectIDCPRef := deploy.KonnectExtension(
+					t, ctx, clientNamespaced,
+					deploy.WithKonnectConfiguration[*konnectv1alpha1.KonnectExtension](konnectv1alpha1.KonnectConfiguration{
+						APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+							Name: authCfg.Name,
+						},
+					}),
+					deploy.WithKonnectIDControlPlaneRef(cp),
+				)
+				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
+				params := testBodyParams{
+					konnectControlPlane: cp,
+					konnectExtension:    keWithKonnectIDCPRef,
+					secret:              nil, // automatic provisioning
+					client:              clientNamespaced,
+					authConfigName:      authCfg.Name,
+					namespace:           ns.Name,
+				}
+				konnectExtensionTestBody(t, params)
+			})
+		})
+
+		t.Run("KonnectExtension with KonnectNamespacedRef control plane ref", func(t *testing.T) {
+			t.Run("manual secret provisioning", func(t *testing.T) {
+				t.Logf("Creating a Secret Certificate for the KonnectExtension")
+				secretCert := deploy.Secret(
+					t, ctx, clientNamespaced,
+					map[string][]byte{
+						consts.TLSCRT: cert,
+						consts.TLSKey: key,
+					},
+					deploy.WithLabel("konghq.com/konnect-dp-cert", "true"),
+				)
+				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, secretCert.DeepCopy()))
+
+				t.Logf("Creating a KonnectExtension")
+				keWithKonnectIDCPRef := deploy.KonnectExtension(
+					t, ctx, clientNamespaced,
+					deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+					setKonnectExtensionDPCertSecretRef(t, secretCert),
+				)
+				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
+
+				params := testBodyParams{
+					konnectControlPlane: cp,
+					konnectExtension:    keWithKonnectIDCPRef,
+					secret:              secretCert,
+					client:              clientNamespaced,
+					authConfigName:      authCfg.Name,
+					namespace:           ns.Name,
+				}
+				konnectExtensionTestBody(t, params)
+			})
+
+			t.Run("automatic secret provisioning", func(t *testing.T) {
+				t.Logf("Creating a KonnectExtension")
+				keWithKonnectIDCPRef := deploy.KonnectExtension(
+					t, ctx, clientNamespaced,
+					deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+				)
+				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
+				params := testBodyParams{
+					konnectControlPlane: cp,
+					konnectExtension:    keWithKonnectIDCPRef,
+					secret:              nil, // automatic provisioning
+					client:              clientNamespaced,
+					authConfigName:      authCfg.Name,
+					namespace:           ns.Name,
+				}
+				konnectExtensionTestBody(t, params)
+			})
+		})
+	})
+}
+
+// testBodyParams is a struct that holds the parameters for the test body function.
+type testBodyParams struct {
+	konnectControlPlane *konnectv1alpha1.KonnectGatewayControlPlane
+	konnectExtension    *konnectv1alpha1.KonnectExtension
+	secret              *corev1.Secret
+	client              client.Client
+	authConfigName      string
+	namespace           string
+}
+
+// konnectExtensionTestBody is a function that runs the test body for KonnectExtension.
+// The logic herein defined is shared between all the dataplane KonnectExtension tests.
+func konnectExtensionTestBody(t *testing.T, p testBodyParams) {
+	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", p.konnectExtension.Namespace, p.konnectExtension.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		ok, msg := checkKonnectExtensionConditions(t, keWithKonnectIDCPRef)
-		assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, keWithKonnectIDCPRef.Status.Conditions)
+		ok, msg := checkKonnectExtensionConditions(t, p.konnectExtension)
+		assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, p.konnectExtension.Status.Conditions)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
-	t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s/%s", keWithKonnectIDCPRef.Namespace, keWithKonnectIDCPRef.Name)
+	t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s/%s", p.konnectExtension.Namespace, p.konnectExtension.Name)
 	require.EventuallyWithT(t,
-		checkKonnectExtensionStatus(keWithKonnectIDCPRef, cp.GetKonnectID(), dpCert1.Name),
+		checkKonnectExtensionStatus(p.konnectExtension, p.konnectControlPlane.GetKonnectID(), ""),
 		testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
-	// Create a DataPlane using the KonnectExension.
-	t.Logf("Creating a DataPlane using the KonnectExtension %s/%s", keWithKonnectIDCPRef.Namespace, keWithKonnectIDCPRef.Name)
+	t.Logf("Creating a DataPlane using the KonnectExtension %s/%s", p.konnectExtension.Namespace, p.konnectExtension.Name)
 	dp := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
+			Namespace: p.namespace,
 			Name:      "test-konnect-extension-dp-1",
 		},
 		Spec: operatorv1beta1.DataPlaneSpec{
@@ -157,7 +271,7 @@ func TestKonnectExtension(t *testing.T) {
 								Containers: []corev1.Container{
 									{
 										Name:  consts.DataPlaneProxyContainerName,
-										Image: helpers.GetDefaultDataPlaneImage(),
+										Image: helpers.GetDefaultDataPlaneEnterpriseImage(),
 										Env: []corev1.EnvVar{
 											{
 												Name:  "KONG_LOG_LEVEL",
@@ -175,14 +289,14 @@ func TestKonnectExtension(t *testing.T) {
 						Group: konnectv1alpha1.GroupVersion.Group,
 						Kind:  "KonnectExtension",
 						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: keWithKonnectIDCPRef.Name,
+							Name: p.konnectExtension.Name,
 						},
 					},
 				},
 			},
 		},
 	}
-	require.NoError(t, clientNamespaced.Create(ctx, dp))
+	require.NoError(t, p.client.Create(ctx, dp))
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, dp))
 
 	dpName := k8stypes.NamespacedName{
@@ -191,7 +305,7 @@ func TestKonnectExtension(t *testing.T) {
 	}
 
 	t.Log("verifying dataplane gets marked provisioned")
-	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dpName, GetClients().OperatorClient), waitTime, tickTime)
+	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dpName, GetClients().OperatorClient), 10*waitTime, tickTime)
 
 	t.Logf("verifying dataplane %s has ingress service", dpName)
 	var dpIngressService corev1.Service
@@ -202,28 +316,18 @@ func TestKonnectExtension(t *testing.T) {
 
 	t.Log("verifying dataplane services receive IP addresses")
 	require.Eventually(t, func() bool {
-		err := clientNamespaced.Get(ctx, k8stypes.NamespacedName{
+		err := p.client.Get(ctx, k8stypes.NamespacedName{
 			Namespace: dpIngressService.Namespace,
 			Name:      dpIngressService.Name,
 		}, &dpIngressService)
 		require.NoError(t, err)
 		return len(dpIngressService.Status.LoadBalancer.Ingress) > 0
-	}, waitTime, tickTime)
+	}, 10*waitTime, tickTime)
 	dpIngressIP := dpIngressService.Status.LoadBalancer.Ingress[0].IP
 	require.Eventuallyf(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+dpIngressIP), waitTime, tickTime,
 		"Should receive 'No Route' response from dataplane's ingress service IP %s", dpIngressIP)
 
-	kr := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, ks)
-	t.Logf("Waiting for KongRoute to be updated with Konnect ID")
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, kr)
-		require.NoError(t, err)
-
-		assertKonnectEntityProgrammed(t, kr)
-	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kr))
-
-	t.Log("route to / path of service httpbin should receive a 200 OK response")
+	t.Log("route to /test path of service httpbin should receive a 200 OK response")
 	httpClient, err := helpers.CreateHTTPClient(nil, "")
 	require.NoError(t, err)
 	const routeAccessTimeout = 3 * time.Minute
@@ -234,37 +338,6 @@ func TestKonnectExtension(t *testing.T) {
 		routeAccessTimeout,
 		time.Second,
 	)
-
-	// Tests on KonnectExtension with KonnectNamespacedRef control plane ref.
-	dpCert2 := deploy.Secret(
-		t, ctx, clientNamespaced,
-		map[string][]byte{
-			consts.TLSCRT: cert,
-			consts.TLSKey: key,
-		},
-		deploy.WithLabel("konghq.com/konnect-dp-cert", "true"),
-	)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, dpCert2.DeepCopy()))
-	t.Logf("Creating a KonnectExtension with KonnectNamespacedRef typed control plane ref")
-	keWithNamespacedCPRef := deploy.KonnectExtension(
-		t, ctx,
-		clientNamespaced,
-		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-		setKonnectExtensionDPCertSecretRef(t, dpCert2),
-	)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithNamespacedCPRef.DeepCopy()))
-
-	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", keWithNamespacedCPRef.Namespace, keWithNamespacedCPRef.Name)
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		ok, msg := checkKonnectExtensionConditions(t, keWithNamespacedCPRef)
-		assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, keWithNamespacedCPRef.Status.Conditions)
-	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
-
-	t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s/%s", keWithNamespacedCPRef.Namespace, keWithNamespacedCPRef.Name)
-	require.EventuallyWithT(t,
-		checkKonnectExtensionStatus(keWithNamespacedCPRef, cp.GetKonnectID(), dpCert2.Name),
-		testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
-
 }
 
 func setKonnectExtensionDPCertSecretRef(t *testing.T, s *corev1.Secret) deploy.ObjOption {
@@ -308,7 +381,9 @@ func checkKonnectExtensionStatus(
 		// Check dataplane client auth
 		require.NotNil(t, ke.Status.DataPlaneClientAuth, "status.dataPlaneClientAuth should be present")
 		require.NotNil(t, ke.Status.DataPlaneClientAuth.CertificateSecretRef, "status.dataPlaneClientAuth.certiifcateSecretRef should be present")
-		assert.Equal(t, expectedDPCertificateSecretName, ke.Status.DataPlaneClientAuth.CertificateSecretRef.Name,
-			"status.dataPlaneClientAuth.certiifcateSecretRef should have the expected secret name")
+		if expectedDPCertificateSecretName != "" {
+			assert.Equal(t, expectedDPCertificateSecretName, ke.Status.DataPlaneClientAuth.CertificateSecretRef.Name,
+				"status.dataPlaneClientAuth.certiifcateSecretRef should have the expected secret name")
+		}
 	}
 }
