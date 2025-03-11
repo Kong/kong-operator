@@ -46,7 +46,7 @@ type KonnectGatewayControlPlane struct {
 // +kubebuilder:validation:XValidation:message="when specified, spec.cluster_type must be one of 'CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE' or 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'", rule="!has(self.cluster_type) ? true : ['CLUSTER_TYPE_CONTROL_PLANE_GROUP', 'CLUSTER_TYPE_CONTROL_PLANE', 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'].exists(ct, ct == self.cluster_type)"
 // +kubebuilder:validation:XValidation:message="spec.members is only applicable for ControlPlanes that are created as groups", rule="(has(self.cluster_type) && self.cluster_type != 'CLUSTER_TYPE_CONTROL_PLANE_GROUP') ? !has(self.members) : true"
 // +kubebuilder:validation:XValidation:message="spec.cluster_type is immutable", rule="!has(self.cluster_type) ? !has(oldSelf.cluster_type) : self.cluster_type == oldSelf.cluster_type"
-// +kubebuilder:validation:XValidation:message="cloud_gateway cannot be set for cluster_type 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'", rule="has(self.cluster_type) && self.cluster_type == 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER' ? self.cloud_gateway == false : true"
+// +kubebuilder:validation:XValidation:message="cloud_gateway cannot be set for cluster_type 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'", rule="has(self.cluster_type) && self.cluster_type == 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER' ? !has(self.cloud_gateway) : true"
 // +apireference:kgo:include
 type KonnectGatewayControlPlaneSpec struct {
 	sdkkonnectcomp.CreateControlPlaneRequest `json:",inline"`

@@ -684,7 +684,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 				ExpectedUpdateErrorMessage: lo.ToPtr("spec.cluster_type is immutable"),
 			},
 			{
-				Name: "cannot set cloud_gateway for cluster_type CLUSTER_TYPE_K8S_INGRESS_CONTROLLER",
+				Name: "cannot set cloud_gateway to true for cluster_type CLUSTER_TYPE_K8S_INGRESS_CONTROLLER",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
@@ -701,6 +701,42 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("cloud_gateway cannot be set for cluster_type 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'"),
+			},
+			{
+				Name: "cannot set cloud_gateway to false for cluster_type CLUSTER_TYPE_K8S_INGRESS_CONTROLLER",
+				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							Name:         "cp-1",
+							ClusterType:  sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
+							CloudGateway: lo.ToPtr(false),
+						},
+						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+								Name: "name-1",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("cloud_gateway cannot be set for cluster_type 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'"),
+			},
+			{
+				Name: "not setting cloud_gateway for cluster_type CLUSTER_TYPE_K8S_INGRESS_CONTROLLER passes",
+				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+						CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+							Name:        "cp-1",
+							ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
+						},
+						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+								Name: "name-1",
+							},
+						},
+					},
+				},
 			},
 		}.Run(t)
 	})
