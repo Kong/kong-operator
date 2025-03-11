@@ -80,7 +80,6 @@ func TestKonnectExtension(t *testing.T) {
 		// After they are all deleted, the namespace can be deleted in the final clean up.
 		t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
 
-		t.Log("Creating a KongService and a KongRoute to the service")
 		ks := deploy.KongService(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
@@ -101,7 +100,6 @@ func TestKonnectExtension(t *testing.T) {
 		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 		t.Cleanup(deleteObjectAndWaitForDeletionFn(t, ks))
 
-		t.Log("Creating a KongRoute to the service")
 		kr := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, ks,
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongRoute)
@@ -130,7 +128,6 @@ func TestKonnectExtension(t *testing.T) {
 				)
 				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, secretCert.DeepCopy()))
 
-				t.Logf("Creating a KonnectExtension")
 				keWithKonnectIDCPRef := deploy.KonnectExtension(
 					t, ctx, clientNamespaced,
 					deploy.WithKonnectConfiguration[*konnectv1alpha1.KonnectExtension](konnectv1alpha1.KonnectConfiguration{
@@ -155,7 +152,6 @@ func TestKonnectExtension(t *testing.T) {
 			})
 
 			t.Run("automatic secret provisioning", func(t *testing.T) {
-				t.Logf("Creating a KonnectExtension")
 				keWithKonnectIDCPRef := deploy.KonnectExtension(
 					t, ctx, clientNamespaced,
 					deploy.WithKonnectConfiguration[*konnectv1alpha1.KonnectExtension](konnectv1alpha1.KonnectConfiguration{
@@ -191,7 +187,6 @@ func TestKonnectExtension(t *testing.T) {
 				)
 				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, secretCert.DeepCopy()))
 
-				t.Logf("Creating a KonnectExtension")
 				keWithKonnectIDCPRef := deploy.KonnectExtension(
 					t, ctx, clientNamespaced,
 					deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
@@ -211,7 +206,6 @@ func TestKonnectExtension(t *testing.T) {
 			})
 
 			t.Run("automatic secret provisioning", func(t *testing.T) {
-				t.Logf("Creating a KonnectExtension")
 				keWithKonnectIDCPRef := deploy.KonnectExtension(
 					t, ctx, clientNamespaced,
 					deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
