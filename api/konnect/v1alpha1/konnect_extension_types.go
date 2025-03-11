@@ -39,6 +39,7 @@ const (
 // +kubebuilder:object:root=true
 // +kubebuilder:object:generate=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="Ready",description="The Resource is Ready to be used",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.konnect.controlPlane.ref == self.spec.konnect.controlPlane.ref", message="spec.konnect.controlPlane.ref is immutable."
 // +kubebuilder:validation:XValidation:rule="self.spec.konnect.controlPlane.ref.type == 'konnectID' ? has(self.spec.konnect.configuration) : true",message="konnect must be set when ControlPlaneRef is set to KonnectID."
 // +kubebuilder:validation:XValidation:rule="self.spec.konnect.controlPlane.ref.type == 'konnectNamespacedRef' ? !has(self.spec.konnect.configuration) : true",message="konnect must be unset when ControlPlaneRef is set to konnectNamespacedRef."
