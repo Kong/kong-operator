@@ -308,7 +308,7 @@ func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
 		}, &dpIngressService)
 		require.NoError(t, err)
 		return len(dpIngressService.Status.LoadBalancer.Ingress) > 0
-	}, 10*waitTime, tickTime)
+	}, waitTime, tickTime)
 	dpIngressIP := dpIngressService.Status.LoadBalancer.Ingress[0].IP
 	require.Eventuallyf(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+dpIngressIP), waitTime, tickTime,
 		"Should receive 'No Route' response from dataplane's ingress service IP %s", dpIngressIP)
