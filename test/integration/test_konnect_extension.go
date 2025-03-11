@@ -54,14 +54,14 @@ func TestKonnectExtensionKonnectGatewayControlPlaneNamespacedRef(t *testing.T) {
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	t.Logf("Creating a KonnectExtension")
-	ke := deploy.KonnectExtensionRefencingKonnectGatewayControlPlane(
+	ke := deploy.KonnectExtensionReferencingKonnectGatewayControlPlane(
 		t, ctx,
 		clientNamespaced,
 		cp,
 	)
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, ke.DeepCopy()))
 
-	t.Logf("Waiting for KonnectExtension %s/%s to have ControlPlaneRefValid contition set to True", ke.Namespace, ke.Name)
+	t.Logf("Waiting for KonnectExtension %s/%s to have ControlPlaneRefValid condition set to True", ke.Namespace, ke.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: ke.Name, Namespace: ke.Namespace}, ke)
 		require.NoError(t, err)
