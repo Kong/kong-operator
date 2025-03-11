@@ -20,6 +20,9 @@ on:
         - prerelease
         - release
 
+permissions:
+  contents: read
+
 jobs:
   release:
     permissions:

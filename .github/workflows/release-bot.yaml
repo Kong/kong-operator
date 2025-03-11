@@ -10,7 +10,7 @@ on:
       - 'release/*'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   look_for_release:

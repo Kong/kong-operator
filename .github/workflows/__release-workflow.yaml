@@ -71,7 +71,7 @@ on:
         default: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   semver:
