@@ -9,10 +9,8 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,6 +20,7 @@ import (
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
+	"github.com/kong/gateway-operator/test/helpers/eventually"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -144,12 +143,7 @@ func TestKongService(t *testing.T) {
 
 		t.Log("Deleting KongService")
 		require.NoError(t, clientNamespaced.Delete(ctx, createdService))
-
-		t.Log("Waiting for KongService to disappear")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			err := clientNamespaced.Get(ctx, client.ObjectKeyFromObject(createdService), createdService)
-			assert.True(c, err != nil && k8serrors.IsNotFound(err))
-		}, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdService, waitTime, tickTime)
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 	})

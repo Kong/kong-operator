@@ -16,7 +16,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -27,6 +26,7 @@ import (
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
+	"github.com/kong/gateway-operator/test/helpers/eventually"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
@@ -386,18 +386,9 @@ func TestControlPlaneEssentials(t *testing.T) {
 	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasClusterRole(t, GetCtx(), controlplane, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasClusterRoleBinding(t, GetCtx(), controlplane, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasAdmissionWebhookConfiguration(t, GetCtx(), controlplane, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
-	t.Log("verifying controlplane disappears after cluster resources are deleted")
-	require.Eventually(t, func() bool {
-		_, err := GetClients().OperatorClient.GatewayOperatorV1beta1().ControlPlanes(controlplaneName.Namespace).Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
-		return k8serrors.IsNotFound(err)
-	}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
-		func() string {
-			controlplane, err := GetClients().OperatorClient.GatewayOperatorV1beta1().ControlPlanes(controlplaneName.Namespace).Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
-			if err != nil {
-				return fmt.Sprintf("failed to get controlplane %s, error %v", controlplaneName.Name, err)
-			}
-			return fmt.Sprintf("last state of control plane: %#v", controlplane)
-		},
+	t.Logf("verifying controlplane %s disappears after cluster resources are deleted", controlplane.Name)
+	eventually.WaitForObjectToNotExist(t, ctx, GetClients().MgrClient, controlplane,
+		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 	)
 }
 

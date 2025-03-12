@@ -13,7 +13,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -23,6 +22,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
+	"github.com/kong/gateway-operator/test/helpers/eventually"
 
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -441,13 +441,9 @@ func TestDataPlaneBlueGreen_ResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T)
 	t.Log("deleting dataplane and ensuring its owned resources are deleted after that")
 	require.NoError(t, GetClients().MgrClient.Delete(GetCtx(), dataplane))
 	for _, resource := range dependentResources {
-		require.Eventually(t, func() bool {
-			err := GetClients().MgrClient.Get(GetCtx(), client.ObjectKeyFromObject(resource), resource)
-			if err != nil && k8serrors.IsNotFound(err) {
-				return true
-			}
-			return false
-		}, waitTime, tickTime, "resource %T %q should be deleted after dataplane deletion", resource, resource.GetName())
+		eventually.WaitForObjectToNotExist(t, ctx, GetClients().MgrClient, resource, waitTime, tickTime,
+			"should be deleted after dataplane deletion",
+		)
 	}
 }
 
