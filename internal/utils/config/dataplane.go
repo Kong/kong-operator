@@ -1,4 +1,4 @@
-package dataplane
+package config
 
 import (
 	"fmt"
@@ -41,9 +41,9 @@ var KongDefaults = map[string]string{
 	"KONG_NGINX_ADMIN_SSL_VERIFY_DEPTH":       "3",
 }
 
-// KongInKonnectDefaults are the baseline Kong proxy configuration options needed for
-// the proxy to function when configured in Konnect.
-var kongInKonnectClusterTypeControlPlaneDefaults = map[string]string{
+// kongInKonnectClusterTypeControlPlane are the baseline Kong proxy configuration options needed for
+// the proxy to function when configured in Konnect Hybrid ControlPlanes.
+var kongInKonnectClusterTypeControlPlane = map[string]string{
 	"KONG_ROLE":                          "data_plane",
 	"KONG_CLUSTER_MTLS":                  "pki",
 	"KONG_CLUSTER_CONTROL_PLANE":         "<CONTROL-PLANE-ENDPOINT>:443",
@@ -57,8 +57,10 @@ var kongInKonnectClusterTypeControlPlaneDefaults = map[string]string{
 	"KONG_VITALS":                        "off",
 }
 
+// kongInKonnectClusterTypeIngressController are the baseline Kong proxy configuration options needed for
+// the proxy to function when configured in Konnect K8s Ingress Controllers ControlPlanes.
 var kongInKonnectClusterTypeIngressController = map[string]string{
-	"KONG_ROLE":                          "data_plane",
+	"KONG_ROLE":                          "traditional",
 	"KONG_CLUSTER_MTLS":                  "pki",
 	"KONG_CLUSTER_TELEMETRY_ENDPOINT":    "<TELEMETRY-ENDPOINT>:443",
 	"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "<TELEMETRY-ENDPOINT>",
@@ -74,12 +76,12 @@ func KongInKonnectDefaults(
 	dpLabels map[string]konnectv1alpha1.DataPlaneLabelValue,
 	konnectExtensionStatus konnectv1alpha1.KonnectExtensionStatus,
 ) map[string]string {
-	newEnvSet := make(map[string]string, len(kongInKonnectClusterTypeControlPlaneDefaults))
+	newEnvSet := make(map[string]string, len(kongInKonnectClusterTypeControlPlane))
 	var template map[string]string
 
 	switch konnectExtensionStatus.Konnect.ClusterType {
 	case konnectv1alpha1.ClusterTypeControlPlane:
-		template = kongInKonnectClusterTypeControlPlaneDefaults
+		template = kongInKonnectClusterTypeControlPlane
 	case konnectv1alpha1.ClusterTypeK8sIngressController:
 		template = kongInKonnectClusterTypeIngressController
 	default:

@@ -22,6 +22,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/kong/gateway-operator/controller/pkg/extensions"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -32,6 +33,9 @@ import (
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
+	kcfggateway "github.com/kong/kubernetes-configuration/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -56,6 +60,9 @@ func (r *Reconciler) createDataPlane(ctx context.Context,
 	if err := setDataPlaneIngressServicePorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners); err != nil {
 		return nil, err
 	}
+
+	dataplane.Spec.DataPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, dataplane.Spec.DataPlaneOptions.Extensions)
+
 	k8sutils.SetOwnerForObject(dataplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(dataplane)
 	err := r.Client.Create(ctx, dataplane)
@@ -87,6 +94,8 @@ func (r *Reconciler) createControlPlane(
 	if controlplane.Spec.DataPlane == nil {
 		controlplane.Spec.DataPlane = &dataplaneName
 	}
+
+	controlplane.Spec.ControlPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, controlplane.Spec.ControlPlaneOptions.Extensions)
 
 	setControlPlaneOptionsDefaults(&controlplane.Spec.ControlPlaneOptions)
 	k8sutils.SetOwnerForObject(controlplane, gateway)
@@ -126,7 +135,8 @@ func (r *Reconciler) getGatewayAddresses(
 }
 
 func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
-	gatewayConfigNamespace string, opts operatorv1beta1.GatewayConfigDataPlaneOptions,
+	gatewayConfigNamespace string,
+	opts operatorv1beta1.GatewayConfigDataPlaneOptions,
 ) *operatorv1beta1.DataPlaneOptions {
 	// When Namespace is not provided, the GatewayConfiguration's namespace is assumed.
 	pluginsToInstall := lo.Map(opts.PluginsToInstall, func(pluginReference operatorv1beta1.NamespacedName, _ int) operatorv1beta1.NamespacedName {
@@ -138,6 +148,7 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 
 	dataPlaneOptions := &operatorv1beta1.DataPlaneOptions{
 		Deployment:       opts.Deployment,
+		Extensions:       opts.Extensions,
 		PluginsToInstall: pluginsToInstall,
 	}
 
@@ -541,15 +552,15 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus() {
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			consts.ConditionType(gatewayv1.GatewayConditionProgrammed),
+			kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed),
 			metav1.ConditionFalse,
-			consts.ConditionReason(gatewayv1.GatewayReasonPending),
-			consts.DependenciesNotReadyMessage,
+			kcfgconsts.ConditionReason(gatewayv1.GatewayReasonPending),
+			kcfgdataplane.DependenciesNotReadyMessage,
 			g.Generation),
 		g)
 	for i := range g.Spec.Listeners {
 		lStatus := listenerConditionsAware(&g.Status.Listeners[i])
-		cond, ok := k8sutils.GetCondition(consts.ConditionType(gatewayv1.ListenerConditionProgrammed), lStatus)
+		cond, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.ListenerConditionProgrammed), lStatus)
 		if !ok || cond.ObservedGeneration != g.Generation {
 			k8sutils.SetCondition(metav1.Condition{
 				Type:               string(gatewayv1.ListenerConditionProgrammed),
@@ -800,7 +811,7 @@ func (g *gatewayConditionsAndListenersAwareT) setProgrammed() {
 			LastTransitionTime: metav1.Now(),
 		}
 		listenerStatus := listenerConditionsAware(listener)
-		rCond, ok := k8sutils.GetCondition(consts.ConditionType(gatewayv1.ListenerConditionResolvedRefs), listenerStatus)
+		rCond, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.ListenerConditionResolvedRefs), listenerStatus)
 		if ok && rCond.Status == metav1.ConditionFalse {
 			programmedCondition.Status = metav1.ConditionFalse
 			programmedCondition.Reason = string(gatewayv1.ListenerReasonPending)
@@ -875,7 +886,7 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 		}
 		// We currently do not support more that one listener certificate.
 		if len(listener.TLS.CertificateRefs) != 1 {
-			resolvedRefsCondition.Reason = string(ListenerReasonTooManyTLSSecrets)
+			resolvedRefsCondition.Reason = string(kcfggateway.ListenerReasonTooManyTLSSecrets)
 			message = conditionMessage(message, "Only one certificate per listener is supported")
 		} else {
 			isValidGroupKind := true
@@ -1032,8 +1043,8 @@ func parseKongListenEnv(str string) (kongListenConfig, error) {
 }
 
 func gatewayStatusNeedsUpdate(oldGateway, newGateway gatewayConditionsAndListenersAwareT) bool {
-	oldCondAccepted, okOld := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayConditionAccepted), oldGateway)
-	newCondAccepted, _ := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayConditionAccepted), newGateway)
+	oldCondAccepted, okOld := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionAccepted), oldGateway)
+	newCondAccepted, _ := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionAccepted), newGateway)
 
 	if !okOld || !areConditionsEqual(oldCondAccepted, newCondAccepted) {
 		return true

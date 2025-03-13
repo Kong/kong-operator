@@ -2,7 +2,6 @@ package konnect
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/samber/lo"
@@ -132,19 +131,10 @@ func TestHandleKeySetRef(t *testing.T) {
 				return true, ""
 			}
 		}
-		hasExactlyOneOwnerReferenceTo = func(obj client.Object) func(key *configurationv1alpha1.KongKey) (ok bool, message string) {
+		hasNoOwners = func() func(key *configurationv1alpha1.KongKey) (ok bool, message string) {
 			return func(key *configurationv1alpha1.KongKey) (ok bool, message string) {
-				if len(key.GetOwnerReferences()) != 1 {
-					return false, "KongKey should have exactly one owner reference"
-				}
-
-				hasOwnerRef := lo.ContainsBy(key.GetOwnerReferences(), func(owner metav1.OwnerReference) bool {
-					return owner.Name == obj.GetName() &&
-						reflect.TypeOf(obj).Elem().Name() == owner.Kind &&
-						owner.BlockOwnerDeletion != nil && *owner.BlockOwnerDeletion
-				})
-				if !hasOwnerRef {
-					return false, fmt.Sprintf("KongKey should have owner reference to %s", client.ObjectKeyFromObject(obj))
+				if len(key.GetOwnerReferences()) != 0 {
+					return false, "KongKey should have no owner references"
 				}
 				return true, ""
 			}
@@ -267,7 +257,7 @@ func TestHandleKeySetRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongKey) (ok bool, message string){
 				keySetRefConditionIs(metav1.ConditionTrue),
 				keySetIDIs(programmedKeySet.Status.Konnect.ID),
-				hasExactlyOneOwnerReferenceTo(programmedKeySet),
+				hasNoOwners(),
 			},
 		},
 		{
@@ -290,43 +280,7 @@ func TestHandleKeySetRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongKey) (ok bool, message string){
 				keySetIDIsEmpty,
 				keySetRefConditionIs(metav1.ConditionTrue),
-				hasExactlyOneOwnerReferenceTo(&konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: cpRef.KonnectNamespacedRef.Name,
-					},
-				}),
-			},
-		},
-		{
-			name: "when entity has owning reference to control plane and refers key set, the ownership should be transferred to key set",
-			ent: &configurationv1alpha1.KongKey{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "key-1",
-					Namespace: "ns",
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: konnectv1alpha1.GroupVersion.String(),
-							Kind:       "KonnectGatewayControlPlane",
-							Name:       cpRef.KonnectNamespacedRef.Name,
-						},
-					},
-				},
-				Spec: configurationv1alpha1.KongKeySpec{
-					ControlPlaneRef: cpRef,
-					KeySetRef: &configurationv1alpha1.KeySetRef{
-						Type: configurationv1alpha1.KeySetRefNamespacedRef,
-						NamespacedRef: &configurationv1alpha1.KeySetNamespacedRef{
-							Name: programmedKeySet.Name,
-						},
-					},
-				},
-			},
-			objects:      []client.Object{programmedKeySet},
-			expectResult: ctrl.Result{},
-			updatedEntAssertions: []func(*configurationv1alpha1.KongKey) (ok bool, message string){
-				keySetIDIs(programmedKeySet.Status.Konnect.ID),
-				keySetRefConditionIs(metav1.ConditionTrue),
-				hasExactlyOneOwnerReferenceTo(programmedKeySet),
+				hasNoOwners(),
 			},
 		},
 	}

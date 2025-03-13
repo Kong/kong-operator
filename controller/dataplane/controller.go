@@ -14,6 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/pkg/ctxinjector"
+	"github.com/kong/gateway-operator/controller/pkg/extensions"
+	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
@@ -22,6 +24,7 @@ import (
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
 )
 
 // -----------------------------------------------------------------------------
@@ -41,6 +44,7 @@ type Reconciler struct {
 	ContextInjector          ctxinjector.CtxInjector
 	DefaultImage             string
 	KonnectEnabled           bool
+	EnforceConfig            bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -81,16 +85,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "applying extensions")
-	stop, requeue, err := applyExtensions(ctx, r.Client, logger, dataplane, r.KonnectEnabled)
+	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, dataplane, r.KonnectEnabled)
 	if err != nil {
-		if !requeue {
+		if extensionserrors.IsKonnectExtensionError(err) {
 			log.Debug(logger, "failed to apply extensions", "err", err)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
-	if stop {
-		return ctrl.Result{}, nil
+	if stop || !result.IsZero() {
+		return result, nil
 	}
 
 	log.Trace(logger, "exposing DataPlane deployment admin API via headless service")
@@ -182,7 +186,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// if the dataplane is configured with Konnect, the status/ready endpoint should be set as the readiness probe.
-	if _, konnectApplied := k8sutils.GetCondition(consts.KonnectExtensionAppliedType, dataplane); konnectApplied {
+	if _, konnectApplied := k8sutils.GetCondition(kcfgkonnect.KonnectExtensionAppliedType, dataplane); konnectApplied {
 		deploymentOpts = append(deploymentOpts, statusReadyEndpointDeploymentOpt(dataplane))
 	}
 
@@ -204,7 +208,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		WithDefaultImage(r.DefaultImage).
 		WithAdditionalLabels(deploymentLabels)
 
-	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.DevelopmentMode)
+	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.DevelopmentMode)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("could not build Deployment for DataPlane %s: %w", dpNn, err)
 	}

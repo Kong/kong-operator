@@ -314,7 +314,7 @@ jobs:
 
       # PRs will update the version file and manifests
       - name: Create a release PR
-        uses: peter-evans/create-pull-request@dd2324fc52d5d43c699a5636bcf19fceaa70c284 # v7.0.6
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.6
         with:
           token: ${{ secrets.gh-pat }}
           path: .

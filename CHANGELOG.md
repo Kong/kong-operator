@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v1.5.0](#v150)
 - [v1.4.2](#v142)
 - [v1.4.1](#v141)
 - [v1.4.0](#v140)
@@ -24,7 +25,9 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v1.5.0]
+
+> Release date: 2025-03-11
 
 ### Breaking Changes
 
@@ -47,6 +50,14 @@
 - Support for the `konnect-extension.gateway-operator.konghq.com` CRD has been interrupted. The new
   API `konnect-extension.konnect.konghq.com` must be used instead.
   [#1183](https://github.com/Kong/gateway-operator/pull/1183)
+- Migrate KGO CRDs conditions to the kubernetes-configuration repo.
+  With this migration process, we have moved all conditions from the KGO repo to [kubernetes-configuration](kubernetes-configuration).
+  This is a breaking change which requires manual action for projects that use operator's Go conditions types.
+  In order to migrate please use the import paths from the [kong/kubernetes-configuration](kubernetes-configuration) repo instead.
+  [#1281](https://github.com/Kong/gateway-operator/pull/1281)
+  [#1305](https://github.com/Kong/gateway-operator/pull/1305)
+  [#1306](https://github.com/Kong/gateway-operator/pull/1306)
+  [#1318](https://github.com/Kong/gateway-operator/pull/1318)
 
 [kubernetes-configuration]: https://github.com/Kong/kubernetes-configuration
 
@@ -56,9 +67,6 @@
   owning service. Currently specifying ingress service of `DataPlane` is
   supported.
   [#966](https://github.com/Kong/gateway-operator/pull/966)
-- Added support for `ControlPlaneRef`s with `type` equal to `konnectID` for
-  all Konnect entities that refer to a `ControlPlane`.
-  [#985](https://github.com/Kong/gateway-operator/pull/985)
 - Added support for global plugins with `KongPluginBinding`'s `scope` field.
   The default value is `OnlyTargets` which means that the plugin will be
   applied only to the targets specified in the `targets` field. The new
@@ -102,6 +110,22 @@
 - Added support for `KonnectDataPlaneGroupConfiguration` CRD which can manage Konnect
   Cloud Gateway DataPlane Group configurations entities.
   [#1186](https://github.com/Kong/gateway-operator/pull/1186)
+- Supported `KonnectExtension` to attach to Konnect control planes by setting
+  namespace and name of `KonnectGatewayControlPlane` in `spec.konnectControlPlane`.
+  [#1254](https://github.com/Kong/gateway-operator/pull/1254)
+- Added support for `KonnectExtension`s on `ControlPlane`s.
+  [#1262](https://github.com/Kong/gateway-operator/pull/1262)
+- Added support for `KonnectExtension`'s `status` `controlPlaneRefs` and `dataPlaneRefs`
+  fields.
+  [#1297](https://github.com/Kong/gateway-operator/pull/1297)
+- Added support for `KonnectExtension`s on `Gateway`s via `GatewayConfiguration`
+  extensibility.
+  [#1292](https://github.com/Kong/gateway-operator/pull/1292)
+- Added `-enforce-config` flag to enforce the configuration of the `ControlPlane`
+  and `DataPlane` `Deployment`s.
+  [#1307](https://github.com/Kong/gateway-operator/pull/1307)
+- Added Automatic secret provisioning for `KonnectExtension` certificates.
+  [#1304](https://github.com/Kong/gateway-operator/pull/1304)
 
 ### Changed
 
@@ -166,6 +190,21 @@
   [#1099](https://github.com/Kong/gateway-operator/pull/1099)
 - Remove the owner relationship between `KongService` and `KongRoute`.
   [#1178](https://github.com/Kong/gateway-operator/pull/1178)
+- Remove the owner relationship between `KongTarget` and `KongUpstream`.
+  [#1279](https://github.com/Kong/gateway-operator/pull/1279)
+- Remove the owner relationship between `KongCertificate` and `KongSNI`.
+  [#1285](https://github.com/Kong/gateway-operator/pull/1285)
+- Remove the owner relationship between `KongKey`s and `KongKeysSet`s and `KonnectGatewayControlPlane`s.
+  [#1291](https://github.com/Kong/gateway-operator/pull/1291)
+- Check whether an error from calling Konnect API is a validation error by
+  HTTP status code in Konnect entity controller. If the HTTP status code is
+  `400`, we consider the error as a validation error and do not try to requeue
+  the Konnect entity.
+  [#1226](https://github.com/Kong/gateway-operator/pull/1226)
+- Credential resources used as Konnect entities that are attached to a `KongConsumer`
+  resource do not get an owner relationship set to the `KongConsumer` anymore hence
+  they are not deleted when the `KongConsumer` is deleted.
+  [#1259](https://github.com/Kong/gateway-operator/pull/1259)
 
 [kubebuilder_3907]: https://github.com/kubernetes-sigs/kubebuilder/discussions/3907
 
@@ -993,6 +1032,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v1.5.0]: https://github.com/Kong/gateway-operator/compare/v1.4.2..v1.5.0
 [v1.4.2]: https://github.com/Kong/gateway-operator/compare/v1.4.1..v1.4.2
 [v1.4.1]: https://github.com/Kong/gateway-operator/compare/v1.4.0..v1.4.1
 [v1.4.0]: https://github.com/Kong/gateway-operator/compare/v1.3.0..v1.4.0

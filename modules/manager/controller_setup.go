@@ -185,8 +185,14 @@ func setupIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 			}
 		}
 		if cfg.KonnectControllersEnabled {
-			if err := index.DataPlaneOnDataPlaneKonnecExtension(ctx, mgr.GetCache()); err != nil {
+			if err := index.ExtendableOnKonnectExtension(ctx, mgr.GetCache(), &operatorv1beta1.DataPlane{}); err != nil {
 				return fmt.Errorf("failed to setup index for DataPlanes on KonnectExtensions: %w", err)
+			}
+			if err := index.ExtendableOnKonnectExtension(ctx, mgr.GetCache(), &operatorv1beta1.ControlPlane{}); err != nil {
+				return fmt.Errorf("failed to setup index for ControlPlanes on KonnectExtensions: %w", err)
+			}
+			if err := index.ExtendableOnKonnectExtension(ctx, mgr.GetCache(), &operatorv1beta1.GatewayConfiguration{}); err != nil {
+				return fmt.Errorf("failed to setup index for ControlPlanes on KonnectExtensions: %w", err)
 			}
 		}
 	}
@@ -418,6 +424,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				Scheme:                mgr.GetScheme(),
 				DevelopmentMode:       c.DevelopmentMode,
 				DefaultDataPlaneImage: consts.DefaultDataPlaneImage,
+				KonnectEnabled:        c.KonnectControllersEnabled,
 			},
 		},
 		// ControlPlane controller
@@ -430,6 +437,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				DevelopmentMode:          c.DevelopmentMode,
+				KonnectEnabled:           c.KonnectControllersEnabled,
+				EnforceConfig:            c.EnforceConfig,
 				RestConfig:               mgr.GetConfig(),
 				InstancesManager:         cpsMgr,
 			},
@@ -450,6 +459,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				},
 				DefaultImage:   consts.DefaultDataPlaneImage,
 				KonnectEnabled: c.KonnectControllersEnabled,
+				EnforceConfig:  c.EnforceConfig,
 			},
 		},
 		// DataPlaneBlueGreen controller
@@ -474,6 +484,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 						AfterDeployment:  dataplane.CreateCallbackManager(),
 					},
 					KonnectEnabled: c.KonnectControllersEnabled,
+					EnforceConfig:  c.EnforceConfig,
 				},
 				Callbacks: dataplane.DataPlaneCallbacks{
 					BeforeDeployment: dataplane.CreateCallbackManager(),
@@ -481,6 +492,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				},
 				DefaultImage:   consts.DefaultDataPlaneImage,
 				KonnectEnabled: c.KonnectControllersEnabled,
+				EnforceConfig:  c.EnforceConfig,
 			},
 		},
 		DataPlaneOwnedServiceFinalizerControllerName: {
@@ -571,11 +583,15 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 
 			KonnectExtensionControllerName: {
 				Enabled: (c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled) && c.KonnectControllersEnabled,
-				Controller: konnect.NewKonnectExtensionReconciler(
-					sdkFactory,
-					c.DevelopmentMode,
-					mgr.GetClient(),
-				),
+				Controller: &konnect.KonnectExtensionReconciler{
+					SdkFactory:               sdkFactory,
+					DevelopmentMode:          c.DevelopmentMode,
+					Client:                   mgr.GetClient(),
+					SyncPeriod:               c.KonnectSyncPeriod,
+					ClusterCASecretName:      c.ClusterCASecretName,
+					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+					ClusterCAKeyConfig:       clusterCAKeyConfig,
+				},
 			},
 
 			// Controllers responsible for cleaning up KongPluginBinding cleanup finalizers.

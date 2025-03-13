@@ -6,7 +6,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 )
 
 // ConditionsAndListenerConditionsAndGenerationAware is a CRD type that has Conditions, Generation, and Listener
@@ -61,7 +62,7 @@ func SetCondition(condition metav1.Condition, resource ConditionsAware) {
 }
 
 // GetCondition returns the condition with the given type, if it exists. If the condition does not exists it returns false.
-func GetCondition(cType consts.ConditionType, resource ConditionsAware) (metav1.Condition, bool) {
+func GetCondition(cType kcfgconsts.ConditionType, resource ConditionsAware) (metav1.Condition, bool) {
 	for _, condition := range resource.GetConditions() {
 		if condition.Type == string(cType) {
 			return condition, true
@@ -72,7 +73,7 @@ func GetCondition(cType consts.ConditionType, resource ConditionsAware) (metav1.
 
 // hasConditionWithStatus returns true if the provided resource has a condition
 // with the given type and status.
-func hasConditionWithStatus(cType consts.ConditionType, resource ConditionsAware, status metav1.ConditionStatus) bool {
+func hasConditionWithStatus(cType kcfgconsts.ConditionType, resource ConditionsAware, status metav1.ConditionStatus) bool {
 	for _, condition := range resource.GetConditions() {
 		if condition.Type == string(cType) {
 			return condition.Status == status
@@ -82,24 +83,24 @@ func hasConditionWithStatus(cType consts.ConditionType, resource ConditionsAware
 }
 
 // HasConditionFalse returns true if the condition on the resource has Status set to ConditionFalse, false otherwise.
-func HasConditionFalse(cType consts.ConditionType, resource ConditionsAware) bool {
+func HasConditionFalse(cType kcfgconsts.ConditionType, resource ConditionsAware) bool {
 	return hasConditionWithStatus(cType, resource, metav1.ConditionFalse)
 }
 
 // HasConditionTrue returns true if the condition on the resource has Status set to ConditionTrue, false otherwise.
-func HasConditionTrue(cType consts.ConditionType, resource ConditionsAware) bool {
+func HasConditionTrue(cType kcfgconsts.ConditionType, resource ConditionsAware) bool {
 	return hasConditionWithStatus(cType, resource, metav1.ConditionTrue)
 }
 
 // InitReady initializes the Ready status to False if Ready condition is not
 // yet set on the resource.
 func InitReady(resource ConditionsAndGenerationAware) bool {
-	_, ok := GetCondition(consts.ReadyType, resource)
+	_, ok := GetCondition(kcfgdataplane.ReadyType, resource)
 	if ok {
 		return false
 	}
 	SetCondition(
-		NewConditionWithGeneration(consts.ReadyType, metav1.ConditionFalse, consts.DependenciesNotReadyReason, consts.DependenciesNotReadyMessage, resource.GetGeneration()),
+		NewConditionWithGeneration(kcfgdataplane.ReadyType, metav1.ConditionFalse, kcfgdataplane.DependenciesNotReadyReason, kcfgdataplane.DependenciesNotReadyMessage, resource.GetGeneration()),
 		resource,
 	)
 	return true
@@ -109,18 +110,18 @@ func InitReady(resource ConditionsAndGenerationAware) bool {
 // It uses the provided generation to set the ObservedGeneration field.
 func SetReadyWithGeneration(resource ConditionsAndGenerationAware, generation int64) {
 	ready := metav1.Condition{
-		Type:               string(consts.ReadyType),
+		Type:               string(kcfgdataplane.ReadyType),
 		LastTransitionTime: metav1.Now(),
 		ObservedGeneration: generation,
 	}
 
 	if AreAllConditionsHaveTrueStatus(resource) {
 		ready.Status = metav1.ConditionTrue
-		ready.Reason = string(consts.ResourceReadyReason)
+		ready.Reason = string(kcfgdataplane.ResourceReadyReason)
 	} else {
 		ready.Status = metav1.ConditionFalse
-		ready.Reason = string(consts.DependenciesNotReadyReason)
-		ready.Message = consts.DependenciesNotReadyMessage
+		ready.Reason = string(kcfgdataplane.DependenciesNotReadyReason)
+		ready.Message = kcfgdataplane.DependenciesNotReadyMessage
 	}
 	SetCondition(ready, resource)
 }
@@ -143,8 +144,8 @@ func SetProgrammed(resource ConditionsAndGenerationAware) {
 		programmed.Reason = string(gatewayv1.GatewayReasonProgrammed)
 	} else {
 		programmed.Status = metav1.ConditionFalse
-		programmed.Reason = string(consts.DependenciesNotReadyReason)
-		programmed.Message = consts.DependenciesNotReadyMessage
+		programmed.Reason = string(kcfgdataplane.DependenciesNotReadyReason)
+		programmed.Message = kcfgdataplane.DependenciesNotReadyMessage
 	}
 	SetCondition(programmed, resource)
 }
@@ -201,7 +202,7 @@ func SetAcceptedConditionOnGateway(resource ConditionsAndListenerConditionsAndGe
 func AreAllConditionsHaveTrueStatus(resource ConditionsAware) bool {
 	for _, condition := range resource.GetConditions() {
 		switch condition.Type {
-		case string(consts.ReadyType), string(gatewayv1.GatewayConditionProgrammed):
+		case string(kcfgdataplane.ReadyType), string(gatewayv1.GatewayConditionProgrammed):
 			continue
 		default:
 			if condition.Status != metav1.ConditionTrue {
@@ -212,22 +213,11 @@ func AreAllConditionsHaveTrueStatus(resource ConditionsAware) bool {
 	return true
 }
 
-// IsAccepted evaluates whether a resource is in Accepted state, meaning
-// that all its listeners are accepted.
-func IsAccepted(resource ConditionsAware) bool {
-	for _, condition := range resource.GetConditions() {
-		if condition.Type == string(gatewayv1.GatewayConditionAccepted) {
-			return condition.Status == metav1.ConditionTrue
-		}
-	}
-	return false
-}
-
 // IsReady evaluates whether a resource is in Ready state, meaning
 // that all its conditions are in the True state.
 func IsReady(resource ConditionsAware) bool {
 	for _, condition := range resource.GetConditions() {
-		if condition.Type == string(consts.ReadyType) {
+		if condition.Type == string(kcfgdataplane.ReadyType) {
 			return condition.Status == metav1.ConditionTrue
 		}
 	}
@@ -245,7 +235,7 @@ func IsProgrammed(resource ConditionsAware) bool {
 }
 
 // NewCondition convenience method for creating conditions
-func NewCondition(cType consts.ConditionType, status metav1.ConditionStatus, reason consts.ConditionReason, message string) metav1.Condition {
+func NewCondition(cType kcfgconsts.ConditionType, status metav1.ConditionStatus, reason kcfgconsts.ConditionReason, message string) metav1.Condition {
 	return metav1.Condition{
 		Type:               string(cType),
 		Reason:             string(reason),
@@ -256,7 +246,7 @@ func NewCondition(cType consts.ConditionType, status metav1.ConditionStatus, rea
 }
 
 // NewConditionWithGeneration convenience method for creating conditions with ObservedGeneration set.
-func NewConditionWithGeneration(cType consts.ConditionType, status metav1.ConditionStatus, reason consts.ConditionReason, message string, observedGeneration int64) metav1.Condition {
+func NewConditionWithGeneration(cType kcfgconsts.ConditionType, status metav1.ConditionStatus, reason kcfgconsts.ConditionReason, message string, observedGeneration int64) metav1.Condition {
 	c := NewCondition(cType, status, reason, message)
 	c.ObservedGeneration = observedGeneration
 	return c
@@ -270,7 +260,7 @@ func NeedsUpdate(current, updated ConditionsAware) bool {
 	}
 
 	for _, c := range current.GetConditions() {
-		u, exists := GetCondition(consts.ConditionType(c.Type), updated)
+		u, exists := GetCondition(kcfgconsts.ConditionType(c.Type), updated)
 		if !exists {
 			return true
 		}

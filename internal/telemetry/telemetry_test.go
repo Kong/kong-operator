@@ -15,6 +15,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -153,6 +154,7 @@ func TestCreateManager(t *testing.T) {
 				"v=0.6.2",
 				"k8sv=v1.27.2",
 				"k8s_nodes_count=1",
+				"k8s_ingresses_count=0",
 				"k8s_pods_count=0",
 				"k8s_dataplanes_count=0",
 				"controller_dataplane_enabled=true",
@@ -183,12 +185,19 @@ func TestCreateManager(t *testing.T) {
 						Name:      "cloud-gateway-0",
 					},
 				},
+				&netv1.Ingress{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "kong",
+						Name:      "ingress-1",
+					},
+				},
 			},
 			expectedReportParts: []string{
 				"signal=test-signal",
 				"v=0.6.2",
 				"k8sv=v1.27.2",
 				"k8s_nodes_count=1",
+				"k8s_ingresses_count=1",
 				"k8s_pods_count=1",
 				"k8s_dataplanes_count=1",
 				"controller_dataplane_enabled=true",
@@ -269,6 +278,7 @@ func TestCreateManager(t *testing.T) {
 				"k8sv=v1.27.2",
 				"k8s_nodes_count=2",
 				"k8s_pods_count=1",
+				"k8s_ingresses_count=0",
 				"k8s_dataplanes_count=4",
 				"k8s_controlplanes_count=3",
 				"k8s_standalone_dataplanes_count=3",

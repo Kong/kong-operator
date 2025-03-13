@@ -211,9 +211,14 @@ _build.operator:
 build: generate
 	$(MAKE) build.operator
 
+.PHONY: _govulncheck
+_govulncheck:
+	$(GOVULNCHECK) -scan $(SCAN) -show color,verbose ./...
+
 .PHONY: govulncheck
 govulncheck: download.govulncheck
-	$(GOVULNCHECK) -scan symbol -show color,verbose ./...
+	$(MAKE) _govulncheck SCAN=symbol
+	$(MAKE) _govulncheck SCAN=package
 
 GOLANGCI_LINT_CONFIG ?= $(PROJECT_DIR)/.golangci.yaml
 .PHONY: lint

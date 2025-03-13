@@ -250,6 +250,7 @@ jobs:
         # Below 'docker images ...' relies on the fact that there will only be 1 image with
         # reference ${{ inputs.image-name }}.
         run: |
+          chmod +x ${{ inputs.verify-image-script }}
           docker images
           docker run --rm \
               --platform ${{ matrix.os }}/${{ matrix.arch }} \

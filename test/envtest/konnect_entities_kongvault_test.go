@@ -169,6 +169,7 @@ func TestKongVault(t *testing.T) {
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
+		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/922")
 		const (
 			vaultBackend   = "env"
 			vaultPrefix    = "env-vault"
@@ -203,4 +204,5 @@ func TestKongVault(t *testing.T) {
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
 	})
+
 }

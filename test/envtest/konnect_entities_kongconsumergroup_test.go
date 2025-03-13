@@ -190,6 +190,7 @@ func TestKongConsumerGroup(t *testing.T) {
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
+		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/922")
 		const (
 			cgID   = "cg-with-konnectid-cp-ref-id"
 			cgName = "cg-with-konnectid-cp-ref"
@@ -266,7 +267,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			)
 
 		created := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced,
-			deploy.WithKonnectIDControlPlaneRef(cp),
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				cg := obj.(*configurationv1beta1.KongConsumerGroup)
 				cg.Spec.Name = name
@@ -275,7 +276,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumerGroupSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
+		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("ConsumerGroup didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")

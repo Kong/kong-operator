@@ -2,7 +2,6 @@ package e2e
 
 import (
 	"bufio"
-	"context"
 	"encoding/json"
 	"regexp"
 	"strings"
@@ -65,14 +64,24 @@ var (
 )
 
 func TestOperatorLogs(t *testing.T) {
-	t.Skip() // TODO: https://github.com/kong/gateway-operator-archive/issues/908
-
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
+	t.Skip("https://github.com/Kong/gateway-operator/issues/1350")
+	ctx := t.Context()
+	if imageLoad == "" && imageOverride == "" {
+		t.Skipf("No KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE nor KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD" +
+			" env specified. Please specify the image to use in order to run this test.")
+	}
+	var image string
+	if imageLoad != "" {
+		t.Logf("KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD set to %q, using it for this test", imageLoad)
+		image = imageLoad
+	} else {
+		t.Logf("KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE set to %q, using it for this test", imageOverride)
+		image = imageOverride
+	}
 
 	// createEnvironment will queue up environment cleanup if necessary
-	// and dumping diagnostics if the test fails.
-	e := CreateEnvironment(t, ctx, WithInstallViaKustomize())
+	// and dump diagnostics if the test fails.
+	e := CreateEnvironment(t, ctx, WithOperatorImage(image), WithInstallViaKustomize())
 	clients, testNamespace, cleaner := e.Clients, e.Namespace, e.Cleaner
 
 	t.Log("finding the Pod for the Gateway Operator")
@@ -81,8 +90,8 @@ func TestOperatorLogs(t *testing.T) {
 		"control-plane": "controller-manager",
 	})
 	require.NoError(t, err)
-	require.Eventually(t, func() bool {
-		return len(podList.Items) == 1
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		require.Len(c, podList.Items, 1)
 	}, time.Minute, time.Second)
 	operatorPod := podList.Items[0]
 
@@ -112,7 +121,7 @@ func TestOperatorLogs(t *testing.T) {
 			structuredLine := &structuredLogLine{}
 			// we cannot assert that all the log lines respect the same format, hence we work on a best effort basis:
 			// if the unmarshaling succeeds, the log line complies with the format we expect and we check the message severity,
-			// otherwise, no reason to make the test failing when the unmershaling fails
+			// otherwise, no reason to make the test failing when the unmarshaling fails
 			if err := json.Unmarshal(message, structuredLine); err != nil {
 				continue
 			}
@@ -149,8 +158,8 @@ func TestOperatorLogs(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
 
-	t.Logf("deploying %d Gateway resourcess", parallelGateways)
-	for i := 0; i < parallelGateways; i++ {
+	t.Logf("deploying %d Gateway resources", parallelGateways)
+	for i := range parallelGateways {
 		gatewayNN := types.NamespacedName{
 			Name:      uuid.NewString(),
 			Namespace: testNamespace.Name,
@@ -207,12 +216,12 @@ func TestOperatorLogs(t *testing.T) {
 }
 
 func isReconcilerErrorAllowedByRegexMatch(errorMsg string) bool {
+	// For some reason this sometimes happen on CI. While this might
+	// be an actual issue, this should not fail the test on its own.
+	//
+	// Possibly related upstream issue:
+	// - https://github.com/kubernetes/kubernetes/issues/124347
 	allowedReconcilerErrorRegexes := []string{
-		// For some reason this sometimes happen on CI. While this might be an actual
-		// issue, this should not fail the test on its own.
-		//
-		// Possibly related upstream issue:
-		// - https://github.com/kubernetes-sigs/controller-runtime/issues/1881
 		`Operation cannot be fulfilled on dataplanes.gateway-operator.konghq.com \"[a-z0-9-]*\": StorageError: invalid object, Code: 4.*`,
 	}
 

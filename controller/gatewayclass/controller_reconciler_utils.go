@@ -16,6 +16,7 @@ import (
 	gatewayapipkg "github.com/kong/gateway-operator/pkg/gatewayapi"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -59,9 +60,9 @@ func getAcceptedCondition(ctx context.Context, cl client.Client, gwc *gatewayv1.
 	}
 
 	acceptedCondition := k8sutils.NewConditionWithGeneration(
-		consts.ConditionType(gatewayv1.GatewayClassConditionStatusAccepted),
+		kcfgconsts.ConditionType(gatewayv1.GatewayClassConditionStatusAccepted),
 		status,
-		consts.ConditionReason(reason),
+		kcfgconsts.ConditionReason(reason),
 		strings.Join(messages, ". "),
 		gwc.GetGeneration(),
 	)

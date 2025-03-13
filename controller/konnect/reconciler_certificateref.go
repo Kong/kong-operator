@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
@@ -93,16 +92,9 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Set owner reference of referenced KongCertificate and the reconciled entity.
-	old := ent.DeepCopyObject().(TEnt)
-	if err := controllerutil.SetOwnerReference(cert, ent, cl.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
-	}
-	if err := cl.Patch(ctx, ent, client.MergeFrom(old)); err != nil {
-		if k8serrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
+	res, err := RemoveOwnerRefIfSet(ctx, cl, ent, cert)
+	if err != nil || !res.IsZero() {
+		return res, err
 	}
 
 	// TODO: make this more generic.

@@ -20,10 +20,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	controlplanecontroller "github.com/kong/gateway-operator/controller/pkg/controlplane"
+	"github.com/kong/gateway-operator/controller/pkg/extensions"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
@@ -40,7 +42,11 @@ import (
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
+	kcfggateway "github.com/kong/kubernetes-configuration/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -53,6 +59,7 @@ type Reconciler struct {
 	Scheme                *runtime.Scheme
 	DevelopmentMode       bool
 	DefaultDataPlaneImage string
+	KonnectEnabled        bool
 }
 
 // provisionDataPlaneFailRequeueAfter is the time duration after which we retry provisioning
@@ -61,7 +68,7 @@ const provisionDataPlaneFailRetryAfter = 5 * time.Second
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
+	builder := ctrl.NewControllerManagedBy(mgr).
 		// watch Gateway objects, filtering out any Gateways which are not configured with
 		// a supported GatewayClass controller name.
 		For(&gwtypes.Gateway{},
@@ -100,8 +107,20 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		// This is required to properly support Gateway's listeners.allowedRoutes.namespaces.selector.
 		Watches(
 			&corev1.Namespace{},
-			handler.EnqueueRequestsFromMapFunc(r.listManagedGatewaysInNamespace)).
-		Complete(r)
+			handler.EnqueueRequestsFromMapFunc(r.listManagedGatewaysInNamespace))
+
+	if r.KonnectEnabled {
+		// Watch for changes in KonnectExtension objects that are referenced by GatewayConfigurations used by Gateways objects.
+		// They may trigger reconciliation of DataPlane resources.
+		builder.WatchesRawSource(
+			source.Kind(
+				mgr.GetCache(),
+				&konnectv1alpha1.KonnectExtension{},
+				handler.TypedEnqueueRequestsFromMapFunc(r.listGatewaysForKonnectExtension),
+			),
+		)
+	}
+	return builder.Complete(r)
 }
 
 // Reconcile moves the current state of an object to the intended state.
@@ -180,7 +199,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client); err != nil {
 		return ctrl.Result{}, err
 	}
-	acceptedCondition, _ := k8sutils.GetCondition(consts.ConditionType(gatewayv1.GatewayConditionAccepted), gwConditionAware)
+	acceptedCondition, _ := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionAccepted), gwConditionAware)
 	// If the static Gateway API conditions (Accepted, ResolvedRefs, Conflicted) changed, we need to update the Gateway status
 	if gatewayStatusNeedsUpdate(oldGwConditionsAware, gwConditionAware) {
 		// Requeue will be triggered by the update of the gateway status.
@@ -210,6 +229,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// condition to the Gateway status if the dataplane is ready. If not ready
 	// the status DataPlaneReady=False will be set instead.
 	dataplane, provisionErr := r.provisionDataPlane(ctx, logger, &gateway, gatewayConfig)
+
 	// Set the DataPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no DataPlaneReady condition in the old gateway, or
 	// * the new status is false and the previous status was true
@@ -218,12 +238,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// with the WaitingToBecomeReadyReason statuc condition because when using
 	// Kong Gateway's readiness status /status/ready we need to provision the
 	// ControlPlane as well to make DataPlane ready.
-	if c, ok := k8sutils.GetCondition(DataPlaneReadyType, gwConditionAware); !ok || c.Status == metav1.ConditionFalse || provisionErr != nil {
+	if c, ok := k8sutils.GetCondition(kcfggateway.DataPlaneReadyType, gwConditionAware); !ok || c.Status == metav1.ConditionFalse || provisionErr != nil {
 		if provisionErr != nil {
 			log.Error(logger, provisionErr, "failed to provision dataplane")
 		}
 
-		oldCondition, oldFound := k8sutils.GetCondition(DataPlaneReadyType, oldGwConditionsAware)
+		oldCondition, oldFound := k8sutils.GetCondition(kcfggateway.DataPlaneReadyType, oldGwConditionsAware)
 		if !oldFound || oldCondition.Status == metav1.ConditionTrue {
 			// requeue will be triggered by the update of the dataplane status
 			if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil {
@@ -250,7 +270,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// We don't requeue when the DataPlane provisioning has succeeded and
 		// DataPlane is waiting to become ready because we need to provision the ControlPlane
 		// to send the config to /status/ready endpoint.
-		if !ok || c.Reason != string(consts.WaitingToBecomeReadyReason) {
+		if !ok || c.Reason != string(kcfgdataplane.WaitingToBecomeReadyReason) {
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
@@ -330,17 +350,16 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
 	// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false.
 	controlplane := r.provisionControlPlane(ctx, logger, gwc.GatewayClass, &gateway, gatewayConfig, dataplane, ingressServices[0], adminServices[0])
-
 	// Set the ControlPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no ControlPlaneReady condition in the gateway
 	// * the new status is false and the previous status was true
-	if condition, found := k8sutils.GetCondition(ControlPlaneReadyType, gwConditionAware); found && condition.Status != metav1.ConditionTrue {
-		if condition.Reason == string(consts.UnableToProvisionReason) {
+	if condition, found := k8sutils.GetCondition(kcfggateway.ControlPlaneReadyType, gwConditionAware); found && condition.Status != metav1.ConditionTrue {
+		if condition.Reason == string(kcfgdataplane.UnableToProvisionReason) {
 			log.Debug(logger, "unable to provision controlplane, requeueing")
 			return ctrl.Result{Requeue: true}, nil
 		}
 
-		conditionOld, foundOld := k8sutils.GetCondition(ControlPlaneReadyType, oldGwConditionsAware)
+		conditionOld, foundOld := k8sutils.GetCondition(kcfggateway.ControlPlaneReadyType, oldGwConditionsAware)
 		if !foundOld || conditionOld.Status == metav1.ConditionTrue {
 			if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil {
 				return ctrl.Result{}, err
@@ -351,11 +370,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// if the controlplane wasn't ready before this reconciliation loop and now is ready, log this event
-	if !k8sutils.HasConditionTrue(ControlPlaneReadyType, oldGwConditionsAware) {
+	if !k8sutils.HasConditionTrue(kcfggateway.ControlPlaneReadyType, oldGwConditionsAware) {
 		log.Debug(logger, "controlplane is ready")
 	}
 	// If the dataplane has not been marked as ready yet, return and wait for the next reconciliation loop.
-	if !k8sutils.HasConditionTrue(DataPlaneReadyType, gwConditionAware) {
+	if !k8sutils.HasConditionTrue(kcfggateway.DataPlaneReadyType, gwConditionAware) {
 		log.Debug(logger, "controlplane is ready, but dataplane is not ready yet")
 		return ctrl.Result{}, nil
 	}
@@ -379,11 +398,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log.Trace(logger, "ensuring DataPlane connectivity for Gateway")
 	gateway.Status.Addresses, err = r.getGatewayAddresses(ctx, dataplane)
 	if err == nil {
-		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(GatewayServiceType, metav1.ConditionTrue, consts.ResourceReadyReason, "", gateway.Generation),
+		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(kcfggateway.GatewayServiceType, metav1.ConditionTrue, kcfgdataplane.ResourceReadyReason, "", gateway.Generation),
 			gatewayConditionsAndListenersAware(&gateway))
 	} else {
-		log.Info(logger, "could not determine gateway status", "err", err)
-		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(GatewayServiceType, metav1.ConditionFalse, GatewayReasonServiceError, err.Error(), gateway.Generation),
+		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(kcfggateway.GatewayServiceType, metav1.ConditionFalse, kcfggateway.GatewayReasonServiceError, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(&gateway))
 	}
 
@@ -422,7 +440,7 @@ func (r *Reconciler) provisionDataPlane(
 	if err != nil {
 		errWrap := fmt.Errorf("failed listing associated dataplanes - error: %w", err)
 		k8sutils.SetCondition(
-			createDataPlaneCondition(metav1.ConditionFalse, consts.UnableToProvisionReason, errWrap.Error(), gateway.Generation),
+			createDataPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, errWrap.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 		return nil, errWrap
@@ -432,7 +450,7 @@ func (r *Reconciler) provisionDataPlane(
 	if count > 1 {
 		err = fmt.Errorf("data planes found: %d, expected: 1", count)
 		k8sutils.SetCondition(
-			createDataPlaneCondition(metav1.ConditionFalse, consts.UnableToProvisionReason, err.Error(), gateway.Generation),
+			createDataPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 		log.Debug(logger, "reducing dataplanes", "count", count)
@@ -447,14 +465,14 @@ func (r *Reconciler) provisionDataPlane(
 		if err != nil {
 			errWrap := fmt.Errorf("dataplane creation failed - error: %w", err)
 			k8sutils.SetCondition(
-				createDataPlaneCondition(metav1.ConditionFalse, consts.UnableToProvisionReason, errWrap.Error(), gateway.Generation),
+				createDataPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, errWrap.Error(), gateway.Generation),
 				gatewayConditionsAndListenersAware(gateway),
 			)
 			return nil, err
 		}
 		log.Debug(logger, "dataplane created")
 		k8sutils.SetCondition(
-			createDataPlaneCondition(metav1.ConditionFalse, consts.ResourceCreatedOrUpdatedReason, consts.ResourceCreatedMessage, gateway.Generation),
+			createDataPlaneCondition(metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, kcfgdataplane.ResourceCreatedMessage, gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 		return dataplane, nil
@@ -474,11 +492,13 @@ func (r *Reconciler) provisionDataPlane(
 	if err != nil {
 		errWrap := fmt.Errorf("dataplane creation failed - error: %w", err)
 		k8sutils.SetCondition(
-			createDataPlaneCondition(metav1.ConditionFalse, consts.UnableToProvisionReason, errWrap.Error(), gateway.Generation),
+			createDataPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, errWrap.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 		return nil, errWrap
 	}
+
+	expectedDataPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, expectedDataPlaneOptions.Extensions)
 
 	if !dataplaneSpecDeepEqual(&dataplane.Spec.DataPlaneOptions, expectedDataPlaneOptions) {
 		log.Trace(logger, "dataplane config is out of date")
@@ -487,13 +507,13 @@ func (r *Reconciler) provisionDataPlane(
 
 		if err = r.Client.Patch(ctx, dataplane, client.MergeFrom(oldDataPlane)); err != nil {
 			k8sutils.SetCondition(
-				createDataPlaneCondition(metav1.ConditionFalse, consts.UnableToProvisionReason, err.Error(), gateway.Generation),
+				createDataPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 				gatewayConditionsAndListenersAware(gateway),
 			)
 			return nil, fmt.Errorf("failed patching the dataplane %s: %w", dataplane.Name, err)
 		}
 		k8sutils.SetCondition(
-			createDataPlaneCondition(metav1.ConditionFalse, consts.ResourceCreatedOrUpdatedReason, consts.ResourceUpdatedMessage, gateway.Generation),
+			createDataPlaneCondition(metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, kcfgdataplane.ResourceUpdatedMessage, gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 		log.Debug(logger, "dataplane config updated")
@@ -503,12 +523,12 @@ func (r *Reconciler) provisionDataPlane(
 
 	if k8sutils.IsReady(dataplane) {
 		k8sutils.SetCondition(
-			createDataPlaneCondition(metav1.ConditionTrue, consts.ResourceReadyReason, "", gateway.Generation),
+			createDataPlaneCondition(metav1.ConditionTrue, kcfgdataplane.ResourceReadyReason, "", gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 	} else {
 		k8sutils.SetCondition(
-			createDataPlaneCondition(metav1.ConditionFalse, consts.WaitingToBecomeReadyReason, consts.WaitingToBecomeReadyMessage, gateway.Generation),
+			createDataPlaneCondition(metav1.ConditionFalse, kcfgdataplane.WaitingToBecomeReadyReason, kcfgdataplane.WaitingToBecomeReadyMessage, gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 	}
@@ -532,7 +552,7 @@ func (r *Reconciler) provisionControlPlane(
 	if err != nil {
 		log.Debug(logger, fmt.Sprintf("failed listing associated controlplanes - error: %v", err))
 		k8sutils.SetCondition(
-			createControlPlaneCondition(metav1.ConditionFalse, consts.UnableToProvisionReason, err.Error(), gateway.Generation),
+			createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 		return nil
@@ -548,13 +568,13 @@ func (r *Reconciler) provisionControlPlane(
 		if err != nil {
 			log.Debug(logger, fmt.Sprintf("controlplane creation failed - error: %v", err))
 			k8sutils.SetCondition(
-				createControlPlaneCondition(metav1.ConditionFalse, consts.UnableToProvisionReason, err.Error(), gateway.Generation),
+				createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 				gatewayConditionsAndListenersAware(gateway),
 			)
 		} else {
 			log.Debug(logger, "controlplane created")
 			k8sutils.SetCondition(
-				createControlPlaneCondition(metav1.ConditionFalse, consts.ResourceCreatedOrUpdatedReason, consts.ResourceCreatedMessage, gateway.Generation),
+				createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, kcfgdataplane.ResourceCreatedMessage, gateway.Generation),
 				gatewayConditionsAndListenersAware(gateway),
 			)
 		}
@@ -562,7 +582,7 @@ func (r *Reconciler) provisionControlPlane(
 	case count > 1:
 		err := fmt.Errorf("control plane deployments found: %d, expected: 1, requeing", count)
 		k8sutils.SetCondition(
-			createControlPlaneCondition(metav1.ConditionFalse, consts.UnableToProvisionReason, err.Error(), gateway.Generation),
+			createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 		return nil
@@ -582,19 +602,21 @@ func (r *Reconciler) provisionControlPlane(
 	// Don't require setting defaults for ControlPlane when using Gateway CRD.
 	setControlPlaneOptionsDefaults(expectedControlPlaneOptions)
 
+	expectedControlPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, expectedControlPlaneOptions.Extensions)
+
 	if !controlplanecontroller.SpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, expectedControlPlaneOptions) {
 		log.Trace(logger, "controlplane config is out of date")
 		controlplaneOld := controlPlane.DeepCopy()
 		controlPlane.Spec.ControlPlaneOptions = *expectedControlPlaneOptions
 		if err := r.Client.Patch(ctx, controlPlane, client.MergeFrom(controlplaneOld)); err != nil {
 			k8sutils.SetCondition(
-				createControlPlaneCondition(metav1.ConditionFalse, consts.UnableToProvisionReason, err.Error(), gateway.Generation),
+				createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 				gatewayConditionsAndListenersAware(gateway),
 			)
 			return nil
 		}
 		k8sutils.SetCondition(
-			createControlPlaneCondition(metav1.ConditionFalse, consts.ResourceCreatedOrUpdatedReason, consts.ResourceUpdatedMessage, gateway.Generation),
+			createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, kcfgdataplane.ResourceUpdatedMessage, gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 	}
@@ -602,14 +624,14 @@ func (r *Reconciler) provisionControlPlane(
 	log.Trace(logger, "waiting for controlplane readiness")
 	if !k8sutils.IsReady(controlPlane) {
 		k8sutils.SetCondition(
-			createControlPlaneCondition(metav1.ConditionFalse, consts.WaitingToBecomeReadyReason, consts.WaitingToBecomeReadyMessage, gateway.Generation),
+			createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.WaitingToBecomeReadyReason, kcfgdataplane.WaitingToBecomeReadyMessage, gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 		return nil
 	}
 
 	k8sutils.SetCondition(
-		createControlPlaneCondition(metav1.ConditionTrue, consts.ResourceReadyReason, "", gateway.Generation),
+		createControlPlaneCondition(metav1.ConditionTrue, kcfgdataplane.ResourceReadyReason, "", gateway.Generation),
 		gatewayConditionsAndListenersAware(gateway),
 	)
 	return controlPlane
@@ -682,12 +704,12 @@ func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions, default
 	}
 }
 
-func createDataPlaneCondition(status metav1.ConditionStatus, reason consts.ConditionReason, message string, observedGeneration int64) metav1.Condition {
-	return k8sutils.NewConditionWithGeneration(DataPlaneReadyType, status, reason, message, observedGeneration)
+func createDataPlaneCondition(status metav1.ConditionStatus, reason kcfgconsts.ConditionReason, message string, observedGeneration int64) metav1.Condition {
+	return k8sutils.NewConditionWithGeneration(kcfggateway.DataPlaneReadyType, status, reason, message, observedGeneration)
 }
 
-func createControlPlaneCondition(status metav1.ConditionStatus, reason consts.ConditionReason, message string, observedGeneration int64) metav1.Condition {
-	return k8sutils.NewConditionWithGeneration(ControlPlaneReadyType, status, reason, message, observedGeneration)
+func createControlPlaneCondition(status metav1.ConditionStatus, reason kcfgconsts.ConditionReason, message string, observedGeneration int64) metav1.Condition {
+	return k8sutils.NewConditionWithGeneration(kcfggateway.ControlPlaneReadyType, status, reason, message, observedGeneration)
 }
 
 // patchStatus patches the resource status with the Merge strategy
@@ -702,7 +724,7 @@ func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1beta1.DataPlaneOptions) bool
 		return false
 	}
 
-	return true
+	return reflect.DeepEqual(spec1.Extensions, spec2.Extensions)
 }
 
 func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVarsToIgnore ...string) bool {

@@ -4,7 +4,8 @@ import (
 	"fmt"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
-	"github.com/kong/gateway-operator/pkg/consts"
+
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 )
 
 // FailedKonnectOpError is an error type that is returned when an operation against
@@ -31,7 +32,7 @@ func (e FailedKonnectOpError[T]) Unwrap() error {
 // to create relations to the entity fail.
 type KonnectEntityCreatedButRelationsFailedError struct {
 	KonnectID string
-	Reason    consts.ConditionReason
+	Reason    kcfgconsts.ConditionReason
 	Err       error
 }
 

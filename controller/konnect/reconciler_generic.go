@@ -7,8 +7,6 @@ import (
 	"time"
 
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
-	"github.com/samber/mo"
-	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -29,8 +27,6 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -198,29 +194,25 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		// If the referenced KongConsumer is not found or is being deleted
-		// and the object is being deleted, remove the finalizer and let the
-		// deletion proceed without trying to delete the entity from Konnect
+		// then remove the finalizer and let the deletion proceed without trying to delete the entity from Konnect
 		// as the KongConsumer deletion will (or already has - in case of the consumer being gone)
 		// take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongConsumerDoesNotExist{}) ||
-			errors.As(err, &ReferencedKongConsumerIsBeingDeleted{}) {
-			if !ent.GetDeletionTimestamp().IsZero() {
-				if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-					if err := r.Client.Update(ctx, ent); err != nil {
-						if k8serrors.IsConflict(err) {
-							return ctrl.Result{Requeue: true}, nil
-						}
-						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+		if errors.As(err, &ReferencedKongConsumerDoesNotExist{}) {
+			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+				if err := r.Client.Update(ctx, ent); err != nil {
+					if k8serrors.IsConflict(err) {
+						return ctrl.Result{Requeue: true}, nil
 					}
-					log.Debug(logger, "finalizer removed as the owning KongConsumer is being deleted or is already gone",
-						"finalizer", KonnectCleanupFinalizer,
-					)
+					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
+				log.Debug(logger, "finalizer removed as the owning KongConsumer is being deleted or is already gone",
+					"finalizer", KonnectCleanupFinalizer,
+				)
 			}
 			return ctrl.Result{}, nil
 		}
 
-		return ctrl.Result{}, err
+		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if !res.IsZero() {
 		return res, nil
 	}
@@ -238,28 +230,25 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}, nil
 		}
 
-		// If the referenced KongUpstream is not found or is being deleted
-		// and the object is being deleted, remove the finalizer and let the
-		// deletion proceed without trying to delete the entity from Konnect
-		// as the KongUpstream deletion will take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongUpstreamIsBeingDeleted{}) ||
-			errors.As(err, &ReferencedKongUpstreamDoesNotExist{}) {
-			if !ent.GetDeletionTimestamp().IsZero() {
-				if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-					if err := r.Client.Update(ctx, ent); err != nil {
-						if k8serrors.IsConflict(err) {
-							return ctrl.Result{Requeue: true}, nil
-						}
-						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+		// If the referenced KongUpstream is not found then remove the finalizer
+		// and let the deletion proceed without trying to delete the entity from Konnect
+		// as the KongUpstream deletion will (or already has - in case of the upstream being gone)
+		// take care of it on the Konnect side.
+		if errors.As(err, &ReferencedKongUpstreamDoesNotExist{}) {
+			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+				if err := r.Client.Update(ctx, ent); err != nil {
+					if k8serrors.IsConflict(err) {
+						return ctrl.Result{Requeue: true}, nil
 					}
-					log.Debug(logger, "finalizer removed as the owning KongUpstream is being deleted or is already gone",
-						"finalizer", KonnectCleanupFinalizer,
-					)
+					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
+				log.Debug(logger, "finalizer removed as the owning KongUpstream is being deleted or is already gone",
+					"finalizer", KonnectCleanupFinalizer,
+				)
 			}
 		}
 
-		return ctrl.Result{}, err
+		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if !res.IsZero() {
 		return res, nil
 	}
@@ -281,23 +270,21 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// and the object is being deleted, remove the finalizer and let the
 		// deletion proceed without trying to delete the entity from Konnect
 		// as the KongCertificate deletion will take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongCertificateIsBeingDeleted{}) ||
-			errors.As(err, &ReferencedKongCertificateDoesNotExist{}) {
-			if !ent.GetDeletionTimestamp().IsZero() {
-				if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-					if err := r.Client.Update(ctx, ent); err != nil {
-						if k8serrors.IsConflict(err) {
-							return ctrl.Result{Requeue: true}, nil
-						}
-						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+		if errors.As(err, &ReferencedKongCertificateDoesNotExist{}) {
+			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+				if err := r.Client.Update(ctx, ent); err != nil {
+					if k8serrors.IsConflict(err) {
+						return ctrl.Result{Requeue: true}, nil
 					}
-					log.Debug(logger, "finalizer removed as the owning KongCertificate is being deleted or is already gone",
-						"finalizer", KonnectCleanupFinalizer,
-					)
+					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
+				log.Debug(logger, "finalizer removed as the owning KongCertificate is being deleted or is already gone",
+					"finalizer", KonnectCleanupFinalizer,
+				)
 			}
 		}
-		return ctrl.Result{}, nil
+
+		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if res.Requeue {
 		return res, nil
 	}
@@ -315,29 +302,25 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}, nil
 		}
 
-		// If the referenced KongKeySet is not found or is being deleted
-		// and the object is being deleted, remove the finalizer and let the
-		// deletion proceed without trying to delete the entity from Konnect
+		// If the referenced KongKeySet is not found, remove the finalizer and let the
+		// user delete the resource without trying to delete the entity from Konnect
 		// as the KongKeySet deletion will take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongKeySetIsBeingDeleted{}) ||
-			errors.As(err, &ReferencedKongKeySetDoesNotExist{}) {
-			if !ent.GetDeletionTimestamp().IsZero() {
-				if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-					if err := r.Client.Update(ctx, ent); err != nil {
-						if k8serrors.IsConflict(err) {
-							return ctrl.Result{Requeue: true}, nil
-						}
-						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+		if errors.As(err, &ReferencedKongKeySetDoesNotExist{}) {
+			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+				if err := r.Client.Update(ctx, ent); err != nil {
+					if k8serrors.IsConflict(err) {
+						return ctrl.Result{Requeue: true}, nil
 					}
-					log.Debug(logger, "finalizer removed as the owning KongKeySet is being deleted or is already gone",
-						"finalizer", KonnectCleanupFinalizer,
-					)
-					return ctrl.Result{}, nil
+					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
+				log.Debug(logger, "finalizer removed as the owning KongKeySet is being deleted or is already gone",
+					"finalizer", KonnectCleanupFinalizer,
+				)
+				return ctrl.Result{}, nil
 			}
 		}
 
-		return res, err
+		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
@@ -412,6 +395,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
+	// Handle type specific operations and stop reconciliation if needed.
+	// This can happen for instance when KongConsumer references credentials Secrets
+	// that do not exist.
+	if stop, res, err := handleTypeSpecific(ctx, r.Client, ent); err != nil || !res.IsZero() || stop {
+		return res, err
+	}
+
 	// TODO: relying on status ID is OK but we need to rethink this because
 	// we're using a cached client so after creating the resource on Konnect it might
 	// happen that we've just created the resource but the status ID is not there yet.
@@ -430,23 +420,8 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// set then:
 		// - add the finalizer so that the resource can be cleaned up from Konnect on deletion...
 		if status != nil && status.ID != "" {
-			objWithFinalizer := ent.DeepCopyObject().(client.Object)
-			if controllerutil.AddFinalizer(objWithFinalizer, KonnectCleanupFinalizer) {
-				if errUpd := r.Client.Patch(ctx, objWithFinalizer, client.MergeFrom(ent)); errUpd != nil {
-					if k8serrors.IsConflict(errUpd) {
-						return ctrl.Result{Requeue: true}, nil
-					}
-					if err != nil {
-						return ctrl.Result{}, fmt.Errorf(
-							"failed to update finalizer %s: %w, object create operation failed against Konnect API: %w",
-							KonnectCleanupFinalizer, errUpd, err,
-						)
-					}
-					return ctrl.Result{}, fmt.Errorf(
-						"failed to update finalizer %s: %w",
-						KonnectCleanupFinalizer, errUpd,
-					)
-				}
+			if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
+				return res, err
 			}
 
 			// ...
@@ -496,6 +471,14 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, nil
 	}
 
+	// Ensure that successfully reonciled object has the cleanup finalizer.
+	// This can happen when the finalizer was removed e.g. when the referenced
+	// object was removed, breaking the reference chaing in Konnect and thus making
+	// the delete operation on the Konnect side impossible.
+	if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	// NOTE: We requeue here to keep enforcing the state of the resource in Konnect.
 	// Konnect does not allow subscribing to changes so we need to keep pushing the
 	// desired state periodically.
@@ -513,51 +496,6 @@ func setStatusServerURLAndOrgID(
 ) {
 	ent.GetKonnectStatus().ServerURL = serverURL.String()
 	ent.GetKonnectStatus().OrgID = orgID
-}
-
-// EntityWithControlPlaneRef is an interface for entities that have a ControlPlaneRef.
-type EntityWithControlPlaneRef interface {
-	SetControlPlaneID(string)
-	GetControlPlaneID() string
-}
-
-func getCPForRef(
-	ctx context.Context,
-	cl client.Client,
-	cpRef commonv1alpha1.ControlPlaneRef,
-	namespace string,
-) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
-	switch cpRef.Type {
-	case commonv1alpha1.ControlPlaneRefKonnectID:
-		return getCPForKonnectID(ctx, cl, cpRef)
-	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-		return getCPForNamespacedRef(ctx, cl, cpRef, namespace)
-	default:
-		return nil, ReferencedKongGatewayControlPlaneIsUnsupported{Reference: cpRef}
-	}
-}
-
-func getCPForKonnectID(
-	ctx context.Context,
-	cl client.Client,
-	cpRef commonv1alpha1.ControlPlaneRef,
-) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
-	var l konnectv1alpha1.KonnectGatewayControlPlaneList
-	if err := cl.List(ctx, &l,
-		client.MatchingFields{
-			IndexFieldKonnectGatewayControlPlaneOnKonnectID: *cpRef.KonnectID,
-		},
-	); err != nil {
-		return nil, fmt.Errorf("failed to list ControlPlanes: %w", err)
-	}
-
-	if len(l.Items) == 0 {
-		return nil, ReferencedControlPlaneDoesNotExistError{
-			Reference: cpRef,
-			Err:       errors.New("no KonnectControlPlane with given status.konnectID found"),
-		}
-	}
-	return &l.Items[0], nil
 }
 
 func getCPForNamespacedRef(
@@ -592,327 +530,6 @@ func getCPForNamespacedRef(
 		return nil, fmt.Errorf("failed to get ControlPlane %s: %w", nn, err)
 	}
 	return &cp, nil
-}
-
-func getCPAuthRefForRef(
-	ctx context.Context,
-	cl client.Client,
-	cpRef commonv1alpha1.ControlPlaneRef,
-	namespace string,
-) (types.NamespacedName, error) {
-	cp, err := getCPForRef(ctx, cl, cpRef, namespace)
-	if err != nil {
-		return types.NamespacedName{}, err
-	}
-
-	return types.NamespacedName{
-		Name: cp.GetKonnectAPIAuthConfigurationRef().Name,
-		// TODO(pmalek): enable if cross namespace refs are allowed
-		Namespace: cp.GetNamespace(),
-	}, nil
-}
-
-func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
-	ctx context.Context,
-	cl client.Client,
-	ent TEnt,
-) (types.NamespacedName, error) {
-	// If the entity has a KonnectAPIAuthConfigurationRef, return it.
-	if ref, ok := any(ent).(constraints.EntityWithKonnectAPIAuthConfigurationRef); ok {
-		return types.NamespacedName{
-			Name: ref.GetKonnectAPIAuthConfigurationRef().Name,
-			// TODO: enable if cross namespace refs are allowed
-			Namespace: ent.GetNamespace(),
-		}, nil
-	}
-
-	// If the entity has a ControlPlaneRef, get the KonnectAPIAuthConfiguration
-	// ref from the referenced ControlPlane.
-	cpRef, ok := getControlPlaneRef(ent).Get()
-	if ok {
-		cp, err := getCPForRef(ctx, cl, cpRef, ent.GetNamespace())
-		if err != nil {
-			return types.NamespacedName{}, fmt.Errorf("failed to get ControlPlane for %s: %w", client.ObjectKeyFromObject(ent), err)
-		}
-
-		cpNamespace := ent.GetNamespace()
-		if ent.GetNamespace() == "" && cp.GetNamespace() != "" {
-			cpNamespace = cp.GetNamespace()
-		}
-		return getCPAuthRefForRef(ctx, cl, cpRef, cpNamespace)
-	}
-
-	// If the entity has a KongServiceRef, get the KonnectAPIAuthConfiguration
-	// ref from the referenced KongService.
-	svcRef, ok := getServiceRef(ent).Get()
-	if ok {
-		if svcRef.Type != configurationv1alpha1.ServiceRefNamespacedRef {
-			return types.NamespacedName{}, fmt.Errorf("unsupported KongService ref type %q", svcRef.Type)
-		}
-		// TODO(pmalek): handle cross namespace refs
-		nn := types.NamespacedName{
-			Name:      svcRef.NamespacedRef.Name,
-			Namespace: ent.GetNamespace(),
-		}
-
-		var svc configurationv1alpha1.KongService
-		if err := cl.Get(ctx, nn, &svc); err != nil {
-			return types.NamespacedName{}, fmt.Errorf("failed to get KongService %s", nn)
-		}
-
-		cpRef, ok := getControlPlaneRef(&svc).Get()
-		if !ok {
-			return types.NamespacedName{}, fmt.Errorf("KongService %s does not have a ControlPlaneRef", nn)
-		}
-		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
-	}
-
-	// If the entity has a KongConsumerRef, get the KonnectAPIAuthConfiguration
-	// ref from the referenced KongConsumer.
-	consumerRef, ok := getConsumerRef(ent).Get()
-	if ok {
-		// TODO(pmalek): handle cross namespace refs
-		nn := types.NamespacedName{
-			Name:      consumerRef.Name,
-			Namespace: ent.GetNamespace(),
-		}
-
-		var consumer configurationv1.KongConsumer
-		if err := cl.Get(ctx, nn, &consumer); err != nil {
-			return types.NamespacedName{}, fmt.Errorf("failed to get KongConsumer %s", nn)
-		}
-
-		cpRef, ok := getControlPlaneRef(&consumer).Get()
-		if !ok {
-			return types.NamespacedName{}, fmt.Errorf("KongConsumer %s does not have a ControlPlaneRef", nn)
-		}
-		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
-	}
-
-	// If the entity has a KongUpstreamRef, get the KonnectAPIAuthConfiguration
-	// ref from the referenced KongUpstream.
-	upstreamRef, ok := getKongUpstreamRef(ent).Get()
-	if ok {
-		nn := types.NamespacedName{
-			Name:      upstreamRef.Name,
-			Namespace: ent.GetNamespace(),
-		}
-
-		var upstream configurationv1alpha1.KongUpstream
-		if err := cl.Get(ctx, nn, &upstream); err != nil {
-			return types.NamespacedName{}, fmt.Errorf("failed to get KongUpstream %s", nn)
-		}
-
-		cpRef, ok := getControlPlaneRef(&upstream).Get()
-		if !ok {
-			return types.NamespacedName{}, fmt.Errorf("KongUpstream %s does not have a ControlPlaneRef", nn)
-		}
-		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
-	}
-
-	// If the entity has a KongCertificateRef, get the KonnectAPIAuthConfiguration
-	// ref from the referenced KongUpstream.
-	certificateRef, ok := getKongCertificateRef(ent).Get()
-	if ok {
-		nn := types.NamespacedName{
-			Name:      certificateRef.Name,
-			Namespace: ent.GetNamespace(),
-		}
-
-		var cert configurationv1alpha1.KongCertificate
-		if err := cl.Get(ctx, nn, &cert); err != nil {
-			return types.NamespacedName{}, fmt.Errorf("failed to get KongCertificate %s", nn)
-		}
-
-		cpRef, ok := getControlPlaneRef(&cert).Get()
-		if !ok {
-			return types.NamespacedName{}, fmt.Errorf("KongCertificate %s does not have a ControlPlaneRef", nn)
-		}
-		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
-	}
-
-	return types.NamespacedName{}, fmt.Errorf(
-		"cannot get KonnectAPIAuthConfiguration for entity type %T %s",
-		client.ObjectKeyFromObject(ent), ent,
-	)
-}
-
-func getConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
-	e TEnt,
-) mo.Option[corev1.LocalObjectReference] {
-	switch e := any(e).(type) {
-	case *configurationv1alpha1.KongCredentialBasicAuth:
-		return mo.Some(e.Spec.ConsumerRef)
-	case *configurationv1alpha1.KongCredentialAPIKey:
-		return mo.Some(e.Spec.ConsumerRef)
-	case *configurationv1alpha1.KongCredentialACL:
-		return mo.Some(e.Spec.ConsumerRef)
-	case *configurationv1alpha1.KongCredentialJWT:
-		return mo.Some(e.Spec.ConsumerRef)
-	case *configurationv1alpha1.KongCredentialHMAC:
-		return mo.Some(e.Spec.ConsumerRef)
-	default:
-		return mo.None[corev1.LocalObjectReference]()
-	}
-}
-
-// handleKongConsumerRef handles the ConsumerRef for the given entity.
-// It sets the owner reference to the referenced KongConsumer and updates the
-// status of the entity based on the referenced KongConsumer status.
-func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
-	ctx context.Context,
-	cl client.Client,
-	ent TEnt,
-) (ctrl.Result, error) {
-	kongConsumerRef, ok := getConsumerRef(ent).Get()
-	if !ok {
-		return ctrl.Result{}, nil
-	}
-	consumer := configurationv1.KongConsumer{}
-	nn := types.NamespacedName{
-		Name:      kongConsumerRef.Name,
-		Namespace: ent.GetNamespace(),
-	}
-
-	if err := cl.Get(ctx, nn, &consumer); err != nil {
-		if res, errStatus := patch.StatusWithCondition(
-			ctx, cl, ent,
-			konnectv1alpha1.KongConsumerRefValidConditionType,
-			metav1.ConditionFalse,
-			konnectv1alpha1.KongConsumerRefReasonInvalid,
-			err.Error(),
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
-		}
-
-		return ctrl.Result{}, ReferencedKongConsumerDoesNotExist{
-			Reference: nn,
-			Err:       err,
-		}
-	}
-
-	// If referenced KongConsumer is being deleted, return an error so that we
-	// can remove the entity from Konnect first.
-	if delTimestamp := consumer.GetDeletionTimestamp(); !delTimestamp.IsZero() {
-		return ctrl.Result{}, ReferencedKongConsumerIsBeingDeleted{
-			Reference:         nn,
-			DeletionTimestamp: delTimestamp.Time,
-		}
-	}
-
-	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &consumer)
-	if !ok || cond.Status != metav1.ConditionTrue {
-		ent.SetKonnectID("")
-		if res, err := patch.StatusWithCondition(
-			ctx, cl, ent,
-			konnectv1alpha1.KongConsumerRefValidConditionType,
-			metav1.ConditionFalse,
-			konnectv1alpha1.KongConsumerRefReasonInvalid,
-			fmt.Sprintf("Referenced KongConsumer %s is not programmed yet", nn),
-		); err != nil || !res.IsZero() {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	old := ent.DeepCopyObject().(TEnt)
-	if err := controllerutil.SetOwnerReference(&consumer, ent, cl.Scheme(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to set owner reference: %w", err)
-	}
-	if err := cl.Patch(ctx, ent, client.MergeFrom(old)); err != nil {
-		if k8serrors.IsConflict(err) {
-			return ctrl.Result{Requeue: true}, nil
-		}
-		return ctrl.Result{}, fmt.Errorf("failed to update status: %w", err)
-	}
-
-	type EntityWithConsumerRef interface {
-		SetKonnectConsumerIDInStatus(string)
-	}
-	if cred, ok := any(ent).(EntityWithConsumerRef); ok {
-		cred.SetKonnectConsumerIDInStatus(consumer.Status.Konnect.GetKonnectID())
-	} else {
-		return ctrl.Result{}, fmt.Errorf(
-			"cannot set referenced Consumer %s KonnectID in %s %sstatus",
-			client.ObjectKeyFromObject(&consumer), constraints.EntityTypeName[T](), client.ObjectKeyFromObject(ent),
-		)
-	}
-
-	if res, errStatus := patch.StatusWithCondition(
-		ctx, cl, ent,
-		konnectv1alpha1.KongConsumerRefValidConditionType,
-		metav1.ConditionTrue,
-		konnectv1alpha1.KongConsumerRefReasonValid,
-		fmt.Sprintf("Referenced KongConsumer %s programmed", nn),
-	); errStatus != nil || !res.IsZero() {
-		return res, errStatus
-	}
-
-	cpRef, ok := getControlPlaneRef(&consumer).Get()
-	if !ok {
-		return ctrl.Result{}, fmt.Errorf(
-			"KongRoute references a KongConsumer %s which does not have a ControlPlane ref",
-			client.ObjectKeyFromObject(&consumer),
-		)
-	}
-	cp, err := getCPForRef(ctx, cl, cpRef, ent.GetNamespace())
-	if err != nil {
-		if res, errStatus := patch.StatusWithCondition(
-			ctx, cl, ent,
-			konnectv1alpha1.ControlPlaneRefValidConditionType,
-			metav1.ConditionFalse,
-			konnectv1alpha1.ControlPlaneRefReasonInvalid,
-			err.Error(),
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
-		}
-		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{}, ReferencedControlPlaneDoesNotExistError{
-				Reference: cpRef,
-				Err:       err,
-			}
-		}
-		return ctrl.Result{}, err
-	}
-
-	cond, ok = k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp)
-	if !ok || cond.Status != metav1.ConditionTrue || cond.ObservedGeneration != cp.GetGeneration() {
-		if res, errStatus := patch.StatusWithCondition(
-			ctx, cl, ent,
-			konnectv1alpha1.ControlPlaneRefValidConditionType,
-			metav1.ConditionFalse,
-			konnectv1alpha1.ControlPlaneRefReasonInvalid,
-			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
-		}
-
-		return ctrl.Result{Requeue: true}, nil
-	}
-
-	if resource, ok := any(ent).(EntityWithControlPlaneRef); ok {
-		old := ent.DeepCopyObject().(TEnt)
-		resource.SetControlPlaneID(cp.Status.ID)
-		_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
-		if err != nil {
-			if k8serrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-			return ctrl.Result{}, err
-		}
-	}
-
-	if res, errStatus := patch.StatusWithCondition(
-		ctx, cl, ent,
-		konnectv1alpha1.ControlPlaneRefValidConditionType,
-		metav1.ConditionTrue,
-		konnectv1alpha1.ControlPlaneRefReasonValid,
-		fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
-	); errStatus != nil || !res.IsZero() {
-		return res, errStatus
-	}
-
-	return ctrl.Result{}, nil
 }
 
 func setProgrammedStatusConditionBasedOnOtherConditions[

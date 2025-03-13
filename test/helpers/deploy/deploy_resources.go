@@ -1010,6 +1010,79 @@ func KongDataPlaneClientCertificateAttachedToCP(
 	return cert
 }
 
+// KonnectExtension deploys a KonnectExtension.
+func KonnectExtension(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	opts ...ObjOption,
+) *konnectv1alpha1.KonnectExtension {
+	t.Helper()
+
+	ke := &konnectv1alpha1.KonnectExtension{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "konnect-extension-",
+		},
+	}
+	for _, opt := range opts {
+		opt(ke)
+	}
+
+	require.NoError(t, cl.Create(ctx, ke))
+	logObjectCreate(t, ke)
+
+	return ke
+}
+
+// KonnectExtensionReferencingKonnectGatewayControlPlane deploys a KonnectExtension attached to a Konnect CP represented by the given KonnectGatewayControlPlane.
+func KonnectExtensionReferencingKonnectGatewayControlPlane(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+) *konnectv1alpha1.KonnectExtension {
+	return KonnectExtension(
+		t, ctx, cl,
+		func(obj client.Object) {
+			ke, ok := obj.(*konnectv1alpha1.KonnectExtension)
+			require.Truef(t, ok, "Expect object %s/%s to be a KonnectExtension, actual type %T",
+				obj.GetNamespace(), obj.GetName(), obj)
+			ke.Spec.Konnect.ControlPlane = konnectv1alpha1.KonnectExtensionControlPlane{
+				Ref: commonv1alpha1.ControlPlaneRef{
+					Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+					KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+						Name:      cp.Name,
+						Namespace: cp.Namespace,
+					},
+				},
+			}
+		},
+	)
+}
+
+// ObjectSupportingKonnectConfiguration defines the interface of types supporting setting `KonnectConfiguration`.
+type ObjectSupportingKonnectConfiguration interface {
+	*konnectv1alpha1.KonnectGatewayControlPlane |
+		*konnectv1alpha1.KonnectExtension |
+		*konnectv1alpha1.KonnectCloudGatewayNetwork
+}
+
+// WithKonnectConfiguration returns an option function that sets the `KonnectConfiguration` in the object.
+func WithKonnectConfiguration[T ObjectSupportingKonnectConfiguration](
+	konnectConfiguration konnectv1alpha1.KonnectConfiguration,
+) ObjOption {
+	return func(obj client.Object) {
+		switch o := any(obj).(type) {
+		case *konnectv1alpha1.KonnectGatewayControlPlane:
+			o.Spec.KonnectConfiguration = konnectConfiguration
+		case *konnectv1alpha1.KonnectExtension:
+			o.Spec.Konnect.Configuration = lo.ToPtr(konnectConfiguration)
+		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
+			o.Spec.KonnectConfiguration = konnectConfiguration
+		}
+	}
+}
+
 func logObjectCreate[
 	T interface {
 		client.Object

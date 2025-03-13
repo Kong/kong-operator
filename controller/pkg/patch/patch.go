@@ -45,7 +45,7 @@ func ApplyPatchIfNotEmpty[
 		return op.Noop, existingResource, nil
 	}
 
-	if err := cl.Patch(ctx, existingResource, client.MergeFrom(oldExistingResource)); err != nil {
+	if err := cl.Patch(ctx, existingResource, patch); err != nil {
 		var t T
 		return op.Noop, t, fmt.Errorf("failed patching %s %s: %w", kind, existingResource.GetName(), err)
 	}

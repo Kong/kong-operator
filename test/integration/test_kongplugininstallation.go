@@ -21,12 +21,12 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/gateway-operator/controller/dataplane"
-	"github.com/kong/gateway-operator/pkg/consts"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test/helpers"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
@@ -79,7 +79,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 	attachKPI(t, gatewayConfigNN, kpiPublicNN)
 	t.Log("ensure that status of the DataPlane is not ready with proper description of the issue")
 	checkDataPlaneStatus(
-		t, namespace.Name, metav1.ConditionFalse, dataplane.DataPlaneConditionReferencedResourcesNotAvailable,
+		t, namespace.Name, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable,
 		fmt.Sprintf("something wrong with referenced KongPluginInstallation %s, please check it", client.ObjectKeyFromObject(kpiPublic)),
 	)
 
@@ -93,7 +93,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 	checkKongPluginInstallationConditions(t, kpiPublicNN, metav1.ConditionTrue, "plugin successfully saved in cluster as ConfigMap")
 
 	t.Log("waiting for the DataPlane that reference KongPluginInstallation to be ready")
-	checkDataPlaneStatus(t, namespace.Name, metav1.ConditionTrue, consts.ResourceReadyReason, "")
+	checkDataPlaneStatus(t, namespace.Name, metav1.ConditionTrue, kcfgdataplane.ResourceReadyReason, "")
 	t.Log("attach configured KongPlugin with KongPluginInstallation to the HTTPRoute")
 	attachKongPluginBasedOnKPIToRoute(t, cleaner, httpRouteNN, kpiPublicNN)
 
@@ -143,7 +143,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 		)
 		attachKPI(t, gatewayConfigNN, kpiPrivateNN)
 		checkDataPlaneStatus(
-			t, namespace.Name, metav1.ConditionFalse, dataplane.DataPlaneConditionReferencedResourcesNotAvailable,
+			t, namespace.Name, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable,
 			fmt.Sprintf("something wrong with referenced KongPluginInstallation %s, please check it", client.ObjectKeyFromObject(kpiPrivate)),
 		)
 
@@ -178,7 +178,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 			fmt.Sprintf(`referenced Secret "%s/%s" not found`, *secretRef.Namespace, secretRef.Name),
 		)
 		checkDataPlaneStatus(
-			t, namespace.Name, metav1.ConditionFalse, dataplane.DataPlaneConditionReferencedResourcesNotAvailable,
+			t, namespace.Name, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReferencedResourcesNotAvailable,
 			fmt.Sprintf("something wrong with referenced KongPluginInstallation %s, please check it", client.ObjectKeyFromObject(kpiPrivate)),
 		)
 
@@ -200,7 +200,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 		)
 
 		t.Log("waiting for the DataPlane that reference KongPluginInstallation to be ready")
-		checkDataPlaneStatus(t, namespace.Name, metav1.ConditionTrue, consts.ResourceReadyReason, "")
+		checkDataPlaneStatus(t, namespace.Name, metav1.ConditionTrue, kcfgdataplane.ResourceReadyReason, "")
 		t.Log("attach configured KongPlugin to the HTTPRoute")
 		attachKongPluginBasedOnKPIToRoute(t, cleaner, httpRouteNN, kpiPrivateNN)
 		t.Log("verify that plugin is properly configured and works")
@@ -343,7 +343,7 @@ func checkDataPlaneStatus(
 	t *testing.T,
 	namespace string,
 	expectedConditionStatus metav1.ConditionStatus,
-	expectedConditionReason consts.ConditionReason,
+	expectedConditionReason kcfgconsts.ConditionReason,
 	expectedConditionMessage string,
 ) {
 	t.Helper()
@@ -361,7 +361,7 @@ func checkDataPlaneStatus(
 		}
 
 		condition := dp.Status.Conditions[0]
-		assert.EqualValues(c, consts.ReadyType, condition.Type)
+		assert.EqualValues(c, kcfgdataplane.ReadyType, condition.Type)
 		assert.EqualValues(c, expectedConditionStatus, condition.Status)
 		assert.EqualValues(c, expectedConditionReason, condition.Reason)
 		assert.Equal(c, expectedConditionMessage, condition.Message)

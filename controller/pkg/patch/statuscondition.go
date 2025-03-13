@@ -9,21 +9,23 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 )
 
 // SetStatusWithConditionIfDifferent sets the status of the provided object with the
 // given condition if the condition is different from the current one.
 // It does not take LastTransitionTime into account.
+// The return value tells whether status needs an update.
 func SetStatusWithConditionIfDifferent[T interface {
 	client.Object
 	k8sutils.ConditionsAware
 }](
 	ent T,
-	conditionType consts.ConditionType,
+	conditionType kcfgconsts.ConditionType,
 	conditionStatus metav1.ConditionStatus,
-	conditionReason consts.ConditionReason,
+	conditionReason kcfgconsts.ConditionReason,
 	conditionMessage string,
 ) bool {
 	cond, ok := k8sutils.GetCondition(conditionType, ent)
@@ -51,6 +53,44 @@ func SetStatusWithConditionIfDifferent[T interface {
 	return true
 }
 
+// StatusWithConditions patches the status of the provided object with the
+// given conditions.
+func StatusWithConditions[T interface {
+	client.Object
+	k8sutils.ConditionsAware
+}](
+	ctx context.Context,
+	cl client.Client,
+	ent T,
+	conditions ...metav1.Condition,
+) (res ctrl.Result, updated bool, err error) {
+	old := ent.DeepCopyObject().(T)
+	var needsUpdate bool
+	for _, condition := range conditions {
+		if SetStatusWithConditionIfDifferent(ent,
+			kcfgconsts.ConditionType(condition.Type),
+			condition.Status,
+			kcfgconsts.ConditionReason(condition.Reason),
+			condition.Message,
+		) {
+			needsUpdate = true
+		}
+	}
+
+	if needsUpdate {
+		if err := cl.Status().Patch(ctx, ent, client.MergeFrom(old)); err != nil {
+			if k8serrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, false, nil
+			}
+			return ctrl.Result{}, false, fmt.Errorf("failed to patch status with conditions %v: %w", conditions, err)
+		}
+		return ctrl.Result{}, true, nil
+	}
+
+	return ctrl.Result{}, false, nil
+
+}
+
 // StatusWithCondition patches the status of the provided object with the
 // given condition.
 // If the condition is already set and it's as expected, it returns without patching.
@@ -61,9 +101,9 @@ func StatusWithCondition[T interface {
 	ctx context.Context,
 	cl client.Client,
 	ent T,
-	conditionType consts.ConditionType,
+	conditionType kcfgconsts.ConditionType,
 	conditionStatus metav1.ConditionStatus,
-	conditionReason consts.ConditionReason,
+	conditionReason kcfgconsts.ConditionReason,
 	conditionMessage string,
 ) (ctrl.Result, error) {
 	old := ent.DeepCopyObject().(T)

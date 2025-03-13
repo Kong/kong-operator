@@ -22,6 +22,8 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers"
 
+	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -102,7 +104,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				Status: operatorv1beta1.ControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(ConditionTypeProvisioned),
+							Type:   string(kcfgcontrolplane.ConditionTypeProvisioned),
 							Status: metav1.ConditionTrue,
 						},
 					},
@@ -139,7 +141,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
-							Type:   string(consts.ReadyType),
+							Type:   string(kcfgdataplane.ReadyType),
 							Status: metav1.ConditionTrue,
 						},
 					},

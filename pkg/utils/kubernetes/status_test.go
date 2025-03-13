@@ -6,7 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 )
 
 type TestResource struct {
@@ -73,7 +74,7 @@ func TestGetCondition(t *testing.T) {
 			resource := &TestResource{
 				Conditions: tt.conditions,
 			}
-			current, exists := GetCondition(consts.ConditionType(tt.condition), resource)
+			current, exists := GetCondition(kcfgconsts.ConditionType(tt.condition), resource)
 			assert.Equal(t, tt.expected, current)
 			assert.Equal(t, tt.expectedFound, exists)
 		})
@@ -332,7 +333,7 @@ func TestIsValidCondition(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			current := HasConditionTrue(consts.ConditionType(tt.input), resource)
+			current := HasConditionTrue(kcfgconsts.ConditionType(tt.input), resource)
 			assert.Equal(t, tt.expected, current)
 		})
 	}
@@ -353,7 +354,7 @@ func TestIsReady(t *testing.T) {
 			"true",
 			[]metav1.Condition{
 				{
-					Type:   string(consts.ReadyType),
+					Type:   string(kcfgdataplane.ReadyType),
 					Status: metav1.ConditionTrue,
 				},
 			},
@@ -377,7 +378,7 @@ func TestIsReady(t *testing.T) {
 					Status: metav1.ConditionTrue,
 				},
 				{
-					Type:   string(consts.ReadyType),
+					Type:   string(kcfgdataplane.ReadyType),
 					Status: metav1.ConditionFalse,
 				},
 			},
@@ -409,7 +410,7 @@ func TestSetReady(t *testing.T) {
 			"override_no_other_conditions",
 			[]metav1.Condition{
 				{
-					Type:   string(consts.ReadyType),
+					Type:   string(kcfgdataplane.ReadyType),
 					Status: metav1.ConditionFalse,
 				},
 			},
@@ -453,7 +454,7 @@ func TestSetReady(t *testing.T) {
 					Status: metav1.ConditionTrue,
 				},
 				{
-					Type:   string(consts.ReadyType),
+					Type:   string(kcfgdataplane.ReadyType),
 					Status: metav1.ConditionFalse,
 				},
 			},
@@ -467,7 +468,7 @@ func TestSetReady(t *testing.T) {
 					Status: metav1.ConditionFalse,
 				},
 				{
-					Type:   string(consts.ReadyType),
+					Type:   string(kcfgdataplane.ReadyType),
 					Status: metav1.ConditionTrue,
 				},
 			},
@@ -481,7 +482,7 @@ func TestSetReady(t *testing.T) {
 					Status: metav1.ConditionUnknown,
 				},
 				{
-					Type:   string(consts.ReadyType),
+					Type:   string(kcfgdataplane.ReadyType),
 					Status: metav1.ConditionTrue,
 				},
 			},
@@ -504,9 +505,9 @@ func TestInitReady(t *testing.T) {
 	InitReady(resource)
 	conditions := resource.GetConditions()
 	assert.Len(t, conditions, 1)
-	assert.Equal(t, string(consts.ReadyType), conditions[0].Type)
-	assert.Equal(t, string(consts.DependenciesNotReadyReason), conditions[0].Reason)
-	assert.Equal(t, consts.DependenciesNotReadyMessage, conditions[0].Message)
+	assert.Equal(t, string(kcfgdataplane.ReadyType), conditions[0].Type)
+	assert.Equal(t, string(kcfgdataplane.DependenciesNotReadyReason), conditions[0].Reason)
+	assert.Equal(t, kcfgdataplane.DependenciesNotReadyMessage, conditions[0].Message)
 	assert.NotEmpty(t, conditions[0].LastTransitionTime)
 }
 

@@ -170,6 +170,7 @@ func expectedDefaultCfg() manager.Config {
 		LeaderElection:                          true,
 		LeaderElectionNamespace:                 "kong-system",
 		DevelopmentMode:                         false,
+		EnforceConfig:                           true,
 		ControllerName:                          "",
 		ControllerNamespace:                     "kong-system",
 		AnonymousReports:                        true,

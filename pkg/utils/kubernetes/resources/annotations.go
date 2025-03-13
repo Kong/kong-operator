@@ -1,6 +1,8 @@
 package resources
 
 import (
+	"fmt"
+
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -19,4 +21,24 @@ func AnnotateConfigMapWithKongPluginInstallation(cm *corev1.ConfigMap, kpi opera
 	}
 	annotations[consts.AnnotationMappedToKongPluginInstallation] = client.ObjectKeyFromObject(&kpi).String()
 	cm.SetAnnotations(annotations)
+}
+
+// AnnotateObjWithHash sets the hash of the provided toHash object in the provided
+// obj's annotations.
+func AnnotateObjWithHash[T any](
+	obj client.Object,
+	toHash T,
+) error {
+	hash, err := CalculateHash(toHash)
+	if err != nil {
+		return fmt.Errorf("failed to calculate hash spec from DataPlane: %w", err)
+	}
+	anns := obj.GetAnnotations()
+	if anns == nil {
+		anns = make(map[string]string)
+	}
+	anns[consts.AnnotationPodTemplateSpecHash] = hash
+	obj.SetAnnotations(anns)
+
+	return nil
 }

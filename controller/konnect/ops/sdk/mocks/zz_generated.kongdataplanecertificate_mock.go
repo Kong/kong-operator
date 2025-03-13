@@ -175,6 +175,80 @@ func (_c *MockDataPlaneClientCertificatesSDK_DeleteDataplaneCertificate_Call) Ru
 	return _c
 }
 
+// ListDpClientCertificates provides a mock function with given fields: ctx, controlPlaneID, opts
+func (_m *MockDataPlaneClientCertificatesSDK) ListDpClientCertificates(ctx context.Context, controlPlaneID string, opts ...operations.Option) (*operations.ListDpClientCertificatesResponse, error) {
+	_va := make([]interface{}, len(opts))
+	for _i := range opts {
+		_va[_i] = opts[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, ctx, controlPlaneID)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListDpClientCertificates")
+	}
+
+	var r0 *operations.ListDpClientCertificatesResponse
+	var r1 error
+	if rf, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) (*operations.ListDpClientCertificatesResponse, error)); ok {
+		return rf(ctx, controlPlaneID, opts...)
+	}
+	if rf, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) *operations.ListDpClientCertificatesResponse); ok {
+		r0 = rf(ctx, controlPlaneID, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.ListDpClientCertificatesResponse)
+		}
+	}
+
+	if rf, ok := ret.Get(1).(func(context.Context, string, ...operations.Option) error); ok {
+		r1 = rf(ctx, controlPlaneID, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+
+	return r0, r1
+}
+
+// MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListDpClientCertificates'
+type MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call struct {
+	*mock.Call
+}
+
+// ListDpClientCertificates is a helper method to define mock.On call
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - opts ...operations.Option
+func (_e *MockDataPlaneClientCertificatesSDK_Expecter) ListDpClientCertificates(ctx interface{}, controlPlaneID interface{}, opts ...interface{}) *MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call {
+	return &MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call{Call: _e.mock.On("ListDpClientCertificates",
+		append([]interface{}{ctx, controlPlaneID}, opts...)...)}
+}
+
+func (_c *MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call) Run(run func(ctx context.Context, controlPlaneID string, opts ...operations.Option)) *MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(string), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call) Return(_a0 *operations.ListDpClientCertificatesResponse, _a1 error) *MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call {
+	_c.Call.Return(_a0, _a1)
+	return _c
+}
+
+func (_c *MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call) RunAndReturn(run func(context.Context, string, ...operations.Option) (*operations.ListDpClientCertificatesResponse, error)) *MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // NewMockDataPlaneClientCertificatesSDK creates a new instance of MockDataPlaneClientCertificatesSDK. It also registers a testing interface on the mock and a cleanup function to assert the mocks expectations.
 // The first argument is typically a *testing.T value.
 func NewMockDataPlaneClientCertificatesSDK(t interface {

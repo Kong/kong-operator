@@ -7,10 +7,8 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"k8s.io/utils/strings/slices"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -20,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
+	"github.com/kong/gateway-operator/test/helpers/eventually"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
@@ -121,17 +120,13 @@ func TestKongUpstream(t *testing.T) {
 
 		t.Log("Deleting KongUpstream")
 		require.NoError(t, clientNamespaced.Delete(ctx, createdUpstream))
-
-		t.Log("Waiting for KongUpstream to disappear")
-		assert.EventuallyWithT(t, func(c *assert.CollectT) {
-			err := clientNamespaced.Get(ctx, client.ObjectKeyFromObject(createdUpstream), createdUpstream)
-			assert.True(c, err != nil && k8serrors.IsNotFound(err))
-		}, waitTime, tickTime)
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdUpstream, waitTime, tickTime)
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
+		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/922")
 		const upstreamID = "upstream-12345"
 
 		t.Log("Setting up SDK expectations on Upstream creation")
@@ -204,9 +199,9 @@ func TestKongUpstream(t *testing.T) {
 				nil,
 			)
 
-		t.Log("Creating a KongUpstream with ControlPlaneRef type=konnectID")
+		t.Log("Creating a KongUpstream")
 		created := deploy.KongUpstream(t, ctx, clientNamespaced,
-			deploy.WithKonnectIDControlPlaneRef(cp),
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongUpstream)
 				s.Spec.Tags = append(s.Spec.Tags, "test-1")
@@ -215,7 +210,7 @@ func TestKongUpstream(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
+		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("KongUpstream didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")

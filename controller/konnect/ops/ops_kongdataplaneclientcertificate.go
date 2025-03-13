@@ -10,9 +10,9 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
-// createKongDataPlaneClientCertificate creates a KongDataPlaneClientCertificate in Konnect.
+// CreateKongDataPlaneClientCertificate creates a KongDataPlaneClientCertificate in Konnect.
 // It sets the KonnectID in the KongDataPlaneClientCertificate status.
-func createKongDataPlaneClientCertificate(
+func CreateKongDataPlaneClientCertificate(
 	ctx context.Context,
 	sdk sdkops.DataPlaneClientCertificatesSDK,
 	cert *configurationv1alpha1.KongDataPlaneClientCertificate,
@@ -36,15 +36,33 @@ func createKongDataPlaneClientCertificate(
 		return errWrap
 	}
 
-	cert.SetKonnectID(*resp.DataPlaneClientCertificate.Item.ID)
+	cert.SetKonnectID(*resp.DataPlaneClientCertificateResponse.Item.ID)
 
 	return nil
 }
 
-// deleteKongDataPlaneClientCertificate deletes a KongDataPlaneClientCertificate in Konnect.
+// ListKongDataPlaneClientCertificates lists KongDataPlaneClientCertificates in Konnect.
+// It returns an error if the operation fails.
+func ListKongDataPlaneClientCertificates(
+	ctx context.Context,
+	sdk sdkops.DataPlaneClientCertificatesSDK,
+	cpID string,
+) ([]sdkkonnectcomp.DataPlaneClientCertificate, error) {
+	resp, err := sdk.ListDpClientCertificates(ctx, cpID)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.ListDataPlaneCertificatesResponse == nil || resp.ListDataPlaneCertificatesResponse.Items == nil {
+		return nil, nil
+	}
+	return resp.ListDataPlaneCertificatesResponse.Items, nil
+}
+
+// DeleteKongDataPlaneClientCertificate deletes a KongDataPlaneClientCertificate in Konnect.
 // The KongDataPlaneClientCertificate must have a KonnectID set in its status.
 // It returns an error if the operation fails.
-func deleteKongDataPlaneClientCertificate(
+func DeleteKongDataPlaneClientCertificate(
 	ctx context.Context,
 	sdk sdkops.DataPlaneClientCertificatesSDK,
 	cert *configurationv1alpha1.KongDataPlaneClientCertificate,
