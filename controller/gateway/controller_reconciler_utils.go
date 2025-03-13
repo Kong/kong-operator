@@ -307,32 +307,15 @@ func generateDataPlaneNetworkPolicy(
 	var (
 		protocolTCP     = corev1.ProtocolTCP
 		adminAPISSLPort = intstr.FromInt(consts.DataPlaneAdminAPIPort)
-		proxyPort       = intstr.FromInt(consts.DataPlaneProxyPort)
-		proxySSLPort    = intstr.FromInt(consts.DataPlaneProxySSLPort)
 		metricsPort     = intstr.FromInt(consts.DataPlaneMetricsPort)
 	)
 
-	// Check if KONG_PROXY_LISTEN and/or KONG_ADMIN_LISTEN are set in
-	// DataPlaneDeploymentOptions and in that's the case then update NetworkPolicy
-	// ports accordingly to allow communication on those ports.
-	//
-	// Note: for now only direct env variable manipulation is allowed (through
-	// the .Env field in DataPlaneDeploymentOptions). EnvFrom is not taken into
-	// account when updating NetworkPolicy ports.
 	dpOpts := dataplane.Spec.DataPlaneOptions
-	container := k8sutils.GetPodContainerByName(&dpOpts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
-	if proxyListen := k8sutils.EnvValueByName(container.Env, "KONG_PROXY_LISTEN"); proxyListen != "" {
-		kongListenConfig, err := parseKongListenEnv(proxyListen)
-		if err != nil {
-			return nil, fmt.Errorf("failed parsing KONG_PROXY_LISTEN env: %w", err)
-		}
-		if kongListenConfig.Endpoint != nil {
-			proxyPort = intstr.FromInt(kongListenConfig.Endpoint.Port)
-		}
-		if kongListenConfig.SSLEndpoint != nil {
-			proxySSLPort = intstr.FromInt(kongListenConfig.SSLEndpoint.Port)
-		}
+	proxyPort, proxySSLPort, err := proxyPorts(dpOpts)
+	if err != nil {
+		return nil, err
 	}
+	container := k8sutils.GetPodContainerByName(&dpOpts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 	if adminListen := k8sutils.EnvValueByName(container.Env, "KONG_ADMIN_LISTEN"); adminListen != "" {
 		kongListenConfig, err := parseKongListenEnv(adminListen)
 		if err != nil {
@@ -396,6 +379,39 @@ func generateDataPlaneNetworkPolicy(
 			},
 		},
 	}, nil
+}
+
+// proxyPorts checks if KONG_PROXY_LISTEN is set in DataPlaneDeploymentOptions
+// and based on them returns the proxy and proxySSL ports, in case of missing
+// defaults are returned.
+//
+// Note: for now only direct env variable manipulation is allowed (through
+// the .Env field in DataPlaneDeploymentOptions). EnvFrom is not taken into
+// account when updating NetworkPolicy ports.
+func proxyPorts(
+	dpOpts operatorv1beta1.DataPlaneOptions,
+) (proxyPort, proxySSLPort intstr.IntOrString, err error) {
+	proxyPort = intstr.FromInt(consts.DataPlaneProxyPort)
+	proxySSLPort = intstr.FromInt(consts.DataPlaneProxySSLPort)
+
+	if dpOpts.Deployment.PodTemplateSpec == nil {
+		return proxyPort, proxySSLPort, nil
+	}
+	container := k8sutils.GetPodContainerByName(&dpOpts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+	if proxyListen := k8sutils.EnvValueByName(container.Env, "KONG_PROXY_LISTEN"); proxyListen != "" {
+		kongListenConfig, err := parseKongListenEnv(proxyListen)
+		if err != nil {
+			toDiscard := intstr.FromInt(0)
+			return toDiscard, toDiscard, fmt.Errorf("failed parsing KONG_PROXY_LISTEN env: %w", err)
+		}
+		if kongListenConfig.Endpoint != nil {
+			proxyPort = intstr.FromInt(kongListenConfig.Endpoint.Port)
+		}
+		if kongListenConfig.SSLEndpoint != nil {
+			proxySSLPort = intstr.FromInt(kongListenConfig.SSLEndpoint.Port)
+		}
+	}
+	return proxyPort, proxySSLPort, nil
 }
 
 // ensureOwnedControlPlanesDeleted deletes all controlplanes owned by gateway.
@@ -836,6 +852,10 @@ func setDataPlaneIngressServicePorts(opts *operatorv1beta1.DataPlaneOptions, lis
 		}
 	}
 
+	proxyPort, proxySSLPort, err := proxyPorts(*opts)
+	if err != nil {
+		return fmt.Errorf("failed to get ports from DataPlane configuration: %w", err)
+	}
 	var errs error
 	for i, l := range listeners {
 		var name string
@@ -850,11 +870,12 @@ func setDataPlaneIngressServicePorts(opts *operatorv1beta1.DataPlaneOptions, lis
 			Name: name,
 			Port: int32(l.Port),
 		}
+
 		switch l.Protocol {
 		case gatewayv1.HTTPSProtocolType:
-			port.TargetPort = intstr.FromInt(consts.DataPlaneProxySSLPort)
+			port.TargetPort = proxySSLPort
 		case gatewayv1.HTTPProtocolType:
-			port.TargetPort = intstr.FromInt(consts.DataPlaneProxyPort)
+			port.TargetPort = proxyPort
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
 			continue
