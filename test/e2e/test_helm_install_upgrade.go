@@ -67,8 +67,8 @@ func TestHelmUpgrade(t *testing.T) {
 	}{
 		{
 			name:        "upgrade from one before latest to latest minor",
-			fromVersion: "1.3.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss depName=kong/gateway-operator-oss@only-patch
-			toVersion:   "1.4.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
+			fromVersion: "1.4.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss depName=kong/gateway-operator-oss@only-patch
+			toVersion:   "1.5.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -123,10 +123,10 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 				{
-					Name: "DataPlane deployment is patched after operator upgrade (due to change in default Kong image version to 3.8)",
+					Name: "DataPlane deployment is patched after operator upgrade (due to change in default Kong image version to 3.9)",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-onebeforelatestminor-latestminor=true")(ctx, c, cl.MgrClient)
-						gatewayDataPlaneDeploymentHasImageSetTo("gw-upgrade-onebeforelatestminor-latestminor=true", helpers.GetDefaultDataPlaneBaseImage()+":3.8")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentHasImageSetTo("gw-upgrade-onebeforelatestminor-latestminor=true", helpers.GetDefaultDataPlaneBaseImage()+":3.9")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
@@ -139,7 +139,7 @@ func TestHelmUpgrade(t *testing.T) {
 		},
 		{
 			name:             "upgrade from latest minor to current",
-			fromVersion:      "1.4.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
+			fromVersion:      "1.5.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release. It's needed for the chart to properly render
 			// semver-conditional templates.
