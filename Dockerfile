@@ -54,7 +54,7 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
 
 # Use distroless as minimal base image to package the operator binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot@sha256:6ec5aa99dc335666e79dc64e4a6c8b89c33a543a1967f20d360922a80dd21f02 AS distroless
+FROM gcr.io/distroless/static:nonroot@sha256:b35229a3a6398fe8f86138c74c611e386f128c20378354fc5442811700d5600d AS distroless
 
 ARG TAG
 ARG NAME="Kong Gateway Operator"
