@@ -193,7 +193,7 @@ const (
 // -----------------------------------------------------------------------------
 
 const (
-	// DataPlaneExtensionFinalizer is the finalizer added to KonnectExtension
+	// ExtensionInUseFinalizer is the finalizer added to KonnectExtension
 	// to ensure that the resources are not deleted when in use by a dataplane.
-	DataPlaneExtensionFinalizer = "gateway-operator.konghq.com/extension-in-use"
+	ExtensionInUseFinalizer = "gateway-operator.konghq.com/extension-in-use"
 )

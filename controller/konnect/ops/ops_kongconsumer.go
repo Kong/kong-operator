@@ -16,11 +16,11 @@ import (
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -56,7 +56,7 @@ func createConsumer(
 	if err = handleConsumerGroupAssignments(ctx, consumer, cl, cgSDK, cpID); err != nil {
 		return KonnectEntityCreatedButRelationsFailedError{
 			KonnectID: id,
-			Reason:    consts.FailedToAttachConsumerToConsumerGroupReason,
+			Reason:    kcfgkonnect.FailedToAttachConsumerToConsumerGroupReason,
 			Err:       err,
 		}
 	}
@@ -95,7 +95,7 @@ func updateConsumer(
 	if err = handleConsumerGroupAssignments(ctx, consumer, cl, cgSDK, cpID); err != nil {
 		return KonnectEntityCreatedButRelationsFailedError{
 			KonnectID: id,
-			Reason:    consts.FailedToAttachConsumerToConsumerGroupReason,
+			Reason:    kcfgkonnect.FailedToAttachConsumerToConsumerGroupReason,
 			Err:       err,
 		}
 	}

@@ -3,10 +3,8 @@ package dataplane
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
-	"strings"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -15,13 +13,12 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/pkg/extensions"
-	konnectextension "github.com/kong/gateway-operator/controller/pkg/extensions/konnect"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -148,10 +145,10 @@ func ensureDataPlaneReadyStatus(
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				consts.ReadyType,
+				kcfgdataplane.ReadyType,
 				metav1.ConditionFalse,
-				consts.WaitingToBecomeReadyReason,
-				consts.WaitingToBecomeReadyMessage,
+				kcfgdataplane.WaitingToBecomeReadyReason,
+				kcfgdataplane.WaitingToBecomeReadyMessage,
 				generation,
 			),
 			dataplane,
@@ -182,10 +179,10 @@ func ensureDataPlaneReadyStatus(
 		// Set Ready to false for dataplane as the underlying deployment is not ready.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				consts.ReadyType,
+				kcfgdataplane.ReadyType,
 				metav1.ConditionFalse,
-				consts.WaitingToBecomeReadyReason,
-				fmt.Sprintf("%s: Deployment %s is not ready yet", consts.WaitingToBecomeReadyMessage, deployment.Name),
+				kcfgdataplane.WaitingToBecomeReadyReason,
+				fmt.Sprintf("%s: Deployment %s is not ready yet", kcfgdataplane.WaitingToBecomeReadyMessage, deployment.Name),
 				generation,
 			),
 			dataplane,
@@ -209,10 +206,10 @@ func ensureDataPlaneReadyStatus(
 		// Set Ready to false for dataplane as the Service is not ready yet.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				consts.ReadyType,
+				kcfgdataplane.ReadyType,
 				metav1.ConditionFalse,
-				consts.WaitingToBecomeReadyReason,
-				consts.WaitingToBecomeReadyMessage,
+				kcfgdataplane.WaitingToBecomeReadyReason,
+				kcfgdataplane.WaitingToBecomeReadyMessage,
 				generation,
 			),
 			dataplane,
@@ -238,10 +235,10 @@ func ensureDataPlaneReadyStatus(
 		// Set Ready to false for dataplane as the Service is not ready yet.
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				consts.ReadyType,
+				kcfgdataplane.ReadyType,
 				metav1.ConditionFalse,
-				consts.WaitingToBecomeReadyReason,
-				fmt.Sprintf("%s: ingress Service %s is not ready yet", consts.WaitingToBecomeReadyMessage, ingressService.Name),
+				kcfgdataplane.WaitingToBecomeReadyReason,
+				fmt.Sprintf("%s: ingress Service %s is not ready yet", kcfgdataplane.WaitingToBecomeReadyMessage, ingressService.Name),
 				generation,
 			),
 			dataplane,
@@ -312,71 +309,4 @@ func isDeploymentReady(deploymentStatus appsv1.DeploymentStatus) (metav1.Conditi
 	} else {
 		return metav1.ConditionFalse, false
 	}
-}
-
-// -----------------------------------------------------------------------------
-// DataPlane - Private Functions - extensions
-// -----------------------------------------------------------------------------
-
-// applyExtensions patches the dataplane spec by taking into account customizations from the referenced extensions.
-// In case any extension is referenced, it adds a resolvedRefs condition to the dataplane, indicating the status of the
-// extension reference. it returns 3 values:
-//   - stop: a boolean indicating if the caller must return. It's true when the dataplane status has been patched.
-//   - requeue: a boolean indicating if the dataplane should be requeued. If the error was unexpected (e.g., because of API server error), the dataplane should be requeued.
-//     In case the error is related to a misconfiguration, the dataplane does not need to be requeued, and feedback is provided into the dataplane status.
-//   - err: an error in case of failure.
-func applyExtensions(ctx context.Context, cl client.Client, logger logr.Logger, dataplane *operatorv1beta1.DataPlane, konnectEnabled bool) (stop bool, requeue bool, err error) {
-	var condition metav1.Condition
-
-	stop = true
-	// extensionsCondition can be nil. In that case, no extensions are referenced by the DataPlane.
-	extensionsCondition := extensions.ValidateExtensions(dataplane)
-	if extensionsCondition == nil {
-		return false, false, nil
-	}
-
-	newDataPlane := dataplane.DeepCopy()
-	k8sutils.SetCondition(*extensionsCondition, newDataPlane)
-
-	// the konnect extension is the only one implemented at the moment. In case konnect is not enabled, we return early.
-	if !konnectEnabled {
-		return false, false, nil
-	}
-
-	// in case the extensionsCondition is true, let's apply the extensions.
-	if extensionsCondition.Status == metav1.ConditionTrue {
-		condition = k8sutils.NewConditionWithGeneration(consts.KonnectExtensionAppliedType, metav1.ConditionTrue, consts.KonnectExtensionAppliedReason, "", dataplane.GetGeneration())
-		err = konnectextension.ApplyKonnectExtension(ctx, cl, dataplane)
-		if err != nil {
-			switch {
-			case errors.Is(err, konnectextension.ErrCrossNamespaceReference):
-				condition.Status = metav1.ConditionFalse
-				condition.Reason = string(consts.RefNotPermittedReason)
-				condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
-			case errors.Is(err, konnectextension.ErrKonnectExtensionNotFound):
-				condition.Status = metav1.ConditionFalse
-				condition.Reason = string(consts.InvalidExtensionRefReason)
-				condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
-			case errors.Is(err, konnectextension.ErrClusterCertificateNotFound):
-				condition.Status = metav1.ConditionFalse
-				condition.Reason = string(consts.InvalidSecretRefReason)
-				condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
-			case errors.Is(err, konnectextension.ErrKonnectExtensionNotReady):
-				condition.Status = metav1.ConditionFalse
-				condition.Reason = string(consts.KonnectExtensionNotReadyReason)
-				condition.Message = strings.ReplaceAll(err.Error(), "\n", " - ")
-			default:
-				return stop, true, err
-			}
-		} else {
-			stop = false
-		}
-		k8sutils.SetCondition(condition, newDataPlane)
-	}
-
-	patched, patchErr := patchDataPlaneStatus(ctx, cl, logger, newDataPlane)
-	if patchErr != nil {
-		return false, true, fmt.Errorf("failed patching status for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, patchErr)
-	}
-	return (patched || stop), false, err
 }

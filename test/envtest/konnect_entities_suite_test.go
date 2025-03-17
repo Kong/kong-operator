@@ -52,8 +52,7 @@ func testNewKonnectEntityReconciler[
 	t.Run(ent.GetTypeName(), func(t *testing.T) {
 		t.Parallel()
 
-		ctx, cancel := context.WithCancel(t.Context())
-		defer cancel()
+		ctx := t.Context()
 
 		mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
 

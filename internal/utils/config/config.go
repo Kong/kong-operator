@@ -1,12 +1,12 @@
-package dataplane
+package config
 
 import (
 	"sort"
 	"strings"
 
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
@@ -19,21 +19,17 @@ const (
 )
 
 // -----------------------------------------------------------------------------
-// DataPlane Utils - Config
+// Utils - Config
 // -----------------------------------------------------------------------------
 
-// FillDataPlaneProxyContainerEnvs sets any unset default configuration
-// options on the DataPlane. It allows overriding the defaults via the provided
-// PodTemplateSpec. The default configuration is passed as the last argument.
-// EnvVars are sorted lexographically as a side effect.
-// It also returns the updated EnvVar slice.
-func FillDataPlaneProxyContainerEnvs(existing []corev1.EnvVar, podTemplateSpec *corev1.PodTemplateSpec, envSet map[string]string) {
+// FillContainerEnvMap updates the environment variables in the provided PodTemplateSpec's container by taking a slice of env vars as an input.
+func FillContainerEnvs(existing []corev1.EnvVar, podTemplateSpec *corev1.PodTemplateSpec, containerName string, envSet []corev1.EnvVar) {
 	if podTemplateSpec == nil {
 		return
 	}
 
 	podSpec := &podTemplateSpec.Spec
-	container := k8sutils.GetPodContainerByName(podSpec, consts.DataPlaneProxyContainerName)
+	container := k8sutils.GetPodContainerByName(podSpec, containerName)
 	if container == nil {
 		return
 	}
@@ -43,16 +39,24 @@ func FillDataPlaneProxyContainerEnvs(existing []corev1.EnvVar, podTemplateSpec *
 			container.Env = append(container.Env, envVar)
 		}
 	}
-	for k, v := range envSet {
-		envVar := corev1.EnvVar{
-			Name:  k,
-			Value: v,
-		}
+	for _, envVar := range envSet {
 		if !k8sutils.IsEnvVarPresent(envVar, container.Env) {
 			container.Env = append(container.Env, envVar)
 		}
 	}
 	sort.Sort(k8sutils.SortableEnvVars(container.Env))
+}
+
+// EnvVarMapToSlice converts a map[string]string to a slice of environment variables.
+// Note: this function should be used only when the env var slice is made of simple key-value pairs.
+// in case of more complex env vars, don't rely on maps.
+func EnvVarMapToSlice(envMap map[string]string) []corev1.EnvVar {
+	return lo.MapToSlice(envMap, func(k, v string) corev1.EnvVar {
+		return corev1.EnvVar{
+			Name:  k,
+			Value: v,
+		}
+	})
 }
 
 // ConfigureKongPluginRelatedEnvVars returns the environment variables

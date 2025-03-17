@@ -8,7 +8,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,6 +17,7 @@ import (
 	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
+	"github.com/kong/gateway-operator/test/helpers/eventually"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -67,7 +67,7 @@ func TestKonnectEntities(t *testing.T) {
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	ks := deploy.KongService(t, ctx, clientNamespaced,
-		deploy.WithKonnectIDControlPlaneRef(cp),
+		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		deploy.WithTestIDLabel(testID),
 	)
 
@@ -252,13 +252,14 @@ func TestKonnectEntities(t *testing.T) {
 // It's designed to be used with t.Cleanup() to ensure the object is properly deleted (it's not stuck with finalizers, etc.).
 func deleteObjectAndWaitForDeletionFn(t *testing.T, obj client.Object) func() {
 	return func() {
-		err := GetClients().MgrClient.Delete(GetCtx(), obj)
-		require.NoError(t, err)
-
-		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: obj.GetName(), Namespace: obj.GetNamespace()}, obj)
-			assert.True(t, k8serrors.IsNotFound(err))
-		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+		t.Logf("Deleting %s/%s and waiting for it gone",
+			obj.GetNamespace(), obj.GetName(),
+		)
+		cl := GetClients().MgrClient
+		require.NoError(t, cl.Delete(GetCtx(), obj))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, obj,
+			testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick,
+		)
 	}
 }
 

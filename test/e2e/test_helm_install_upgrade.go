@@ -25,6 +25,7 @@ import (
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/pkg/vars"
 	"github.com/kong/gateway-operator/test/helpers"
+	"github.com/kong/gateway-operator/test/helpers/eventually"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
@@ -40,9 +41,7 @@ func TestHelmUpgrade(t *testing.T) {
 
 		waitTime = 3 * time.Minute
 	)
-
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
+	ctx := t.Context()
 
 	// createEnvironment will queue up environment cleanup if necessary
 	// and dumping diagnostics if the test fails.
@@ -69,8 +68,8 @@ func TestHelmUpgrade(t *testing.T) {
 	}{
 		{
 			name:        "upgrade from one before latest to latest minor",
-			fromVersion: "1.3.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss depName=kong/gateway-operator-oss@only-patch
-			toVersion:   "1.4.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
+			fromVersion: "1.4.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss depName=kong/gateway-operator-oss@only-patch
+			toVersion:   "1.5.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -125,10 +124,10 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 				{
-					Name: "DataPlane deployment is patched after operator upgrade (due to change in default Kong image version to 3.8)",
+					Name: "DataPlane deployment is patched after operator upgrade (due to change in default Kong image version to 3.9)",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
 						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-onebeforelatestminor-latestminor=true")(ctx, c, cl.MgrClient)
-						gatewayDataPlaneDeploymentHasImageSetTo("gw-upgrade-onebeforelatestminor-latestminor=true", helpers.GetDefaultDataPlaneBaseImage()+":3.8")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentHasImageSetTo("gw-upgrade-onebeforelatestminor-latestminor=true", helpers.GetDefaultDataPlaneBaseImage()+":3.9")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
@@ -142,7 +141,7 @@ func TestHelmUpgrade(t *testing.T) {
 		{
 			name:             "upgrade from latest minor to current",
 			skip:             "ControlPlane assertions have to be adjusted to KIC as a library approach (https://github.com/Kong/gateway-operator/issues/1188)",
-			fromVersion:      "1.4.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
+			fromVersion:      "1.5.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release. It's needed for the chart to properly render
 			// semver-conditional templates.
@@ -203,7 +202,7 @@ func TestHelmUpgrade(t *testing.T) {
 				{
 					Name: "DataPlane deployment is not patched after operator upgrade",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-latestminor-current=true")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-latestminor-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
@@ -214,10 +213,9 @@ func TestHelmUpgrade(t *testing.T) {
 				},
 			},
 		},
-		/**
-		// TODO(Jintao): This test is disabled. After a new nightly image is available which uses KIC 3.4.1, we can enable it.
 		{
 			name:             "upgrade from nightly to current",
+			skip:             "ControlPlane assertions have to be adjusted to KIC as a library approach (https://github.com/Kong/gateway-operator/issues/1188)",
 			fromVersion:      "nightly",
 			upgradeToCurrent: true,
 			objectsToDeploy: []client.Object{
@@ -276,7 +274,7 @@ func TestHelmUpgrade(t *testing.T) {
 				{
 					Name: "DataPlane deployment is not patched after operator upgrade",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
@@ -287,7 +285,6 @@ func TestHelmUpgrade(t *testing.T) {
 				},
 			},
 		},
-		**/
 	}
 
 	var (
@@ -310,8 +307,10 @@ func TestHelmUpgrade(t *testing.T) {
 
 			// Repository is different for OSS and Enterprise images and it should be set accordingly.
 			kgoImageRepository := "docker.io/kong/gateway-operator-oss"
+			kgoImageRepositoryNightly := "docker.io/kong/nightly-gateway-operator-oss"
 			if helpers.GetDefaultDataPlaneBaseImage() == consts.DefaultDataPlaneBaseEnterpriseImage {
 				kgoImageRepository = "docker.io/kong/gateway-operator"
+				kgoImageRepositoryNightly = "docker.io/kong/nightly-gateway-operator"
 			}
 			var (
 				tag              string
@@ -335,6 +334,9 @@ func TestHelmUpgrade(t *testing.T) {
 				tagInReleaseName = tag[:8]
 			}
 			releaseName := strings.ReplaceAll(fmt.Sprintf("kgo-%s-to-%s", tc.fromVersion, tagInReleaseName), ".", "-")
+			if strings.Contains(tc.fromVersion, "nightly") {
+				kgoImageRepository = kgoImageRepositoryNightly
+			}
 			values := map[string]string{
 				"image.tag":                          tc.fromVersion,
 				"image.repository":                   kgoImageRepository,
@@ -355,10 +357,21 @@ func TestHelmUpgrade(t *testing.T) {
 					RestConfig: e.Environment.Cluster().Config(),
 				},
 				SetValues: values,
+				ExtraArgs: map[string][]string{
+					"install": {
+						"--devel",
+					},
+					"upgrade": {
+						"--devel",
+					},
+				},
 			}
 
 			require.NoError(t, helm.AddRepoE(t, opts, "kong", "https://charts.konghq.com"))
 			require.NoError(t, helm.InstallE(t, opts, chart, releaseName))
+			out, err := helm.RunHelmCommandAndGetOutputE(t, opts, "list")
+			require.NoError(t, err)
+			t.Logf("Helm list output after install:\n  %s", out)
 			t.Cleanup(func() {
 				out, err := helm.RunHelmCommandAndGetOutputE(t, opts, "uninstall", releaseName)
 				if !assert.NoError(t, err) {
@@ -375,7 +388,12 @@ func TestHelmUpgrade(t *testing.T) {
 			for _, obj := range tc.objectsToDeploy {
 				require.NoError(t, cl.Create(ctx, obj))
 				t.Cleanup(func() {
+					// Ensure that every object is properly deleted (the finalizer must
+					// be executed, it requires some time) before the Helm chart is uninstalled.
+					ctx, cancel := context.WithTimeout(ctx, waitTime)
+					defer cancel()
 					require.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, obj)))
+					eventually.WaitForObjectToNotExist(t, ctx, cl, obj, waitTime, 500*time.Millisecond)
 				})
 			}
 
@@ -393,6 +411,9 @@ func TestHelmUpgrade(t *testing.T) {
 			opts.SetValues["image.repository"] = targetRepository
 
 			require.NoError(t, helm.UpgradeE(t, opts, chart, releaseName))
+			out, err = helm.RunHelmCommandAndGetOutputE(t, opts, "list")
+			require.NoError(t, err)
+			t.Logf("Helm list output after upgrade:\n  %s", out)
 			require.NoError(t, waitForOperatorDeployment(t, ctx, e.Namespace.Name, e.Clients.K8sClient, waitTime,
 				deploymentAssertConditions(t, deploymentReadyConditions()...),
 			),
@@ -538,7 +559,7 @@ func gatewayDataPlaneDeploymentHasImageSetTo(
 	})
 }
 
-func gatewayDataPlaneDeploymentIsNotPatched( //nolint:unused
+func gatewayDataPlaneDeploymentIsNotPatched(
 	gatewayLabelSelector string,
 ) func(context.Context, *assert.CollectT, client.Client) {
 	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {

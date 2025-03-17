@@ -9,7 +9,7 @@ go 1.24.0
 retract v1.2.2
 
 require (
-	github.com/Kong/sdk-konnect-go v0.2.16
+	github.com/Kong/sdk-konnect-go v0.2.21
 	github.com/Masterminds/semver v1.5.0
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/go-logr/logr v1.4.2
@@ -19,20 +19,20 @@ require (
 	github.com/google/go-containerregistry v0.20.3
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.48.2
-	github.com/kong/kubernetes-configuration v1.2.0-rc.1.0.20250226124621-148cbaed8d99
-	github.com/kong/kubernetes-telemetry v0.1.8
+	github.com/kong/kubernetes-configuration v1.2.0
+	github.com/kong/kubernetes-telemetry v0.1.9
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
-	github.com/opencontainers/image-spec v1.1.0
-	github.com/prometheus/client_golang v1.21.0
+	github.com/opencontainers/image-spec v1.1.1
+	github.com/prometheus/client_golang v1.21.1
 	github.com/samber/lo v1.49.1
 	github.com/samber/mo v1.13.0
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/pretty v1.2.1
 	go.uber.org/zap v1.27.0
-	golang.org/x/mod v0.23.0
+	golang.org/x/mod v0.24.0
 	k8s.io/api v0.32.2
 	k8s.io/apiextensions-apiserver v0.32.2
 	k8s.io/apimachinery v0.32.2
@@ -41,7 +41,7 @@ require (
 	// TODO: Use official release when
 	// https://github.com/oras-project/oras-go/pull/850 becomes part of it.
 	oras.land/oras-go/v2 v2.5.1-0.20250115103459-a15da41d19be
-	sigs.k8s.io/controller-runtime v0.20.2
+	sigs.k8s.io/controller-runtime v0.20.3
 	sigs.k8s.io/gateway-api v1.2.1
 	sigs.k8s.io/kustomize/api v0.19.0
 )
@@ -213,7 +213,7 @@ require (
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/crypto v0.35.0 // indirect
 	golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac // indirect
-	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
 	golang.org/x/tools v0.30.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250212204824-5a70512c5d8b // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250212204824-5a70512c5d8b // indirect
@@ -233,7 +233,29 @@ require (
 	sigs.k8s.io/kustomize/kyaml v0.19.0
 )
 
-require github.com/kong/kubernetes-ingress-controller/v3 v3.4.1-0.20250307134043-3adc388aa7d0
+require (
+	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
+	github.com/gohugoio/hashstructure v0.5.0
+	github.com/google/btree v1.1.3 // indirect
+	github.com/klauspost/compress v1.17.11 // indirect
+	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
+	golang.org/x/oauth2 v0.28.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/term v0.29.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
+	golang.org/x/time v0.10.0 // indirect
+	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
+	google.golang.org/protobuf v1.36.5 // indirect
+	gopkg.in/inf.v0 v0.9.1 // indirect
+	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
+	k8s.io/component-base v0.32.2 // indirect
+	k8s.io/klog/v2 v2.130.1 // indirect
+	k8s.io/kube-openapi v0.0.0-20241212222426-2c72e554b1e7 // indirect
+	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
+	sigs.k8s.io/structured-merge-diff/v4 v4.5.0 // indirect
+	sigs.k8s.io/yaml v1.4.0 // indirect
+)
 
 require (
 	dario.cat/mergo v1.0.1 // indirect
@@ -241,11 +263,9 @@ require (
 	github.com/Kong/go-diff v1.2.2 // indirect
 	github.com/Kong/gojsondiff v1.3.2 // indirect
 	github.com/adrg/strutil v0.3.0 // indirect
-	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/dominikbraun/graph v0.23.0 // indirect
 	github.com/fatih/color v1.17.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/google/btree v1.1.3 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-memdb v1.3.4 // indirect
@@ -253,8 +273,8 @@ require (
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hexops/gotextdiff v1.0.3 // indirect
 	github.com/jpillora/backoff v1.0.0 // indirect
-	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/kong/go-database-reconciler v1.16.1 // indirect
+	github.com/kong/kubernetes-ingress-controller/v3 v3.4.1-0.20250307134043-3adc388aa7d0
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/lufia/plan9stats v0.0.0-20230326075908-cb1d2100619a // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -270,24 +290,7 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	github.com/yudai/golcs v0.0.0-20170316035057-ecda9a501e82 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
-	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	golang.org/x/oauth2 v0.26.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/term v0.29.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
-	golang.org/x/time v0.10.0 // indirect
-	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/protobuf v1.36.5 // indirect
-	gopkg.in/inf.v0 v0.9.1 // indirect
-	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/cli-runtime v0.32.1 // indirect
-	k8s.io/component-base v0.32.2 // indirect
-	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20241212222426-2c72e554b1e7 // indirect
-	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
-	sigs.k8s.io/structured-merge-diff/v4 v4.5.0 // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
 // The replace directives for `k8s.io/*` are required for making it possible to
@@ -297,7 +300,7 @@ require (
 replace (
 	k8s.io/api => k8s.io/api v0.32.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.32.2
-	k8s.io/apimachinery => k8s.io/apimachinery v0.32.2
+	k8s.io/apimachinery => k8s.io/apimachinery v0.32.3
 	k8s.io/apiserver => k8s.io/apiserver v0.32.2
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.32.2
 	k8s.io/client-go => k8s.io/client-go v0.32.2
@@ -307,12 +310,12 @@ replace (
 	k8s.io/component-base => k8s.io/component-base v0.32.2
 	k8s.io/component-helpers => k8s.io/component-helpers v0.32.2
 	k8s.io/controller-manager => k8s.io/controller-manager v0.32.2
-	k8s.io/cri-api => k8s.io/cri-api v0.32.2
+	k8s.io/cri-api => k8s.io/cri-api v0.32.3
 	k8s.io/cri-client => k8s.io/cri-client v0.32.2
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.32.2
 	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.32.2
 	k8s.io/endpointslice => k8s.io/endpointslice v0.32.2
-	k8s.io/externaljwt => k8s.io/externaljwt v0.32.2
+	k8s.io/externaljwt => k8s.io/externaljwt v0.32.3
 	k8s.io/kms => k8s.io/kms v0.32.2
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.32.2
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.32.2
@@ -322,7 +325,7 @@ replace (
 	k8s.io/kubelet => k8s.io/kubelet v0.32.2
 	k8s.io/legacy-cloud-providers => k8s.io/legacy-cloud-providers v0.30.3
 	k8s.io/metrics => k8s.io/metrics v0.32.2
-	k8s.io/mount-utils => k8s.io/mount-utils v0.32.2
+	k8s.io/mount-utils => k8s.io/mount-utils v0.32.3
 	k8s.io/pod-security-admission => k8s.io/pod-security-admission v0.32.2
 	k8s.io/sample-apiserver => k8s.io/sample-apiserver v0.32.2
 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.32.2

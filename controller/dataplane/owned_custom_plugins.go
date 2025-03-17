@@ -8,7 +8,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/gateway-operator/internal/utils/dataplane"
+	"github.com/kong/gateway-operator/internal/utils/config"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 )
@@ -67,7 +67,7 @@ func withCustomPlugins(customPlugins ...customPlugin) k8sresources.DeploymentOpt
 		deployment.Spec.Template.Annotations[consts.AnnotationKongPluginInstallationGenerationInternal] = strings.Join(kpisGenerations, ",")
 		deployment.Spec.Template.Spec.Containers[0].Env = append(
 			deployment.Spec.Template.Spec.Containers[0].Env,
-			dataplane.ConfigureKongPluginRelatedEnvVars(kpisNames)...,
+			config.ConfigureKongPluginRelatedEnvVars(kpisNames)...,
 		)
 		deployment.Spec.Template.Spec.Containers[0].VolumeMounts = append(
 			deployment.Spec.Template.Spec.Containers[0].VolumeMounts,

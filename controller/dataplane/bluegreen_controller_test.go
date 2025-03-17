@@ -33,6 +33,7 @@ import (
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/test/helpers"
 
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -243,7 +244,7 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, reconciler.Client.Get(ctx, dpNN, dp))
 				require.NotNil(t, dp.Status.RolloutStatus)
 				require.Len(t, dp.Status.RolloutStatus.Conditions, 1)
-				require.EqualValues(t, consts.DataPlaneConditionTypeRolledOut, dp.Status.RolloutStatus.Conditions[0].Type)
+				require.EqualValues(t, kcfgdataplane.DataPlaneConditionTypeRolledOut, dp.Status.RolloutStatus.Conditions[0].Type)
 				require.Equal(t, metav1.ConditionFalse, dp.Status.RolloutStatus.Conditions[0].Status)
 
 				// Update the DataPlane deployment options to trigger rollout.
@@ -312,20 +313,20 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 
 				t.Logf("DataPlane status should have the Ready status condition set to false")
 				require.Len(t, dp.Status.Conditions, 1)
-				require.EqualValues(t, consts.ReadyType, dp.Status.Conditions[0].Type)
+				require.EqualValues(t, kcfgdataplane.ReadyType, dp.Status.Conditions[0].Type)
 				require.Equal(t, metav1.ConditionFalse, dp.Status.Conditions[0].Status,
 					"DataPlane's Ready status condition should be set to false when live Deployment has no Ready replicas",
 				)
-				require.EqualValues(t, consts.WaitingToBecomeReadyReason, dp.Status.Conditions[0].Reason)
+				require.EqualValues(t, kcfgdataplane.WaitingToBecomeReadyReason, dp.Status.Conditions[0].Reason)
 
 				t.Logf("DataPlane rollout status should have the Ready status condition set to true")
 				require.NotNil(t, dp.Status.RolloutStatus)
 				require.Len(t, dp.Status.RolloutStatus.Conditions, 1)
-				require.EqualValues(t, consts.DataPlaneConditionTypeRolledOut, dp.Status.RolloutStatus.Conditions[0].Type)
+				require.EqualValues(t, kcfgdataplane.DataPlaneConditionTypeRolledOut, dp.Status.RolloutStatus.Conditions[0].Type)
 				require.Equal(t, metav1.ConditionFalse, dp.Status.RolloutStatus.Conditions[0].Status,
 					"DataPlane's Ready rollout status condition should be set to true when preview Deployment has Ready replicas",
 				)
-				require.EqualValues(t, consts.DataPlaneConditionReasonRolloutAwaitingPromotion, dp.Status.RolloutStatus.Conditions[0].Reason)
+				require.EqualValues(t, kcfgdataplane.DataPlaneConditionReasonRolloutAwaitingPromotion, dp.Status.RolloutStatus.Conditions[0].Reason)
 			},
 		},
 	}

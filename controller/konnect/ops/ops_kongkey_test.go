@@ -54,7 +54,7 @@ func TestKongKeyToKeyInput(t *testing.T) {
 				Kid:  "kid",
 				Name: lo.ToPtr("name"),
 				Jwk:  lo.ToPtr("jwk"),
-				Pem: &sdkkonnectcomp.Pem{
+				Pem: &sdkkonnectcomp.KeyPem{
 					PublicKey:  lo.ToPtr("public"),
 					PrivateKey: lo.ToPtr("private"),
 				},
@@ -112,11 +112,11 @@ func TestKongKeyToKeyInput(t *testing.T) {
 				Kid:  "kid",
 				Name: lo.ToPtr("name"),
 				Jwk:  lo.ToPtr("jwk"),
-				Pem: &sdkkonnectcomp.Pem{
+				Pem: &sdkkonnectcomp.KeyPem{
 					PublicKey:  lo.ToPtr("public"),
 					PrivateKey: lo.ToPtr("private"),
 				},
-				Set: &sdkkonnectcomp.Set{
+				Set: &sdkkonnectcomp.KeySet1{
 					ID: lo.ToPtr("key-set-id"),
 				},
 				Tags: []string{

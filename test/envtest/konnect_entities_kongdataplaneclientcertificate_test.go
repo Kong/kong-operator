@@ -57,8 +57,8 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 			return input.Cert == deploy.TestValidCACertPEM
 		}),
 	).Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
-		DataPlaneClientCertificate: &sdkkonnectcomp.DataPlaneClientCertificate{
-			Item: &sdkkonnectcomp.DataPlaneClientCertificateItem{
+		DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
+			Item: &sdkkonnectcomp.DataPlaneClientCertificate{
 				ID:   lo.ToPtr(dpCertID),
 				Cert: lo.ToPtr(deploy.TestValidCACertPEM),
 			},
@@ -101,6 +101,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	}, waitTime, tickTime)
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
+		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/922")
 		t.Log("Setting up SDK expectations on KongDataPlaneClientCertificate creation")
 		const dpCertID = "dp-cert-id-with-konnectid-cp-ref"
 		sdk.DataPlaneCertificatesSDK.EXPECT().CreateDataplaneCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
@@ -108,8 +109,8 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 				return input.Cert == deploy.TestValidCACertPEM
 			}),
 		).Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
-			DataPlaneClientCertificate: &sdkkonnectcomp.DataPlaneClientCertificate{
-				Item: &sdkkonnectcomp.DataPlaneClientCertificateItem{
+			DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
+				Item: &sdkkonnectcomp.DataPlaneClientCertificate{
 					ID:   lo.ToPtr(dpCertID),
 					Cert: lo.ToPtr(deploy.TestValidCACertPEM),
 				},
@@ -158,8 +159,8 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 			).
 			Return(
 				&sdkkonnectops.CreateDataplaneCertificateResponse{
-					DataPlaneClientCertificate: &sdkkonnectcomp.DataPlaneClientCertificate{
-						Item: &sdkkonnectcomp.DataPlaneClientCertificateItem{
+					DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
+						Item: &sdkkonnectcomp.DataPlaneClientCertificate{
 							ID: lo.ToPtr(id),
 						},
 					},
@@ -168,12 +169,12 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 			)
 
 		created := deploy.KongDataPlaneClientCertificateAttachedToCP(t, ctx, clientNamespaced,
-			deploy.WithKonnectIDControlPlaneRef(cp),
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		)
 		eventuallyAssertSDKExpectations(t, factory.SDK.DataPlaneCertificatesSDK, waitTime, tickTime)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
+		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("DataPlaneClientCertificate didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		t.Log("Deleting KonnectGatewayControlPlane")

@@ -4,9 +4,9 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -33,7 +33,7 @@ func SetKonnectEntityProgrammedCondition(
 // to false on the provided object.
 func SetKonnectEntityProgrammedConditionFalse(
 	obj entityType,
-	reason consts.ConditionReason,
+	reason kcfgconsts.ConditionReason,
 	msg string,
 ) {
 	_setKonnectEntityProgrammedConditon(
@@ -47,7 +47,7 @@ func SetKonnectEntityProgrammedConditionFalse(
 func _setKonnectEntityProgrammedConditon(
 	obj entityType,
 	status metav1.ConditionStatus,
-	reason consts.ConditionReason,
+	reason kcfgconsts.ConditionReason,
 	msg string,
 ) {
 	k8sutils.SetCondition(
@@ -68,13 +68,13 @@ const (
 	ControlPlaneGroupMembersReferenceResolvedConditionType = "MembersReferenceResolved"
 	// ControlPlaneGroupMembersReferenceResolvedReasonResolved indicates that all members of the control plane group
 	// are created and attached to the group in Konnect.
-	ControlPlaneGroupMembersReferenceResolvedReasonResolved consts.ConditionReason = "Resolved"
+	ControlPlaneGroupMembersReferenceResolvedReasonResolved kcfgconsts.ConditionReason = "Resolved"
 	// ControlPlaneGroupMembersReferenceResolvedReasonPartialNotResolved indicates that some members of the control plane group
 	// are not resolved (not found or not created in Konnect).
-	ControlPlaneGroupMembersReferenceResolvedReasonPartialNotResolved consts.ConditionReason = "SomeMemberNotResolved"
+	ControlPlaneGroupMembersReferenceResolvedReasonPartialNotResolved kcfgconsts.ConditionReason = "SomeMemberNotResolved"
 	// ControlPlaneGroupMembersReferenceResolvedReasonFailedToSet indicates that error happened on setting control plane as
 	// member of the control plane.
-	ControlPlaneGroupMembersReferenceResolvedReasonFailedToSet consts.ConditionReason = "SetGroupMemberFailed"
+	ControlPlaneGroupMembersReferenceResolvedReasonFailedToSet kcfgconsts.ConditionReason = "SetGroupMemberFailed"
 )
 
 // SetControlPlaneGroupMembersReferenceResolvedCondition sets MembersReferenceResolved condition of control plane to True.
@@ -92,7 +92,7 @@ func SetControlPlaneGroupMembersReferenceResolvedCondition(
 // SetControlPlaneGroupMembersReferenceResolvedConditionFalse sets MembersReferenceResolved condition of control plane to False.
 func SetControlPlaneGroupMembersReferenceResolvedConditionFalse(
 	cpGroup *konnectv1alpha1.KonnectGatewayControlPlane,
-	reason consts.ConditionReason,
+	reason kcfgconsts.ConditionReason,
 	msg string,
 ) {
 	_setControlPlaneGroupMembersReferenceResolvedCondition(
@@ -106,7 +106,7 @@ func SetControlPlaneGroupMembersReferenceResolvedConditionFalse(
 func _setControlPlaneGroupMembersReferenceResolvedCondition(
 	cpGroup *konnectv1alpha1.KonnectGatewayControlPlane,
 	status metav1.ConditionStatus,
-	reason consts.ConditionReason,
+	reason kcfgconsts.ConditionReason,
 	msg string,
 ) {
 	if cpGroup.Spec.ClusterType == nil || *cpGroup.Spec.ClusterType != sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup {

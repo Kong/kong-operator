@@ -2,7 +2,7 @@
 # Debug image
 # ------------------------------------------------------------------------------
 
-FROM --platform=$BUILDPLATFORM golang:1.24.0@sha256:3f7444391c51a11a039bf0359ee81cc64e663c17d787ad0e637a4de1a3f62a71 AS debug
+FROM --platform=$BUILDPLATFORM golang:1.24.1@sha256:8678013a2add364dc3d5df2acc2b36893fbbd60ebafa5d5149bc22158512f021 AS debug
 
 ARG GOPATH
 ARG GOCACHE
@@ -35,7 +35,7 @@ WORKDIR /workspace
 
 RUN --mount=type=cache,target=$GOPATH/pkg/mod \
     --mount=type=cache,target=$GOCACHE \
-    go install github.com/go-delve/delve/cmd/dlv@v1.22.1
+    go install github.com/go-delve/delve/cmd/dlv@v1.24.0
 
 # Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
 # layers when using COPY instructions for go.mod and go.sum.

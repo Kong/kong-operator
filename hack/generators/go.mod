@@ -11,8 +11,8 @@ require (
 	github.com/kong/gateway-operator v0.0.0-00010101000000-000000000000
 	github.com/kong/semver/v4 v4.0.1
 	github.com/samber/lo v1.49.1
-	k8s.io/api v0.32.2
-	k8s.io/apimachinery v0.32.2
+	k8s.io/api v0.32.3
+	k8s.io/apimachinery v0.32.3
 	sigs.k8s.io/gateway-api v1.2.1
 )
 
@@ -36,7 +36,7 @@ require (
 	github.com/spf13/cast v1.7.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	golang.org/x/crypto v0.35.0 // indirect
-	golang.org/x/net v0.35.0 // indirect
+	golang.org/x/net v0.36.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect

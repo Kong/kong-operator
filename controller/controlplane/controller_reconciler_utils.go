@@ -5,6 +5,7 @@ import (
 
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -15,12 +16,12 @@ import (
 func (r *Reconciler) ensureIsMarkedScheduled(
 	cp *operatorv1beta1.ControlPlane,
 ) bool {
-	_, present := k8sutils.GetCondition(ConditionTypeProvisioned, cp)
+	_, present := k8sutils.GetCondition(kcfgcontrolplane.ConditionTypeProvisioned, cp)
 	if !present {
 		condition := k8sutils.NewCondition(
-			ConditionTypeProvisioned,
+			kcfgcontrolplane.ConditionTypeProvisioned,
 			metav1.ConditionFalse,
-			ConditionReasonPodsNotReady,
+			kcfgcontrolplane.ConditionReasonPodsNotReady,
 			"ControlPlane resource is scheduled for provisioning",
 		)
 
@@ -39,19 +40,19 @@ func (r *Reconciler) ensureDataPlaneStatus(
 	dataplane *operatorv1beta1.DataPlane,
 ) (dataplaneIsSet bool) {
 	dataplaneIsSet = cp.Spec.DataPlane != nil && *cp.Spec.DataPlane == dataplane.Name
-	condition, present := k8sutils.GetCondition(ConditionTypeProvisioned, cp)
+	condition, present := k8sutils.GetCondition(kcfgcontrolplane.ConditionTypeProvisioned, cp)
 
 	newCondition := k8sutils.NewCondition(
-		ConditionTypeProvisioned,
+		kcfgcontrolplane.ConditionTypeProvisioned,
 		metav1.ConditionFalse,
-		ConditionReasonNoDataPlane,
+		kcfgcontrolplane.ConditionReasonNoDataPlane,
 		"DataPlane is not set",
 	)
 	if dataplaneIsSet {
 		newCondition = k8sutils.NewCondition(
-			ConditionTypeProvisioned,
+			kcfgcontrolplane.ConditionTypeProvisioned,
 			metav1.ConditionFalse,
-			ConditionReasonPodsNotReady,
+			kcfgcontrolplane.ConditionReasonPodsNotReady,
 			"DataPlane was set, ControlPlane resource is scheduled for provisioning",
 		)
 	}

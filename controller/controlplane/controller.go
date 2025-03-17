@@ -28,6 +28,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/gateway-operator/controller"
@@ -35,11 +37,14 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // Reconciler reconciles a ControlPlane object
@@ -53,11 +58,27 @@ type Reconciler struct {
 
 	RestConfig       *rest.Config
 	InstancesManager *multiinstance.Manager
+	KonnectEnabled   bool
+	EnforceConfig    bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).For(&operatorv1beta1.ControlPlane{}).Complete(r)
+	builder := ctrl.NewControllerManagedBy(mgr).For(&operatorv1beta1.ControlPlane{})
+
+	if r.KonnectEnabled {
+		// Watch for changes in KonnectExtension objects that are referenced by ControlPlane objects.
+		// They may trigger reconciliation of DataPlane resources.
+		builder.WatchesRawSource(
+			source.Kind(
+				mgr.GetCache(),
+				&konnectv1alpha1.KonnectExtension{},
+				handler.TypedEnqueueRequestsFromMapFunc(index.ListObjectsReferencingKonnectExtension(mgr.GetClient(), &operatorv1beta1.DataPlaneList{})),
+			),
+		)
+	}
+
+	return builder.Complete(r)
 }
 
 // Reconcile moves the current state of an object to the intended state.
@@ -234,6 +255,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				return ctrl.Result{}, fmt.Errorf("failed to generate client certificate: %w", err)
 			}
 
+			// TODO: handle KonnectExtension
+
 			mgrCfg, err := manager.NewConfig(
 				WithRestConfig(r.RestConfig),
 				WithKongAdminService(types.NamespacedName{
@@ -280,7 +303,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		k8sutils.SetCondition(
-			k8sutils.NewCondition(consts.ReadyType, metav1.ConditionFalse, consts.WaitingToBecomeReadyReason, consts.WaitingToBecomeReadyMessage),
+			k8sutils.NewCondition(kcfgdataplane.ReadyType, metav1.ConditionFalse, kcfgdataplane.WaitingToBecomeReadyReason, kcfgdataplane.WaitingToBecomeReadyMessage),
 			cp,
 		)
 		res, err := r.patchStatus(ctx, logger, cp)

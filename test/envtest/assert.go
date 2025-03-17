@@ -59,9 +59,7 @@ func eventuallyAssertSDKExpectations(
 
 // assertsAnd returns a function that performs a logical AND of the given asserts.
 func assertsAnd[
-	T interface {
-		client.Object
-	},
+	T client.Object,
 ](
 	asserts ...func(T) bool,
 ) func(objToMatch T) bool {
@@ -73,5 +71,15 @@ func assertsAnd[
 		}
 
 		return true
+	}
+}
+
+func assertNot[
+	T client.Object,
+](
+	assert func(T) bool,
+) func(objToMatch T) bool {
+	return func(objToMatch T) bool {
+		return !assert(objToMatch)
 	}
 }

@@ -22,6 +22,26 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
+// EntityWithControlPlaneRef is an interface for entities that have a ControlPlaneRef.
+type EntityWithControlPlaneRef interface {
+	SetControlPlaneID(string)
+	GetControlPlaneID() string
+}
+
+func getCPForRef(
+	ctx context.Context,
+	cl client.Client,
+	cpRef commonv1alpha1.ControlPlaneRef,
+	namespace string,
+) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
+	switch cpRef.Type {
+	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
+		return getCPForNamespacedRef(ctx, cl, cpRef, namespace)
+	default:
+		return nil, ReferencedKongGatewayControlPlaneIsUnsupported{Reference: cpRef}
+	}
+}
+
 func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	e TEnt,
 ) mo.Option[commonv1alpha1.ControlPlaneRef] {

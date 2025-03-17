@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/controller/pkg/patch"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 
@@ -237,17 +238,15 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// The KongPlugin cannot be deleted until all objects that reference it are
 	// deleted or do not reference it anymore.
 	if pluginReferenceFound {
-		if controllerutil.AddFinalizer(&kongPlugin, consts.PluginInUseFinalizer) {
-			if err = r.client.Update(ctx, &kongPlugin); err != nil {
-				if k8serrors.IsConflict(err) {
-					return ctrl.Result{Requeue: true}, nil
-				}
-				return ctrl.Result{}, err
-			}
+		updated, res, err := patch.WithFinalizer(ctx, r.client, &kongPlugin, consts.PluginInUseFinalizer)
+		if err != nil || !res.IsZero() {
+			return res, err
+		}
+		if updated {
 			log.Debug(logger, "KongPlugin finalizer added", "finalizer", consts.PluginInUseFinalizer)
 			return ctrl.Result{}, nil
 		}
-	} else {
+	} else { //nolint:gocritic
 		if controllerutil.RemoveFinalizer(&kongPlugin, consts.PluginInUseFinalizer) {
 			if err = r.client.Update(ctx, &kongPlugin); err != nil {
 				if k8serrors.IsConflict(err) {

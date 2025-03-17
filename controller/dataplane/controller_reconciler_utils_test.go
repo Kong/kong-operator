@@ -57,7 +57,10 @@ func TestDeploymentBuilder(t *testing.T) {
 		},
 	}
 
-	const developmentMode = false
+	const (
+		developmentMode = false
+		enforceConfig   = true
+	)
 	deploymentLiveLabels := client.MatchingLabels{
 		consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
 	}
@@ -83,7 +86,7 @@ func TestDeploymentBuilder(t *testing.T) {
 					WithClusterCertificate(certSecretName).
 					WithAdditionalLabels(deploymentLiveLabels)
 
-				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, developmentMode)
+				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, developmentMode)
 				require.NoError(t, err)
 				require.Equal(t, op.Created, res)
 				require.NotNil(t, deployment)
@@ -149,7 +152,7 @@ func TestDeploymentBuilder(t *testing.T) {
 					WithClusterCertificate(certSecretName).
 					WithAdditionalLabels(deploymentLiveLabels)
 
-				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, developmentMode)
+				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, developmentMode)
 				require.NoError(t, err)
 				require.Equal(t, op.Created, res)
 				require.Len(t, deployment.Spec.Template.Spec.Volumes, 2)
@@ -231,7 +234,7 @@ func TestDeploymentBuilder(t *testing.T) {
 					WithClusterCertificate(certSecretName).
 					WithAdditionalLabels(client.MatchingLabels{})
 
-				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, developmentMode)
+				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, developmentMode)
 				require.NoError(t, err)
 
 				assert.Equal(t, op.Updated, res, "the DataPlane deployment should be updated with the original strategy")
@@ -294,7 +297,7 @@ func TestDeploymentBuilder(t *testing.T) {
 					WithClusterCertificate(certSecretName).
 					WithAdditionalLabels(client.MatchingLabels{})
 
-				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, developmentMode)
+				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, developmentMode)
 				require.NoError(t, err)
 
 				assert.Equal(t, op.Updated, res, "the DataPlane deployment should be updated to get the resources set to defaults")
@@ -365,7 +368,7 @@ func TestDeploymentBuilder(t *testing.T) {
 					WithClusterCertificate(certSecretName).
 					WithAdditionalLabels(client.MatchingLabels{})
 
-				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, developmentMode)
+				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, developmentMode)
 				require.NoError(t, err)
 
 				assert.Equal(t, op.Updated, res, "the DataPlane deployment should be updated to get the affinity set to the dataplane's spec")
@@ -402,7 +405,7 @@ func TestDeploymentBuilder(t *testing.T) {
 					WithClusterCertificate(certSecretName).
 					WithAdditionalLabels(deploymentLiveLabels)
 
-				existingDeployment, res, err := firstDeploymentBuilder.BuildAndDeploy(ctx, dataPlane, developmentMode)
+				existingDeployment, res, err := firstDeploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, developmentMode)
 				require.NoError(t, err)
 				require.Equal(t, op.Created, res)
 
@@ -430,7 +433,7 @@ func TestDeploymentBuilder(t *testing.T) {
 					WithClusterCertificate(certSecretName).
 					WithAdditionalLabels(deploymentLiveLabels)
 
-				deployment, res, err := secondDeploymentBuilder.BuildAndDeploy(ctx, dataPlane, developmentMode)
+				deployment, res, err := secondDeploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, developmentMode)
 				require.NoError(t, err)
 				assert.Equal(t, op.Updated, res, "the DataPlane deployment should be updated to get the affinity removed")
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
@@ -466,7 +469,7 @@ func TestDeploymentBuilder(t *testing.T) {
 					WithClusterCertificate(certSecretName).
 					WithAdditionalLabels(deploymentLiveLabels)
 
-				existingDeployment, res, err := firstDeploymentBuilder.BuildAndDeploy(ctx, dataPlane, developmentMode)
+				existingDeployment, res, err := firstDeploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, developmentMode)
 
 				require.NoError(t, err)
 				require.Equal(t, op.Created, res)
@@ -495,7 +498,7 @@ func TestDeploymentBuilder(t *testing.T) {
 					WithClusterCertificate(certSecretName).
 					WithAdditionalLabels(deploymentLiveLabels)
 
-				deployment, res, err := secondDeploymentBuilder.BuildAndDeploy(ctx, dataPlane, developmentMode)
+				deployment, res, err := secondDeploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, developmentMode)
 
 				require.NoError(t, err)
 				assert.Equal(t, op.Updated, res, "the DataPlane deployment should be updated to get the affinity removed")

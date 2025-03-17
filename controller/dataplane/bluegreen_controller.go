@@ -22,6 +22,8 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/address"
 	"github.com/kong/gateway-operator/controller/pkg/ctxinjector"
 	"github.com/kong/gateway-operator/controller/pkg/dataplane"
+	"github.com/kong/gateway-operator/controller/pkg/extensions"
+	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
@@ -29,7 +31,10 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
 )
 
 // -----------------------------------------------------------------------------
@@ -68,6 +73,8 @@ type BlueGreenReconciler struct {
 	DefaultImage string
 
 	KonnectEnabled bool
+
+	EnforceConfig bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -119,8 +126,8 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, fmt.Errorf("failed updating DataPlane with selector in Rollout Status: %w", err)
 	}
 
-	c, ok := k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
-	if ok && c.ObservedGeneration == dataplane.Generation && c.Reason == string(consts.DataPlaneConditionReasonRolloutPromotionDone) {
+	c, ok := k8sutils.GetCondition(kcfgdataplane.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
+	if ok && c.ObservedGeneration == dataplane.Generation && c.Reason == string(kcfgdataplane.DataPlaneConditionReasonRolloutPromotionDone) {
 		// If we've just completed the promotion and the RolledOut condition is up to date then we
 		// can update the Ready status condition of the DataPlane.
 		if res, err := ensureDataPlaneReadyStatus(ctx, r.Client, logger, &dataplane, dataplane.Generation); err != nil {
@@ -132,7 +139,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// Otherwise we either don't have the RolledOut condition set yet or the
 		// DataPlane generation has progressed so set the RolledOut condition
 		// to "Rollout initialized"
-		err := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutProgressing, consts.DataPlaneConditionMessageRolledOutRolloutInitialized)
+		err := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutProgressing, kcfgdataplane.DataPlaneConditionMessageRolledOutRolloutInitialized)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -142,22 +149,22 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// customize the dataplane with the extensions field
 	log.Trace(logger, "applying extensions")
-	patched, requeue, err := applyExtensions(ctx, r.Client, logger, &dataplane, r.KonnectEnabled)
+	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, &dataplane, r.KonnectEnabled)
 	if err != nil {
-		if !requeue {
+		if extensionserrors.IsKonnectExtensionError(err) {
 			log.Debug(logger, "failed to apply extensions", "err", err)
 			return ctrl.Result{}, nil
 		}
 		return ctrl.Result{}, err
 	}
-	if patched {
-		return ctrl.Result{}, nil
+	if stop || !result.IsZero() {
+		return result, nil
 	}
 
 	// Ensure "preview" Admin API service.
 	res, dataplaneAdminService, err := r.ensurePreviewAdminAPIService(ctx, logger, &dataplane)
 	if err != nil {
-		cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Admin API Service")
+		cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Admin API Service")
 		return ctrl.Result{}, fmt.Errorf("failed ensuring that preview Admin API Service exists for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
 	} else if res == op.Created || res == op.Updated {
 		return ctrl.Result{}, nil // dataplane admin service creation/update will trigger reconciliation
@@ -192,7 +199,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Ensure "preview" Ingress service.
 	res, previewIngressService, err := r.ensurePreviewIngressService(ctx, logger, &dataplane)
 	if err != nil {
-		cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview ingress Service")
+		cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview ingress Service")
 		return ctrl.Result{}, fmt.Errorf("failed ensuring preview Ingress service for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
 	} else if res == op.Created || res == op.Updated {
 		return ctrl.Result{}, nil // dataplane ingress service creation/update will trigger reconciliation
@@ -208,12 +215,12 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Ensure "preview" Deployment.
 	deployment, res, err := r.ensureDeploymentForDataPlane(ctx, logger, &dataplane, certSecret)
 	if err != nil {
-		cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Deployment")
+		cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutFailed, "failed to ensure preview Deployment")
 		return ctrl.Result{}, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", errors.Join(cErr, err))
 	} else if res == op.Created || res == op.Updated {
 		return ctrl.Result{}, nil // dataplane deployment creation/update will trigger reconciliation
 	} else if replicas := deployment.Spec.Replicas; replicas != nil && *replicas == 0 {
-		return ctrl.Result{}, r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutWaitingForChange, "")
+		return ctrl.Result{}, r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutWaitingForChange, "")
 	}
 
 	// TODO: check if the preview service is available.
@@ -221,7 +228,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		deployment.Status.AvailableReplicas != deployment.Status.Replicas ||
 		deployment.Status.ReadyReplicas != deployment.Status.Replicas {
 		log.Trace(logger, "preview deployment for DataPlane not ready yet")
-		err := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutProgressing, consts.DataPlaneConditionMessageRolledOutPreviewDeploymentNotYetReady)
+		err := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutProgressing, kcfgdataplane.DataPlaneConditionMessageRolledOutPreviewDeploymentNotYetReady)
 		return ctrl.Result{}, err
 	}
 
@@ -234,22 +241,22 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		log.Debug(logger, "DataPlane preview resources cannot be promoted yet or is awaiting promotion trigger",
 			"promotion_strategy", dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen.Promotion.Strategy)
 
-		err := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutAwaitingPromotion, "")
+		err := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutAwaitingPromotion, "")
 		return ctrl.Result{}, err
 	}
 
 	// If we've failed to promote previously, don't set the RolledOut reason to
 	// PromotionInProgress as the error can reoccur and the status can start flapping.
-	c, ok = k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
-	if !ok || c.Reason != string(consts.DataPlaneConditionReasonRolloutPromotionFailed) {
-		if err = r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutPromotionInProgress, ""); err != nil {
+	c, ok = k8sutils.GetCondition(kcfgdataplane.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
+	if !ok || c.Reason != string(kcfgdataplane.DataPlaneConditionReasonRolloutPromotionFailed) {
+		if err = r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutPromotionInProgress, ""); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
 	// Ensure that the live deployment selector is equal to the preview deployment selector to trigger the promotion.
 	if updated, err := r.ensurePreviewSelectorOverridesLive(ctx, &dataplane); err != nil {
-		cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutPromotionFailed, "failed to update DataPlane's selector")
+		cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutPromotionFailed, "failed to update DataPlane's selector")
 		return ctrl.Result{}, fmt.Errorf("failed to update DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
 	} else if updated {
 		log.Debug(logger, "preview deployment selector assigned to a live selector, promotion in progress")
@@ -283,7 +290,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		// Let's label the preview deployment as live so that it's easily retrievable.
 		previewDeploymentSelector := dataplane.Status.RolloutStatus.Deployment.Selector
 		if updated, err := r.ensurePreviewDeploymentLabeledLive(ctx, logger, &dataplane, previewDeploymentSelector); err != nil {
-			cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, consts.DataPlaneConditionReasonRolloutPromotionFailed, "failed to label DataPlane's preview Deployment for promotion")
+			cErr := r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionFalse, kcfgdataplane.DataPlaneConditionReasonRolloutPromotionFailed, "failed to label DataPlane's preview Deployment for promotion")
 			return ctrl.Result{}, fmt.Errorf("failed to ensure preview deployment becomes live %s/%s: %w", dataplane.Namespace, dataplane.Name, errors.Join(cErr, err))
 		} else if updated {
 			log.Trace(logger, "preview deployment labeled as live")
@@ -301,7 +308,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// TODO: Even if we set the condition to true here, it will shortly be set to false in the next reconcile loop.
 	// It is so because we trigger another rollout cycle despite no changes in the DataPlane spec.
 	// We might consider changing the logic to not trigger a rollout cycle if there are no changes in the spec.
-	if err = r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionTrue, consts.DataPlaneConditionReasonRolloutPromotionDone, ""); err != nil {
+	if err = r.ensureRolledOutCondition(ctx, logger, &dataplane, metav1.ConditionTrue, kcfgdataplane.DataPlaneConditionReasonRolloutPromotionDone, ""); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -329,7 +336,7 @@ func (r *BlueGreenReconciler) ensureDataPlaneLiveReadyStatus(
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 ) (ctrl.Result, error) {
-	c, ok := k8sutils.GetCondition(consts.ReadyType, dataplane)
+	c, ok := k8sutils.GetCondition(kcfgdataplane.ReadyType, dataplane)
 	if !ok {
 		// No Ready condition yet, it will be set by the DataPlane controller.
 		return ctrl.Result{}, nil
@@ -355,12 +362,12 @@ func shouldDelegateToDataPlaneController(
 	// - any other reason for rollout status condition "RolledOut" should not trigger
 	//   the delegation because that either means that we're waiting for the promotion,
 	//   we're in the process of promotion or the promotion failed.
-	cReady, okReady := k8sutils.GetCondition(consts.ReadyType, dataplane)
-	cRolledOut, okRolledOut := k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
+	cReady, okReady := k8sutils.GetCondition(kcfgdataplane.ReadyType, dataplane)
+	cRolledOut, okRolledOut := k8sutils.GetCondition(kcfgdataplane.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
 	if okReady && okRolledOut &&
 		cReady.ObservedGeneration == cRolledOut.ObservedGeneration &&
 		cReady.ObservedGeneration == dataplane.Generation {
-		if cRolledOut.Reason == string(consts.DataPlaneConditionReasonRolloutWaitingForChange) {
+		if cRolledOut.Reason == string(kcfgdataplane.DataPlaneConditionReasonRolloutWaitingForChange) {
 			log.Debug(logger, "DataPlane is up to date, waiting for changes, delegating to DataPlaneReconciler")
 			return true
 		}
@@ -500,8 +507,8 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 	// If we're running the exact same Generation as "live" version is then:
 	// - the rollout resource plan is set to ScaleDownOnPromotionScaleUpOnRollout
 	//   then  scale down the Deployment to 0 replicas.
-	cReady, okReady := k8sutils.GetCondition(consts.ReadyType, dataplane)
-	cRolledOut, okRolledOut := k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
+	cReady, okReady := k8sutils.GetCondition(kcfgdataplane.ReadyType, dataplane)
+	cRolledOut, okRolledOut := k8sutils.GetCondition(kcfgdataplane.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
 	if okReady && okRolledOut && cReady.ObservedGeneration == cRolledOut.ObservedGeneration {
 		dPlan := dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen.Resources.Plan.Deployment
 		if dPlan == operatorv1beta1.RolloutResourcePlanDeploymentScaleDownOnPromotionScaleUpOnRollout {
@@ -516,7 +523,7 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 		consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,
 	}
 	// if the dataplane is configured with Konnect, the status/ready endpoint should be set as the readiness probe.
-	if _, konnectApplied := k8sutils.GetCondition(consts.KonnectExtensionAppliedType, dataplane); konnectApplied {
+	if _, konnectApplied := k8sutils.GetCondition(kcfgkonnect.KonnectExtensionAppliedType, dataplane); konnectApplied {
 		deploymentOpts = append(deploymentOpts, statusReadyEndpointDeploymentOpt(dataplane))
 	}
 
@@ -528,7 +535,7 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 		WithDefaultImage(r.DefaultImage).
 		WithAdditionalLabels(deploymentLabels)
 
-	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.DevelopmentMode)
+	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.DevelopmentMode)
 	if err != nil {
 		return nil, op.Noop, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", err)
 	}
@@ -613,10 +620,10 @@ func (r *BlueGreenReconciler) ensureRolledOutCondition(
 	logger logr.Logger,
 	dataplane *operatorv1beta1.DataPlane,
 	status metav1.ConditionStatus,
-	reason consts.ConditionReason,
+	reason kcfgconsts.ConditionReason,
 	message string,
 ) error {
-	c, ok := k8sutils.GetCondition(consts.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
+	c, ok := k8sutils.GetCondition(kcfgdataplane.DataPlaneConditionTypeRolledOut, dataplane.Status.RolloutStatus)
 	if ok && c.ObservedGeneration == dataplane.Generation && c.Status == status && c.Reason == string(reason) && c.Message == message {
 		// DataPlane rollout status already contains this condition.
 		return nil
@@ -624,7 +631,7 @@ func (r *BlueGreenReconciler) ensureRolledOutCondition(
 
 	oldDataPlane := dataplane.DeepCopy()
 	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(consts.DataPlaneConditionTypeRolledOut, status, reason, message, dataplane.Generation),
+		k8sutils.NewConditionWithGeneration(kcfgdataplane.DataPlaneConditionTypeRolledOut, status, reason, message, dataplane.Generation),
 		dataplane.Status.RolloutStatus,
 	)
 	_, err := r.patchRolloutStatus(ctx, logger, oldDataPlane, dataplane)

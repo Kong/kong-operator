@@ -1,4 +1,5 @@
 name: govulncheck
+run-name: govulncheck ${{ github.head_ref }}
 
 concurrency:
   # Run only for most recent commit in PRs but for all tags and commits on main
@@ -7,51 +8,20 @@ concurrency:
   cancel-in-progress: true
 
 on:
-  schedule:
-    - cron: '42 1 * * *'
+  push:
+    branches:
+      - main
+      - release/*
   workflow_dispatch: {}
 
 permissions:
   contents: read
 
 jobs:
-  govulncheck:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
-    name: analyze
-    runs-on: ubuntu-latest
+  analyze:
+    uses: ./.github/workflows/__govulncheck.yaml
+    with:
+      ref: ${{ github.ref_name }}
     permissions:
       security-events: write
-    strategy:
-      fail-fast: false
-      matrix:
-        branch:
-        - main
-        - release/1.4.x
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      with:
-        ref: ${{ matrix.branch }}
-
-    - name: Set results file name
-      id: filename
-      run: |
-        echo "result=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-
-    - id: govulncheck
-      uses: golang/govulncheck-action@b625fbe08f3bccbe446d94fbf87fcc875a4f50ee # v1.0.4
-      with:
-        # Let the actions/checkout above perform the checkout as this action
-        # cannot checkout on custom ref.
-        repo-checkout: false
-        output-format: sarif
-        output-file: results_${{ steps.filename.result }}.sarif
-
-    - name: Upload SARIF file
-      uses: github/codeql-action/upload-sarif@b56ba49b26e50535fa1e7f7db0f4f7b4bf65d80d # v3.28.10
-      with:
-        # Path to SARIF file relative to the root of the repository
-        sarif_file: results_${{ steps.filename.result }}.sarif
-        # Optional category for the results
-        # Used to differentiate multiple results for one commit
-        category: govulncheck
+      contents: read

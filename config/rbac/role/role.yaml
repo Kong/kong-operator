@@ -48,7 +48,16 @@ rules:
   - delete
   - get
   - list
+  - patch
+  - update
   - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets/finalizers
+  verbs:
+  - patch
+  - update
 - apiGroups:
   - ""
   resources:
@@ -267,6 +276,7 @@ rules:
 - apiGroups:
   - gateway-operator.konghq.com
   resources:
+  - controlplane
   - gatewayconfigurations
   verbs:
   - get
@@ -371,6 +381,7 @@ rules:
   - konnectapiauthconfigurations
   - konnectcloudgatewaydataplanegroupconfigurations
   - konnectcloudgatewaynetworks
+  - konnectextensions
   - konnectgatewaycontrolplanes
   verbs:
   - get
@@ -387,6 +398,8 @@ rules:
   - konnectcloudgatewaydataplanegroupconfigurations/status
   - konnectcloudgatewaynetworks/finalizers
   - konnectcloudgatewaynetworks/status
+  - konnectextensions/finalizers
+  - konnectextensions/status
   - konnectgatewaycontrolplanes/finalizers
   - konnectgatewaycontrolplanes/status
   verbs:

@@ -175,6 +175,7 @@ func TestKongKeySet(t *testing.T) {
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
+		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/922")
 		t.Log("Setting up SDK expectations on KongKeySet creation")
 		sdk.KeySetsSDK.EXPECT().CreateKeySet(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
 			mock.MatchedBy(func(input sdkkonnectcomp.KeySetInput) bool {
@@ -240,7 +241,7 @@ func TestKongKeySet(t *testing.T) {
 			)
 
 		created := deploy.KongKeySet(t, ctx, clientNamespaced, "keyset-1",
-			deploy.WithKonnectIDControlPlaneRef(cp),
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				cg := obj.(*configurationv1alpha1.KongKeySet)
 				cg.Spec.Tags = append(cg.Spec.Tags, "test-1")
@@ -248,7 +249,7 @@ func TestKongKeySet(t *testing.T) {
 		)
 
 		t.Log("Waiting for object to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectID(created, id),
+		watchFor(t, ctx, w, apiwatch.Modified, conditionProgrammedIsSetToTrueAndCPRefIsKonnectNamespacedRef(created, id),
 			fmt.Sprintf("Key didn't get Programmed status condition or didn't get the correct %s Konnect ID assigned", id))
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
