@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -372,7 +371,6 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 			if err := ops.Delete[T, TEnt](ctx, sdk, r.Client, r.MetricRecoder, ent); err != nil {
-				err = clearInstanceFromError(err)
 				if res, errStatus := patch.StatusWithCondition(
 					ctx, r.Client, ent,
 					konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -556,18 +554,4 @@ func setProgrammedStatusConditionBasedOnOtherConditions[
 		return res, errStatus
 	}
 	return ctrl.Result{}, nil
-}
-
-// clearInstanceFromError clears the instance field from the error.
-// This is needed because the instance field contains the trace ID which changes
-// with each request and makes the reconciliation loop requeue the resource
-// instead of performing the backoff.
-func clearInstanceFromError(err error) error {
-	var errBadRequest *sdkkonnecterrs.BadRequestError
-	if errors.As(err, &errBadRequest) {
-		errBadRequest.Instance = ""
-		return errBadRequest
-	}
-
-	return err
 }

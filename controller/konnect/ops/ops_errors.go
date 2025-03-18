@@ -151,6 +151,38 @@ func ErrorIsSDKError400(err error) bool {
 	return errSDK.StatusCode == 400
 }
 
+// ErrorIsConflictError returns true if the provided error is a 409 ConflictError.
+// This can happen when the entity already exists.
+// Example error body:
+//
+//	{
+//		"status": 409,
+//		"title": "Conflict",
+//		"instance": "kong:trace:14893476519012495000",
+//		"detail": "Key (org_id, name)=(8a6e97b1-1111-1111-1111-111111111111, test1) already exists."
+//	}
+func ErrorIsConflictError(err error) bool {
+	var errConflict *sdkkonnecterrs.ConflictError
+	if !errors.As(err, &errConflict) {
+		return false
+	}
+
+	if !errConflictHasStatusCode(errConflict, 409) {
+		return false
+	}
+
+	return true
+}
+
+func errConflictHasStatusCode(err *sdkkonnecterrs.ConflictError, n int) bool {
+	if err == nil {
+		return false
+	}
+	// NOTE: Status contains a float64 value, so we need to cast it to int to deterministically compare.
+	floatStatus, okStatus := (err.Status).(float64)
+	return okStatus && int(floatStatus) == n
+}
+
 // ErrorIsSDKBadRequestError returns true if the provided error is a BadRequestError.
 func ErrorIsSDKBadRequestError(err error) bool {
 	var errSDK *sdkkonnecterrs.BadRequestError
@@ -183,7 +215,7 @@ func ErrorIsCreateConflict(err error) bool {
 // - 3: INVALID_ARGUMENT
 // - 6: ALREADY_EXISTS
 //
-// Exemplary body:
+// Example error body:
 //
 //	{
 //	"code": 3,
@@ -294,7 +326,8 @@ func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 	// manifest. The entity's status is already updated with the error.
 	if ErrorIsSDKBadRequestError(err) ||
 		ErrorIsSDKError400(err) ||
-		ErrorIsSDKError403(err) {
+		ErrorIsSDKError403(err) ||
+		ErrorIsConflictError(err) {
 		log.Debug(logger, "ignoring unrecoverable API error, consult object's status for details", "err", err)
 		return nil
 	}
@@ -308,9 +341,7 @@ func errorIsDataPlaneGroupConflictProposedConfigIsTheSame(err error) bool {
 		return false
 	}
 
-	// NOTE: Status contains a float64 value, so we need to cast it to int to deterministically compare.
-	floatStatus, okStatus := (errConflict.Status).(float64)
-	if !okStatus || int(floatStatus) != 409 {
+	if !errConflictHasStatusCode(errConflict, 409) {
 		return false
 	}
 

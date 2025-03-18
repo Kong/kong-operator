@@ -34,13 +34,17 @@ func SetKonnectEntityProgrammedCondition(
 func SetKonnectEntityProgrammedConditionFalse(
 	obj entityType,
 	reason kcfgconsts.ConditionReason,
-	msg string,
+	err error,
 ) {
+	// Clear the instance field from the error to avoid requeueing the resource
+	// because of the trace ID in the instance field is different for each request.
+	err = clearInstanceFromError(err)
+
 	_setKonnectEntityProgrammedConditon(
 		obj,
 		metav1.ConditionFalse,
 		reason,
-		msg,
+		err.Error(),
 	)
 }
 
