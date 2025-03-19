@@ -12,13 +12,37 @@ import (
 )
 
 func TestDataplane(t *testing.T) {
+	validDataplaneOptions := operatorv1beta1.DataPlaneOptions{
+		Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+			DeploymentOptions: operatorv1beta1.DeploymentOptions{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  "proxy",
+								Image: "kong:over9000",
+								Env: []corev1.EnvVar{
+									{
+										Name:  "KONG_DATABASE",
+										Value: "off",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 	t.Run("extensions", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
 			{
 				Name: "no extensions",
 				TestObject: &operatorv1beta1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec:       operatorv1beta1.DataPlaneSpec{},
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: validDataplaneOptions,
+					},
 				},
 			},
 			{
@@ -27,6 +51,7 @@ func TestDataplane(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
 							Extensions: []commonv1alpha1.ExtensionRef{
 								{
 									Group: "konnect.konghq.com",
@@ -46,6 +71,7 @@ func TestDataplane(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
 							Extensions: []commonv1alpha1.ExtensionRef{
 								{
 									Group: "invalid.konghq.com",
@@ -198,28 +224,7 @@ func TestDataplane(t *testing.T) {
 				TestObject: &operatorv1beta1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
-						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
-							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-								DeploymentOptions: operatorv1beta1.DeploymentOptions{
-									PodTemplateSpec: &corev1.PodTemplateSpec{
-										Spec: corev1.PodSpec{
-											Containers: []corev1.Container{
-												{
-													Name:  "proxy",
-													Image: "kong:over9000",
-													Env: []corev1.EnvVar{
-														{
-															Name:  "KONG_DATABASE",
-															Value: "off",
-														},
-													},
-												},
-											},
-										},
-									},
-								},
-							},
-						},
+						DataPlaneOptions: validDataplaneOptions,
 					},
 				},
 			},

@@ -12,13 +12,29 @@ import (
 )
 
 func TestControlPlane(t *testing.T) {
+	validControlPlaneOptions := operatorv1beta1.ControlPlaneOptions{
+		Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
+			PodTemplateSpec: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "controller",
+							Image: "kong:over9000",
+						},
+					},
+				},
+			},
+		},
+	}
 	t.Run("extensions", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.ControlPlane]{
 			{
 				Name: "no extensions",
 				TestObject: &operatorv1beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec:       operatorv1beta1.ControlPlaneSpec{},
+					Spec: operatorv1beta1.ControlPlaneSpec{
+						ControlPlaneOptions: validControlPlaneOptions,
+					},
 				},
 			},
 			{
@@ -27,6 +43,7 @@ func TestControlPlane(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+							Deployment: validControlPlaneOptions.Deployment,
 							Extensions: []commonv1alpha1.ExtensionRef{
 								{
 									Group: "konnect.konghq.com",
@@ -46,6 +63,7 @@ func TestControlPlane(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+							Deployment: validControlPlaneOptions.Deployment,
 							Extensions: []commonv1alpha1.ExtensionRef{
 								{
 									Group: "konnect.konghq.com",
