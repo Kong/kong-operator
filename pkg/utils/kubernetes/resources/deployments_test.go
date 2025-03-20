@@ -311,7 +311,7 @@ func TestGenerateNewDeploymentForControlPlane(t *testing.T) {
 						"gateway-operator.konghq.com/managed-by": "controlplane",
 					},
 					Annotations: map[string]string{
-						"gateway-operator.konghq.com/spec-hash": "2007ff92a457340b",
+						"gateway-operator.konghq.com/spec-hash": "97702e5d8e850807",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
@@ -471,7 +471,7 @@ func TestGenerateNewDeploymentForControlPlane(t *testing.T) {
 						"gateway-operator.konghq.com/managed-by": "controlplane",
 					},
 					Annotations: map[string]string{
-						"gateway-operator.konghq.com/spec-hash": "2007ff92a457340b",
+						"gateway-operator.konghq.com/spec-hash": "97702e5d8e850807",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
@@ -582,6 +582,81 @@ func TestGenerateNewDeploymentForControlPlane(t *testing.T) {
 			deployment, err := GenerateNewDeploymentForControlPlane(tt.generateControlPlaneArgs)
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedDeployment, deployment)
+		})
+	}
+}
+
+func TestSetWatchNamespace(t *testing.T) {
+	tests := []struct {
+		name            string
+		namespace       string
+		watchNamespaces *operatorv1beta1.WatchNamespaces
+		expected        []corev1.EnvVar
+	}{
+		{
+			name:      "watch all namespaces",
+			namespace: "test-namespace",
+			watchNamespaces: &operatorv1beta1.WatchNamespaces{
+				Type: operatorv1beta1.WatchNamespacesTypeAll,
+			},
+			expected: nil,
+		},
+		{
+			name:      "watch own namespace",
+			namespace: "test-namespace",
+			watchNamespaces: &operatorv1beta1.WatchNamespaces{
+				Type: operatorv1beta1.WatchNamespacesTypeOwn,
+			},
+			expected: []corev1.EnvVar{
+				{
+					Name:  "CONTROLLER_WATCH_NAMESPACE",
+					Value: "test-namespace",
+				},
+			},
+		},
+		{
+			name:      "watch list of namespaces",
+			namespace: "test-namespace",
+			watchNamespaces: &operatorv1beta1.WatchNamespaces{
+				Type: operatorv1beta1.WatchNamespacesTypeList,
+				List: []string{"namespace1", "namespace2", "namespace3"},
+			},
+			expected: []corev1.EnvVar{
+				{
+					Name:  "CONTROLLER_WATCH_NAMESPACE",
+					Value: "namespace1,namespace2,namespace3,test-namespace",
+				},
+			},
+		},
+		{
+			name:      "watch list of namespaces is sorted",
+			namespace: "test-namespace",
+			watchNamespaces: &operatorv1beta1.WatchNamespaces{
+				Type: operatorv1beta1.WatchNamespacesTypeList,
+				List: []string{"namespace3", "namespace1", "namespace2", "abc"},
+			},
+			expected: []corev1.EnvVar{
+				{
+					Name:  "CONTROLLER_WATCH_NAMESPACE",
+					Value: "abc,namespace1,namespace2,namespace3,test-namespace",
+				},
+			},
+		},
+		{
+			name:      "invalid type defaults to watching all",
+			namespace: "test-namespace",
+			watchNamespaces: &operatorv1beta1.WatchNamespaces{
+				Type: "invalid-type",
+			},
+			expected: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			container := &corev1.Container{}
+			setWatchNamespace(container, tt.namespace, tt.watchNamespaces)
+			require.Equal(t, tt.expected, container.Env)
 		})
 	}
 }

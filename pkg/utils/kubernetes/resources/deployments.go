@@ -2,6 +2,8 @@ package resources
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 	"sync"
 
 	"github.com/samber/lo"
@@ -120,6 +122,7 @@ func GenerateNewDeploymentForControlPlane(params GenerateNewDeploymentForControl
 		}
 		deployment.Spec.Template = *patchedPodTemplateSpec
 	}
+	setWatchNamespace(&deployment.Spec.Template.Spec.Containers[0], params.ControlPlane.Namespace, params.ControlPlane.Spec.WatchNamespaces)
 
 	k8sutils.SetOwnerForObject(deployment, params.ControlPlane)
 
@@ -132,6 +135,36 @@ func GenerateNewDeploymentForControlPlane(params GenerateNewDeploymentForControl
 	}
 
 	return deployment, nil
+}
+
+func setWatchNamespace(
+	c *corev1.Container,
+	ns string,
+	watchNamespaces *operatorv1beta1.WatchNamespaces,
+) {
+	const watchNamespaceEnvVarName = "CONTROLLER_WATCH_NAMESPACE"
+	if watchNamespaces == nil {
+		return
+	}
+
+	switch watchNamespaces.Type {
+	case operatorv1beta1.WatchNamespacesTypeAll:
+		return
+	case operatorv1beta1.WatchNamespacesTypeOwn:
+		c.Env = append(c.Env, corev1.EnvVar{
+			Name:  watchNamespaceEnvVarName,
+			Value: ns,
+		})
+	case operatorv1beta1.WatchNamespacesTypeList:
+		l := append(watchNamespaces.List, ns) //nolint:gocritic
+		sort.Strings(l)
+		c.Env = append(c.Env, corev1.EnvVar{
+			Name:  watchNamespaceEnvVarName,
+			Value: strings.Join(l, ","),
+		})
+	default:
+		return
+	}
 }
 
 // GenerateContainerForControlPlaneParams is a parameter struct for GenerateControlPlaneContainer function.
@@ -181,6 +214,7 @@ func GenerateControlPlaneContainer(params GenerateContainerForControlPlaneParams
 			Protocol:      corev1.ProtocolTCP,
 		})
 	}
+
 	return c
 }
 

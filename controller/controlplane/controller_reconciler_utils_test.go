@@ -8,10 +8,12 @@ import (
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/gateway-operator/controller/pkg/op"
+	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
@@ -188,7 +190,7 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			fakeClient := fakectrlruntimeclient.
 				NewClientBuilder().
-				WithScheme(scheme.Scheme).
+				WithScheme(scheme.Get()).
 				WithObjects(tc.cp).
 				Build()
 
@@ -197,6 +199,208 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 			}
 
 			tc.testBody(t, r, tc.cp)
+		})
+	}
+}
+
+func TestEnsureReferenceGrantsForNamespace(t *testing.T) {
+	tests := []struct {
+		name      string
+		namespace string
+		cp        *operatorv1beta1.ControlPlane
+		refGrants []client.Object
+		wantErr   bool
+	}{
+		{
+			name:      "reference grant exists and matches",
+			namespace: "test-ns",
+			cp: &operatorv1beta1.ControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cp",
+					Namespace: "cp-ns",
+				},
+			},
+			refGrants: []client.Object{
+				&gatewayv1beta1.ReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "valid-grant",
+						Namespace: "test-ns",
+					},
+					Spec: gatewayv1beta1.ReferenceGrantSpec{
+						From: []gatewayv1beta1.ReferenceGrantFrom{
+							{
+								Group:     "gateway-operator.konghq.com",
+								Kind:      "ControlPlane",
+								Namespace: "cp-ns",
+							},
+						},
+						To: []gatewayv1beta1.ReferenceGrantTo{
+							{
+								Group: "",
+								Kind:  "Namespace",
+								Name:  lo.ToPtr(gatewayv1beta1.ObjectName("test-ns")),
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name:      "reference grant doesn't exist",
+			namespace: "test-ns",
+			cp: &operatorv1beta1.ControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cp",
+					Namespace: "cp-ns",
+				},
+			},
+			refGrants: []client.Object{},
+			wantErr:   true,
+		},
+		{
+			name:      "reference grant exists but from namespace doesn't match",
+			namespace: "test-ns",
+			cp: &operatorv1beta1.ControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cp",
+					Namespace: "cp-ns",
+				},
+			},
+			refGrants: []client.Object{
+				&gatewayv1beta1.ReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "invalid-from-namespace",
+						Namespace: "test-ns",
+					},
+					Spec: gatewayv1beta1.ReferenceGrantSpec{
+						From: []gatewayv1beta1.ReferenceGrantFrom{
+							{
+								Group:     "gateway-operator.konghq.com",
+								Kind:      "ControlPlane",
+								Namespace: "wrong-namespace",
+							},
+						},
+						To: []gatewayv1beta1.ReferenceGrantTo{
+							{
+								Group: "",
+								Kind:  "Namespace",
+								Name:  lo.ToPtr(gatewayv1beta1.ObjectName("test-ns")),
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name:      "reference grant exists but to name doesn't match",
+			namespace: "test-ns",
+			cp: &operatorv1beta1.ControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cp",
+					Namespace: "cp-ns",
+				},
+			},
+			refGrants: []client.Object{
+				&gatewayv1beta1.ReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "invalid-to-name",
+						Namespace: "test-ns",
+					},
+					Spec: gatewayv1beta1.ReferenceGrantSpec{
+						From: []gatewayv1beta1.ReferenceGrantFrom{
+							{
+								Group:     "gateway-operator.konghq.com",
+								Kind:      "ControlPlane",
+								Namespace: "cp-ns",
+							},
+						},
+						To: []gatewayv1beta1.ReferenceGrantTo{
+							{
+								Group: "",
+								Kind:  "Namespace",
+								Name:  lo.ToPtr(gatewayv1beta1.ObjectName("wrong-name")),
+							},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name:      "multiple reference grants with only one valid",
+			namespace: "test-ns",
+			cp: &operatorv1beta1.ControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cp",
+					Namespace: "cp-ns",
+				},
+			},
+			refGrants: []client.Object{
+				&gatewayv1beta1.ReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "invalid-grant",
+						Namespace: "test-ns",
+					},
+					Spec: gatewayv1beta1.ReferenceGrantSpec{
+						From: []gatewayv1beta1.ReferenceGrantFrom{
+							{
+								Group:     "wrong.group",
+								Kind:      "WrongKind",
+								Namespace: "wrong-ns",
+							},
+						},
+						To: []gatewayv1beta1.ReferenceGrantTo{
+							{
+								Group: "",
+								Kind:  "Namespace",
+								Name:  lo.ToPtr(gatewayv1beta1.ObjectName("wrong-name")),
+							},
+						},
+					},
+				},
+				&gatewayv1beta1.ReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "valid-grant",
+						Namespace: "test-ns",
+					},
+					Spec: gatewayv1beta1.ReferenceGrantSpec{
+						From: []gatewayv1beta1.ReferenceGrantFrom{
+							{
+								Group:     "gateway-operator.konghq.com",
+								Kind:      "ControlPlane",
+								Namespace: "cp-ns",
+							},
+						},
+						To: []gatewayv1beta1.ReferenceGrantTo{
+							{
+								Group: "",
+								Kind:  "Namespace",
+								Name:  lo.ToPtr(gatewayv1beta1.ObjectName("test-ns")),
+							},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fakeClient := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(tt.refGrants...).
+				Build()
+
+			err := ensureReferenceGrantsForNamespace(t.Context(), fakeClient, tt.cp, tt.namespace)
+			if tt.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 		})
 	}
 }

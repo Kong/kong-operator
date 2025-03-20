@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
+	"github.com/kr/pretty"
 	"github.com/samber/lo"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -16,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
@@ -264,6 +266,8 @@ func (r *Reconciler) ensureDeployment(
 		generatedDeployment.Spec.Replicas = lo.ToPtr(int32(numReplicasWhenNoDataPlane))
 	}
 	if err := r.Client.Create(ctx, generatedDeployment); err != nil {
+		pretty.Print(generatedDeployment)
+		// fmt.Printf("failed creating ControlPlane Deployment %s: %w", generatedDeployment)
 		return op.Noop, nil, fmt.Errorf("failed creating ControlPlane Deployment %s: %w", generatedDeployment.Name, err)
 	}
 
@@ -313,6 +317,35 @@ func (r *Reconciler) ensureServiceAccount(
 	}
 
 	return true, generatedServiceAccount, r.Client.Create(ctx, generatedServiceAccount)
+}
+
+func (r *Reconciler) ensureRoles(
+	ctx context.Context,
+	logger logr.Logger,
+	cp *operatorv1beta1.ControlPlane,
+	controlplaneServiceAccount *corev1.ServiceAccount,
+) (op.Result, error) {
+	log.Trace(logger, "ensuring ClusterRoles for ControlPlane deployment exist")
+	createdOrUpdated, controlplaneClusterRole, err := r.ensureClusterRole(ctx, cp)
+	if err != nil {
+		return op.Noop, err
+	}
+	if createdOrUpdated {
+		log.Debug(logger, "clusterRole updated")
+		return op.Updated, nil // requeue will be triggered by the creation or update of the owned object
+	}
+
+	log.Trace(logger, "ensuring that ClusterRoleBindings for ControlPlane Deployment exist")
+	createdOrUpdated, _, err = r.ensureClusterRoleBinding(ctx, cp, controlplaneServiceAccount.Name, controlplaneClusterRole.Name)
+	if err != nil {
+		return op.Noop, err
+	}
+	if createdOrUpdated {
+		log.Debug(logger, "clusterRoleBinding updated")
+		return op.Updated, nil // requeue will be triggered by the creation or update of the owned object
+	}
+
+	return op.Noop, nil
 }
 
 func (r *Reconciler) ensureClusterRole(
@@ -763,4 +796,71 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	}
 
 	return op.Created, r.Client.Create(ctx, generatedWebhookConfiguration)
+}
+
+func (r *Reconciler) validateReferenceGrants(
+	ctx context.Context,
+	cp *operatorv1beta1.ControlPlane,
+) error {
+	if cp.Spec.WatchNamespaces == nil {
+		return nil
+	}
+
+	switch cp.Spec.WatchNamespaces.Type {
+	// NOTE: We currentlty do not require any ReferenceGrants or other permission
+	// granting resources for the "All" case.
+	case operatorv1beta1.WatchNamespacesTypeAll:
+		return nil
+	// No special permissions are required to watch the controlplane's own namespace.
+	case operatorv1beta1.WatchNamespacesTypeOwn:
+		return nil
+	case operatorv1beta1.WatchNamespacesTypeList:
+		for _, ns := range cp.Spec.WatchNamespaces.List {
+			if err := ensureReferenceGrantsForNamespace(ctx, r.Client, cp, ns); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	default:
+		return nil
+	}
+}
+
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants,verbs=list
+
+// ensureReferenceGrantsForNamespace ensures that a ReferenceGrant exists for the
+// given namespace and ControlPlane.
+// It returns an error if a ReferenceGrant is missing.
+func ensureReferenceGrantsForNamespace(
+	ctx context.Context,
+	cl client.Client,
+	cp *operatorv1beta1.ControlPlane,
+	ns string,
+) error {
+	var refGrants gatewayv1beta1.ReferenceGrantList
+	if err := cl.List(ctx, &refGrants, client.InNamespace(ns)); err != nil {
+		return fmt.Errorf("failed listing ReferenceGrants in namespace %s: %w", ns, err)
+	}
+	for _, refGrant := range refGrants.Items {
+		if !lo.ContainsBy(refGrant.Spec.From, func(from gatewayv1beta1.ReferenceGrantFrom) bool {
+			return from.Group == "gateway-operator.konghq.com" &&
+				from.Kind == "ControlPlane" &&
+				string(from.Namespace) == cp.Namespace
+		}) {
+			continue
+		}
+
+		if !lo.ContainsBy(refGrant.Spec.To, func(to gatewayv1beta1.ReferenceGrantTo) bool {
+			return to.Group == "" &&
+				to.Kind == "Namespace" &&
+				to.Name != nil &&
+				string(*to.Name) == ns
+		}) {
+			continue
+		}
+
+		return nil
+	}
+	return fmt.Errorf("ReferenceGrant in Namespace %s to ControlPlane in Namespace %s not found", ns, cp.Namespace)
 }

@@ -24,6 +24,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/gateway-operator/controller"
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
@@ -39,6 +40,7 @@ import (
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -118,7 +120,13 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		// status gets updated accordingly, leading to a reconciliation loop trigger)
 		Watches(
 			&appsv1.Deployment{},
-			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlaneDeployment))
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlaneDeployment)).
+		// watch for events on ReferenceGrants, if any ReferenceGrant event happen, enqueue
+		// reconciliation for all supported ControlPlane objects which namespaces
+		// are referenced in a "from" instance.
+		Watches(
+			&gatewayv1beta1.ReferenceGrant{},
+			handler.EnqueueRequestsFromMapFunc(r.listControlPlanesForReferenceGrants))
 
 	if r.KonnectEnabled {
 		// Watch for changes in KonnectExtension objects that are referenced by ControlPlane objects.
@@ -340,6 +348,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		log.Debug(logger, "DataPlane not set, deployment for ControlPlane will remain dormant")
 	}
 
+	log.Trace(logger, "validating ReferenceGrants exist for the ControlPlane")
+	if err := r.validateReferenceGrants(ctx, cp); err != nil {
+		k8sutils.SetCondition(
+			k8sutils.NewCondition(
+				kcfgdataplane.ReadyType,
+				metav1.ConditionFalse,
+				kcfgcontrolplane.ConditionReasonMissingReferenceGrant,
+				"ReferenceGrant(s) are missing for the ControlPlane",
+			),
+			cp,
+		)
+		res, err := r.patchStatus(ctx, logger, cp)
+		if err != nil {
+			log.Debug(logger, "unable to patch ControlPlane status", "error", err)
+			return ctrl.Result{}, err
+		}
+		if !res.IsZero() {
+			return res, nil
+		}
+		return ctrl.Result{}, nil
+	}
+
 	log.Trace(logger, "ensuring ServiceAccount for ControlPlane deployment exists")
 	createdOrUpdated, controlplaneServiceAccount, err := r.ensureServiceAccount(ctx, cp)
 	if err != nil {
@@ -350,24 +380,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
-	log.Trace(logger, "ensuring ClusterRoles for ControlPlane deployment exist")
-	createdOrUpdated, controlplaneClusterRole, err := r.ensureClusterRole(ctx, cp)
+	res, err := r.ensureRoles(ctx, logger, cp, controlplaneServiceAccount)
 	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if createdOrUpdated {
-		log.Debug(logger, "clusterRole updated")
-		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
-	}
-
-	log.Trace(logger, "ensuring that ClusterRoleBindings for ControlPlane Deployment exist")
-	createdOrUpdated, _, err = r.ensureClusterRoleBinding(ctx, cp, controlplaneServiceAccount.Name, controlplaneClusterRole.Name)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if createdOrUpdated {
-		log.Debug(logger, "clusterRoleBinding updated")
-		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+		return ctrl.Result{}, fmt.Errorf("failed to ensure roles or cluster roles: %w", err)
+	} else if res != op.Noop {
+		return ctrl.Result{Requeue: true}, nil
 	}
 
 	log.Trace(logger, "creating mTLS certificate")
