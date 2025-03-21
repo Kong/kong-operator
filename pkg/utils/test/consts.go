@@ -92,3 +92,7 @@ const (
 	// DefaultHTTPPort is the default HTTP port.
 	DefaultHTTPPort = 80
 )
+
+// ServiceAccountToImpersonate is the service account to impersonate when running tests,
+// to ensure that the same RBAC rules as presented in Helm chart are used.
+const ServiceAccountToImpersonate = "system:serviceaccount:kong-system:controller-manager"

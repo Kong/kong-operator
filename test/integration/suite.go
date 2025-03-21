@@ -14,8 +14,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"k8s.io/client-go/rest"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/config"
 	"github.com/kong/gateway-operator/modules/manager"
@@ -208,14 +206,7 @@ func DefaultControllerConfigForTests() manager.Config {
 	cfg.ClusterCAKeyType = mgrconfig.ECDSA
 	cfg.GatewayAPIExperimentalEnabled = true
 	cfg.EnforceConfig = true
+	cfg.ServiceAccountToImpersonate = testutils.ServiceAccountToImpersonate
 
-	cfg.NewClientFunc = func(config *rest.Config, options client.Options) (client.Client, error) {
-		// always hijack and impersonate the system service account here so that the manager
-		// is testing the RBAC permissions we provide under config/rbac/. This helps alert us
-		// if we break our RBAC configs as the manager will emit permissions errors.
-		config.Impersonate.UserName = "system:serviceaccount:kong-system:controller-manager"
-
-		return client.New(config, options)
-	}
 	return cfg
 }
