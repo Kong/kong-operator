@@ -84,6 +84,12 @@ type ControlPlaneSpec struct {
 	//
 	// +optional
 	IngressClass *string `json:"ingressClass,omitempty"`
+
+	// WatchNamespaces indicates the namespaces to watch for resources.
+	//
+	// +optional
+	// +kubebuilder:default={type: all}
+	WatchNamespaces *WatchNamespaces `json:"watchNamespaces,omitempty"`
 }
 
 // ControlPlaneOptions indicates the specific information needed to

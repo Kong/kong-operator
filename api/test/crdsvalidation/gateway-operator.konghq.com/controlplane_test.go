@@ -196,4 +196,86 @@ func TestControlPlane(t *testing.T) {
 			},
 		}.Run(t)
 	})
+
+	t.Run("watch namespaces", func(t *testing.T) {
+		common.TestCasesGroup[*operatorv1beta1.ControlPlane]{
+			{
+				Name: "no watch namespaces",
+				TestObject: &operatorv1beta1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.ControlPlaneSpec{
+						ControlPlaneOptions: validControlPlaneOptions,
+					},
+				},
+			},
+			{
+				Name: "watch namespaces all",
+				TestObject: &operatorv1beta1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.ControlPlaneSpec{
+						ControlPlaneOptions: validControlPlaneOptions,
+						WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+							Type: operatorv1beta1.WatchNamespacesTypeAll,
+						},
+					},
+				},
+			},
+			{
+				Name: "watch namespaces list",
+				TestObject: &operatorv1beta1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.ControlPlaneSpec{
+						ControlPlaneOptions: validControlPlaneOptions,
+						WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+							Type: operatorv1beta1.WatchNamespacesTypeList,
+							List: []string{
+								"namespace1",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "watch namespaces list, no list is an error",
+				TestObject: &operatorv1beta1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.ControlPlaneSpec{
+						ControlPlaneOptions: validControlPlaneOptions,
+						WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+							Type: operatorv1beta1.WatchNamespacesTypeList,
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("list is required when type is 'list'"),
+			},
+			{
+				Name: "watch namespaces own",
+				TestObject: &operatorv1beta1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.ControlPlaneSpec{
+						ControlPlaneOptions: validControlPlaneOptions,
+						WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+							Type: operatorv1beta1.WatchNamespacesTypeOwn,
+						},
+					},
+				},
+			},
+			{
+				Name: "watch namespaces list, list cannot be specified when type is not List",
+				TestObject: &operatorv1beta1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.ControlPlaneSpec{
+						ControlPlaneOptions: validControlPlaneOptions,
+						WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+							Type: operatorv1beta1.WatchNamespacesTypeOwn,
+							List: []string{
+								"namespace1",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("list must not be specified when type is not 'list'"),
+			},
+		}.Run(t)
+	})
 }
