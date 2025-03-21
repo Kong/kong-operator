@@ -32,4 +32,9 @@ const (
 	// ConditionReasonNoDataPlane is a reason which indicates that no DataPlane
 	// has been provisioned.
 	ConditionReasonNoDataPlane consts.ConditionReason = "NoDataPlane"
+
+	// ConditionReasonMissingReferenceGrant is a reason which indicates that
+	// ReferenceGrants are missing for the ControlPlane to be able to watch
+	// resources in requested namespaces.
+	ConditionReasonMissingReferenceGrant consts.ConditionReason = "MissingReferenceGrants"
 )
