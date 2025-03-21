@@ -61,7 +61,6 @@ type Config struct {
 	LeaderElectionNamespace  string
 	DevelopmentMode          bool
 	Out                      *os.File
-	NewClientFunc            client.NewClientFunc
 	ControllerName           string
 	ControllerNamespace      string
 	AnonymousReports         bool
@@ -73,6 +72,11 @@ type Config struct {
 	ClusterCAKeySize         int
 	LoggerOpts               *zap.Options
 	EnforceConfig            bool
+
+	// ServiceAccountToImpersonate is the name of the service account to impersonate,
+	// by the controller manager, when making requests to the API server.
+	// Use for testing purposes only.
+	ServiceAccountToImpersonate string
 
 	// controllers for standard APIs and features
 	GatewayControllerEnabled            bool
@@ -159,35 +163,40 @@ func Run(
 
 	restCfg := ctrl.GetConfigOrDie()
 	restCfg.UserAgent = metadata.UserAgent()
+	restCfg.Impersonate = rest.ImpersonationConfig{
+		UserName: cfg.ServiceAccountToImpersonate,
+	}
 
-	mgr, err := ctrl.NewManager(restCfg, ctrl.Options{
-		Controller: config.Controller{
-			// This is needed because controller-runtime since v0.19.0 keeps a global list of controller
-			// names and panics if there are duplicates. This is a workaround for that in tests.
-			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
-			SkipNameValidation: lo.ToPtr(true),
+	mgr, err := ctrl.NewManager(
+		restCfg,
+		ctrl.Options{
+			Controller: config.Controller{
+				// This is needed because controller-runtime since v0.19.0 keeps a global list of controller
+				// names and panics if there are duplicates. This is a workaround for that in tests.
+				// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
+				SkipNameValidation: lo.ToPtr(true),
+			},
+			Scheme: scheme,
+			Metrics: server.Options{
+				BindAddress: cfg.MetricsAddr,
+				FilterProvider: func() func(c *rest.Config, httpClient *http.Client) (server.Filter, error) {
+					switch cfg.MetricsAccessFilter {
+					case MetricsAccessFilterRBAC:
+						return filters.WithAuthenticationAndAuthorization
+					case MetricsAccessFilterOff:
+						return nil
+					default:
+						// This is checked in flags validation so this should never happen.
+						panic("unsupported metrics filter")
+					}
+				}(),
+			},
+			HealthProbeBindAddress:  cfg.ProbeAddr,
+			LeaderElection:          cfg.LeaderElection,
+			LeaderElectionNamespace: cfg.LeaderElectionNamespace,
+			LeaderElectionID:        "a7feedc84.konghq.com",
 		},
-		Scheme: scheme,
-		Metrics: server.Options{
-			BindAddress: cfg.MetricsAddr,
-			FilterProvider: func() func(c *rest.Config, httpClient *http.Client) (server.Filter, error) {
-				switch cfg.MetricsAccessFilter {
-				case MetricsAccessFilterRBAC:
-					return filters.WithAuthenticationAndAuthorization
-				case MetricsAccessFilterOff:
-					return nil
-				default:
-					// This is checked in flags validation so this should never happen.
-					panic("unsupported metrics filter")
-				}
-			}(),
-		},
-		HealthProbeBindAddress:  cfg.ProbeAddr,
-		LeaderElection:          cfg.LeaderElection,
-		LeaderElectionNamespace: cfg.LeaderElectionNamespace,
-		LeaderElectionID:        "a7feedc84.konghq.com",
-		NewClient:               cfg.NewClientFunc,
-	})
+	)
 	if err != nil {
 		return err
 	}
