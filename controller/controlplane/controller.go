@@ -360,12 +360,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			cp,
 		)
 		res, err := r.patchStatus(ctx, logger, cp)
-		if err != nil {
-			log.Debug(logger, "unable to patch ControlPlane status", "error", err)
-			return ctrl.Result{}, err
-		}
-		if !res.IsZero() {
-			return res, nil
+		if err != nil || !res.IsZero() {
+			return res, err
 		}
 		return ctrl.Result{}, nil
 	}

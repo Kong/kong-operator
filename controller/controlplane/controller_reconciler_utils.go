@@ -7,7 +7,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
-	"github.com/kr/pretty"
 	"github.com/samber/lo"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -266,8 +265,6 @@ func (r *Reconciler) ensureDeployment(
 		generatedDeployment.Spec.Replicas = lo.ToPtr(int32(numReplicasWhenNoDataPlane))
 	}
 	if err := r.Client.Create(ctx, generatedDeployment); err != nil {
-		pretty.Print(generatedDeployment)
-		// fmt.Printf("failed creating ControlPlane Deployment %s: %w", generatedDeployment)
 		return op.Noop, nil, fmt.Errorf("failed creating ControlPlane Deployment %s: %w", generatedDeployment.Name, err)
 	}
 
@@ -803,7 +800,7 @@ func (r *Reconciler) validateReferenceGrants(
 	cp *operatorv1beta1.ControlPlane,
 ) error {
 	if cp.Spec.WatchNamespaces == nil {
-		return nil
+		return errors.New("spec.watchNamespaces cannot be empty")
 	}
 
 	switch cp.Spec.WatchNamespaces.Type {
@@ -823,7 +820,7 @@ func (r *Reconciler) validateReferenceGrants(
 
 		return nil
 	default:
-		return nil
+		return fmt.Errorf("unexpected watchNamespaces.type: %q", cp.Spec.WatchNamespaces.Type)
 	}
 }
 
