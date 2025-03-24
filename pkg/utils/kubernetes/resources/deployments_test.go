@@ -589,73 +589,30 @@ func TestGenerateNewDeploymentForControlPlane(t *testing.T) {
 func TestSetWatchNamespace(t *testing.T) {
 	tests := []struct {
 		name            string
-		namespace       string
-		watchNamespaces *operatorv1beta1.WatchNamespaces
+		watchNamespaces []string
 		expected        []corev1.EnvVar
 	}{
 		{
-			name:      "watch all namespaces",
-			namespace: "test-namespace",
-			watchNamespaces: &operatorv1beta1.WatchNamespaces{
-				Type: operatorv1beta1.WatchNamespacesTypeAll,
-			},
-			expected: nil,
+			name:            "watch all namespaces",
+			watchNamespaces: nil,
+			expected:        nil,
 		},
 		{
-			name:      "watch own namespace",
-			namespace: "test-namespace",
-			watchNamespaces: &operatorv1beta1.WatchNamespaces{
-				Type: operatorv1beta1.WatchNamespacesTypeOwn,
-			},
+			name:            "watch list of namespaces",
+			watchNamespaces: []string{"namespace1", "namespace2", "namespace3"},
 			expected: []corev1.EnvVar{
 				{
 					Name:  "CONTROLLER_WATCH_NAMESPACE",
-					Value: "test-namespace",
+					Value: "namespace1,namespace2,namespace3",
 				},
 			},
-		},
-		{
-			name:      "watch list of namespaces",
-			namespace: "test-namespace",
-			watchNamespaces: &operatorv1beta1.WatchNamespaces{
-				Type: operatorv1beta1.WatchNamespacesTypeList,
-				List: []string{"namespace1", "namespace2", "namespace3"},
-			},
-			expected: []corev1.EnvVar{
-				{
-					Name:  "CONTROLLER_WATCH_NAMESPACE",
-					Value: "namespace1,namespace2,namespace3,test-namespace",
-				},
-			},
-		},
-		{
-			name:      "watch list of namespaces is sorted",
-			namespace: "test-namespace",
-			watchNamespaces: &operatorv1beta1.WatchNamespaces{
-				Type: operatorv1beta1.WatchNamespacesTypeList,
-				List: []string{"namespace3", "namespace1", "namespace2", "abc"},
-			},
-			expected: []corev1.EnvVar{
-				{
-					Name:  "CONTROLLER_WATCH_NAMESPACE",
-					Value: "abc,namespace1,namespace2,namespace3,test-namespace",
-				},
-			},
-		},
-		{
-			name:      "invalid type defaults to watching all",
-			namespace: "test-namespace",
-			watchNamespaces: &operatorv1beta1.WatchNamespaces{
-				Type: "invalid-type",
-			},
-			expected: nil,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			container := &corev1.Container{}
-			setWatchNamespace(container, tt.namespace, tt.watchNamespaces)
+			setWatchNamespace(container, tt.watchNamespaces)
 			require.Equal(t, tt.expected, container.Env)
 		})
 	}

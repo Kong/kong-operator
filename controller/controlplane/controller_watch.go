@@ -262,7 +262,7 @@ func (r *Reconciler) listControlPlanesForReferenceGrants(
 
 	fromsForControlPlane := lo.Filter(rg.Spec.From,
 		func(from gatewayv1beta1.ReferenceGrantFrom, _ int) bool {
-			return from.Group == gatewayv1beta1.Group(operatorv1beta1.ControlPlaneGVR().Group) &&
+			return string(from.Group) == operatorv1beta1.ControlPlaneGVR().Group &&
 				from.Kind == "ControlPlane"
 		},
 	)

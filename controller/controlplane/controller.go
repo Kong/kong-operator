@@ -349,13 +349,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "validating ReferenceGrants exist for the ControlPlane")
-	if err := r.validateReferenceGrants(ctx, cp); err != nil {
+	validatedWatchNamespaces, err := r.validateReferenceGrants(ctx, cp)
+	if err != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewCondition(
 				kcfgdataplane.ReadyType,
 				metav1.ConditionFalse,
 				kcfgcontrolplane.ConditionReasonMissingReferenceGrant,
-				"ReferenceGrant(s) are missing for the ControlPlane",
+				fmt.Sprintf("ReferenceGrant(s) are missing for the ControlPlane: %v", err),
 			),
 			cp,
 		)
@@ -363,7 +364,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if err != nil || !res.IsZero() {
 			return res, err
 		}
-		return ctrl.Result{}, nil
+		// We do not return here as we want to proceed with reconciling the Deployment.
+		// This will prevent users using the ControlPlane Deployment with previous
+		// WatchNamespaces spec.
 	}
 
 	log.Trace(logger, "ensuring ServiceAccount for ControlPlane deployment exists")
@@ -398,6 +401,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		ServiceAccountName:      controlplaneServiceAccount.Name,
 		AdminMTLSCertSecretName: adminCertificate.Name,
 		EnforceConfig:           r.EnforceConfig,
+		WatchNamespaces:         validatedWatchNamespaces,
 	}
 
 	admissionWebhookCertificateSecretName, res, err := r.ensureWebhookResources(ctx, logger, cp)

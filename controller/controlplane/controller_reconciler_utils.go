@@ -151,6 +151,11 @@ type ensureDeploymentParams struct {
 	// (typically mutation webhook that enforces some cluster-wide policy,
 	// typically for resources or security).
 	EnforceConfig bool
+	// WatchNamespaces contains a list of namespaces to watch for resources.
+	// This list might have been filtered down from the list in the spec
+	// as a result of the ReferenceGrant validation: if a ReferenceGrant is missing
+	// in the requested namespace, the namespace is removed from the list.
+	WatchNamespaces []string
 }
 
 // ensureDeployment ensures that a Deployment is created for the
@@ -197,6 +202,7 @@ func (r *Reconciler) ensureDeployment(
 		ServiceAccountName:             params.ServiceAccountName,
 		AdminMTLSCertSecretName:        params.AdminMTLSCertSecretName,
 		AdmissionWebhookCertSecretName: params.AdmissionWebhookCertSecretName,
+		WatchNamespaces:                params.WatchNamespaces,
 	})
 	if err != nil {
 		return op.Noop, nil, err
@@ -798,29 +804,31 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 func (r *Reconciler) validateReferenceGrants(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
-) error {
+) ([]string, error) {
 	if cp.Spec.WatchNamespaces == nil {
-		return errors.New("spec.watchNamespaces cannot be empty")
+		return nil, errors.New("spec.watchNamespaces cannot be empty")
 	}
 
 	switch cp.Spec.WatchNamespaces.Type {
 	// NOTE: We currentlty do not require any ReferenceGrants or other permission
 	// granting resources for the "All" case.
 	case operatorv1beta1.WatchNamespacesTypeAll:
-		return nil
+		return nil, nil
 	// No special permissions are required to watch the controlplane's own namespace.
 	case operatorv1beta1.WatchNamespacesTypeOwn:
-		return nil
+		return []string{cp.Namespace}, nil
 	case operatorv1beta1.WatchNamespacesTypeList:
+		var nsList []string
 		for _, ns := range cp.Spec.WatchNamespaces.List {
 			if err := ensureReferenceGrantsForNamespace(ctx, r.Client, cp, ns); err != nil {
-				return err
+				return nsList, err
 			}
+			nsList = append(nsList, ns)
 		}
 
-		return nil
+		return nsList, nil
 	default:
-		return fmt.Errorf("unexpected watchNamespaces.type: %q", cp.Spec.WatchNamespaces.Type)
+		return nil, fmt.Errorf("unexpected watchNamespaces.type: %q", cp.Spec.WatchNamespaces.Type)
 	}
 }
 
@@ -841,7 +849,7 @@ func ensureReferenceGrantsForNamespace(
 	}
 	for _, refGrant := range refGrants.Items {
 		if !lo.ContainsBy(refGrant.Spec.From, func(from gatewayv1beta1.ReferenceGrantFrom) bool {
-			return from.Group == "gateway-operator.konghq.com" &&
+			return string(from.Group) == operatorv1beta1.SchemeGroupVersion.Group &&
 				from.Kind == "ControlPlane" &&
 				string(from.Namespace) == cp.Namespace
 		}) {

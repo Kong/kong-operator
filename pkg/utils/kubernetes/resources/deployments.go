@@ -60,6 +60,12 @@ type GenerateNewDeploymentForControlPlaneParams struct {
 	ServiceAccountName             string
 	AdminMTLSCertSecretName        string
 	AdmissionWebhookCertSecretName string
+	// WatchNamespaces contains the namespaces to watch for resources.
+	// If not nil, the controller will only watch for resources in the specified namespaces.
+	// This list has been verified (and possibly filtered down) by inspecting
+	// the WatchNamespaces from the spec for ReferenceGrants in these namespaces.
+	// If a namespace did not have a ReferenceGrant, it will not be in this list.
+	WatchNamespaces []string
 }
 
 // GenerateNewDeploymentForControlPlane generates a new Deployment for the ControlPlane
@@ -122,7 +128,7 @@ func GenerateNewDeploymentForControlPlane(params GenerateNewDeploymentForControl
 		}
 		deployment.Spec.Template = *patchedPodTemplateSpec
 	}
-	setWatchNamespace(&deployment.Spec.Template.Spec.Containers[0], params.ControlPlane.Namespace, params.ControlPlane.Spec.WatchNamespaces)
+	setWatchNamespace(&deployment.Spec.Template.Spec.Containers[0], params.WatchNamespaces)
 
 	k8sutils.SetOwnerForObject(deployment, params.ControlPlane)
 
@@ -139,32 +145,18 @@ func GenerateNewDeploymentForControlPlane(params GenerateNewDeploymentForControl
 
 func setWatchNamespace(
 	c *corev1.Container,
-	ns string,
-	watchNamespaces *operatorv1beta1.WatchNamespaces,
+	watchNamespaces []string,
 ) {
-	const watchNamespaceEnvVarName = "CONTROLLER_WATCH_NAMESPACE"
-	if watchNamespaces == nil {
+	if len(watchNamespaces) == 0 {
 		return
 	}
 
-	switch watchNamespaces.Type {
-	case operatorv1beta1.WatchNamespacesTypeAll:
-		return
-	case operatorv1beta1.WatchNamespacesTypeOwn:
-		c.Env = append(c.Env, corev1.EnvVar{
-			Name:  watchNamespaceEnvVarName,
-			Value: ns,
-		})
-	case operatorv1beta1.WatchNamespacesTypeList:
-		l := append(watchNamespaces.List, ns) //nolint:gocritic
-		sort.Strings(l)
-		c.Env = append(c.Env, corev1.EnvVar{
-			Name:  watchNamespaceEnvVarName,
-			Value: strings.Join(l, ","),
-		})
-	default:
-		return
-	}
+	const watchNamespaceEnvVarName = "CONTROLLER_WATCH_NAMESPACE"
+	sort.Strings(watchNamespaces)
+	c.Env = append(c.Env, corev1.EnvVar{
+		Name:  watchNamespaceEnvVarName,
+		Value: strings.Join(watchNamespaces, ","),
+	})
 }
 
 // GenerateContainerForControlPlaneParams is a parameter struct for GenerateControlPlaneContainer function.
