@@ -170,6 +170,8 @@ func init() {
 	}
 }
 
+// MockRecorder records operations for testing purposes.
+//
 // TODO: move all the mocks to a place inside `/test`:
 // https://github.com/Kong/gateway-operator/issues/955
 type MockRecorder struct{}

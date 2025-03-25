@@ -68,7 +68,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log.Trace(logger, "reconciling DataPlane resource")
 	dpNn := req.NamespacedName
 	dataplane := new(operatorv1beta1.DataPlane)
-	if err := r.Client.Get(ctx, dpNn, dataplane); err != nil {
+	if err := r.Get(ctx, dpNn, dataplane); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 

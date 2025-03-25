@@ -379,7 +379,7 @@ func testHandleCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 
 			res, err := handleKongCertificateRef(t.Context(), fakeClient, tc.ent)
 
-			var updatedEnt TEnt = tc.ent.DeepCopyObject().(TEnt)
+			var updatedEnt = tc.ent.DeepCopyObject().(TEnt)
 			require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(tc.ent), updatedEnt))
 			for _, assertion := range tc.updatedEntAssertions {
 				ok, msg := assertion(updatedEnt)

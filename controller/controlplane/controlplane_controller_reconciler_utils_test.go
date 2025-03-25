@@ -41,7 +41,7 @@ func TestEnsureClusterRole(t *testing.T) {
 		},
 	)
 	wrongClusterRole2 := clusterRole.DeepCopy()
-	wrongClusterRole2.ObjectMeta.Labels["aaa"] = "bbb"
+	wrongClusterRole2.Labels["aaa"] = "bbb"
 
 	controlplane := operatorv1beta1.ControlPlane{
 		TypeMeta: metav1.TypeMeta{
@@ -184,7 +184,7 @@ func TestEnsureClusterRoleBinding(t *testing.T) {
 	crbWithNoServiceAccount.Subjects = nil
 
 	crbWithDifferentLabel := expectedClusterRoleBinding.DeepCopy()
-	crbWithDifferentLabel.ObjectMeta.Labels["foo"] = "bar"
+	crbWithDifferentLabel.Labels["foo"] = "bar"
 
 	testCases := []struct {
 		name             string

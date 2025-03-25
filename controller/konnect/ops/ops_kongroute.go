@@ -88,25 +88,25 @@ func kongRouteToSDKRouteInput(
 ) sdkkonnectcomp.RouteInput {
 	r := sdkkonnectcomp.RouteInput{
 		RouteJSONInput: &sdkkonnectcomp.RouteJSONInput{
-			Destinations:            route.Spec.KongRouteAPISpec.Destinations,
+			Destinations:            route.Spec.Destinations,
 			Headers:                 route.Spec.Headers,
-			Hosts:                   route.Spec.KongRouteAPISpec.Hosts,
-			HTTPSRedirectStatusCode: route.Spec.KongRouteAPISpec.HTTPSRedirectStatusCode,
-			Methods:                 route.Spec.KongRouteAPISpec.Methods,
-			Name:                    route.Spec.KongRouteAPISpec.Name,
-			PathHandling:            route.Spec.KongRouteAPISpec.PathHandling,
-			Paths:                   route.Spec.KongRouteAPISpec.Paths,
-			PreserveHost:            route.Spec.KongRouteAPISpec.PreserveHost,
-			Protocols: lo.Map(route.Spec.KongRouteAPISpec.Protocols, func(protocol sdkkonnectcomp.RouteWithoutParentsProtocols, _ int) sdkkonnectcomp.RouteJSONProtocols {
+			Hosts:                   route.Spec.Hosts,
+			HTTPSRedirectStatusCode: route.Spec.HTTPSRedirectStatusCode,
+			Methods:                 route.Spec.Methods,
+			Name:                    route.Spec.Name,
+			PathHandling:            route.Spec.PathHandling,
+			Paths:                   route.Spec.Paths,
+			PreserveHost:            route.Spec.PreserveHost,
+			Protocols: lo.Map(route.Spec.Protocols, func(protocol sdkkonnectcomp.RouteWithoutParentsProtocols, _ int) sdkkonnectcomp.RouteJSONProtocols {
 				return sdkkonnectcomp.RouteJSONProtocols(protocol)
 			}),
-			RegexPriority:     route.Spec.KongRouteAPISpec.RegexPriority,
-			RequestBuffering:  route.Spec.KongRouteAPISpec.RequestBuffering,
-			ResponseBuffering: route.Spec.KongRouteAPISpec.ResponseBuffering,
-			Snis:              route.Spec.KongRouteAPISpec.Snis,
-			Sources:           route.Spec.KongRouteAPISpec.Sources,
-			StripPath:         route.Spec.KongRouteAPISpec.StripPath,
-			Tags:              GenerateTagsForObject(route, route.Spec.KongRouteAPISpec.Tags...),
+			RegexPriority:     route.Spec.RegexPriority,
+			RequestBuffering:  route.Spec.RequestBuffering,
+			ResponseBuffering: route.Spec.ResponseBuffering,
+			Snis:              route.Spec.Snis,
+			Sources:           route.Spec.Sources,
+			StripPath:         route.Spec.StripPath,
+			Tags:              GenerateTagsForObject(route, route.Spec.Tags...),
 		},
 	}
 	if route.Status.Konnect != nil && route.Status.Konnect.ServiceID != "" {

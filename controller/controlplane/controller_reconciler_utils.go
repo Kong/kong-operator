@@ -105,7 +105,7 @@ func (r *Reconciler) ensureDataPlaneConfiguration(
 		dataplaneServiceName,
 	)
 	if changed {
-		if err := r.Client.Update(ctx, cp); err != nil {
+		if err := r.Update(ctx, cp); err != nil {
 			return fmt.Errorf("failed updating ControlPlane's DataPlane: %w", err)
 		}
 		return nil
@@ -239,7 +239,7 @@ func (r *Reconciler) ensureDeployment(
 		}
 
 		// ensure that replication strategy is up to date
-		replicas := params.ControlPlane.Spec.ControlPlaneOptions.Deployment.Replicas
+		replicas := params.ControlPlane.Spec.Deployment.Replicas
 		switch {
 		case !dataplaneIsSet && (replicas == nil || *replicas != numReplicasWhenNoDataPlane):
 			// DataPlane was just unset, so we need to scale down the Deployment.
@@ -263,7 +263,7 @@ func (r *Reconciler) ensureDeployment(
 	if !dataplaneIsSet {
 		generatedDeployment.Spec.Replicas = lo.ToPtr(int32(numReplicasWhenNoDataPlane))
 	}
-	if err := r.Client.Create(ctx, generatedDeployment); err != nil {
+	if err := r.Create(ctx, generatedDeployment); err != nil {
 		return op.Noop, nil, fmt.Errorf("failed creating ControlPlane Deployment %s: %w", generatedDeployment.Name, err)
 	}
 
@@ -304,7 +304,7 @@ func (r *Reconciler) ensureServiceAccount(
 		existingServiceAccount := &serviceAccounts[0]
 		updated, existingServiceAccount.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingServiceAccount.ObjectMeta, generatedServiceAccount.ObjectMeta)
 		if updated {
-			if err := r.Client.Update(ctx, existingServiceAccount); err != nil {
+			if err := r.Update(ctx, existingServiceAccount); err != nil {
 				return false, existingServiceAccount, fmt.Errorf("failed updating ControlPlane's ServiceAccount %s: %w", existingServiceAccount.Name, err)
 			}
 			return true, existingServiceAccount, nil
@@ -312,7 +312,7 @@ func (r *Reconciler) ensureServiceAccount(
 		return false, existingServiceAccount, nil
 	}
 
-	return true, generatedServiceAccount, r.Client.Create(ctx, generatedServiceAccount)
+	return true, generatedServiceAccount, r.Create(ctx, generatedServiceAccount)
 }
 
 func (r *Reconciler) ensureClusterRole(
@@ -356,7 +356,7 @@ func (r *Reconciler) ensureClusterRole(
 			!cmp.Equal(existing.AggregationRule, generated.AggregationRule) {
 			existing.Rules = generated.Rules
 			existing.AggregationRule = generated.AggregationRule
-			if err := r.Client.Patch(ctx, existing, client.MergeFrom(old)); err != nil {
+			if err := r.Patch(ctx, existing, client.MergeFrom(old)); err != nil {
 				return false, existing, fmt.Errorf("failed patching ControlPlane's ClusterRole %s: %w", existing.Name, err)
 			}
 			return true, existing, nil
@@ -364,7 +364,7 @@ func (r *Reconciler) ensureClusterRole(
 		return false, existing, nil
 	}
 
-	return true, generated, r.Client.Create(ctx, generated)
+	return true, generated, r.Create(ctx, generated)
 }
 
 func (r *Reconciler) ensureClusterRoleBinding(
@@ -403,7 +403,7 @@ func (r *Reconciler) ensureClusterRoleBinding(
 				"old_cluster_role", existing.RoleRef.Name,
 				"new_cluster_role", clusterRoleName,
 			)
-			if err := r.Client.Delete(ctx, existing); err != nil {
+			if err := r.Delete(ctx, existing); err != nil {
 				return false, nil, err
 			}
 			return false, nil, errors.New("name of ClusterRole changed, out of date ClusterRoleBinding deleted")
@@ -422,7 +422,7 @@ func (r *Reconciler) ensureClusterRoleBinding(
 		}
 
 		if updated || updatedServiceAccount {
-			if err := r.Client.Patch(ctx, existing, client.MergeFrom(old)); err != nil {
+			if err := r.Patch(ctx, existing, client.MergeFrom(old)); err != nil {
 				return false, existing, fmt.Errorf("failed patching ControlPlane's ClusterRoleBinding %s: %w", existing.Name, err)
 			}
 			return true, existing, nil
@@ -431,7 +431,7 @@ func (r *Reconciler) ensureClusterRoleBinding(
 
 	}
 
-	return true, generated, r.Client.Create(ctx, generated)
+	return true, generated, r.Create(ctx, generated)
 }
 
 // ensureAdminMTLSCertificateSecret ensures that a Secret is created with the certificate for mTLS communication between the
@@ -539,7 +539,7 @@ func (r *Reconciler) ensureOwnedClusterRolesDeleted(
 		errs    []error
 	)
 	for i := range clusterRoles {
-		if err = r.Client.Delete(ctx, &clusterRoles[i]); client.IgnoreNotFound(err) != nil {
+		if err = r.Delete(ctx, &clusterRoles[i]); client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
 			continue
 		}
@@ -570,7 +570,7 @@ func (r *Reconciler) ensureOwnedClusterRoleBindingsDeleted(
 		errs    []error
 	)
 	for i := range clusterRoleBindings {
-		if err = r.Client.Delete(ctx, &clusterRoleBindings[i]); client.IgnoreNotFound(err) != nil {
+		if err = r.Delete(ctx, &clusterRoleBindings[i]); client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
 			continue
 		}
@@ -597,7 +597,7 @@ func (r *Reconciler) ensureOwnedValidatingWebhookConfigurationDeleted(ctx contex
 		errs    []error
 	)
 	for i := range validatingWebhookConfigurations {
-		if err = r.Client.Delete(ctx, &validatingWebhookConfigurations[i]); client.IgnoreNotFound(err) != nil {
+		if err = r.Delete(ctx, &validatingWebhookConfigurations[i]); client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
 			continue
 		}
@@ -756,11 +756,11 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 
 		if updated {
 			log.Debug(logger, "patching existing ValidatingWebhookConfiguration")
-			return op.Updated, r.Client.Patch(ctx, &webhookConfiguration, client.MergeFrom(old))
+			return op.Updated, r.Patch(ctx, &webhookConfiguration, client.MergeFrom(old))
 		}
 
 		return op.Noop, nil
 	}
 
-	return op.Created, r.Client.Create(ctx, generatedWebhookConfiguration)
+	return op.Created, r.Create(ctx, generatedWebhookConfiguration)
 }

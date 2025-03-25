@@ -57,7 +57,7 @@ func NewControlPlaneCountProvider(dyn dynamic.Interface, restMapper meta.RESTMap
 	)
 }
 
-// NewControlPlaneCountProvider creates a provider for number of dataplanes in the cluster.
+// NewAIgatewayCountProvider creates a provider for number of dataplanes in the cluster.
 func NewAIgatewayCountProvider(dyn dynamic.Interface, restMapper meta.RESTMapper) (provider.Provider, error) {
 	return provider.NewK8sObjectCountProviderWithRESTMapper(
 		AIGatewayK8sResourceName, AIGatewayCountKind, dyn, operatorv1alpha1.AIGatewayGVR(), restMapper,
@@ -102,11 +102,11 @@ func NewDataPlaneRequestedReplicasCountProvider(cl client.Client) (provider.Prov
 		}
 		count := 0
 		for _, dp := range dataPlanes.Items {
-			if dp.Spec.DataPlaneOptions.Deployment.Replicas != nil {
-				count += int(*dp.Spec.DataPlaneOptions.Deployment.Replicas)
+			if dp.Spec.Deployment.Replicas != nil {
+				count += int(*dp.Spec.Deployment.Replicas)
 				continue
 			}
-			if scaling := dp.Spec.DataPlaneOptions.Deployment.Scaling; scaling != nil {
+			if scaling := dp.Spec.Deployment.Scaling; scaling != nil {
 				if scaling.HorizontalScaling != nil {
 					// Take the upper bound of the scaling range as the requested replicas count.
 					count += int(scaling.HorizontalScaling.MaxReplicas)
@@ -130,8 +130,8 @@ func NewControlPlaneRequestedReplicasCountProvider(cl client.Client) (provider.P
 		}
 		count := 0
 		for _, dp := range controlPlanes.Items {
-			if dp.Spec.ControlPlaneOptions.Deployment.Replicas != nil {
-				count += int(*dp.Spec.ControlPlaneOptions.Deployment.Replicas)
+			if dp.Spec.Deployment.Replicas != nil {
+				count += int(*dp.Spec.Deployment.Replicas)
 				continue
 			}
 			// No replicas defined, count it as 1 replica.

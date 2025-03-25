@@ -103,7 +103,7 @@ func TestKonnectExtension(t *testing.T) {
 		kr := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, ks,
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongRoute)
-				s.Spec.KongRouteAPISpec.Paths = []string{"/test"}
+				s.Spec.Paths = []string{"/test"}
 			},
 		)
 		t.Logf("Waiting for KongRoute to be updated with Konnect ID")

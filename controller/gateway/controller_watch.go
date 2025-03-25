@@ -64,7 +64,7 @@ func (r *Reconciler) gatewayConfigurationMatchesController(obj client.Object) bo
 	ctx := context.Background()
 
 	gatewayClassList := new(gatewayv1.GatewayClassList)
-	if err := r.Client.List(ctx, gatewayClassList); err != nil {
+	if err := r.List(ctx, gatewayClassList); err != nil {
 		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
 			"failed to run predicate function",
@@ -102,7 +102,7 @@ func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client
 	}
 
 	gateways := new(gatewayv1.GatewayList)
-	if err := r.Client.List(ctx, gateways); err != nil {
+	if err := r.List(ctx, gateways); err != nil {
 		ctrllog.FromContext(ctx).Error(err, "could not list gateways in map func")
 		return
 	}
@@ -156,7 +156,7 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 	}
 
 	gatewayClassList := new(gatewayv1.GatewayClassList)
-	if err := r.Client.List(ctx, gatewayClassList); err != nil {
+	if err := r.List(ctx, gatewayClassList); err != nil {
 		ctrllog.FromContext(ctx).Error(
 			fmt.Errorf("unexpected error occurred while listing GatewayClass resources"),
 			"failed to run map funcs",
@@ -176,7 +176,7 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 	}
 
 	gatewayList := new(gatewayv1.GatewayList)
-	if err := r.Client.List(ctx, gatewayList); err != nil {
+	if err := r.List(ctx, gatewayList); err != nil {
 		ctrllog.FromContext(ctx).Error(
 			fmt.Errorf("unexpected error occurred while listing Gateway resources"),
 			"failed to run map funcs",
@@ -214,7 +214,7 @@ func (r *Reconciler) listReferenceGrantsForGateway(ctx context.Context, obj clie
 		return nil
 	}
 	gateways := &gatewayv1.GatewayList{}
-	if err := r.Client.List(ctx, gateways); err != nil {
+	if err := r.List(ctx, gateways); err != nil {
 		logger.Error(err, "Failed to list gateways in watch", "referencegrant", grant.Name)
 		return nil
 	}
@@ -244,7 +244,7 @@ func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj cli
 		return nil
 	}
 	gateways := &gatewayv1.GatewayList{}
-	if err := r.Client.List(ctx, gateways, &client.ListOptions{
+	if err := r.List(ctx, gateways, &client.ListOptions{
 		Namespace: ns.Name,
 	}); err != nil {
 		logger.Error(err, "Failed to list gateways in watch", "namespace", ns.Name)
@@ -294,7 +294,7 @@ func (r *Reconciler) listGatewaysAttachedByHTTPRoute(ctx context.Context, obj cl
 		return nil
 	}
 	gateways := &gatewayv1.GatewayList{}
-	if err := r.Client.List(ctx, gateways); err != nil {
+	if err := r.List(ctx, gateways); err != nil {
 		logger.Error(err, "Failed to list gateways in watch", "HTTPRoute", httpRoute.Name)
 		return nil
 	}

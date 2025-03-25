@@ -92,7 +92,7 @@ func TestKongService(t *testing.T) {
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongService)
-				s.Spec.KongServiceAPISpec.Host = host
+				s.Spec.Host = host
 			},
 		)
 
@@ -198,7 +198,7 @@ func TestKongService(t *testing.T) {
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongService)
-				s.Spec.KongServiceAPISpec.Host = host
+				s.Spec.Host = host
 			},
 		)
 		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
@@ -262,7 +262,7 @@ func TestKongService(t *testing.T) {
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongService)
-				s.Spec.KongServiceAPISpec.Host = host
+				s.Spec.Host = host
 			},
 			deploy.WithKonnectIDControlPlaneRef(cp),
 		)
@@ -317,7 +317,7 @@ func TestKongService(t *testing.T) {
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongService)
-				s.Spec.KongServiceAPISpec.Host = host
+				s.Spec.Host = host
 			},
 		)
 
@@ -369,7 +369,7 @@ func TestKongService(t *testing.T) {
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongService)
-				s.Spec.KongServiceAPISpec.Host = host
+				s.Spec.Host = host
 			},
 		)
 

@@ -12,7 +12,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// ApplyDataPlaneKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it
+// ApplyControlPlaneKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it
 // fetches the referenced extension and applies the necessary changes to the DataPlane spec.
 func ApplyControlPlaneKonnectExtension(ctx context.Context, cl client.Client, controlPlane *operatorv1beta1.ControlPlane) (bool, error) {
 	var konnectExtension *konnectv1alpha1.KonnectExtension

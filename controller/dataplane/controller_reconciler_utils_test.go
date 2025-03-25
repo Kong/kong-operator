@@ -166,8 +166,8 @@ func TestDeploymentBuilder(t *testing.T) {
 				// would conflict with the secret volume source field.
 				k8sresources.SetDefaultsVolume(&certificateVolume)
 				certificateVolume.Name = consts.ClusterCertificateVolume
-				certificateVolume.VolumeSource.Secret.SecretName = "certificate"
-				certificateVolume.VolumeSource.Secret.Items = []corev1.KeyToPath{
+				certificateVolume.Secret.SecretName = "certificate"
+				certificateVolume.Secret.Items = []corev1.KeyToPath{
 					{
 						Key:  "tls.crt",
 						Path: "tls.crt",
@@ -189,7 +189,7 @@ func TestDeploymentBuilder(t *testing.T) {
 				// would conflict with the secret volume source field.
 				k8sresources.SetDefaultsVolume(&testVolume)
 				testVolume.Name = "test-volume"
-				testVolume.VolumeSource.Secret.SecretName = "test-secret"
+				testVolume.Secret.SecretName = "test-secret"
 
 				require.Equal(t, []corev1.VolumeMount{
 					{
@@ -228,7 +228,7 @@ func TestDeploymentBuilder(t *testing.T) {
 					IntVal: 5,
 				}
 				standardDeployment := appsv1.Deployment(*existingDeployment)
-				require.NoError(t, reconciler.Client.Create(ctx, &standardDeployment))
+				require.NoError(t, reconciler.Create(ctx, &standardDeployment))
 
 				deploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
@@ -291,7 +291,7 @@ func TestDeploymentBuilder(t *testing.T) {
 				dataPlane.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Resources.Limits[corev1.ResourceCPU] = resource.MustParse("4")
 
 				standardDeployment := appsv1.Deployment(*existingDeployment)
-				require.NoError(t, reconciler.Client.Create(ctx, &standardDeployment))
+				require.NoError(t, reconciler.Create(ctx, &standardDeployment))
 
 				deploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
@@ -362,7 +362,7 @@ func TestDeploymentBuilder(t *testing.T) {
 				dataPlane.Spec.Deployment.PodTemplateSpec.Spec.Affinity = &corev1.Affinity{}
 
 				standardDeployment := appsv1.Deployment(*existingDeployment)
-				require.NoError(t, reconciler.Client.Create(ctx, &standardDeployment))
+				require.NoError(t, reconciler.Create(ctx, &standardDeployment))
 
 				deploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
@@ -373,7 +373,7 @@ func TestDeploymentBuilder(t *testing.T) {
 
 				assert.Equal(t, op.Updated, res, "the DataPlane deployment should be updated to get the affinity set to the dataplane's spec")
 				assert.Len(t, deployment.Spec.Template.Spec.Containers, 1)
-				assert.Equal(t, dataPlane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Affinity.PodAntiAffinity, deployment.Spec.Template.Spec.Affinity.PodAntiAffinity)
+				assert.Equal(t, dataPlane.Spec.Deployment.PodTemplateSpec.Spec.Affinity.PodAntiAffinity, deployment.Spec.Template.Spec.Affinity.PodAntiAffinity)
 			},
 		},
 		{
@@ -427,7 +427,7 @@ func TestDeploymentBuilder(t *testing.T) {
 					},
 				}
 
-				require.NoError(t, reconciler.Client.Update(ctx, existingDeployment))
+				require.NoError(t, reconciler.Update(ctx, existingDeployment))
 
 				secondDeploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
@@ -492,7 +492,7 @@ func TestDeploymentBuilder(t *testing.T) {
 					},
 				}
 
-				require.NoError(t, reconciler.Client.Update(ctx, existingDeployment))
+				require.NoError(t, reconciler.Update(ctx, existingDeployment))
 
 				secondDeploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).

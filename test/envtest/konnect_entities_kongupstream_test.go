@@ -78,7 +78,7 @@ func TestKongUpstream(t *testing.T) {
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongUpstream)
-				s.Spec.KongUpstreamAPISpec.Algorithm = sdkkonnectcomp.UpstreamAlgorithmRoundRobin.ToPointer()
+				s.Spec.Algorithm = sdkkonnectcomp.UpstreamAlgorithmRoundRobin.ToPointer()
 			},
 		)
 
@@ -152,7 +152,7 @@ func TestKongUpstream(t *testing.T) {
 			deploy.WithKonnectIDControlPlaneRef(cp),
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongUpstream)
-				s.Spec.KongUpstreamAPISpec.Algorithm = sdkkonnectcomp.UpstreamAlgorithmRoundRobin.ToPointer()
+				s.Spec.Algorithm = sdkkonnectcomp.UpstreamAlgorithmRoundRobin.ToPointer()
 			},
 		)
 

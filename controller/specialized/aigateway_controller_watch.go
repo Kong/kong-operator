@@ -63,7 +63,7 @@ func (r *AIGatewayReconciler) listAIGatewaysForGatewayClass(ctx context.Context,
 	}
 
 	aigateways := new(operatorv1alpha1.AIGatewayList)
-	if err := r.Client.List(ctx, aigateways); err != nil {
+	if err := r.List(ctx, aigateways); err != nil {
 		ctrllog.FromContext(ctx).Error(err, "could not list aigateways in map func")
 		return
 	}

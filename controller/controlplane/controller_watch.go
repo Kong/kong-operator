@@ -76,7 +76,7 @@ func (r *Reconciler) validatingWebhookConfigurationHasControlPlaneOwner(obj clie
 // The check is performed through the managed-by-name label.
 func (r *Reconciler) ClusterScopedObjHasControlPlaneOwner(ctx context.Context, obj client.Object) bool {
 	var controlplaneList operatorv1beta1.ControlPlaneList
-	if err := r.Client.List(ctx, &controlplaneList); err != nil {
+	if err := r.List(ctx, &controlplaneList); err != nil {
 		// filtering here is just an optimization. If we fail here it's most likely because of some failure
 		// of the Kubernetes API and it's technically better to enqueue the object
 		// than to drop it for eventual consistency during cluster outages.
@@ -141,7 +141,7 @@ func (r *Reconciler) getControlPlaneForValidatingWebhookConfiguration(ctx contex
 
 func (r *Reconciler) getControlPlaneRequestFromManagedByNameLabel(ctx context.Context, obj client.Object) (recs []reconcile.Request) {
 	controlplanes := &operatorv1beta1.ControlPlaneList{}
-	if err := r.Client.List(ctx, controlplanes); err != nil {
+	if err := r.List(ctx, controlplanes); err != nil {
 		ctrllog.FromContext(ctx).Error(err, "could not list controlplanes in map func")
 		return
 	}
@@ -202,7 +202,7 @@ func (r *Reconciler) getControlPlanesFromDataPlaneDeployment(ctx context.Context
 	}
 
 	dataPlane := &operatorv1beta1.DataPlane{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: deployment.Namespace, Name: dataPlaneOwnerName}, dataPlane); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Namespace: deployment.Namespace, Name: dataPlaneOwnerName}, dataPlane); err != nil {
 		if !k8serrors.IsNotFound(err) {
 			ctrllog.FromContext(ctx).Error(err, "failed to map ControlPlane on DataPlane Deployment")
 		}
@@ -223,7 +223,7 @@ func (r *Reconciler) getControlPlanesFromDataPlane(ctx context.Context, obj clie
 	}
 
 	controlPlaneList := &operatorv1beta1.ControlPlaneList{}
-	if err := r.Client.List(ctx, controlPlaneList,
+	if err := r.List(ctx, controlPlaneList,
 		client.InNamespace(dataplane.Namespace),
 		client.MatchingFields{
 			index.DataPlaneNameIndex: dataplane.Name,
