@@ -92,7 +92,7 @@ func TestCreateKongVault(t *testing.T) {
 			},
 			expectedErr: true,
 			assertions: func(t *testing.T, vault *configurationv1alpha1.KongVault) {
-				assert.Equal(t, "", vault.GetKonnectStatus().GetKonnectID())
+				assert.Empty(t, vault.GetKonnectStatus().GetKonnectID())
 			},
 		},
 		{
@@ -130,7 +130,7 @@ func TestCreateKongVault(t *testing.T) {
 			},
 			expectedErr: true,
 			assertions: func(t *testing.T, vault *configurationv1alpha1.KongVault) {
-				assert.Equal(t, "", vault.GetKonnectStatus().GetKonnectID())
+				assert.Empty(t, vault.GetKonnectStatus().GetKonnectID())
 			},
 		},
 	}

@@ -1,195 +1,197 @@
+version: "2"
 run:
   timeout: 8m
 linters:
   enable:
-  - asciicheck
-  - bodyclose
-  - copyloopvar
-  - dogsled
-  - durationcheck
-  - errcheck
-  - errorlint
-  - exhaustive
-  - forbidigo
-  - gci
-  - gocritic
-  - gofmt
-  - goimports
-  - gomodguard
-  - gosec
-  - gosimple
-  - govet
-  - importas
-  - ineffassign
-  - misspell
-  - nakedret
-  - nilerr
-  - nolintlint
-  - predeclared
-  - revive
-  - staticcheck
-  - typecheck
-  - testifylint
-  - unconvert
-  - unparam
-  - unused
-  - usetesting
-  - wastedassign
-  - loggercheck
-linters-settings:
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/kong/kubernetes-configuration)
-      - prefix(github.com/kong/gateway-operator)
-  govet:
-    enable-all: true # To have checks like e.g. unusedwrite.
-    disable:
-      - fieldalignment
-      - shadow
-  importas:
-    no-unaliased: true
-    alias:
-      - pkg: k8s.io/api/([a-z])/(v[\w\d]+)
-        alias: ${1}${2}
-      - pkg: k8s.io/apimachinery/pkg/apis/meta/v1
-        alias: metav1
-      - pkg: k8s.io/apimachinery/pkg/watch
-        alias: apiwatch
-
-      - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
-        alias: gateway${1}
-
-      - pkg: sigs.k8s.io/controller-runtime/pkg/log
-        alias: ctrllog
-      
-      - pkg: github.com/kong/kubernetes-configuration/api/common/(v[\w\d]+)
-        alias: common${1}
-      - pkg: github.com/kong/kubernetes-configuration/api/gateway-operator/(v[\w\d]+)
-        alias: operator${1}
-      - pkg: github.com/kong/kubernetes-configuration/api/configuration/(v[\w\d]+)
-        alias: configuration${1}
-      - pkg: github.com/kong/kubernetes-configuration/api/incubator/(v[\w\d]+)
-        alias: incubator${1}
-      - pkg: github.com/kong/kubernetes-configuration/api/konnect/(v[\w\d]+)
-        alias: konnect${1}
-
-      - pkg: github.com/Kong/sdk-konnect-go/models/components
-        alias: sdkkonnectcomp
-      - pkg: github.com/Kong/sdk-konnect-go/models/operations
-        alias: sdkkonnectops
-      - pkg: github.com/Kong/sdk-konnect-go/models/sdkerrors
-        alias: sdkkonnecterrs
-
-      - pkg: github.com/kong/gateway-operator/controller/konnect/ops/sdk
-        alias: sdkops
-      - pkg: github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks
-        alias: sdkmocks
-      - pkg: github.com/kong/gateway-operator/internal/types
-        alias: gwtypes
-      - pkg: "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-        alias: k8sutils
-      - pkg: "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
-        alias: k8sresources
-
-  revive:
+    - asciicheck
+    - bodyclose
+    - copyloopvar
+    - dogsled
+    - durationcheck
+    - errorlint
+    - exhaustive
+    - forbidigo
+    - gocritic
+    - gomodguard
+    - gosec
+    - importas
+    - loggercheck
+    - misspell
+    - nakedret
+    - nilerr
+    - nolintlint
+    - predeclared
+    - revive
+    - testifylint
+    - unconvert
+    - unparam
+    - usetesting
+    - wastedassign
+  settings:
+    staticcheck:
+      checks:
+        - all
+        # Incorrect or missing package comment.
+        # https://staticcheck.dev/docs/checks/#ST1000
+        - -ST1000
+        # Incorrectly formatted error string.
+        # https://staticcheck.dev/docs/checks/#ST1005
+        - -ST1005
+    exhaustive:
+      default-signifies-exhaustive: true
+    forbidigo:
+      forbid:
+        - pattern: ^.*Dataplane[^G].*$
+          msg: Please use camel case 'DataPlane' instead of 'Dataplane'
+        - pattern: ^.*Controlplane.*$
+          msg: Please use camel case 'ControlPlane' instead of 'Controlplane'
+    gomodguard:
+      blocked:
+        modules:
+          - golang.org/x/exp:
+              recommendations:
+                - maps
+                - slices
+                - github.com/samber/lo
+          - github.com/pkg/errors:
+              recommendations:
+                - fmt
+                - errors
+          - github.com/sirupsen/logrus:
+              recommendations:
+                - sigs.k8s.io/controller-runtime/pkg/log
+                - go.uber.org/zap/zapcore
+    govet:
+      disable:
+        - fieldalignment
+        - shadow
+      enable-all: true
+    importas:
+      alias:
+        - pkg: k8s.io/api/([a-z])/(v[\w\d]+)
+          alias: ${1}${2}
+        - pkg: k8s.io/apimachinery/pkg/apis/meta/v1
+          alias: metav1
+        - pkg: k8s.io/apimachinery/pkg/watch
+          alias: apiwatch
+        - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
+          alias: gateway${1}
+        - pkg: sigs.k8s.io/controller-runtime/pkg/log
+          alias: ctrllog
+        - pkg: github.com/kong/kubernetes-configuration/api/common/(v[\w\d]+)
+          alias: common${1}
+        - pkg: github.com/kong/kubernetes-configuration/api/gateway-operator/(v[\w\d]+)
+          alias: operator${1}
+        - pkg: github.com/kong/kubernetes-configuration/api/configuration/(v[\w\d]+)
+          alias: configuration${1}
+        - pkg: github.com/kong/kubernetes-configuration/api/incubator/(v[\w\d]+)
+          alias: incubator${1}
+        - pkg: github.com/kong/kubernetes-configuration/api/konnect/(v[\w\d]+)
+          alias: konnect${1}
+        - pkg: github.com/Kong/sdk-konnect-go/models/components
+          alias: sdkkonnectcomp
+        - pkg: github.com/Kong/sdk-konnect-go/models/operations
+          alias: sdkkonnectops
+        - pkg: github.com/Kong/sdk-konnect-go/models/sdkerrors
+          alias: sdkkonnecterrs
+        - pkg: github.com/kong/gateway-operator/controller/konnect/ops/sdk
+          alias: sdkops
+        - pkg: github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks
+          alias: sdkmocks
+        - pkg: github.com/kong/gateway-operator/internal/types
+          alias: gwtypes
+        - pkg: github.com/kong/gateway-operator/pkg/utils/kubernetes
+          alias: k8sutils
+        - pkg: github.com/kong/gateway-operator/pkg/utils/kubernetes/resources
+          alias: k8sresources
+      no-unaliased: true
+    revive:
+      rules:
+        - name: errorf
+          severity: warning
+          disabled: false
+        - name: error-strings
+          severity: warning
+          disabled: false
+        - name: error-naming
+          severity: warning
+          disabled: false
+        - name: duplicated-imports
+          severity: warning
+          disabled: false
+        - name: empty-block
+          severity: warning
+          disabled: false
+        - name: exported
+          arguments:
+            - checkPrivateReceivers
+            - disableStutteringCheck
+          severity: warning
+          disabled: false
+        - name: context-as-argument
+          disabled: true
+    testifylint:
+      enable-all: true
+      disable:
+        - error-is-as
+    usetesting:
+      os-temp-dir: true
+  exclusions:
+    generated: lax
+    presets:
+      - common-false-positives
+      - legacy
+      - std-error-handling
     rules:
-      - name: errorf
-        severity: warning
-        disabled: false
-      - name: error-strings
-        severity: warning
-        disabled: false
-      - name: error-naming
-        severity: warning
-        disabled: false
-      - name: duplicated-imports
-        severity: warning
-        disabled: false
-      - name: empty-block
-        severity: warning
-        disabled: false
-      - name: exported
-        severity: warning
-        disabled: false
-        arguments:
-          - "checkPrivateReceivers"
-          # TODO: enable this when ready to refactor exported types that stutter at call site.
-          - "disableStutteringCheck"
-      - name: context-as-argument
-        # TODO: re-add this rule after https://github.com/golangci/golangci-lint/issues/3280
-        # is resolved and released.
-        # arguments:
-        #   - "allowTypesBefore": "*testing.T"
-        disabled: true
-  exhaustive:
-    default-signifies-exhaustive: true
-  gomodguard:
-    blocked:
-      modules:
-      - golang.org/x/exp:
-         recommendations:
-          - maps
-          - slices
-          - github.com/samber/lo
-      - github.com/pkg/errors:
-          recommendations:
-          - fmt
-          - errors
-      - github.com/sirupsen/logrus:
-          recommendations:
-          - sigs.k8s.io/controller-runtime/pkg/log
-          - go.uber.org/zap/zapcore
-  forbidigo:
-    forbid:
-      # Add DataplaneG (for DataplaneGroup since there's no lookahead support here)
-      # exception as that's coming from the sdk and we have no control over it.
-      - p: ^.*Dataplane[^G].*$
-        msg: "Please use camel case 'DataPlane' instead of 'Dataplane'"
-      - p: ^.*Controlplane.*$
-        msg: "Please use camel case 'ControlPlane' instead of 'Controlplane'"
-  usetesting:
-    os-temp-dir: true
-  testifylint:
-    enable-all: true
-    disable:
-      # Incorrectly converts assert.CollectT's Errorf to ErrorIsf
-      # https://github.com/Antonboom/testifylint/issues/231
-      - error-is-as
+      - linters:
+          - revive
+        path: internal/
+        text: 'exported: exported'
+      - linters:
+          - revive
+        path: test/integration
+        text: 'exported: exported'
+      - linters:
+          - revive
+        path: test/e2e
+        text: 'exported: exported'
+      - linters:
+          - revive
+        path: controller/konnect/ops/.*_mock\.go
+        text: 'exported: exported'
+      - linters:
+          - forbidigo
+        text: use of `.*(Create|Delete)Dataplane.+` forbidden because "Please use camel case
+      - linters:
+          - gosec
+        path: .*_test\.go
+        text: Use of weak random number generator
+    paths:
+      - pkg/clientset
+      - config/
+      - third_party$
+      - builtin$
+      - examples$
 issues:
   max-same-issues: 0
   fix: true
-  exclude-dirs:
-    - pkg/clientset
-    - config/
-  include:
-    - EXC0012
-  exclude-rules:
-    # Exclude checking exported comments in internal/ which cannot be used from outside.
-    - path: internal/
-      linters:
-        - revive
-      text: "exported: exported"
-    # Test cases are self-explanatory, thus no need a docstring.
-    - path: test/integration
-      linters:
-        - revive
-      text: "exported: exported"
-    - path: test/e2e
-      linters:
-        - revive
-      text: "exported: exported"
-    # Generated mock SDKs does not need comments on generated methods.
-    - path: controller/konnect/ops/.*_mock\.go
-      linters:
-        - revive
-      text: "exported: exported"
-    # Methods imported from the SDK do not use the camel case naming convention for DP and we have no control over it.
-    - linters:
-        - forbidigo
-      text: 'use of `.*(Create|Delete)Dataplane.+` forbidden because "Please use camel case'
-    - path: .*_test\.go
-      linters:
-        - gosec
-      text: 'Use of weak random number generator'
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/kong/kubernetes-configuration)
+        - prefix(github.com/kong/gateway-operator)
+  exclusions:
+    generated: lax
+    paths:
+      - pkg/clientset
+      - config/
+      - third_party$
+      - builtin$
+      - examples$

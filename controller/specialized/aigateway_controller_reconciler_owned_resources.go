@@ -22,7 +22,7 @@ import (
 // AIGatewayReconciler - Owned Resource Create/Update
 // -----------------------------------------------------------------------------
 
-func (r *AIGatewayReconciler) createOrUpdateHttpRoute(
+func (r *AIGatewayReconciler) createOrUpdateHTTPRoute(
 	ctx context.Context,
 	logger logr.Logger,
 	httpRoute *gatewayv1.HTTPRoute,
@@ -33,14 +33,14 @@ func (r *AIGatewayReconciler) createOrUpdateHttpRoute(
 	//
 	// See: https://github.com/Kong/gateway-operator/issues/137
 	found := &gatewayv1.HTTPRoute{}
-	err := r.Client.Get(ctx, types.NamespacedName{
+	err := r.Get(ctx, types.NamespacedName{
 		Name:      httpRoute.Name,
 		Namespace: httpRoute.Namespace,
 	}, found)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			log.Info(logger, "creating httproute for aigateway")
-			return true, r.Client.Create(ctx, httpRoute)
+			return true, r.Create(ctx, httpRoute)
 		}
 		return false, err
 	}
@@ -63,14 +63,14 @@ func (r *AIGatewayReconciler) createOrUpdatePlugin(
 	//
 	// See: https://github.com/Kong/gateway-operator/issues/137
 	found := &configurationv1.KongPlugin{}
-	err := r.Client.Get(ctx, types.NamespacedName{
+	err := r.Get(ctx, types.NamespacedName{
 		Name:      kongPlugin.Name,
 		Namespace: kongPlugin.Namespace,
 	}, found)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			log.Info(logger, "creating plugin for aigateway")
-			return true, r.Client.Create(ctx, kongPlugin)
+			return true, r.Create(ctx, kongPlugin)
 		}
 		return false, err
 	}
@@ -93,14 +93,14 @@ func (r *AIGatewayReconciler) createOrUpdateGateway(
 	// TODO - use GenerateName
 	//
 	// See: https://github.com/Kong/gateway-operator/issues/137
-	err := r.Client.Get(ctx, types.NamespacedName{
+	err := r.Get(ctx, types.NamespacedName{
 		Name:      gateway.Name,
 		Namespace: gateway.Namespace,
 	}, found)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			log.Info(logger, "creating gateway for aigateway")
-			return true, r.Client.Create(ctx, gateway)
+			return true, r.Create(ctx, gateway)
 		}
 
 		return false, err
@@ -124,14 +124,14 @@ func (r *AIGatewayReconciler) createOrUpdateSvc(
 	//
 	// See: https://github.com/Kong/gateway-operator/issues/137
 	found := &corev1.Service{}
-	err := r.Client.Get(ctx, types.NamespacedName{
+	err := r.Get(ctx, types.NamespacedName{
 		Name:      service.Name,
 		Namespace: service.Namespace,
 	}, found)
 	if err != nil {
 		if k8serrors.IsNotFound(err) {
 			log.Info(logger, "creating service for aigateway")
-			return true, r.Client.Create(ctx, service)
+			return true, r.Create(ctx, service)
 		}
 
 		return false, err
@@ -210,7 +210,7 @@ func (r *AIGatewayReconciler) configurePlugins(
 	}
 
 	credentialSecret := &corev1.Secret{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: credentialSecretNamespace, Name: credentialSecretName}, credentialSecret); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Namespace: credentialSecretNamespace, Name: credentialSecretName}, credentialSecret); err != nil {
 		if k8serrors.IsNotFound(err) {
 			return changes, nil
 		}
@@ -267,7 +267,7 @@ func (r *AIGatewayReconciler) configurePlugins(
 			plugins = append(plugins, decoratorPlugin.Name)
 		}
 		httpRoute := aiCloudGatewayToHTTPRoute(&cloudHostedLLM, aiGateway, aiGatewaySinkService, plugins)
-		changed, err = r.createOrUpdateHttpRoute(ctx, logger, httpRoute)
+		changed, err = r.createOrUpdateHTTPRoute(ctx, logger, httpRoute)
 		if changed {
 			changes = true
 		}

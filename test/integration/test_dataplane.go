@@ -316,7 +316,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	t.Logf("updating TEST_ENV in dataplane")
 	require.Eventually(t,
 		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
-			container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+			container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 			require.NotNil(t, container)
 			container.Env = []corev1.EnvVar{
 				{
@@ -361,7 +361,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	t.Run("dataplane is not Ready when the underlying deployment changes state to not Ready", func(t *testing.T) {
 		require.Eventually(t,
 			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
-				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 				require.NotNil(t, container)
 				container.ReadinessProbe = &corev1.Probe{
 					InitialDelaySeconds: 0,
@@ -399,7 +399,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	t.Run("dataplane gets Ready when the underlying deployment changes state to Ready", func(t *testing.T) {
 		require.Eventually(t,
 			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
-				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 				require.NotNil(t, container)
 				container.ReadinessProbe = &corev1.Probe{
 					InitialDelaySeconds: 0,
@@ -438,7 +438,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	t.Run("dataplane Ready condition gets properly update with correct ObservedGeneration", func(t *testing.T) {
 		require.Eventually(t,
 			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
-				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 				require.NotNil(t, container)
 				container.StartupProbe = &corev1.Probe{
 					InitialDelaySeconds: 0,
@@ -475,7 +475,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 	t.Run("dataplane gets properly updated with a ReadinessProbe using port names instead of numbers", func(t *testing.T) {
 		require.Eventually(t,
 			testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
-				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 				require.NotNil(t, container)
 				container.StartupProbe = &corev1.Probe{
 					InitialDelaySeconds: 0,
@@ -796,7 +796,7 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	require.True(t, volMounts[0].ReadOnly, "proxy container should mount 'test-volume' in read only mode")
 
 	t.Log("updating volumes and volume mounts in dataplane spec to verify volumes could be reconciled")
-	dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Volumes[0] = corev1.Volume{
+	dataplane.Spec.Deployment.PodTemplateSpec.Spec.Volumes[0] = corev1.Volume{
 		Name: "test-volume-1",
 		VolumeSource: corev1.VolumeSource{
 			Secret: &corev1.SecretVolumeSource{

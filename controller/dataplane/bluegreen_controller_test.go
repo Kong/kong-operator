@@ -211,7 +211,7 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 
 				dp := &operatorv1beta1.DataPlane{}
 				dpNN := types.NamespacedName{Namespace: dataplaneReq.Namespace, Name: dataplaneReq.Name}
-				require.NoError(t, reconciler.Client.Get(ctx, dpNN, dp))
+				require.NoError(t, reconciler.Get(ctx, dpNN, dp))
 				require.Equal(t, "test-proxy-service", dp.Status.Service)
 				require.Equal(t, []operatorv1beta1.Address{
 					// This currently assumes that we sort the addresses in a way
@@ -241,7 +241,7 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
-				require.NoError(t, reconciler.Client.Get(ctx, dpNN, dp))
+				require.NoError(t, reconciler.Get(ctx, dpNN, dp))
 				require.NotNil(t, dp.Status.RolloutStatus)
 				require.Len(t, dp.Status.RolloutStatus.Conditions, 1)
 				require.EqualValues(t, kcfgdataplane.DataPlaneConditionTypeRolledOut, dp.Status.RolloutStatus.Conditions[0].Type)
@@ -256,7 +256,7 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 				)
 				// We're not running these tests against an API server to let's just bump the generation ourselves.
 				dp.Generation++
-				require.NoError(t, reconciler.Client.Update(ctx, dp))
+				require.NoError(t, reconciler.Update(ctx, dp))
 
 				// Run reconciliation to advance the rollout.
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
@@ -278,7 +278,7 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 				)
 				require.NoError(t, err)
 				previewDeployments := &appsv1.DeploymentList{}
-				require.NoError(t, reconciler.Client.List(ctx, previewDeployments, &client.ListOptions{
+				require.NoError(t, reconciler.List(ctx, previewDeployments, &client.ListOptions{
 					LabelSelector: labels.NewSelector().Add(*previewDeploymentLabelReq),
 				}))
 				require.Len(t, previewDeployments.Items, 1)
@@ -309,7 +309,7 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
-				require.NoError(t, reconciler.Client.Get(ctx, dpNN, dp))
+				require.NoError(t, reconciler.Get(ctx, dpNN, dp))
 
 				t.Logf("DataPlane status should have the Ready status condition set to false")
 				require.Len(t, dp.Status.Conditions, 1)
@@ -575,7 +575,7 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 			// generate an existing "preview ingress service" for the test dataplane.
 			existingSvc, err := k8sresources.GenerateNewIngressServiceForDataPlane(tc.dataplane,
 				func(svc *corev1.Service) {
-					svc.ObjectMeta.Labels[consts.DataPlaneServiceStateLabel] = consts.DataPlaneStateLabelValuePreview
+					svc.Labels[consts.DataPlaneServiceStateLabel] = consts.DataPlaneStateLabelValuePreview
 				})
 			require.NoError(t, err)
 			k8sutils.SetOwnerForObject(existingSvc, tc.dataplane)

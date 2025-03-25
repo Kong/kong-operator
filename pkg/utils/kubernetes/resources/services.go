@@ -125,7 +125,7 @@ func ServiceWithLabel(k, v string) ServiceOpt {
 	}
 }
 
-// labelSelectorFromDataPlaneStatusSelectorServiceOpt returns a ServiceOpt function
+// LabelSelectorFromDataPlaneStatusSelectorServiceOpt returns a ServiceOpt function
 // which will set Service's selector based on provided DataPlane's Status selector
 // field.
 func LabelSelectorFromDataPlaneStatusSelectorServiceOpt(dataplane *operatorv1beta1.DataPlane) ServiceOpt {
@@ -280,7 +280,7 @@ func GetDataPlaneIngressServiceName(dataPlane *operatorv1beta1.DataPlane) string
 	if dataPlane == nil {
 		return ""
 	}
-	dpServices := dataPlane.Spec.DataPlaneOptions.Network.Services
+	dpServices := dataPlane.Spec.Network.Services
 	if dpServices == nil || dpServices.Ingress == nil || dpServices.Ingress.Name == nil {
 		return ""
 	}

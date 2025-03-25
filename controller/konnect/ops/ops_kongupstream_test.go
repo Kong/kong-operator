@@ -87,7 +87,7 @@ func TestCreateKongUpstream(t *testing.T) {
 				return sdk, svc
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
-				assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
+				assert.Empty(t, svc.GetKonnectStatus().GetKonnectID())
 				// TODO: we should probably set a condition when the control plane ID is missing in the status.
 			},
 			expectedErr: true,
@@ -127,7 +127,7 @@ func TestCreateKongUpstream(t *testing.T) {
 				return sdk, svc
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongUpstream) {
-				assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
+				assert.Empty(t, svc.GetKonnectStatus().GetKonnectID())
 			},
 			expectedErr: true,
 		},

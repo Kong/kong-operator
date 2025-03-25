@@ -16,7 +16,8 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
-// Predicates to filter only the ReferenceGrants that allow a Gateway cross-namespace reference.
+// ReferenceGrantForSecretFrom returns a predicate function that checks if the
+// ReferenceGrant is for the specified group and kind.
 func ReferenceGrantForSecretFrom(group gatewayv1.Group, kind gatewayv1.Kind) predicate.TypedFuncs[client.Object] {
 	return predicate.NewPredicateFuncs(
 		func(obj client.Object) bool {

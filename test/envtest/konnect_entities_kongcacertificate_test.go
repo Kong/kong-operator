@@ -223,7 +223,7 @@ func TestKongCACertificate(t *testing.T) {
 			id = "abc-12345"
 		)
 
-		var tags []string = []string{"tag1"}
+		var tags = []string{"tag1"}
 
 		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)

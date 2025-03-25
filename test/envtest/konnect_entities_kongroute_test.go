@@ -81,7 +81,7 @@ func TestKongRoute(t *testing.T) {
 		createdRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, svc,
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongRoute)
-				s.Spec.KongRouteAPISpec.Paths = []string{"/path"}
+				s.Spec.Paths = []string{"/path"}
 			},
 		)
 

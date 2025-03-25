@@ -431,7 +431,7 @@ func ClusterCertificateVolume(certSecretName string) corev1.Volume {
 	clusterCertificateVolume.Secret = &corev1.SecretVolumeSource{}
 	SetDefaultsVolume(&clusterCertificateVolume)
 	clusterCertificateVolume.Name = consts.ClusterCertificateVolume
-	clusterCertificateVolume.VolumeSource.Secret = &corev1.SecretVolumeSource{
+	clusterCertificateVolume.Secret = &corev1.SecretVolumeSource{
 		SecretName: certSecretName,
 		Items: []corev1.KeyToPath{
 			{
@@ -536,7 +536,7 @@ func controlPlaneAdmissionWebhookCertificateVolume(certSecretName string) corev1
 	volume.Secret = &corev1.SecretVolumeSource{}
 	SetDefaultsVolume(&volume)
 	volume.Name = consts.ControlPlaneAdmissionWebhookVolumeName
-	volume.VolumeSource.Secret = &corev1.SecretVolumeSource{
+	volume.Secret = &corev1.SecretVolumeSource{
 		SecretName: certSecretName,
 		Items: []corev1.KeyToPath{
 			{

@@ -61,11 +61,11 @@ func (r *Reconciler) createDataPlane(ctx context.Context,
 		return nil, err
 	}
 
-	dataplane.Spec.DataPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, dataplane.Spec.DataPlaneOptions.Extensions)
+	dataplane.Spec.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, dataplane.Spec.Extensions)
 
 	k8sutils.SetOwnerForObject(dataplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(dataplane)
-	err := r.Client.Create(ctx, dataplane)
+	err := r.Create(ctx, dataplane)
 	if err != nil {
 		return nil, err
 	}
@@ -95,12 +95,12 @@ func (r *Reconciler) createControlPlane(
 		controlplane.Spec.DataPlane = &dataplaneName
 	}
 
-	controlplane.Spec.ControlPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, controlplane.Spec.ControlPlaneOptions.Extensions)
+	controlplane.Spec.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, controlplane.Spec.Extensions)
 
 	setControlPlaneOptionsDefaults(&controlplane.Spec.ControlPlaneOptions)
 	k8sutils.SetOwnerForObject(controlplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(controlplane)
-	return r.Client.Create(ctx, controlplane)
+	return r.Create(ctx, controlplane)
 }
 
 func (r *Reconciler) getGatewayAddresses(
@@ -246,7 +246,7 @@ func (r *Reconciler) getGatewayConfigForGatewayClass(ctx context.Context, gatewa
 	}
 
 	gatewayConfig := new(operatorv1beta1.GatewayConfiguration)
-	return gatewayConfig, r.Client.Get(ctx, client.ObjectKey{
+	return gatewayConfig, r.Get(ctx, client.ObjectKey{
 		Namespace: string(*gatewayClass.Spec.ParametersRef.Namespace),
 		Name:      gatewayClass.Spec.ParametersRef.Name,
 	}, gatewayConfig)
@@ -287,7 +287,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 		metaUpdated, existingPolicy.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existingPolicy.ObjectMeta, generatedPolicy.ObjectMeta)
 
 		if k8sresources.EnsureNetworkPolicyIsUpdated(existingPolicy, generatedPolicy) || metaUpdated {
-			if err := r.Client.Patch(ctx, existingPolicy, client.MergeFrom(old)); err != nil {
+			if err := r.Patch(ctx, existingPolicy, client.MergeFrom(old)); err != nil {
 				return false, fmt.Errorf("failed updating DataPlane's NetworkPolicy %s: %w", existingPolicy.Name, err)
 			}
 			return true, nil
@@ -295,7 +295,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 		return false, nil
 	}
 
-	return true, r.Client.Create(ctx, generatedPolicy)
+	return true, r.Create(ctx, generatedPolicy)
 }
 
 func generateDataPlaneNetworkPolicy(
@@ -415,7 +415,7 @@ func (r *Reconciler) ensureOwnedControlPlanesDeleted(ctx context.Context, gatewa
 		if !controlplanes[i].DeletionTimestamp.IsZero() {
 			continue
 		}
-		err = r.Client.Delete(ctx, &controlplanes[i])
+		err = r.Delete(ctx, &controlplanes[i])
 		if client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
 			continue
@@ -439,7 +439,7 @@ func (r *Reconciler) ensureOwnedDataPlanesDeleted(ctx context.Context, gateway *
 		errs    []error
 	)
 	for i := range dataplanes {
-		err = r.Client.Delete(ctx, &dataplanes[i])
+		err = r.Delete(ctx, &dataplanes[i])
 		if client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
 			continue
@@ -463,7 +463,7 @@ func (r *Reconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gate
 		errs    []error
 	)
 	for i := range networkPolicies {
-		err = r.Client.Delete(ctx, &networkPolicies[i])
+		err = r.Delete(ctx, &networkPolicies[i])
 		if client.IgnoreNotFound(err) != nil {
 			errs = append(errs, err)
 			continue
@@ -619,7 +619,7 @@ func (g *gatewayConditionsAndListenersAwareT) setAcceptedAndAttachedRoutes(ctx c
 		listenerConditionsAware.SetConditions(append(listenerConditionsAware.Conditions, acceptedCondition))
 
 		// AttachedRoutes
-		count, err := countAttachedRoutesForGatewayListener(ctx, g.Gateway, g.Gateway.Spec.Listeners[i], c)
+		count, err := countAttachedRoutesForGatewayListener(ctx, g.Gateway, g.Spec.Listeners[i], c)
 		if err != nil {
 			return fmt.Errorf("failed to count attached routes for Gateway %s: %w", client.ObjectKeyFromObject(g), err)
 		}

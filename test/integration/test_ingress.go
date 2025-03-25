@@ -212,7 +212,7 @@ func TestIngressEssentials(t *testing.T) {
 			if err != nil {
 				return false
 			}
-			delete(ingress.ObjectMeta.Annotations, annotations.IngressClassKey)
+			delete(ingress.Annotations, annotations.IngressClassKey)
 			_, err = GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(GetCtx(), ingress, metav1.UpdateOptions{})
 			if err != nil {
 				return false
@@ -222,7 +222,7 @@ func TestIngressEssentials(t *testing.T) {
 			if err != nil {
 				return false
 			}
-			delete(ingress.ObjectMeta.Annotations, annotations.IngressClassKey)
+			delete(ingress.Annotations, annotations.IngressClassKey)
 			_, err = GetEnv().Cluster().Client().NetworkingV1beta1().Ingresses(namespace.Name).Update(GetCtx(), ingress, metav1.UpdateOptions{})
 			if err != nil {
 				return false
@@ -244,7 +244,7 @@ func TestIngressEssentials(t *testing.T) {
 			if err != nil {
 				return false
 			}
-			ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = ingressClass
+			ingress.Annotations[annotations.IngressClassKey] = ingressClass
 			_, err = GetEnv().Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(GetCtx(), ingress, metav1.UpdateOptions{})
 			if err != nil {
 				return false
@@ -254,7 +254,7 @@ func TestIngressEssentials(t *testing.T) {
 			if err != nil {
 				return false
 			}
-			ingress.ObjectMeta.Annotations[annotations.IngressClassKey] = ingressClass
+			ingress.Annotations[annotations.IngressClassKey] = ingressClass
 			_, err = GetEnv().Cluster().Client().NetworkingV1beta1().Ingresses(namespace.Name).Update(GetCtx(), ingress, metav1.UpdateOptions{})
 			if err != nil {
 				return false

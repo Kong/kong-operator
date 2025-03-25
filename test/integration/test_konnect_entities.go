@@ -82,7 +82,7 @@ func TestKonnectEntities(t *testing.T) {
 		deploy.WithTestIDLabel(testID),
 		func(obj client.Object) {
 			kr := obj.(*configurationv1alpha1.KongRoute)
-			kr.Spec.KongRouteAPISpec.Paths = []string{"/kr-" + testID}
+			kr.Spec.Paths = []string{"/kr-" + testID}
 			kr.Spec.Headers = map[string][]string{
 				"KongTestHeader": {"example.com", "example.org"},
 			}
@@ -171,9 +171,9 @@ func TestKonnectEntities(t *testing.T) {
 		deploy.WithTestIDLabel(testID),
 		func(obj client.Object) {
 			kup := obj.(*configurationv1alpha1.KongUpstream)
-			kup.Spec.KongUpstreamAPISpec.Name = ks.Spec.Host
-			kup.Spec.KongUpstreamAPISpec.Slots = lo.ToPtr(int64(16384))
-			kup.Spec.KongUpstreamAPISpec.Algorithm = sdkkonnectcomp.UpstreamAlgorithmConsistentHashing.ToPointer()
+			kup.Spec.Name = ks.Spec.Host
+			kup.Spec.Slots = lo.ToPtr(int64(16384))
+			kup.Spec.Algorithm = sdkkonnectcomp.UpstreamAlgorithmConsistentHashing.ToPointer()
 		},
 	)
 
@@ -189,8 +189,8 @@ func TestKonnectEntities(t *testing.T) {
 		deploy.WithTestIDLabel(testID),
 		func(obj client.Object) {
 			kt := obj.(*configurationv1alpha1.KongTarget)
-			kt.Spec.KongTargetAPISpec.Target = "example.com"
-			kt.Spec.KongTargetAPISpec.Weight = 100
+			kt.Spec.Target = "example.com"
+			kt.Spec.Weight = 100
 		},
 	)
 
@@ -231,7 +231,7 @@ func TestKonnectEntities(t *testing.T) {
 		deploy.WithTestIDLabel(testID),
 		func(obj client.Object) {
 			ksni := obj.(*configurationv1alpha1.KongSNI)
-			ksni.Spec.KongSNIAPISpec.Name = "test.kong-sni.example.com"
+			ksni.Spec.Name = "test.kong-sni.example.com"
 		},
 	)
 

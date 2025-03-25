@@ -72,7 +72,7 @@ func ensureHPAForDataPlane(
 		return op.Noop, nil, fmt.Errorf("failed listing HPAs for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 	}
 
-	if scaling := dataplane.Spec.Deployment.DeploymentOptions.Scaling; scaling == nil || scaling.HorizontalScaling == nil {
+	if scaling := dataplane.Spec.Deployment.Scaling; scaling == nil || scaling.HorizontalScaling == nil {
 		if err := k8sreduce.ReduceHPAs(ctx, cl, hpas, k8sreduce.FilterNone); err != nil {
 			return op.Noop, nil, fmt.Errorf("failed reducing HPAs for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 		}
@@ -351,11 +351,11 @@ func ensureIngressServiceForDataPlane(
 		const (
 			defaultExternalTrafficPolicy = corev1.ServiceExternalTrafficPolicyCluster
 		)
-		// Do not update when
-		// - the existing service has the default value for ExternalTrafficPolicy
-		// - and the generated service has the default value for ExternalTrafficPolicy or is empty.
-		if !(existingService.Spec.ExternalTrafficPolicy == defaultExternalTrafficPolicy &&
-			(generatedService.Spec.ExternalTrafficPolicy == "" || generatedService.Spec.ExternalTrafficPolicy == defaultExternalTrafficPolicy)) {
+
+		// Update when
+		// - the existing service does not have the default value for ExternalTrafficPolicy
+		// - or the generated service has the a different than default value for ExternalTrafficPolicy or is non empty.
+		if existingService.Spec.ExternalTrafficPolicy != defaultExternalTrafficPolicy || (generatedService.Spec.ExternalTrafficPolicy != "" && generatedService.Spec.ExternalTrafficPolicy != defaultExternalTrafficPolicy) {
 			existingService.Spec.ExternalTrafficPolicy = generatedService.Spec.ExternalTrafficPolicy
 			updated = true
 		}

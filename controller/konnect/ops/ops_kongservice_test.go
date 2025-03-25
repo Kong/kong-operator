@@ -91,7 +91,7 @@ func TestCreateKongService(t *testing.T) {
 				return sdk, svc
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
-				assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
+				assert.Empty(t, svc.GetKonnectStatus().GetKonnectID())
 			},
 			expectedErrContains: "can't create KongService default/svc-1 without a Konnect ControlPlane ID",
 		},
@@ -131,7 +131,7 @@ func TestCreateKongService(t *testing.T) {
 				return sdk, svc
 			},
 			assertions: func(t *testing.T, svc *configurationv1alpha1.KongService) {
-				assert.Equal(t, "", svc.GetKonnectStatus().GetKonnectID())
+				assert.Empty(t, svc.GetKonnectStatus().GetKonnectID())
 			},
 			expectedErrContains: "failed to create KongService default/svc-1: {\"status\":400,\"title\":\"\",\"instance\":\"\",\"detail\":\"bad request\",\"invalid_parameters\":null}",
 		},

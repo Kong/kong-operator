@@ -23,7 +23,7 @@ import (
 // GatewayClassReconciler
 // -----------------------------------------------------------------------------
 
-// GatewayReconciler reconciles a Gateway object
+// Reconciler reconciles a Gateway object
 type Reconciler struct {
 	client.Client
 	Scheme                        *runtime.Scheme
@@ -46,7 +46,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log.Trace(logger, "reconciling gatewayclass resource")
 
 	gwc := gatewayclass.NewDecorator()
-	if err := r.Client.Get(ctx, req.NamespacedName, gwc.GatewayClass); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, gwc.GatewayClass); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	log.Debug(logger, "processing gatewayclass")

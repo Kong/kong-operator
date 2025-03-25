@@ -440,7 +440,7 @@ func ensureContainerImageUpdated(container *corev1.Container, imageVersionStr st
 
 func parsePrivateKey(pemBlock *pem.Block) (crypto.Signer, x509.SignatureAlgorithm, error) {
 	var (
-		signatureAlgorithm x509.SignatureAlgorithm = x509.UnknownSignatureAlgorithm
+		signatureAlgorithm = x509.UnknownSignatureAlgorithm
 		priv               crypto.Signer
 		err                error
 	)

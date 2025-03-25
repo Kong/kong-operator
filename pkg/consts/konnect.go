@@ -24,7 +24,7 @@ const (
 	// properly referenced by KongPluginBindings.
 	// It avoids that KongPlugins get deleted when KongPluginBindings are still referencing them.
 	PluginInUseFinalizer = "gateway.konghq.com/plugin-in-use"
-	// DataPlaneKonnectExtensionFinalizer is the finalizer added to the secret
+	// KonnectExtensionSecretInUseFinalizer is the finalizer added to the secret
 	// referenced by KonnectExtension to ensure that the secret is not deleted
 	// when in use by an active KonnectExtension.
 	KonnectExtensionSecretInUseFinalizer = "gateway.konghq.com/secret-in-use"

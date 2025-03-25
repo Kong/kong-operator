@@ -102,7 +102,7 @@ const (
 	// TLSCACRTPath is the full path for the ca.crt file.
 	TLSCACRTPath = ClusterCertificateVolumeMountPath + "/" + CACRT
 
-	// TLSFieldSecret is the field name in Kubernetes secret - WebhookCertificateConfigSecretName.
+	// CertFieldSecret is the field name in Kubernetes secret - WebhookCertificateConfigSecretName.
 	CertFieldSecret = "cert"
 
 	// KeyFieldSecret is the field name in Kubernetes secret - WebhookCertificateConfigSecretName.
@@ -149,7 +149,7 @@ const (
 const (
 	// ClusterCertEnvKey is the environment variable name for the cluster certificate.
 	ClusterCertEnvKey = "KONG_CLUSTER_CERT"
-	// ClusterCertEnvKey is the environment variable name for the cluster certificate key.
+	// ClusterCertKeyEnvKey is the environment variable name for the cluster certificate key.
 	ClusterCertKeyEnvKey = "KONG_CLUSTER_CERT_KEY"
 	// RouterFlavorEnvKey is the environment variable name for the Kong router flavor.
 	RouterFlavorEnvKey = "KONG_ROUTER_FLAVOR"

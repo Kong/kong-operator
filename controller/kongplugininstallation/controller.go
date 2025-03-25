@@ -90,7 +90,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	log.Trace(logger, "reconciling KongPluginInstallation resource")
 	var kpi operatorv1alpha1.KongPluginInstallation
-	if err := r.Client.Get(ctx, req.NamespacedName, &kpi); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, &kpi); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 	if err := setStatusConditionForKongPluginInstallation(
@@ -124,7 +124,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			Name:      string(imagePullSecretRef.Name),
 		}
 		var secret corev1.Secret
-		if err := r.Client.Get(
+		if err := r.Get(
 			ctx,
 			secretNN,
 			&secret,
@@ -174,14 +174,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if err := ctrl.SetControllerReference(&kpi, &cm, r.Scheme); err != nil {
 			return ctrl.Result{}, err
 		}
-		if err := r.Client.Create(ctx, &cm); err != nil {
+		if err := r.Create(ctx, &cm); err != nil {
 			return ctrl.Result{}, err
 		}
 		kpi.Status.UnderlyingConfigMapName = cm.Name
 	case 1:
 		cm = cms[0]
 		cm.Data = plugin
-		if err := r.Client.Update(ctx, &cm); err != nil {
+		if err := r.Update(ctx, &cm); err != nil {
 			return ctrl.Result{}, err
 		}
 	default:
@@ -237,7 +237,7 @@ func (r *Reconciler) listReferenceGrantsForKongPluginInstallation(ctx context.Co
 		return nil
 	}
 	var kpiList operatorv1alpha1.KongPluginInstallationList
-	if err := r.Client.List(ctx, &kpiList); err != nil {
+	if err := r.List(ctx, &kpiList); err != nil {
 		logger.Error(err, "Failed to list KongPluginInstallations in watch", "referencegrant", grant.Name)
 		return nil
 	}

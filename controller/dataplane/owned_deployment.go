@@ -327,7 +327,7 @@ func reconcileDataPlaneDeployment(
 			updated = true
 		}
 
-		if scaling := dataplane.Spec.Deployment.DeploymentOptions.Scaling; false ||
+		if scaling := dataplane.Spec.Deployment.Scaling; false ||
 			// If the scaling strategy is not specified, we compare the replicas.
 			(scaling == nil || scaling.HorizontalScaling == nil) ||
 			// If the scaling strategy is specified with minReplicas, we compare

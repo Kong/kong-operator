@@ -72,7 +72,7 @@ func WithKonnectMaxConcurrentReconciles[T constraints.SupportedKonnectEntityType
 	}
 }
 
-// WithMetricRecoder sets the metric recorder to record metrics of Konnect entity operations of the reconciler.
+// WithMetricRecorder sets the metric recorder to record metrics of Konnect entity operations of the reconciler.
 func WithMetricRecorder[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	metricRecorder metrics.Recorder,
 ) KonnectEntityReconcilerOption[T, TEnt] {
