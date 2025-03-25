@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"time"
 
 	"github.com/samber/lo"
@@ -12,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -23,7 +25,6 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
-	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/controller/specialized"
 	"github.com/kong/gateway-operator/internal/metrics"
@@ -165,34 +166,53 @@ func (c *ControllerDef) MaybeSetupWithManager(ctx context.Context, mgr ctrl.Mana
 	return c.Controller.SetupWithManager(ctx, mgr)
 }
 
-func setupIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
+// SetupCacheIndexes sets up all the cache indexes required by the controllers.
+func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
+	var indexOptions []index.Option
+
 	if cfg.ControlPlaneControllerEnabled || cfg.GatewayControllerEnabled {
-		log.GetLogger(ctx, "ControlPlane", cfg.DevelopmentMode).Info(
-			"creating index",
-			"indexField", index.DataPlaneNameIndex,
+		indexOptions = slices.Concat(indexOptions,
+			index.OptionsForControlPlane(cfg.KonnectControllersEnabled),
+			index.OptionsForDataPlane(index.DataPlaneFlags{
+				KongPluginInstallationControllerEnabled: cfg.KongPluginInstallationControllerEnabled,
+				KonnectControllersEnabled:               cfg.KonnectControllersEnabled,
+			}),
 		)
-		if err := index.DataPlaneNameOnControlPlane(ctx, mgr.GetCache()); err != nil {
-			return fmt.Errorf("failed to setup index for DataPlane names on ControlPlane: %w", err)
-		}
-		if cfg.KongPluginInstallationControllerEnabled {
-			log.GetLogger(ctx, "DataPlane", cfg.DevelopmentMode).Info(
-				"creating index",
-				"indexField", index.KongPluginInstallationsIndex,
-			)
-			if err := index.KongPluginInstallationsOnDataPlane(ctx, mgr.GetCache()); err != nil {
-				return fmt.Errorf("failed to setup index for KongPluginInstallations on DataPlane: %w", err)
-			}
-		}
-		if cfg.KonnectControllersEnabled {
-			if err := index.ExtendableOnKonnectExtension(ctx, mgr.GetCache(), &operatorv1beta1.DataPlane{}); err != nil {
-				return fmt.Errorf("failed to setup index for DataPlanes on KonnectExtensions: %w", err)
-			}
-			if err := index.ExtendableOnKonnectExtension(ctx, mgr.GetCache(), &operatorv1beta1.ControlPlane{}); err != nil {
-				return fmt.Errorf("failed to setup index for ControlPlanes on KonnectExtensions: %w", err)
-			}
-			if err := index.ExtendableOnKonnectExtension(ctx, mgr.GetCache(), &operatorv1beta1.GatewayConfiguration{}); err != nil {
-				return fmt.Errorf("failed to setup index for ControlPlanes on KonnectExtensions: %w", err)
-			}
+	}
+	if cfg.KonnectControllersEnabled {
+		cl := mgr.GetClient()
+		indexOptions = slices.Concat(indexOptions,
+			index.OptionsForGatewayConfiguration(),
+			index.OptionsForKongPluginBinding(),
+			index.OptionsForCredentialsBasicAuth(),
+			index.OptionsForCredentialsACL(),
+			index.OptionsForCredentialsJWT(),
+			index.OptionsForCredentialsAPIKey(),
+			index.OptionsForCredentialsHMAC(),
+			index.OptionsForKongConsumer(cl),
+			index.OptionsForKongConsumerGroup(cl),
+			index.OptionsForKongService(cl),
+			index.OptionsForKongRoute(),
+			index.OptionsForKongUpstream(cl),
+			index.OptionsForKongTarget(),
+			index.OptionsForKongSNI(),
+			index.OptionsForKongKey(cl),
+			index.OptionsForKongKeySet(cl),
+			index.OptionsForKongDataPlaneCertificate(cl),
+			index.OptionsForKongVault(cl),
+			index.OptionsForKongCertificate(cl),
+			index.OptionsForKongCACertificate(cl),
+			index.OptionsForKonnectGatewayControlPlane(),
+			index.OptionsForKonnectCloudGatewayNetwork(),
+			index.OptionsForKonnectExtension(),
+			index.OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
+		)
+	}
+
+	for _, e := range indexOptions {
+		ctrllog.FromContext(ctx).Info("Setting up index", "index", e.String())
+		if err := mgr.GetCache().IndexField(ctx, e.Object, e.Field, e.ExtractValueFn); err != nil {
+			return fmt.Errorf("failed to set up index %q: %w", e, err)
 		}
 	}
 	return nil
@@ -200,7 +220,6 @@ func setupIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 
 // SetupControllers returns a list of ControllerDefs based on config.
 func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef, error) {
-	ctx := context.Background()
 	// metricRecorder is the recorder used to record custom metrics in the controller manager's metrics server.
 	metricRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
 
@@ -535,12 +554,6 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
-		if err := SetupCacheIndicesForKonnectTypes(ctx, mgr, c.DevelopmentMode); err != nil {
-			return nil, err
-		}
-
-		// REVIEW: Should we define the recorder here, or define it out of the section to allow setting custom metrics in other controllers
-
 		sdkFactory := sdkops.NewSDKFactory()
 		controllerFactory := konnectControllerFactory{
 			sdkFactory:              sdkFactory,
@@ -634,131 +647,6 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 	}
 
 	return controllers, nil
-}
-
-// SetupCacheIndicesForKonnectTypes sets up the cache indices for the controllers.
-// This is done only once because 1 manager's cache can only have one index with
-// a predefined key and so that different controllers can share the same indices.
-func SetupCacheIndicesForKonnectTypes(ctx context.Context, mgr manager.Manager, developmentMode bool) error {
-	cl := mgr.GetClient()
-	types := []struct {
-		Object interface {
-			client.Object
-			GetTypeName() string
-		}
-		IndexOptions []konnect.ReconciliationIndexOption
-	}{
-		{
-			Object:       &configurationv1alpha1.KongPluginBinding{},
-			IndexOptions: konnect.IndexOptionsForKongPluginBinding(),
-		},
-		{
-			Object:       &configurationv1alpha1.KongCredentialBasicAuth{},
-			IndexOptions: konnect.IndexOptionsForCredentialsBasicAuth(),
-		},
-		{
-			Object:       &configurationv1alpha1.KongCredentialACL{},
-			IndexOptions: konnect.IndexOptionsForCredentialsACL(),
-		},
-		{
-			Object:       &configurationv1alpha1.KongCredentialJWT{},
-			IndexOptions: konnect.IndexOptionsForCredentialsJWT(),
-		},
-		{
-			Object:       &configurationv1alpha1.KongCredentialAPIKey{},
-			IndexOptions: konnect.IndexOptionsForCredentialsAPIKey(),
-		},
-		{
-			Object:       &configurationv1alpha1.KongCredentialHMAC{},
-			IndexOptions: konnect.IndexOptionsForCredentialsHMAC(),
-		},
-		{
-			Object:       &configurationv1.KongConsumer{},
-			IndexOptions: konnect.IndexOptionsForKongConsumer(cl),
-		},
-		{
-			Object:       &configurationv1beta1.KongConsumerGroup{},
-			IndexOptions: konnect.IndexOptionsForKongConsumerGroup(cl),
-		},
-		{
-			Object:       &configurationv1alpha1.KongService{},
-			IndexOptions: konnect.IndexOptionsForKongService(cl),
-		},
-		{
-			Object:       &configurationv1alpha1.KongRoute{},
-			IndexOptions: konnect.IndexOptionsForKongRoute(),
-		},
-		{
-			Object:       &configurationv1alpha1.KongUpstream{},
-			IndexOptions: konnect.IndexOptionsForKongUpstream(cl),
-		},
-		{
-			Object:       &configurationv1alpha1.KongTarget{},
-			IndexOptions: konnect.IndexOptionsForKongTarget(),
-		},
-		{
-			Object:       &configurationv1alpha1.KongSNI{},
-			IndexOptions: konnect.IndexOptionsForKongSNI(),
-		},
-		{
-			Object:       &configurationv1alpha1.KongKey{},
-			IndexOptions: konnect.IndexOptionsForKongKey(cl),
-		},
-		{
-			Object:       &configurationv1alpha1.KongKeySet{},
-			IndexOptions: konnect.IndexOptionsForKongKeySet(cl),
-		},
-		{
-			Object:       &configurationv1alpha1.KongDataPlaneClientCertificate{},
-			IndexOptions: konnect.IndexOptionsForKongDataPlaneCertificate(cl),
-		},
-		{
-			Object:       &configurationv1alpha1.KongVault{},
-			IndexOptions: konnect.IndexOptionsForKongVault(cl),
-		},
-		{
-			Object:       &configurationv1alpha1.KongCertificate{},
-			IndexOptions: konnect.IndexOptionsForKongCertificate(cl),
-		},
-		{
-			Object:       &configurationv1alpha1.KongCACertificate{},
-			IndexOptions: konnect.IndexOptionsForKongCACertificate(cl),
-		},
-		{
-			Object:       &konnectv1alpha1.KonnectGatewayControlPlane{},
-			IndexOptions: konnect.IndexOptionsForKonnectGatewayControlPlane(),
-		},
-		{
-			Object:       &konnectv1alpha1.KonnectCloudGatewayNetwork{},
-			IndexOptions: konnect.IndexOptionsForKonnectCloudGatewayNetwork(),
-		},
-		{
-			Object:       &konnectv1alpha1.KonnectExtension{},
-			IndexOptions: konnect.IndexOptionsForKonnectExtension(),
-		},
-		{
-			Object:       &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{},
-			IndexOptions: konnect.IndexOptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
-		},
-	}
-
-	for _, t := range types {
-		var (
-			entityTypeName = constraints.EntityTypeNameForObj(t.Object)
-			logger         = log.GetLogger(ctx, entityTypeName, developmentMode)
-		)
-		for _, ind := range t.IndexOptions {
-			logger.Info("creating index", "indexField", ind.IndexField)
-			err := mgr.
-				GetCache().
-				IndexField(ctx, ind.IndexObject, ind.IndexField, ind.ExtractValue)
-			if err != nil {
-				return fmt.Errorf("failed to setup cache indices for %s: %w", entityTypeName, err)
-			}
-		}
-	}
-
-	return nil
 }
 
 type konnectControllerFactory struct {

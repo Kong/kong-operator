@@ -7,6 +7,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/kong/gateway-operator/internal/utils/index"
+
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -23,7 +25,7 @@ func enqueueKonnectExtensionsForKonnectGatewayControlPlane(cl client.Client) fun
 			&konnectExtensionList,
 			client.InNamespace(cp.Namespace),
 			client.MatchingFields{
-				IndexFieldKonnectExtensionOnKonnectGatewayControlPlane: cp.Name,
+				index.IndexFieldKonnectExtensionOnKonnectGatewayControlPlane: cp.Name,
 			},
 		); err != nil {
 			return nil

@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	"github.com/kong/gateway-operator/internal/utils/index"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
@@ -109,7 +110,7 @@ func enqueueKongRouteForKongService(
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(kongSvc.GetNamespace()),
 			client.MatchingFields{
-				IndexFieldKongRouteOnReferencedKongService: kongSvc.Namespace + "/" + kongSvc.Name,
+				index.IndexFieldKongRouteOnReferencedKongService: kongSvc.Namespace + "/" + kongSvc.Name,
 			},
 		); err != nil {
 			return nil

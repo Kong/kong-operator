@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -11,13 +11,13 @@ const (
 	IndexFieldKongTargetOnReferencedUpstream = "kongTargetUpstreamRef"
 )
 
-// IndexOptionsForKongTarget returns required Index options for KongTarget reconciler.
-func IndexOptionsForKongTarget() []ReconciliationIndexOption {
-	return []ReconciliationIndexOption{
+// OptionsForKongTarget returns required Index options for KongTarget reconciler.
+func OptionsForKongTarget() []Option {
+	return []Option{
 		{
-			IndexObject:  &configurationv1alpha1.KongTarget{},
-			IndexField:   IndexFieldKongTargetOnReferencedUpstream,
-			ExtractValue: kongTargetReferencesKongUpstream,
+			Object:         &configurationv1alpha1.KongTarget{},
+			Field:          IndexFieldKongTargetOnReferencedUpstream,
+			ExtractValueFn: kongTargetReferencesKongUpstream,
 		},
 	}
 }

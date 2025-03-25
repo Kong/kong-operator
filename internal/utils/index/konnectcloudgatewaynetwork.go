@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -11,13 +11,13 @@ const (
 	IndexFieldKonnectCloudGatewayNetworkOnAPIAuthConfiguration = "konnectCloudGatewayNetworkAPIAuthConfigurationRef"
 )
 
-// IndexOptionsForKonnectCloudGatewayNetwork returns required Index options for KonnectCloudGatewayNetwork reconciler.
-func IndexOptionsForKonnectCloudGatewayNetwork() []ReconciliationIndexOption {
-	return []ReconciliationIndexOption{
+// OptionsForKonnectCloudGatewayNetwork returns required Index options for KonnectCloudGatewayNetwork reconciler.
+func OptionsForKonnectCloudGatewayNetwork() []Option {
+	return []Option{
 		{
-			IndexObject:  &konnectv1alpha1.KonnectCloudGatewayNetwork{},
-			IndexField:   IndexFieldKonnectCloudGatewayNetworkOnAPIAuthConfiguration,
-			ExtractValue: konnectCloudGatewayNetworkAPIAuthConfigurationRef,
+			Object:         &konnectv1alpha1.KonnectCloudGatewayNetwork{},
+			Field:          IndexFieldKonnectCloudGatewayNetworkOnAPIAuthConfiguration,
+			ExtractValueFn: konnectCloudGatewayNetworkAPIAuthConfigurationRef,
 		},
 	}
 }

@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -116,7 +117,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return res, errStatus
 	}
 
-	cpRef, ok := getControlPlaneRef(kongUpstream).Get()
+	cpRef, ok := controlplane.GetControlPlaneRef(kongUpstream).Get()
 	// TODO: ignore the entity if referenced KongUpstream does not have a Konnect control plane reference
 	// because this situation is likely to mean that they are not controlled by us:
 	// https://github.com/Kong/gateway-operator/issues/629
@@ -126,7 +127,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			ent, client.ObjectKeyFromObject(kongUpstream),
 		)
 	}
-	cp, err := getCPForRef(ctx, cl, cpRef, ent.GetNamespace())
+	cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, ent.GetNamespace())
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
@@ -138,7 +139,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			return res, errStatus
 		}
 		if k8serrors.IsNotFound(err) {
-			return ctrl.Result{}, ReferencedControlPlaneDoesNotExistError{
+			return ctrl.Result{}, controlplane.ReferencedControlPlaneDoesNotExistError{
 				Reference: cpRef,
 				Err:       err,
 			}

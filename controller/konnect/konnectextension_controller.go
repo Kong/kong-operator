@@ -82,7 +82,7 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 			handler.EnqueueRequestsFromMapFunc(
 				enqueueObjectsForKonnectAPIAuthConfiguration[konnectv1alpha1.KonnectExtensionList](
 					mgr.GetClient(),
-					IndexFieldKonnectExtensionOnAPIAuthConfiguration,
+					index.IndexFieldKonnectExtensionOnAPIAuthConfiguration,
 				),
 			),
 		).

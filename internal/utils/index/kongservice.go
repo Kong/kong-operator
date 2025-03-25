@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,18 +14,18 @@ const (
 	IndexFieldKongServiceOnKonnectGatewayControlPlane = "kongServiceKonnectGatewayControlPlaneRef"
 )
 
-// IndexOptionsForKongService returns required Index options for KongService reconciler.
-func IndexOptionsForKongService(cl client.Client) []ReconciliationIndexOption {
-	return []ReconciliationIndexOption{
+// OptionsForKongService returns required Index options for KongService reconciler.
+func OptionsForKongService(cl client.Client) []Option {
+	return []Option{
 		{
-			IndexObject:  &configurationv1alpha1.KongService{},
-			IndexField:   IndexFieldKongServiceOnReferencedPluginNames,
-			ExtractValue: kongServiceUsesPlugins,
+			Object:         &configurationv1alpha1.KongService{},
+			Field:          IndexFieldKongServiceOnReferencedPluginNames,
+			ExtractValueFn: kongServiceUsesPlugins,
 		},
 		{
-			IndexObject:  &configurationv1alpha1.KongService{},
-			IndexField:   IndexFieldKongServiceOnKonnectGatewayControlPlane,
-			ExtractValue: indexKonnectGatewayControlPlaneRef[configurationv1alpha1.KongService](cl),
+			Object:         &configurationv1alpha1.KongService{},
+			Field:          IndexFieldKongServiceOnKonnectGatewayControlPlane,
+			ExtractValueFn: indexKonnectGatewayControlPlaneRef[configurationv1alpha1.KongService](cl),
 		},
 	}
 }

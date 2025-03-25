@@ -17,6 +17,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/clientops"
 	"github.com/kong/gateway-operator/pkg/consts"
 
@@ -231,13 +232,13 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) getKongPluginBi
 
 	switch any(ent).(type) {
 	case *configurationv1alpha1.KongService:
-		return IndexFieldKongPluginBindingKongServiceReference
+		return index.IndexFieldKongPluginBindingKongServiceReference
 	case *configurationv1alpha1.KongRoute:
-		return IndexFieldKongPluginBindingKongRouteReference
+		return index.IndexFieldKongPluginBindingKongRouteReference
 	case *configurationv1.KongConsumer:
-		return IndexFieldKongPluginBindingKongConsumerReference
+		return index.IndexFieldKongPluginBindingKongConsumerReference
 	case *configurationv1beta1.KongConsumerGroup:
-		return IndexFieldKongPluginBindingKongConsumerGroupReference
+		return index.IndexFieldKongPluginBindingKongConsumerGroupReference
 	default:
 		panic(fmt.Sprintf("unsupported entity type %s", constraints.EntityTypeName[T]()))
 	}

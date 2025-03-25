@@ -7,6 +7,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/gateway-operator/controller/pkg/controlplane"
+
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -40,11 +42,11 @@ func (relations *ForeignRelations) GroupByControlPlane(
 ) (ForeignRelationsGroupedByControlPlane, error) {
 	ret := make(map[types.NamespacedName]ForeignRelations)
 	for _, service := range relations.Service {
-		cpRef, ok := getControlPlaneRef(&service).Get()
+		cpRef, ok := controlplane.GetControlPlaneRef(&service).Get()
 		if !ok {
 			continue
 		}
-		cp, err := getCPForRef(ctx, cl, cpRef, service.Namespace)
+		cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, service.Namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get ControlPlane for KongService %s: %w", service.Name, err)
 		}
@@ -60,11 +62,11 @@ func (relations *ForeignRelations) GroupByControlPlane(
 	for _, route := range relations.Route {
 		svcRef := route.Spec.ServiceRef
 		if svcRef == nil || svcRef.NamespacedRef == nil {
-			cpRef, ok := getControlPlaneRef(&route).Get()
+			cpRef, ok := controlplane.GetControlPlaneRef(&route).Get()
 			if !ok {
 				continue
 			}
-			cp, err := getCPForRef(ctx, cl, cpRef, route.Namespace)
+			cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, route.Namespace)
 			if err != nil {
 				return nil, fmt.Errorf("failed to get ControlPlane for KongRoute %s: %w", route.Name, err)
 			}
@@ -91,11 +93,11 @@ func (relations *ForeignRelations) GroupByControlPlane(
 			return nil, err
 		}
 
-		cpRef, ok := getControlPlaneRef(&svc).Get()
+		cpRef, ok := controlplane.GetControlPlaneRef(&svc).Get()
 		if !ok {
 			continue
 		}
-		cp, err := getCPForRef(ctx, cl, cpRef, svc.Namespace)
+		cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, svc.Namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get ControlPlane for KongService %s: %w", svc.Name, err)
 		}
@@ -110,11 +112,11 @@ func (relations *ForeignRelations) GroupByControlPlane(
 		ret[nn] = fr
 	}
 	for _, consumer := range relations.Consumer {
-		cpRef, ok := getControlPlaneRef(&consumer).Get()
+		cpRef, ok := controlplane.GetControlPlaneRef(&consumer).Get()
 		if !ok {
 			continue
 		}
-		cp, err := getCPForRef(ctx, cl, cpRef, consumer.Namespace)
+		cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, consumer.Namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get ControlPlane for KongConsumer %s: %w", consumer.Name, err)
 		}
@@ -128,11 +130,11 @@ func (relations *ForeignRelations) GroupByControlPlane(
 		ret[nn] = fr
 	}
 	for _, group := range relations.ConsumerGroup {
-		cpRef, ok := getControlPlaneRef(&group).Get()
+		cpRef, ok := controlplane.GetControlPlaneRef(&group).Get()
 		if !ok {
 			continue
 		}
-		cp, err := getCPForRef(ctx, cl, cpRef, group.Namespace)
+		cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, group.Namespace)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get ControlPlane for KongConsumerGroup %s: %w", group.Name, err)
 		}

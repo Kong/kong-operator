@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -11,13 +11,13 @@ const (
 	IndexFieldKongSNIOnCertificateRefNmae = "kongSNICertificateRefName"
 )
 
-// IndexOptionsForKongSNI returns required Index options for KongSNI reconciler.
-func IndexOptionsForKongSNI() []ReconciliationIndexOption {
-	return []ReconciliationIndexOption{
+// OptionsForKongSNI returns required Index options for KongSNI reconciler.
+func OptionsForKongSNI() []Option {
+	return []Option{
 		{
-			IndexObject:  &configurationv1alpha1.KongSNI{},
-			IndexField:   IndexFieldKongSNIOnCertificateRefNmae,
-			ExtractValue: kongSNIReferencesCertificate,
+			Object:         &configurationv1alpha1.KongSNI{},
+			Field:          IndexFieldKongSNIOnCertificateRefNmae,
+			ExtractValueFn: kongSNIReferencesCertificate,
 		},
 	}
 }

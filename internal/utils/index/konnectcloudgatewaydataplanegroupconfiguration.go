@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -13,13 +13,13 @@ const (
 	IndexFieldKonnectCloudGatewayDataPlaneGroupConfigurationOnKonnectGatewayControlPlane = "konnectCloudGatewayDataPlaneGroupConfigurationOnKonnectGatewayControlPlaneRef"
 )
 
-// IndexOptionsForKonnectCloudGatewayDataPlaneGroupConfiguration returns required Index options for KonnectCloudGatewayDataPlaneGroupConfiguration reconciler.
-func IndexOptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl client.Client) []ReconciliationIndexOption {
-	return []ReconciliationIndexOption{
+// OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration returns required Index options for KonnectCloudGatewayDataPlaneGroupConfiguration reconciler.
+func OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl client.Client) []Option {
+	return []Option{
 		{
-			IndexObject:  &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{},
-			IndexField:   IndexFieldKonnectCloudGatewayDataPlaneGroupConfigurationOnKonnectGatewayControlPlane,
-			ExtractValue: indexKonnectGatewayControlPlaneRef[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration](cl),
+			Object:         &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{},
+			Field:          IndexFieldKonnectCloudGatewayDataPlaneGroupConfigurationOnKonnectGatewayControlPlane,
+			ExtractValueFn: indexKonnectGatewayControlPlaneRef[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration](cl),
 		},
 	}
 }

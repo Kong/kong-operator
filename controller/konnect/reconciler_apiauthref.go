@@ -8,6 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -20,7 +21,7 @@ func getCPAuthRefForRef(
 	cpRef commonv1alpha1.ControlPlaneRef,
 	namespace string,
 ) (types.NamespacedName, error) {
-	cp, err := getCPForRef(ctx, cl, cpRef, namespace)
+	cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, namespace)
 	if err != nil {
 		return types.NamespacedName{}, err
 	}
@@ -48,9 +49,9 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 
 	// If the entity has a ControlPlaneRef, get the KonnectAPIAuthConfiguration
 	// ref from the referenced ControlPlane.
-	cpRef, ok := getControlPlaneRef(ent).Get()
+	cpRef, ok := controlplane.GetControlPlaneRef(ent).Get()
 	if ok {
-		cp, err := getCPForRef(ctx, cl, cpRef, ent.GetNamespace())
+		cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, ent.GetNamespace())
 		if err != nil {
 			return types.NamespacedName{}, fmt.Errorf("failed to get ControlPlane for %s: %w", client.ObjectKeyFromObject(ent), err)
 		}
@@ -80,7 +81,7 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 			return types.NamespacedName{}, fmt.Errorf("failed to get KongService %s", nn)
 		}
 
-		cpRef, ok := getControlPlaneRef(&svc).Get()
+		cpRef, ok := controlplane.GetControlPlaneRef(&svc).Get()
 		if !ok {
 			return types.NamespacedName{}, fmt.Errorf("KongService %s does not have a ControlPlaneRef", nn)
 		}
@@ -102,7 +103,7 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 			return types.NamespacedName{}, fmt.Errorf("failed to get KongConsumer %s", nn)
 		}
 
-		cpRef, ok := getControlPlaneRef(&consumer).Get()
+		cpRef, ok := controlplane.GetControlPlaneRef(&consumer).Get()
 		if !ok {
 			return types.NamespacedName{}, fmt.Errorf("KongConsumer %s does not have a ControlPlaneRef", nn)
 		}
@@ -123,7 +124,7 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 			return types.NamespacedName{}, fmt.Errorf("failed to get KongUpstream %s", nn)
 		}
 
-		cpRef, ok := getControlPlaneRef(&upstream).Get()
+		cpRef, ok := controlplane.GetControlPlaneRef(&upstream).Get()
 		if !ok {
 			return types.NamespacedName{}, fmt.Errorf("KongUpstream %s does not have a ControlPlaneRef", nn)
 		}
@@ -144,7 +145,7 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 			return types.NamespacedName{}, fmt.Errorf("failed to get KongCertificate %s", nn)
 		}
 
-		cpRef, ok := getControlPlaneRef(&cert).Get()
+		cpRef, ok := controlplane.GetControlPlaneRef(&cert).Get()
 		if !ok {
 			return types.NamespacedName{}, fmt.Errorf("KongCertificate %s does not have a ControlPlaneRef", nn)
 		}

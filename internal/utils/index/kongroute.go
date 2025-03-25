@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,18 +14,18 @@ const (
 	IndexFieldKongRouteOnReferencedKongService = "kongRouteKongServiceRef"
 )
 
-// IndexOptionsForKongRoute returns required Index options for KongRoute reconciler.
-func IndexOptionsForKongRoute() []ReconciliationIndexOption {
-	return []ReconciliationIndexOption{
+// OptionsForKongRoute returns required Index options for KongRoute reconciler.
+func OptionsForKongRoute() []Option {
+	return []Option{
 		{
-			IndexObject:  &configurationv1alpha1.KongRoute{},
-			IndexField:   IndexFieldKongRouteOnReferencedPluginNames,
-			ExtractValue: kongRouteUsesPlugins,
+			Object:         &configurationv1alpha1.KongRoute{},
+			Field:          IndexFieldKongRouteOnReferencedPluginNames,
+			ExtractValueFn: kongRouteUsesPlugins,
 		},
 		{
-			IndexObject:  &configurationv1alpha1.KongRoute{},
-			IndexField:   IndexFieldKongRouteOnReferencedKongService,
-			ExtractValue: kongRouteRefersToKongService,
+			Object:         &configurationv1alpha1.KongRoute{},
+			Field:          IndexFieldKongRouteOnReferencedKongService,
+			ExtractValueFn: kongRouteRefersToKongService,
 		},
 	}
 }

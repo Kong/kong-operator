@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -16,23 +16,23 @@ const (
 	IndexFieldKonnectExtensionOnKonnectGatewayControlPlane = "konnectExtensionKonnectGatewayControlPlaneRef"
 )
 
-// IndexOptionsForKonnectExtension returns required Index options for KonnectExtension reconciler.
-func IndexOptionsForKonnectExtension() []ReconciliationIndexOption {
-	return []ReconciliationIndexOption{
+// OptionsForKonnectExtension returns required Index options for KonnectExtension reconciler.
+func OptionsForKonnectExtension() []Option {
+	return []Option{
 		{
-			IndexObject:  &konnectv1alpha1.KonnectExtension{},
-			IndexField:   IndexFieldKonnectExtensionOnAPIAuthConfiguration,
-			ExtractValue: konnectExtensionAPIAuthConfigurationRef,
+			Object:         &konnectv1alpha1.KonnectExtension{},
+			Field:          IndexFieldKonnectExtensionOnAPIAuthConfiguration,
+			ExtractValueFn: konnectExtensionAPIAuthConfigurationRef,
 		},
 		{
-			IndexObject:  &konnectv1alpha1.KonnectExtension{},
-			IndexField:   IndexFieldKonnectExtensionOnSecrets,
-			ExtractValue: konnectExtensionSecretRef,
+			Object:         &konnectv1alpha1.KonnectExtension{},
+			Field:          IndexFieldKonnectExtensionOnSecrets,
+			ExtractValueFn: konnectExtensionSecretRef,
 		},
 		{
-			IndexObject:  &konnectv1alpha1.KonnectExtension{},
-			IndexField:   IndexFieldKonnectExtensionOnKonnectGatewayControlPlane,
-			ExtractValue: konnectExtensionControlPlaneRef,
+			Object:         &konnectv1alpha1.KonnectExtension{},
+			Field:          IndexFieldKonnectExtensionOnKonnectGatewayControlPlane,
+			ExtractValueFn: konnectExtensionControlPlaneRef,
 		},
 	}
 }

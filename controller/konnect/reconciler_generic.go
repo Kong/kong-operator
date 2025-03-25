@@ -8,7 +8,6 @@ import (
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -18,6 +17,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
@@ -25,7 +25,6 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -157,7 +156,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// If the referenced ControlPlane is not found, remove the finalizer and update the status.
 		// There's no need to remove the entity on Konnect because the ControlPlane
 		// does not exist anymore.
-		if errors.As(err, &ReferencedControlPlaneDoesNotExistError{}) {
+		if errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {
@@ -494,40 +493,6 @@ func setStatusServerURLAndOrgID(
 ) {
 	ent.GetKonnectStatus().ServerURL = serverURL.String()
 	ent.GetKonnectStatus().OrgID = orgID
-}
-
-func getCPForNamespacedRef(
-	ctx context.Context,
-	cl client.Client,
-	ref commonv1alpha1.ControlPlaneRef,
-	namespace string,
-) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
-	// TODO(pmalek): handle cross namespace refs
-	if namespace != "" && ref.KonnectNamespacedRef.Namespace != "" && ref.KonnectNamespacedRef.Namespace != namespace {
-		return nil, fmt.Errorf("%s ControlPlaneRef from different namespace than %s", ref.KonnectNamespacedRef.Namespace, namespace)
-	}
-
-	nn := types.NamespacedName{
-		Name:      ref.KonnectNamespacedRef.Name,
-		Namespace: namespace,
-	}
-
-	// Set namespace of control plane when it is non-empty. Only applies for cluster-scoped resources (KongVault).
-	if namespace == "" && ref.KonnectNamespacedRef.Namespace != "" {
-		nn.Namespace = ref.KonnectNamespacedRef.Namespace
-	}
-
-	var cp konnectv1alpha1.KonnectGatewayControlPlane
-	if err := cl.Get(ctx, nn, &cp); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return nil, ReferencedControlPlaneDoesNotExistError{
-				Reference: ref,
-				Err:       err,
-			}
-		}
-		return nil, fmt.Errorf("failed to get ControlPlane %s: %w", nn, err)
-	}
-	return &cp, nil
 }
 
 func setProgrammedStatusConditionBasedOnOtherConditions[

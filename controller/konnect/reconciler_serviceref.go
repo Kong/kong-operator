@@ -13,6 +13,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -138,14 +139,14 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 			return ctrl.Result{}, err
 		}
 
-		cpRef, ok := getControlPlaneRef(&svc).Get()
+		cpRef, ok := controlplane.GetControlPlaneRef(&svc).Get()
 		if !ok {
 			return ctrl.Result{}, fmt.Errorf(
 				"KongRoute references a KongService %s which does not have a ControlPlane ref",
 				client.ObjectKeyFromObject(&svc),
 			)
 		}
-		cp, err := getCPForRef(ctx, cl, cpRef, ent.GetNamespace())
+		cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, ent.GetNamespace())
 		if err != nil {
 			if res, errStatus := patch.StatusWithCondition(
 				ctx, cl, ent,
@@ -157,7 +158,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 				return res, errStatus
 			}
 			if k8serrors.IsNotFound(err) {
-				return ctrl.Result{}, ReferencedControlPlaneDoesNotExistError{
+				return ctrl.Result{}, controlplane.ReferencedControlPlaneDoesNotExistError{
 					Reference: cpRef,
 					Err:       err,
 				}

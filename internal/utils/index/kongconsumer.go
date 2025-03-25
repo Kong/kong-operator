@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,28 +18,28 @@ const (
 	IndexFieldKongConsumerReferencesSecrets = "kongConsumerSecretRef"
 )
 
-// IndexOptionsForKongConsumer returns required Index options for KongConsumer reconciler.
-func IndexOptionsForKongConsumer(cl client.Client) []ReconciliationIndexOption {
-	return []ReconciliationIndexOption{
+// OptionsForKongConsumer returns required Index options for KongConsumer reconciler.
+func OptionsForKongConsumer(cl client.Client) []Option {
+	return []Option{
 		{
-			IndexObject:  &configurationv1.KongConsumer{},
-			IndexField:   IndexFieldKongConsumerOnKongConsumerGroup,
-			ExtractValue: kongConsumerReferencesFromKongConsumerGroup,
+			Object:         &configurationv1.KongConsumer{},
+			Field:          IndexFieldKongConsumerOnKongConsumerGroup,
+			ExtractValueFn: kongConsumerReferencesFromKongConsumerGroup,
 		},
 		{
-			IndexObject:  &configurationv1.KongConsumer{},
-			IndexField:   IndexFieldKongConsumerOnPlugin,
-			ExtractValue: kongConsumerReferencesKongPluginsViaAnnotation,
+			Object:         &configurationv1.KongConsumer{},
+			Field:          IndexFieldKongConsumerOnPlugin,
+			ExtractValueFn: kongConsumerReferencesKongPluginsViaAnnotation,
 		},
 		{
-			IndexObject:  &configurationv1.KongConsumer{},
-			IndexField:   IndexFieldKongConsumerOnKonnectGatewayControlPlane,
-			ExtractValue: indexKonnectGatewayControlPlaneRef[configurationv1.KongConsumer](cl),
+			Object:         &configurationv1.KongConsumer{},
+			Field:          IndexFieldKongConsumerOnKonnectGatewayControlPlane,
+			ExtractValueFn: indexKonnectGatewayControlPlaneRef[configurationv1.KongConsumer](cl),
 		},
 		{
-			IndexObject:  &configurationv1.KongConsumer{},
-			IndexField:   IndexFieldKongConsumerReferencesSecrets,
-			ExtractValue: kongConsumerReferencesSecrets,
+			Object:         &configurationv1.KongConsumer{},
+			Field:          IndexFieldKongConsumerReferencesSecrets,
+			ExtractValueFn: kongConsumerReferencesSecrets,
 		},
 	}
 }

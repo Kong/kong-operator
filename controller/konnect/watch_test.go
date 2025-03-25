@@ -11,6 +11,7 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
@@ -106,9 +107,8 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 			expected    []ctrl.Request
 		}{
 			{
-				name:        "no ControlPlane reference",
-				index:       IndexFieldKongConsumerOnKonnectGatewayControlPlane,
-				extractFunc: indexKonnectGatewayControlPlaneRef[configurationv1.KongConsumer],
+				name:  "no ControlPlane reference",
+				index: index.IndexFieldKongConsumerOnKonnectGatewayControlPlane,
 				list: []client.Object{
 					&configurationv1.KongConsumer{
 						ObjectMeta: metav1.ObjectMeta{
@@ -125,9 +125,8 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 				},
 			},
 			{
-				name:        "1 KongConumser refers to KonnectGatewayControlPlane",
-				index:       IndexFieldKongConsumerOnKonnectGatewayControlPlane,
-				extractFunc: indexKonnectGatewayControlPlaneRef[configurationv1.KongConsumer],
+				name:  "1 KongConumser refers to KonnectGatewayControlPlane",
+				index: index.IndexFieldKongConsumerOnKonnectGatewayControlPlane,
 				list: []client.Object{
 					&configurationv1.KongConsumer{
 						ObjectMeta: metav1.ObjectMeta{
@@ -160,9 +159,8 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 				},
 			},
 			{
-				name:        "1 KongConumser refers to a different KonnectGatewayControlPlane",
-				index:       IndexFieldKongConsumerOnKonnectGatewayControlPlane,
-				extractFunc: indexKonnectGatewayControlPlaneRef[configurationv1.KongConsumer],
+				name:  "1 KongConumser refers to a different KonnectGatewayControlPlane",
+				index: index.IndexFieldKongConsumerOnKonnectGatewayControlPlane,
 				list: []client.Object{
 					&configurationv1.KongConsumer{
 						ObjectMeta: metav1.ObjectMeta{
@@ -200,7 +198,10 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 				clForIndices := builder.Build()
 				require.NotNil(t, clForIndices)
 
-				cl := builder.WithIndex(&configurationv1.KongConsumer{}, tt.index, tt.extractFunc(clForIndices)).Build()
+				for _, opt := range index.OptionsForKongConsumer(clForIndices) {
+					builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
+				}
+				cl := builder.Build()
 				require.NotNil(t, cl)
 
 				f := enqueueObjectForKonnectGatewayControlPlane[configurationv1.KongConsumerList](cl, tt.index)

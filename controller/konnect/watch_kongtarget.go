@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	"github.com/kong/gateway-operator/internal/utils/index"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
@@ -82,7 +83,7 @@ func enqueueKongTargetForKongUpstream(cl client.Client,
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(kongUpstream.GetNamespace()),
 			client.MatchingFields{
-				IndexFieldKongTargetOnReferencedUpstream: kongUpstream.Name,
+				index.IndexFieldKongTargetOnReferencedUpstream: kongUpstream.Name,
 			},
 		); err != nil {
 			return nil

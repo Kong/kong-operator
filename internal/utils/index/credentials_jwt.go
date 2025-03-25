@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -13,18 +13,18 @@ const (
 	IndexFieldKongCredentialJWTReferencesSecret = "kongCredentialsJWTSecretRef"
 )
 
-// IndexOptionsForCredentialsJWT returns required Index options for KongCredentialJWT.
-func IndexOptionsForCredentialsJWT() []ReconciliationIndexOption {
-	return []ReconciliationIndexOption{
+// OptionsForCredentialsJWT returns required Index options for KongCredentialJWT.
+func OptionsForCredentialsJWT() []Option {
+	return []Option{
 		{
-			IndexObject:  &configurationv1alpha1.KongCredentialJWT{},
-			IndexField:   IndexFieldKongCredentialJWTReferencesKongConsumer,
-			ExtractValue: kongCredentialJWTReferencesConsumer,
+			Object:         &configurationv1alpha1.KongCredentialJWT{},
+			Field:          IndexFieldKongCredentialJWTReferencesKongConsumer,
+			ExtractValueFn: kongCredentialJWTReferencesConsumer,
 		},
 		{
-			IndexObject:  &configurationv1alpha1.KongCredentialJWT{},
-			IndexField:   IndexFieldKongCredentialJWTReferencesSecret,
-			ExtractValue: kongCredentialReferencesSecret[configurationv1alpha1.KongCredentialJWT],
+			Object:         &configurationv1alpha1.KongCredentialJWT{},
+			Field:          IndexFieldKongCredentialJWTReferencesSecret,
+			ExtractValueFn: kongCredentialReferencesSecret[configurationv1alpha1.KongCredentialJWT],
 		},
 	}
 }

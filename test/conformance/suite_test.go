@@ -18,7 +18,6 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
 	"github.com/kong/gateway-operator/config"
-	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/manager"
 	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
@@ -176,7 +175,7 @@ func startControllerManager(metadata metadata.Info) <-chan struct{} {
 
 	startedChan := make(chan struct{})
 	go func() {
-		exitOnErr(manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, admission.NewRequestHandler, startedChan, metadata))
+		exitOnErr(manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, startedChan, metadata))
 	}()
 
 	return startedChan

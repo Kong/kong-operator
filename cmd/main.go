@@ -22,7 +22,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/cli"
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
@@ -37,7 +36,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(cfg.LoggerOpts)))
 
-	if err := manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, admission.NewRequestHandler, nil, m); err != nil {
+	if err := manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, nil, m); err != nil {
 		ctrl.Log.Error(err, "failed to run manager")
 		os.Exit(1)
 	}

@@ -12,7 +12,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	index2 "github.com/kong/gateway-operator/internal/utils/index"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -103,7 +105,7 @@ func objHasControlPlaneRef[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ent TEnt) bool {
-	cpRef, ok := getControlPlaneRef(ent).Get()
+	cpRef, ok := controlplane.GetControlPlaneRef(ent).Get()
 	if !ok {
 		return false
 	}
@@ -113,21 +115,6 @@ func objHasControlPlaneRef[
 	default:
 		return false
 	}
-}
-
-// controlPlaneRefIsKonnectNamespacedRef returns:
-// - the ControlPlane KonnectNamespacedRef of the object if it is a KonnectNamespacedRef.
-// - a boolean indicating if the object has a KonnectNamespacedRef.
-func controlPlaneRefIsKonnectNamespacedRef[
-	T constraints.SupportedKonnectEntityType,
-	TEnt constraints.EntityType[T],
-](ent TEnt) (commonv1alpha1.ControlPlaneRef, bool) {
-	cpRef, ok := getControlPlaneRef(ent).Get()
-	if !ok {
-		return commonv1alpha1.ControlPlaneRef{}, false
-	}
-	return cpRef, cpRef.KonnectNamespacedRef != nil &&
-		cpRef.Type == commonv1alpha1.ControlPlaneRefKonnectNamespacedRef
 }
 
 // objectListToReconcileRequests converts a list of objects to a list of reconcile requests.
@@ -238,7 +225,7 @@ func enqueueObjectForAPIAuthThroughControlPlaneRef[
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(auth.GetNamespace()),
 			client.MatchingFields{
-				IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration: auth.Name,
+				index2.IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration: auth.Name,
 			},
 		); err != nil {
 			return nil

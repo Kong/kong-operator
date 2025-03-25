@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,18 +14,18 @@ const (
 	IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane = "consumerGroupKonnectGatewayControlPlaneRef"
 )
 
-// IndexOptionsForKongConsumerGroup returns required Index options for KongConsumerGroup reconciler.
-func IndexOptionsForKongConsumerGroup(cl client.Client) []ReconciliationIndexOption {
-	return []ReconciliationIndexOption{
+// OptionsForKongConsumerGroup returns required Index options for KongConsumerGroup reconciler.
+func OptionsForKongConsumerGroup(cl client.Client) []Option {
+	return []Option{
 		{
-			IndexObject:  &configurationv1beta1.KongConsumerGroup{},
-			IndexField:   IndexFieldKongConsumerGroupOnPlugin,
-			ExtractValue: kongConsumerGroupReferencesKongPluginsViaAnnotation,
+			Object:         &configurationv1beta1.KongConsumerGroup{},
+			Field:          IndexFieldKongConsumerGroupOnPlugin,
+			ExtractValueFn: kongConsumerGroupReferencesKongPluginsViaAnnotation,
 		},
 		{
-			IndexObject:  &configurationv1beta1.KongConsumerGroup{},
-			IndexField:   IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane,
-			ExtractValue: indexKonnectGatewayControlPlaneRef[configurationv1beta1.KongConsumerGroup](cl),
+			Object:         &configurationv1beta1.KongConsumerGroup{},
+			Field:          IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane,
+			ExtractValueFn: indexKonnectGatewayControlPlaneRef[configurationv1beta1.KongConsumerGroup](cl),
 		},
 	}
 }

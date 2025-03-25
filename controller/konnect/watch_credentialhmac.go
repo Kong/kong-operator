@@ -12,6 +12,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/kong/gateway-operator/controller/pkg/controlplane"
+	"github.com/kong/gateway-operator/internal/utils/index"
+
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -89,11 +92,11 @@ func kongCredentialHMACForKonnectAPIAuthConfiguration(
 
 		var ret []reconcile.Request
 		for _, consumer := range l.Items {
-			cpRef, ok := getControlPlaneRef(&consumer).Get()
+			cpRef, ok := controlplane.GetControlPlaneRef(&consumer).Get()
 			if !ok {
 				continue
 			}
-			cp, err := getCPForRef(ctx, cl, cpRef, consumer.Namespace)
+			cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, consumer.Namespace)
 			if err != nil {
 				ctrllog.FromContext(ctx).Error(
 					err,
@@ -111,7 +114,7 @@ func kongCredentialHMACForKonnectAPIAuthConfiguration(
 			var credList configurationv1alpha1.KongCredentialHMACList
 			if err := cl.List(ctx, &credList,
 				client.MatchingFields{
-					IndexFieldKongCredentialHMACReferencesKongConsumer: consumer.Name,
+					index.IndexFieldKongCredentialHMACReferencesKongConsumer: consumer.Name,
 				},
 				client.InNamespace(auth.GetNamespace()),
 			); err != nil {
@@ -145,7 +148,7 @@ func kongCredentialHMACForKonnectGatewayControlPlane(
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(cp.GetNamespace()),
 			client.MatchingFields{
-				IndexFieldKongConsumerOnKonnectGatewayControlPlane: cp.Namespace + "/" + cp.Name,
+				index.IndexFieldKongConsumerOnKonnectGatewayControlPlane: cp.Namespace + "/" + cp.Name,
 			},
 		); err != nil {
 			return nil
@@ -156,7 +159,7 @@ func kongCredentialHMACForKonnectGatewayControlPlane(
 			var credList configurationv1alpha1.KongCredentialHMACList
 			if err := cl.List(ctx, &credList,
 				client.MatchingFields{
-					IndexFieldKongCredentialHMACReferencesKongConsumer: consumer.Name,
+					index.IndexFieldKongCredentialHMACReferencesKongConsumer: consumer.Name,
 				},
 				client.InNamespace(cp.GetNamespace()),
 			); err != nil {
@@ -188,7 +191,7 @@ func kongCredentialHMACForKongConsumer(
 		var l configurationv1alpha1.KongCredentialHMACList
 		if err := cl.List(ctx, &l,
 			client.MatchingFields{
-				IndexFieldKongCredentialHMACReferencesKongConsumer: consumer.Name,
+				index.IndexFieldKongCredentialHMACReferencesKongConsumer: consumer.Name,
 			},
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(consumer.GetNamespace()),

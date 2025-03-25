@@ -13,6 +13,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -52,7 +53,7 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 
 				// Check if the entity has a ControlPlaneRef as not having it as well as not having
 				// a KeySetRef is an error.
-				_, hasCPRef := getControlPlaneRef(ent).Get()
+				_, hasCPRef := controlplane.GetControlPlaneRef(ent).Get()
 				if !hasCPRef {
 					return ctrl.Result{}, fmt.Errorf("key doesn't have neither a KeySet ref not a ControlPlane ref")
 				}

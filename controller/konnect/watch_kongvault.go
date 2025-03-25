@@ -13,6 +13,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/kong/gateway-operator/controller/pkg/controlplane"
+	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
@@ -43,7 +45,7 @@ func KongVaultReconciliationWatchOptions(cl client.Client) []func(*ctrl.Builder)
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectForKonnectGatewayControlPlane[configurationv1alpha1.KongVaultList](
-						cl, IndexFieldKongVaultOnKonnectGatewayControlPlane,
+						cl, index.IndexFieldKongVaultOnKonnectGatewayControlPlane,
 					),
 				),
 			)
@@ -69,7 +71,7 @@ func enqueueKongVaultForKonnectAPIAuthConfiguration(
 
 		var ret []reconcile.Request
 		for _, vault := range l.Items {
-			cpRef, ok := getControlPlaneRef(&vault).Get()
+			cpRef, ok := controlplane.GetControlPlaneRef(&vault).Get()
 			if !ok {
 				continue
 			}
