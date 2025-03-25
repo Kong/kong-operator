@@ -48,6 +48,13 @@
   `KonnectAPIAuthConfiguration` instead of using a hardcoded `eu` value.
   [#1409](https://github.com/Kong/gateway-operator/pull/1409)
 
+### Fixes
+
+- Fix setting the defaults for `GatewayConfiguration`'s `ReadinessProbe when only
+  timeouts and/or delays are specified. Now the HTTPGet field is set to `/status/ready`
+  as expected with the `Gateway` scenario.
+  [#1395](https://github.com/Kong/gateway-operator/pull/1395)
+
 ## [v1.5.1]
 
 > Release date: 2025-04-01

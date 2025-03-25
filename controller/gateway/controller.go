@@ -445,7 +445,6 @@ func (r *Reconciler) provisionDataPlane(
 		)
 		return nil, errWrap
 	}
-
 	count := len(dataplanes)
 	if count > 1 {
 		err = fmt.Errorf("data planes found: %d, expected: 1", count)
@@ -679,10 +678,16 @@ func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions, default
 		if container.Image == "" {
 			container.Image = defaultImage
 		}
-		if container.ReadinessProbe == nil {
+		probe := k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint)
+		cProbe := container.ReadinessProbe
+		if cProbe == nil {
 			// For Gateway we set DataPlane's readiness probe to /status/ready so that
 			// it's only marked ready when it receives the configuration from the ControlPlane.
-			container.ReadinessProbe = k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint)
+			container.ReadinessProbe = probe
+		} else if cProbe.HTTPGet == nil && cProbe.Exec == nil && cProbe.TCPSocket == nil && cProbe.GRPC == nil {
+			// If user specified custom readiness probe settings (e.g. initial delay, timeout, etc)
+			// but has not specified the actual probe, then we ensure that the default HTTPGet probe is used.
+			container.ReadinessProbe.HTTPGet = probe.HTTPGet
 		}
 	} else {
 		// Because we currently require image to be specified for DataPlanes
