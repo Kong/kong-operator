@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/samber/lo"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -12,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/index"
@@ -241,5 +243,48 @@ func (r *Reconciler) getControlPlanesFromDataPlane(ctx context.Context, obj clie
 			},
 		})
 	}
+	return recs
+}
+
+func (r *Reconciler) listControlPlanesForReferenceGrants(
+	ctx context.Context,
+	obj client.Object,
+) []reconcile.Request {
+	rg, ok := obj.(*gatewayv1beta1.ReferenceGrant)
+	if !ok {
+		ctrllog.FromContext(ctx).Error(
+			operatorerrors.ErrUnexpectedObject,
+			"failed to map ReferenceGrant on ControlPlane",
+			"expected", "ReferenceGrant", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+
+	fromsForControlPlane := lo.Filter(rg.Spec.From,
+		func(from gatewayv1beta1.ReferenceGrantFrom, _ int) bool {
+			return string(from.Group) == operatorv1beta1.ControlPlaneGVR().Group &&
+				from.Kind == "ControlPlane"
+		},
+	)
+
+	var recs []reconcile.Request
+	for _, from := range fromsForControlPlane {
+		var controlPlaneList operatorv1beta1.ControlPlaneList
+		if err := r.List(ctx, &controlPlaneList,
+			client.InNamespace(from.Namespace),
+		); err != nil {
+			ctrllog.FromContext(ctx).Error(err, "failed to map ReferenceGrant to ControlPlane")
+			return nil
+		}
+		for _, cp := range controlPlaneList.Items {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: cp.Namespace,
+					Name:      cp.Name,
+				},
+			})
+		}
+	}
+
 	return recs
 }

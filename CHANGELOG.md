@@ -25,6 +25,17 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Changes
+
+- Added `spec.watchNamespace` field to `ControlPlane` CRD to allow watching resources
+  only in the specified namespace.
+  When `spec.watchNamespace.type=list` is used, each specified namespace requires
+  a `ReferenceGrant` in the namespace of the `ControlPlane` that allows the `ControlPlane`
+  to watch resources in the specified namespace.
+  [#1388](https://github.com/Kong/gateway-operator/pull/1388)
+
 ## [v1.5.0]
 
 > Release date: 2025-03-11

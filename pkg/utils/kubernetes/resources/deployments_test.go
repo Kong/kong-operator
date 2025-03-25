@@ -311,7 +311,7 @@ func TestGenerateNewDeploymentForControlPlane(t *testing.T) {
 						"gateway-operator.konghq.com/managed-by": "controlplane",
 					},
 					Annotations: map[string]string{
-						"gateway-operator.konghq.com/spec-hash": "2007ff92a457340b",
+						"gateway-operator.konghq.com/spec-hash": "97702e5d8e850807",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
@@ -471,7 +471,7 @@ func TestGenerateNewDeploymentForControlPlane(t *testing.T) {
 						"gateway-operator.konghq.com/managed-by": "controlplane",
 					},
 					Annotations: map[string]string{
-						"gateway-operator.konghq.com/spec-hash": "2007ff92a457340b",
+						"gateway-operator.konghq.com/spec-hash": "97702e5d8e850807",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
@@ -582,6 +582,38 @@ func TestGenerateNewDeploymentForControlPlane(t *testing.T) {
 			deployment, err := GenerateNewDeploymentForControlPlane(tt.generateControlPlaneArgs)
 			require.NoError(t, err)
 			require.Equal(t, tt.expectedDeployment, deployment)
+		})
+	}
+}
+
+func TestSetWatchNamespace(t *testing.T) {
+	tests := []struct {
+		name            string
+		watchNamespaces []string
+		expected        []corev1.EnvVar
+	}{
+		{
+			name:            "watch all namespaces",
+			watchNamespaces: nil,
+			expected:        nil,
+		},
+		{
+			name:            "watch list of namespaces",
+			watchNamespaces: []string{"namespace1", "namespace2", "namespace3"},
+			expected: []corev1.EnvVar{
+				{
+					Name:  "CONTROLLER_WATCH_NAMESPACE",
+					Value: "namespace1,namespace2,namespace3",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			container := &corev1.Container{}
+			setWatchNamespace(container, tt.watchNamespaces)
+			require.Equal(t, tt.expected, container.Env)
 		})
 	}
 }

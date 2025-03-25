@@ -1,0 +1,80 @@
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: dataplane-cp-watchnamespace
+spec:
+  deployment:
+    podTemplateSpec:
+      spec:
+        containers:
+        - name: proxy
+          # renovate: datasource=docker versioning=docker
+          image: kong/kong-gateway:3.9
+          env:
+          - name: KONG_LOG_LEVEL
+            value: debug
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 1
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kong-system
+---
+apiVersion: gateway.networking.k8s.io/v1beta1
+kind: ReferenceGrant
+metadata:
+  name: ref
+  namespace: kong-system
+spec:
+  from:
+  - group: gateway-operator.konghq.com
+    kind: ControlPlane
+    namespace: default
+  to:
+  - group: ""
+    kind: Namespace
+    name: kong-system
+---
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: ControlPlane
+metadata:
+  name: controlplane-example
+spec:
+  dataplane: dataplane-cp-watchnamespace
+  gatewayClass: kong
+  watchNamespaces:
+    type: list
+    list:
+    - kong-system
+  deployment:
+    podTemplateSpec:
+      metadata:
+        labels:
+          controlplane-pod-label: example
+      spec:
+        containers:
+        - name: controller
+          # renovate: datasource=docker versioning=docker
+          image: kong/kubernetes-ingress-controller:3.4.3
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 3
+          env:
+          - name: CONTROLLER_DUMP_CONFIG
+            value: "true"
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"

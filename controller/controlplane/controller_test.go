@@ -85,6 +85,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 					},
 				},
 				Spec: operatorv1beta1.ControlPlaneSpec{
+					WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+						Type: operatorv1beta1.WatchNamespacesTypeAll,
+					},
 					ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
 						Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 							PodTemplateSpec: &corev1.PodTemplateSpec{
