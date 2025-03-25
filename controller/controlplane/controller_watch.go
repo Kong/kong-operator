@@ -270,7 +270,7 @@ func (r *Reconciler) listControlPlanesForReferenceGrants(
 	var recs []reconcile.Request
 	for _, from := range fromsForControlPlane {
 		var controlPlaneList operatorv1beta1.ControlPlaneList
-		if err := r.Client.List(ctx, &controlPlaneList,
+		if err := r.List(ctx, &controlPlaneList,
 			client.InNamespace(from.Namespace),
 		); err != nil {
 			ctrllog.FromContext(ctx).Error(err, "failed to map ReferenceGrant to ControlPlane")
