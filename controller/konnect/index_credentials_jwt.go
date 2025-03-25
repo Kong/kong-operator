@@ -9,7 +9,7 @@ import (
 const (
 	// IndexFieldKongCredentialJWTReferencesKongConsumer is the index name for KongCredentialJWT -> Consumer.
 	IndexFieldKongCredentialJWTReferencesKongConsumer = "kongCredentialsJWTConsumerRef"
-	// IndexFieldKongCredentialAPIKeyReferencesSecret is the index name for KongCredentialJWT -> Secret.
+	// IndexFieldKongCredentialJWTReferencesSecret is the index name for KongCredentialJWT -> Secret.
 	IndexFieldKongCredentialJWTReferencesSecret = "kongCredentialsJWTSecretRef"
 )
 

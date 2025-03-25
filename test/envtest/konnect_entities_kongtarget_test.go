@@ -80,8 +80,8 @@ func TestKongTarget(t *testing.T) {
 		createdTarget := deploy.KongTargetAttachedToUpstream(t, ctx, clientNamespaced, upstream,
 			func(obj client.Object) {
 				kt := obj.(*configurationv1alpha1.KongTarget)
-				kt.Spec.KongTargetAPISpec.Target = targetHost
-				kt.Spec.KongTargetAPISpec.Weight = targetWeight
+				kt.Spec.Target = targetHost
+				kt.Spec.Weight = targetWeight
 			},
 		)
 

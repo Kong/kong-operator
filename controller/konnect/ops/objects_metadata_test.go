@@ -196,7 +196,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 			name: "annotation tags are set",
 			obj: func() testObjectKind {
 				obj := namespacedObject()
-				obj.ObjectMeta.Annotations = map[string]string{
+				obj.Annotations = map[string]string{
 					"konghq.com/tags": "tag1,tag2",
 				}
 				return obj
@@ -217,7 +217,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 			name: "additional tags are passed with a duplicate",
 			obj: func() testObjectKind {
 				obj := namespacedObject()
-				obj.ObjectMeta.Annotations = map[string]string{
+				obj.Annotations = map[string]string{
 					"konghq.com/tags": "tag1,tag2,duplicate-tag",
 				}
 				return obj
@@ -265,7 +265,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 			name: "too long tags in annotations are truncated",
 			obj: func() testObjectKind {
 				obj := namespacedObject()
-				obj.ObjectMeta.Annotations = map[string]string{
+				obj.Annotations = map[string]string{
 					"konghq.com/tags": "tag1,tag2,long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-tag-that-would-end-here-and-no-more-things-should-be-preserved",
 				}
 				return obj
@@ -287,7 +287,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 			name: "when too many tags in total, last from annotations are discarded",
 			obj: func() testObjectKind {
 				obj := namespacedObject()
-				obj.ObjectMeta.Annotations = map[string]string{
+				obj.Annotations = map[string]string{
 					"konghq.com/tags": "a,b,c,d,e,f,g,h,i,j,k,l,m,iwillbediscarded",
 				}
 				return obj
@@ -319,7 +319,7 @@ func TestGenerateTagsForObject(t *testing.T) {
 			name: "when too many tags in total and additional tags are passed, last from annotations are discarded",
 			obj: func() testObjectKind {
 				obj := namespacedObject()
-				obj.ObjectMeta.Annotations = map[string]string{
+				obj.Annotations = map[string]string{
 					"konghq.com/tags": "a,c,e,gwillbediscarded,iwillbediscarded,kwillbediscarded,mwillbediscarded",
 				}
 				return obj

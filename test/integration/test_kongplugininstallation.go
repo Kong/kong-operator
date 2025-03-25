@@ -37,14 +37,14 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 	t.Log("this test accesses container registries on public internet")
 
 	// Learn more how images were build and pushed to the registry in hack/plugin-images/README.md.
-	const registryUrl = "northamerica-northeast1-docker.pkg.dev/k8s-team-playground/"
+	const registryURL = "northamerica-northeast1-docker.pkg.dev/k8s-team-playground/"
 	// Source: hack/plugin-images/invalid-layers.Dockerfile.
-	const pluginInvalidLayersImage = registryUrl + "plugin-example/invalid-layers"
+	const pluginInvalidLayersImage = registryURL + "plugin-example/invalid-layers"
 	// Source: hack/plugin-images/myheader.Dockerfile.
-	const pluginMyHeaderImage = registryUrl + "plugin-example/myheader"
+	const pluginMyHeaderImage = registryURL + "plugin-example/myheader"
 	expectedHeadersForMyHeader := http.Header{"myheader": {"roar"}}
 	// Source: hack/plugin-images/myheader-2.Dockerfile.
-	const pluginMyHeader2Image = registryUrl + "plugin-example-private/myheader-2"
+	const pluginMyHeader2Image = registryURL + "plugin-example-private/myheader-2"
 	expectedHeadersForMyHeader2 := http.Header{"newheader": {"amazing"}}
 
 	t.Log("deploying an invalid KongPluginInstallation resource")
@@ -290,7 +290,7 @@ func checkKongPluginInstallationConditions(
 		}
 		status := kpi.Status.Conditions[0]
 		assert.EqualValues(c, operatorv1alpha1.KongPluginInstallationConditionStatusAccepted, status.Type)
-		assert.EqualValues(c, conditionStatus, status.Status)
+		assert.Equal(c, conditionStatus, status.Status)
 		if conditionStatus == metav1.ConditionTrue {
 			assert.EqualValues(c, operatorv1alpha1.KongPluginInstallationReasonReady, status.Reason)
 		} else {
@@ -360,7 +360,7 @@ func checkDataPlaneStatus(
 
 		condition := dp.Status.Conditions[0]
 		assert.EqualValues(c, kcfgdataplane.ReadyType, condition.Type)
-		assert.EqualValues(c, expectedConditionStatus, condition.Status)
+		assert.Equal(c, expectedConditionStatus, condition.Status)
 		assert.EqualValues(c, expectedConditionReason, condition.Reason)
 		assert.Equal(c, expectedConditionMessage, condition.Message)
 	}, 2*time.Minute, time.Second)

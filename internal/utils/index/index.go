@@ -113,7 +113,7 @@ func ExtendableOnKonnectExtension[T extensions.ExtendableT](ctx context.Context,
 					if ext.Namespace != nil && *ext.Namespace != namespace {
 						continue
 					}
-					result = append(result, namespace+"/"+ext.NamespacedRef.Name)
+					result = append(result, namespace+"/"+ext.Name)
 				}
 			}
 			return result

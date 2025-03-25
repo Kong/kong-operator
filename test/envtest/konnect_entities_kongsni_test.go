@@ -90,7 +90,7 @@ func TestKongSNI(t *testing.T) {
 		createdSNI := deploy.KongSNIAttachedToCertificate(t, ctx, clientNamespaced, createdCert,
 			func(obj client.Object) {
 				sni := obj.(*configurationv1alpha1.KongSNI)
-				sni.Spec.KongSNIAPISpec.Name = "test.kong-sni.example.com"
+				sni.Spec.Name = "test.kong-sni.example.com"
 			},
 		)
 
@@ -111,7 +111,7 @@ func TestKongSNI(t *testing.T) {
 
 		t.Log("Patching KongSNI")
 		sniToPatch := createdSNI.DeepCopy()
-		sniToPatch.Spec.KongSNIAPISpec.Name = "test2.kong-sni.example.com"
+		sniToPatch.Spec.Name = "test2.kong-sni.example.com"
 		require.NoError(t, clientNamespaced.Patch(ctx, sniToPatch, client.MergeFrom(createdSNI)))
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.SNIsSDK, waitTime, tickTime)

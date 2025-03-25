@@ -43,46 +43,46 @@ func (b *testDataPlaneBuilder) WithObjectMeta(objectMeta metav1.ObjectMeta) *tes
 }
 
 func (b *testDataPlaneBuilder) initIngressServiceOptions() {
-	if b.dataplane.Spec.DataPlaneOptions.Network.Services == nil {
-		b.dataplane.Spec.DataPlaneOptions.Network.Services = &operatorv1beta1.DataPlaneServices{}
+	if b.dataplane.Spec.Network.Services == nil {
+		b.dataplane.Spec.Network.Services = &operatorv1beta1.DataPlaneServices{}
 	}
-	if b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress == nil {
-		b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress = &operatorv1beta1.DataPlaneServiceOptions{}
+	if b.dataplane.Spec.Network.Services.Ingress == nil {
+		b.dataplane.Spec.Network.Services.Ingress = &operatorv1beta1.DataPlaneServiceOptions{}
 	}
 }
 
 // WithIngressServiceType sets the ServiceType of the Ingress service.
 func (b *testDataPlaneBuilder) WithIngressServiceType(typ corev1.ServiceType) *testDataPlaneBuilder {
 	b.initIngressServiceOptions()
-	b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.Type = typ
+	b.dataplane.Spec.Network.Services.Ingress.Type = typ
 	return b
 }
 
 // WithIngressServiceName sets the Name of the Ingress service.
 func (b *testDataPlaneBuilder) WithIngressServiceName(name string) *testDataPlaneBuilder {
 	b.initIngressServiceOptions()
-	b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.Name = &name
+	b.dataplane.Spec.Network.Services.Ingress.Name = &name
 	return b
 }
 
 // WithIngressServiceExternalTrafficPolicy sets the ExternalTrafficPolicy of the Ingress service.
 func (b *testDataPlaneBuilder) WithIngressServiceExternalTrafficPolicy(typ corev1.ServiceExternalTrafficPolicyType) *testDataPlaneBuilder {
 	b.initIngressServiceOptions()
-	b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.ExternalTrafficPolicy = typ
+	b.dataplane.Spec.Network.Services.Ingress.ExternalTrafficPolicy = typ
 	return b
 }
 
 // WithIngressServicePorts sets the Ports of the Ingress service.
 func (b *testDataPlaneBuilder) WithIngressServicePorts(ports []operatorv1beta1.DataPlaneServicePort) *testDataPlaneBuilder {
 	b.initIngressServiceOptions()
-	b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.Ports = ports
+	b.dataplane.Spec.Network.Services.Ingress.Ports = ports
 	return b
 }
 
 // WithIngressServiceAnnotations sets the Annotations of the Ingress service.
 func (b *testDataPlaneBuilder) WithIngressServiceAnnotations(anns map[string]string) *testDataPlaneBuilder {
 	b.initIngressServiceOptions()
-	b.dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.Annotations = anns
+	b.dataplane.Spec.Network.Services.Ingress.Annotations = anns
 	return b
 }
 
@@ -102,7 +102,7 @@ func (b *testDataPlaneBuilder) WithPromotionStrategy(promotionStrategy operatorv
 	return b
 }
 
-// WithTemplateSpec sets the PodTemplateSpec of the DataPlane object.
+// WithPodTemplateSpec sets the PodTemplateSpec of the DataPlane object.
 func (b *testDataPlaneBuilder) WithPodTemplateSpec(podSpec *corev1.PodTemplateSpec) *testDataPlaneBuilder {
 	b.dataplane.Spec.Deployment.PodTemplateSpec = podSpec
 	return b

@@ -24,7 +24,7 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
-// mustListControlPlaneDeployments is a helper function for tests that
+// MustListControlPlaneDeployments is a helper function for tests that
 // conveniently lists all deployments managed by a given controlplane.
 func MustListControlPlaneDeployments(t *testing.T, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, clients K8sClients) []appsv1.Deployment {
 	deployments, err := k8sutils.ListDeploymentsForOwner(

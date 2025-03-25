@@ -136,7 +136,7 @@ func listExtendableReferencedExtensions[t extensions.ExtendableT](_ context.Cont
 // Reconcile reconciles a KonnectExtension object.
 func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var ext konnectv1alpha1.KonnectExtension
-	if err := r.Client.Get(ctx, req.NamespacedName, &ext); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, &ext); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -176,7 +176,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		updated = controllerutil.AddFinalizer(&ext, consts.ExtensionInUseFinalizer)
 	}
 	if updated {
-		if err := r.Client.Update(ctx, &ext); err != nil {
+		if err := r.Update(ctx, &ext); err != nil {
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
@@ -209,7 +209,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			// remove the secret-in-use finalizer from the secret.
 			updated = controllerutil.RemoveFinalizer(certificateSecret, consts.KonnectExtensionSecretInUseFinalizer)
 			if updated {
-				if err := r.Client.Update(ctx, certificateSecret); err != nil {
+				if err := r.Update(ctx, certificateSecret); err != nil {
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
@@ -225,7 +225,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			// remove the konnect-cleanup finalizer from the KonnectExtension.
 			updated = controllerutil.RemoveFinalizer(&ext, KonnectCleanupFinalizer)
 			if updated {
-				if err := r.Client.Update(ctx, &ext); err != nil {
+				if err := r.Update(ctx, &ext); err != nil {
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
@@ -267,7 +267,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
-	err = r.Client.Get(ctx, apiAuthRef, &apiAuth)
+	err = r.Get(ctx, apiAuthRef, &apiAuth)
 	if requeue, res, retErr := handleAPIAuthStatusCondition(
 		ctx,
 		r.Client,
@@ -379,7 +379,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// Enforce a finalizer on the secret to prevent it from being deleted while in use.
 	if controllerutil.AddFinalizer(certificateSecret, consts.KonnectExtensionSecretInUseFinalizer) {
-		if err := r.Client.Update(ctx, certificateSecret); err != nil {
+		if err := r.Update(ctx, certificateSecret); err != nil {
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
@@ -439,7 +439,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			certificateSecret.Annotations = map[string]string{}
 		}
 		certificateSecret.Annotations[consts.DataPlaneCertificateIDAnnotationKey] = newMappedIDsStr
-		if err := r.Client.Update(ctx, certificateSecret); err != nil {
+		if err := r.Update(ctx, certificateSecret); err != nil {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -548,7 +548,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if len(mappedIDs) == 0 {
 			updated = controllerutil.RemoveFinalizer(certificateSecret, KonnectCleanupFinalizer)
 			if updated {
-				if err := r.Client.Update(ctx, certificateSecret); err != nil {
+				if err := r.Update(ctx, certificateSecret); err != nil {
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}

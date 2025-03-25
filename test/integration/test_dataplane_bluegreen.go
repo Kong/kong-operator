@@ -338,7 +338,7 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 		waitTime, tickTime)
 }
 
-func TestDataPlaneBlueGreen_ResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T) {
+func TestDataPlaneBlueGreenResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T) {
 	if !bluegreenController {
 		t.Skipf("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER not set, skipping")
 	}
