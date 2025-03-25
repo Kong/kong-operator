@@ -240,7 +240,7 @@ func getControlPlaneForUID(
 	return id, nil
 }
 
-// GetControlPlaneByUID returns the Konnect ControlPlane that matches the provided ID.
+// GetControlPlaneByID returns the Konnect ControlPlane that matches the provided ID.
 func GetControlPlaneByID(
 	ctx context.Context,
 	sdk sdkops.ControlPlaneSDK,

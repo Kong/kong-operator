@@ -20,7 +20,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// FiltenNone filter nothing, that is it returns the same slice as provided.
+// FilterNone filter nothing, that is it returns the same slice as provided.
 func FilterNone[T any](objs []T) []T {
 	return objs
 }

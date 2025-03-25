@@ -238,6 +238,8 @@ func GenerateImage(opts *operatorv1beta1.ControlPlaneOptions, validators ...vers
 // -----------------------------------------------------------------------------
 // ControlPlane - Private Functions - Equality Checks
 // -----------------------------------------------------------------------------
+
+// SpecDeepEqual returns true if the two ControlPlaneOptions are equal.
 func SpecDeepEqual(spec1, spec2 *operatorv1beta1.ControlPlaneOptions, envVarsToIgnore ...string) bool {
 	if !k8scompare.ControlPlaneDeploymentOptionsDeepEqual(&spec1.Deployment, &spec2.Deployment, envVarsToIgnore...) ||
 		!reflect.DeepEqual(spec1.DataPlane, spec2.DataPlane) {

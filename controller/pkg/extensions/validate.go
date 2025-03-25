@@ -29,7 +29,7 @@ func validateExtensions[t ExtendableT](obj t) *metav1.Condition {
 	}
 	var messageBuilder strings.Builder
 	for i, ext := range obj.GetExtensions() {
-		if !(isKonnectExtension(ext) || isDataPlaneMetricsExtension(ext)) {
+		if !isKonnectExtension(ext) && !isDataPlaneMetricsExtension(ext) {
 			buildMessage(&messageBuilder, fmt.Sprintf("Extension %s/%s is not supported", ext.Group, ext.Kind))
 			continue
 		}

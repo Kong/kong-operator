@@ -129,7 +129,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	log.Trace(logger, "reconciling gateway resource")
 	var gateway gwtypes.Gateway
-	if err := r.Client.Get(ctx, req.NamespacedName, &gateway); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, &gateway); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -167,7 +167,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	npFinalizerSet := controllerutil.AddFinalizer(&gateway, string(GatewayFinalizerCleanupNetworkPolicies))
 	if cpFinalizerSet || dpFinalizerSet || npFinalizerSet {
 		log.Trace(logger, "Setting finalizers")
-		if err := r.Client.Update(ctx, &gateway); err != nil {
+		if err := r.Update(ctx, &gateway); err != nil {
 			res, err := handleGatewayFinalizerPatchOrUpdateError(err, logger)
 			if err != nil {
 				return res, fmt.Errorf("failed updating Gateway's finalizers: %w", err)
@@ -505,7 +505,7 @@ func (r *Reconciler) provisionDataPlane(
 		oldDataPlane := dataplane.DeepCopy()
 		dataplane.Spec.DataPlaneOptions = *expectedDataPlaneOptions
 
-		if err = r.Client.Patch(ctx, dataplane, client.MergeFrom(oldDataPlane)); err != nil {
+		if err = r.Patch(ctx, dataplane, client.MergeFrom(oldDataPlane)); err != nil {
 			k8sutils.SetCondition(
 				createDataPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 				gatewayConditionsAndListenersAware(gateway),
@@ -608,7 +608,7 @@ func (r *Reconciler) provisionControlPlane(
 		log.Trace(logger, "controlplane config is out of date")
 		controlplaneOld := controlPlane.DeepCopy()
 		controlPlane.Spec.ControlPlaneOptions = *expectedControlPlaneOptions
-		if err := r.Client.Patch(ctx, controlPlane, client.MergeFrom(controlplaneOld)); err != nil {
+		if err := r.Patch(ctx, controlPlane, client.MergeFrom(controlplaneOld)); err != nil {
 			k8sutils.SetCondition(
 				createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 				gatewayConditionsAndListenersAware(gateway),

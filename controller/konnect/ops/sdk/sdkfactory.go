@@ -157,7 +157,7 @@ func (w sdkWrapper) GetDataPlaneCertificatesSDK() DataPlaneClientCertificatesSDK
 	return w.sdk.DPCertificates
 }
 
-// GetDedicatedCloudgatewaysSDK returns the SDK to operate Konnect Dedicated Cloud Gateways SDK.
+// GetCloudGatewaysSDK returns the SDK to operate Konnect Dedicated Cloud Gateways SDK.
 func (w sdkWrapper) GetCloudGatewaysSDK() CloudGatewaysSDK {
 	return w.sdk.CloudGateways
 }

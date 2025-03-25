@@ -27,11 +27,11 @@ import (
 // -----------------------------------------------------------------------------
 
 func generateDataPlaneImage(dataplane *operatorv1beta1.DataPlane, defaultImage string, validators ...versions.VersionValidationOption) (string, error) {
-	if dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec == nil {
+	if dataplane.Spec.Deployment.PodTemplateSpec == nil {
 		return defaultImage, nil // TODO: https://github.com/Kong/gateway-operator-archive/issues/20
 	}
 
-	container := k8sutils.GetPodContainerByName(&dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+	container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 	if container != nil && container.Image != "" {
 		for _, v := range validators {
 			supported, err := v(container.Image)
@@ -78,13 +78,13 @@ func addAnnotationsForDataPlaneIngressService(obj client.Object, dataplane opera
 }
 
 func extractDataPlaneIngressServiceAnnotations(dataplane *operatorv1beta1.DataPlane) map[string]string {
-	if dataplane.Spec.DataPlaneOptions.Network.Services == nil ||
-		dataplane.Spec.DataPlaneOptions.Network.Services.Ingress == nil ||
-		dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.Annotations == nil {
+	if dataplane.Spec.Network.Services == nil ||
+		dataplane.Spec.Network.Services.Ingress == nil ||
+		dataplane.Spec.Network.Services.Ingress.Annotations == nil {
 		return nil
 	}
 
-	anns := dataplane.Spec.DataPlaneOptions.Network.Services.Ingress.Annotations
+	anns := dataplane.Spec.Network.Services.Ingress.Annotations
 	return anns
 }
 

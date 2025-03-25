@@ -22,7 +22,7 @@ func LabelObjectAsDataPlaneManaged(obj metav1.Object) {
 	obj.SetLabels(labels)
 }
 
-// LabelObjectAsDataPlaneManaged ensures that labels are set on the
+// LabelObjectAsKongPluginInstallationManaged ensures that labels are set on the
 // provided object to signal that it's owned by a KongPluginInstallation
 // resource and that its lifecycle is managed by this operator.
 func LabelObjectAsKongPluginInstallationManaged(obj metav1.Object) {

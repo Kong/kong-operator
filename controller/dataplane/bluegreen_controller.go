@@ -97,7 +97,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// Calling it here ensures that evaluated values will be used for the duration of this function.
 	ctx = r.ContextInjector.InjectKeyValues(ctx)
 	var dataplane operatorv1beta1.DataPlane
-	if err := r.Client.Get(ctx, req.NamespacedName, &dataplane); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, &dataplane); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -559,7 +559,7 @@ func (r *BlueGreenReconciler) resetPromoteWhenReadyAnnotation(
 ) error {
 	oldDp := dataplane.DeepCopy()
 	delete(dataplane.Annotations, operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey)
-	if err := r.Client.Patch(ctx, dataplane, client.MergeFrom(oldDp)); err != nil {
+	if err := r.Patch(ctx, dataplane, client.MergeFrom(oldDp)); err != nil {
 		return fmt.Errorf("failed resetting promote-when-ready annotation: %w", err)
 	}
 	return nil
@@ -606,7 +606,7 @@ func (r *BlueGreenReconciler) reduceLiveDeployments(
 		if err := dataplane.OwnedObjectPreDeleteHook(ctx, r.Client, &deployment); err != nil {
 			return fmt.Errorf("failed executing pre delete hook: %w", err)
 		}
-		if err := r.Client.Delete(ctx, &deployment); err != nil {
+		if err := r.Delete(ctx, &deployment); err != nil {
 			return fmt.Errorf("failed deleting live deployment %s/%s: %w", deployment.Namespace, deployment.Name, err)
 		}
 	}
@@ -960,7 +960,7 @@ func (r *BlueGreenReconciler) ensurePreviewDeploymentLabeledLive(
 		deployment.Labels = map[string]string{}
 	}
 	deployment.Labels[consts.DataPlaneDeploymentStateLabel] = consts.DataPlaneStateLabelValueLive
-	if err := r.Client.Patch(ctx, &deployment, client.MergeFrom(old)); err != nil {
+	if err := r.Patch(ctx, &deployment, client.MergeFrom(old)); err != nil {
 		return false, fmt.Errorf("failed labeling preview deployment %q as live: %w",
 			fmt.Sprintf("%s/%s", deployment.Namespace, deployment.Name), err)
 	}

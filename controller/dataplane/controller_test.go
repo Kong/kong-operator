@@ -183,9 +183,9 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				require.EqualError(t, err, "number of DataPlane ingress services reduced")
 
 				svcToBeDeleted, svcToBeKept := &corev1.Service{}, &corev1.Service{}
-				err = reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "svc-proxy-to-delete"}, svcToBeDeleted)
+				err = reconciler.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "svc-proxy-to-delete"}, svcToBeDeleted)
 				require.True(t, k8serrors.IsNotFound(err))
-				err = reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "svc-proxy-to-keep"}, svcToBeKept)
+				err = reconciler.Get(ctx, types.NamespacedName{Namespace: "test-namespace", Name: "svc-proxy-to-keep"}, svcToBeKept)
 				require.NoError(t, err)
 			},
 		},
@@ -528,7 +528,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err)
 
 				dp := &operatorv1beta1.DataPlane{}
-				err = reconciler.Client.Get(ctx, types.NamespacedName{Namespace: "default", Name: "dataplane-kong"}, dp)
+				err = reconciler.Get(ctx, types.NamespacedName{Namespace: "default", Name: "dataplane-kong"}, dp)
 				require.NoError(t, err)
 				require.Equal(t, "test-proxy-service", dp.Status.Service)
 				require.Equal(t, []operatorv1beta1.Address{
@@ -679,7 +679,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 
 				dp := &operatorv1beta1.DataPlane{}
 				nn := types.NamespacedName{Namespace: "default", Name: "dataplane-kong"}
-				err = reconciler.Client.Get(ctx, nn, dp)
+				err = reconciler.Get(ctx, nn, dp)
 				require.NoError(t, err)
 				c, ok := k8sutils.GetCondition(kcfgdataplane.ReadyType, dp)
 				require.True(t, ok, "DataPlane should have a Ready condition set")
@@ -696,7 +696,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
-				err = reconciler.Client.Get(ctx, nn, dp)
+				err = reconciler.Get(ctx, nn, dp)
 				require.NoError(t, err)
 				c, ok = k8sutils.GetCondition(kcfgdataplane.ReadyType, dp)
 				require.True(t, ok, "DataPlane should have a Ready condition set")
@@ -841,7 +841,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 
 				dp := &operatorv1beta1.DataPlane{}
 				nn := types.NamespacedName{Namespace: "default", Name: "dataplane-kong"}
-				err = reconciler.Client.Get(ctx, nn, dp)
+				err = reconciler.Get(ctx, nn, dp)
 				require.NoError(t, err)
 				c, ok := k8sutils.GetCondition(kcfgdataplane.ReadyType, dp)
 				require.True(t, ok, "DataPlane should have a Ready condition set")
@@ -858,7 +858,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
-				err = reconciler.Client.Get(ctx, nn, dp)
+				err = reconciler.Get(ctx, nn, dp)
 				require.NoError(t, err)
 				c, ok = k8sutils.GetCondition(kcfgdataplane.ReadyType, dp)
 				require.True(t, ok, "DataPlane should have a Ready condition set")
@@ -867,8 +867,8 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				assert.EqualValues(t, 1, dp.Status.ReadyReplicas)
 				assert.EqualValues(t, 1, dp.Status.Replicas)
 
-				dp.Spec.Deployment.DeploymentOptions.PodTemplateSpec.Spec.Containers[0].LivenessProbe.PeriodSeconds = 2
-				require.NoError(t, reconciler.Client.Update(ctx, dp))
+				dp.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].LivenessProbe.PeriodSeconds = 2
+				require.NoError(t, reconciler.Update(ctx, dp))
 
 				// Below code checks if the dataplane gets properly updated status conditions when
 				// the dataplane spec changes with a field that has non zero defaults.
@@ -882,7 +882,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 
-				require.NoError(t, reconciler.Client.Get(ctx, nn, dp))
+				require.NoError(t, reconciler.Get(ctx, nn, dp))
 				c, ok = k8sutils.GetCondition(kcfgdataplane.ReadyType, dp)
 				require.True(t, ok, "DataPlane should have a Ready condition set")
 				assert.Equal(t, metav1.ConditionTrue, c.Status, "DataPlane should be ready at this point")

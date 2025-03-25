@@ -76,7 +76,7 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 					ctx      = t.Context()
 					webhooks admregv1.ValidatingWebhookConfigurationList
 				)
-				require.NoError(t, r.Client.List(ctx, &webhooks))
+				require.NoError(t, r.List(ctx, &webhooks))
 				require.Empty(t, webhooks.Items)
 
 				certSecret := &corev1.Secret{
@@ -92,7 +92,7 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, op.Created, res)
 
-				require.NoError(t, r.Client.List(ctx, &webhooks))
+				require.NoError(t, r.List(ctx, &webhooks))
 				require.Len(t, webhooks.Items, 1)
 
 				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
@@ -142,7 +142,7 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 					ctx      = t.Context()
 					webhooks admregv1.ValidatingWebhookConfigurationList
 				)
-				require.NoError(t, r.Client.List(ctx, &webhooks))
+				require.NoError(t, r.List(ctx, &webhooks))
 				require.Empty(t, webhooks.Items)
 
 				certSecret := &corev1.Secret{
@@ -158,7 +158,7 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, op.Created, res)
 
-				require.NoError(t, r.Client.List(ctx, &webhooks))
+				require.NoError(t, r.List(ctx, &webhooks))
 				require.Len(t, webhooks.Items, 1, "webhook configuration should be created")
 
 				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
@@ -168,8 +168,8 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 				t.Log("updating webhook configuration outside of the controller")
 				{
 					w := webhooks.Items[0]
-					w.ObjectMeta.Labels["foo"] = "bar"
-					require.NoError(t, r.Client.Update(ctx, &w))
+					w.Labels["foo"] = "bar"
+					require.NoError(t, r.Update(ctx, &w))
 				}
 
 				t.Log("running ensureValidatingWebhookConfiguration to enforce ObjectMeta")
@@ -177,7 +177,7 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, op.Updated, res)
 
-				require.NoError(t, r.Client.List(ctx, &webhooks))
+				require.NoError(t, r.List(ctx, &webhooks))
 				require.Len(t, webhooks.Items, 1)
 				require.NotContains(t, webhooks.Items[0].Labels, "foo",
 					"labels should be updated by the controller so that changes applied by 3rd parties are overwritten",

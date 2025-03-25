@@ -213,7 +213,7 @@ func KonnectGatewayControlPlaneType(typ sdkkonnectcomp.CreateControlPlaneRequest
 		if !ok {
 			panic(fmt.Errorf("%T does not implement KonnectGatewayControlPlane", obj))
 		}
-		cp.Spec.CreateControlPlaneRequest.ClusterType = &typ
+		cp.Spec.ClusterType = &typ
 	}
 }
 

@@ -39,7 +39,7 @@ func testReconciliationWatchOptionsForEntity[
 ) {
 	t.Helper()
 
-	var tt T = *ent
+	var tt = *ent
 	t.Run(tt.GetTypeName(), func(t *testing.T) {
 		cl := fakectrlruntimeclient.NewFakeClient()
 		require.NotNil(t, cl)

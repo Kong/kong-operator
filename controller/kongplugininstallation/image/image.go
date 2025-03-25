@@ -130,14 +130,14 @@ func (sl sizeLimitBytes) String() string {
 func extractKongPluginFromLayer(r io.Reader) (PluginFiles, error) {
 	// Search for the files walking through the archive.
 	// The size of a plugin is limited to the size of a ConfigMap in Kubernetes.
-	const sizeLimit_1MiB sizeLimitBytes = 1024 * 1024
+	const sizeLimit1MiB sizeLimitBytes = 1024 * 1024
 
 	gr, err := gzip.NewReader(r)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse layer as tar.gz: %w", err)
 	}
 	pluginFiles := make(map[string]string)
-	for tr := tar.NewReader(io.LimitReader(gr, sizeLimit_1MiB.int64())); ; {
+	for tr := tar.NewReader(io.LimitReader(gr, sizeLimit1MiB.int64())); ; {
 		h, err := tr.Next()
 		if err == io.EOF {
 			break
@@ -151,7 +151,7 @@ func extractKongPluginFromLayer(r io.Reader) (PluginFiles, error) {
 			file := make([]byte, h.Size)
 			if _, err := io.ReadFull(tr, file); err != nil {
 				if errors.Is(err, io.ErrUnexpectedEOF) {
-					return nil, fmt.Errorf("plugin size limit of %s exceeded", sizeLimit_1MiB)
+					return nil, fmt.Errorf("plugin size limit of %s exceeded", sizeLimit1MiB)
 				}
 				return nil, fmt.Errorf("failed to read %s from image: %w", fileName, err)
 			}

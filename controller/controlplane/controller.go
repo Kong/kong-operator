@@ -149,7 +149,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	log.Trace(logger, "reconciling ControlPlane resource")
 	cp := new(operatorv1beta1.ControlPlane)
-	if err := r.Client.Get(ctx, req.NamespacedName, cp); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, cp); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
@@ -184,7 +184,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 		// now that ValidatingWebhookConfigurations are cleaned up, remove the relevant finalizer
 		if controllerutil.RemoveFinalizer(newControlPlane, string(ControlPlaneFinalizerCleanupValidatingWebhookConfiguration)) {
-			if err := r.Client.Patch(ctx, newControlPlane, client.MergeFrom(cp)); err != nil {
+			if err := r.Patch(ctx, newControlPlane, client.MergeFrom(cp)); err != nil {
 				return ctrl.Result{}, err
 			}
 			log.Debug(logger, "ValidatingWebhookConfigurations finalizer removed")
@@ -203,7 +203,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 		// now that ClusterRoleBindings are cleaned up, remove the relevant finalizer
 		if controllerutil.RemoveFinalizer(newControlPlane, string(ControlPlaneFinalizerCleanupClusterRoleBinding)) {
-			if err := r.Client.Patch(ctx, newControlPlane, client.MergeFrom(cp)); err != nil {
+			if err := r.Patch(ctx, newControlPlane, client.MergeFrom(cp)); err != nil {
 				return ctrl.Result{}, err
 			}
 			log.Debug(logger, "clusterRoleBinding finalizer removed")
@@ -222,7 +222,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 		// now that ClusterRoles are cleaned up, remove the relevant finalizer
 		if controllerutil.RemoveFinalizer(newControlPlane, string(ControlPlaneFinalizerCleanupClusterRole)) {
-			if err := r.Client.Patch(ctx, newControlPlane, client.MergeFrom(cp)); err != nil {
+			if err := r.Patch(ctx, newControlPlane, client.MergeFrom(cp)); err != nil {
 				return ctrl.Result{}, err
 			}
 			log.Debug(logger, "clusterRole finalizer removed")
@@ -240,7 +240,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	vwcFinalizerSet := controllerutil.AddFinalizer(cp, string(ControlPlaneFinalizerCleanupValidatingWebhookConfiguration))
 	if crFinalizerSet || crbFinalizerSet || vwcFinalizerSet {
 		log.Trace(logger, "setting finalizers")
-		if err := r.Client.Update(ctx, cp); err != nil {
+		if err := r.Update(ctx, cp); err != nil {
 			if k8serrors.IsConflict(err) {
 				log.Debug(logger, "conflict found when updating ControlPlane, retrying")
 				return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
@@ -486,7 +486,7 @@ func validateControlPlane(controlPlane *operatorv1beta1.ControlPlane, devMode bo
 func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, updated *operatorv1beta1.ControlPlane) (ctrl.Result, error) {
 	current := &operatorv1beta1.ControlPlane{}
 
-	err := r.Client.Get(ctx, client.ObjectKeyFromObject(updated), current)
+	err := r.Get(ctx, client.ObjectKeyFromObject(updated), current)
 	if client.IgnoreNotFound(err) != nil {
 		return ctrl.Result{}, err
 	}

@@ -64,7 +64,7 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	logger := log.GetLogger(ctx, "aigateway", r.DevelopmentMode)
 
 	var aigateway operatorv1alpha1.AIGateway
-	if err := r.Client.Get(ctx, req.NamespacedName, &aigateway); err != nil {
+	if err := r.Get(ctx, req.NamespacedName, &aigateway); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 

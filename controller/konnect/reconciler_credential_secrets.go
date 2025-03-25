@@ -55,7 +55,7 @@ const (
 	CredentialSecretKeyNameACLGroupKey = "group"
 	// CredentialSecretKeyNameJwtAlgorithmKey is the credential secret key name for JWT algorithm.
 	CredentialSecretKeyNameJwtAlgorithmKey = "algorithm"
-	// CredentualSecretKeyNameJwtKeyKey is the credential secret key name for JWT key.
+	// CredentialSecretKeyNameJwtKeyKey is the credential secret key name for JWT key.
 	CredentialSecretKeyNameJwtKeyKey = "key"
 	// CredentialSecretKeyNameJwtRSAPublicKeyKey is the credential secret key name for JWT RSA public key.
 	CredentialSecretKeyNameJwtRSAPublicKeyKey = "rsa_public_key" //nolint:gosec

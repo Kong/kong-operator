@@ -119,7 +119,7 @@ const (
 	// DataPlaneProxyContainerName is the name of the Kong proxy container
 	DataPlaneProxyContainerName = "proxy"
 
-	// DataPlaneReadyEndpoint is the endpoint to use for DataPlane readiness probe.
+	// DataPlaneStatusEndpoint is the endpoint to use for DataPlane readiness probe.
 	DataPlaneStatusEndpoint = "/status"
 
 	// DataPlaneStatusReadyEndpoint is the endpoint to use for DataPlane readiness probe
@@ -140,19 +140,19 @@ const (
 	// from outside clusters.
 	DefaultHTTPSPort = 443
 
-	// DataPlaneHTTPSPort is the port that the dataplane uses for Admin API.
+	// DataPlaneAdminAPIPort is the port that the dataplane uses for Admin API.
 	DataPlaneAdminAPIPort = 8444
 
-	// DataPlaneHTTPSPort is the port that the dataplane uses for HTTP.
+	// DataPlaneProxyPort is the port that the dataplane uses for HTTP.
 	DataPlaneProxyPort = 8000
 
-	// DataPlaneHTTPSPort is the port that the dataplane uses for HTTPS.
+	// DataPlaneProxySSLPort is the port that the dataplane uses for HTTPS.
 	DataPlaneProxySSLPort = 8443
 
 	// DataPlaneMetricsPort is the port that the dataplane uses for metrics.
 	DataPlaneMetricsPort = 8100
 
-	// DefaultKongStatusPort is the port that the dataplane uses for status.
+	// DataPlaneStatusPort is the port that the dataplane uses for status.
 	DataPlaneStatusPort = 8100
 )
 
