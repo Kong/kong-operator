@@ -205,12 +205,12 @@ func Run(
 		return fmt.Errorf("unsupported cluster CA key type: %w", err)
 	}
 
-	caMgr := &caManager{
-		logger:          ctrl.Log.WithName("ca_manager"),
-		client:          mgr.GetClient(),
-		secretName:      cfg.ClusterCASecretName,
-		secretNamespace: cfg.ClusterCASecretNamespace,
-		keyConfig: secrets.KeyConfig{
+	caMgr := &CAManager{
+		Logger:          ctrl.Log.WithName("ca_manager"),
+		Client:          mgr.GetClient(),
+		SecretName:      cfg.ClusterCASecretName,
+		SecretNamespace: cfg.ClusterCASecretNamespace,
+		KeyConfig: secrets.KeyConfig{
 			Type: keyType,
 			Size: cfg.ClusterCAKeySize,
 		},
@@ -269,26 +269,27 @@ func Run(
 	return nil
 }
 
-type caManager struct {
-	logger          logr.Logger
-	client          client.Client
-	secretName      string
-	secretNamespace string
-	keyConfig       secrets.KeyConfig
+// CAManager is a manager responsible for creating a cluster CA certificate.
+type CAManager struct {
+	Logger          logr.Logger
+	Client          client.Client
+	SecretName      string
+	SecretNamespace string
+	KeyConfig       secrets.KeyConfig
 }
 
 // Start starts the CA manager.
-func (m *caManager) Start(ctx context.Context) error {
-	if m.secretName == "" {
+func (m *CAManager) Start(ctx context.Context) error {
+	if m.SecretName == "" {
 		return fmt.Errorf("cannot use an empty secret name when creating a CA secret")
 	}
-	if m.secretNamespace == "" {
+	if m.SecretNamespace == "" {
 		return fmt.Errorf("cannot use an empty secret namespace when creating a CA secret")
 	}
 	return m.maybeCreateCACertificate(ctx)
 }
 
-func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
+func (m *CAManager) maybeCreateCACertificate(ctx context.Context) error {
 	// TODO https://github.com/Kong/gateway-operator/issues/199 this also needs to check if the CA is expired and
 	// managed, and needs to reissue it (and all issued certificates) if so
 	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
@@ -296,12 +297,12 @@ func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
 
 	var (
 		ca        corev1.Secret
-		objectKey = client.ObjectKey{Namespace: m.secretNamespace, Name: m.secretName}
+		objectKey = client.ObjectKey{Namespace: m.SecretNamespace, Name: m.SecretName}
 	)
 
-	if err := m.client.Get(ctx, objectKey, &ca); err != nil {
+	if err := m.Client.Get(ctx, objectKey, &ca); err != nil {
 		if k8serrors.IsNotFound(err) {
-			m.logger.Info(fmt.Sprintf("no CA certificate Secret %s found, generating CA certificate", objectKey))
+			m.Logger.Info(fmt.Sprintf("no CA certificate Secret %s found, generating CA certificate", objectKey))
 			return m.createCACertificate(ctx)
 		}
 
@@ -310,13 +311,13 @@ func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
 	return nil
 }
 
-func (m *caManager) createCACertificate(ctx context.Context) error {
+func (m *CAManager) createCACertificate(ctx context.Context) error {
 	serial, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
 	if err != nil {
 		return err
 	}
 
-	priv, pemBlock, signatureAlgorithm, err := secrets.CreatePrivateKey(m.keyConfig)
+	priv, pemBlock, signatureAlgorithm, err := secrets.CreatePrivateKey(m.KeyConfig)
 	if err != nil {
 		return err
 	}
@@ -343,8 +344,8 @@ func (m *caManager) createCACertificate(ctx context.Context) error {
 
 	signedSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: m.secretNamespace,
-			Name:      m.secretName,
+			Namespace: m.SecretNamespace,
+			Name:      m.SecretName,
 		},
 		Type: corev1.SecretTypeTLS,
 		StringData: map[string]string{
@@ -356,7 +357,7 @@ func (m *caManager) createCACertificate(ctx context.Context) error {
 			"tls.key": string(pem.EncodeToMemory(pemBlock)),
 		},
 	}
-	return m.client.Create(ctx, signedSecret)
+	return m.Client.Create(ctx, signedSecret)
 }
 
 // setupAnonymousReports sets up and starts the anonymous reporting and returns
