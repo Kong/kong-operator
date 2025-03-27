@@ -141,9 +141,9 @@ func TestHelmUpgrade(t *testing.T) {
 			name:             "upgrade from latest minor to current",
 			fromVersion:      "1.5.1", // renovate: datasource=docker packageName=kong/gateway-operator-oss depName=kong/gateway-operator-oss
 			upgradeToCurrent: true,
-			// This is the effective semver of a next release. It's needed for the chart to properly render
-			// semver-conditional templates.
-			upgradeToEffectiveSemver: "1.5.0",
+			// This is the effective semver of a next release.
+			// It's needed for the chart to properly render semver-conditional templates.
+			upgradeToEffectiveSemver: "1.6.0",
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -215,6 +215,9 @@ func TestHelmUpgrade(t *testing.T) {
 			name:             "upgrade from nightly to current",
 			fromVersion:      "nightly",
 			upgradeToCurrent: true,
+			// This is the effective semver of a next release.
+			// It's needed for the chart to properly render semver-conditional templates.
+			upgradeToEffectiveSemver: "1.6.0",
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
