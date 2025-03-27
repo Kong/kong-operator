@@ -56,10 +56,12 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		t.Log("Setting up a watch for KonnectCloudGatewayDataPlaneGroupConfiguration events")
 		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		t.Log("Setting up SDK expectations on creation")
+		const expectedCPGeo = sdkkonnectcomp.ControlPlaneGeoUs // US is the default used by the Mock SDK, we expect this to be propagated.
 		sdk.CloudGatewaysSDK.EXPECT().CreateConfiguration(
 			mock.Anything,
 			mock.MatchedBy(func(req sdkkonnectcomp.CreateConfigurationRequest) bool {
-				return req.ControlPlaneID == cp.GetKonnectID()
+				return req.ControlPlaneID == cp.GetKonnectID() &&
+					req.ControlPlaneGeo == expectedCPGeo
 			}),
 		).Return(&sdkkonnectops.CreateConfigurationResponse{
 			ConfigurationManifest: &sdkkonnectcomp.ConfigurationManifest{
@@ -91,6 +93,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			mock.Anything,
 			mock.MatchedBy(func(req sdkkonnectcomp.CreateConfigurationRequest) bool {
 				return req.ControlPlaneID == cp.GetKonnectID() &&
+					req.ControlPlaneGeo == expectedCPGeo &&
 					len(req.DataplaneGroups) == 0
 			}),
 		).Return(&sdkkonnectops.CreateConfigurationResponse{

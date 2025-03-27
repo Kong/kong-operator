@@ -17,8 +17,8 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+	"github.com/kong/gateway-operator/controller/konnect/server"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -130,11 +130,11 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		return ctrl.Result{}, err
 	}
 
-	serverURL := ops.NewServerURL[konnectv1alpha1.KonnectAPIAuthConfiguration](apiAuth.Spec.ServerURL)
-	sdk := r.sdkFactory.NewKonnectSDK(
-		serverURL.String(),
-		sdkops.SDKToken(token),
-	)
+	server, err := server.NewServer[konnectv1alpha1.KonnectAPIAuthConfiguration](apiAuth.Spec.ServerURL)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to parse server URL: %w", err)
+	}
+	sdk := r.sdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
 
 	// TODO(pmalek): check if api auth config has a valid status condition
 	// If not then return an error.
@@ -145,7 +145,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 	// NOTE: This is needed because currently the SDK only lists the prod global API as supported:
 	// https://github.com/Kong/sdk-konnect-go/blob/999d9a987e1aa7d2e09ac11b1450f4563adf21ea/models/operations/getorganizationsme.go#L10-L12
-	respOrg, err := sdk.GetMeSDK().GetOrganizationsMe(ctx, sdkkonnectops.WithServerURL(serverURL.String()))
+	respOrg, err := sdk.GetMeSDK().GetOrganizationsMe(ctx, sdkkonnectops.WithServerURL(server.URL()))
 	if err != nil ||
 		respOrg == nil ||
 		respOrg.MeOrganization == nil ||
@@ -164,11 +164,11 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 			cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonInvalid ||
 			cond.ObservedGeneration != apiAuth.GetGeneration() ||
 			apiAuth.Status.OrganizationID != "" ||
-			apiAuth.Status.ServerURL != serverURL.String() {
+			apiAuth.Status.ServerURL != server.URL() {
 
 			old := apiAuth.DeepCopy()
 			apiAuth.Status.OrganizationID = ""
-			apiAuth.Status.ServerURL = serverURL.String()
+			apiAuth.Status.ServerURL = server.URL()
 
 			_ = patch.SetStatusWithConditionIfDifferent(&apiAuth,
 				konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
@@ -208,12 +208,12 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid ||
 		cond.ObservedGeneration != apiAuth.GetGeneration() ||
 		apiAuth.Status.OrganizationID != *respOrg.MeOrganization.ID ||
-		apiAuth.Status.ServerURL != serverURL.String() {
+		apiAuth.Status.ServerURL != server.URL() {
 
 		old := apiAuth.DeepCopy()
 
 		apiAuth.Status.OrganizationID = *respOrg.MeOrganization.ID
-		apiAuth.Status.ServerURL = serverURL.String()
+		apiAuth.Status.ServerURL = server.URL()
 
 		_ = patch.SetStatusWithConditionIfDifferent(&apiAuth,
 			konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,

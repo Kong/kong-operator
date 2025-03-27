@@ -7,6 +7,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+	"github.com/kong/gateway-operator/controller/konnect/server"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -16,13 +17,18 @@ func createKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
 	sdk sdkops.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
+	serverRegion server.Region,
 ) error {
 	cpID := n.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: n, Op: CreateOp}
 	}
 
-	req := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(n.Spec, cpID)
+	req, err := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(n.Spec, cpID, serverRegion)
+	if err != nil {
+		return fmt.Errorf("failed converting %s to API request: %w", n.GetTypeName(), err)
+	}
+
 	resp, err := sdk.CreateConfiguration(ctx, req)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, n); errWrap != nil {
@@ -46,13 +52,17 @@ func updateKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
 	sdk sdkops.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
+	server server.Server,
 ) error {
 	cpID := n.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: n, Op: UpdateOp}
 	}
 
-	req := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(n.Spec, cpID)
+	req, err := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(n.Spec, cpID, server.Region())
+	if err != nil {
+		return fmt.Errorf("failed converting %s to API request: %w", n.GetTypeName(), err)
+	}
 	resp, err := sdk.CreateConfiguration(ctx, req)
 	if err != nil {
 		var transientError bool
@@ -114,6 +124,7 @@ func deleteKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
 	sdk sdkops.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
+	serverRegion server.Region,
 ) error {
 	cpID := n.GetControlPlaneID()
 	if cpID == "" {
@@ -122,7 +133,10 @@ func deleteKonnectDataPlaneGroupConfiguration(
 	// NOTE: we delete the data plane group configuration by "creating" (using PUT)
 	// a new configuration with the same ID and the same version, but with an empty
 	// list of data plane groups.
-	req := cloudGatewayDataPlaneGroupConfigurationInit(n.Spec, cpID)
+	req, err := cloudGatewayDataPlaneGroupConfigurationInit(n.Spec, cpID, serverRegion)
+	if err != nil {
+		return fmt.Errorf("failed initializing cloud gateway data plane group configuration: %w", err)
+	}
 	resp, err := sdk.CreateConfiguration(ctx, req)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, n); errWrap != nil {
@@ -139,22 +153,53 @@ func deleteKonnectDataPlaneGroupConfiguration(
 func cloudGatewayDataPlaneGroupConfigurationInit(
 	spec konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec,
 	cpID string,
-) sdkkonnectcomp.CreateConfigurationRequest {
+	serverRegion server.Region,
+) (sdkkonnectcomp.CreateConfigurationRequest, error) {
+	cpGeo, err := serverRegionToSDKControlPlaneGeoForCloudGateway(serverRegion)
+	if err != nil {
+		return sdkkonnectcomp.CreateConfigurationRequest{}, fmt.Errorf("failed converting server region to SDK ControlPlaneGeo: %w", err)
+	}
+
 	return sdkkonnectcomp.CreateConfigurationRequest{
-		ControlPlaneID: cpID,
-		Version:        spec.Version,
-		APIAccess:      spec.APIAccess,
-		// TODO deduct CP geo
-		ControlPlaneGeo: sdkkonnectcomp.ControlPlaneGeoEu,
+		ControlPlaneID:  cpID,
+		Version:         spec.Version,
+		APIAccess:       spec.APIAccess,
+		ControlPlaneGeo: cpGeo,
 		DataplaneGroups: []sdkkonnectcomp.CreateConfigurationDataPlaneGroup{},
+	}, nil
+}
+
+// serverRegionToSDKControlPlaneGeoForCloudGateway converts a server region to a Konnect SDK ControlPlaneGeo value
+// for use in Cloud Gateway operations.
+func serverRegionToSDKControlPlaneGeoForCloudGateway(serverRegion server.Region) (sdkkonnectcomp.ControlPlaneGeo, error) {
+	switch serverRegion {
+	case server.RegionUS:
+		return sdkkonnectcomp.ControlPlaneGeoUs, nil
+	case server.RegionEU:
+		return sdkkonnectcomp.ControlPlaneGeoEu, nil
+	case server.RegionAU:
+		return sdkkonnectcomp.ControlPlaneGeoAu, nil
+	case server.RegionIN:
+		return sdkkonnectcomp.ControlPlaneGeoIn, nil
+	case server.RegionME:
+		return sdkkonnectcomp.ControlPlaneGeoMe, nil
+	case server.RegionGlobal:
+		// This shouldn't happen but if it does, we want to bubble up the error.
+		return "", fmt.Errorf("global region is not supported for Cloud Gateway operations")
+	default:
+		return "", fmt.Errorf("unsupported server region: %s", serverRegion)
 	}
 }
 
 func cloudGatewayDataPlaneGroupConfigurationToAPIRequest(
 	spec konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec,
 	cpID string,
-) sdkkonnectcomp.CreateConfigurationRequest {
-	cfgReq := cloudGatewayDataPlaneGroupConfigurationInit(spec, cpID)
+	cpRegion server.Region,
+) (sdkkonnectcomp.CreateConfigurationRequest, error) {
+	cfgReq, err := cloudGatewayDataPlaneGroupConfigurationInit(spec, cpID, cpRegion)
+	if err != nil {
+		return sdkkonnectcomp.CreateConfigurationRequest{}, fmt.Errorf("failed initializing cloud gateway data plane group configuration: %w", err)
+	}
 	cfgReq.DataplaneGroups = func() []sdkkonnectcomp.CreateConfigurationDataPlaneGroup {
 		ret := make([]sdkkonnectcomp.CreateConfigurationDataPlaneGroup, 0, len(spec.DataplaneGroups))
 		for _, g := range spec.DataplaneGroups {
@@ -163,7 +208,7 @@ func cloudGatewayDataPlaneGroupConfigurationToAPIRequest(
 		return ret
 	}()
 
-	return cfgReq
+	return cfgReq, nil
 }
 
 func konnectConfigurationDataPlaneGroupToAPIRequest(

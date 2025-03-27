@@ -17,6 +17,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+	"github.com/kong/gateway-operator/controller/konnect/server"
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
@@ -348,11 +349,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	// NOTE: We need to create a new SDK instance for each reconciliation
 	// because the token is retrieved in runtime through KonnectAPIAuthConfiguration.
-	serverURL := ops.NewServerURL[T](apiAuth.Spec.ServerURL)
-	sdk := r.sdkFactory.NewKonnectSDK(
-		serverURL.String(),
-		sdkops.SDKToken(token),
-	)
+	server, err := server.NewServer[T](apiAuth.Spec.ServerURL)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to parse server URL: %w", err)
+	}
+	sdk := r.sdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
 
 	if delTimestamp := ent.GetDeletionTimestamp(); !delTimestamp.IsZero() {
 		logger.Info("resource is being deleted")
@@ -425,7 +426,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			// - add the Org ID and Server URL to the status so that the resource can be
 			//   cleaned up from Konnect on deletion and also so that the status can
 			//   indicate where the corresponding Konnect entity is located.
-			setStatusServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
+			setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
 		}
 
 		// Regardless of the error, patch the status as it can contain the Konnect ID,
@@ -454,7 +455,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	res, err = ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecoder, ent)
 	// Set the server URL and org ID regardless of the error.
-	setStatusServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
+	setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
 	// Update the status of the object regardless of the error.
 	if errUpd := r.Client.Status().Update(ctx, ent); errUpd != nil {
 		if k8serrors.IsConflict(errUpd) {
@@ -488,10 +489,10 @@ func setStatusServerURLAndOrgID(
 	ent interface {
 		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
 	},
-	serverURL ops.ServerURL,
+	serverURL server.Server,
 	orgID string,
 ) {
-	ent.GetKonnectStatus().ServerURL = serverURL.String()
+	ent.GetKonnectStatus().ServerURL = serverURL.URL()
 	ent.GetKonnectStatus().OrgID = orgID
 }
 
