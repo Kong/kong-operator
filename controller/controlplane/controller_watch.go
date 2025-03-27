@@ -288,3 +288,81 @@ func (r *Reconciler) listControlPlanesForReferenceGrants(
 
 	return recs
 }
+
+func (r *Reconciler) listControlPlanesForRoles(
+	ctx context.Context,
+	obj client.Object,
+) []reconcile.Request {
+	role, ok := obj.(*rbacv1.Role)
+	if !ok {
+		ctrllog.FromContext(ctx).Error(
+			operatorerrors.ErrUnexpectedObject,
+			"failed to map Role on ControlPlane",
+			"expected", "Role", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+
+	nn, ok := isManagedByControlPlane(role)
+	if !ok {
+		return nil
+	}
+
+	return []reconcile.Request{
+		{
+			NamespacedName: nn,
+		},
+	}
+}
+
+func (r *Reconciler) listControlPlanesForRoleBindings(
+	ctx context.Context,
+	obj client.Object,
+) []reconcile.Request {
+	roleBinding, ok := obj.(*rbacv1.RoleBinding)
+	if !ok {
+		ctrllog.FromContext(ctx).Error(
+			operatorerrors.ErrUnexpectedObject,
+			"failed to map RoleBinding on ControlPlane",
+			"expected", "RoleBinding", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+
+	nn, ok := isManagedByControlPlane(roleBinding)
+	if !ok {
+		return nil
+	}
+
+	return []reconcile.Request{
+		{
+			NamespacedName: nn,
+		},
+	}
+}
+
+func isManagedByControlPlane(
+	obj client.Object,
+) (types.NamespacedName, bool) {
+	labels := obj.GetLabels()
+	if len(labels) == 0 {
+		return types.NamespacedName{}, false
+	}
+	managedBy, ok := labels[consts.GatewayOperatorManagedByLabel]
+	if !ok || managedBy != consts.ControlPlaneManagedLabelValue {
+		return types.NamespacedName{}, false
+	}
+
+	managedByName, ok := labels[consts.GatewayOperatorManagedByNameLabel]
+	if !ok {
+		return types.NamespacedName{}, false
+	}
+	managedByNamespace, ok := labels[consts.GatewayOperatorManagedByNamespaceLabel]
+	if !ok {
+		return types.NamespacedName{}, false
+	}
+	return types.NamespacedName{
+		Namespace: managedByNamespace,
+		Name:      managedByName,
+	}, true
+}

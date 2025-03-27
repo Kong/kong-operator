@@ -125,7 +125,8 @@ func TestEnsureClusterRole(t *testing.T) {
 		}
 
 		t.Run(tc.Name, func(t *testing.T) {
-			createdOrUpdated, generatedClusterRole, err := r.ensureClusterRole(t.Context(), &tc.controlplane)
+			// NOTE: we pass in nil as we don't test watch namespaces here.
+			createdOrUpdated, generatedClusterRole, err := r.ensureClusterRole(t.Context(), &tc.controlplane, clusterRole)
 			require.Equal(t, tc.err, err)
 			require.Equal(t, tc.createdorUpdated, createdOrUpdated)
 			require.Equal(t, tc.expectedClusterRole.Rules, generatedClusterRole.Rules)

@@ -95,23 +95,55 @@ func filterClusterRoles(clusterRoles []rbacv1.ClusterRole) []rbacv1.ClusterRole 
 }
 
 // -----------------------------------------------------------------------------
+// Filter functions - Roles
+// -----------------------------------------------------------------------------
+
+// filterRoles filters out the Role to be kept and returns
+// all the Roles to be deleted.
+// The filtered-out Role is decided as follows:
+//  1. creationTimestamp (newer is better, because newer Roles can contain new policy rules)
+func filterRoles(roles []rbacv1.Role) []rbacv1.Role {
+	if len(roles) == 1 {
+		return []rbacv1.Role{}
+	}
+
+	best := 0
+	for i, cr := range roles {
+		if cr.CreationTimestamp.After(roles[best].CreationTimestamp.Time) {
+			best = i
+		}
+	}
+
+	return append(roles[:best], roles[best+1:]...)
+}
+
+// -----------------------------------------------------------------------------
 // Filter functions - ClusterRoleBindings
 // -----------------------------------------------------------------------------
 
-// filterClusterRoleBindings filters out the ClusterRoleBinding to be kept and returns
-// all the ClusterRoleBindings to be deleted.
-// The filtered-out ClusterRoleBinding is decided as follows:
-// 1. creationTimestamp (older is better)
-func filterClusterRoleBindings(clusterRoleBindings []rbacv1.ClusterRoleBinding) []rbacv1.ClusterRoleBinding {
+// filterBindings filters out the ClusterRoleBinding or RoleBindings to be kept and returns
+// all the objects to be deleted.
+func filterBindings[
+	T interface {
+		rbacv1.ClusterRoleBinding | rbacv1.RoleBinding
+	},
+	TPtr interface {
+		*T
+		GetLabels() map[string]string
+		GetCreationTimestamp() metav1.Time
+	},
+](clusterRoleBindings []T) []T {
 	if len(clusterRoleBindings) < 2 {
-		return []rbacv1.ClusterRoleBinding{}
+		return []T{}
 	}
 
 	oldestWithManagedByLabels := -1
 	oldestLegacy := -1
 	for i, clusterRoleBinding := range clusterRoleBindings {
-		labels := clusterRoleBinding.GetLabels()
+		ptr := TPtr(&clusterRoleBinding)
+		creationTS := ptr.GetCreationTimestamp()
 
+		labels := ptr.GetLabels()
 		_, okManagedBy := labels[consts.GatewayOperatorManagedByLabel]
 		_, okManagedByNs := labels[consts.GatewayOperatorManagedByNamespaceLabel]
 		_, okManagedByName := labels[consts.GatewayOperatorManagedByNameLabel]
@@ -121,7 +153,10 @@ func filterClusterRoleBindings(clusterRoleBindings []rbacv1.ClusterRoleBinding) 
 				continue
 			}
 
-			if clusterRoleBinding.CreationTimestamp.Before(&clusterRoleBindings[oldestWithManagedByLabels].CreationTimestamp) {
+			ptrOldest := TPtr(&clusterRoleBindings[oldestWithManagedByLabels])
+			creationTSOldest := ptrOldest.GetCreationTimestamp()
+
+			if creationTS.Before(&creationTSOldest) {
 				oldestWithManagedByLabels = i
 			}
 			continue
@@ -132,7 +167,9 @@ func filterClusterRoleBindings(clusterRoleBindings []rbacv1.ClusterRoleBinding) 
 			continue
 		}
 
-		if clusterRoleBinding.CreationTimestamp.Before(&clusterRoleBindings[oldestLegacy].CreationTimestamp) {
+		ptrOldestLegacy := TPtr(&clusterRoleBindings[oldestLegacy])
+		creationTSOldestLegacy := ptrOldestLegacy.GetCreationTimestamp()
+		if creationTS.Before(&creationTSOldestLegacy) {
 			oldestLegacy = i
 		}
 		continue

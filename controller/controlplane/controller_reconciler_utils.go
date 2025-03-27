@@ -14,7 +14,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -322,14 +324,20 @@ func (r *Reconciler) ensureServiceAccount(
 	return true, generatedServiceAccount, r.Create(ctx, generatedServiceAccount)
 }
 
-func (r *Reconciler) ensureRoles(
+func (r *Reconciler) ensureRolesAndClusterRoles(
 	ctx context.Context,
 	logger logr.Logger,
 	cp *operatorv1beta1.ControlPlane,
 	controlplaneServiceAccount *corev1.ServiceAccount,
+	validatedWatchNamespaces []string,
 ) (op.Result, error) {
-	log.Trace(logger, "ensuring ClusterRoles for ControlPlane deployment exist")
-	createdOrUpdated, controlplaneClusterRole, err := r.ensureClusterRole(ctx, cp)
+	generatedRoles, generatedClusterRole, err := r.generateRoleAndClusterRole(cp, validatedWatchNamespaces)
+	if err != nil {
+		return op.Noop, err
+	}
+
+	log.Trace(logger, "ensuring ClusterRoles for ControlPlane Deployment exist")
+	createdOrUpdated, controlplaneClusterRole, err := r.ensureClusterRole(ctx, cp, generatedClusterRole)
 	if err != nil {
 		return op.Noop, err
 	}
@@ -348,12 +356,306 @@ func (r *Reconciler) ensureRoles(
 		return op.Updated, nil // requeue will be triggered by the creation or update of the owned object
 	}
 
+	// If watchNamespaces is not empty then we need to generate roles and role bindings for each namespace.
+	if len(generatedRoles) > 0 {
+		log.Trace(logger, "ensuring Roles for ControlPlane Deployment exist")
+		createdOrUpdated, controlplaneRoles, err := r.ensureRoles(ctx, cp, generatedRoles)
+		if err != nil {
+			return op.Noop, err
+		}
+		if createdOrUpdated {
+			log.Debug(logger, "Roles created/updated")
+			return op.Updated, nil // requeue will be triggered by the creation or update of Roles.
+		}
+
+		res, err := r.ensureRoleBindings(ctx, cp, controlplaneServiceAccount, controlplaneRoles)
+		if err != nil {
+			return op.Noop, err
+		} else if res != op.Noop {
+			log.Debug(logger, "RoleBindings created/updated")
+			return res, nil
+		}
+
+		deleted, err := r.pruneOutdatedRoles(ctx, logger, cp, validatedWatchNamespaces)
+		if err != nil {
+			return op.Noop, err
+		}
+		if deleted {
+			log.Debug(logger, "not needed Roles deleted")
+		}
+
+		deleted, err = r.pruneOutdatedRoleBindings(ctx, logger, cp, validatedWatchNamespaces)
+		if err != nil {
+			return op.Noop, err
+		}
+		if deleted {
+			log.Debug(logger, "not needed RoleBindings deleted")
+		}
+	}
+
 	return op.Noop, nil
+}
+
+func (r *Reconciler) pruneOutdatedRoles(
+	ctx context.Context,
+	logger logr.Logger,
+	cp *operatorv1beta1.ControlPlane,
+	validatedWatchNamespaces []string,
+) (deleted bool, err error) {
+	namespaces := sets.New(validatedWatchNamespaces...)
+
+	roles, err := k8sutils.ListRoles(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
+	)
+	if err != nil {
+		return false, err
+	}
+
+	for _, role := range roles {
+		objDeleted, err := deleteIfNotInNamespaceSet(ctx, r.Client, &role, namespaces, "ControlPlane's Role")
+		if err != nil {
+			return false, err
+		}
+		if !objDeleted {
+			continue
+		}
+
+		deleted = true
+		log.Debug(logger, "Role deleted", "role", role)
+	}
+
+	return deleted, nil
+}
+
+func (r *Reconciler) pruneOutdatedRoleBindings(
+	ctx context.Context,
+	logger logr.Logger,
+	cp *operatorv1beta1.ControlPlane,
+	validatedWatchNamespaces []string,
+) (deleted bool, err error) {
+	namespaces := sets.New(validatedWatchNamespaces...)
+
+	roleBindings, err := k8sutils.ListRoleBindings(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
+	)
+	if err != nil {
+		return false, err
+	}
+
+	for _, rb := range roleBindings {
+		objDeleted, err := deleteIfNotInNamespaceSet(ctx, r.Client, &rb, namespaces, "ControlPlane's RoleBinding")
+		if err != nil {
+			return false, err
+		}
+		if !objDeleted {
+			continue
+		}
+
+		deleted = true
+		log.Debug(logger, "RoleBinding deleted", "role_binding", rb)
+	}
+
+	return deleted, nil
+}
+
+func deleteIfNotInNamespaceSet(
+	ctx context.Context, cl client.Client, obj client.Object, namespaces sets.Set[string], msg string,
+) (bool, error) {
+	if namespaces.Has(obj.GetNamespace()) {
+		return false, nil
+	}
+
+	if err := cl.Delete(ctx, obj); err != nil {
+		return false, fmt.Errorf("failed deleting %s %s: %w", msg, client.ObjectKeyFromObject(obj), err)
+	}
+	return true, nil
+}
+
+func (r *Reconciler) ensureRoles(
+	ctx context.Context,
+	cp *operatorv1beta1.ControlPlane,
+	generatedRoles []*rbacv1.Role,
+) (createdOrUpdated bool, roles []*rbacv1.Role, err error) {
+rolesLoop:
+	for _, generatedRole := range generatedRoles {
+		existingRoles, err := k8sutils.ListRoles(
+			ctx,
+			r.Client,
+			client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
+			client.InNamespace(generatedRole.Namespace),
+		)
+		if err != nil {
+			return false, nil, err
+		}
+
+		count := len(existingRoles)
+		switch count {
+		case 0:
+			if err := r.Create(ctx, generatedRole); err != nil {
+				return false, nil, err
+			}
+			roles = append(roles, generatedRole)
+			createdOrUpdated = true
+		case 1:
+			var (
+				updated  bool
+				existing = &existingRoles[0]
+				old      = existing.DeepCopy()
+			)
+
+			updated, existing.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existing.ObjectMeta, generatedRole.ObjectMeta)
+			if updated ||
+				!cmp.Equal(existing.Rules, generatedRole.Rules) {
+				existing.Rules = generatedRole.Rules
+				if err := r.Patch(ctx, existing, client.MergeFrom(old)); err != nil {
+					return false, nil, fmt.Errorf("failed patching ControlPlane's Role %s: %w", existing.Name, err)
+				}
+				roles = append(roles, existing)
+				createdOrUpdated = true
+				continue rolesLoop
+			}
+			roles = append(roles, existing)
+		default:
+			if err := k8sreduce.ReduceRoles(ctx, r.Client, existingRoles); err != nil {
+				return false, nil, err
+			}
+			return false, nil, errors.New("number of Roles reduced")
+		}
+
+	}
+
+	return createdOrUpdated, roles, nil
+}
+
+func (r *Reconciler) ensureRoleBindings(
+	ctx context.Context,
+	cp *operatorv1beta1.ControlPlane,
+	controlplaneServiceAccount *corev1.ServiceAccount,
+	roles []*rbacv1.Role,
+) (op.Result, error) {
+	res := op.Noop
+	for _, role := range roles {
+		resEnsure, _, err := r.ensureRoleBinding(ctx, cp, controlplaneServiceAccount.Name, client.ObjectKeyFromObject(role))
+		if err != nil {
+			return op.Noop, err
+		}
+
+		if resEnsure != op.Noop {
+			res = resEnsure
+		}
+	}
+
+	return res, nil
+}
+
+func (r *Reconciler) ensureRoleBinding(
+	ctx context.Context,
+	cp *operatorv1beta1.ControlPlane,
+	serviceAccountName string,
+	roleNN k8stypes.NamespacedName,
+) (op.Result, *rbacv1.RoleBinding, error) {
+	logger := log.GetLogger(ctx, "controlplane.ensureRoleBinding", r.LoggingMode)
+
+	roleBindings, err := k8sutils.ListRoleBindings(
+		ctx,
+		r.Client,
+		client.MatchingLabels(k8sutils.GetManagedByLabelSet(cp)),
+		client.InNamespace(roleNN.Namespace),
+	)
+	if err != nil {
+		return op.Noop, nil, err
+	}
+
+	count := len(roleBindings)
+	if count > 1 {
+		if err := k8sreduce.ReduceRoleBindings(ctx, r.Client, roleBindings); err != nil {
+			return op.Noop, nil, err
+		}
+		return op.Noop, nil, errors.New("number of roleBindings reduced")
+	}
+
+	generated := k8sresources.GenerateNewRoleBindingForControlPlane(cp, serviceAccountName, roleNN)
+	k8sutils.SetOwnerForObjectThroughLabels(generated, cp)
+
+	if count == 1 {
+		existing := &roleBindings[0]
+		// Delete and re-create RoleBinding if name of Role changed because RoleRef is immutable.
+		if !k8sresources.CompareRoleName(existing, roleNN.Name) {
+			log.Debug(logger, "Role name changed, delete and re-create a RoleBinding",
+				"old_role", existing.RoleRef.Name,
+				"new_role", roleNN,
+			)
+			if err := r.Delete(ctx, existing); err != nil {
+				return op.Noop, nil, err
+			}
+			return op.Noop, nil, errors.New("name of Role changed, out of date RoleBinding deleted")
+		}
+
+		var (
+			old                   = existing.DeepCopy()
+			updated               bool
+			updatedServiceAccount bool
+		)
+		updated, existing.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existing.ObjectMeta, generated.ObjectMeta)
+
+		if !k8sresources.RoleBindingContainsServiceAccount(existing, cp.Namespace, serviceAccountName) {
+			existing.Subjects = generated.Subjects
+			updatedServiceAccount = true
+		}
+
+		if updated || updatedServiceAccount {
+			if err := r.Patch(ctx, existing, client.MergeFrom(old)); err != nil {
+				return op.Noop, existing, fmt.Errorf("failed patching ControlPlane's RoleBinding %s: %w", existing.Name, err)
+			}
+			return op.Updated, existing, nil
+		}
+		return op.Noop, existing, nil
+
+	}
+
+	return op.Created, generated, r.Create(ctx, generated)
+}
+
+func (r *Reconciler) generateRoleAndClusterRole(
+	cp *operatorv1beta1.ControlPlane,
+	verifiedWatchNamespaces []string,
+) ([]*rbacv1.Role, *rbacv1.ClusterRole, error) {
+	controlplaneContainer := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
+	clusterRole, err := k8sresources.GenerateNewClusterRoleForControlPlane(cp.Name, controlplaneContainer.Image, r.ValidateControlPlaneImage)
+	if err != nil {
+		return nil, nil, err
+	}
+	k8sutils.SetOwnerForObjectThroughLabels(clusterRole, cp)
+
+	// If watchNamespaces is not empty, we're generating Roles and a ClusterRole.
+	if len(verifiedWatchNamespaces) > 0 {
+		m, err := r.DiscoveryClient.GetAPIResourceListMapping()
+		if err != nil {
+			return nil, nil, err
+		}
+		roleRules, clusterRolesRules := processClusterRole(clusterRole, m)
+		clusterRole.Rules = clusterRolesRules
+
+		roles := make([]*rbacv1.Role, 0, len(verifiedWatchNamespaces))
+		for _, namespace := range verifiedWatchNamespaces {
+			role := k8sresources.GenerateNewRoleForControlPlane(cp, namespace, roleRules)
+			k8sutils.SetOwnerForObjectThroughLabels(role, cp)
+			roles = append(roles, role)
+		}
+		return roles, clusterRole, nil
+	}
+
+	return nil, clusterRole, nil
 }
 
 func (r *Reconciler) ensureClusterRole(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
+	generatedClusterRole *rbacv1.ClusterRole,
 ) (createdOrUpdated bool, cr *rbacv1.ClusterRole, err error) {
 	clusterRoles, err := k8sutils.ListClusterRoles(
 		ctx,
@@ -372,13 +674,6 @@ func (r *Reconciler) ensureClusterRole(
 		return false, nil, errors.New("number of clusterRoles reduced")
 	}
 
-	controlplaneContainer := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-	generated, err := k8sresources.GenerateNewClusterRoleForControlPlane(cp.Name, controlplaneContainer.Image, r.ValidateControlPlaneImage)
-	if err != nil {
-		return false, nil, err
-	}
-	k8sutils.SetOwnerForObjectThroughLabels(generated, cp)
-
 	if count == 1 {
 		var (
 			updated  bool
@@ -386,12 +681,12 @@ func (r *Reconciler) ensureClusterRole(
 			old      = existing.DeepCopy()
 		)
 
-		updated, existing.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existing.ObjectMeta, generated.ObjectMeta)
+		updated, existing.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existing.ObjectMeta, generatedClusterRole.ObjectMeta)
 		if updated ||
-			!cmp.Equal(existing.Rules, generated.Rules) ||
-			!cmp.Equal(existing.AggregationRule, generated.AggregationRule) {
-			existing.Rules = generated.Rules
-			existing.AggregationRule = generated.AggregationRule
+			!cmp.Equal(existing.Rules, generatedClusterRole.Rules) ||
+			!cmp.Equal(existing.AggregationRule, generatedClusterRole.AggregationRule) {
+			existing.Rules = generatedClusterRole.Rules
+			existing.AggregationRule = generatedClusterRole.AggregationRule
 			if err := r.Patch(ctx, existing, client.MergeFrom(old)); err != nil {
 				return false, existing, fmt.Errorf("failed patching ControlPlane's ClusterRole %s: %w", existing.Name, err)
 			}
@@ -400,7 +695,78 @@ func (r *Reconciler) ensureClusterRole(
 		return false, existing, nil
 	}
 
-	return true, generated, r.Create(ctx, generated)
+	return true, generatedClusterRole, r.Create(ctx, generatedClusterRole)
+}
+
+// processClusterRole processes the generated ClusterRole and splits its policy rules
+// into two slices: one for the Role and one for the ClusterRole.
+// The split is based on the availability of the resources in the cluster.
+//
+// For example assuming the following rules on the ClusterRole:
+// ```
+// rules:
+// - apiGroups:
+//   - ""
+//     resources:
+//   - configmaps
+//   - namespaces
+//     verbs:
+//   - create
+//
+// ```
+//
+// If the cluster has the `configmaps` resource available in the cluster,
+// the rule will be added to the RolePolicyRules as it's a namespaced resource.
+// If the cluster has the `namespaces` resource available in the cluster,
+// the rule will be added to the ClusterRolePolicyRules as it's a cluster-scoped resource.
+func processClusterRole(
+	generated *rbacv1.ClusterRole,
+	gvl map[schema.GroupVersion]*metav1.APIResourceList,
+) (rolePolicyRules []rbacv1.PolicyRule, clusterRolePolicyRules []rbacv1.PolicyRule) {
+	for _, rule := range generated.Rules {
+		// There's typically just 1 APIGroup in the rule, but we loop over all of them
+		// to ensure that we're only adding rules for the APIGroups that are available.
+		for _, apiGroup := range rule.APIGroups {
+			for _, resource := range rule.Resources {
+				var found bool
+				for gv, apiresl := range gvl {
+					if gv.Group != apiGroup {
+						continue
+					}
+
+					apires, ok := lo.Find(apiresl.APIResources,
+						func(apires metav1.APIResource) bool {
+							return apires.Group == apiGroup && apires.Name == resource
+						})
+					if !ok {
+						continue
+					}
+
+					found = true
+
+					// There can be more than one resource in policy rule so we need to
+					// create a new rule for each resource separately.
+					rule.Resources = []string{resource}
+
+					if apires.Namespaced {
+						rolePolicyRules = append(rolePolicyRules, rule)
+					} else {
+						clusterRolePolicyRules = append(clusterRolePolicyRules, rule)
+					}
+					break
+				}
+
+				// Just in case the resource is not found in the cluster, we add
+				// it to ClusterRole as it's the default behavior and we better
+				// have the rule set rather than not and break the configuration.
+				if !found {
+					clusterRolePolicyRules = append(clusterRolePolicyRules, rule)
+				}
+			}
+		}
+	}
+
+	return rolePolicyRules, clusterRolePolicyRules
 }
 
 func (r *Reconciler) ensureClusterRoleBinding(
@@ -846,6 +1212,11 @@ func (r *Reconciler) validateReferenceGrants(
 			}
 			nsList = append(nsList, ns)
 		}
+		// Add ControlPlane's own namespace as it will add it anyway because
+		// that's where the default "publish service" exists.
+		// We add it here as we do not require a ReferenceGrant for own namespace
+		// so there's no validation whether a grant exists.
+		nsList = append(nsList, cp.Namespace)
 
 		return nsList, nil
 	default:

@@ -453,6 +453,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		ControlPlaneControllerName: {
 			Enabled: c.GatewayControllerEnabled || c.ControlPlaneControllerEnabled,
 			Controller: &controlplane.Reconciler{
+				DiscoveryClient:           controlplane.NewDiscoveryClient(mgr.GetConfig(), time.Minute),
 				Client:                    mgr.GetClient(),
 				Scheme:                    mgr.GetScheme(),
 				ClusterCASecretName:       c.ClusterCASecretName,
