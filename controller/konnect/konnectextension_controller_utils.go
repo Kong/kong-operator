@@ -47,6 +47,57 @@ func (r *KonnectExtensionReconciler) getKonnectControlPlane(
 	ext konnectv1alpha1.KonnectExtension,
 	dependingConditions ...metav1.Condition,
 ) (cp *sdkkonnectcomp.ControlPlane, res ctrl.Result, err error) {
+	controlPlaneRefValidCond := metav1.Condition{
+		Type:    konnectv1alpha1.ControlPlaneRefValidConditionType,
+		Status:  metav1.ConditionTrue,
+		Reason:  konnectv1alpha1.ControlPlaneRefReasonValid,
+		Message: "ControlPlaneRef is valid",
+	}
+
+	konnectCPID, res, err := r.getKonnectControlPlaneID(ctx, ext, dependingConditions...)
+	if err != nil || !res.IsZero() {
+		return nil, res, err
+	}
+
+	// get the Konnect Control Plane from Konnect
+	konnectCP, err := ops.GetControlPlaneByID(ctx, sdk, konnectCPID)
+	// set the controlPlaneRefValidCond to false in case the Control Plane is not found in Konnect
+	if err != nil {
+		controlPlaneRefValidCond.Status = metav1.ConditionFalse
+		controlPlaneRefValidCond.Reason = konnectv1alpha1.ControlPlaneRefReasonInvalid
+		controlPlaneRefValidCond.Message = err.Error()
+		if res, _, errPatch := patch.StatusWithConditions(
+			ctx,
+			r.Client,
+			&ext,
+			append(dependingConditions, controlPlaneRefValidCond)...,
+		); errPatch != nil || !res.IsZero() {
+			return nil, res, errPatch
+		}
+		log.Debug(logger, "ControlPlane retrieval failed in Konnect")
+		// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
+		// if the syncPeriod is set to zero, the controller won't requeue.
+		return nil, ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, nil
+	}
+
+	// set the controlPlaneRefValidCond to true in case the Control Plane is found in Konnect
+	if res, _, errPatch := patch.StatusWithConditions(
+		ctx,
+		r.Client,
+		&ext,
+		controlPlaneRefValidCond,
+	); errPatch != nil || !res.IsZero() {
+		return nil, res, errPatch
+	}
+
+	return konnectCP, ctrl.Result{}, err
+}
+
+func (r *KonnectExtensionReconciler) getKonnectControlPlaneID(
+	ctx context.Context,
+	ext konnectv1alpha1.KonnectExtension,
+	dependingConditions ...metav1.Condition,
+) (id string, res ctrl.Result, err error) {
 	var (
 		konnectCPID string
 		// init the controlPlaneRefValidCond with the assumption that the ControlPlaneRef is valid
@@ -82,9 +133,9 @@ func (r *KonnectExtensionReconciler) getKonnectControlPlane(
 				&ext,
 				append(dependingConditions, controlPlaneRefValidCond)...,
 			); errPatch != nil || !res.IsZero() {
-				return nil, res, errPatch
+				return "", res, errPatch
 			}
-			return nil, ctrl.Result{}, err
+			return "", ctrl.Result{}, err
 		}
 
 		// set the controlPlaneRefValidCond to false in case the KonnectGatewayControlPlane is not programmed yet
@@ -101,9 +152,9 @@ func (r *KonnectExtensionReconciler) getKonnectControlPlane(
 				&ext,
 				append(dependingConditions, controlPlaneRefValidCond)...,
 			); errPatch != nil || !res.IsZero() {
-				return nil, res, errPatch
+				return "", res, errPatch
 			}
-			return nil, ctrl.Result{}, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed
+			return "", ctrl.Result{}, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed
 		}
 		konnectCPID = kgcp.GetKonnectID()
 	case commonv1alpha1.ControlPlaneRefKonnectID:
@@ -111,38 +162,7 @@ func (r *KonnectExtensionReconciler) getKonnectControlPlane(
 		konnectCPID = *ext.Spec.Konnect.ControlPlane.Ref.KonnectID
 	}
 
-	// get the Konnect Control Plane from Konnect
-	konnectCP, err := ops.GetControlPlaneByID(ctx, sdk, konnectCPID)
-	// set the controlPlaneRefValidCond to false in case the Control Plane is not found in Konnect
-	if err != nil {
-		controlPlaneRefValidCond.Status = metav1.ConditionFalse
-		controlPlaneRefValidCond.Reason = konnectv1alpha1.ControlPlaneRefReasonInvalid
-		controlPlaneRefValidCond.Message = err.Error()
-		if res, _, errPatch := patch.StatusWithConditions(
-			ctx,
-			r.Client,
-			&ext,
-			append(dependingConditions, controlPlaneRefValidCond)...,
-		); errPatch != nil || !res.IsZero() {
-			return nil, res, errPatch
-		}
-		log.Debug(logger, "ControlPlane retrieval failed in Konnect")
-		// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
-		// if the syncPeriod is set to zero, the controller won't requeue.
-		return nil, ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, nil
-	}
-
-	// set the controlPlaneRefValidCond to true in case the Control Plane is found in Konnect
-	if res, _, errPatch := patch.StatusWithConditions(
-		ctx,
-		r.Client,
-		&ext,
-		controlPlaneRefValidCond,
-	); errPatch != nil || !res.IsZero() {
-		return nil, res, errPatch
-	}
-
-	return konnectCP, ctrl.Result{}, err
+	return konnectCPID, ctrl.Result{}, nil
 }
 
 // ensureExtendablesReferencesInStatus ensures that the KonnectExtension references to DataPlane and ControlPlane are up-to-date.
