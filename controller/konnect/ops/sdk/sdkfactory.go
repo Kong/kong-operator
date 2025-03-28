@@ -3,6 +3,8 @@ package sdk
 import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+
+	"github.com/kong/gateway-operator/controller/konnect/server"
 )
 
 // SDKWrapper is a wrapper of Konnect SDK to allow using mock SDKs in tests.
@@ -33,18 +35,24 @@ type SDKWrapper interface {
 
 	// GetServerURL returns the server URL for recording metrics.
 	GetServerURL() string
+	GetServer() server.Server
 }
 
 type sdkWrapper struct {
-	serverURL string
-	sdk       *sdkkonnectgo.SDK
+	server server.Server
+	sdk    *sdkkonnectgo.SDK
 }
 
 var _ SDKWrapper = sdkWrapper{}
 
 // GetServerURL returns the Konnect server URL for recording metrics.
 func (w sdkWrapper) GetServerURL() string {
-	return w.serverURL
+	return w.server.URL()
+}
+
+// GetServer returns the Konnect server used by this SDK instance.
+func (w sdkWrapper) GetServer() server.Server {
+	return w.server
 }
 
 // GetControlPlaneSDK returns the SDK to operate Konnect control planes.
@@ -167,7 +175,7 @@ type SDKToken string
 
 // SDKFactory is a factory for creating Konnect SDKs.
 type SDKFactory interface {
-	NewKonnectSDK(serverURL string, token SDKToken) SDKWrapper
+	NewKonnectSDK(server server.Server, token SDKToken) SDKWrapper
 }
 
 type sdkFactory struct{}
@@ -178,16 +186,16 @@ func NewSDKFactory() SDKFactory {
 }
 
 // NewKonnectSDK creates a new Konnect SDK.
-func (f sdkFactory) NewKonnectSDK(serverURL string, token SDKToken) SDKWrapper {
+func (f sdkFactory) NewKonnectSDK(server server.Server, token SDKToken) SDKWrapper {
 	return sdkWrapper{
-		serverURL: serverURL,
+		server: server,
 		sdk: sdkkonnectgo.New(
 			sdkkonnectgo.WithSecurity(
 				sdkkonnectcomp.Security{
 					PersonalAccessToken: sdkkonnectgo.String(string(token)),
 				},
 			),
-			sdkkonnectgo.WithServerURL(serverURL),
+			sdkkonnectgo.WithServerURL(server.URL()),
 		),
 	}
 }
