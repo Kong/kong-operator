@@ -5,10 +5,13 @@ import (
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/konnect/server"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -16,6 +19,7 @@ import (
 func createKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
 	sdk sdkops.CloudGatewaysSDK,
+	cl client.Client,
 	n *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
 	serverRegion server.Region,
 ) error {
@@ -24,7 +28,11 @@ func createKonnectDataPlaneGroupConfiguration(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: n, Op: CreateOp}
 	}
 
-	req := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(n.Spec, cpID, serverRegion)
+	req, err := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(ctx, cl, n.Spec, n.Namespace, cpID, serverRegion)
+	if err != nil {
+		return fmt.Errorf("failed to convert configuration spec: %w", err)
+	}
+
 	resp, err := sdk.CreateConfiguration(ctx, req)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, n); errWrap != nil {
@@ -47,6 +55,7 @@ func createKonnectDataPlaneGroupConfiguration(
 func updateKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
 	sdk sdkops.CloudGatewaysSDK,
+	cl client.Client,
 	n *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
 	server server.Server,
 ) error {
@@ -55,7 +64,11 @@ func updateKonnectDataPlaneGroupConfiguration(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: n, Op: UpdateOp}
 	}
 
-	req := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(n.Spec, cpID, server.Region())
+	req, err := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(ctx, cl, n.Spec, n.Namespace, cpID, server.Region())
+	if err != nil {
+		return fmt.Errorf("failed to convert configuration spec: %w", err)
+	}
+
 	resp, err := sdk.CreateConfiguration(ctx, req)
 	if err != nil {
 		var transientError bool
@@ -159,25 +172,63 @@ func cloudGatewayDataPlaneGroupConfigurationInit(
 }
 
 func cloudGatewayDataPlaneGroupConfigurationToAPIRequest(
+	ctx context.Context,
+	cl client.Client,
 	spec konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec,
+	namespace string,
 	cpID string,
 	cpRegion server.Region,
-) sdkkonnectcomp.CreateConfigurationRequest {
+) (sdkkonnectcomp.CreateConfigurationRequest, error) {
 	cfgReq := cloudGatewayDataPlaneGroupConfigurationInit(spec, cpID, cpRegion)
-	cfgReq.DataplaneGroups = func() []sdkkonnectcomp.CreateConfigurationDataPlaneGroup {
-		ret := make([]sdkkonnectcomp.CreateConfigurationDataPlaneGroup, 0, len(spec.DataplaneGroups))
-		for _, g := range spec.DataplaneGroups {
-			ret = append(ret, konnectConfigurationDataPlaneGroupToAPIRequest(g))
-		}
-		return ret
-	}()
 
-	return cfgReq
+	dataplaneGroups := make([]sdkkonnectcomp.CreateConfigurationDataPlaneGroup, 0, len(spec.DataplaneGroups))
+	for _, g := range spec.DataplaneGroups {
+		dpg, err := konnectConfigurationDataPlaneGroupToAPIRequest(ctx, cl, g, namespace)
+		if err != nil {
+			// This should never happen, since we validate the spec at the CRD level.
+			return sdkkonnectcomp.CreateConfigurationRequest{}, fmt.Errorf("failed to convert data plane group: %w", err)
+		}
+		dataplaneGroups = append(dataplaneGroups, dpg)
+	}
+	cfgReq.DataplaneGroups = dataplaneGroups
+
+	return cfgReq, nil
 }
 
 func konnectConfigurationDataPlaneGroupToAPIRequest(
+	ctx context.Context,
+	cl client.Client,
 	spec konnectv1alpha1.KonnectConfigurationDataPlaneGroup,
-) sdkkonnectcomp.CreateConfigurationDataPlaneGroup {
+	namespace string,
+) (sdkkonnectcomp.CreateConfigurationDataPlaneGroup, error) {
+	var networkID string
+	switch spec.NetworkRef.Type {
+	case commonv1alpha1.ObjectRefTypeKonnectID:
+		networkID = *spec.NetworkRef.KonnectID
+	case commonv1alpha1.ObjectRefTypeNamespacedRef:
+		var network konnectv1alpha1.KonnectCloudGatewayNetwork
+		nn := types.NamespacedName{
+			Name:      spec.NetworkRef.NamespacedRef.Name,
+			Namespace: namespace,
+		}
+		if err := cl.Get(ctx, nn, &network); err != nil {
+			return sdkkonnectcomp.CreateConfigurationDataPlaneGroup{}, fmt.Errorf("failed to get network %s: %w", nn, err)
+		}
+		// Just check if the network has an ID.
+		// Other aspects of network readiness are checks in handleKonnectNetworkRef.
+		if network.Status.ID == "" {
+			return sdkkonnectcomp.CreateConfigurationDataPlaneGroup{}, fmt.Errorf("network %s has no ID", nn)
+		}
+		networkID = network.Status.ID
+	default:
+		return sdkkonnectcomp.CreateConfigurationDataPlaneGroup{}, fmt.Errorf("unknown network ref type: %s", spec.NetworkRef.Type)
+	}
+
+	autoscaleConf, err := configurationDataPlaneGroupAutoscaleTypeToSDKAutoscale(spec.Autoscale)
+	if err != nil {
+		return sdkkonnectcomp.CreateConfigurationDataPlaneGroup{}, fmt.Errorf("failed to convert autoscale type: %w", err)
+	}
+
 	return sdkkonnectcomp.CreateConfigurationDataPlaneGroup{
 		Provider: spec.Provider,
 		Region:   spec.Region,
@@ -191,38 +242,35 @@ func konnectConfigurationDataPlaneGroupToAPIRequest(
 			}
 			return ret
 		}(),
-		CloudGatewayNetworkID: func() string {
-			switch spec.NetworkRef.Type {
-			case konnectv1alpha1.NetworkRefKonnectID:
-				return *spec.NetworkRef.KonnectID
-			default:
-				panic(fmt.Sprintf("unknown network ref type: %s", spec.NetworkRef.Type))
-			}
-		}(),
-		Autoscale: func() sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscale {
-			switch spec.Autoscale.Type {
-			case konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeAutopilot:
-				return sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscale{
-					Type: sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleTypeConfigurationDataPlaneGroupAutoscaleAutopilot,
-					ConfigurationDataPlaneGroupAutoscaleAutopilot: &sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleAutopilot{
-						Kind:    sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleAutopilotKindAutopilot,
-						BaseRps: spec.Autoscale.Autopilot.BaseRps,
-						MaxRps:  spec.Autoscale.Autopilot.MaxRps,
-					},
-				}
-			case konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic:
-				return sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscale{
-					Type: sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleTypeConfigurationDataPlaneGroupAutoscaleStatic,
-					ConfigurationDataPlaneGroupAutoscaleStatic: &sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleStatic{
-						Kind:               sdkkonnectcomp.KindStatic,
-						InstanceType:       spec.Autoscale.Static.InstanceType,
-						RequestedInstances: spec.Autoscale.Static.RequestedInstances,
-					},
-				}
-			default:
-				panic(fmt.Sprintf("unknown autoscale type: %s", spec.Autoscale.Type))
-			}
-		}(),
+		CloudGatewayNetworkID: networkID,
+		Autoscale:             autoscaleConf,
+	}, nil
+}
+
+func configurationDataPlaneGroupAutoscaleTypeToSDKAutoscale(
+	autoscale konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale,
+) (sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscale, error) {
+	switch autoscale.Type {
+	case konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeAutopilot:
+		return sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscale{
+			Type: sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleTypeConfigurationDataPlaneGroupAutoscaleAutopilot,
+			ConfigurationDataPlaneGroupAutoscaleAutopilot: &sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleAutopilot{
+				Kind:    sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleAutopilotKindAutopilot,
+				BaseRps: autoscale.Autopilot.BaseRps,
+				MaxRps:  autoscale.Autopilot.MaxRps,
+			},
+		}, nil
+	case konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic:
+		return sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscale{
+			Type: sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleTypeConfigurationDataPlaneGroupAutoscaleStatic,
+			ConfigurationDataPlaneGroupAutoscaleStatic: &sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleStatic{
+				Kind:               sdkkonnectcomp.KindStatic,
+				InstanceType:       autoscale.Static.InstanceType,
+				RequestedInstances: autoscale.Static.RequestedInstances,
+			},
+		}, nil
+	default:
+		return sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscale{}, fmt.Errorf("unknown autoscale type: %s", autoscale.Type)
 	}
 }
 

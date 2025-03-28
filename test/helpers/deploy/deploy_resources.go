@@ -278,8 +278,8 @@ func KonnectCloudGatewayDataPlaneGroupConfiguration(
 				{
 					Provider: sdkkonnectcomp.ProviderNameAws,
 					Region:   "us-west-2",
-					NetworkRef: konnectv1alpha1.NetworkRef{
-						Type:      konnectv1alpha1.NetworkRefKonnectID,
+					NetworkRef: commonv1alpha1.ObjectRef{
+						Type:      commonv1alpha1.ObjectRefTypeKonnectID,
 						KonnectID: lo.ToPtr("network-12345"),
 					},
 					Autoscale: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{

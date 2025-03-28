@@ -167,9 +167,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				}
 			}
 		}
-
-		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
+		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
+
 	// If a type has a KongService ref, handle it.
 	res, err = handleKongServiceRef(ctx, r.Client, ent)
 	if err != nil {
@@ -211,7 +211,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			return ctrl.Result{}, nil
 		}
 
-		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
+		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if !res.IsZero() {
 		return res, nil
 	}
@@ -247,7 +247,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}
 		}
 
-		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
+		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if !res.IsZero() {
 		return res, nil
 	}
@@ -283,7 +283,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}
 		}
 
-		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
+		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	} else if res.Requeue {
 		return res, nil
 	}
@@ -319,7 +319,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}
 		}
 
-		return setProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
+		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
@@ -354,6 +354,20 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("failed to parse server URL: %w", err)
 	}
 	sdk := r.sdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
+
+	// If a type has a KonnectCloudGatewayNetwork ref, handle it.
+	res, err = handleKonnectNetworkRef(ctx, r.Client, ent, sdk)
+	if err != nil || !res.IsZero() {
+		// NOTE: If the referenced network is being deleted and the object
+		// is being deleted then allow the reconciliation to continue as we want to
+		// proceed with object's deletion.
+		// Otherwise, just return the error and requeue.
+		if errDel := (&ReferencedObjectIsBeingDeleted{}); !errors.As(err, errDel) ||
+			ent.GetDeletionTimestamp().IsZero() {
+			log.Debug(logger, "error handling KonnectNetwork ref", "error", err)
+			return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
+		}
+	}
 
 	if delTimestamp := ent.GetDeletionTimestamp(); !delTimestamp.IsZero() {
 		logger.Info("resource is being deleted")
@@ -496,7 +510,7 @@ func setStatusServerURLAndOrgID(
 	ent.GetKonnectStatus().OrgID = orgID
 }
 
-func setProgrammedStatusConditionBasedOnOtherConditions[
+func patchWithProgrammedStatusConditionBasedOnOtherConditions[
 	T interface {
 		client.Object
 		k8sutils.ConditionsAware
