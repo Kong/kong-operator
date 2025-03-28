@@ -32,14 +32,26 @@ func TestServer(t *testing.T) {
 			expectedRegion: server.RegionUS,
 		},
 		{
+			name:           "valid hostname with yet-unknown region",
+			input:          "pl.konghq.com",
+			expectedURL:    "https://pl.konghq.com",
+			expectedRegion: server.Region("pl"),
+		},
+		{
+			name:           "valid hostname with global region",
+			input:          "global.konghq.com",
+			expectedURL:    "https://global.konghq.com",
+			expectedRegion: server.RegionGlobal,
+		},
+		{
 			name:                  "invalid URL",
 			input:                 "not-a-valid-url:\\us.konghq.com",
 			expectedErrorContains: "failed to parse region from hostname",
 		},
 		{
-			name:                  "unknown region",
-			input:                 "unknown.konghq.com",
-			expectedErrorContains: "failed to parse region from hostname: unknown region",
+			name:                  "region not satisfying regex",
+			input:                 "not-two-lowercase-letters.konghq.com",
+			expectedErrorContains: `failed to parse region from hostname: invalid region "not-two-lowercase-letters"`,
 		},
 	}
 	for _, tc := range testCases {
