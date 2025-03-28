@@ -255,6 +255,10 @@ type ServiceOptions struct {
 	// `ClusterIP` allocates a cluster-internal IP address for load-balancing
 	// to endpoints.
 	//
+	// `NodePort` exposes the Service on each Node's IP at a static port (the NodePort).
+	// To make the node port available, Kubernetes sets up a cluster IP address,
+	// the same as if you had requested a Service of type: ClusterIP.
+	//
 	// `LoadBalancer` builds on NodePort and creates an external load-balancer
 	// (if supported in the current cloud) which routes to the same endpoints
 	// as the clusterIP.
@@ -263,7 +267,7 @@ type ServiceOptions struct {
 	//
 	// +optional
 	// +kubebuilder:default=LoadBalancer
-	// +kubebuilder:validation:Enum=LoadBalancer;ClusterIP
+	// +kubebuilder:validation:Enum=LoadBalancer;NodePort;ClusterIP
 	Type corev1.ServiceType `json:"type,omitempty" protobuf:"bytes,4,opt,name=type,casttype=ServiceType"`
 
 	// Name defines the name of the service.

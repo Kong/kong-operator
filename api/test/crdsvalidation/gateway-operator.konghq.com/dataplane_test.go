@@ -230,4 +230,89 @@ func TestDataplane(t *testing.T) {
 			},
 		}.Run(t)
 	})
+	t.Run("service ingress type", func(t *testing.T) {
+		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
+			{
+				Name: "service ingress type LoadBalancer",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Type: corev1.ServiceTypeLoadBalancer,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "service ingress type NodePort",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Type: corev1.ServiceTypeNodePort,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "service ingress type ClusterIP",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Type: corev1.ServiceTypeClusterIP,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "service ingress type ExternalName",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Type: corev1.ServiceTypeExternalName,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("Unsupported value: \"ExternalName\""),
+			},
+		}.Run(t)
+	})
 }
