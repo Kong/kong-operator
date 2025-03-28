@@ -35,6 +35,9 @@
   a `ReferenceGrant` in the namespace of the `ControlPlane` that allows the `ControlPlane`
   to watch resources in the specified namespace.
   [#1388](https://github.com/Kong/gateway-operator/pull/1388)
+- Deduce `KonnectCloudGatewayDataPlaneGroupConfiguration` region based on the attached
+  `KonnectAPIAuthConfiguration` instead of using a hardcoded `eu` value.
+  [#1409](https://github.com/Kong/gateway-operator/pull/1409)
 
 ## [v1.5.0]
 

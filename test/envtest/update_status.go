@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -128,7 +129,7 @@ func updateKongUpstreamStatusWithProgrammed(
 func konnectEntityStatus(id string) konnectv1alpha1.KonnectEntityStatus {
 	return konnectv1alpha1.KonnectEntityStatus{
 		ID:        id,
-		ServerURL: "https://api.konghq.com",
+		ServerURL: sdkmocks.SDKServerURL,
 		OrgID:     "org-id",
 	}
 }
