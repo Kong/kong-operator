@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -21,38 +21,38 @@ const (
 	IndexFieldKongPluginBindingKonnectGatewayControlPlane = "kongPluginBindingKonnectGatewayControlPlaneRef"
 )
 
-// IndexOptionsForKongPluginBinding returns required Index options for KongPluginBinding reconclier.
-func IndexOptionsForKongPluginBinding() []ReconciliationIndexOption {
-	return []ReconciliationIndexOption{
+// OptionsForKongPluginBinding returns required Index options for KongPluginBinding reconclier.
+func OptionsForKongPluginBinding() []Option {
+	return []Option{
 		{
-			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
-			IndexField:   IndexFieldKongPluginBindingKongPluginReference,
-			ExtractValue: kongPluginReferencesFromKongPluginBinding,
+			Object:         &configurationv1alpha1.KongPluginBinding{},
+			Field:          IndexFieldKongPluginBindingKongPluginReference,
+			ExtractValueFn: kongPluginReferencesFromKongPluginBinding,
 		},
 		{
-			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
-			IndexField:   IndexFieldKongPluginBindingKongServiceReference,
-			ExtractValue: kongServiceReferencesFromKongPluginBinding,
+			Object:         &configurationv1alpha1.KongPluginBinding{},
+			Field:          IndexFieldKongPluginBindingKongServiceReference,
+			ExtractValueFn: kongServiceReferencesFromKongPluginBinding,
 		},
 		{
-			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
-			IndexField:   IndexFieldKongPluginBindingKongRouteReference,
-			ExtractValue: kongRouteReferencesFromKongPluginBinding,
+			Object:         &configurationv1alpha1.KongPluginBinding{},
+			Field:          IndexFieldKongPluginBindingKongRouteReference,
+			ExtractValueFn: kongRouteReferencesFromKongPluginBinding,
 		},
 		{
-			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
-			IndexField:   IndexFieldKongPluginBindingKongConsumerReference,
-			ExtractValue: kongConsumerReferencesFromKongPluginBinding,
+			Object:         &configurationv1alpha1.KongPluginBinding{},
+			Field:          IndexFieldKongPluginBindingKongConsumerReference,
+			ExtractValueFn: kongConsumerReferencesFromKongPluginBinding,
 		},
 		{
-			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
-			IndexField:   IndexFieldKongPluginBindingKongConsumerGroupReference,
-			ExtractValue: kongConsumerGroupReferencesFromKongPluginBinding,
+			Object:         &configurationv1alpha1.KongPluginBinding{},
+			Field:          IndexFieldKongPluginBindingKongConsumerGroupReference,
+			ExtractValueFn: kongConsumerGroupReferencesFromKongPluginBinding,
 		},
 		{
-			IndexObject:  &configurationv1alpha1.KongPluginBinding{},
-			IndexField:   IndexFieldKongPluginBindingKonnectGatewayControlPlane,
-			ExtractValue: kongPluginBindingReferencesKonnectGatewayControlPlane,
+			Object:         &configurationv1alpha1.KongPluginBinding{},
+			Field:          IndexFieldKongPluginBindingKonnectGatewayControlPlane,
+			ExtractValueFn: kongPluginBindingReferencesKonnectGatewayControlPlane,
 		},
 	}
 }

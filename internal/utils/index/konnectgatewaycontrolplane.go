@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -18,23 +18,23 @@ const (
 	IndexFieldKonnectGatewayControlPlaneOnKonnectID = "konnectGatewayControlPlaneKonnectID"
 )
 
-// IndexOptionsForKonnectGatewayControlPlane returns required Index options for KonnectGatewayControlPlane reconciler.
-func IndexOptionsForKonnectGatewayControlPlane() []ReconciliationIndexOption {
-	return []ReconciliationIndexOption{
+// OptionsForKonnectGatewayControlPlane returns required Index options for KonnectGatewayControlPlane reconciler.
+func OptionsForKonnectGatewayControlPlane() []Option {
+	return []Option{
 		{
-			IndexObject:  &konnectv1alpha1.KonnectGatewayControlPlane{},
-			IndexField:   IndexFieldKonnectGatewayControlPlaneGroupOnMembers,
-			ExtractValue: konnectGatewayControlPlaneGroupMembers,
+			Object:         &konnectv1alpha1.KonnectGatewayControlPlane{},
+			Field:          IndexFieldKonnectGatewayControlPlaneGroupOnMembers,
+			ExtractValueFn: konnectGatewayControlPlaneGroupMembers,
 		},
 		{
-			IndexObject:  &konnectv1alpha1.KonnectGatewayControlPlane{},
-			IndexField:   IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration,
-			ExtractValue: konnectGatewayControlPlaneAPIAuthConfigurationRef,
+			Object:         &konnectv1alpha1.KonnectGatewayControlPlane{},
+			Field:          IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration,
+			ExtractValueFn: konnectGatewayControlPlaneAPIAuthConfigurationRef,
 		},
 		{
-			IndexObject:  &konnectv1alpha1.KonnectGatewayControlPlane{},
-			IndexField:   IndexFieldKonnectGatewayControlPlaneOnKonnectID,
-			ExtractValue: konnectGatewayControlPlaneKonnectID,
+			Object:         &konnectv1alpha1.KonnectGatewayControlPlane{},
+			Field:          IndexFieldKonnectGatewayControlPlaneOnKonnectID,
+			ExtractValueFn: konnectGatewayControlPlaneKonnectID,
 		},
 	}
 }

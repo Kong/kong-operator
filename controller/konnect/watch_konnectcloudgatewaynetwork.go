@@ -8,6 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/kong/gateway-operator/internal/utils/index"
+
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -52,7 +54,7 @@ func enqueueKonnectCloudGatewayNetworkForKonnectAPIAuthConfiguration(
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(auth.GetNamespace()),
 			client.MatchingFields{
-				IndexFieldKonnectCloudGatewayNetworkOnAPIAuthConfiguration: auth.Name,
+				index.IndexFieldKonnectCloudGatewayNetworkOnAPIAuthConfiguration: auth.Name,
 			},
 		); err != nil {
 			return nil

@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	"github.com/samber/lo"
-	"github.com/samber/mo"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -15,10 +13,10 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -26,36 +24,6 @@ import (
 type EntityWithControlPlaneRef interface {
 	SetControlPlaneID(string)
 	GetControlPlaneID() string
-}
-
-func getCPForRef(
-	ctx context.Context,
-	cl client.Client,
-	cpRef commonv1alpha1.ControlPlaneRef,
-	namespace string,
-) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
-	switch cpRef.Type {
-	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-		return getCPForNamespacedRef(ctx, cl, cpRef, namespace)
-	default:
-		return nil, ReferencedKongGatewayControlPlaneIsUnsupported{Reference: cpRef}
-	}
-}
-
-func getControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
-	e TEnt,
-) mo.Option[commonv1alpha1.ControlPlaneRef] {
-	none := mo.None[commonv1alpha1.ControlPlaneRef]()
-	type GetControlPlaneRef interface {
-		GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef
-	}
-
-	if eGetter, ok := any(e).(GetControlPlaneRef); ok {
-		if cpRef := eGetter.GetControlPlaneRef(); lo.IsNotEmpty(cpRef) {
-			return mo.Some(*cpRef)
-		}
-	}
-	return none
 }
 
 // handleControlPlaneRef handles the ControlPlaneRef for the given entity.
@@ -66,12 +34,12 @@ func handleControlPlaneRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	cl client.Client,
 	ent TEnt,
 ) (ctrl.Result, error) {
-	cpRef, ok := getControlPlaneRef(ent).Get()
+	cpRef, ok := controlplane.GetControlPlaneRef(ent).Get()
 	if !ok {
 		return ctrl.Result{}, nil
 	}
 
-	cp, err := getCPForRef(ctx, cl, cpRef, ent.GetNamespace())
+	cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, ent.GetNamespace())
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,

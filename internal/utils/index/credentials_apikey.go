@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -13,18 +13,18 @@ const (
 	IndexFieldKongCredentialAPIKeyReferencesSecret = "kongCredentialsAPIKeySecretRef"
 )
 
-// IndexOptionsForCredentialsAPIKey returns required Index options for KongCredentialAPIKey.
-func IndexOptionsForCredentialsAPIKey() []ReconciliationIndexOption {
-	return []ReconciliationIndexOption{
+// OptionsForCredentialsAPIKey returns required Index options for KongCredentialAPIKey.
+func OptionsForCredentialsAPIKey() []Option {
+	return []Option{
 		{
-			IndexObject:  &configurationv1alpha1.KongCredentialAPIKey{},
-			IndexField:   IndexFieldKongCredentialAPIKeyReferencesKongConsumer,
-			ExtractValue: kongCredentialAPIKeyReferencesConsumer,
+			Object:         &configurationv1alpha1.KongCredentialAPIKey{},
+			Field:          IndexFieldKongCredentialAPIKeyReferencesKongConsumer,
+			ExtractValueFn: kongCredentialAPIKeyReferencesConsumer,
 		},
 		{
-			IndexObject:  &configurationv1alpha1.KongCredentialAPIKey{},
-			IndexField:   IndexFieldKongCredentialAPIKeyReferencesSecret,
-			ExtractValue: kongCredentialReferencesSecret[configurationv1alpha1.KongCredentialAPIKey],
+			Object:         &configurationv1alpha1.KongCredentialAPIKey{},
+			Field:          IndexFieldKongCredentialAPIKeyReferencesSecret,
+			ExtractValueFn: kongCredentialReferencesSecret[configurationv1alpha1.KongCredentialAPIKey],
 		},
 	}
 }

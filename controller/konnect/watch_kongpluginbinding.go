@@ -14,6 +14,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/internal/utils/index"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -51,7 +52,7 @@ func KongPluginBindingReconciliationWatchOptions(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectForAPIAuthThroughControlPlaneRef[configurationv1alpha1.KongPluginBindingList](
-						cl, IndexFieldKongPluginBindingKonnectGatewayControlPlane,
+						cl, index.IndexFieldKongPluginBindingKonnectGatewayControlPlane,
 					),
 				),
 			)
@@ -61,7 +62,7 @@ func KongPluginBindingReconciliationWatchOptions(
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectForKonnectGatewayControlPlane[configurationv1alpha1.KongPluginBindingList](
-						cl, IndexFieldKongPluginBindingKonnectGatewayControlPlane,
+						cl, index.IndexFieldKongPluginBindingKonnectGatewayControlPlane,
 					),
 				),
 			)
@@ -138,7 +139,7 @@ func enqueueKongPluginBindingForKongPlugin(cl client.Client) func(
 			// Currently KongPlugin and KongPluginBinding must be in the same namespace to reference the plugin.
 			client.InNamespace(plugin.Namespace),
 			client.MatchingFields{
-				IndexFieldKongPluginBindingKongPluginReference: plugin.Namespace + "/" + plugin.Name,
+				index.IndexFieldKongPluginBindingKongPluginReference: plugin.Namespace + "/" + plugin.Name,
 			},
 		)
 		if err != nil {
@@ -163,16 +164,16 @@ func enqueueKongPluginBindingFor[
 		}
 
 		logger := ctrllog.FromContext(ctx)
-		var index string
+		var indexName string
 		switch any(ent).(type) {
 		case *configurationv1alpha1.KongService:
-			index = IndexFieldKongPluginBindingKongServiceReference
+			indexName = index.IndexFieldKongPluginBindingKongServiceReference
 		case *configurationv1alpha1.KongRoute:
-			index = IndexFieldKongPluginBindingKongRouteReference
+			indexName = index.IndexFieldKongPluginBindingKongRouteReference
 		case *configurationv1.KongConsumer:
-			index = IndexFieldKongPluginBindingKongConsumerReference
+			indexName = index.IndexFieldKongPluginBindingKongConsumerReference
 		case *configurationv1beta1.KongConsumerGroup:
-			index = IndexFieldKongPluginBindingKongConsumerGroupReference
+			indexName = index.IndexFieldKongPluginBindingKongConsumerGroupReference
 		default:
 			log.Error(
 				logger,
@@ -187,7 +188,7 @@ func enqueueKongPluginBindingFor[
 		err := cl.List(ctx, &pluginBindingList,
 			client.InNamespace(ent.GetNamespace()),
 			client.MatchingFields{
-				index: ent.GetName(),
+				indexName: ent.GetName(),
 			},
 		)
 		if err != nil {

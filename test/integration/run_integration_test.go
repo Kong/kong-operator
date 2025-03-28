@@ -6,7 +6,6 @@ package integration_test
 import (
 	"testing"
 
-	"github.com/kong/gateway-operator/modules/admission"
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
@@ -26,7 +25,7 @@ func TestMain(m *testing.M) {
 
 	metadata := metadata.Metadata()
 	managerToTest := func(startedChan chan struct{}) error {
-		return manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, admission.NewRequestHandler, startedChan, metadata)
+		return manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, startedChan, metadata)
 	}
 	integration.TestMain(
 		m,

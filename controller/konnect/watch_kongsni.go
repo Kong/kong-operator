@@ -11,6 +11,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/kong/gateway-operator/internal/utils/index"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
@@ -78,7 +80,7 @@ func enqueueKongSNIForKongCertificate(
 		sniList := configurationv1alpha1.KongSNIList{}
 		if err := cl.List(ctx, &sniList, client.InNamespace(cert.Namespace),
 			client.MatchingFields{
-				IndexFieldKongSNIOnCertificateRefNmae: cert.Name,
+				index.IndexFieldKongSNIOnCertificateRefNmae: cert.Name,
 			},
 		); err != nil {
 			return nil

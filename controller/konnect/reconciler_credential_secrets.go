@@ -23,6 +23,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/clientops"
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 
@@ -172,7 +173,7 @@ func secretIsUsedByConsumerAttachedToKonnectControlPlane(cl client.Client) func(
 			context.Background(),
 			&kongConsumerList,
 			client.MatchingFields{
-				IndexFieldKongConsumerReferencesSecrets: secret.GetName(),
+				index.IndexFieldKongConsumerReferencesSecrets: secret.GetName(),
 			},
 		)
 		if err != nil {
@@ -221,7 +222,7 @@ func (r *KongCredentialSecretReconciler) Reconcile(ctx context.Context, req ctrl
 		ctx,
 		&kongConsumerList,
 		client.MatchingFields{
-			IndexFieldKongConsumerReferencesSecrets: secret.GetName(),
+			index.IndexFieldKongConsumerReferencesSecrets: secret.GetName(),
 		},
 	)
 	if err != nil {
@@ -268,7 +269,7 @@ func deleteAllCredentialsUsingSecret(
 		var l configurationv1alpha1.KongCredentialBasicAuthList
 		err := cl.List(ctx, &l,
 			client.MatchingFields{
-				IndexFieldKongCredentialBasicAuthReferencesSecret: secret.Name,
+				index.IndexFieldKongCredentialBasicAuthReferencesSecret: secret.Name,
 			},
 		)
 		if err != nil {
@@ -282,7 +283,7 @@ func deleteAllCredentialsUsingSecret(
 		var l configurationv1alpha1.KongCredentialAPIKeyList
 		err := cl.List(ctx, &l,
 			client.MatchingFields{
-				IndexFieldKongCredentialAPIKeyReferencesSecret: secret.Name,
+				index.IndexFieldKongCredentialAPIKeyReferencesSecret: secret.Name,
 			},
 		)
 		if err != nil {
@@ -297,7 +298,7 @@ func deleteAllCredentialsUsingSecret(
 		err := cl.List(
 			ctx, &l,
 			client.MatchingFields{
-				IndexFieldKongCredentialACLReferencesKongSecret: secret.Name,
+				index.IndexFieldKongCredentialACLReferencesKongSecret: secret.Name,
 			},
 		)
 		if err != nil {
@@ -312,7 +313,7 @@ func deleteAllCredentialsUsingSecret(
 		err := cl.List(
 			ctx, &l,
 			client.MatchingFields{
-				IndexFieldKongCredentialJWTReferencesSecret: secret.Name,
+				index.IndexFieldKongCredentialJWTReferencesSecret: secret.Name,
 			},
 		)
 		if err != nil {
@@ -327,7 +328,7 @@ func deleteAllCredentialsUsingSecret(
 		err := cl.List(
 			ctx, &l,
 			client.MatchingFields{
-				IndexFieldKongCredentialHMACReferencesSecret: secret.Name,
+				index.IndexFieldKongCredentialHMACReferencesSecret: secret.Name,
 			},
 		)
 		if err != nil {
@@ -776,7 +777,7 @@ func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 			ctx,
 			&l,
 			client.MatchingFields{
-				IndexFieldKongCredentialBasicAuthReferencesKongConsumer: consumer.Name,
+				index.IndexFieldKongCredentialBasicAuthReferencesKongConsumer: consumer.Name,
 			},
 		)
 		if err != nil {
@@ -793,7 +794,7 @@ func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 			ctx,
 			&l,
 			client.MatchingFields{
-				IndexFieldKongCredentialAPIKeyReferencesKongConsumer: consumer.Name,
+				index.IndexFieldKongCredentialAPIKeyReferencesKongConsumer: consumer.Name,
 			},
 		)
 		if err != nil {
@@ -810,7 +811,7 @@ func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 			ctx,
 			&l,
 			client.MatchingFields{
-				IndexFieldKongCredentialACLReferencesKongConsumer: consumer.Name,
+				index.IndexFieldKongCredentialACLReferencesKongConsumer: consumer.Name,
 			},
 		)
 		if err != nil {
@@ -826,7 +827,7 @@ func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 			ctx,
 			&l,
 			client.MatchingFields{
-				IndexFieldKongCredentialJWTReferencesKongConsumer: consumer.Name,
+				index.IndexFieldKongCredentialJWTReferencesKongConsumer: consumer.Name,
 			},
 		)
 		if err != nil {
@@ -842,7 +843,7 @@ func (r KongCredentialSecretReconciler) handleConsumerUsingCredentialSecret(
 			ctx,
 			&l,
 			client.MatchingFields{
-				IndexFieldKongCredentialHMACReferencesKongConsumer: consumer.Name,
+				index.IndexFieldKongCredentialHMACReferencesKongConsumer: consumer.Name,
 			},
 		)
 		if err != nil {

@@ -26,13 +26,6 @@ type Reconciler interface {
 // ManagerOption is a function that can be used to configure the manager.
 type ManagerOption func(manager.Manager) error
 
-// WithKonnectCacheIndices is a manager option that sets up cache indices for Konnect types.
-func WithKonnectCacheIndices(ctx context.Context) ManagerOption {
-	return func(mgr manager.Manager) error {
-		return kgomanager.SetupCacheIndicesForKonnectTypes(ctx, mgr, true)
-	}
-}
-
 // NewManager returns a manager and a logs observer.
 // The logs observer can be used to dump logs if the test fails.
 // The returned manager can be used with StartReconcilers() to start a list of
@@ -81,6 +74,11 @@ func StartReconcilers(
 	reconcilers ...Reconciler,
 ) {
 	t.Helper()
+
+	// Setup cache indices for all types.
+	cfg := kgomanager.DefaultConfig()
+	cfg.KonnectControllersEnabled = true
+	require.NoError(t, kgomanager.SetupCacheIndexes(ctx, mgr, cfg))
 
 	for _, r := range reconcilers {
 		require.NoError(t, r.SetupWithManager(ctx, mgr))

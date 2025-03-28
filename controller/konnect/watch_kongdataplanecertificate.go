@@ -7,6 +7,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/kong/gateway-operator/internal/utils/index"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -26,7 +28,7 @@ func KongDataPlaneClientCertificateReconciliationWatchOptions(cl client.Client) 
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectForAPIAuthThroughControlPlaneRef[configurationv1alpha1.KongDataPlaneClientCertificateList](
-						cl, IndexFieldKongDataPlaneClientCertificateOnKonnectGatewayControlPlane,
+						cl, index.IndexFieldKongDataPlaneClientCertificateOnKonnectGatewayControlPlane,
 					),
 				),
 			)
@@ -36,7 +38,7 @@ func KongDataPlaneClientCertificateReconciliationWatchOptions(cl client.Client) 
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectForKonnectGatewayControlPlane[configurationv1alpha1.KongDataPlaneClientCertificateList](
-						cl, IndexFieldKongDataPlaneClientCertificateOnKonnectGatewayControlPlane,
+						cl, index.IndexFieldKongDataPlaneClientCertificateOnKonnectGatewayControlPlane,
 					),
 				),
 			)

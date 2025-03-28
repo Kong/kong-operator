@@ -135,7 +135,6 @@ func Run(
 	cfg Config,
 	scheme *runtime.Scheme,
 	setupControllers SetupControllersFunc,
-	admissionRequestHandler AdmissionRequestHandlerFunc,
 	startedChan chan<- struct{},
 	metadata metadata.Info,
 ) error {
@@ -222,7 +221,7 @@ func Run(
 
 	ctx := context.Background()
 
-	if err := setupIndexes(ctx, mgr, cfg); err != nil {
+	if err := SetupCacheIndexes(ctx, mgr, cfg); err != nil {
 		return err
 	}
 
@@ -241,7 +240,7 @@ func Run(
 		return fmt.Errorf("unable to set up ready check: %w", err)
 	}
 
-	//+kubebuilder:scaffold:builder
+	// +kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		return fmt.Errorf("unable to set up health check: %w", err)

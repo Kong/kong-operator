@@ -10,6 +10,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/kong/gateway-operator/internal/utils/index"
+
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -37,7 +39,7 @@ func KongKeyReconciliationWatchOptions(cl client.Client) []func(*ctrl.Builder) *
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectForAPIAuthThroughControlPlaneRef[configurationv1alpha1.KongKeyList](
-						cl, IndexFieldKongKeyOnKonnectGatewayControlPlane,
+						cl, index.IndexFieldKongKeyOnKonnectGatewayControlPlane,
 					),
 				),
 			)
@@ -47,7 +49,7 @@ func KongKeyReconciliationWatchOptions(cl client.Client) []func(*ctrl.Builder) *
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectForKonnectGatewayControlPlane[configurationv1alpha1.KongKeyList](
-						cl, IndexFieldKongKeyOnKonnectGatewayControlPlane,
+						cl, index.IndexFieldKongKeyOnKonnectGatewayControlPlane,
 					),
 				),
 			)
@@ -66,7 +68,7 @@ func enqueueKongKeyForKongKeySet(cl client.Client) handler.MapFunc {
 		if err := cl.List(ctx, &l,
 			client.InNamespace(keySet.GetNamespace()),
 			client.MatchingFields{
-				IndexFieldKongKeyOnKongKeySetReference: keySet.GetNamespace() + "/" + keySet.GetName(),
+				index.IndexFieldKongKeyOnKongKeySetReference: keySet.GetNamespace() + "/" + keySet.GetName(),
 			},
 		); err != nil {
 			return nil

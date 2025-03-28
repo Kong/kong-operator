@@ -19,8 +19,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
+	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 
@@ -117,7 +119,7 @@ func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		ctx,
 		&kongPluginBindingList,
 		client.MatchingFields{
-			IndexFieldKongPluginBindingKongPluginReference: kongPluginNN.String(),
+			index.IndexFieldKongPluginBindingKongPluginReference: kongPluginNN.String(),
 		},
 	)
 	if err != nil {
@@ -271,7 +273,7 @@ func listAllEntitiesReferencingPluginIntoRelations(
 	var kongServiceList configurationv1alpha1.KongServiceList
 	err := clientWithNamespace.List(ctx, &kongServiceList,
 		client.MatchingFields{
-			IndexFieldKongServiceOnReferencedPluginNames: kongPluginNN.String(),
+			index.IndexFieldKongServiceOnReferencedPluginNames: kongPluginNN.String(),
 		},
 	)
 	if err != nil {
@@ -281,7 +283,7 @@ func listAllEntitiesReferencingPluginIntoRelations(
 	var kongRouteList configurationv1alpha1.KongRouteList
 	err = clientWithNamespace.List(ctx, &kongRouteList,
 		client.MatchingFields{
-			IndexFieldKongRouteOnReferencedPluginNames: kongPluginNN.String(),
+			index.IndexFieldKongRouteOnReferencedPluginNames: kongPluginNN.String(),
 		},
 	)
 	if err != nil {
@@ -291,7 +293,7 @@ func listAllEntitiesReferencingPluginIntoRelations(
 	var kongConsumerList configurationv1.KongConsumerList
 	err = clientWithNamespace.List(ctx, &kongConsumerList,
 		client.MatchingFields{
-			IndexFieldKongConsumerOnPlugin: kongPluginNN.String(),
+			index.IndexFieldKongConsumerOnPlugin: kongPluginNN.String(),
 		},
 	)
 	if err != nil {
@@ -301,7 +303,7 @@ func listAllEntitiesReferencingPluginIntoRelations(
 	var kongConsumerGroupList configurationv1beta1.KongConsumerGroupList
 	err = clientWithNamespace.List(ctx, &kongConsumerGroupList,
 		client.MatchingFields{
-			IndexFieldKongConsumerGroupOnPlugin: kongPluginNN.String(),
+			index.IndexFieldKongConsumerGroupOnPlugin: kongPluginNN.String(),
 		},
 	)
 	if err != nil {
@@ -375,11 +377,11 @@ func deleteUnusedKongPluginBindings(
 			continue
 		}
 
-		cpRef, ok := getControlPlaneRef(&pb).Get()
+		cpRef, ok := controlplane.GetControlPlaneRef(&pb).Get()
 		if !ok {
 			continue
 		}
-		cp, err := getCPForRef(ctx, clientWithNamespace, cpRef, pb.Namespace)
+		cp, err := controlplane.GetCPForRef(ctx, clientWithNamespace, cpRef, pb.Namespace)
 		if err != nil {
 			return fmt.Errorf("failed to get ControlPlane for KongPluginBinding: %w", err)
 		}

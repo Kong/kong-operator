@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"

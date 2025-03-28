@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"context"
@@ -6,14 +6,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
-)
+	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 
-// ReconciliationIndexOption contains required options of index for a kind of object required for reconciliation.
-type ReconciliationIndexOption struct {
-	IndexObject  client.Object
-	IndexField   string
-	ExtractValue client.IndexerFunc
-}
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+)
 
 // indexKonnectGatewayControlPlaneRef returns a function that extracts the KonnectGatewayControlPlane reference from the
 // object and returns it as a slice of strings for indexing.
@@ -35,13 +31,28 @@ func controlPlaneRefAsSlice[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ent TEnt, cl client.Client) []string {
-	cpRef, ok := getControlPlaneRef(ent).Get()
+	cpRef, ok := controlplane.GetControlPlaneRef(ent).Get()
 	if !ok {
 		return nil
 	}
-	cp, err := getCPForRef(context.Background(), cl, cpRef, ent.GetNamespace())
+	cp, err := controlplane.GetCPForRef(context.Background(), cl, cpRef, ent.GetNamespace())
 	if err != nil {
 		return nil
 	}
 	return []string{client.ObjectKeyFromObject(cp).String()}
+}
+
+// controlPlaneRefIsKonnectNamespacedRef returns:
+// - the ControlPlane KonnectNamespacedRef of the object if it is a KonnectNamespacedRef.
+// - a boolean indicating if the object has a KonnectNamespacedRef.
+func controlPlaneRefIsKonnectNamespacedRef[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) (commonv1alpha1.ControlPlaneRef, bool) {
+	cpRef, ok := controlplane.GetControlPlaneRef(ent).Get()
+	if !ok {
+		return commonv1alpha1.ControlPlaneRef{}, false
+	}
+	return cpRef, cpRef.KonnectNamespacedRef != nil &&
+		cpRef.Type == commonv1alpha1.ControlPlaneRefKonnectNamespacedRef
 }

@@ -14,6 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/kong/gateway-operator/internal/utils/index"
+
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -57,7 +59,7 @@ func KongConsumerReconciliationWatchOptions(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectForAPIAuthThroughControlPlaneRef[configurationv1.KongConsumerList](
-						cl, IndexFieldKongConsumerOnKonnectGatewayControlPlane,
+						cl, index.IndexFieldKongConsumerOnKonnectGatewayControlPlane,
 					),
 				),
 			)
@@ -67,7 +69,7 @@ func KongConsumerReconciliationWatchOptions(
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectForKonnectGatewayControlPlane[configurationv1.KongConsumerList](
-						cl, IndexFieldKongConsumerOnKonnectGatewayControlPlane,
+						cl, index.IndexFieldKongConsumerOnKonnectGatewayControlPlane,
 					),
 				),
 			)
@@ -107,7 +109,7 @@ func enqueueKongConsumerForKongConsumerGroup(
 		}
 		var l configurationv1.KongConsumerList
 		if err := cl.List(ctx, &l, client.MatchingFields{
-			IndexFieldKongConsumerOnKongConsumerGroup: group.Name,
+			index.IndexFieldKongConsumerOnKongConsumerGroup: group.Name,
 		}); err != nil {
 			return nil
 		}
@@ -130,7 +132,7 @@ func enqueueKongConsumerForKongCredentialSecret(
 			ctx,
 			&l,
 			client.MatchingFields{
-				IndexFieldKongConsumerReferencesSecrets: s.GetName(),
+				index.IndexFieldKongConsumerReferencesSecrets: s.GetName(),
 			},
 		)
 		if err != nil {

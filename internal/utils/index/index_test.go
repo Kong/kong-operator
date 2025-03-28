@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"testing"

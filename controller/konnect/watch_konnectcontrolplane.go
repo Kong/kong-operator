@@ -8,6 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/kong/gateway-operator/internal/utils/index"
+
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -34,7 +36,7 @@ func KonnectGatewayControlPlaneReconciliationWatchOptions(
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKonnectAPIAuthConfiguration[konnectv1alpha1.KonnectGatewayControlPlaneList](
 						cl,
-						IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration,
+						index.IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration,
 					),
 				),
 			)
@@ -64,7 +66,7 @@ func enqueueKonnectGatewayControlPlaneGroupForMembers(
 			client.InNamespace(cp.GetNamespace()),
 			client.MatchingFields{
 				// List groups that this control plane is a member of.
-				IndexFieldKonnectGatewayControlPlaneGroupOnMembers: cp.Name,
+				index.IndexFieldKonnectGatewayControlPlaneGroupOnMembers: cp.Name,
 			},
 		); err != nil {
 			return nil

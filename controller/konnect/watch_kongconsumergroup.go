@@ -7,6 +7,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/kong/gateway-operator/internal/utils/index"
+
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -37,7 +39,7 @@ func KongConsumerGroupReconciliationWatchOptions(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectForAPIAuthThroughControlPlaneRef[configurationv1beta1.KongConsumerGroupList](
-						cl, IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane,
+						cl, index.IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane,
 					),
 				),
 			)
@@ -47,7 +49,7 @@ func KongConsumerGroupReconciliationWatchOptions(
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectForKonnectGatewayControlPlane[configurationv1beta1.KongConsumerGroupList](
-						cl, IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane,
+						cl, index.IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane,
 					),
 				),
 			)

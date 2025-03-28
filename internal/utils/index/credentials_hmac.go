@@ -1,4 +1,4 @@
-package konnect
+package index
 
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -13,18 +13,18 @@ const (
 	IndexFieldKongCredentialHMACReferencesSecret = "kongCredentialsHMACSecretRef"
 )
 
-// IndexOptionsForCredentialsHMAC returns required Index options for KongCredentialHMAC.
-func IndexOptionsForCredentialsHMAC() []ReconciliationIndexOption {
-	return []ReconciliationIndexOption{
+// OptionsForCredentialsHMAC returns required Index options for KongCredentialHMAC.
+func OptionsForCredentialsHMAC() []Option {
+	return []Option{
 		{
-			IndexObject:  &configurationv1alpha1.KongCredentialHMAC{},
-			IndexField:   IndexFieldKongCredentialHMACReferencesKongConsumer,
-			ExtractValue: kongCredentialHMACReferencesConsumer,
+			Object:         &configurationv1alpha1.KongCredentialHMAC{},
+			Field:          IndexFieldKongCredentialHMACReferencesKongConsumer,
+			ExtractValueFn: kongCredentialHMACReferencesConsumer,
 		},
 		{
-			IndexObject:  &configurationv1alpha1.KongCredentialHMAC{},
-			IndexField:   IndexFieldKongCredentialHMACReferencesSecret,
-			ExtractValue: kongCredentialReferencesSecret[configurationv1alpha1.KongCredentialHMAC],
+			Object:         &configurationv1alpha1.KongCredentialHMAC{},
+			Field:          IndexFieldKongCredentialHMACReferencesSecret,
+			ExtractValueFn: kongCredentialReferencesSecret[configurationv1alpha1.KongCredentialHMAC],
 		},
 	}
 }

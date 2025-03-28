@@ -20,7 +20,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
-	"github.com/kong/gateway-operator/modules/manager"
+	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
@@ -58,7 +58,6 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
 
-	require.NoError(t, manager.SetupCacheIndicesForKonnectTypes(ctx, mgr, false))
 	reconcilers := []Reconciler{
 		konnect.NewKongPluginReconciler(false, mgr.GetClient()),
 		konnect.NewKonnectEntityReconciler(factory, false, mgr.GetClient(),
@@ -551,9 +550,9 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				var l configurationv1alpha1.KongPluginBindingList
 				if !assert.NoError(t, clientNamespaced.List(ctx, &l,
 					client.MatchingFields{
-						konnect.IndexFieldKongPluginBindingKongPluginReference:   rateLimitingkongPlugin.Namespace + "/" + rateLimitingkongPlugin.Name,
-						konnect.IndexFieldKongPluginBindingKongServiceReference:  kongService.Name,
-						konnect.IndexFieldKongPluginBindingKongConsumerReference: kongConsumer.Name,
+						index.IndexFieldKongPluginBindingKongPluginReference:   rateLimitingkongPlugin.Namespace + "/" + rateLimitingkongPlugin.Name,
+						index.IndexFieldKongPluginBindingKongServiceReference:  kongService.Name,
+						index.IndexFieldKongPluginBindingKongConsumerReference: kongConsumer.Name,
 					},
 				)) {
 					return
@@ -750,9 +749,9 @@ func TestKongPluginBindingManaged(t *testing.T) {
 				var l configurationv1alpha1.KongPluginBindingList
 				if !assert.NoError(t, clientNamespaced.List(ctx, &l,
 					client.MatchingFields{
-						konnect.IndexFieldKongPluginBindingKongPluginReference:        rateLimitingkongPlugin.Namespace + "/" + rateLimitingkongPlugin.Name,
-						konnect.IndexFieldKongPluginBindingKongServiceReference:       kongService.Name,
-						konnect.IndexFieldKongPluginBindingKongConsumerGroupReference: kongConsumerGroup.Name,
+						index.IndexFieldKongPluginBindingKongPluginReference:        rateLimitingkongPlugin.Namespace + "/" + rateLimitingkongPlugin.Name,
+						index.IndexFieldKongPluginBindingKongServiceReference:       kongService.Name,
+						index.IndexFieldKongPluginBindingKongConsumerGroupReference: kongConsumerGroup.Name,
 					},
 				)) {
 					return

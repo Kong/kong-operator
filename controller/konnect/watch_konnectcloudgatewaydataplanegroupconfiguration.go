@@ -5,6 +5,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
+	"github.com/kong/gateway-operator/internal/utils/index"
+
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -30,7 +32,7 @@ func KonnectCloudGatewayDataPlaneGroupConfigurationReconciliationWatchOptions(
 				&konnectv1alpha1.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectForKonnectGatewayControlPlane[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationList](
-						cl, IndexFieldKonnectCloudGatewayDataPlaneGroupConfigurationOnKonnectGatewayControlPlane,
+						cl, index.IndexFieldKonnectCloudGatewayDataPlaneGroupConfigurationOnKonnectGatewayControlPlane,
 					),
 				),
 			)

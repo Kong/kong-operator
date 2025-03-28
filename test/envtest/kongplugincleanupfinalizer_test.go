@@ -10,7 +10,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
-	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
@@ -40,8 +39,6 @@ func TestKongPluginFinalizer(t *testing.T) {
 
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
-
-	require.NoError(t, manager.SetupCacheIndicesForKonnectTypes(ctx, mgr, false))
 
 	StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongService](false, cl),
