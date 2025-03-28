@@ -21,6 +21,7 @@ import (
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -175,9 +176,9 @@ func TestKongKey(t *testing.T) {
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 			func(obj client.Object) {
 				key := obj.(*configurationv1alpha1.KongKey)
-				key.Spec.KeySetRef = &configurationv1alpha1.KeySetRef{
-					Type: configurationv1alpha1.KeySetRefNamespacedRef,
-					NamespacedRef: lo.ToPtr(configurationv1alpha1.KeySetNamespacedRef{
+				key.Spec.KeySetRef = &commonv1alpha1.ObjectRef{
+					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: lo.ToPtr(commonv1alpha1.NamespacedRef{
 						Name: keySetName,
 					}),
 				}

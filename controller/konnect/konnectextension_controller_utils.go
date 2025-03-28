@@ -70,7 +70,6 @@ func (r *KonnectExtensionReconciler) getKonnectControlPlane(
 			Namespace: cpNamepace,
 			Name:      cpRef.Name,
 		}, kgcp)
-
 		// set the controlPlaneRefValidCond to false in case the KonnectGatewayControlPlane is not found
 		if err != nil {
 			controlPlaneRefValidCond.Status = metav1.ConditionFalse

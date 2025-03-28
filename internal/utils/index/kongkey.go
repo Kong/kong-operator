@@ -3,6 +3,7 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
@@ -38,7 +39,7 @@ func kongKeySetRefFromKongKey(obj client.Object) []string {
 	}
 
 	if key.Spec.KeySetRef == nil ||
-		key.Spec.KeySetRef.Type != configurationv1alpha1.KeySetRefNamespacedRef ||
+		key.Spec.KeySetRef.Type != commonv1alpha1.ObjectRefTypeNamespacedRef ||
 		key.Spec.KeySetRef.NamespacedRef == nil {
 		return nil
 	}

@@ -17,6 +17,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -62,7 +63,7 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 		return ctrl.Result{}, nil
 	}
 
-	if keySetRef.Type != configurationv1alpha1.KeySetRefNamespacedRef {
+	if keySetRef.Type != commonv1alpha1.ObjectRefTypeNamespacedRef {
 		ctrllog.FromContext(ctx).Error(fmt.Errorf("unsupported KeySet ref type %q", keySetRef.Type), "unsupported KeySet ref type", "entity", ent)
 		return ctrl.Result{}, nil
 	}
@@ -154,14 +155,14 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 
 func getKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	e TEnt,
-) mo.Option[configurationv1alpha1.KeySetRef] {
+) mo.Option[commonv1alpha1.ObjectRef] {
 	switch e := any(e).(type) {
 	case *configurationv1alpha1.KongKey:
 		if e.Spec.KeySetRef == nil {
-			return mo.None[configurationv1alpha1.KeySetRef]()
+			return mo.None[commonv1alpha1.ObjectRef]()
 		}
 		return mo.Some(*e.Spec.KeySetRef)
 	default:
-		return mo.None[configurationv1alpha1.KeySetRef]()
+		return mo.None[commonv1alpha1.ObjectRef]()
 	}
 }

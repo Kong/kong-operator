@@ -181,9 +181,9 @@ func TestHandleKeySetRef(t *testing.T) {
 				ObjectMeta: commonKeyMeta,
 				Spec: configurationv1alpha1.KongKeySpec{
 					ControlPlaneRef: cpRef,
-					KeySetRef: &configurationv1alpha1.KeySetRef{
-						Type: configurationv1alpha1.KeySetRefNamespacedRef,
-						NamespacedRef: &configurationv1alpha1.KeySetNamespacedRef{
+					KeySetRef: &commonv1alpha1.ObjectRef{
+						Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
 							Name: "key-set-1",
 						},
 					},
@@ -202,9 +202,9 @@ func TestHandleKeySetRef(t *testing.T) {
 				ObjectMeta: commonKeyMeta,
 				Spec: configurationv1alpha1.KongKeySpec{
 					ControlPlaneRef: cpRef,
-					KeySetRef: &configurationv1alpha1.KeySetRef{
-						Type: configurationv1alpha1.KeySetRefNamespacedRef,
-						NamespacedRef: &configurationv1alpha1.KeySetNamespacedRef{
+					KeySetRef: &commonv1alpha1.ObjectRef{
+						Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
 							Name: keySetDuringDeletion.Name,
 						},
 					},
@@ -223,9 +223,9 @@ func TestHandleKeySetRef(t *testing.T) {
 				ObjectMeta: commonKeyMeta,
 				Spec: configurationv1alpha1.KongKeySpec{
 					ControlPlaneRef: cpRef,
-					KeySetRef: &configurationv1alpha1.KeySetRef{
-						Type: configurationv1alpha1.KeySetRefNamespacedRef,
-						NamespacedRef: &configurationv1alpha1.KeySetNamespacedRef{
+					KeySetRef: &commonv1alpha1.ObjectRef{
+						Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
 							Name: notProgrammedKeySet.Name,
 						},
 					},
@@ -244,9 +244,9 @@ func TestHandleKeySetRef(t *testing.T) {
 				ObjectMeta: commonKeyMeta,
 				Spec: configurationv1alpha1.KongKeySpec{
 					ControlPlaneRef: cpRef,
-					KeySetRef: &configurationv1alpha1.KeySetRef{
-						Type: configurationv1alpha1.KeySetRefNamespacedRef,
-						NamespacedRef: &configurationv1alpha1.KeySetNamespacedRef{
+					KeySetRef: &commonv1alpha1.ObjectRef{
+						Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
 							Name: programmedKeySet.Name,
 						},
 					},
