@@ -16,16 +16,6 @@ func (r Region) String() string {
 const (
 	// RegionGlobal represents the global region.
 	RegionGlobal Region = "global"
-	// RegionEU represents the European region.
-	RegionEU Region = "eu"
-	// RegionUS represents the United States region.
-	RegionUS Region = "us"
-	// RegionAU represents the Australian region.
-	RegionAU Region = "au"
-	// RegionME represents the Middle East region.
-	RegionME Region = "me"
-	// RegionIN represents the Indian region.
-	RegionIN Region = "in"
 )
 
 var regionRegex = regexp.MustCompile(`^[a-z]{2}$`)

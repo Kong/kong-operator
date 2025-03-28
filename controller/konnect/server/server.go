@@ -29,10 +29,7 @@ func NewServer[T any](serverURL string) (Server, error) {
 	}
 	regionPart := hostnameParts[0]
 
-	region, err := NewRegion(regionPart)
-	if err != nil {
-		return Server{}, fmt.Errorf("failed to parse region from hostname: %w", err)
-	}
+	var region Region
 
 	// NOTE: Code below tries to determine if we need a global API endpoint for the given type.
 	// Thus far there's no way to determine that programmatically (easily).
@@ -42,6 +39,11 @@ func NewServer[T any](serverURL string) (Server, error) {
 	case konnectv1alpha1.KonnectCloudGatewayNetwork:
 		region = RegionGlobal
 	default:
+		var err error
+		region, err = NewRegion(regionPart)
+		if err != nil {
+			return Server{}, fmt.Errorf("failed to parse region from hostname: %w", err)
+		}
 	}
 
 	s := Server{
@@ -50,7 +52,7 @@ func NewServer[T any](serverURL string) (Server, error) {
 	}
 
 	// Validate the constructed URL.
-	_, err = url.Parse(s.URL())
+	_, err := url.Parse(s.URL())
 	if err != nil {
 		return Server{}, fmt.Errorf("failed to construct valid server URL: %w", err)
 	}

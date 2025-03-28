@@ -23,13 +23,13 @@ func TestServer(t *testing.T) {
 			name:           "valid URL",
 			input:          "https://us.konghq.com:8000",
 			expectedURL:    "https://us.konghq.com:8000",
-			expectedRegion: server.RegionUS,
+			expectedRegion: server.Region("us"),
 		},
 		{
 			name:           "valid hostname",
 			input:          "us.konghq.com",
 			expectedURL:    "https://us.konghq.com",
-			expectedRegion: server.RegionUS,
+			expectedRegion: server.Region("us"),
 		},
 		{
 			name:           "valid hostname with yet-unknown region",
