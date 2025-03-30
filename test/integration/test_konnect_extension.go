@@ -30,6 +30,39 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
+func TestKonnectExtensionKonnectControlPlaneNotFound(t *testing.T) {
+	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+
+	// Let's generate a unique test ID that we can refer to in Konnect entities.
+	// Using only the first 8 characters of the UUID to keep the ID short enough for Konnect to accept it as a part
+	// of an entity name.
+	testID := uuid.NewString()[:8]
+	t.Logf("Running Konnect extensions test with ID: %s", testID)
+
+	// Create an APIAuth for test.
+	clientNamespaced := client.NewNamespacedClient(GetClients().MgrClient, ns.Name)
+
+	konnectExtension := deploy.KonnectExtension(
+		t, ctx, clientNamespaced,
+		deploy.WithKonnectNamespacedRefControlPlaneRef(&konnectv1alpha1.KonnectGatewayControlPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "controlplane-not-found",
+				Namespace: ns.Name,
+			},
+		}),
+	)
+
+	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to False", konnectExtension.Namespace, konnectExtension.Name)
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		ok, msg := checkKonnectExtensionConditions(t,
+			konnectExtension,
+			helpers.CheckAllConditionsFalse,
+			konnectv1alpha1.ControlPlaneRefValidConditionType,
+			konnectv1alpha1.KonnectExtensionReadyConditionType)
+		assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, konnectExtension.Status.Conditions)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+}
+
 func TestKonnectExtension(t *testing.T) {
 	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -240,7 +273,12 @@ type KonnectExtensionTestBodyParams struct {
 func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
 	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", p.konnectExtension.Namespace, p.konnectExtension.Name)
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		ok, msg := checkKonnectExtensionConditions(t, p.konnectExtension)
+		ok, msg := checkKonnectExtensionConditions(t,
+			p.konnectExtension,
+			helpers.CheckAllConditionsTrue,
+			konnectv1alpha1.ControlPlaneRefValidConditionType,
+			konnectv1alpha1.DataPlaneCertificateProvisionedConditionType,
+			konnectv1alpha1.KonnectExtensionReadyConditionType)
 		assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, p.konnectExtension.Status.Conditions)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
@@ -341,16 +379,16 @@ func setKonnectExtensionDPCertSecretRef(t *testing.T, s *corev1.Secret) deploy.O
 	}
 }
 
-func checkKonnectExtensionConditions(t *assert.CollectT, ke *konnectv1alpha1.KonnectExtension) (bool, string) {
+func checkKonnectExtensionConditions(
+	t *assert.CollectT,
+	ke *konnectv1alpha1.KonnectExtension,
+	checker helpers.ConditionsChecker,
+	conditions ...kcfgconsts.ConditionType,
+) (bool, string) {
 	err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: ke.Name, Namespace: ke.Namespace}, ke)
 	require.NoError(t, err)
 
-	checkConditionTypes := []kcfgconsts.ConditionType{
-		konnectv1alpha1.ControlPlaneRefValidConditionType,
-		konnectv1alpha1.DataPlaneCertificateProvisionedConditionType,
-		konnectv1alpha1.KonnectExtensionReadyConditionType,
-	}
-	return helpers.CheckAllConditionsTrue(ke, checkConditionTypes)
+	return checker(ke, conditions...)
 }
 
 func checkKonnectExtensionStatus(

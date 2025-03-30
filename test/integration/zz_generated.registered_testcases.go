@@ -31,6 +31,7 @@ func init() {
 		TestKongPluginInstallationEssentials,
 		TestKonnectEntities,
 		TestKonnectExtension,
+		TestKonnectExtensionKonnectControlPlaneNotFound,
 		TestManualGatewayUpgradesAndDowngrades,
 		TestScalingDataPlaneThroughGatewayConfiguration,
 	)
