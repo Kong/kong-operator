@@ -8,7 +8,6 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -16,13 +15,13 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/dataplane"
 	"github.com/kong/gateway-operator/controller/konnect"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
-	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -128,14 +127,10 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 	mgr.GetCache().WaitForCacheSync(ctx)
 
 	t.Logf("Creating cluster CA secret")
-	caManager := manager.CAManager{
-		Logger:          logr.Discard(),
-		Client:          cl,
-		SecretName:      clusterCASecretName,
-		SecretNamespace: ns.Name,
-		KeyConfig:       clusterCAKeyConfig,
-	}
-	require.NoError(t, caManager.Start(ctx))
+	require.NoError(t, secrets.CreateClusterCACertificate(ctx, cl, types.NamespacedName{
+		Name:      clusterCASecretName,
+		Namespace: ns.Name,
+	}, clusterCAKeyConfig))
 
 	t.Logf("Creating KonnectAPIAuthConfiguration")
 	konnectAPIAuthConfiguration := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
