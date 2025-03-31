@@ -206,7 +206,7 @@ build: generate
 
 .PHONY: _govulncheck
 _govulncheck:
-	$(GOVULNCHECK) -scan $(SCAN) -show color,verbose ./...
+	GOVULNCHECK=$(GOVULNCHECK) SCAN=$(SCAN) ./hack/govulncheck-with-excludes.sh ./...
 
 .PHONY: govulncheck
 govulncheck: download.govulncheck
