@@ -57,6 +57,30 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 					nil,
 				)
+
+			sdk.ControlPlaneSDK.EXPECT().
+				ListControlPlanes(
+					mock.Anything,
+					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
+						return *r.Filter.ID.StringFieldEqualsFilter.Str == "12345"
+					}),
+				).
+				Return(
+					&sdkkonnectops.ListControlPlanesResponse{
+						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
+							Data: []sdkkonnectcomp.ControlPlane{
+								{
+									ID: "12345",
+									Config: sdkkonnectcomp.Config{
+										ControlPlaneEndpoint: "https://control-plane-endpoint",
+										TelemetryEndpoint:    "https://telemetry-endpoint",
+									},
+								},
+							},
+						},
+					},
+					nil,
+				)
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
@@ -77,6 +101,9 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			assert.True(t, controllerutil.ContainsFinalizer(cp, konnect.KonnectCleanupFinalizer),
 				"Finalizer should be set on control plane group",
 			)
+			require.NotNil(t, cp.Status.Endpoints)
+			assert.Equal(t, "https://control-plane-endpoint", cp.Status.Endpoints.ControlPlaneEndpoint)
+			assert.Equal(t, "https://telemetry-endpoint", cp.Status.Endpoints.TelemetryEndpoint)
 		},
 	},
 	{
@@ -135,6 +162,30 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 					nil)
 
+			sdk.ControlPlaneSDK.EXPECT().
+				ListControlPlanes(
+					mock.Anything,
+					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
+						return *r.Filter.ID.StringFieldEqualsFilter.Str == "12346"
+					}),
+				).
+				Return(
+					&sdkkonnectops.ListControlPlanesResponse{
+						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
+							Data: []sdkkonnectcomp.ControlPlane{
+								{
+									ID: "12346",
+									Config: sdkkonnectcomp.Config{
+										ControlPlaneEndpoint: "https://control-plane-endpoint",
+										TelemetryEndpoint:    "https://telemetry-endpoint",
+									},
+								},
+							},
+						},
+					},
+					nil,
+				)
+
 			sdk.ControlPlaneGroupSDK.EXPECT().
 				PutControlPlanesIDGroupMemberships(
 					mock.Anything,
@@ -191,6 +242,9 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			assert.True(t, controllerutil.ContainsFinalizer(cp, konnect.KonnectCleanupFinalizer),
 				"Finalizer should be set on control plane",
 			)
+			require.NotNil(t, cp.Status.Endpoints)
+			assert.Equal(t, "https://control-plane-endpoint", cp.Status.Endpoints.ControlPlaneEndpoint)
+			assert.Equal(t, "https://telemetry-endpoint", cp.Status.Endpoints.TelemetryEndpoint)
 
 			cpGroup := &konnectv1alpha1.KonnectGatewayControlPlane{}
 			require.NoError(t,
@@ -213,6 +267,9 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			assert.True(t, controllerutil.ContainsFinalizer(cpGroup, konnect.KonnectCleanupFinalizer),
 				"Finalizer should be set on control plane group",
 			)
+			require.NotNil(t, cpGroup.Status.Endpoints)
+			assert.Equal(t, "https://control-plane-endpoint", cpGroup.Status.Endpoints.ControlPlaneEndpoint)
+			assert.Equal(t, "https://telemetry-endpoint", cpGroup.Status.Endpoints.TelemetryEndpoint)
 		},
 	},
 	{
@@ -289,6 +346,30 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Return(
 					&sdkkonnectops.PutControlPlanesIDGroupMembershipsResponse{},
 					errors.New("some error"),
+				)
+
+			sdk.ControlPlaneSDK.EXPECT().
+				ListControlPlanes(
+					mock.Anything,
+					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
+						return *r.Filter.ID.StringFieldEqualsFilter.Str == "123467"
+					}),
+				).
+				Return(
+					&sdkkonnectops.ListControlPlanesResponse{
+						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
+							Data: []sdkkonnectcomp.ControlPlane{
+								{
+									ID: "123467",
+									Config: sdkkonnectcomp.Config{
+										ControlPlaneEndpoint: "https://control-plane-endpoint",
+										TelemetryEndpoint:    "https://telemetry-endpoint",
+									},
+								},
+							},
+						},
+					},
+					nil,
 				)
 
 			sdk.ControlPlaneSDK.EXPECT().
@@ -395,6 +476,34 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "123456",
+									Config: sdkkonnectcomp.Config{
+										ControlPlaneEndpoint: "https://control-plane-endpoint",
+										TelemetryEndpoint:    "https://telemetry-endpoint",
+									},
+								},
+							},
+						},
+					},
+					nil,
+				)
+
+			sdk.ControlPlaneSDK.EXPECT().
+				ListControlPlanes(
+					mock.Anything,
+					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
+						return *r.Filter.ID.StringFieldEqualsFilter.Str == "123456"
+					}),
+				).
+				Return(
+					&sdkkonnectops.ListControlPlanesResponse{
+						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
+							Data: []sdkkonnectcomp.ControlPlane{
+								{
+									ID: "123456",
+									Config: sdkkonnectcomp.Config{
+										ControlPlaneEndpoint: "https://control-plane-endpoint",
+										TelemetryEndpoint:    "https://telemetry-endpoint",
+									},
 								},
 							},
 						},
@@ -421,6 +530,9 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			assert.True(t, controllerutil.ContainsFinalizer(cp, konnect.KonnectCleanupFinalizer),
 				"Finalizer should be set on control plane",
 			)
+			require.NotNil(t, cp.Status.Endpoints)
+			assert.Equal(t, "https://control-plane-endpoint", cp.Status.Endpoints.ControlPlaneEndpoint)
+			assert.Equal(t, "https://telemetry-endpoint", cp.Status.Endpoints.TelemetryEndpoint)
 		},
 	},
 	{
@@ -491,6 +603,58 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "group-123456",
+									Config: sdkkonnectcomp.Config{
+										ControlPlaneEndpoint: "https://control-plane-endpoint",
+										TelemetryEndpoint:    "https://telemetry-endpoint",
+									},
+								},
+							},
+						},
+					},
+					nil,
+				)
+
+			sdk.ControlPlaneSDK.EXPECT().
+				ListControlPlanes(
+					mock.Anything,
+					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
+						return *r.Filter.ID.StringFieldEqualsFilter.Str == "group-123456"
+					}),
+				).
+				Return(
+					&sdkkonnectops.ListControlPlanesResponse{
+						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
+							Data: []sdkkonnectcomp.ControlPlane{
+								{
+									ID: "group-123456",
+									Config: sdkkonnectcomp.Config{
+										ControlPlaneEndpoint: "https://control-plane-endpoint",
+										TelemetryEndpoint:    "https://telemetry-endpoint",
+									},
+								},
+							},
+						},
+					},
+					nil,
+				)
+
+			sdk.ControlPlaneSDK.EXPECT().
+				ListControlPlanes(
+					mock.Anything,
+					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
+						return *r.Filter.ID.StringFieldEqualsFilter.Str == "123456"
+					}),
+				).
+				Return(
+					&sdkkonnectops.ListControlPlanesResponse{
+						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
+							Data: []sdkkonnectcomp.ControlPlane{
+								{
+									ID: "123456",
+									Config: sdkkonnectcomp.Config{
+										ControlPlaneEndpoint: "https://control-plane-endpoint",
+										TelemetryEndpoint:    "https://telemetry-endpoint",
+									},
 								},
 							},
 						},
@@ -511,6 +675,27 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 				).
 				Return(&sdkkonnectops.PutControlPlanesIDGroupMembershipsResponse{}, nil)
+
+			sdk.ControlPlaneSDK.EXPECT().
+				UpdateControlPlane(
+					mock.Anything,
+					"group-123456",
+					mock.MatchedBy(func(req sdkkonnectcomp.UpdateControlPlaneRequest) bool {
+						return req.Name != nil && *req.Name == "cp-group-1"
+					}),
+				).
+				Return(
+					&sdkkonnectops.UpdateControlPlaneResponse{
+						ControlPlane: &sdkkonnectcomp.ControlPlane{
+							ID: "group-123456",
+						},
+					},
+					nil,
+				).
+				// NOTE: UpdateControlPlane can be called depending on the order
+				// of the events in the queue: either the group itself or the member
+				// control plane can be created first.
+				Maybe()
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cpGroup := &konnectv1alpha1.KonnectGatewayControlPlane{}
@@ -529,7 +714,11 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				"Programmed condition should be set and its status should be true",
 			)
 			assert.True(t, conditionsContainMembersRefResolvedTrue(cpGroup.Status.Conditions),
-				"MembersRefernceResolved condition should be set and its status should be true")
+				"MembersReferenceResolved condition should be set and its status should be true",
+			)
+			require.NotNil(t, cpGroup.Status.Endpoints)
+			assert.Equal(t, "https://control-plane-endpoint", cpGroup.Status.Endpoints.ControlPlaneEndpoint)
+			assert.Equal(t, "https://telemetry-endpoint", cpGroup.Status.Endpoints.TelemetryEndpoint)
 		},
 	},
 	{
@@ -572,6 +761,30 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					},
 				).
 				Return(&sdkkonnectops.PutControlPlanesIDGroupMembershipsResponse{}, nil)
+
+			sdk.ControlPlaneSDK.EXPECT().
+				ListControlPlanes(
+					mock.Anything,
+					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
+						return *r.Filter.ID.StringFieldEqualsFilter.Str == "cpg-id"
+					}),
+				).
+				Return(
+					&sdkkonnectops.ListControlPlanesResponse{
+						ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
+							Data: []sdkkonnectcomp.ControlPlane{
+								{
+									ID: "cpg-id",
+									Config: sdkkonnectcomp.Config{
+										ControlPlaneEndpoint: "https://control-plane-endpoint",
+										TelemetryEndpoint:    "https://telemetry-endpoint",
+									},
+								},
+							},
+						},
+					},
+					nil,
+				)
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
 			cpGroup := &konnectv1alpha1.KonnectGatewayControlPlane{}
@@ -590,7 +803,11 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				"Programmed condition should be set and its status should be true",
 			)
 			assert.True(t, conditionsContainMembersRefResolvedTrue(cpGroup.Status.Conditions),
-				"MembersRefernceResolved condition should be set and its status should be true")
+				"MembersRefernceResolved condition should be set and its status should be true",
+			)
+			require.NotNil(t, cpGroup.Status.Endpoints)
+			assert.Equal(t, "https://control-plane-endpoint", cpGroup.Status.Endpoints.ControlPlaneEndpoint)
+			assert.Equal(t, "https://telemetry-endpoint", cpGroup.Status.Endpoints.TelemetryEndpoint)
 		},
 	},
 }
