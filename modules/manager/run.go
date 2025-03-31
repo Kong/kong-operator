@@ -18,13 +18,7 @@ package manager
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/pem"
 	"fmt"
-	"math"
-	"math/big"
 	"net/http"
 	"os"
 	"time"
@@ -33,7 +27,6 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -206,11 +199,11 @@ func Run(
 	}
 
 	caMgr := &caManager{
-		logger:          ctrl.Log.WithName("ca_manager"),
-		client:          mgr.GetClient(),
-		secretName:      cfg.ClusterCASecretName,
-		secretNamespace: cfg.ClusterCASecretNamespace,
-		keyConfig: secrets.KeyConfig{
+		Logger:          ctrl.Log.WithName("ca_manager"),
+		Client:          mgr.GetClient(),
+		SecretName:      cfg.ClusterCASecretName,
+		SecretNamespace: cfg.ClusterCASecretNamespace,
+		KeyConfig: secrets.KeyConfig{
 			Type: keyType,
 			Size: cfg.ClusterCAKeySize,
 		},
@@ -269,20 +262,21 @@ func Run(
 	return nil
 }
 
+// caManager is a manager responsible for creating a cluster CA certificate.
 type caManager struct {
-	logger          logr.Logger
-	client          client.Client
-	secretName      string
-	secretNamespace string
-	keyConfig       secrets.KeyConfig
+	Logger          logr.Logger
+	Client          client.Client
+	SecretName      string
+	SecretNamespace string
+	KeyConfig       secrets.KeyConfig
 }
 
 // Start starts the CA manager.
 func (m *caManager) Start(ctx context.Context) error {
-	if m.secretName == "" {
+	if m.SecretName == "" {
 		return fmt.Errorf("cannot use an empty secret name when creating a CA secret")
 	}
-	if m.secretNamespace == "" {
+	if m.SecretNamespace == "" {
 		return fmt.Errorf("cannot use an empty secret namespace when creating a CA secret")
 	}
 	return m.maybeCreateCACertificate(ctx)
@@ -296,67 +290,18 @@ func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
 
 	var (
 		ca        corev1.Secret
-		objectKey = client.ObjectKey{Namespace: m.secretNamespace, Name: m.secretName}
+		objectKey = client.ObjectKey{Namespace: m.SecretNamespace, Name: m.SecretName}
 	)
 
-	if err := m.client.Get(ctx, objectKey, &ca); err != nil {
+	if err := m.Client.Get(ctx, objectKey, &ca); err != nil {
 		if k8serrors.IsNotFound(err) {
-			m.logger.Info(fmt.Sprintf("no CA certificate Secret %s found, generating CA certificate", objectKey))
-			return m.createCACertificate(ctx)
+			m.Logger.Info(fmt.Sprintf("no CA certificate Secret %s found, generating CA certificate", objectKey))
+			return secrets.CreateClusterCACertificate(ctx, m.Client, objectKey, m.KeyConfig)
 		}
 
 		return err
 	}
 	return nil
-}
-
-func (m *caManager) createCACertificate(ctx context.Context) error {
-	serial, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
-	if err != nil {
-		return err
-	}
-
-	priv, pemBlock, signatureAlgorithm, err := secrets.CreatePrivateKey(m.keyConfig)
-	if err != nil {
-		return err
-	}
-
-	template := x509.Certificate{
-		Subject: pkix.Name{
-			CommonName:   "Kong Gateway Operator CA",
-			Organization: []string{"Kong, Inc."},
-			Country:      []string{"US"},
-		},
-		SerialNumber:          serial,
-		SignatureAlgorithm:    signatureAlgorithm,
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Second * 315400000),
-		KeyUsage:              x509.KeyUsageCertSign + x509.KeyUsageKeyEncipherment + x509.KeyUsageDigitalSignature,
-		BasicConstraintsValid: true,
-		IsCA:                  true,
-	}
-
-	der, err := x509.CreateCertificate(rand.Reader, &template, &template, priv.Public(), priv)
-	if err != nil {
-		return err
-	}
-
-	signedSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: m.secretNamespace,
-			Name:      m.secretName,
-		},
-		Type: corev1.SecretTypeTLS,
-		StringData: map[string]string{
-			"tls.crt": string(pem.EncodeToMemory(&pem.Block{
-				Type:  "CERTIFICATE",
-				Bytes: der,
-			})),
-
-			"tls.key": string(pem.EncodeToMemory(pemBlock)),
-		},
-	}
-	return m.client.Create(ctx, signedSecret)
 }
 
 // setupAnonymousReports sets up and starts the anonymous reporting and returns
