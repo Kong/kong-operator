@@ -33,8 +33,8 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 		return ctrl.Result{}, nil
 	}
 
-	setInvalidWithMsg := func(msg string) bool {
-		return patch.SetStatusWithConditionIfDifferent(
+	setInvalidWithMsg := func(msg string) {
+		_ = patch.SetStatusWithConditionIfDifferent(
 			ent,
 			konnectv1alpha1.KonnectNetworkRefsValidConditionType,
 			metav1.ConditionFalse,
@@ -55,7 +55,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 
 			err := cl.Get(ctx, nn, &network)
 			if err != nil {
-				_ = setInvalidWithMsg(err.Error())
+				setInvalidWithMsg(err.Error())
 				return ctrl.Result{}, ReferencedObjectDoesNotExist{
 					Reference: nn,
 					Err:       err,
@@ -72,7 +72,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 			// requeue it if referenced network is not programmed yet so we cannot do the following work.
 			cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &network)
 			if !ok || cond.Status != metav1.ConditionTrue {
-				_ = setInvalidWithMsg(fmt.Sprintf("Referenced KonnectCloudGatewayNetwork %s is not programmed yet", nn))
+				setInvalidWithMsg(fmt.Sprintf("Referenced KonnectCloudGatewayNetwork %s is not programmed yet", nn))
 				return ctrl.Result{Requeue: true}, ReferencedObjectIsInvalid{
 					Reference: nn.String(),
 					Msg:       "Referenced KonnectCloudGatewayNetwork is not programmed yet",
@@ -82,7 +82,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 			if network.Status.State != string(sdkkonnectcomp.NetworkStateReady) {
 				nn := client.ObjectKeyFromObject(&network)
 				msg := fmt.Sprintf("Referenced KonnectCloudGatewayNetwork %s: is not ready yet, current state: %s", nn, network.Status.State)
-				_ = setInvalidWithMsg(msg)
+				setInvalidWithMsg(msg)
 				return ctrl.Result{Requeue: true}, ReferencedObjectIsInvalid{
 					Reference: nn.String(),
 					Msg:       msg,
@@ -93,7 +93,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 			n, err := sdk.GetCloudGatewaysSDK().GetNetwork(ctx, *ref.KonnectID)
 			if err != nil {
 				msg := fmt.Sprintf("Could not get the referenced KonnectCloudGatewayNetwork <konnectID:%s>: %v", *ref.KonnectID, err)
-				_ = setInvalidWithMsg(msg)
+				setInvalidWithMsg(msg)
 				return ctrl.Result{Requeue: true}, ReferencedObjectIsInvalid{
 					Reference: *ref.KonnectID,
 					Msg:       msg,
@@ -101,7 +101,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 			}
 			if n.Network.State != sdkkonnectcomp.NetworkStateReady {
 				msg := fmt.Sprintf("Referenced KonnectCloudGatewayNetwork <konnectID:%s>: is not ready yet, current state: %s", *ref.KonnectID, n.Network.State)
-				_ = setInvalidWithMsg(msg)
+				setInvalidWithMsg(msg)
 				return ctrl.Result{Requeue: true}, ReferencedObjectIsInvalid{
 					Reference: *ref.KonnectID,
 					Msg:       msg,
