@@ -311,7 +311,7 @@ func TestGenerateNewDeploymentForControlPlane(t *testing.T) {
 						"gateway-operator.konghq.com/managed-by": "controlplane",
 					},
 					Annotations: map[string]string{
-						"gateway-operator.konghq.com/spec-hash": "2007ff92a457340b",
+						"gateway-operator.konghq.com/spec-hash": "97702e5d8e850807",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
@@ -471,7 +471,7 @@ func TestGenerateNewDeploymentForControlPlane(t *testing.T) {
 						"gateway-operator.konghq.com/managed-by": "controlplane",
 					},
 					Annotations: map[string]string{
-						"gateway-operator.konghq.com/spec-hash": "2007ff92a457340b",
+						"gateway-operator.konghq.com/spec-hash": "97702e5d8e850807",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{

@@ -62,7 +62,7 @@ func TestDataPlane(t *testing.T) {
 				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
 			},
 			{
-				Name: "dbmode '' is supported",
+				Name: "not specifying dbmode is supported",
 				TestObject: &operatorv1beta1.DataPlane{
 					ObjectMeta: commonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
@@ -75,12 +75,7 @@ func TestDataPlane(t *testing.T) {
 												{
 													Name:  "proxy",
 													Image: "kong:3.9",
-													Env: []corev1.EnvVar{
-														{
-															Name:  "KONG_DATABASE",
-															Value: "",
-														},
-													},
+													Env:   []corev1.EnvVar{},
 												},
 											},
 										},
@@ -265,7 +260,7 @@ func TestDataPlane(t *testing.T) {
 													Env: []corev1.EnvVar{
 														{
 															Name:  "KONG_DATABASE",
-															Value: "postgres",
+															Value: "off",
 														},
 													},
 												},
@@ -306,7 +301,7 @@ func TestDataPlane(t *testing.T) {
 													Env: []corev1.EnvVar{
 														{
 															Name:  "KONG_DATABASE",
-															Value: "postgres",
+															Value: "off",
 														},
 													},
 												},

@@ -99,14 +99,14 @@ func kongKeyToKeyInput(key *configurationv1alpha1.KongKey) sdkkonnectcomp.KeyInp
 		Tags: GenerateTagsForObject(key, key.Spec.Tags...),
 	}
 	if key.Spec.PEM != nil {
-		k.Pem = &sdkkonnectcomp.KeyPem{
+		k.Pem = &sdkkonnectcomp.Pem{
 			PrivateKey: lo.ToPtr(key.Spec.PEM.PrivateKey),
 			PublicKey:  lo.ToPtr(key.Spec.PEM.PublicKey),
 		}
 	}
 	if konnectStatus := key.Status.Konnect; konnectStatus != nil {
 		if keySetID := konnectStatus.GetKeySetID(); keySetID != "" {
-			k.Set = &sdkkonnectcomp.KeySet1{
+			k.Set = &sdkkonnectcomp.Set{
 				ID: lo.ToPtr(konnectStatus.GetKeySetID()),
 			}
 		}
