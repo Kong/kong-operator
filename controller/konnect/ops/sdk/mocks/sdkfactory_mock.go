@@ -3,9 +3,13 @@ package mocks
 import (
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+	"github.com/kong/gateway-operator/controller/konnect/server"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 type MockSDKWrapper struct {
@@ -32,6 +36,8 @@ type MockSDKWrapper struct {
 	KeySetsSDK                  *MockKeySetsSDK
 	SNIsSDK                     *MockSNIsSDK
 	DataPlaneCertificatesSDK    *MockDataPlaneClientCertificatesSDK
+
+	server server.Server
 }
 
 var _ sdkops.SDKWrapper = MockSDKWrapper{}
@@ -61,15 +67,22 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		KeySetsSDK:                  NewMockKeySetsSDK(t),
 		SNIsSDK:                     NewMockSNIsSDK(t),
 		DataPlaneCertificatesSDK:    NewMockDataPlaneClientCertificatesSDK(t),
+
+		server: lo.Must(server.NewServer[*operatorv1beta1.ControlPlane](SDKServerURL)),
 	}
 }
 
 const (
-	mockSDKServerURL = "http://mock-api.konnect.test"
+	// SDKServerURL is the synthetic URL of the mock server.
+	SDKServerURL = "https://us.mock.konghq.com"
 )
 
 func (m MockSDKWrapper) GetServerURL() string {
-	return mockSDKServerURL
+	return m.server.URL()
+}
+
+func (m MockSDKWrapper) GetServer() server.Server {
+	return m.server
 }
 
 func (m MockSDKWrapper) GetControlPlaneSDK() sdkops.ControlPlaneSDK {
@@ -178,7 +191,7 @@ func NewMockSDKFactory(t *testing.T) *MockSDKFactory {
 	}
 }
 
-func (m MockSDKFactory) NewKonnectSDK(_ string, _ sdkops.SDKToken) sdkops.SDKWrapper {
+func (m MockSDKFactory) NewKonnectSDK(_ server.Server, _ sdkops.SDKToken) sdkops.SDKWrapper {
 	require.NotNil(m.t, m.SDK)
 	return *m.SDK
 }

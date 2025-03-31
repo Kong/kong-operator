@@ -9,7 +9,6 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -19,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+	"github.com/kong/gateway-operator/controller/konnect/server"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
@@ -26,7 +26,6 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -73,7 +72,7 @@ func WithKonnectMaxConcurrentReconciles[T constraints.SupportedKonnectEntityType
 	}
 }
 
-// WithMetricRecoder sets the metric recorder to record metrics of Konnect entity operations of the reconciler.
+// WithMetricRecorder sets the metric recorder to record metrics of Konnect entity operations of the reconciler.
 func WithMetricRecorder[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	metricRecorder metrics.Recorder,
 ) KonnectEntityReconcilerOption[T, TEnt] {
@@ -350,11 +349,11 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	// NOTE: We need to create a new SDK instance for each reconciliation
 	// because the token is retrieved in runtime through KonnectAPIAuthConfiguration.
-	serverURL := ops.NewServerURL[T](apiAuth.Spec.ServerURL)
-	sdk := r.sdkFactory.NewKonnectSDK(
-		serverURL.String(),
-		sdkops.SDKToken(token),
-	)
+	server, err := server.NewServer[T](apiAuth.Spec.ServerURL)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to parse server URL: %w", err)
+	}
+	sdk := r.sdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
 
 	if delTimestamp := ent.GetDeletionTimestamp(); !delTimestamp.IsZero() {
 		logger.Info("resource is being deleted")
@@ -428,7 +427,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			// - add the Org ID and Server URL to the status so that the resource can be
 			//   cleaned up from Konnect on deletion and also so that the status can
 			//   indicate where the corresponding Konnect entity is located.
-			setStatusServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
+			setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
 		}
 
 		// Regardless of the error, patch the status as it can contain the Konnect ID,
@@ -457,7 +456,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	res, err = ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecoder, ent)
 	// Set the server URL and org ID regardless of the error.
-	setStatusServerURLAndOrgID(ent, serverURL, apiAuth.Status.OrganizationID)
+	setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
 	// Update the status of the object regardless of the error.
 	if errUpd := r.Client.Status().Update(ctx, ent); errUpd != nil {
 		if k8serrors.IsConflict(errUpd) {
@@ -491,45 +490,11 @@ func setStatusServerURLAndOrgID(
 	ent interface {
 		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
 	},
-	serverURL ops.ServerURL,
+	serverURL server.Server,
 	orgID string,
 ) {
-	ent.GetKonnectStatus().ServerURL = serverURL.String()
+	ent.GetKonnectStatus().ServerURL = serverURL.URL()
 	ent.GetKonnectStatus().OrgID = orgID
-}
-
-func getCPForNamespacedRef(
-	ctx context.Context,
-	cl client.Client,
-	ref commonv1alpha1.ControlPlaneRef,
-	namespace string,
-) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
-	// TODO(pmalek): handle cross namespace refs
-	if namespace != "" && ref.KonnectNamespacedRef.Namespace != "" && ref.KonnectNamespacedRef.Namespace != namespace {
-		return nil, fmt.Errorf("%s ControlPlaneRef from different namespace than %s", ref.KonnectNamespacedRef.Namespace, namespace)
-	}
-
-	nn := types.NamespacedName{
-		Name:      ref.KonnectNamespacedRef.Name,
-		Namespace: namespace,
-	}
-
-	// Set namespace of control plane when it is non-empty. Only applies for cluster-scoped resources (KongVault).
-	if namespace == "" && ref.KonnectNamespacedRef.Namespace != "" {
-		nn.Namespace = ref.KonnectNamespacedRef.Namespace
-	}
-
-	var cp konnectv1alpha1.KonnectGatewayControlPlane
-	if err := cl.Get(ctx, nn, &cp); err != nil {
-		if k8serrors.IsNotFound(err) {
-			return nil, ReferencedControlPlaneDoesNotExistError{
-				Reference: ref,
-				Err:       err,
-			}
-		}
-		return nil, fmt.Errorf("failed to get ControlPlane %s: %w", nn, err)
-	}
-	return &cp, nil
 }
 
 func setProgrammedStatusConditionBasedOnOtherConditions[

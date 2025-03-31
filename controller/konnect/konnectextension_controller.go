@@ -3,6 +3,7 @@ package konnect
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -22,6 +23,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect/ops"
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+	"github.com/kong/gateway-operator/controller/konnect/server"
 	"github.com/kong/gateway-operator/controller/pkg/extensions"
 	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
 	"github.com/kong/gateway-operator/controller/pkg/log"
@@ -319,11 +321,11 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// NOTE: We need to create a new SDK instance for each reconciliation
 	// because the token is retrieved in runtime through KonnectAPIAuthConfiguration.
-	serverURL := ops.NewServerURL[*konnectv1alpha1.KonnectExtension](apiAuth.Spec.ServerURL)
-	sdk := r.SdkFactory.NewKonnectSDK(
-		serverURL.String(),
-		sdkops.SDKToken(token),
-	)
+	server, err := server.NewServer[*konnectv1alpha1.KonnectExtension](apiAuth.Spec.ServerURL)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to parse server URL: %w", err)
+	}
+	sdk := r.SdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
 
 	// get the Konnect Control Plane
 	cp, res, err := r.getKonnectControlPlane(ctx, logger, sdk.GetControlPlaneSDK(), ext)
