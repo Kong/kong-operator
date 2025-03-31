@@ -9,6 +9,7 @@ import (
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/konnect/server"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -193,7 +194,7 @@ func konnectConfigurationDataPlaneGroupToAPIRequest(
 		}(),
 		CloudGatewayNetworkID: func() string {
 			switch spec.NetworkRef.Type {
-			case konnectv1alpha1.NetworkRefKonnectID:
+			case commonv1alpha1.ObjectRefTypeKonnectID:
 				return *spec.NetworkRef.KonnectID
 			default:
 				panic(fmt.Sprintf("unknown network ref type: %s", spec.NetworkRef.Type))
