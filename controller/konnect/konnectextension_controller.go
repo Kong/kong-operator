@@ -258,6 +258,17 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return res, err
 		}
 	}
+
+	// get the Konnect Control Plane ID. Set the ControlPlaneRefValid condition accordingly.
+	_, res, err := r.getKonnectControlPlaneID(ctx, ext, readyCondition)
+	if err != nil || !res.IsZero() {
+		// don't return the error here to avoid noise. Status condition is properly set.
+		log.Debug(logger, "controlPlane reference has not properly resolved", "error", err)
+		return res, nil
+	}
+
+	log.Debug(logger, "controlPlane reference validity checked")
+
 	apiAuthRef, err := getKonnectAPIAuthRefNN(ctx, r.Client, &ext)
 	if err != nil {
 		if client.IgnoreNotFound(err) != nil {
@@ -323,8 +334,6 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		log.Debug(logger, "controlPlane not ready yet")
 		return res, nil
 	}
-
-	log.Debug(logger, "controlPlane reference validity checked")
 
 	certProvisionedCond := metav1.Condition{
 		Type:    konnectv1alpha1.DataPlaneCertificateProvisionedConditionType,
