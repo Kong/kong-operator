@@ -31,23 +31,3 @@ type ExtensionRef struct {
 	// NamespacedRef is a reference to the extension resource.
 	NamespacedRef `json:",inline"`
 }
-
-// NamespacedRef is a reference to a namespaced resource.
-// +apireference:kgo:include
-type NamespacedRef struct {
-	// Name is the name of the referred resource.
-	//
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Name string `json:"name"`
-
-	// Namespace is the namespace of the referred resource.
-	//
-	// For namespace-scoped resources if no Namespace is provided then the
-	// namespace of the parent object MUST be used.
-	//
-	// This field MUST not be set when referring to cluster-scoped resources.
-	//
-	// +optional
-	Namespace *string `json:"namespace,omitempty"`
-}

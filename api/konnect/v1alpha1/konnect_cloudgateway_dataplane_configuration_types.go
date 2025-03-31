@@ -78,30 +78,6 @@ const (
 	APIAccessPrivatePublic APIAccess = "private+public"
 )
 
-const (
-	// NetworkRefKonnectID is the type for the KonnectID Network ref.
-	// It is used to reference a Konnect network entity by its ID on the Konnect platform.
-	NetworkRefKonnectID = "konnectID"
-)
-
-// NetworkRef is the schema for the NetworkRef type.
-// It is used to reference a Network entity.
-//
-// +kubebuilder:object:generate=true
-// +kubebuilder:validation:XValidation:rule="(has(self.type) && self.type == 'konnectID') ? has(self.konnectID) : true", message="when type is konnectID, konnectID must be set"
-// +apireference:kgo:include
-type NetworkRef struct {
-	// Type indicates the type of the control plane being referenced.
-	//
-	// +kubebuilder:validation:Enum=konnectID
-	Type string `json:"type,omitempty"`
-
-	// KonnectID is the schema for the KonnectID type.
-	// This field is required when the Type is konnectID.
-	// +optional
-	KonnectID *string `json:"konnectID,omitempty"`
-}
-
 // KonnectConfigurationDataPlaneGroup is the schema for the KonnectConfiguration type.
 type KonnectConfigurationDataPlaneGroup struct {
 	// Name of cloud provider.
@@ -114,10 +90,11 @@ type KonnectConfigurationDataPlaneGroup struct {
 	// +kubebuilder:validation:Required
 	Region string `json:"region"`
 
-	// NetworkRef is the schema for the NetworkRef type.
+	// NetworkRef is the reference to the network that this data-plane group will be deployed on.
 	//
 	// +kubebuilder:validation:Required
-	NetworkRef NetworkRef `json:"networkRef"`
+	// +kubebuilder:validation:XValidation:rule="self.type == 'namespacedRef' && has(self.namespacedRef) ? !has(self.namespacedRef.namespace) : true", message="cross namespace references are not supported for networkRef of type namespacedRef"
+	NetworkRef commonv1alpha1.ObjectRef `json:"networkRef"`
 
 	// Autoscale configuration for the data-plane group.
 	//

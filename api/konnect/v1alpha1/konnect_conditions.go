@@ -201,3 +201,16 @@ const (
 	// the DataPlane client certificate creation in Konnect has failed.
 	DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed = "KonnectAPIOpFailed"
 )
+
+const (
+	// KonnectNetworkRefsValidConditionType is the type of the condition that indicates
+	// whether the Konnect network reference is valid and points to an existing Konnect network.
+	KonnectNetworkRefsValidConditionType = "KonnectNetworkRefsValid"
+
+	// KonnectNetworkRefsReasonValid is the reason used with the KonnectNetworkRefsValid
+	// condition type indicating that the Konnect network reference is valid.
+	KonnectNetworkRefsReasonValid = "Valid"
+	// KonnectNetworkRefsReasonInvalid is the reason used with the KonnectNetworkRefsValid
+	// condition type indicating that the Konnect network reference is invalid.
+	KonnectNetworkRefsReasonInvalid = "Invalid"
+)

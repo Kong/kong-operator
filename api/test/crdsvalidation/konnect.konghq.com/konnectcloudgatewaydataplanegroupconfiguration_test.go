@@ -20,10 +20,18 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			Name: "test-konnect-control-plane-cloud-gateway",
 		},
 	}
-	networkRef := konnectv1alpha1.NetworkRef{
+	networkRefKonnectID := commonv1alpha1.ObjectRef{
 		Type:      "konnectID",
 		KonnectID: lo.ToPtr("12345"),
 	}
+	autoscaleConfiguration := konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
+		Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic,
+		Static: &konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleStatic{
+			InstanceType:       sdkkonnectcomp.InstanceTypeNameSmall,
+			RequestedInstances: 3,
+		},
+	}
+
 	t.Run("spec", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration]{
 			{
@@ -38,7 +46,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 							{
 								Provider:   sdkkonnectcomp.ProviderNameAws,
 								Region:     "us-west-2",
-								NetworkRef: networkRef,
+								NetworkRef: networkRefKonnectID,
 								Autoscale: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
 									Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic,
 									Static: &konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleStatic{
@@ -63,7 +71,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 							{
 								Provider:   sdkkonnectcomp.ProviderNameAws,
 								Region:     "us-west-2",
-								NetworkRef: networkRef,
+								NetworkRef: networkRefKonnectID,
 								Autoscale: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
 									Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic,
 									Autopilot: &konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleAutopilot{
@@ -88,7 +96,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 							{
 								Provider:   sdkkonnectcomp.ProviderNameAws,
 								Region:     "us-west-2",
-								NetworkRef: networkRef,
+								NetworkRef: networkRefKonnectID,
 								Autoscale: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
 									Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeAutopilot,
 									Static: &konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleStatic{
@@ -114,7 +122,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 							{
 								Provider:   sdkkonnectcomp.ProviderNameAws,
 								Region:     "us-west-2",
-								NetworkRef: networkRef,
+								NetworkRef: networkRefKonnectID,
 								Autoscale: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
 									Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeAutopilot,
 									Static: &konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleStatic{
@@ -143,7 +151,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 							{
 								Provider:   sdkkonnectcomp.ProviderNameAws,
 								Region:     "us-west-2",
-								NetworkRef: networkRef,
+								NetworkRef: networkRefKonnectID,
 								Environment: []konnectv1alpha1.ConfigurationDataPlaneGroupEnvironmentField{
 									{
 										Name:  "KONG_LOG_LEVEL",
@@ -174,7 +182,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 							{
 								Provider:   sdkkonnectcomp.ProviderNameAws,
 								Region:     "us-west-2",
-								NetworkRef: networkRef,
+								NetworkRef: networkRefKonnectID,
 								Environment: []konnectv1alpha1.ConfigurationDataPlaneGroupEnvironmentField{
 									{
 										Name:  "RANDOM_ENV",
@@ -193,6 +201,131 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("Invalid value: \"RANDOM_ENV\": spec.dataplane_groups[0].environment[0].name in body should match '^KONG_."),
+			},
+		}.Run(t)
+	})
+
+	t.Run("networkRef", func(t *testing.T) {
+		common.TestCasesGroup[*konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration]{
+			{
+				Name: "networkRef konnectID is supported",
+				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
+						ControlPlaneRef: cpRef,
+						Version:         "3.9",
+						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
+							{
+								Provider: sdkkonnectcomp.ProviderNameAws,
+								Region:   "us-west-2",
+								NetworkRef: commonv1alpha1.ObjectRef{
+									Type:      "konnectID",
+									KonnectID: lo.ToPtr("12345"),
+								},
+								Autoscale: autoscaleConfiguration,
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "networkRef konnectID is required when type is konnectID",
+				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
+						ControlPlaneRef: cpRef,
+						Version:         "3.9",
+						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
+							{
+								Provider: sdkkonnectcomp.ProviderNameAws,
+								Region:   "us-west-2",
+								NetworkRef: commonv1alpha1.ObjectRef{
+									Type: "konnectID",
+									NamespacedRef: &commonv1alpha1.NamespacedRef{
+										Name: "network-1",
+									},
+								},
+								Autoscale: autoscaleConfiguration,
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectID must be set"),
+			},
+			{
+				Name: "networkRef namespacedRef is supported",
+				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
+						ControlPlaneRef: cpRef,
+						Version:         "3.9",
+						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
+							{
+								Provider: sdkkonnectcomp.ProviderNameAws,
+								Region:   "us-west-2",
+								NetworkRef: commonv1alpha1.ObjectRef{
+									Type: "namespacedRef",
+									NamespacedRef: &commonv1alpha1.NamespacedRef{
+										Name: "network-1",
+									},
+								},
+								Autoscale: autoscaleConfiguration,
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "networkRef namespacedRef is required when type is namespacedRef",
+				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
+						ControlPlaneRef: cpRef,
+						Version:         "3.9",
+						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
+							{
+								Provider: sdkkonnectcomp.ProviderNameAws,
+								Region:   "us-west-2",
+								NetworkRef: commonv1alpha1.ObjectRef{
+									Type:      "namespacedRef",
+									KonnectID: lo.ToPtr("12345"),
+								},
+								Autoscale: autoscaleConfiguration,
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("when type is namespacedRef, namespacedRef must be set"),
+			},
+			{
+				Name: "networkRef namespacedRef cannot specify namespace",
+				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
+						ControlPlaneRef: cpRef,
+						Version:         "3.9",
+						APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
+							{
+								Provider: sdkkonnectcomp.ProviderNameAws,
+								Region:   "us-west-2",
+								NetworkRef: commonv1alpha1.ObjectRef{
+									Type: "namespacedRef",
+									NamespacedRef: &commonv1alpha1.NamespacedRef{
+										Name:      "network-1",
+										Namespace: lo.ToPtr("ns-1"),
+									},
+								},
+								Autoscale: autoscaleConfiguration,
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("cross namespace references are not supported for networkRef of type namespacedRef"),
 			},
 		}.Run(t)
 	})
