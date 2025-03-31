@@ -112,7 +112,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 			StatusCode: http.StatusOK,
 		}, nil)
 
-	t.Logf("Setting pu expected CreateDataplaneCertificate SDK call")
+	t.Logf("Setting up expected CreateDataplaneCertificate SDK call")
 	factory.SDK.DataPlaneCertificatesSDK.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneID, mock.Anything).
 		Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
 			StatusCode: http.StatusCreated,
