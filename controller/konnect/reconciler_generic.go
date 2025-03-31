@@ -395,8 +395,8 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	// Handle type specific operations and stop reconciliation if needed.
 	// This can happen for instance when KongConsumer references credentials Secrets
-	// that do not exist.
-	if stop, res, err := handleTypeSpecific(ctx, r.Client, ent); err != nil || !res.IsZero() || stop {
+	// that do not exist or populate some Status fields based on Konnect API.
+	if stop, res, err := handleTypeSpecific(ctx, sdk, r.Client, ent); err != nil || !res.IsZero() || stop {
 		return res, err
 	}
 

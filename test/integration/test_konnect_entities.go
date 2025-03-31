@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"strings"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -64,6 +65,19 @@ func TestKonnectEntities(t *testing.T) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 		require.NoError(t, err)
 		assertKonnectEntityProgrammed(t, cp)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+
+	t.Logf("Waiting for ControlPlane and telemetry endpoints to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
+		require.NoError(t, err)
+		require.NotEmpty(t, cp.Status.Endpoints)
+		// Example: https://e7b5c7de43.us.cp0.konghq.tech - always it will include ".cp0.".
+		require.True(t, strings.HasPrefix(cp.Status.Endpoints.ControlPlaneEndpoint, "https://"), "must start with https://")
+		require.Contains(t, cp.Status.Endpoints.ControlPlaneEndpoint, ".cp0.", "must contain .cp0.")
+		// Example: https://e7b5c7de43.us.tp0.konghq.tech - always it will include ".tp0.".
+		require.True(t, strings.HasPrefix(cp.Status.Endpoints.TelemetryEndpoint, "https://"), "must start with https://")
+		require.Contains(t, cp.Status.Endpoints.TelemetryEndpoint, ".tp0.", "must contain .tp0.")
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	ks := deploy.KongService(t, ctx, clientNamespaced,
