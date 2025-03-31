@@ -65,7 +65,7 @@ func Create[
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = createKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
-		err = createKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), ent)
+		err = createKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), ent, sdk.GetServer().Region())
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -237,9 +237,8 @@ func Delete[
 	}
 
 	var (
-		err   error
-		start = time.Now()
-
+		err        error
+		start      = time.Now()
 		entityType = ent.GetTypeName()
 		statusCode int
 	)
@@ -249,7 +248,7 @@ func Delete[
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = deleteKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
-		err = deleteKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), ent)
+		err = deleteKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), ent, sdk.GetServer().Region())
 	case *configurationv1alpha1.KongService:
 		err = deleteService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -383,8 +382,7 @@ func Update[
 	}
 
 	var (
-		err error
-
+		err        error
 		entityType = e.GetTypeName()
 		statusCode int
 		start      = time.Now()
@@ -395,7 +393,7 @@ func Update[
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = updateKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
-		err = updateKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), ent)
+		err = updateKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), ent, sdk.GetServer())
 	case *configurationv1alpha1.KongService:
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:

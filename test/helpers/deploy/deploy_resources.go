@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/pkg/consts"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
@@ -133,7 +134,7 @@ func KonnectAPIAuthConfiguration(
 		Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 			Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 			Token:     "kpat_xxxxxx",
-			ServerURL: "https://api.us.konghq.com",
+			ServerURL: sdkmocks.SDKServerURL,
 		},
 	}
 	for _, opt := range opts {

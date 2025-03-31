@@ -7,6 +7,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+	"github.com/kong/gateway-operator/controller/konnect/server"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -16,13 +17,14 @@ func createKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
 	sdk sdkops.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
+	serverRegion server.Region,
 ) error {
 	cpID := n.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: n, Op: CreateOp}
 	}
 
-	req := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(n.Spec, cpID)
+	req := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(n.Spec, cpID, serverRegion)
 	resp, err := sdk.CreateConfiguration(ctx, req)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, n); errWrap != nil {
@@ -46,13 +48,14 @@ func updateKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
 	sdk sdkops.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
+	server server.Server,
 ) error {
 	cpID := n.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: n, Op: UpdateOp}
 	}
 
-	req := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(n.Spec, cpID)
+	req := cloudGatewayDataPlaneGroupConfigurationToAPIRequest(n.Spec, cpID, server.Region())
 	resp, err := sdk.CreateConfiguration(ctx, req)
 	if err != nil {
 		var transientError bool
@@ -114,6 +117,7 @@ func deleteKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
 	sdk sdkops.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
+	serverRegion server.Region,
 ) error {
 	cpID := n.GetControlPlaneID()
 	if cpID == "" {
@@ -122,7 +126,7 @@ func deleteKonnectDataPlaneGroupConfiguration(
 	// NOTE: we delete the data plane group configuration by "creating" (using PUT)
 	// a new configuration with the same ID and the same version, but with an empty
 	// list of data plane groups.
-	req := cloudGatewayDataPlaneGroupConfigurationInit(n.Spec, cpID)
+	req := cloudGatewayDataPlaneGroupConfigurationInit(n.Spec, cpID, serverRegion)
 	resp, err := sdk.CreateConfiguration(ctx, req)
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, n); errWrap != nil {
@@ -139,13 +143,17 @@ func deleteKonnectDataPlaneGroupConfiguration(
 func cloudGatewayDataPlaneGroupConfigurationInit(
 	spec konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec,
 	cpID string,
+	serverRegion server.Region,
 ) sdkkonnectcomp.CreateConfigurationRequest {
+	// We intentionally map the server region to a Konnect SDK ControlPlaneGeo value without validation to make this
+	// forward-compatible with future server regions that are not yet defined in the Konnect SDK.
+	cpGeo := sdkkonnectcomp.ControlPlaneGeo(serverRegion.String())
+
 	return sdkkonnectcomp.CreateConfigurationRequest{
-		ControlPlaneID: cpID,
-		Version:        spec.Version,
-		APIAccess:      spec.APIAccess,
-		// TODO deduct CP geo
-		ControlPlaneGeo: sdkkonnectcomp.ControlPlaneGeoEu,
+		ControlPlaneID:  cpID,
+		Version:         spec.Version,
+		APIAccess:       spec.APIAccess,
+		ControlPlaneGeo: cpGeo,
 		DataplaneGroups: []sdkkonnectcomp.CreateConfigurationDataPlaneGroup{},
 	}
 }
@@ -153,8 +161,9 @@ func cloudGatewayDataPlaneGroupConfigurationInit(
 func cloudGatewayDataPlaneGroupConfigurationToAPIRequest(
 	spec konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec,
 	cpID string,
+	cpRegion server.Region,
 ) sdkkonnectcomp.CreateConfigurationRequest {
-	cfgReq := cloudGatewayDataPlaneGroupConfigurationInit(spec, cpID)
+	cfgReq := cloudGatewayDataPlaneGroupConfigurationInit(spec, cpID, cpRegion)
 	cfgReq.DataplaneGroups = func() []sdkkonnectcomp.CreateConfigurationDataPlaneGroup {
 		ret := make([]sdkkonnectcomp.CreateConfigurationDataPlaneGroup, 0, len(spec.DataplaneGroups))
 		for _, g := range spec.DataplaneGroups {
