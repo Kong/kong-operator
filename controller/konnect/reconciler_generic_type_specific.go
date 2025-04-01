@@ -41,7 +41,7 @@ func handleTypeSpecific[
 	}
 
 	if updated {
-		res, err = setProgrammedStatusConditionBasedOnOtherConditions(ctx, cl, ent)
+		res, err = patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, cl, ent)
 	}
 
 	return isProblem, res, err

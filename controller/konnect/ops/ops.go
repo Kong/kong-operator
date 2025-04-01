@@ -65,7 +65,7 @@ func Create[
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = createKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
-		err = createKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), ent, sdk.GetServer().Region())
+		err = createKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), cl, ent, sdk.GetServer().Region())
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -183,17 +183,17 @@ func Create[
 			if errGet != nil {
 				err = fmt.Errorf("trying to find a matching Konnect entity matching the ID failed: %w, %w", errGet, err)
 			}
-			SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, err.Error())
+			SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, err)
 		}
 
 	case errors.As(err, &errSDK):
 		statusCode = errSDK.StatusCode
-		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, errSDK.Error())
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, errSDK)
 	case errors.As(err, &errRelationsFailed):
 		e.SetKonnectID(errRelationsFailed.KonnectID)
-		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, errRelationsFailed.Err.Error())
+		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, errRelationsFailed.Err)
 	case err != nil:
-		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, err.Error())
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, err)
 	default:
 		SetKonnectEntityProgrammedCondition(e)
 	}
@@ -315,6 +315,10 @@ func Delete[
 	}
 	logOpComplete(ctx, start, DeleteOp, ent, err)
 
+	// Clear the instance field from the error to avoid requeueing the resource
+	// because of the trace ID in the instance field is different for each request.
+	err = ClearInstanceFromError(err)
+
 	return err
 }
 
@@ -393,7 +397,7 @@ func Update[
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = updateKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
-		err = updateKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), ent, sdk.GetServer())
+		err = updateKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), cl, ent, sdk.GetServer())
 	case *configurationv1alpha1.KongService:
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -446,12 +450,12 @@ func Update[
 	switch {
 	case errors.As(err, &errSDK):
 		statusCode = errSDK.StatusCode
-		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToUpdateReason, errSDK.Body)
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToUpdateReason, errSDK)
 	case errors.As(err, &errRelationsFailed):
 		e.SetKonnectID(errRelationsFailed.KonnectID)
-		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, err.Error())
+		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, err)
 	case err != nil:
-		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToUpdateReason, err.Error())
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToUpdateReason, err)
 	default:
 		SetKonnectEntityProgrammedCondition(e)
 	}
@@ -617,4 +621,30 @@ func getMatchingEntryFromListResponseData[
 	}
 
 	return id, nil
+}
+
+// ClearInstanceFromError clears the instance field from the error.
+// This is needed because the instance field contains the trace ID which changes
+// with each request and makes the reconciliation loop requeue the resource
+// instead of performing the backoff.
+func ClearInstanceFromError(err error) error {
+	var errBadRequest *sdkkonnecterrs.BadRequestError
+	if errors.As(err, &errBadRequest) {
+		errBadRequest.Instance = ""
+		return errBadRequest
+	}
+
+	var errConflict *sdkkonnecterrs.ConflictError
+	if errors.As(err, &errConflict) {
+		errConflict.Instance = ""
+		return errConflict
+	}
+
+	var errNotFound *sdkkonnecterrs.NotFoundError
+	if errors.As(err, &errNotFound) {
+		errNotFound.Instance = ""
+		return errNotFound
+	}
+
+	return err
 }
