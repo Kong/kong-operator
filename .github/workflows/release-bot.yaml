@@ -156,7 +156,8 @@ jobs:
 
       - name: Cherry-pick commit
         run: |
-          git checkout -b ${{ env.CHERRYPICK_BRANCH }} main
+          git fetch --all
+          git checkout -b ${{ env.CHERRYPICK_BRANCH }} origin/main
           git cherry-pick ${{ github.sha }}
           # Amend the commit message to avoid infinite loop of this workflow (it's triggered by the commit message).
           git commit --amend -m "chore: cherry-pick ${{ needs.semver.outputs.version }} commit (${{ github.sha }}) onto main"
