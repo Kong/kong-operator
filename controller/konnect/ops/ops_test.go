@@ -97,7 +97,7 @@ func TestCreate(t *testing.T) {
 				require.Len(t, ent.Status.Conditions, 1)
 				assert.Equal(t, metav1.ConditionFalse, ent.Status.Conditions[0].Status)
 				assert.EqualValues(t, kcfgkonnect.KonnectEntitiesFailedToCreateReason, ent.Status.Conditions[0].Reason)
-				assert.Equal(t,
+				assert.JSONEq(t,
 					`{"status":400,"title":"Invalid Request","instance":"","detail":"Invalid Parameters","invalid_parameters":[{"field":"labels","rule":"is_label","reason":"Label value exceeds maximum of 63 characters"}]}`,
 					ent.Status.Conditions[0].Message)
 			},
