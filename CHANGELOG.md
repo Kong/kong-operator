@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v1.5.1](#v151)
 - [v1.5.0](#v150)
 - [v1.4.2](#v142)
 - [v1.4.1](#v141)
@@ -46,6 +47,24 @@
 - Deduce `KonnectCloudGatewayDataPlaneGroupConfiguration` region based on the attached
   `KonnectAPIAuthConfiguration` instead of using a hardcoded `eu` value.
   [#1409](https://github.com/Kong/gateway-operator/pull/1409)
+
+## [v1.5.1]
+
+> Release date: 2025-04-01
+
+### Added
+
+- Add `namespacedRef` support for referencing networks in `KonnectCloudGatewayDataPlaneGroupConfiguration`
+  [#1425](https://github.com/Kong/gateway-operator/pull/1425)
+- Set `ControlPlaneRefValid` condition to false when reference to `KonnectGatewayControlPlane` is invalid
+  [#1421](https://github.com/Kong/gateway-operator/pull/1421)
+
+### Changes
+
+- Deduce `KonnectCloudGatewayDataPlaneGroupConfiguration` region based on the attached
+  `KonnectAPIAuthConfiguration` instead of using a hardcoded `eu` value.
+  [#1417](https://github.com/Kong/gateway-operator/pull/1417)
+- Bump `kong/kubernetes-configuration` dependency to v1.3.
 
 ## [v1.5.0]
 
@@ -1054,6 +1073,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v1.5.1]: https://github.com/Kong/gateway-operator/compare/v1.5.0..v1.5.1
 [v1.5.0]: https://github.com/Kong/gateway-operator/compare/v1.4.2..v1.5.0
 [v1.4.2]: https://github.com/Kong/gateway-operator/compare/v1.4.1..v1.4.2
 [v1.4.1]: https://github.com/Kong/gateway-operator/compare/v1.4.0..v1.4.1
