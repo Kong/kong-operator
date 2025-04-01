@@ -148,3 +148,40 @@ type ReferencedKongGatewayControlPlaneIsUnsupported struct {
 func (e ReferencedKongGatewayControlPlaneIsUnsupported) Error() string {
 	return fmt.Sprintf("referenced ControlPlaneRef %s is unsupported", e.Reference.String())
 }
+
+// ReferencedObjectDoesNotExist is an error type that is returned when
+// a Konnect entity references a non existing object.
+type ReferencedObjectDoesNotExist struct {
+	Reference types.NamespacedName
+	Err       error
+}
+
+// Error implements the error interface.
+func (e ReferencedObjectDoesNotExist) Error() string {
+	return fmt.Sprintf("referenced object %s does not exist: %v", e.Reference, e.Err)
+}
+
+// ReferencedObjectIsBeingDeleted is an error type that is returned when
+// a Konnect entity references an object which is being deleted.
+type ReferencedObjectIsBeingDeleted struct {
+	Reference         types.NamespacedName
+	DeletionTimestamp time.Time
+}
+
+// Error implements the error interface.
+func (e ReferencedObjectIsBeingDeleted) Error() string {
+	return fmt.Sprintf("referenced object %s is being deleted (deletion timestamp: %s)",
+		e.Reference, e.DeletionTimestamp)
+}
+
+// ReferencedObjectIsInvalid is an error type that is returned when
+// the referenced object is invalid.
+type ReferencedObjectIsInvalid struct {
+	Reference string
+	Msg       string
+}
+
+// Error implements the error interface.
+func (e ReferencedObjectIsInvalid) Error() string {
+	return fmt.Sprintf("referenced object %s is invalid: %v", e.Reference, e.Msg)
+}

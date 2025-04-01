@@ -117,6 +117,21 @@ func WithKonnectIDControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane
 	}
 }
 
+// WithKonnectID returns an ObjOption that sets the Konnect ID on the object.
+func WithKonnectID(id string) ObjOption {
+	return func(obj client.Object) {
+		o, ok := obj.(interface {
+			SetKonnectID(id string)
+		})
+		if !ok {
+			// As it's only used in tests, we can panic here - it will mean test code is incorrect.
+			panic(fmt.Errorf("%T does not implement SetKonnectID method", obj))
+		}
+
+		o.SetKonnectID(id)
+	}
+}
+
 // KonnectAPIAuthConfiguration deploys a KonnectAPIAuthConfiguration resource
 // and returns the resource.
 func KonnectAPIAuthConfiguration(
@@ -264,6 +279,7 @@ func KonnectCloudGatewayDataPlaneGroupConfiguration(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
+	dataplaneGroups []konnectv1alpha1.KonnectConfigurationDataPlaneGroup,
 	opts ...ObjOption,
 ) *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration {
 	t.Helper()
@@ -272,22 +288,45 @@ func KonnectCloudGatewayDataPlaneGroupConfiguration(
 			Name: "data-plane-group-configuration-" + uuid.NewString()[:8],
 		},
 		Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
-			Version:   consts.DefaultDataPlaneTag,
-			APIAccess: lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
-			DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
-				{
-					Provider: sdkkonnectcomp.ProviderNameAws,
-					Region:   "us-west-2",
-					NetworkRef: commonv1alpha1.ObjectRef{
-						Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-						KonnectID: lo.ToPtr("network-12345"),
-					},
-					Autoscale: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
-						Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeAutopilot,
-						Autopilot: &konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleAutopilot{
-							BaseRps: 10,
-						},
-					},
+			Version:         consts.DefaultDataPlaneTag,
+			APIAccess:       lo.ToPtr(sdkkonnectcomp.APIAccessPrivatePlusPublic),
+			DataplaneGroups: dataplaneGroups,
+		},
+	}
+
+	for _, opt := range opts {
+		opt(&obj)
+	}
+
+	require.NoError(t, cl.Create(ctx, &obj))
+	return &obj
+}
+
+// KonnectCloudGatewayNetwork deploys a KonnectCloudGatewayNetwork resource and returns it.
+func KonnectCloudGatewayNetwork(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	opts ...ObjOption,
+) *konnectv1alpha1.KonnectCloudGatewayNetwork {
+	t.Helper()
+	name := "network-" + uuid.NewString()[:8]
+	obj := konnectv1alpha1.KonnectCloudGatewayNetwork{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: konnectv1alpha1.KonnectCloudGatewayNetworkSpec{
+			Name:                          name,
+			CloudGatewayProviderAccountID: "1111111111111111111",
+			Region:                        "us-east-1",
+			AvailabilityZones: []string{
+				"us-east-1a",
+			},
+			CidrBlock: "10.0.0.1/8",
+			KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+					Name: apiAuth.Name,
 				},
 			},
 		},
@@ -299,6 +338,37 @@ func KonnectCloudGatewayDataPlaneGroupConfiguration(
 
 	require.NoError(t, cl.Create(ctx, &obj))
 	return &obj
+}
+
+// KonnectCloudGatewayNetworkWithProgrammed deploys a KonnectNetwork resource and returns it.
+// The Programmed condition is set on the returned resource using status Update() call.
+// It can be useful where the reconciler for KonnectNetwork is not started
+// and hence the status has to be filled manually.
+func KonnectCloudGatewayNetworkWithProgrammed(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	opts ...ObjOption,
+) *konnectv1alpha1.KonnectCloudGatewayNetwork {
+	t.Helper()
+
+	obj := KonnectCloudGatewayNetwork(t, ctx, cl, apiAuth)
+	obj.Status.Conditions = []metav1.Condition{
+		{
+			Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
+			Status:             metav1.ConditionTrue,
+			Reason:             konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
+			ObservedGeneration: obj.GetGeneration(),
+			LastTransitionTime: metav1.Now(),
+		},
+	}
+
+	for _, opt := range opts {
+		opt(obj)
+	}
+	require.NoError(t, cl.Status().Update(ctx, obj))
+	return obj
 }
 
 // KongServiceWithID deploys a KongService resource and returns the resource.

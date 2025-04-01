@@ -1,9 +1,12 @@
 package konnect
 
 import (
+	"context"
+
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -35,5 +38,35 @@ func KonnectCloudGatewayDataPlaneGroupConfigurationReconciliationWatchOptions(
 				),
 			)
 		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&konnectv1alpha1.KonnectCloudGatewayNetwork{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueKonnectCloudGatewayNetworkForKonnectNetwork(cl),
+				),
+			)
+		},
+	}
+}
+
+func enqueueKonnectCloudGatewayNetworkForKonnectNetwork(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		n, ok := obj.(*konnectv1alpha1.KonnectCloudGatewayNetwork)
+		if !ok {
+			return nil
+		}
+		var l konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationList
+		if err := cl.List(ctx, &l,
+			// TODO: change this when cross namespace refs are allowed.
+			client.InNamespace(n.GetNamespace()),
+			client.MatchingFields{
+				IndexFieldKonnectCloudGatewayDataPlaneGroupConfigurationOnKonnectNetworkRef: n.Name,
+			},
+		); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
 	}
 }
