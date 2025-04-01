@@ -204,6 +204,73 @@ func TestDataPlaneEssentials(t *testing.T) {
 
 	t.Log("verifying dataplane status is properly filled with backing service name and its addresses")
 	require.Eventually(t, testutils.DataPlaneHasServiceAndAddressesInStatus(t, GetCtx(), dataplaneName, clients), waitTime, tickTime)
+}
+
+func TestDataPlaneServiceTypes(t *testing.T) {
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+
+	t.Log("deploying dataplane resource with 2 replicas")
+	dataplaneName := types.NamespacedName{
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
+	}
+	dataplane := &operatorv1beta1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: dataplaneName.Namespace,
+			Name:      dataplaneName.Name,
+		},
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						Replicas: lo.ToPtr(int32(2)),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: helpers.GetDefaultDataPlaneImage(),
+									},
+								},
+							},
+						},
+					},
+				},
+				Network: operatorv1beta1.DataPlaneNetworkOptions{
+					Services: &operatorv1beta1.DataPlaneServices{
+						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+							ServiceOptions: operatorv1beta1.ServiceOptions{
+								Type: corev1.ServiceTypeLoadBalancer,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
+
+	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(dataplane)
+
+	t.Log("verifying dataplane gets marked provisioned")
+	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), waitTime, tickTime)
+
+	t.Log("verifying deployments managed by the dataplane")
+	deployment := &appsv1.Deployment{}
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, deployment, client.MatchingLabels{
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+	}, clients), waitTime, tickTime)
+
+	t.Log("verifying services managed by the dataplane")
+	var dataplaneIngressService corev1.Service
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, &dataplaneIngressService, clients, client.MatchingLabels{
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+	}), waitTime, tickTime)
 
 	t.Log("updating dataplane spec with proxy service type of ClusterIP")
 	require.Eventually(t,
@@ -222,6 +289,29 @@ func TestDataPlaneEssentials(t *testing.T) {
 		}
 		if dataplaneIngressService.Spec.Type != corev1.ServiceTypeClusterIP {
 			t.Logf("dataplane proxy service should be of ClusterIP type but is %s", dataplaneIngressService.Spec.Type)
+			return false
+		}
+
+		return true
+	}, waitTime, tickTime)
+
+	t.Log("updating dataplane spec with proxy service type of NodePort")
+	require.Eventually(t,
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+			dp.Spec.Network.Services.Ingress.Type = corev1.ServiceTypeNodePort
+		}),
+		waitTime, tickTime)
+
+	t.Log("checking if dataplane proxy service type changes to NodePort")
+	require.Eventually(t, func() bool {
+		servicesClient := GetClients().K8sClient.CoreV1().Services(dataplane.Namespace)
+		dataplaneIngressService, err := servicesClient.Get(GetCtx(), dataplaneIngressService.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting dataplane proxy service: %v", err)
+			return false
+		}
+		if dataplaneIngressService.Spec.Type != corev1.ServiceTypeNodePort {
+			t.Logf("dataplane proxy service should be of NodePort type but is %s", dataplaneIngressService.Spec.Type)
 			return false
 		}
 
