@@ -34,7 +34,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 	}
 
 	setInvalidWithMsg := func(msg string) {
-		_ = patch.SetStatusWithConditionIfDifferent(
+		patch.SetStatusWithConditionIfDifferent(
 			ent,
 			konnectv1alpha1.KonnectNetworkRefsValidConditionType,
 			metav1.ConditionFalse,
