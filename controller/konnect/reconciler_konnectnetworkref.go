@@ -76,7 +76,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 			cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, &network)
 			if !ok || cond.Status != metav1.ConditionTrue {
 				setInvalidWithMsg(fmt.Sprintf("Referenced KonnectCloudGatewayNetwork %s is not programmed yet", nn))
-				return ctrl.Result{Requeue: true}, ReferencedObjectIsInvalid{
+				return ctrl.Result{}, ReferencedObjectIsInvalid{
 					Reference: nn.String(),
 					Msg:       "Referenced KonnectCloudGatewayNetwork is not programmed yet",
 				}
@@ -86,7 +86,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 				nn := client.ObjectKeyFromObject(&network)
 				msg := fmt.Sprintf("Referenced KonnectCloudGatewayNetwork %s: is not ready yet, current state: %s", nn, network.Status.State)
 				setInvalidWithMsg(msg)
-				return ctrl.Result{Requeue: true}, ReferencedObjectIsInvalid{
+				return ctrl.Result{}, ReferencedObjectIsInvalid{
 					Reference: nn.String(),
 					Msg:       msg,
 				}
@@ -97,7 +97,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 			if err != nil {
 				msg := fmt.Sprintf("Could not get the referenced KonnectCloudGatewayNetwork <konnectID:%s>: %v", *ref.KonnectID, err)
 				setInvalidWithMsg(msg)
-				return ctrl.Result{Requeue: true}, ReferencedObjectIsInvalid{
+				return ctrl.Result{}, ReferencedObjectIsInvalid{
 					Reference: *ref.KonnectID,
 					Msg:       msg,
 				}
@@ -105,7 +105,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 			if n.Network.State != sdkkonnectcomp.NetworkStateReady {
 				msg := fmt.Sprintf("Referenced KonnectCloudGatewayNetwork <konnectID:%s>: is not ready yet, current state: %s", *ref.KonnectID, n.Network.State)
 				setInvalidWithMsg(msg)
-				return ctrl.Result{Requeue: true}, ReferencedObjectIsInvalid{
+				return ctrl.Result{}, ReferencedObjectIsInvalid{
 					Reference: *ref.KonnectID,
 					Msg:       msg,
 				}

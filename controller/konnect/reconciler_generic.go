@@ -367,6 +367,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			log.Debug(logger, "error handling KonnectNetwork ref", "error", err)
 			return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 		}
+		if !res.IsZero() {
+			return res, err
+		}
 	}
 
 	if delTimestamp := ent.GetDeletionTimestamp(); !delTimestamp.IsZero() {
