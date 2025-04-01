@@ -40,7 +40,12 @@ func konnectCloudGatewayNetworkDataPlaneGroupConfigurationRef(object client.Obje
 	return lo.FilterMap(
 		dpg.Spec.DataplaneGroups,
 		func(dpg konnectv1alpha1.KonnectConfigurationDataPlaneGroup, _ int) (string, bool) {
-			return dpg.NetworkRef.NamespacedRef.Name, dpg.NetworkRef.Type == commonv1alpha1.ObjectRefTypeNamespacedRef
+			switch dpg.NetworkRef.Type {
+			case commonv1alpha1.ObjectRefTypeNamespacedRef:
+				return dpg.NetworkRef.NamespacedRef.Name, true
+			default:
+				return "", false
+			}
 		},
 	)
 }

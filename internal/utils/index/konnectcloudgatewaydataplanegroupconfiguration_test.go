@@ -3,6 +3,7 @@ package index
 import (
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -60,6 +61,22 @@ func Test_konnectCloudGatewayNetworkDataPlaneGroupConfigurationRef(t *testing.T)
 								NamespacedRef: &commonv1alpha1.NamespacedRef{
 									Name: "test-network",
 								},
+							},
+						},
+					},
+				},
+			},
+			want: []string{},
+		},
+		{
+			name: "dataplane group with konnect ID network ref type returns empty slice",
+			obj: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
+				Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
+					DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
+						{
+							NetworkRef: commonv1alpha1.ObjectRef{
+								Type:      commonv1alpha1.ObjectRefTypeKonnectID,
+								KonnectID: lo.ToPtr("test-konnect-id"),
 							},
 						},
 					},
