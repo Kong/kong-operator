@@ -98,7 +98,7 @@ func TestCreate(t *testing.T) {
 				assert.Equal(t, metav1.ConditionFalse, ent.Status.Conditions[0].Status)
 				assert.EqualValues(t, kcfgkonnect.KonnectEntitiesFailedToCreateReason, ent.Status.Conditions[0].Reason)
 				assert.Equal(t,
-					`failed to create KonnectGatewayControlPlane test-ns/test-cp: {"status":400,"title":"Invalid Request","instance":"","detail":"Invalid Parameters","invalid_parameters":[{"field":"labels","rule":"is_label","reason":"Label value exceeds maximum of 63 characters"}]}`,
+					`{"status":400,"title":"Invalid Request","instance":"","detail":"Invalid Parameters","invalid_parameters":[{"field":"labels","rule":"is_label","reason":"Label value exceeds maximum of 63 characters"}]}`,
 					ent.Status.Conditions[0].Message)
 			},
 		},
