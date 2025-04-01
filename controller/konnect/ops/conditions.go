@@ -38,7 +38,7 @@ func SetKonnectEntityProgrammedConditionFalse(
 ) {
 	// Clear the instance field from the error to avoid requeueing the resource
 	// because of the trace ID in the instance field is different for each request.
-	err = clearInstanceFromError(err)
+	err = ClearInstanceFromError(err)
 
 	_setKonnectEntityProgrammedConditon(
 		obj,

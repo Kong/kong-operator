@@ -32,6 +32,8 @@
 - In `KonnectGatewayControlPlane` fields `Status.Endpoints.ControlPlaneEndpoint`
   and `Status.Endpoints.TelemetryEndpoint` are filled with respective values from Konnect.
   [#1415](https://github.com/Kong/gateway-operator/pull/1415)
+- Add `namespacedRef` support for referencing networks in `KonnectCloudGatewayDataPlaneGroupConfiguration`
+  [#1423](https://github.com/Kong/gateway-operator/pull/1423)
 
 ### Changes
 
