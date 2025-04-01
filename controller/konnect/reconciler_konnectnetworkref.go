@@ -56,10 +56,13 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 			err := cl.Get(ctx, nn, &network)
 			if err != nil {
 				setInvalidWithMsg(err.Error())
-				return ctrl.Result{}, ReferencedObjectDoesNotExist{
-					Reference: nn,
-					Err:       err,
+				if k8serrors.IsNotFound(err) {
+					return ctrl.Result{}, ReferencedObjectDoesNotExist{
+						Reference: nn,
+						Err:       err,
+					}
 				}
+				return ctrl.Result{}, fmt.Errorf("failed to get network ref %q: %w", nn, err)
 			}
 
 			if delTimestamp := network.GetDeletionTimestamp(); !delTimestamp.IsZero() {
