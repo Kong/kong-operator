@@ -18,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/config"
 	"github.com/kong/gateway-operator/modules/manager"
 	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -193,7 +194,7 @@ func exitOnErr(err error) {
 func DefaultControllerConfigForTests() manager.Config {
 	cfg := manager.DefaultConfig()
 	cfg.LeaderElection = false
-	cfg.DevelopmentMode = true
+	cfg.LoggingMode = logging.DevelopmentMode
 	cfg.ControllerName = "konghq.com/gateway-operator-integration-tests"
 	cfg.GatewayControllerEnabled = true
 	cfg.ControlPlaneControllerEnabled = true

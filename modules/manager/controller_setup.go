@@ -29,6 +29,7 @@ import (
 	"github.com/kong/gateway-operator/controller/specialized"
 	"github.com/kong/gateway-operator/internal/metrics"
 	"github.com/kong/gateway-operator/internal/utils/index"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -430,7 +431,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			Controller: &gatewayclass.Reconciler{
 				Client:                        mgr.GetClient(),
 				Scheme:                        mgr.GetScheme(),
-				DevelopmentMode:               c.DevelopmentMode,
+				LoggingMode:                   c.LoggingMode,
 				GatewayAPIExperimentalEnabled: c.GatewayAPIExperimentalEnabled,
 			},
 		},
@@ -438,25 +439,28 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		GatewayControllerName: {
 			Enabled: c.GatewayControllerEnabled,
 			Controller: &gateway.Reconciler{
-				Client:                mgr.GetClient(),
-				Scheme:                mgr.GetScheme(),
-				DevelopmentMode:       c.DevelopmentMode,
-				DefaultDataPlaneImage: consts.DefaultDataPlaneImage,
-				KonnectEnabled:        c.KonnectControllersEnabled,
+				Client:                  mgr.GetClient(),
+				Scheme:                  mgr.GetScheme(),
+				DefaultDataPlaneImage:   consts.DefaultDataPlaneImage,
+				KonnectEnabled:          c.KonnectControllersEnabled,
+				AnonymousReportsEnabled: c.AnonymousReports,
+				LoggingMode:             c.LoggingMode,
 			},
 		},
 		// ControlPlane controller
 		ControlPlaneControllerName: {
 			Enabled: c.GatewayControllerEnabled || c.ControlPlaneControllerEnabled,
 			Controller: &controlplane.Reconciler{
-				Client:                   mgr.GetClient(),
-				Scheme:                   mgr.GetScheme(),
-				ClusterCASecretName:      c.ClusterCASecretName,
-				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
-				ClusterCAKeyConfig:       clusterCAKeyConfig,
-				DevelopmentMode:          c.DevelopmentMode,
-				KonnectEnabled:           c.KonnectControllersEnabled,
-				EnforceConfig:            c.EnforceConfig,
+				Client:                    mgr.GetClient(),
+				Scheme:                    mgr.GetScheme(),
+				ClusterCASecretName:       c.ClusterCASecretName,
+				ClusterCASecretNamespace:  c.ClusterCASecretNamespace,
+				ClusterCAKeyConfig:        clusterCAKeyConfig,
+				KonnectEnabled:            c.KonnectControllersEnabled,
+				EnforceConfig:             c.EnforceConfig,
+				AnonymousReportsEnabled:   c.AnonymousReports,
+				LoggingMode:               c.LoggingMode,
+				ValidateControlPlaneImage: c.ValidateImages,
 			},
 		},
 		// DataPlane controller
@@ -468,14 +472,15 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				ClusterCAKeyConfig:       clusterCAKeyConfig,
-				DevelopmentMode:          c.DevelopmentMode,
 				Callbacks: dataplane.DataPlaneCallbacks{
 					BeforeDeployment: dataplane.CreateCallbackManager(),
 					AfterDeployment:  dataplane.CreateCallbackManager(),
 				},
-				DefaultImage:   consts.DefaultDataPlaneImage,
-				KonnectEnabled: c.KonnectControllersEnabled,
-				EnforceConfig:  c.EnforceConfig,
+				DefaultImage:           consts.DefaultDataPlaneImage,
+				KonnectEnabled:         c.KonnectControllersEnabled,
+				EnforceConfig:          c.EnforceConfig,
+				LoggingMode:            c.LoggingMode,
+				ValidateDataPlaneImage: c.ValidateImages,
 			},
 		},
 		// DataPlaneBlueGreen controller
@@ -483,7 +488,6 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			Enabled: c.DataPlaneBlueGreenControllerEnabled,
 			Controller: &dataplane.BlueGreenReconciler{
 				Client:                   mgr.GetClient(),
-				DevelopmentMode:          c.DevelopmentMode,
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				ClusterCAKeyConfig:       clusterCAKeyConfig,
@@ -493,61 +497,64 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					ClusterCASecretName:      c.ClusterCASecretName,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 					ClusterCAKeyConfig:       clusterCAKeyConfig,
-					DevelopmentMode:          c.DevelopmentMode,
 					DefaultImage:             consts.DefaultDataPlaneImage,
 					Callbacks: dataplane.DataPlaneCallbacks{
 						BeforeDeployment: dataplane.CreateCallbackManager(),
 						AfterDeployment:  dataplane.CreateCallbackManager(),
 					},
-					KonnectEnabled: c.KonnectControllersEnabled,
-					EnforceConfig:  c.EnforceConfig,
+					KonnectEnabled:         c.KonnectControllersEnabled,
+					EnforceConfig:          c.EnforceConfig,
+					ValidateDataPlaneImage: c.ValidateImages,
+					LoggingMode:            c.LoggingMode,
 				},
 				Callbacks: dataplane.DataPlaneCallbacks{
 					BeforeDeployment: dataplane.CreateCallbackManager(),
 					AfterDeployment:  dataplane.CreateCallbackManager(),
 				},
-				DefaultImage:   consts.DefaultDataPlaneImage,
-				KonnectEnabled: c.KonnectControllersEnabled,
-				EnforceConfig:  c.EnforceConfig,
+				DefaultImage:           consts.DefaultDataPlaneImage,
+				KonnectEnabled:         c.KonnectControllersEnabled,
+				EnforceConfig:          c.EnforceConfig,
+				ValidateDataPlaneImage: c.ValidateImages,
+				LoggingMode:            c.LoggingMode,
 			},
 		},
 		DataPlaneOwnedServiceFinalizerControllerName: {
 			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled,
 			Controller: dataplane.NewDataPlaneOwnedResourceFinalizerReconciler[corev1.Service](
 				mgr.GetClient(),
-				c.DevelopmentMode,
+				c.LoggingMode,
 			),
 		},
 		DataPlaneOwnedSecretFinalizerControllerName: {
 			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled,
 			Controller: dataplane.NewDataPlaneOwnedResourceFinalizerReconciler[corev1.Secret](
 				mgr.GetClient(),
-				c.DevelopmentMode,
+				c.LoggingMode,
 			),
 		},
 		DataPlaneOwnedDeploymentFinalizerControllerName: {
 			Enabled: c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled,
 			Controller: dataplane.NewDataPlaneOwnedResourceFinalizerReconciler[appsv1.Deployment](
 				mgr.GetClient(),
-				c.DevelopmentMode,
+				c.LoggingMode,
 			),
 		},
 		// AIGateway Controller
 		AIGatewayControllerName: {
 			Enabled: c.AIGatewayControllerEnabled,
 			Controller: &specialized.AIGatewayReconciler{
-				Client:          mgr.GetClient(),
-				Scheme:          mgr.GetScheme(),
-				DevelopmentMode: c.DevelopmentMode,
+				Client:      mgr.GetClient(),
+				Scheme:      mgr.GetScheme(),
+				LoggingMode: c.LoggingMode,
 			},
 		},
 		// KongPluginInstallation controller
 		KongPluginInstallationControllerName: {
 			Enabled: c.KongPluginInstallationControllerEnabled,
 			Controller: &kongplugininstallation.Reconciler{
-				Client:          mgr.GetClient(),
-				Scheme:          mgr.GetScheme(),
-				DevelopmentMode: c.DevelopmentMode,
+				Client:      mgr.GetClient(),
+				Scheme:      mgr.GetScheme(),
+				LoggingMode: c.LoggingMode,
 			},
 		},
 	}
@@ -557,7 +564,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		sdkFactory := sdkops.NewSDKFactory()
 		controllerFactory := konnectControllerFactory{
 			sdkFactory:              sdkFactory,
-			devMode:                 c.DevelopmentMode,
+			loggingMode:             c.LoggingMode,
 			client:                  mgr.GetClient(),
 			syncPeriod:              c.KonnectSyncPeriod,
 			maxConcurrentReconciles: c.KonnectMaxConcurrentReconciles,
@@ -569,7 +576,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				Enabled: c.KonnectControllersEnabled,
 				Controller: konnect.NewKonnectAPIAuthConfigurationReconciler(
 					sdkFactory,
-					c.DevelopmentMode,
+					c.LoggingMode,
 					mgr.GetClient(),
 				),
 			},
@@ -577,7 +584,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			KongPluginControllerName: {
 				Enabled: c.KonnectControllersEnabled,
 				Controller: konnect.NewKongPluginReconciler(
-					c.DevelopmentMode,
+					c.LoggingMode,
 					mgr.GetClient(),
 				),
 			},
@@ -585,7 +592,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			KongCredentialsSecretControllerName: {
 				Enabled: c.KonnectControllersEnabled,
 				Controller: konnect.NewKongCredentialSecretReconciler(
-					c.DevelopmentMode,
+					c.LoggingMode,
 					mgr.GetClient(),
 					mgr.GetScheme(),
 				),
@@ -595,7 +602,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				Enabled: (c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled) && c.KonnectControllersEnabled,
 				Controller: &konnect.KonnectExtensionReconciler{
 					SdkFactory:               sdkFactory,
-					DevelopmentMode:          c.DevelopmentMode,
+					LoggingMode:              c.LoggingMode,
 					Client:                   mgr.GetClient(),
 					SyncPeriod:               c.KonnectSyncPeriod,
 					ClusterCASecretName:      c.ClusterCASecretName,
@@ -651,7 +658,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 
 type konnectControllerFactory struct {
 	sdkFactory              sdkops.SDKFactory
-	devMode                 bool
+	loggingMode             logging.LoggingMode
 	client                  client.Client
 	syncPeriod              time.Duration
 	maxConcurrentReconciles uint
@@ -666,7 +673,7 @@ func newKonnectEntityController[
 		Enabled: true,
 		Controller: konnect.NewKonnectEntityReconciler(
 			f.sdkFactory,
-			f.devMode,
+			f.loggingMode,
 			f.client,
 			konnect.WithKonnectEntitySyncPeriod[T, TEnt](f.syncPeriod),
 			konnect.WithKonnectMaxConcurrentReconciles[T, TEnt](f.maxConcurrentReconciles),
@@ -682,7 +689,7 @@ func newKonnectPluginController[
 	return ControllerDef{
 		Enabled: true,
 		Controller: konnect.NewKonnectEntityPluginReconciler[T, TEnt](
-			f.devMode,
+			f.loggingMode,
 			f.client,
 		),
 	}

@@ -29,6 +29,9 @@ func New(m metadata.Info) *CLI {
 	}
 	var deferCfg flagsForFurtherEvaluation
 
+	flagSet.BoolVar(&cfg.ValidateImages, "validate-images", true, "Validate the images set in ControlPlane and DataPlane specifications.")
+	flagSet.Var(NewValidatedValue[logging.LoggingMode](&cfg.LoggingMode, logging.NewLoggingMode, WithDefault(logging.ProductionMode)), "logging-mode", "Logging mode to use. Possible values: production, development.")
+
 	flagSet.BoolVar(&cfg.AnonymousReports, "anonymous-reports", true, "Send anonymized usage data to help improve Kong.")
 	flagSet.StringVar(&cfg.APIServerPath, "apiserver-host", "", "The Kubernetes API server URL. If not set, the operator will use cluster config discovery.")
 	flagSet.StringVar(&cfg.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
@@ -73,14 +76,7 @@ func New(m metadata.Info) *CLI {
 
 	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information.")
 
-	developmentModeEnabled := manager.DefaultConfig().DevelopmentMode
-	// TODO: clean env handling https://github.com/Kong/gateway-operator-archive/issues/19
-	if os.Getenv(envVarFlagPrefix+"DEVELOPMENT_MODE") == "true" ||
-		os.Getenv("CONTROLLER_DEVELOPMENT_MODE") == "true" {
-		developmentModeEnabled = true
-	}
 	loggerOpts := lo.ToPtr(*manager.DefaultConfig().LoggerOpts)
-	loggerOpts.Development = developmentModeEnabled
 	loggerOpts.BindFlags(flagSet)
 
 	return &CLI{
@@ -148,15 +144,6 @@ func (c *CLI) Metadata() metadata.Info {
 // Must be called after all additional flags in the FlagSet() are defined and before flags are accessed
 // by the program. It returns config for controller manager.
 func (c *CLI) Parse(arguments []string) manager.Config {
-	developmentModeEnabled := manager.DefaultConfig().DevelopmentMode
-	// TODO: clean env handling https://github.com/Kong/gateway-operator-archive/issues/19
-	if os.Getenv(envVarFlagPrefix+"DEVELOPMENT_MODE") == "true" ||
-		os.Getenv("CONTROLLER_DEVELOPMENT_MODE") == "true" {
-		developmentModeEnabled = true
-	}
-
-	// TODO: clean env handling https://github.com/Kong/gateway-operator-archive/issues/19
-
 	// Flags take precedence over environment variables,
 	// so we bind env vars first then parse aruments to override the values from flags.
 	if err := c.bindEnvVarsToFlags(); err != nil {
@@ -167,13 +154,6 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	if err := c.flagSet.Parse(arguments); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
-	}
-
-	anonymousReportsEnabled := c.cfg.AnonymousReports
-	if developmentModeEnabled {
-		// If developmentModeEnabled is true, we want to disable `telemetry` to not pollute telemetry results.
-		// https://github.com/Kong/gateway-operator/issues/1392
-		anonymousReportsEnabled = false
 	}
 
 	if c.deferFlagValues.Version {
@@ -217,13 +197,11 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 		}
 	}
 
-	c.cfg.DevelopmentMode = developmentModeEnabled
 	c.cfg.LeaderElection = leaderElection
 	c.cfg.ControllerNamespace = controllerNamespace
 	c.cfg.ClusterCASecretNamespace = clusterCASecretNamespace
-	c.cfg.LoggerOpts = logging.SetupLogEncoder(c.cfg.DevelopmentMode || c.loggerOpts.Development, c.loggerOpts)
+	c.cfg.LoggerOpts = logging.SetupLogEncoder(c.cfg.LoggingMode, c.loggerOpts)
 	c.cfg.LeaderElectionNamespace = controllerNamespace
-	c.cfg.AnonymousReports = anonymousReportsEnabled
 
 	return *c.cfg
 }

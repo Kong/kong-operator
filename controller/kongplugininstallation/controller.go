@@ -26,6 +26,7 @@ import (
 	"github.com/kong/gateway-operator/controller/kongplugininstallation/image"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
@@ -37,8 +38,8 @@ const kindKongPluginInstallation = gatewayv1.Kind("KongPluginInstallation")
 // Reconciler reconciles a KongPluginInstallation object.
 type Reconciler struct {
 	client.Client
-	Scheme          *runtime.Scheme
-	DevelopmentMode bool
+	Scheme      *runtime.Scheme
+	LoggingMode logging.LoggingMode
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -86,7 +87,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.GetLogger(ctx, "kongplugininstallation", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, "kongplugininstallation", r.LoggingMode)
 
 	log.Trace(logger, "reconciling KongPluginInstallation resource")
 	var kpi operatorv1alpha1.KongPluginInstallation

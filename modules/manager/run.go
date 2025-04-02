@@ -41,22 +41,26 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/internal/telemetry"
 	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
 // Config represents the configuration for the manager.
 type Config struct {
-	MetricsAddr              string
-	MetricsAccessFilter      MetricsAccessFilter
-	ProbeAddr                string
-	LeaderElection           bool
-	LeaderElectionNamespace  string
-	DevelopmentMode          bool
+	MetricsAddr             string
+	MetricsAccessFilter     MetricsAccessFilter
+	ProbeAddr               string
+	LeaderElection          bool
+	LeaderElectionNamespace string
+
+	AnonymousReports bool
+	LoggingMode      logging.LoggingMode
+	ValidateImages   bool
+
 	Out                      *os.File
 	ControllerName           string
 	ControllerNamespace      string
-	AnonymousReports         bool
 	APIServerPath            string
 	KubeconfigPath           string
 	ClusterCASecretName      string
@@ -99,7 +103,6 @@ func DefaultConfig() Config {
 		MetricsAddr:                   ":8080",
 		MetricsAccessFilter:           MetricsAccessFilterOff,
 		ProbeAddr:                     ":8081",
-		DevelopmentMode:               false,
 		LeaderElection:                true,
 		LeaderElectionNamespace:       defaultLeaderElectionNamespace,
 		ClusterCASecretName:           "kong-operator-ca",
@@ -141,10 +144,6 @@ func Run(
 	if cfg.ControllerName != "" {
 		setupLog.Info(fmt.Sprintf("custom controller name provided: %s", cfg.ControllerName))
 		vars.SetControllerName(cfg.ControllerName)
-	}
-
-	if cfg.DevelopmentMode {
-		setupLog.Info("development mode enabled")
 	}
 
 	if cfg.LeaderElection {
@@ -241,7 +240,7 @@ func Run(
 
 	// Enable anonnymous reporting when configured but not for development builds
 	// to reduce the noise.
-	if cfg.AnonymousReports && !cfg.DevelopmentMode {
+	if cfg.AnonymousReports {
 		stopAnonymousReports, err := setupAnonymousReports(ctx, restCfg, setupLog, metadata, cfg)
 		if err != nil {
 			setupLog.Error(err, "failed setting up anonymous reports")

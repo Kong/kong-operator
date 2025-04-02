@@ -21,6 +21,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/server"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -28,9 +29,9 @@ import (
 
 // KonnectAPIAuthConfigurationReconciler reconciles a KonnectAPIAuthConfiguration object.
 type KonnectAPIAuthConfigurationReconciler struct {
-	sdkFactory      sdkops.SDKFactory
-	developmentMode bool
-	client          client.Client
+	sdkFactory  sdkops.SDKFactory
+	client      client.Client
+	loggingMode logging.LoggingMode
 }
 
 const (
@@ -47,13 +48,13 @@ const (
 // NewKonnectAPIAuthConfigurationReconciler creates a new KonnectAPIAuthConfigurationReconciler.
 func NewKonnectAPIAuthConfigurationReconciler(
 	sdkFactory sdkops.SDKFactory,
-	developmentMode bool,
+	loggingMode logging.LoggingMode,
 	client client.Client,
 ) *KonnectAPIAuthConfigurationReconciler {
 	return &KonnectAPIAuthConfigurationReconciler{
-		sdkFactory:      sdkFactory,
-		developmentMode: developmentMode,
-		client:          client,
+		sdkFactory:  sdkFactory,
+		loggingMode: loggingMode,
+		client:      client,
 	}
 }
 
@@ -95,7 +96,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 	var (
 		entityTypeName = "KonnectAPIAuthConfiguration"
-		logger         = log.GetLogger(ctx, entityTypeName, r.developmentMode)
+		logger         = log.GetLogger(ctx, entityTypeName, r.loggingMode)
 	)
 
 	log.Debug(logger, "reconciling")

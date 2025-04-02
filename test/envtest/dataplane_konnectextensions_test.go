@@ -22,6 +22,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -67,13 +68,14 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		ClusterCASecretNamespace: ns.Name,
 		ClusterCAKeyConfig:       clusterCAKeyConfig,
 		DefaultImage:             consts.DefaultDataPlaneImage,
-		DevelopmentMode:          true,
+		LoggingMode:              logging.DevelopmentMode,
+		ValidateDataPlaneImage:   true,
 		KonnectEnabled:           true,
 		EnforceConfig:            true,
 	}
 	konnectExtensionReconciler := &konnect.KonnectExtensionReconciler{
 		Client:                   cl,
-		DevelopmentMode:          true,
+		LoggingMode:              logging.DevelopmentMode,
 		SdkFactory:               factory,
 		SyncPeriod:               time.Hour * 24, // To ensure we don't resync in test. Reconciler will be called automatically on changes.
 		ClusterCASecretName:      clusterCASecretName,

@@ -18,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/watch"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/pkg/vars"
 
@@ -32,8 +33,8 @@ import (
 type AIGatewayReconciler struct {
 	client.Client
 
-	Scheme          *runtime.Scheme
-	DevelopmentMode bool
+	Scheme      *runtime.Scheme
+	LoggingMode logging.LoggingMode
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -61,7 +62,7 @@ func (r *AIGatewayReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 
 // Reconcile reconciles the AIGateway resource.
 func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.GetLogger(ctx, "aigateway", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, "aigateway", r.LoggingMode)
 
 	var aigateway operatorv1alpha1.AIGateway
 	if err := r.Get(ctx, req.NamespacedName, &aigateway); err != nil {

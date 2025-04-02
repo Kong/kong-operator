@@ -27,6 +27,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
@@ -61,10 +62,6 @@ type BlueGreenReconciler struct {
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
 
-	// DevelopmentMode indicates if the controller should run in development mode,
-	// which causes it to e.g. perform less validations.
-	DevelopmentMode bool
-
 	// Callbacks is a set of Callback functions to run at various stages of reconciliation.
 	Callbacks DataPlaneCallbacks
 
@@ -74,7 +71,9 @@ type BlueGreenReconciler struct {
 
 	KonnectEnabled bool
 
-	EnforceConfig bool
+	EnforceConfig          bool
+	ValidateDataPlaneImage bool
+	LoggingMode            logging.LoggingMode
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -101,7 +100,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	logger := log.GetLogger(ctx, "dataplaneBlueGreen", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, "dataplaneBlueGreen", r.LoggingMode)
 
 	// Blue Green rollout strategy is not enabled, delegate to DataPlane controller.
 	if dataplane.Spec.Deployment.Rollout == nil || dataplane.Spec.Deployment.Rollout.Strategy.BlueGreen == nil {
@@ -396,7 +395,7 @@ func (r *BlueGreenReconciler) prunePreviewSubresources(
 	ctx context.Context,
 	dataplane *operatorv1beta1.DataPlane,
 ) error {
-	logger := log.GetLogger(ctx, "dataplaneBlueGreen", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, "dataplaneBlueGreen", r.LoggingMode)
 
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
@@ -535,7 +534,7 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 		WithDefaultImage(r.DefaultImage).
 		WithAdditionalLabels(deploymentLabels)
 
-	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.DevelopmentMode)
+	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.ValidateDataPlaneImage)
 	if err != nil {
 		return nil, op.Noop, fmt.Errorf("failed to ensure Deployment for DataPlane: %w", err)
 	}

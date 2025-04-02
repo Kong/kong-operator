@@ -16,6 +16,7 @@ import (
 	"github.com/kong/gateway-operator/controller"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 )
 
@@ -27,7 +28,7 @@ import (
 type Reconciler struct {
 	client.Client
 	Scheme                        *runtime.Scheme
-	DevelopmentMode               bool
+	LoggingMode                   logging.LoggingMode
 	GatewayAPIExperimentalEnabled bool
 }
 
@@ -41,7 +42,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.GetLogger(ctx, "gatewayclass", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, "gatewayclass", r.LoggingMode)
 
 	log.Trace(logger, "reconciling gatewayclass resource")
 

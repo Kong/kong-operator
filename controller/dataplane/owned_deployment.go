@@ -90,7 +90,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	ctx context.Context,
 	dataplane *operatorv1beta1.DataPlane,
 	enforceConfig bool,
-	developmentMode bool,
+	validateDataPlaneImage bool,
 ) (*appsv1.Deployment, op.Result, error) {
 	// run any preparatory callbacks
 	beforeDeploymentCallbacks := NewCallbackRunner(d.client)
@@ -112,7 +112,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	}
 
 	// generate the initial Deployment struct
-	desiredDeployment, err := generateDataPlaneDeployment(developmentMode, dataplane, d.defaultImage, d.additionalLabels, d.opts...)
+	desiredDeployment, err := generateDataPlaneDeployment(validateDataPlaneImage, dataplane, d.defaultImage, d.additionalLabels, d.opts...)
 	if err != nil {
 		return nil, op.Noop, fmt.Errorf("could not generate Deployment: %w", err)
 	}
@@ -160,7 +160,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 // generateDataPlaneDeployment generates the base Deployment for a DataPlane. It determines the image to use and
 // generates an opt transform function to add additional labels before invoking the generator utility.
 func generateDataPlaneDeployment(
-	developmentMode bool,
+	validateDataPlaneImage bool,
 	dataplane *operatorv1beta1.DataPlane,
 	defaultImage string,
 	additionalDeploymentLabels client.MatchingLabels,
@@ -171,7 +171,7 @@ func generateDataPlaneDeployment(
 	}
 
 	versionValidationOptions := make([]versions.VersionValidationOption, 0)
-	if !developmentMode {
+	if validateDataPlaneImage {
 		versionValidationOptions = append(versionValidationOptions, versions.IsDataPlaneImageVersionSupported)
 	}
 	dataplaneImage, err := generateDataPlaneImage(dataplane, defaultImage, versionValidationOptions...)

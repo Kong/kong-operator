@@ -24,6 +24,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/index"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/clientops"
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 
@@ -70,21 +71,21 @@ const (
 
 // KongCredentialSecretReconciler reconciles a KongPlugin object.
 type KongCredentialSecretReconciler struct {
-	developmentMode bool
-	client          client.Client
-	scheme          *runtime.Scheme
+	loggingMode logging.LoggingMode
+	client      client.Client
+	scheme      *runtime.Scheme
 }
 
 // NewKongCredentialSecretReconciler creates a new KongCredentialSecretReconciler.
 func NewKongCredentialSecretReconciler(
-	developmentMode bool,
+	loggingMode logging.LoggingMode,
 	client client.Client,
 	scheme *runtime.Scheme,
 ) *KongCredentialSecretReconciler {
 	return &KongCredentialSecretReconciler{
-		developmentMode: developmentMode,
-		client:          client,
-		scheme:          scheme,
+		loggingMode: loggingMode,
+		client:      client,
+		scheme:      scheme,
 	}
 }
 
@@ -196,7 +197,7 @@ func (r *KongCredentialSecretReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	logger := log.GetLogger(ctx, "Secret", r.developmentMode)
+	logger := log.GetLogger(ctx, "Secret", r.loggingMode)
 	log.Debug(logger, "reconciling")
 
 	if !secret.GetDeletionTimestamp().IsZero() {

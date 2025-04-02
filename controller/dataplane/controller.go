@@ -19,6 +19,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
@@ -39,12 +40,13 @@ type Reconciler struct {
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
-	DevelopmentMode          bool
 	Callbacks                DataPlaneCallbacks
 	ContextInjector          ctxinjector.CtxInjector
 	DefaultImage             string
 	KonnectEnabled           bool
 	EnforceConfig            bool
+	LoggingMode              logging.LoggingMode
+	ValidateDataPlaneImage   bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -63,7 +65,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// Calling it here ensures that evaluated values will be used for the duration of this function.
 	ctx = r.ContextInjector.InjectKeyValues(ctx)
-	logger := log.GetLogger(ctx, "dataplane", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, "dataplane", r.LoggingMode)
 
 	log.Trace(logger, "reconciling DataPlane resource")
 	dpNn := req.NamespacedName
@@ -121,7 +123,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	serviceRes, dataplaneIngressService, err := ensureIngressServiceForDataPlane(
 		ctx,
-		log.GetLogger(ctx, "dataplane_ingress_service", r.DevelopmentMode),
+		log.GetLogger(ctx, "dataplane_ingress_service", r.LoggingMode),
 		r.Client,
 		dataplane,
 		additionalServiceLabels,
@@ -208,7 +210,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		WithDefaultImage(r.DefaultImage).
 		WithAdditionalLabels(deploymentLabels)
 
-	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.DevelopmentMode)
+	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.ValidateDataPlaneImage)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("could not build Deployment for DataPlane %s: %w", dpNn, err)
 	}

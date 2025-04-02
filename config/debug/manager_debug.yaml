@@ -35,8 +35,8 @@ spec:
             - -enable-controller-konnect
           name: manager
           env:
-            - name: GATEWAY_OPERATOR_DEVELOPMENT_MODE
-              value: "true"
+            - name: GATEWAY_OPERATOR_ANONYMOUS_REPORTS
+              value: "false"
           resources:
             limits:
               cpu: 1000m
