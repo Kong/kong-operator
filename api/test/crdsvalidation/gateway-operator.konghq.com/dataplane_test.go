@@ -5,8 +5,10 @@ import (
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+	"github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	"github.com/kong/kubernetes-configuration/test/crdsvalidation/common"
 )
@@ -312,6 +314,78 @@ func TestDataplane(t *testing.T) {
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("Unsupported value: \"ExternalName\""),
+			},
+		}.Run(t)
+	})
+
+	t.Run("spec update", func(t *testing.T) {
+		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
+			{
+				Name: "cannot update spec when in the middle of promotion",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+						},
+					},
+					Status: operatorv1beta1.DataPlaneStatus{
+						RolloutStatus: &operatorv1beta1.DataPlaneRolloutStatus{
+							Conditions: []metav1.Condition{
+								{
+									Type:               string(dataplane.DataPlaneConditionTypeRolledOut),
+									Status:             metav1.ConditionFalse,
+									Reason:             string(dataplane.DataPlaneConditionReasonRolloutPromotionInProgress),
+									LastTransitionTime: metav1.Now(),
+								},
+							},
+						},
+					},
+				},
+				Update: func(d *operatorv1beta1.DataPlane) {
+					d.Spec.Deployment.PodTemplateSpec.Labels = map[string]string{"foo": "bar"}
+				},
+				ExpectedUpdateErrorMessage: lo.ToPtr("DataPlane spec cannot be updated when promotion is in progress"),
+			},
+			{
+				Name: "can update spec when promotion complete",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+						},
+					},
+					Status: operatorv1beta1.DataPlaneStatus{
+						RolloutStatus: &operatorv1beta1.DataPlaneRolloutStatus{
+							Conditions: []metav1.Condition{
+								{
+									Type:               string(dataplane.DataPlaneConditionTypeRolledOut),
+									Status:             metav1.ConditionTrue,
+									Reason:             string(dataplane.DataPlaneConditionReasonRolloutPromotionDone),
+									LastTransitionTime: metav1.Now(),
+								},
+							},
+						},
+					},
+				},
+				Update: func(d *operatorv1beta1.DataPlane) {
+					d.Spec.Deployment.PodTemplateSpec.Labels = map[string]string{"foo": "bar"}
+				},
+			},
+			{
+				Name: "can update spec when rollout is not in progress",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+						},
+					},
+				},
+				Update: func(d *operatorv1beta1.DataPlane) {
+					d.Spec.Deployment.PodTemplateSpec.Labels = map[string]string{"foo": "bar"}
+				},
 			},
 		}.Run(t)
 	})
