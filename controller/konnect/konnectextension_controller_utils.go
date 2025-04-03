@@ -31,7 +31,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// getGatewayKonnectControlPlane retrieves the Konnect Control Plane form K8s cluster
+// getGatewayKonnectControlPlane retrieves the Konnect Control Plane from K8s cluster
 // based on the provided KonnectExtension specification.
 // It supports two types of ControlPlaneRef: KonnectNamespacedRef and KonnectID.
 //
