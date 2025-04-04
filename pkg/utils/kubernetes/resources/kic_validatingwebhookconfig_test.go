@@ -13,27 +13,30 @@ import (
 
 func TestGenerateValidatingWebhookConfigurationForControlPlane(t *testing.T) {
 	testCases := []struct {
-		image         string
-		expectedError error
-		devMode       bool
+		image                     string
+		expectedError             error
+		validateControlPlaneImage bool
 	}{
 		{
-			image: "kong/kubernetes-ingress-controller:3.2.0",
+			image:                     "kong/kubernetes-ingress-controller:3.2.0",
+			validateControlPlaneImage: true,
 		},
 		{
-			image: "kong/kubernetes-ingress-controller:3.1.2",
+			image:                     "kong/kubernetes-ingress-controller:3.1.2",
+			validateControlPlaneImage: true,
 		},
 		{
-			image:         "kong/kubernetes-ingress-controller:3.0.0",
-			expectedError: k8sresources.ErrControlPlaneVersionNotSupported,
+			image:                     "kong/kubernetes-ingress-controller:3.0.0",
+			validateControlPlaneImage: true,
+			expectedError:             k8sresources.ErrControlPlaneVersionNotSupported,
 		},
 		{
-			image:   "kong/kubernetes-ingress-controller:febecdfe",
-			devMode: true,
+			image:                     "kong/kubernetes-ingress-controller:febecdfe",
+			validateControlPlaneImage: false,
 		},
 		{
-			image:   "kong/nightly-ingress-controller:nightly",
-			devMode: true,
+			image:                     "kong/nightly-ingress-controller:nightly",
+			validateControlPlaneImage: false,
 		},
 	}
 	for _, tc := range testCases {
@@ -41,7 +44,7 @@ func TestGenerateValidatingWebhookConfigurationForControlPlane(t *testing.T) {
 			cfg, err := k8sresources.GenerateValidatingWebhookConfigurationForControlPlane(
 				"webhook",
 				tc.image,
-				tc.devMode,
+				tc.validateControlPlaneImage,
 				admregv1.WebhookClientConfig{
 					Service: &admregv1.ServiceReference{
 						Name:      "svc",

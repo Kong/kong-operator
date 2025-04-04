@@ -916,6 +916,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 				Client:                   fakeClient,
 				ClusterCASecretName:      mtlsSecret.Name,
 				ClusterCASecretNamespace: mtlsSecret.Namespace,
+				ValidateDataPlaneImage:   true,
 				ClusterCAKeyConfig: secrets.KeyConfig{
 					Type: x509.ECDSA,
 				},

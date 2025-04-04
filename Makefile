@@ -550,7 +550,8 @@ KUBECONFIG ?= $(HOME)/.kube/config
 .PHONY: _run
 _run:
 	KUBECONFIG=$(KUBECONFIG) \
-		GATEWAY_OPERATOR_DEVELOPMENT_MODE=true \
+		GATEWAY_OPERATOR_ANONYMOUS_REPORTS=false \
+		GATEWAY_OPERATOR_LOGGING_MODE=development \
 		go run ./cmd/main.go \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
@@ -592,7 +593,9 @@ run.skaffold:
 
 .PHONY: debug
 debug: manifests generate install.all _ensure-kong-system-namespace
-	GATEWAY_OPERATOR_DEVELOPMENT_MODE=true dlv debug ./cmd/main.go -- \
+	GATEWAY_OPERATOR_ANONYMOUS_REPORTS=false \
+	GATEWAY_OPERATOR_LOGGING_MODE=development \
+		dlv debug ./cmd/main.go -- \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
 		--enable-controller-aigateway \

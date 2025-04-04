@@ -15,6 +15,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
@@ -33,7 +34,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
 	StartReconcilers(ctx, t, mgr, logs,
-		konnect.NewKonnectAPIAuthConfigurationReconciler(factory, false, mgr.GetClient()),
+		konnect.NewKonnectAPIAuthConfigurationReconciler(factory, logging.DevelopmentMode, mgr.GetClient()),
 	)
 
 	t.Log("Setting up clients")

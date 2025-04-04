@@ -31,6 +31,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/internal/utils/index"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/consts"
 	konnectresource "github.com/kong/gateway-operator/pkg/utils/konnect/resources"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -43,7 +44,7 @@ import (
 // KonnectExtensionReconciler reconciles a KonnectExtension object.
 type KonnectExtensionReconciler struct {
 	client.Client
-	DevelopmentMode          bool
+	LoggingMode              logging.Mode
 	SdkFactory               sdkops.SDKFactory
 	SyncPeriod               time.Duration
 	ClusterCASecretName      string
@@ -142,7 +143,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	logger := log.GetLogger(ctx, konnectv1alpha1.KonnectExtensionKind, r.DevelopmentMode).WithValues("konnectExtension", req.NamespacedName)
+	logger := log.GetLogger(ctx, konnectv1alpha1.KonnectExtensionKind, r.LoggingMode).WithValues("konnectExtension", req.NamespacedName)
 
 	var (
 		dataPlaneList    operatorv1beta1.DataPlaneList

@@ -122,7 +122,7 @@ var ErrControlPlaneVersionNotSupported = fmt.Errorf("version not supported")
 // GenerateNewClusterRoleForControlPlane is a helper function that extract
 // the version from the tag, and returns the ClusterRole with all the needed
 // permissions.
-func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string, devMode bool) (*rbacv1.ClusterRole, error) {
+func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string, validateControlPlaneImage bool) (*rbacv1.ClusterRole, error) {
 	versionToUse := versions.DefaultControlPlaneVersion
 	var constraint *semver.Constraints
 
@@ -131,15 +131,15 @@ func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string
 		// of the controlplane. When an invalid or unsupported image is used in dev mode,
 		// the clusterRole associated to the default ControlPlane image is used instead.
 		v, err := versions.FromImage(image)
-		if err != nil && !devMode {
+		if err != nil && validateControlPlaneImage {
 				return nil, err
 		}
 
 		supported, err := versions.IsControlPlaneImageVersionSupported(image)
-		if err != nil && !devMode {
+		if err != nil && validateControlPlaneImage {
 			return nil, err
 		}
-		if devMode {
+		if !validateControlPlaneImage {
 			if !supported {
 				v, err = semverv4.Parse(versions.DefaultControlPlaneVersion)
 				if err != nil {

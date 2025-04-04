@@ -35,6 +35,12 @@
   [#1415](https://github.com/Kong/gateway-operator/pull/1415)
 - Add `namespacedRef` support for referencing networks in `KonnectCloudGatewayDataPlaneGroupConfiguration`
   [#1423](https://github.com/Kong/gateway-operator/pull/1423)
+- Introduced new CLI flags:
+  - `--logging-mode` (or `GATEWAY_OPERATOR_LOGGING_MODE` env var) to set the logging mode (`development` can be set
+    for simplified logging).
+  - `--validate-images` (or `GATEWAY_OPERATOR_VALIDATE_IMAGES` env var) to enable ControlPlane and DataPlane image 
+    validation (it's set by default to `true`).
+  [#1435](https://github.com/Kong/gateway-operator/pull/1435)
 
 ### Changes
 

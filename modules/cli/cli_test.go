@@ -40,22 +40,23 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			name: "no command line arguments, many environment variables",
+			name: "no command line arguments, logging mode is set to development, anonymous reports off",
 			args: []string{},
 			envVars: map[string]string{
-				"POD_NAMESPACE":                     "test",
-				"GATEWAY_OPERATOR_DEVELOPMENT_MODE": "true",
+				"POD_NAMESPACE":                      "test",
+				"GATEWAY_OPERATOR_LOGGING_MODE":      "development",
+				"GATEWAY_OPERATOR_ANONYMOUS_REPORTS": "false",
 			},
 			expectedCfg: func() manager.Config {
 				cfg := expectedDefaultCfg()
 				cfg.LeaderElectionNamespace = "test"
 				cfg.ClusterCASecretNamespace = "test"
 				cfg.ControllerNamespace = "test"
-				// All the below config changes are the result of GATEWAY_OPERATOR_DEVELOPMENT_MODE=true.
-				cfg.DevelopmentMode = true
+				// All the below config changes are the result of GATEWAY_OPERATOR_LOGGING_MODE=development.
+				cfg.LoggingMode = logging.DevelopmentMode
 				loggerOpts := manager.DefaultConfig().LoggerOpts
 				loggerOpts.Development = true
-				cfg.LoggerOpts = logging.SetupLogEncoder(true, loggerOpts)
+				cfg.LoggerOpts = logging.SetupLogEncoder(logging.DevelopmentMode, loggerOpts)
 				cfg.AnonymousReports = false
 				return cfg
 			},
@@ -169,7 +170,8 @@ func expectedDefaultCfg() manager.Config {
 		ProbeAddr:                               ":8081",
 		LeaderElection:                          true,
 		LeaderElectionNamespace:                 "kong-system",
-		DevelopmentMode:                         false,
+		LoggingMode:                             logging.ProductionMode,
+		ValidateImages:                          true,
 		EnforceConfig:                           true,
 		ControllerName:                          "",
 		ControllerNamespace:                     "kong-system",

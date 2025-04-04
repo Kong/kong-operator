@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
@@ -41,11 +42,11 @@ func TestKongPluginFinalizer(t *testing.T) {
 	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	StartReconcilers(ctx, t, mgr, logs,
-		konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongService](false, cl),
-		konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongRoute](false, cl),
-		konnect.NewKonnectEntityPluginReconciler[configurationv1.KongConsumer](false, cl),
-		konnect.NewKonnectEntityPluginReconciler[configurationv1beta1.KongConsumerGroup](false, cl),
-		konnect.NewKongPluginReconciler(false, cl),
+		konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongService](logging.DevelopmentMode, cl),
+		konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongRoute](logging.DevelopmentMode, cl),
+		konnect.NewKonnectEntityPluginReconciler[configurationv1.KongConsumer](logging.DevelopmentMode, cl),
+		konnect.NewKonnectEntityPluginReconciler[configurationv1beta1.KongConsumerGroup](logging.DevelopmentMode, cl),
+		konnect.NewKongPluginReconciler(logging.DevelopmentMode, cl),
 	)
 
 	t.Run("KongService", func(t *testing.T) {

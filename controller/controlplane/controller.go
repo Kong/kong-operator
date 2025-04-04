@@ -36,6 +36,7 @@ import (
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/internal/versions"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -49,13 +50,15 @@ import (
 // Reconciler reconciles a ControlPlane object
 type Reconciler struct {
 	client.Client
-	Scheme                   *runtime.Scheme
-	ClusterCASecretName      string
-	ClusterCASecretNamespace string
-	ClusterCAKeyConfig       secrets.KeyConfig
-	DevelopmentMode          bool
-	KonnectEnabled           bool
-	EnforceConfig            bool
+	Scheme                    *runtime.Scheme
+	ClusterCASecretName       string
+	ClusterCASecretNamespace  string
+	ClusterCAKeyConfig        secrets.KeyConfig
+	KonnectEnabled            bool
+	EnforceConfig             bool
+	LoggingMode               logging.Mode
+	ValidateControlPlaneImage bool
+	AnonymousReportsEnabled   bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -145,7 +148,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.GetLogger(ctx, "controlplane", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, "controlplane", r.LoggingMode)
 
 	log.Trace(logger, "reconciling ControlPlane resource")
 	cp := new(operatorv1beta1.ControlPlane)
@@ -293,7 +296,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "validating ControlPlane configuration")
-	if err := validateControlPlane(cp, r.DevelopmentMode); err != nil {
+	if err := validateControlPlane(cp, r.ValidateControlPlaneImage); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -304,7 +307,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		ControlPlaneName:            cp.Name,
 		DataPlaneIngressServiceName: dataplaneIngressServiceName,
 		DataPlaneAdminServiceName:   dataplaneAdminServiceName,
-		AnonymousReportsEnabled:     controlplane.DeduceAnonymousReportsEnabled(r.DevelopmentMode, &cp.Spec.ControlPlaneOptions),
+		AnonymousReportsEnabled:     controlplane.DeduceAnonymousReportsEnabled(r.AnonymousReportsEnabled, &cp.Spec.ControlPlaneOptions),
 	}
 	for _, owner := range cp.OwnerReferences {
 		if strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) && owner.Kind == "Gateway" {
@@ -473,9 +476,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 // validateControlPlane validates the control plane.
-func validateControlPlane(controlPlane *operatorv1beta1.ControlPlane, devMode bool) error {
+func validateControlPlane(controlPlane *operatorv1beta1.ControlPlane, validateControlPlaneImage bool) error {
 	versionValidationOptions := make([]versions.VersionValidationOption, 0)
-	if !devMode {
+	if validateControlPlaneImage {
 		versionValidationOptions = append(versionValidationOptions, versions.IsControlPlaneImageVersionSupported)
 	}
 	_, err := controlplane.GenerateImage(&controlPlane.Spec.ControlPlaneOptions, versionValidationOptions...)
