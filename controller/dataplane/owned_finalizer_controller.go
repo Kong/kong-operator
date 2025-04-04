@@ -65,7 +65,7 @@ type DeepCopier[T DataPlaneOwnedResource, PT ClientObjectPointer[T]] interface {
 // https://github.com/Kong/gateway-operator/issues/1028
 type DataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT DataPlaneOwnedResourcePointer[T, PT]] struct {
 	Client      client.Client
-	LoggingMode logging.LoggingMode
+	LoggingMode logging.Mode
 }
 
 // NewDataPlaneOwnedResourceFinalizerReconciler returns a new DataPlaneOwnedResourceFinalizerReconciler for a type passed
@@ -79,7 +79,7 @@ type DataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT Data
 //	NewDataPlaneOwnedResourceFinalizerReconciler[corev1.Service, *corev1.Service](...).
 func NewDataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT DataPlaneOwnedResourcePointer[T, PT]](
 	client client.Client,
-	loggingMode logging.LoggingMode,
+	loggingMode logging.Mode,
 ) *DataPlaneOwnedResourceFinalizerReconciler[T, PT] {
 	return &DataPlaneOwnedResourceFinalizerReconciler[T, PT]{
 		Client:      client,

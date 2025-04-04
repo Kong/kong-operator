@@ -31,7 +31,7 @@ import (
 type KonnectAPIAuthConfigurationReconciler struct {
 	sdkFactory  sdkops.SDKFactory
 	client      client.Client
-	loggingMode logging.LoggingMode
+	loggingMode logging.Mode
 }
 
 const (
@@ -48,7 +48,7 @@ const (
 // NewKonnectAPIAuthConfigurationReconciler creates a new KonnectAPIAuthConfigurationReconciler.
 func NewKonnectAPIAuthConfigurationReconciler(
 	sdkFactory sdkops.SDKFactory,
-	loggingMode logging.LoggingMode,
+	loggingMode logging.Mode,
 	client client.Client,
 ) *KonnectAPIAuthConfigurationReconciler {
 	return &KonnectAPIAuthConfigurationReconciler{

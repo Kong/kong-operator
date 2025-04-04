@@ -45,7 +45,7 @@ type Reconciler struct {
 	DefaultImage             string
 	KonnectEnabled           bool
 	EnforceConfig            bool
-	LoggingMode              logging.LoggingMode
+	LoggingMode              logging.Mode
 	ValidateDataPlaneImage   bool
 }
 

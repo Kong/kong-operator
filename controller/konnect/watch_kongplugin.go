@@ -29,7 +29,7 @@ func mapPluginsFromAnnotation[
 			configurationv1beta1.KongConsumerGroup
 		GetTypeName() string
 	},
-](loggingMode logging.LoggingMode) func(ctx context.Context, obj client.Object) []ctrl.Request {
+](loggingMode logging.Mode) func(ctx context.Context, obj client.Object) []ctrl.Request {
 	return func(ctx context.Context, obj client.Object) []ctrl.Request {
 		_, ok := any(obj).(*T)
 		if !ok {

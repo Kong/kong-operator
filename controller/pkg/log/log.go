@@ -51,7 +51,7 @@ func oddKeyValues(logger logr.Logger, msg string, keysAndValues ...interface{}) 
 }
 
 // GetLogger returns a configured instance of logger.
-func GetLogger(ctx context.Context, controllerName string, loggingMode logging.LoggingMode) logr.Logger {
+func GetLogger(ctx context.Context, controllerName string, loggingMode logging.Mode) logr.Logger {
 	// if development mode is active, do not add the context to the log line, as we want
 	// to have a lighter logging structure
 	if loggingMode == logging.DevelopmentMode {

@@ -2,22 +2,22 @@ package logging
 
 import "fmt"
 
-// LoggingMode is the type for the logging mode.
-type LoggingMode string
+// Mode is the type for the logging mode.
+type Mode string
 
-func (l LoggingMode) String() string {
+func (l Mode) String() string {
 	return string(l)
 }
 
 const (
 	// DevelopmentMode is the development logging mode.
-	DevelopmentMode LoggingMode = "development"
+	DevelopmentMode Mode = "development"
 	// ProductionMode is the production logging mode.
-	ProductionMode LoggingMode = "production"
+	ProductionMode Mode = "production"
 )
 
-// NewLoggingMode creates a new LoggingMode from a string.
-func NewLoggingMode(mode string) (LoggingMode, error) {
+// NewMode creates a new Mode from a string.
+func NewMode(mode string) (Mode, error) {
 	switch mode {
 	case string(DevelopmentMode):
 		return DevelopmentMode, nil

@@ -30,7 +30,7 @@ var (
 // SetupLogEncoder sets additional logger configuration options when development mode is enabled.
 // In this way, the log structure is lighter and more human-friendly when the development mode
 // is enabled.
-func SetupLogEncoder(loggingMode LoggingMode, options *zap.Options) *zap.Options {
+func SetupLogEncoder(loggingMode Mode, options *zap.Options) *zap.Options {
 	if loggingMode == DevelopmentMode {
 		options.Development = true
 		options.TimeEncoder = defaultDevTimeEncoder

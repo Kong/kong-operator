@@ -61,7 +61,7 @@ type Reconciler struct {
 	DefaultDataPlaneImage   string
 	KonnectEnabled          bool
 	AnonymousReportsEnabled bool
-	LoggingMode             logging.LoggingMode
+	LoggingMode             logging.Mode
 }
 
 // provisionDataPlaneFailRequeueAfter is the time duration after which we retry provisioning

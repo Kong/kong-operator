@@ -28,7 +28,7 @@ import (
 type Reconciler struct {
 	client.Client
 	Scheme                        *runtime.Scheme
-	LoggingMode                   logging.LoggingMode
+	LoggingMode                   logging.Mode
 	GatewayAPIExperimentalEnabled bool
 }
 

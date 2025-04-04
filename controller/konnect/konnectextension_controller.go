@@ -44,7 +44,7 @@ import (
 // KonnectExtensionReconciler reconciles a KonnectExtension object.
 type KonnectExtensionReconciler struct {
 	client.Client
-	LoggingMode              logging.LoggingMode
+	LoggingMode              logging.Mode
 	SdkFactory               sdkops.SDKFactory
 	SyncPeriod               time.Duration
 	ClusterCASecretName      string

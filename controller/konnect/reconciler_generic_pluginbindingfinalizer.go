@@ -33,7 +33,7 @@ type KonnectEntityPluginBindingFinalizerReconciler[
 	T constraints.SupportedKonnectEntityPluginReferenceableType,
 	TEnt constraints.EntityType[T],
 ] struct {
-	LoggingMode logging.LoggingMode
+	LoggingMode logging.Mode
 	Client      client.Client
 }
 
@@ -43,7 +43,7 @@ func NewKonnectEntityPluginReconciler[
 	T constraints.SupportedKonnectEntityPluginReferenceableType,
 	TEnt constraints.EntityType[T],
 ](
-	loggingMode logging.LoggingMode,
+	loggingMode logging.Mode,
 	client client.Client,
 ) *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt] {
 	r := &KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]{

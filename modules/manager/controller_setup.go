@@ -658,7 +658,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 
 type konnectControllerFactory struct {
 	sdkFactory              sdkops.SDKFactory
-	loggingMode             logging.LoggingMode
+	loggingMode             logging.Mode
 	client                  client.Client
 	syncPeriod              time.Duration
 	maxConcurrentReconciles uint

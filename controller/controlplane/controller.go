@@ -56,7 +56,7 @@ type Reconciler struct {
 	ClusterCAKeyConfig        secrets.KeyConfig
 	KonnectEnabled            bool
 	EnforceConfig             bool
-	LoggingMode               logging.LoggingMode
+	LoggingMode               logging.Mode
 	ValidateControlPlaneImage bool
 	AnonymousReportsEnabled   bool
 }

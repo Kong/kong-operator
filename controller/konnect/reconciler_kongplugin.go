@@ -36,13 +36,13 @@ import (
 
 // KongPluginReconciler reconciles a KongPlugin object.
 type KongPluginReconciler struct {
-	loggingMode logging.LoggingMode
+	loggingMode logging.Mode
 	client      client.Client
 }
 
 // NewKongPluginReconciler creates a new KongPluginReconciler.
 func NewKongPluginReconciler(
-	loggingMode logging.LoggingMode,
+	loggingMode logging.Mode,
 	client client.Client,
 ) *KongPluginReconciler {
 	return &KongPluginReconciler{

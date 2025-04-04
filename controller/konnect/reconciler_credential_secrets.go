@@ -71,14 +71,14 @@ const (
 
 // KongCredentialSecretReconciler reconciles a KongPlugin object.
 type KongCredentialSecretReconciler struct {
-	loggingMode logging.LoggingMode
+	loggingMode logging.Mode
 	client      client.Client
 	scheme      *runtime.Scheme
 }
 
 // NewKongCredentialSecretReconciler creates a new KongCredentialSecretReconciler.
 func NewKongCredentialSecretReconciler(
-	loggingMode logging.LoggingMode,
+	loggingMode logging.Mode,
 	client client.Client,
 	scheme *runtime.Scheme,
 ) *KongCredentialSecretReconciler {

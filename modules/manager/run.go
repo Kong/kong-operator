@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -55,7 +56,7 @@ type Config struct {
 	LeaderElectionNamespace string
 
 	AnonymousReports bool
-	LoggingMode      logging.LoggingMode
+	LoggingMode      logging.Mode
 	ValidateImages   bool
 
 	Out                      *os.File
@@ -135,11 +136,14 @@ func Run(
 	metadata metadata.Info,
 ) error {
 	setupLog := ctrl.Log.WithName("setup")
+
 	setupLog.Info("starting controller manager",
 		"release", metadata.Release,
 		"repo", metadata.Repo,
 		"commit", metadata.Commit,
 	)
+
+	warnIfLegacyDevelopmentModeEnabled(setupLog)
 
 	if cfg.ControllerName != "" {
 		setupLog.Info(fmt.Sprintf("custom controller name provided: %s", cfg.ControllerName))
@@ -259,6 +263,32 @@ func Run(
 	}
 
 	return nil
+}
+
+// warnIfLegacyDevelopmentModeEnabled logs a warning if any of the legacy development mode environment variables are set
+// and suggests the new environment variables to use instead.
+// This can be removed after a few releases.
+func warnIfLegacyDevelopmentModeEnabled(log logr.Logger) {
+	legacyEnvVars := []string{
+		"GATEWAY_OPERATOR_DEVELOPMENT_MODE",
+		"CONTROLLER_DEVELOPMENT_MODE",
+	}
+
+	replacingEnvVars := []string{
+		"GATEWAY_OPERATOR_ANONYMOUS_REPORTS",
+		"GATEWAY_OPERATOR_LOGGING_MODE",
+		"GATEWAY_OPERATOR_VALIDATE_IMAGES",
+	}
+
+	for _, envVar := range legacyEnvVars {
+		if os.Getenv(envVar) != "" {
+			log.Info(fmt.Sprintf(
+				"WARNING: %s is ineffective. Depending on your needs, use one of: %s",
+				envVar,
+				strings.Join(replacingEnvVars, ", "),
+			))
+		}
+	}
 }
 
 // caManager is a manager responsible for creating a cluster CA certificate.

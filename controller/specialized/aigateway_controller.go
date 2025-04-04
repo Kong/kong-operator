@@ -34,7 +34,7 @@ type AIGatewayReconciler struct {
 	client.Client
 
 	Scheme      *runtime.Scheme
-	LoggingMode logging.LoggingMode
+	LoggingMode logging.Mode
 }
 
 // SetupWithManager sets up the controller with the Manager.

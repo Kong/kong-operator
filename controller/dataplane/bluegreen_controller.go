@@ -73,7 +73,7 @@ type BlueGreenReconciler struct {
 
 	EnforceConfig          bool
 	ValidateDataPlaneImage bool
-	LoggingMode            logging.LoggingMode
+	LoggingMode            logging.Mode
 }
 
 // SetupWithManager sets up the controller with the Manager.

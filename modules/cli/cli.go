@@ -30,7 +30,7 @@ func New(m metadata.Info) *CLI {
 	var deferCfg flagsForFurtherEvaluation
 
 	flagSet.BoolVar(&cfg.ValidateImages, "validate-images", true, "Validate the images set in ControlPlane and DataPlane specifications.")
-	flagSet.Var(NewValidatedValue[logging.LoggingMode](&cfg.LoggingMode, logging.NewLoggingMode, WithDefault(logging.ProductionMode)), "logging-mode", "Logging mode to use. Possible values: production, development.")
+	flagSet.Var(NewValidatedValue[logging.Mode](&cfg.LoggingMode, logging.NewMode, WithDefault(logging.ProductionMode)), "logging-mode", "Logging mode to use. Possible values: production, development.")
 
 	flagSet.BoolVar(&cfg.AnonymousReports, "anonymous-reports", true, "Send anonymized usage data to help improve Kong.")
 	flagSet.StringVar(&cfg.APIServerPath, "apiserver-host", "", "The Kubernetes API server URL. If not set, the operator will use cluster config discovery.")

@@ -41,7 +41,7 @@ const (
 // It uses the generic type constraints to constrain the supported types.
 type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]] struct {
 	sdkFactory              sdkops.SDKFactory
-	LoggingMode             logging.LoggingMode
+	LoggingMode             logging.Mode
 	Client                  client.Client
 	SyncPeriod              time.Duration
 	MaxConcurrentReconciles uint
@@ -89,7 +89,7 @@ func NewKonnectEntityReconciler[
 	TEnt constraints.EntityType[T],
 ](
 	sdkFactory sdkops.SDKFactory,
-	loggingMode logging.LoggingMode,
+	loggingMode logging.Mode,
 	client client.Client,
 	opts ...KonnectEntityReconcilerOption[T, TEnt],
 ) *KonnectEntityReconciler[T, TEnt] {
