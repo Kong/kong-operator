@@ -125,7 +125,7 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 				},
 			},
 			{
-				name:  "1 KongConumser refers to KonnectGatewayControlPlane",
+				name:  "1 KongConsumer refers to KonnectGatewayControlPlane",
 				index: index.IndexFieldKongConsumerOnKonnectGatewayControlPlane,
 				list: []client.Object{
 					&configurationv1.KongConsumer{
@@ -159,7 +159,7 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 				},
 			},
 			{
-				name:  "1 KongConumser refers to a different KonnectGatewayControlPlane",
+				name:  "1 KongConsumer refers to a different KonnectGatewayControlPlane",
 				index: index.IndexFieldKongConsumerOnKonnectGatewayControlPlane,
 				list: []client.Object{
 					&configurationv1.KongConsumer{
