@@ -34,6 +34,7 @@ import (
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -56,10 +57,11 @@ import (
 // Reconciler reconciles a Gateway object.
 type Reconciler struct {
 	client.Client
-	Scheme                *runtime.Scheme
-	DevelopmentMode       bool
-	DefaultDataPlaneImage string
-	KonnectEnabled        bool
+	Scheme                  *runtime.Scheme
+	DefaultDataPlaneImage   string
+	KonnectEnabled          bool
+	AnonymousReportsEnabled bool
+	LoggingMode             logging.Mode
 }
 
 // provisionDataPlaneFailRequeueAfter is the time duration after which we retry provisioning
@@ -125,7 +127,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.GetLogger(ctx, "gateway", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, "gateway", r.LoggingMode)
 
 	log.Trace(logger, "reconciling gateway resource")
 	var gateway gwtypes.Gateway

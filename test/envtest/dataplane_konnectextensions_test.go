@@ -22,6 +22,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -67,13 +68,14 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		ClusterCASecretNamespace: ns.Name,
 		ClusterCAKeyConfig:       clusterCAKeyConfig,
 		DefaultImage:             consts.DefaultDataPlaneImage,
-		DevelopmentMode:          true,
+		LoggingMode:              logging.DevelopmentMode,
+		ValidateDataPlaneImage:   true,
 		KonnectEnabled:           true,
 		EnforceConfig:            true,
 	}
 	konnectExtensionReconciler := &konnect.KonnectExtensionReconciler{
 		Client:                   cl,
-		DevelopmentMode:          true,
+		LoggingMode:              logging.DevelopmentMode,
 		SdkFactory:               factory,
 		SyncPeriod:               time.Hour * 24, // To ensure we don't resync in test. Reconciler will be called automatically on changes.
 		ClusterCASecretName:      clusterCASecretName,
@@ -85,26 +87,6 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		dpReconciler,
 		konnectExtensionReconciler,
 	)
-
-	t.Logf("Setting up expected ListControlPlanes SDK call returning our control plane")
-	factory.SDK.ControlPlaneSDK.EXPECT().ListControlPlanes(mock.Anything, mock.Anything).
-		Return(
-			&sdkkonnectops.ListControlPlanesResponse{
-				StatusCode: http.StatusOK,
-				ListControlPlanesResponse: &sdkkonnectcomp.ListControlPlanesResponse{
-					Data: []sdkkonnectcomp.ControlPlane{
-						{
-							ID:   konnectControlPlaneID,
-							Name: "konnect-cp",
-							Config: sdkkonnectcomp.Config{
-								ControlPlaneEndpoint: "cp.endpoint",
-								TelemetryEndpoint:    "tp.endpoint",
-								ClusterType:          sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane,
-							},
-						},
-					},
-				},
-			}, nil)
 
 	t.Logf("Setting up expected ListDpClientCertificates SDK call returning no certificates")
 	factory.SDK.DataPlaneCertificatesSDK.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneID).
@@ -134,6 +116,9 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 
 	t.Logf("Creating KonnectAPIAuthConfiguration")
 	konnectAPIAuthConfiguration := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
+
+	t.Logf("Creating and setting expecting status for corresponding KonnectControlPlane with Konnect ID: %s", konnectControlPlaneID)
+	_ = deploy.KonnectGatewayControlPlaneWithID(t, ctx, cl, konnectAPIAuthConfiguration, deploy.WithKonnectID(konnectControlPlaneID))
 
 	t.Logf("Creating KonnectExtension")
 	konnectExtension := konnectv1alpha1.KonnectExtension{

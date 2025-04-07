@@ -15,6 +15,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect"
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -67,7 +68,7 @@ func testNewKonnectEntityReconciler[
 		factory := sdkmocks.NewMockSDKFactory(t)
 		sdk := factory.SDK
 
-		StartReconcilers(ctx, t, mgr, logs, konnect.NewKonnectEntityReconciler[T, TEnt](factory, false, cl))
+		StartReconcilers(ctx, t, mgr, logs, konnect.NewKonnectEntityReconciler[T, TEnt](factory, logging.DevelopmentMode, cl))
 
 		const (
 			wait = time.Second

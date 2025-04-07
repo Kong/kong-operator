@@ -20,6 +20,7 @@ import (
 	"github.com/kong/gateway-operator/config"
 	"github.com/kong/gateway-operator/modules/manager"
 	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
@@ -163,7 +164,7 @@ func exitOnErr(err error) {
 func startControllerManager(metadata metadata.Info) <-chan struct{} {
 	cfg := manager.DefaultConfig()
 	cfg.LeaderElection = false
-	cfg.DevelopmentMode = true
+	cfg.LoggingMode = logging.DevelopmentMode
 	cfg.ControllerName = "konghq.com/gateway-operator-integration-tests"
 	cfg.GatewayControllerEnabled = true
 	cfg.ControlPlaneControllerEnabled = true

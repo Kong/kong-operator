@@ -16,6 +16,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/konnect"
 	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/test/helpers/deploy"
 
@@ -34,7 +35,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK
 	StartReconcilers(ctx, t, mgr, logs,
-		konnect.NewKonnectEntityReconciler(factory, false, mgr.GetClient(),
+		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongDataPlaneClientCertificate](konnectInfiniteSyncTime),
 		),
 	)

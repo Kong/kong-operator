@@ -23,6 +23,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	"github.com/kong/gateway-operator/internal/metrics"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -40,7 +41,7 @@ const (
 // It uses the generic type constraints to constrain the supported types.
 type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]] struct {
 	sdkFactory              sdkops.SDKFactory
-	DevelopmentMode         bool
+	LoggingMode             logging.Mode
 	Client                  client.Client
 	SyncPeriod              time.Duration
 	MaxConcurrentReconciles uint
@@ -88,13 +89,13 @@ func NewKonnectEntityReconciler[
 	TEnt constraints.EntityType[T],
 ](
 	sdkFactory sdkops.SDKFactory,
-	developmentMode bool,
+	loggingMode logging.Mode,
 	client client.Client,
 	opts ...KonnectEntityReconcilerOption[T, TEnt],
 ) *KonnectEntityReconciler[T, TEnt] {
 	r := &KonnectEntityReconciler[T, TEnt]{
 		sdkFactory:              sdkFactory,
-		DevelopmentMode:         developmentMode,
+		LoggingMode:             loggingMode,
 		Client:                  client,
 		SyncPeriod:              consts.DefaultKonnectSyncPeriod,
 		MaxConcurrentReconciles: consts.DefaultKonnectMaxConcurrentReconciles,
@@ -134,7 +135,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 ) (ctrl.Result, error) {
 	var (
 		entityTypeName = constraints.EntityTypeName[T]()
-		logger         = log.GetLogger(ctx, entityTypeName, r.DevelopmentMode)
+		logger         = log.GetLogger(ctx, entityTypeName, r.LoggingMode)
 	)
 
 	var (

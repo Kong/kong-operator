@@ -189,7 +189,7 @@ func (r *Reconciler) ensureDeployment(
 	}
 
 	versionValidationOptions := make([]versions.VersionValidationOption, 0)
-	if !r.DevelopmentMode {
+	if r.ValidateControlPlaneImage {
 		versionValidationOptions = append(versionValidationOptions, versions.IsControlPlaneImageVersionSupported)
 	}
 	controlplaneImage, err := controlplane.GenerateImage(&params.ControlPlane.Spec.ControlPlaneOptions, versionValidationOptions...)
@@ -373,7 +373,7 @@ func (r *Reconciler) ensureClusterRole(
 	}
 
 	controlplaneContainer := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-	generated, err := k8sresources.GenerateNewClusterRoleForControlPlane(cp.Name, controlplaneContainer.Image, r.DevelopmentMode)
+	generated, err := k8sresources.GenerateNewClusterRoleForControlPlane(cp.Name, controlplaneContainer.Image, r.ValidateControlPlaneImage)
 	if err != nil {
 		return false, nil, err
 	}
@@ -409,7 +409,7 @@ func (r *Reconciler) ensureClusterRoleBinding(
 	serviceAccountName string,
 	clusterRoleName string,
 ) (createdOrUpdate bool, crb *rbacv1.ClusterRoleBinding, err error) {
-	logger := log.GetLogger(ctx, "controlplane.ensureClusterRoleBinding", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, "controlplane.ensureClusterRoleBinding", r.LoggingMode)
 
 	clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
 		ctx,
@@ -721,7 +721,7 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	certSecret *corev1.Secret,
 	webhookService *corev1.Service,
 ) (op.Result, error) {
-	logger := log.GetLogger(ctx, "controlplane.ensureValidatingWebhookConfiguration", r.DevelopmentMode)
+	logger := log.GetLogger(ctx, "controlplane.ensureValidatingWebhookConfiguration", r.LoggingMode)
 
 	validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
 		ctx,
@@ -762,7 +762,7 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	generatedWebhookConfiguration, err := k8sresources.GenerateValidatingWebhookConfigurationForControlPlane(
 		cp.Name,
 		cpContainer.Image,
-		r.DevelopmentMode,
+		r.ValidateControlPlaneImage,
 		admregv1.WebhookClientConfig{
 			Service: &admregv1.ServiceReference{
 				Namespace: cp.Namespace,
@@ -832,7 +832,7 @@ func (r *Reconciler) validateReferenceGrants(
 	}
 }
 
-//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants,verbs=list
+// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants,verbs=list
 
 // ensureReferenceGrantsForNamespace ensures that a ReferenceGrant exists for the
 // given namespace and ControlPlane.

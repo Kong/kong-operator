@@ -13,26 +13,26 @@ import (
 
 func TestDeduceAnonymousReportsEnabled(t *testing.T) {
 	tests := []struct {
-		name            string
-		developmentMode bool
-		cpOpts          *operatorv1beta1.ControlPlaneOptions
-		expected        bool
+		name                    string
+		anonymousReportsEnabled bool
+		cpOpts                  *operatorv1beta1.ControlPlaneOptions
+		expected                bool
 	}{
 		{
-			name:            "Anonymous reports not set, development mode enabled",
-			developmentMode: true,
-			cpOpts:          &operatorv1beta1.ControlPlaneOptions{},
-			expected:        false,
+			name:                    "CP opts anonymous reports not set, anonymous reports disabled",
+			anonymousReportsEnabled: false,
+			cpOpts:                  &operatorv1beta1.ControlPlaneOptions{},
+			expected:                false,
 		},
 		{
-			name:            "Anonymous reports not set, development mode disabled",
-			developmentMode: true,
-			expected:        false,
-			cpOpts:          &operatorv1beta1.ControlPlaneOptions{},
+			name:                    "CP opts anonymous reports not set, anonymous reports disabled",
+			anonymousReportsEnabled: false,
+			expected:                false,
+			cpOpts:                  &operatorv1beta1.ControlPlaneOptions{},
 		},
 		{
-			name:            "Anonymous reports disabled",
-			developmentMode: false,
+			name:                    "CP opts anonymous reports disabled",
+			anonymousReportsEnabled: true,
 			cpOpts: &operatorv1beta1.ControlPlaneOptions{
 				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -55,8 +55,8 @@ func TestDeduceAnonymousReportsEnabled(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:            "Anonymous reports enabled, development mode disabled",
-			developmentMode: false,
+			name:                    "CP opts anonymous reports enabled, anonymous reports enabled",
+			anonymousReportsEnabled: true,
 			cpOpts: &operatorv1beta1.ControlPlaneOptions{
 				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -79,8 +79,8 @@ func TestDeduceAnonymousReportsEnabled(t *testing.T) {
 			expected: false,
 		},
 		{
-			name:            "Anonymous reports enabled, development mode",
-			developmentMode: true,
+			name:                    "CP opts anonymous reports enabled, anonymous reports disabled",
+			anonymousReportsEnabled: false,
 			cpOpts: &operatorv1beta1.ControlPlaneOptions{
 				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -105,7 +105,7 @@ func TestDeduceAnonymousReportsEnabled(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ret := DeduceAnonymousReportsEnabled(tt.developmentMode, tt.cpOpts)
+			ret := DeduceAnonymousReportsEnabled(tt.anonymousReportsEnabled, tt.cpOpts)
 			require.Equal(t, tt.expected, ret)
 		})
 	}

@@ -18,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/internal/utils/index"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/clientops"
 	"github.com/kong/gateway-operator/pkg/consts"
 
@@ -32,8 +33,8 @@ type KonnectEntityPluginBindingFinalizerReconciler[
 	T constraints.SupportedKonnectEntityPluginReferenceableType,
 	TEnt constraints.EntityType[T],
 ] struct {
-	DevelopmentMode bool
-	Client          client.Client
+	LoggingMode logging.Mode
+	Client      client.Client
 }
 
 // NewKonnectEntityPluginReconciler returns a new KonnectEntityPluginReconciler
@@ -42,12 +43,12 @@ func NewKonnectEntityPluginReconciler[
 	T constraints.SupportedKonnectEntityPluginReferenceableType,
 	TEnt constraints.EntityType[T],
 ](
-	developmentMode bool,
+	loggingMode logging.Mode,
 	client client.Client,
 ) *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt] {
 	r := &KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]{
-		DevelopmentMode: developmentMode,
-		Client:          client,
+		LoggingMode: loggingMode,
+		Client:      client,
 	}
 	return r
 }
@@ -150,7 +151,7 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) Reconcile(
 ) (ctrl.Result, error) {
 	var (
 		entityTypeName = constraints.EntityTypeName[T]()
-		logger         = log.GetLogger(ctx, entityTypeName, r.DevelopmentMode)
+		logger         = log.GetLogger(ctx, entityTypeName, r.LoggingMode)
 	)
 
 	var (

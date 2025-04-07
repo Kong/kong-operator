@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -41,22 +42,26 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/internal/telemetry"
 	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
 // Config represents the configuration for the manager.
 type Config struct {
-	MetricsAddr              string
-	MetricsAccessFilter      MetricsAccessFilter
-	ProbeAddr                string
-	LeaderElection           bool
-	LeaderElectionNamespace  string
-	DevelopmentMode          bool
+	MetricsAddr             string
+	MetricsAccessFilter     MetricsAccessFilter
+	ProbeAddr               string
+	LeaderElection          bool
+	LeaderElectionNamespace string
+
+	AnonymousReports bool
+	LoggingMode      logging.Mode
+	ValidateImages   bool
+
 	Out                      *os.File
 	ControllerName           string
 	ControllerNamespace      string
-	AnonymousReports         bool
 	APIServerPath            string
 	KubeconfigPath           string
 	ClusterCASecretName      string
@@ -99,7 +104,6 @@ func DefaultConfig() Config {
 		MetricsAddr:                   ":8080",
 		MetricsAccessFilter:           MetricsAccessFilterOff,
 		ProbeAddr:                     ":8081",
-		DevelopmentMode:               false,
 		LeaderElection:                true,
 		LeaderElectionNamespace:       defaultLeaderElectionNamespace,
 		ClusterCASecretName:           "kong-operator-ca",
@@ -132,19 +136,18 @@ func Run(
 	metadata metadata.Info,
 ) error {
 	setupLog := ctrl.Log.WithName("setup")
+
 	setupLog.Info("starting controller manager",
 		"release", metadata.Release,
 		"repo", metadata.Repo,
 		"commit", metadata.Commit,
 	)
 
+	warnIfLegacyDevelopmentModeEnabled(setupLog)
+
 	if cfg.ControllerName != "" {
 		setupLog.Info(fmt.Sprintf("custom controller name provided: %s", cfg.ControllerName))
 		vars.SetControllerName(cfg.ControllerName)
-	}
-
-	if cfg.DevelopmentMode {
-		setupLog.Info("development mode enabled")
 	}
 
 	if cfg.LeaderElection {
@@ -241,7 +244,7 @@ func Run(
 
 	// Enable anonnymous reporting when configured but not for development builds
 	// to reduce the noise.
-	if cfg.AnonymousReports && !cfg.DevelopmentMode {
+	if cfg.AnonymousReports {
 		stopAnonymousReports, err := setupAnonymousReports(ctx, restCfg, setupLog, metadata, cfg)
 		if err != nil {
 			setupLog.Error(err, "failed setting up anonymous reports")
@@ -260,6 +263,32 @@ func Run(
 	}
 
 	return nil
+}
+
+// warnIfLegacyDevelopmentModeEnabled logs a warning if any of the legacy development mode environment variables are set
+// and suggests the new environment variables to use instead.
+// This can be removed after a few releases.
+func warnIfLegacyDevelopmentModeEnabled(log logr.Logger) {
+	legacyEnvVars := []string{
+		"GATEWAY_OPERATOR_DEVELOPMENT_MODE",
+		"CONTROLLER_DEVELOPMENT_MODE",
+	}
+
+	replacingEnvVars := []string{
+		"GATEWAY_OPERATOR_ANONYMOUS_REPORTS",
+		"GATEWAY_OPERATOR_LOGGING_MODE",
+		"GATEWAY_OPERATOR_VALIDATE_IMAGES",
+	}
+
+	for _, envVar := range legacyEnvVars {
+		if os.Getenv(envVar) != "" {
+			log.Info(fmt.Sprintf(
+				"WARNING: %s is ineffective. Depending on your needs, use one of: %s",
+				envVar,
+				strings.Join(replacingEnvVars, ", "),
+			))
+		}
+	}
 }
 
 // caManager is a manager responsible for creating a cluster CA certificate.

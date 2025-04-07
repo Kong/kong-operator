@@ -31,6 +31,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/internal/utils/index"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/consts"
 	konnectresource "github.com/kong/gateway-operator/pkg/utils/konnect/resources"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -43,7 +44,7 @@ import (
 // KonnectExtensionReconciler reconciles a KonnectExtension object.
 type KonnectExtensionReconciler struct {
 	client.Client
-	DevelopmentMode          bool
+	LoggingMode              logging.Mode
 	SdkFactory               sdkops.SDKFactory
 	SyncPeriod               time.Duration
 	ClusterCASecretName      string
@@ -142,7 +143,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	logger := log.GetLogger(ctx, konnectv1alpha1.KonnectExtensionKind, r.DevelopmentMode).WithValues("konnectExtension", req.NamespacedName)
+	logger := log.GetLogger(ctx, konnectv1alpha1.KonnectExtensionKind, r.LoggingMode).WithValues("konnectExtension", req.NamespacedName)
 
 	var (
 		dataPlaneList    operatorv1beta1.DataPlaneList
@@ -261,11 +262,13 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 	}
 
-	// get the Konnect Control Plane ID. Set the ControlPlaneRefValid condition accordingly.
-	_, res, err := r.getKonnectControlPlaneID(ctx, ext, readyCondition)
+	// Get the GatewayKonnectControlPlane and set conditions accordingly.
+	cp, res, err := r.getGatewayKonnectControlPlane(ctx, ext)
 	if err != nil || !res.IsZero() {
-		// don't return the error here to avoid noise. Status condition is properly set.
-		log.Debug(logger, "controlPlane reference has not properly resolved", "error", err)
+		if !k8serrors.IsNotFound(err) && !errors.Is(err, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed) {
+			return res, err
+		}
+		log.Debug(logger, "controlPlane not ready yet")
 		return res, nil
 	}
 
@@ -326,16 +329,6 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, fmt.Errorf("failed to parse server URL: %w", err)
 	}
 	sdk := r.SdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
-
-	// get the Konnect Control Plane
-	cp, res, err := r.getKonnectControlPlane(ctx, logger, sdk.GetControlPlaneSDK(), ext)
-	if err != nil || !res.IsZero() {
-		if !k8serrors.IsNotFound(err) && !errors.Is(err, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed) {
-			return res, err
-		}
-		log.Debug(logger, "controlPlane not ready yet")
-		return res, nil
-	}
 
 	certProvisionedCond := metav1.Condition{
 		Type:    konnectv1alpha1.DataPlaneCertificateProvisionedConditionType,
@@ -404,7 +397,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	log.Debug(logger, "DataPlane certificate validity checked")
 
 	// get the list of DataPlane client certificates in Konnect
-	dpCertificates, err := ops.ListKongDataPlaneClientCertificates(ctx, sdk.GetDataPlaneCertificatesSDK(), cp.ID)
+	dpCertificates, err := ops.ListKongDataPlaneClientCertificates(ctx, sdk.GetDataPlaneCertificatesSDK(), cp.Status.ID)
 	if err != nil {
 		certProvisionedCond.Status = metav1.ConditionFalse
 		certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
@@ -470,7 +463,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					dpCert.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
 						// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
 						// that expects the ControlPlaneID to be set in the status.
-						ControlPlaneID: cp.ID,
+						ControlPlaneID: cp.Status.ID,
 					}
 				},
 			)
@@ -507,7 +500,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return res, err
 		}
 		if updated {
-			log.Info(logger, "KonnectExtension finalizer addded", "finalizer", KonnectCleanupFinalizer)
+			log.Info(logger, "KonnectExtension finalizer added", "finalizer", KonnectCleanupFinalizer)
 			return ctrl.Result{}, nil
 		}
 	case cleanup || secretCleanup:
@@ -525,7 +518,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					dpCert.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
 						// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
 						// that expects the ControlPlaneID to be set in the status.
-						ControlPlaneID: cp.ID,
+						ControlPlaneID: cp.Status.ID,
 						// setting the ID in the status as a workaround for the DeleteKongDataPlaneClientCertificate method,
 						// that expects the ID to be set in the status.
 						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
@@ -584,11 +577,13 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	var updateExtensionStatus bool
 	if ext.Status.Konnect == nil {
 		ext.Status.Konnect = &konnectv1alpha1.KonnectExtensionControlPlaneStatus{
-			ControlPlaneID: cp.ID,
-			ClusterType:    konnectClusterTypeToCRDClusterType(cp.Config.ClusterType),
+			ControlPlaneID: cp.Status.ID,
+			ClusterType: konnectClusterTypeToCRDClusterType(
+				sdkkonnectcomp.ControlPlaneClusterType(lo.FromPtrOr(cp.Spec.ClusterType, "")),
+			),
 			Endpoints: konnectv1alpha1.KonnectEndpoints{
-				ControlPlaneEndpoint: cp.Config.ControlPlaneEndpoint,
-				TelemetryEndpoint:    cp.Config.TelemetryEndpoint,
+				ControlPlaneEndpoint: cp.Status.Endpoints.ControlPlaneEndpoint,
+				TelemetryEndpoint:    cp.Status.Endpoints.TelemetryEndpoint,
 			},
 		}
 		ext.Status.DataPlaneClientAuth = &konnectv1alpha1.DataPlaneClientAuthStatus{

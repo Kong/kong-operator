@@ -23,6 +23,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	"github.com/kong/gateway-operator/internal/utils/index"
+	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
 
@@ -35,18 +36,18 @@ import (
 
 // KongPluginReconciler reconciles a KongPlugin object.
 type KongPluginReconciler struct {
-	developmentMode bool
-	client          client.Client
+	loggingMode logging.Mode
+	client      client.Client
 }
 
 // NewKongPluginReconciler creates a new KongPluginReconciler.
 func NewKongPluginReconciler(
-	developmentMode bool,
+	loggingMode logging.Mode,
 	client client.Client,
 ) *KongPluginReconciler {
 	return &KongPluginReconciler{
-		developmentMode: developmentMode,
-		client:          client,
+		loggingMode: loggingMode,
+		client:      client,
 	}
 }
 
@@ -61,7 +62,7 @@ func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Mana
 		).
 		Watches(
 			&configurationv1alpha1.KongService{},
-			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1alpha1.KongService](r.developmentMode)),
+			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1alpha1.KongService](r.loggingMode)),
 			builder.WithPredicates(
 				kongPluginsAnnotationChangedPredicate,
 				predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongService]),
@@ -69,7 +70,7 @@ func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Mana
 		).
 		Watches(
 			&configurationv1alpha1.KongRoute{},
-			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1alpha1.KongRoute](r.developmentMode)),
+			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1alpha1.KongRoute](r.loggingMode)),
 			builder.WithPredicates(
 				kongPluginsAnnotationChangedPredicate,
 				predicate.NewPredicateFuncs(kongRouteRefersToKonnectGatewayControlPlane(r.client)),
@@ -77,7 +78,7 @@ func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Mana
 		).
 		Watches(
 			&configurationv1.KongConsumer{},
-			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1.KongConsumer](r.developmentMode)),
+			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1.KongConsumer](r.loggingMode)),
 			builder.WithPredicates(
 				kongPluginsAnnotationChangedPredicate,
 				predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1.KongConsumer]),
@@ -85,7 +86,7 @@ func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Mana
 		).
 		Watches(
 			&configurationv1beta1.KongConsumerGroup{},
-			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1beta1.KongConsumerGroup](r.developmentMode)),
+			handler.EnqueueRequestsFromMapFunc(mapPluginsFromAnnotation[configurationv1beta1.KongConsumerGroup](r.loggingMode)),
 			builder.WithPredicates(
 				kongPluginsAnnotationChangedPredicate,
 				predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1beta1.KongConsumerGroup]),
@@ -100,7 +101,7 @@ func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Mana
 func (r *KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var (
 		entityTypeName = "KongPlugin"
-		logger         = log.GetLogger(ctx, entityTypeName, r.developmentMode)
+		logger         = log.GetLogger(ctx, entityTypeName, r.loggingMode)
 	)
 
 	// Fetch the KongPlugin instance

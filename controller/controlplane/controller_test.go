@@ -456,10 +456,11 @@ func TestReconciler_Reconcile(t *testing.T) {
 				Build()
 
 			reconciler := Reconciler{
-				Client:                   fakeClient,
-				Scheme:                   scheme.Scheme,
-				ClusterCASecretName:      mtlsSecret.Name,
-				ClusterCASecretNamespace: mtlsSecret.Namespace,
+				Client:                    fakeClient,
+				Scheme:                    scheme.Scheme,
+				ClusterCASecretName:       mtlsSecret.Name,
+				ClusterCASecretNamespace:  mtlsSecret.Namespace,
+				ValidateControlPlaneImage: true,
 			}
 
 			tc.testBody(t, reconciler, tc.controlplaneReq)
