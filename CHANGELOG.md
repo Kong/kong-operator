@@ -48,7 +48,7 @@
   `KonnectAPIAuthConfiguration` instead of using a hardcoded `eu` value.
   [#1409](https://github.com/Kong/gateway-operator/pull/1409)
 - Support `NodePort` as ingress service type for `DataPlane`
-    [#1430](https://github.com/Kong/gateway-operator/pull/1430)
+  [#1430](https://github.com/Kong/gateway-operator/pull/1430)
 
 ## [v1.5.1]
 
