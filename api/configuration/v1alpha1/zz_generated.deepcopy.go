@@ -1953,7 +1953,7 @@ func (in *KongRouteAPISpec) DeepCopyInto(out *KongRouteAPISpec) {
 	}
 	if in.Protocols != nil {
 		in, out := &in.Protocols, &out.Protocols
-		*out = make([]components.RouteWithoutParentsProtocols, len(*in))
+		*out = make([]components.RouteJSONProtocols, len(*in))
 		copy(*out, *in)
 	}
 	if in.RegexPriority != nil {
