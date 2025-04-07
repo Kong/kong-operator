@@ -681,6 +681,58 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 			},
 		},
 		{
+			name: "providing more options",
+			input: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						Replicas: lo.ToPtr(int32(10)),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: "image:v1",
+										ReadinessProbe: &corev1.Probe{
+											InitialDelaySeconds: 1,
+											TimeoutSeconds:      1,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						Replicas: lo.ToPtr(int32(10)),
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: "image:v1",
+										ReadinessProbe: &corev1.Probe{
+											InitialDelaySeconds: 1,
+											TimeoutSeconds:      1,
+											ProbeHandler: corev1.ProbeHandler{
+												HTTPGet: &corev1.HTTPGetAction{
+													Path:   consts.DataPlaneStatusReadyEndpoint,
+													Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+													Scheme: corev1.URISchemeHTTP,
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "defining scaling strategy should not set default replicas",
 			input: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
