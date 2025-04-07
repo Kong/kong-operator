@@ -33,6 +33,33 @@ const (
 	tickTime = 250 * time.Millisecond
 )
 
+func updateAndVerifyServiceType(t *testing.T, dataplaneName types.NamespacedName, clients testutils.K8sClients, dataplane *operatorv1beta1.DataPlane, dataplaneIngressService corev1.Service, serviceType corev1.ServiceType) {
+	t.Helper()
+
+	t.Logf("updating dataplane spec with proxy service type of %s", serviceType)
+	require.Eventually(t,
+		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+			dp.Spec.Network.Services.Ingress.Type = serviceType
+		}),
+		waitTime, tickTime)
+
+	t.Logf("checking if dataplane proxy service type changes to %s", serviceType)
+	require.Eventually(t, func() bool {
+		servicesClient := GetClients().K8sClient.CoreV1().Services(dataplane.Namespace)
+		dataplaneIngressService, err := servicesClient.Get(GetCtx(), dataplaneIngressService.Name, metav1.GetOptions{})
+		if err != nil {
+			t.Logf("error getting dataplane proxy service: %v", err)
+			return false
+		}
+		if dataplaneIngressService.Spec.Type != serviceType {
+			t.Logf("dataplane proxy service should be of %s type but is %s", serviceType, dataplaneIngressService.Spec.Type)
+			return false
+		}
+
+		return true
+	}, waitTime, tickTime)
+}
+
 func TestDataPlaneEssentials(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
@@ -251,7 +278,6 @@ func TestDataPlaneServiceTypes(t *testing.T) {
 	}
 
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
-
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
@@ -272,51 +298,19 @@ func TestDataPlaneServiceTypes(t *testing.T) {
 		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	}), waitTime, tickTime)
 
-	t.Log("updating dataplane spec with proxy service type of ClusterIP")
-	require.Eventually(t,
-		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
-			dp.Spec.Network.Services.Ingress.Type = corev1.ServiceTypeClusterIP
-		}),
-		waitTime, tickTime)
+	tests := []struct {
+		name        string
+		serviceType corev1.ServiceType
+	}{
+		{"ClusterIP", corev1.ServiceTypeClusterIP},
+		{"NodePort", corev1.ServiceTypeNodePort},
+	}
 
-	t.Log("checking if dataplane proxy service type changes to ClusterIP")
-	require.Eventually(t, func() bool {
-		servicesClient := GetClients().K8sClient.CoreV1().Services(dataplane.Namespace)
-		dataplaneIngressService, err := servicesClient.Get(GetCtx(), dataplaneIngressService.Name, metav1.GetOptions{})
-		if err != nil {
-			t.Logf("error getting dataplane proxy service: %v", err)
-			return false
-		}
-		if dataplaneIngressService.Spec.Type != corev1.ServiceTypeClusterIP {
-			t.Logf("dataplane proxy service should be of ClusterIP type but is %s", dataplaneIngressService.Spec.Type)
-			return false
-		}
-
-		return true
-	}, waitTime, tickTime)
-
-	t.Log("updating dataplane spec with proxy service type of NodePort")
-	require.Eventually(t,
-		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
-			dp.Spec.Network.Services.Ingress.Type = corev1.ServiceTypeNodePort
-		}),
-		waitTime, tickTime)
-
-	t.Log("checking if dataplane proxy service type changes to NodePort")
-	require.Eventually(t, func() bool {
-		servicesClient := GetClients().K8sClient.CoreV1().Services(dataplane.Namespace)
-		dataplaneIngressService, err := servicesClient.Get(GetCtx(), dataplaneIngressService.Name, metav1.GetOptions{})
-		if err != nil {
-			t.Logf("error getting dataplane proxy service: %v", err)
-			return false
-		}
-		if dataplaneIngressService.Spec.Type != corev1.ServiceTypeNodePort {
-			t.Logf("dataplane proxy service should be of NodePort type but is %s", dataplaneIngressService.Spec.Type)
-			return false
-		}
-
-		return true
-	}, waitTime, tickTime)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			updateAndVerifyServiceType(t, dataplaneName, clients, dataplane, dataplaneIngressService, tt.serviceType)
+		})
+	}
 }
 
 func TestDataPlaneUpdate(t *testing.T) {
