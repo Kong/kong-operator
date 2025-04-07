@@ -60,7 +60,7 @@ func TestKongCACertificate(t *testing.T) {
 
 	t.Log("Setting up SDK expectations on KongCACertificate creation")
 	sdk.CACertificatesSDK.EXPECT().CreateCaCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-		mock.MatchedBy(func(input sdkkonnectcomp.CACertificateInput) bool {
+		mock.MatchedBy(func(input sdkkonnectcomp.CACertificate) bool {
 			return input.Cert == deploy.TestValidCACertPEM &&
 				slices.Contains(input.Tags, tagName)
 		}),
@@ -132,7 +132,7 @@ func TestKongCACertificate(t *testing.T) {
 		cpID := cp.GetKonnectStatus().GetKonnectID()
 		sdk.CACertificatesSDK.EXPECT().
 			CreateCaCertificate(mock.Anything, cpID,
-				mock.MatchedBy(func(input sdkkonnectcomp.CACertificateInput) bool {
+				mock.MatchedBy(func(input sdkkonnectcomp.CACertificate) bool {
 					return input.Cert == deploy.TestValidCACertPEM &&
 						slices.Contains(input.Tags, conflictingTagName)
 				}),
@@ -183,7 +183,7 @@ func TestKongCACertificate(t *testing.T) {
 		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/922")
 		t.Log("Setting up SDK expectations on KongCACertificate creation")
 		sdk.CACertificatesSDK.EXPECT().CreateCaCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input sdkkonnectcomp.CACertificateInput) bool {
+			mock.MatchedBy(func(input sdkkonnectcomp.CACertificate) bool {
 				return input.Cert == deploy.TestValidCACertPEM &&
 					slices.Contains(input.Tags, tagName)
 			}),
@@ -224,7 +224,7 @@ func TestKongCACertificate(t *testing.T) {
 			id = "abc-12345"
 		)
 
-		var tags = []string{"tag1"}
+		tags := []string{"tag1"}
 
 		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
@@ -237,7 +237,7 @@ func TestKongCACertificate(t *testing.T) {
 			CreateCaCertificate(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.CACertificateInput) bool {
+				mock.MatchedBy(func(req sdkkonnectcomp.CACertificate) bool {
 					return slices.Contains(req.Tags, "tag1")
 				}),
 			).

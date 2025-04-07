@@ -26,7 +26,7 @@ func (_m *MockKeysSDK) EXPECT() *MockKeysSDK_Expecter {
 }
 
 // CreateKey provides a mock function with given fields: ctx, controlPlaneID, Key, opts
-func (_m *MockKeysSDK) CreateKey(ctx context.Context, controlPlaneID string, Key components.KeyInput, opts ...operations.Option) (*operations.CreateKeyResponse, error) {
+func (_m *MockKeysSDK) CreateKey(ctx context.Context, controlPlaneID string, Key components.Key, opts ...operations.Option) (*operations.CreateKeyResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -42,10 +42,10 @@ func (_m *MockKeysSDK) CreateKey(ctx context.Context, controlPlaneID string, Key
 
 	var r0 *operations.CreateKeyResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.KeyInput, ...operations.Option) (*operations.CreateKeyResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.Key, ...operations.Option) (*operations.CreateKeyResponse, error)); ok {
 		return rf(ctx, controlPlaneID, Key, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.KeyInput, ...operations.Option) *operations.CreateKeyResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.Key, ...operations.Option) *operations.CreateKeyResponse); ok {
 		r0 = rf(ctx, controlPlaneID, Key, opts...)
 	} else {
 		if ret.Get(0) != nil {
@@ -53,7 +53,7 @@ func (_m *MockKeysSDK) CreateKey(ctx context.Context, controlPlaneID string, Key
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, components.KeyInput, ...operations.Option) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, components.Key, ...operations.Option) error); ok {
 		r1 = rf(ctx, controlPlaneID, Key, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -70,14 +70,14 @@ type MockKeysSDK_CreateKey_Call struct {
 // CreateKey is a helper method to define mock.On call
 //   - ctx context.Context
 //   - controlPlaneID string
-//   - Key components.KeyInput
+//   - Key components.Key
 //   - opts ...operations.Option
 func (_e *MockKeysSDK_Expecter) CreateKey(ctx interface{}, controlPlaneID interface{}, Key interface{}, opts ...interface{}) *MockKeysSDK_CreateKey_Call {
 	return &MockKeysSDK_CreateKey_Call{Call: _e.mock.On("CreateKey",
 		append([]interface{}{ctx, controlPlaneID, Key}, opts...)...)}
 }
 
-func (_c *MockKeysSDK_CreateKey_Call) Run(run func(ctx context.Context, controlPlaneID string, Key components.KeyInput, opts ...operations.Option)) *MockKeysSDK_CreateKey_Call {
+func (_c *MockKeysSDK_CreateKey_Call) Run(run func(ctx context.Context, controlPlaneID string, Key components.Key, opts ...operations.Option)) *MockKeysSDK_CreateKey_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		variadicArgs := make([]operations.Option, len(args)-3)
 		for i, a := range args[3:] {
@@ -85,7 +85,7 @@ func (_c *MockKeysSDK_CreateKey_Call) Run(run func(ctx context.Context, controlP
 				variadicArgs[i] = a.(operations.Option)
 			}
 		}
-		run(args[0].(context.Context), args[1].(string), args[2].(components.KeyInput), variadicArgs...)
+		run(args[0].(context.Context), args[1].(string), args[2].(components.Key), variadicArgs...)
 	})
 	return _c
 }
@@ -95,7 +95,7 @@ func (_c *MockKeysSDK_CreateKey_Call) Return(_a0 *operations.CreateKeyResponse, 
 	return _c
 }
 
-func (_c *MockKeysSDK_CreateKey_Call) RunAndReturn(run func(context.Context, string, components.KeyInput, ...operations.Option) (*operations.CreateKeyResponse, error)) *MockKeysSDK_CreateKey_Call {
+func (_c *MockKeysSDK_CreateKey_Call) RunAndReturn(run func(context.Context, string, components.Key, ...operations.Option) (*operations.CreateKeyResponse, error)) *MockKeysSDK_CreateKey_Call {
 	_c.Call.Return(run)
 	return _c
 }

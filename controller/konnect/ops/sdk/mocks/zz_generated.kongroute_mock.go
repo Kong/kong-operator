@@ -26,7 +26,7 @@ func (_m *MockRoutesSDK) EXPECT() *MockRoutesSDK_Expecter {
 }
 
 // CreateRoute provides a mock function with given fields: ctx, controlPlaneID, route, opts
-func (_m *MockRoutesSDK) CreateRoute(ctx context.Context, controlPlaneID string, route components.RouteInput, opts ...operations.Option) (*operations.CreateRouteResponse, error) {
+func (_m *MockRoutesSDK) CreateRoute(ctx context.Context, controlPlaneID string, route components.Route, opts ...operations.Option) (*operations.CreateRouteResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -42,10 +42,10 @@ func (_m *MockRoutesSDK) CreateRoute(ctx context.Context, controlPlaneID string,
 
 	var r0 *operations.CreateRouteResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.RouteInput, ...operations.Option) (*operations.CreateRouteResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.Route, ...operations.Option) (*operations.CreateRouteResponse, error)); ok {
 		return rf(ctx, controlPlaneID, route, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.RouteInput, ...operations.Option) *operations.CreateRouteResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.Route, ...operations.Option) *operations.CreateRouteResponse); ok {
 		r0 = rf(ctx, controlPlaneID, route, opts...)
 	} else {
 		if ret.Get(0) != nil {
@@ -53,7 +53,7 @@ func (_m *MockRoutesSDK) CreateRoute(ctx context.Context, controlPlaneID string,
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, components.RouteInput, ...operations.Option) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, components.Route, ...operations.Option) error); ok {
 		r1 = rf(ctx, controlPlaneID, route, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -70,14 +70,14 @@ type MockRoutesSDK_CreateRoute_Call struct {
 // CreateRoute is a helper method to define mock.On call
 //   - ctx context.Context
 //   - controlPlaneID string
-//   - route components.RouteInput
+//   - route components.Route
 //   - opts ...operations.Option
 func (_e *MockRoutesSDK_Expecter) CreateRoute(ctx interface{}, controlPlaneID interface{}, route interface{}, opts ...interface{}) *MockRoutesSDK_CreateRoute_Call {
 	return &MockRoutesSDK_CreateRoute_Call{Call: _e.mock.On("CreateRoute",
 		append([]interface{}{ctx, controlPlaneID, route}, opts...)...)}
 }
 
-func (_c *MockRoutesSDK_CreateRoute_Call) Run(run func(ctx context.Context, controlPlaneID string, route components.RouteInput, opts ...operations.Option)) *MockRoutesSDK_CreateRoute_Call {
+func (_c *MockRoutesSDK_CreateRoute_Call) Run(run func(ctx context.Context, controlPlaneID string, route components.Route, opts ...operations.Option)) *MockRoutesSDK_CreateRoute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		variadicArgs := make([]operations.Option, len(args)-3)
 		for i, a := range args[3:] {
@@ -85,7 +85,7 @@ func (_c *MockRoutesSDK_CreateRoute_Call) Run(run func(ctx context.Context, cont
 				variadicArgs[i] = a.(operations.Option)
 			}
 		}
-		run(args[0].(context.Context), args[1].(string), args[2].(components.RouteInput), variadicArgs...)
+		run(args[0].(context.Context), args[1].(string), args[2].(components.Route), variadicArgs...)
 	})
 	return _c
 }
@@ -95,7 +95,7 @@ func (_c *MockRoutesSDK_CreateRoute_Call) Return(_a0 *operations.CreateRouteResp
 	return _c
 }
 
-func (_c *MockRoutesSDK_CreateRoute_Call) RunAndReturn(run func(context.Context, string, components.RouteInput, ...operations.Option) (*operations.CreateRouteResponse, error)) *MockRoutesSDK_CreateRoute_Call {
+func (_c *MockRoutesSDK_CreateRoute_Call) RunAndReturn(run func(context.Context, string, components.Route, ...operations.Option) (*operations.CreateRouteResponse, error)) *MockRoutesSDK_CreateRoute_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -61,5 +61,5 @@ func TestKongRouteToSDKRouteInput_Tags(t *testing.T) {
 		"tag4",
 		"duplicate-tag",
 	}
-	require.ElementsMatch(t, expectedTags, output.RouteJSONInput.Tags)
+	require.ElementsMatch(t, expectedTags, output.RouteJSON.Tags)
 }

@@ -146,7 +146,7 @@ func kongPluginBindingToSDKPluginInput(
 	ctx context.Context,
 	cl client.Client,
 	pluginBinding *configurationv1alpha1.KongPluginBinding,
-) (*sdkkonnectcomp.PluginInput, error) {
+) (*sdkkonnectcomp.Plugin, error) {
 	plugin, err := getReferencedPlugin(ctx, cl, pluginBinding)
 	if err != nil {
 		return nil, err
@@ -245,7 +245,7 @@ type pluginTarget interface {
 
 // kongPluginWithTargetsToKongPluginInput converts a KongPlugin configuration along with KongPluginBinding's targets and
 // tags to an SKD PluginInput.
-func kongPluginWithTargetsToKongPluginInput(binding *configurationv1alpha1.KongPluginBinding, plugin *configurationv1.KongPlugin, targets []pluginTarget, tags []string) (*sdkkonnectcomp.PluginInput, error) {
+func kongPluginWithTargetsToKongPluginInput(binding *configurationv1alpha1.KongPluginBinding, plugin *configurationv1.KongPlugin, targets []pluginTarget, tags []string) (*sdkkonnectcomp.Plugin, error) {
 	if binding.Spec.Scope == configurationv1alpha1.KongPluginBindingScopeOnlyTargets && len(targets) == 0 {
 		return nil, fmt.Errorf("no targets found for KongPluginBinding %s", client.ObjectKeyFromObject(plugin))
 	}
@@ -258,7 +258,7 @@ func kongPluginWithTargetsToKongPluginInput(binding *configurationv1alpha1.KongP
 		}
 	}
 
-	pluginInput := &sdkkonnectcomp.PluginInput{
+	pluginInput := &sdkkonnectcomp.Plugin{
 		Name:    plugin.PluginName,
 		Config:  pluginConfig,
 		Enabled: lo.ToPtr(!plugin.Disabled),

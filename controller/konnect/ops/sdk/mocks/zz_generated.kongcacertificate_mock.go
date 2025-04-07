@@ -26,7 +26,7 @@ func (_m *MockCACertificatesSDK) EXPECT() *MockCACertificatesSDK_Expecter {
 }
 
 // CreateCaCertificate provides a mock function with given fields: ctx, controlPlaneID, caCertificate, opts
-func (_m *MockCACertificatesSDK) CreateCaCertificate(ctx context.Context, controlPlaneID string, caCertificate components.CACertificateInput, opts ...operations.Option) (*operations.CreateCaCertificateResponse, error) {
+func (_m *MockCACertificatesSDK) CreateCaCertificate(ctx context.Context, controlPlaneID string, caCertificate components.CACertificate, opts ...operations.Option) (*operations.CreateCaCertificateResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -42,10 +42,10 @@ func (_m *MockCACertificatesSDK) CreateCaCertificate(ctx context.Context, contro
 
 	var r0 *operations.CreateCaCertificateResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.CACertificateInput, ...operations.Option) (*operations.CreateCaCertificateResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.CACertificate, ...operations.Option) (*operations.CreateCaCertificateResponse, error)); ok {
 		return rf(ctx, controlPlaneID, caCertificate, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.CACertificateInput, ...operations.Option) *operations.CreateCaCertificateResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.CACertificate, ...operations.Option) *operations.CreateCaCertificateResponse); ok {
 		r0 = rf(ctx, controlPlaneID, caCertificate, opts...)
 	} else {
 		if ret.Get(0) != nil {
@@ -53,7 +53,7 @@ func (_m *MockCACertificatesSDK) CreateCaCertificate(ctx context.Context, contro
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, components.CACertificateInput, ...operations.Option) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, components.CACertificate, ...operations.Option) error); ok {
 		r1 = rf(ctx, controlPlaneID, caCertificate, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -70,14 +70,14 @@ type MockCACertificatesSDK_CreateCaCertificate_Call struct {
 // CreateCaCertificate is a helper method to define mock.On call
 //   - ctx context.Context
 //   - controlPlaneID string
-//   - caCertificate components.CACertificateInput
+//   - caCertificate components.CACertificate
 //   - opts ...operations.Option
 func (_e *MockCACertificatesSDK_Expecter) CreateCaCertificate(ctx interface{}, controlPlaneID interface{}, caCertificate interface{}, opts ...interface{}) *MockCACertificatesSDK_CreateCaCertificate_Call {
 	return &MockCACertificatesSDK_CreateCaCertificate_Call{Call: _e.mock.On("CreateCaCertificate",
 		append([]interface{}{ctx, controlPlaneID, caCertificate}, opts...)...)}
 }
 
-func (_c *MockCACertificatesSDK_CreateCaCertificate_Call) Run(run func(ctx context.Context, controlPlaneID string, caCertificate components.CACertificateInput, opts ...operations.Option)) *MockCACertificatesSDK_CreateCaCertificate_Call {
+func (_c *MockCACertificatesSDK_CreateCaCertificate_Call) Run(run func(ctx context.Context, controlPlaneID string, caCertificate components.CACertificate, opts ...operations.Option)) *MockCACertificatesSDK_CreateCaCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		variadicArgs := make([]operations.Option, len(args)-3)
 		for i, a := range args[3:] {
@@ -85,7 +85,7 @@ func (_c *MockCACertificatesSDK_CreateCaCertificate_Call) Run(run func(ctx conte
 				variadicArgs[i] = a.(operations.Option)
 			}
 		}
-		run(args[0].(context.Context), args[1].(string), args[2].(components.CACertificateInput), variadicArgs...)
+		run(args[0].(context.Context), args[1].(string), args[2].(components.CACertificate), variadicArgs...)
 	})
 	return _c
 }
@@ -95,7 +95,7 @@ func (_c *MockCACertificatesSDK_CreateCaCertificate_Call) Return(_a0 *operations
 	return _c
 }
 
-func (_c *MockCACertificatesSDK_CreateCaCertificate_Call) RunAndReturn(run func(context.Context, string, components.CACertificateInput, ...operations.Option) (*operations.CreateCaCertificateResponse, error)) *MockCACertificatesSDK_CreateCaCertificate_Call {
+func (_c *MockCACertificatesSDK_CreateCaCertificate_Call) RunAndReturn(run func(context.Context, string, components.CACertificate, ...operations.Option) (*operations.CreateCaCertificateResponse, error)) *MockCACertificatesSDK_CreateCaCertificate_Call {
 	_c.Call.Return(run)
 	return _c
 }

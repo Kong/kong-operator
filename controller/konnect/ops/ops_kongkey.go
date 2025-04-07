@@ -91,8 +91,8 @@ func deleteKey(
 	return nil
 }
 
-func kongKeyToKeyInput(key *configurationv1alpha1.KongKey) sdkkonnectcomp.KeyInput {
-	k := sdkkonnectcomp.KeyInput{
+func kongKeyToKeyInput(key *configurationv1alpha1.KongKey) sdkkonnectcomp.Key {
+	k := sdkkonnectcomp.Key{
 		Jwk:  key.Spec.JWK,
 		Kid:  key.Spec.KID,
 		Name: key.Spec.Name,

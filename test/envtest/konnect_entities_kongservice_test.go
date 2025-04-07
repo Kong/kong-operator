@@ -75,13 +75,13 @@ func TestKongService(t *testing.T) {
 			CreateService(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ServiceInput) bool {
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
 					return req.Host == host
 				}),
 			).
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
-					Service: &sdkkonnectcomp.Service{
+					Service: &sdkkonnectcomp.ServiceOutput{
 						ID: lo.ToPtr(serviceID),
 					},
 				},
@@ -109,7 +109,7 @@ func TestKongService(t *testing.T) {
 			UpsertService(
 				mock.Anything,
 				mock.MatchedBy(func(req sdkkonnectops.UpsertServiceRequest) bool {
-					return req.ServiceID == serviceID && req.Service.Port == port
+					return req.ServiceID == serviceID && req.Service.Port == lo.ToPtr(port)
 				}),
 			).
 			Return(&sdkkonnectops.UpsertServiceResponse{}, nil)
@@ -185,7 +185,7 @@ func TestKongService(t *testing.T) {
 			CreateService(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ServiceInput) bool {
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
 					return req.Host == host
 				}),
 			).
@@ -245,13 +245,13 @@ func TestKongService(t *testing.T) {
 			CreateService(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ServiceInput) bool {
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
 					return req.Host == host
 				}),
 			).
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
-					Service: &sdkkonnectcomp.Service{
+					Service: &sdkkonnectcomp.ServiceOutput{
 						ID: lo.ToPtr(serviceID),
 					},
 				},
@@ -300,13 +300,13 @@ func TestKongService(t *testing.T) {
 			CreateService(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ServiceInput) bool {
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
 					return req.Host == host
 				}),
 			).
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
-					Service: &sdkkonnectcomp.Service{
+					Service: &sdkkonnectcomp.ServiceOutput{
 						ID: lo.ToPtr(id),
 					},
 				},
@@ -353,13 +353,13 @@ func TestKongService(t *testing.T) {
 			CreateService(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ServiceInput) bool {
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
 					return req.Host == host
 				}),
 			).
 			Return(
 				&sdkkonnectops.CreateServiceResponse{
-					Service: &sdkkonnectcomp.Service{
+					Service: &sdkkonnectcomp.ServiceOutput{
 						ID: lo.ToPtr(id),
 					},
 				},
@@ -397,7 +397,7 @@ func TestKongService(t *testing.T) {
 				return r.ServiceID == id && r.Service.Host == host
 			})).
 			Return(&sdkkonnectops.UpsertServiceResponse{
-				Service: &sdkkonnectcomp.Service{
+				Service: &sdkkonnectcomp.ServiceOutput{
 					ID: lo.ToPtr(id2),
 				},
 			}, nil)

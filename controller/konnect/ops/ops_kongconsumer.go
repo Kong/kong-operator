@@ -313,8 +313,8 @@ func deleteConsumer(
 
 func kongConsumerToSDKConsumerInput(
 	consumer *configurationv1.KongConsumer,
-) sdkkonnectcomp.ConsumerInput {
-	return sdkkonnectcomp.ConsumerInput{
+) sdkkonnectcomp.Consumer {
+	return sdkkonnectcomp.Consumer{
 		CustomID: lo.ToPtr(consumer.CustomID),
 		Tags:     GenerateTagsForObject(consumer, consumer.Spec.Tags...),
 		Username: lo.ToPtr(consumer.Username),

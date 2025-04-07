@@ -26,7 +26,7 @@ func (_m *MockServicesSDK) EXPECT() *MockServicesSDK_Expecter {
 }
 
 // CreateService provides a mock function with given fields: ctx, controlPlaneID, service, opts
-func (_m *MockServicesSDK) CreateService(ctx context.Context, controlPlaneID string, service components.ServiceInput, opts ...operations.Option) (*operations.CreateServiceResponse, error) {
+func (_m *MockServicesSDK) CreateService(ctx context.Context, controlPlaneID string, service components.Service, opts ...operations.Option) (*operations.CreateServiceResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -42,10 +42,10 @@ func (_m *MockServicesSDK) CreateService(ctx context.Context, controlPlaneID str
 
 	var r0 *operations.CreateServiceResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.ServiceInput, ...operations.Option) (*operations.CreateServiceResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.Service, ...operations.Option) (*operations.CreateServiceResponse, error)); ok {
 		return rf(ctx, controlPlaneID, service, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.ServiceInput, ...operations.Option) *operations.CreateServiceResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.Service, ...operations.Option) *operations.CreateServiceResponse); ok {
 		r0 = rf(ctx, controlPlaneID, service, opts...)
 	} else {
 		if ret.Get(0) != nil {
@@ -53,7 +53,7 @@ func (_m *MockServicesSDK) CreateService(ctx context.Context, controlPlaneID str
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, components.ServiceInput, ...operations.Option) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, components.Service, ...operations.Option) error); ok {
 		r1 = rf(ctx, controlPlaneID, service, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -70,14 +70,14 @@ type MockServicesSDK_CreateService_Call struct {
 // CreateService is a helper method to define mock.On call
 //   - ctx context.Context
 //   - controlPlaneID string
-//   - service components.ServiceInput
+//   - service components.Service
 //   - opts ...operations.Option
 func (_e *MockServicesSDK_Expecter) CreateService(ctx interface{}, controlPlaneID interface{}, service interface{}, opts ...interface{}) *MockServicesSDK_CreateService_Call {
 	return &MockServicesSDK_CreateService_Call{Call: _e.mock.On("CreateService",
 		append([]interface{}{ctx, controlPlaneID, service}, opts...)...)}
 }
 
-func (_c *MockServicesSDK_CreateService_Call) Run(run func(ctx context.Context, controlPlaneID string, service components.ServiceInput, opts ...operations.Option)) *MockServicesSDK_CreateService_Call {
+func (_c *MockServicesSDK_CreateService_Call) Run(run func(ctx context.Context, controlPlaneID string, service components.Service, opts ...operations.Option)) *MockServicesSDK_CreateService_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		variadicArgs := make([]operations.Option, len(args)-3)
 		for i, a := range args[3:] {
@@ -85,7 +85,7 @@ func (_c *MockServicesSDK_CreateService_Call) Run(run func(ctx context.Context, 
 				variadicArgs[i] = a.(operations.Option)
 			}
 		}
-		run(args[0].(context.Context), args[1].(string), args[2].(components.ServiceInput), variadicArgs...)
+		run(args[0].(context.Context), args[1].(string), args[2].(components.Service), variadicArgs...)
 	})
 	return _c
 }
@@ -95,7 +95,7 @@ func (_c *MockServicesSDK_CreateService_Call) Return(_a0 *operations.CreateServi
 	return _c
 }
 
-func (_c *MockServicesSDK_CreateService_Call) RunAndReturn(run func(context.Context, string, components.ServiceInput, ...operations.Option) (*operations.CreateServiceResponse, error)) *MockServicesSDK_CreateService_Call {
+func (_c *MockServicesSDK_CreateService_Call) RunAndReturn(run func(context.Context, string, components.Service, ...operations.Option) (*operations.CreateServiceResponse, error)) *MockServicesSDK_CreateService_Call {
 	_c.Call.Return(run)
 	return _c
 }
