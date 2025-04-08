@@ -46,7 +46,7 @@ type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt cons
 	SyncPeriod              time.Duration
 	MaxConcurrentReconciles uint
 
-	MetricRecoder metrics.Recorder
+	MetricRecorder metrics.Recorder
 }
 
 // KonnectEntityReconcilerOption is a functional option for the KonnectEntityReconciler.
@@ -78,7 +78,7 @@ func WithMetricRecorder[T constraints.SupportedKonnectEntityType, TEnt constrain
 	metricRecorder metrics.Recorder,
 ) KonnectEntityReconcilerOption[T, TEnt] {
 	return func(r *KonnectEntityReconciler[T, TEnt]) {
-		r.MetricRecoder = metricRecorder
+		r.MetricRecorder = metricRecorder
 	}
 }
 
@@ -99,7 +99,7 @@ func NewKonnectEntityReconciler[
 		Client:                  client,
 		SyncPeriod:              consts.DefaultKonnectSyncPeriod,
 		MaxConcurrentReconciles: consts.DefaultKonnectMaxConcurrentReconciles,
-		MetricRecoder:           &metrics.MockRecorder{},
+		MetricRecorder:          &metrics.MockRecorder{},
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -388,7 +388,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-			if err := ops.Delete[T, TEnt](ctx, sdk, r.Client, r.MetricRecoder, ent); err != nil {
+			if err := ops.Delete[T, TEnt](ctx, sdk, r.Client, r.MetricRecorder, ent); err != nil {
 				if res, errStatus := patch.StatusWithCondition(
 					ctx, r.Client, ent,
 					konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -426,7 +426,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go
 	if status := ent.GetKonnectStatus(); status == nil || status.GetKonnectID() == "" {
 		obj := ent.DeepCopyObject().(client.Object)
-		_, err := ops.Create[T, TEnt](ctx, sdk, r.Client, r.MetricRecoder, ent)
+		_, err := ops.Create[T, TEnt](ctx, sdk, r.Client, r.MetricRecorder, ent)
 
 		// TODO: this is actually not 100% error prone because when status
 		// update fails we don't store the Konnect ID and hence the reconciler
@@ -471,7 +471,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	res, err = ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecoder, ent)
+	res, err = ops.Update[T, TEnt](ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent)
 	// Set the server URL and org ID regardless of the error.
 	setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
 	// Update the status of the object regardless of the error.
@@ -487,9 +487,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, nil
 	}
 
-	// Ensure that successfully reonciled object has the cleanup finalizer.
+	// Ensure that successfully reconciled object has the cleanup finalizer.
 	// This can happen when the finalizer was removed e.g. when the referenced
-	// object was removed, breaking the reference chaing in Konnect and thus making
+	// object was removed, breaking the reference chain in Konnect and thus making
 	// the delete operation on the Konnect side impossible.
 	if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
 		return res, err

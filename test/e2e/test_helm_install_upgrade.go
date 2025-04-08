@@ -271,7 +271,9 @@ func TestHelmUpgrade(t *testing.T) {
 				{
 					Name: "DataPlane deployment is not patched after operator upgrade",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
+						// https://github.com/Kong/gateway-operator/pull/1395 makes the operator patch
+						// the readiness probe when it's customized but without setting a handler.
+						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
