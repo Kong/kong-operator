@@ -109,7 +109,7 @@ func TestKongService(t *testing.T) {
 			UpsertService(
 				mock.Anything,
 				mock.MatchedBy(func(req sdkkonnectops.UpsertServiceRequest) bool {
-					return req.ServiceID == serviceID && req.Service.Port == lo.ToPtr(port)
+					return req.ServiceID == serviceID && req.Service.Port != nil && *req.Service.Port == port
 				}),
 			).
 			Return(&sdkkonnectops.UpsertServiceResponse{}, nil)
