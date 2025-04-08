@@ -68,7 +68,7 @@ func TestHelmUpgrade(t *testing.T) {
 		{
 			name:        "upgrade from one before latest to latest minor",
 			fromVersion: "1.4.2", // renovate: datasource=docker packageName=kong/gateway-operator-oss depName=kong/gateway-operator-oss@only-patch
-			toVersion:   "1.5.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
+			toVersion:   "1.5.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss depName=kong/gateway-operator-oss
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -139,7 +139,7 @@ func TestHelmUpgrade(t *testing.T) {
 		},
 		{
 			name:             "upgrade from latest minor to current",
-			fromVersion:      "1.5.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss
+			fromVersion:      "1.5.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss depName=kong/gateway-operator-oss
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release. It's needed for the chart to properly render
 			// semver-conditional templates.
@@ -271,9 +271,7 @@ func TestHelmUpgrade(t *testing.T) {
 				{
 					Name: "DataPlane deployment is not patched after operator upgrade",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						// https://github.com/Kong/gateway-operator/pull/1395 makes the operator patch
-						// the readiness probe when it's customized but without setting a handler.
-						gatewayDataPlaneDeploymentIsPatched("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
+						gatewayDataPlaneDeploymentIsNotPatched("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 				{
