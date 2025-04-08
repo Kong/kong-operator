@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -38,14 +39,10 @@ func TestDataPlaneEssentials(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying dataplane resource")
-	dataplaneName := types.NamespacedName{
-		Namespace: namespace.Name,
-		Name:      uuid.NewString(),
-	}
 	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: dataplaneName.Namespace,
-			Name:      dataplaneName.Name,
+			Namespace:    namespace.Name,
+			GenerateName: "dataplane-",
 		},
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
@@ -94,6 +91,8 @@ func TestDataPlaneEssentials(t *testing.T) {
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
+
+	dataplaneName := client.ObjectKeyFromObject(dataplane)
 
 	t.Log("verifying dataplane gets marked provisioned")
 	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), waitTime, tickTime)
@@ -204,29 +203,110 @@ func TestDataPlaneEssentials(t *testing.T) {
 
 	t.Log("verifying dataplane status is properly filled with backing service name and its addresses")
 	require.Eventually(t, testutils.DataPlaneHasServiceAndAddressesInStatus(t, GetCtx(), dataplaneName, clients), waitTime, tickTime)
+}
 
-	t.Log("updating dataplane spec with proxy service type of ClusterIP")
-	require.Eventually(t,
-		testutils.DataPlaneUpdateEventually(t, GetCtx(), dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
-			dp.Spec.Network.Services.Ingress.Type = corev1.ServiceTypeClusterIP
-		}),
-		waitTime, tickTime)
+func TestDataPlaneServiceTypes(t *testing.T) {
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
-	t.Log("checking if dataplane proxy service type changes to ClusterIP")
-	require.Eventually(t, func() bool {
-		servicesClient := GetClients().K8sClient.CoreV1().Services(dataplane.Namespace)
-		dataplaneIngressService, err := servicesClient.Get(GetCtx(), dataplaneIngressService.Name, metav1.GetOptions{})
-		if err != nil {
-			t.Logf("error getting dataplane proxy service: %v", err)
-			return false
-		}
-		if dataplaneIngressService.Spec.Type != corev1.ServiceTypeClusterIP {
-			t.Logf("dataplane proxy service should be of ClusterIP type but is %s", dataplaneIngressService.Spec.Type)
-			return false
-		}
+	t.Log("deploying dataplane resource")
+	dataplane := &operatorv1beta1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    namespace.Name,
+			GenerateName: "dataplane-",
+		},
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: helpers.GetDefaultDataPlaneImage(),
+									},
+								},
+							},
+						},
+					},
+				},
+				Network: operatorv1beta1.DataPlaneNetworkOptions{
+					Services: &operatorv1beta1.DataPlaneServices{
+						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+							ServiceOptions: operatorv1beta1.ServiceOptions{
+								Type: corev1.ServiceTypeLoadBalancer,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
 
-		return true
-	}, waitTime, tickTime)
+	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
+	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(dataplane)
+
+	dataplaneName := client.ObjectKeyFromObject(dataplane)
+
+	t.Log("verifying dataplane gets marked provisioned")
+	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), waitTime, tickTime)
+
+	t.Log("verifying deployments managed by the dataplane")
+	deployment := &appsv1.Deployment{}
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, deployment, client.MatchingLabels{
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+	}, clients), waitTime, tickTime)
+
+	t.Log("verifying services managed by the dataplane")
+	var dataplaneIngressService corev1.Service
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, &dataplaneIngressService, clients, client.MatchingLabels{
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+	}), waitTime, tickTime)
+
+	updateAndVerifyServiceType := func(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients testutils.K8sClients, dataplane *operatorv1beta1.DataPlane, dataplaneIngressService corev1.Service, serviceType corev1.ServiceType) {
+		t.Helper()
+
+		t.Logf("updating dataplane spec with proxy service type of %s", serviceType)
+		require.Eventually(t,
+			testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients, func(dp *operatorv1beta1.DataPlane) {
+				dp.Spec.Network.Services.Ingress.Type = serviceType
+			}),
+			waitTime, tickTime)
+
+		t.Logf("checking if dataplane proxy service type changes to %s", serviceType)
+		require.Eventually(t, func() bool {
+			servicesClient := GetClients().K8sClient.CoreV1().Services(dataplane.Namespace)
+			dataplaneIngressService, err := servicesClient.Get(GetCtx(), dataplaneIngressService.Name, metav1.GetOptions{})
+			if err != nil {
+				t.Logf("error getting dataplane proxy service: %v", err)
+				return false
+			}
+			if dataplaneIngressService.Spec.Type != serviceType {
+				t.Logf("dataplane proxy service should be of %s type but is %s", serviceType, dataplaneIngressService.Spec.Type)
+				return false
+			}
+
+			return true
+		}, waitTime, tickTime)
+	}
+
+	tests := []struct {
+		name        string
+		serviceType corev1.ServiceType
+	}{
+		{"ClusterIP", corev1.ServiceTypeClusterIP},
+		{"NodePort", corev1.ServiceTypeNodePort},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			updateAndVerifyServiceType(t, ctx, dataplaneName, clients, dataplane, dataplaneIngressService, tt.serviceType)
+		})
+	}
 }
 
 func TestDataPlaneUpdate(t *testing.T) {
@@ -235,14 +315,10 @@ func TestDataPlaneUpdate(t *testing.T) {
 
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	t.Log("deploying dataplane resource")
-	dataplaneName := types.NamespacedName{
-		Namespace: namespace.Name,
-		Name:      uuid.NewString(),
-	}
 	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: dataplaneName.Namespace,
-			Name:      dataplaneName.Name,
+			Namespace:    namespace.Name,
+			GenerateName: "dataplane-",
 		},
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
@@ -276,6 +352,8 @@ func TestDataPlaneUpdate(t *testing.T) {
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
+
+	dataplaneName := client.ObjectKeyFromObject(dataplane)
 
 	t.Log("verifying that the dataplane gets marked as provisioned")
 	require.Eventually(t, testutils.DataPlaneIsReady(
@@ -515,14 +593,10 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying dataplane resource with 2 replicas")
-	dataplaneName := types.NamespacedName{
-		Namespace: namespace.Name,
-		Name:      uuid.NewString(),
-	}
 	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: dataplaneName.Namespace,
-			Name:      dataplaneName.Name,
+			Namespace:    namespace.Name,
+			GenerateName: "dataplane-",
 		},
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
@@ -554,6 +628,8 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
+
+	dataplaneName := client.ObjectKeyFromObject(dataplane)
 
 	t.Log("verifying dataplane gets marked provisioned")
 	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), waitTime, tickTime)
@@ -659,8 +735,8 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	t.Log("creating a secret to mount to dataplane containers")
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      uuid.NewString(),
+			Namespace:    namespace.Name,
+			GenerateName: "secret-",
 		},
 		StringData: map[string]string{
 			"file-0": "foo",
@@ -671,14 +747,10 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	cleaner.Add(secret)
 
 	t.Log("deploying dataplane resource")
-	dataplaneName := types.NamespacedName{
-		Namespace: namespace.Name,
-		Name:      uuid.NewString(),
-	}
 	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: dataplaneName.Namespace,
-			Name:      dataplaneName.Name,
+			Namespace:    namespace.Name,
+			GenerateName: "dataplane-",
 		},
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
@@ -742,6 +814,8 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	dataplane, err = GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name).Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
+
+	dataplaneName := client.ObjectKeyFromObject(dataplane)
 
 	t.Log("verifying that the dataplane gets marked as Ready")
 	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), waitTime, tickTime)
@@ -838,14 +912,10 @@ func TestDataPlanePodDisruptionBudget(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying DataPlane resource with 2 replicas")
-	dataplaneName := types.NamespacedName{
-		Namespace: namespace.Name,
-		Name:      uuid.NewString(),
-	}
 	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: dataplaneName.Namespace,
-			Name:      dataplaneName.Name,
+			Namespace:    namespace.Name,
+			GenerateName: "dataplane-",
 		},
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
@@ -884,6 +954,8 @@ func TestDataPlanePodDisruptionBudget(t *testing.T) {
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
+
+	dataplaneName := client.ObjectKeyFromObject(dataplane)
 
 	t.Log("verifying DataPlane gets marked provisioned")
 	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), waitTime, tickTime)
@@ -932,14 +1004,10 @@ func TestDataPlaneServiceExternalTrafficPolicy(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying DataPlane resource with 2 replicas")
-	dataplaneName := types.NamespacedName{
-		Namespace: namespace.Name,
-		Name:      uuid.NewString(),
-	}
 	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: dataplaneName.Namespace,
-			Name:      dataplaneName.Name,
+			Namespace:    namespace.Name,
+			GenerateName: "dataplane-",
 		},
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
@@ -998,6 +1066,8 @@ func TestDataPlaneServiceExternalTrafficPolicy(t *testing.T) {
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
 
+	dataplaneName := client.ObjectKeyFromObject(dataplane)
+
 	t.Log("verifying DataPlane gets marked provisioned")
 	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), waitTime, tickTime)
 
@@ -1039,14 +1109,10 @@ func TestDataPlaneSpecifyingServiceName(t *testing.T) {
 
 	serviceName := "ingress-service-" + uuid.NewString()
 	t.Logf("deploying dataplane resource with service name specified to %s", serviceName)
-	dataplaneName := types.NamespacedName{
-		Namespace: namespace.Name,
-		Name:      uuid.NewString(),
-	}
 	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace: dataplaneName.Namespace,
-			Name:      dataplaneName.Name,
+			Namespace:    namespace.Name,
+			GenerateName: "dataplane-",
 		},
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
@@ -1086,6 +1152,8 @@ func TestDataPlaneSpecifyingServiceName(t *testing.T) {
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(dataplane)
+
+	dataplaneName := client.ObjectKeyFromObject(dataplane)
 
 	t.Log("verifying that dataplane is provisioned")
 	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), waitTime, tickTime)
