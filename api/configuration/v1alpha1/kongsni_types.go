@@ -61,7 +61,7 @@ type KongSNIAPISpec struct {
 // +apireference:kgo:include
 type KongSNISpec struct {
 	// CertificateRef is the reference to the certificate to which the KongSNI is attached.
-	CertificateRef KongObjectRef `json:"certificateRef"`
+	CertificateRef commonv1alpha1.NameRef `json:"certificateRef"`
 	// KongSNIAPISpec are the attributes of the Kong SNI itself.
 	KongSNIAPISpec `json:",inline"`
 }

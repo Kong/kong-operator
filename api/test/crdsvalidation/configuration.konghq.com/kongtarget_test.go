@@ -6,6 +6,7 @@ import (
 
 	"github.com/samber/lo"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/test/crdsvalidation/common"
 )
@@ -18,7 +19,7 @@ func TestKongTarget(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongTarget{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1alpha1.KongTargetSpec{
-						UpstreamRef: configurationv1alpha1.TargetRef{
+						UpstreamRef: commonv1alpha1.NameRef{
 							Name: "upstream",
 						},
 						KongTargetAPISpec: configurationv1alpha1.KongTargetAPISpec{
@@ -34,7 +35,7 @@ func TestKongTarget(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongTarget{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1alpha1.KongTargetSpec{
-						UpstreamRef: configurationv1alpha1.TargetRef{
+						UpstreamRef: commonv1alpha1.NameRef{
 							Name: "upstream",
 						},
 						KongTargetAPISpec: configurationv1alpha1.KongTargetAPISpec{
@@ -55,7 +56,7 @@ func TestKongTarget(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongTarget{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1alpha1.KongTargetSpec{
-						UpstreamRef: configurationv1alpha1.TargetRef{
+						UpstreamRef: commonv1alpha1.NameRef{
 							Name: "upstream",
 						},
 						KongTargetAPISpec: configurationv1alpha1.KongTargetAPISpec{
@@ -65,7 +66,7 @@ func TestKongTarget(t *testing.T) {
 					},
 				},
 				Update: func(kt *configurationv1alpha1.KongTarget) {
-					kt.Spec.UpstreamRef = configurationv1alpha1.TargetRef{
+					kt.Spec.UpstreamRef = commonv1alpha1.NameRef{
 						Name: "upstream-2",
 					}
 				},
@@ -81,7 +82,7 @@ func TestKongTarget(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongTarget{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1alpha1.KongTargetSpec{
-						UpstreamRef: configurationv1alpha1.TargetRef{
+						UpstreamRef: commonv1alpha1.NameRef{
 							Name: "upstream",
 						},
 						KongTargetAPISpec: configurationv1alpha1.KongTargetAPISpec{
@@ -103,7 +104,7 @@ func TestKongTarget(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongTarget{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1alpha1.KongTargetSpec{
-						UpstreamRef: configurationv1alpha1.TargetRef{
+						UpstreamRef: commonv1alpha1.NameRef{
 							Name: "upstream",
 						},
 						KongTargetAPISpec: configurationv1alpha1.KongTargetAPISpec{
@@ -126,7 +127,7 @@ func TestKongTarget(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongTarget{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1alpha1.KongTargetSpec{
-						UpstreamRef: configurationv1alpha1.TargetRef{
+						UpstreamRef: commonv1alpha1.NameRef{
 							Name: "upstream",
 						},
 						KongTargetAPISpec: configurationv1alpha1.KongTargetAPISpec{

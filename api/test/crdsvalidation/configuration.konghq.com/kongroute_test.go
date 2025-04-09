@@ -42,7 +42,7 @@ func TestKongRoute(t *testing.T) {
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type:          configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.KongObjectRef{Name: "svc"},
+							NamespacedRef: &commonv1alpha1.NameRef{Name: "svc"},
 						},
 						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 							Paths: []string{"/"},
@@ -57,7 +57,7 @@ func TestKongRoute(t *testing.T) {
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type:          configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.KongObjectRef{Name: "svc"},
+							NamespacedRef: &commonv1alpha1.NameRef{Name: "svc"},
 						},
 						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 							Protocols: []sdkkonnectcomp.RouteJSONProtocols{"http"},
@@ -73,7 +73,7 @@ func TestKongRoute(t *testing.T) {
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type:          configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.KongObjectRef{Name: "svc"},
+							NamespacedRef: &commonv1alpha1.NameRef{Name: "svc"},
 						},
 						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 							Protocols: []sdkkonnectcomp.RouteJSONProtocols{"http"},
@@ -111,7 +111,7 @@ func TestKongRoute(t *testing.T) {
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.KongObjectRef{
+							NamespacedRef: &commonv1alpha1.NameRef{
 								Name: "test-konnect-service",
 							},
 						},
@@ -128,7 +128,7 @@ func TestKongRoute(t *testing.T) {
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.KongObjectRef{
+							NamespacedRef: &commonv1alpha1.NameRef{
 								Name: "",
 							},
 						},
@@ -176,7 +176,7 @@ func TestKongRoute(t *testing.T) {
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.KongObjectRef{
+							NamespacedRef: &commonv1alpha1.NameRef{
 								Name: "test-konnect-service",
 							},
 						},
@@ -207,7 +207,7 @@ func TestKongRoute(t *testing.T) {
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.KongObjectRef{
+							NamespacedRef: &commonv1alpha1.NameRef{
 								Name: "test-konnect-service",
 							},
 						},

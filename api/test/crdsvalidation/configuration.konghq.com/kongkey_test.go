@@ -118,7 +118,7 @@ func TestKongKey(t *testing.T) {
 					Spec: configurationv1alpha1.KongKeySpec{
 						KeySetRef: &configurationv1alpha1.KeySetRef{
 							Type: configurationv1alpha1.KeySetRefNamespacedRef,
-							NamespacedRef: &configurationv1alpha1.KeySetNamespacedRef{
+							NamespacedRef: &commonv1alpha1.NameRef{
 								Name: "keyset-1",
 							},
 						},

@@ -49,7 +49,7 @@ type KongTarget struct {
 // +apireference:kgo:include
 type KongTargetSpec struct {
 	// UpstreamRef is a reference to a KongUpstream this KongTarget is attached to.
-	UpstreamRef TargetRef `json:"upstreamRef"`
+	UpstreamRef commonv1alpha1.NameRef `json:"upstreamRef"`
 	// KongTargetAPISpec are the attributes of the Kong Target itself.
 	KongTargetAPISpec `json:",inline"`
 }

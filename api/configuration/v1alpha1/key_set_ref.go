@@ -1,5 +1,7 @@
 package v1alpha1
 
+import commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+
 // KeySetRefType is the enum type for the KeySetRef.
 // +kubebuilder:validation:Enum=konnectID;namespacedRef
 // +apireference:kgo:include
@@ -36,16 +38,5 @@ type KeySetRef struct {
 	// NamespacedRef is a reference to a KeySet entity inside the cluster.
 	// This field is required when the Type is namespacedRef.
 	// +optional
-	NamespacedRef *KeySetNamespacedRef `json:"namespacedRef,omitempty"`
-}
-
-// KeySetNamespacedRef is the schema for the KeySetNamespacedRef type.
-// +apireference:kgo:include
-type KeySetNamespacedRef struct {
-	// Name is the name of the KeySet object.
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
-
-	// TODO: Implement cross namespace references:
-	// https://github.com/Kong/kubernetes-configuration/issues/36
+	NamespacedRef *commonv1alpha1.NameRef `json:"namespacedRef,omitempty"`
 }

@@ -7,6 +7,7 @@ import (
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/test/crdsvalidation/common"
 )
@@ -19,7 +20,7 @@ func TestKongSNI(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongSNI{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1alpha1.KongSNISpec{
-						CertificateRef: configurationv1alpha1.KongObjectRef{},
+						CertificateRef: commonv1alpha1.NameRef{},
 						KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{
 							Name: "example.com",
 						},
@@ -32,7 +33,7 @@ func TestKongSNI(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongSNI{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1alpha1.KongSNISpec{
-						CertificateRef: configurationv1alpha1.KongObjectRef{
+						CertificateRef: commonv1alpha1.NameRef{
 							Name: "cert1",
 						},
 						KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{
@@ -41,7 +42,7 @@ func TestKongSNI(t *testing.T) {
 					},
 				},
 				Update: func(sni *configurationv1alpha1.KongSNI) {
-					sni.Spec.CertificateRef = configurationv1alpha1.KongObjectRef{
+					sni.Spec.CertificateRef = commonv1alpha1.NameRef{
 						Name: "cert-2",
 					}
 				},
@@ -51,7 +52,7 @@ func TestKongSNI(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongSNI{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1alpha1.KongSNISpec{
-						CertificateRef: configurationv1alpha1.KongObjectRef{
+						CertificateRef: commonv1alpha1.NameRef{
 							Name: "cert1",
 						},
 						KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{
@@ -71,7 +72,7 @@ func TestKongSNI(t *testing.T) {
 					},
 				},
 				Update: func(sni *configurationv1alpha1.KongSNI) {
-					sni.Spec.CertificateRef = configurationv1alpha1.KongObjectRef{
+					sni.Spec.CertificateRef = commonv1alpha1.NameRef{
 						Name: "cert-2",
 					}
 				},
@@ -87,7 +88,7 @@ func TestKongSNI(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongSNI{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1alpha1.KongSNISpec{
-						CertificateRef: configurationv1alpha1.KongObjectRef{
+						CertificateRef: commonv1alpha1.NameRef{
 							Name: "cert1",
 						},
 					},
@@ -104,7 +105,7 @@ func TestKongSNI(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongSNI{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1alpha1.KongSNISpec{
-						CertificateRef: configurationv1alpha1.KongObjectRef{
+						CertificateRef: commonv1alpha1.NameRef{
 							Name: "cert1",
 						},
 						KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{
@@ -125,7 +126,7 @@ func TestKongSNI(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongSNI{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1alpha1.KongSNISpec{
-						CertificateRef: configurationv1alpha1.KongObjectRef{
+						CertificateRef: commonv1alpha1.NameRef{
 							Name: "cert1",
 						},
 						KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{
@@ -147,7 +148,7 @@ func TestKongSNI(t *testing.T) {
 				TestObject: &configurationv1alpha1.KongSNI{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1alpha1.KongSNISpec{
-						CertificateRef: configurationv1alpha1.KongObjectRef{
+						CertificateRef: commonv1alpha1.NameRef{
 							Name: "cert1",
 						},
 						KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{

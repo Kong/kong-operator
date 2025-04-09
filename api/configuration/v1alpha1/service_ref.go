@@ -1,5 +1,7 @@
 package v1alpha1
 
+import commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+
 const (
 	// ServiceRefNamespacedRef is a namespaced reference to a KongService.
 	ServiceRefNamespacedRef = "namespacedRef"
@@ -17,5 +19,5 @@ type ServiceRef struct {
 	Type string `json:"type,omitempty"`
 
 	// NamespacedRef is a reference to a KongService.
-	NamespacedRef *KongObjectRef `json:"namespacedRef,omitempty"`
+	NamespacedRef *commonv1alpha1.NameRef `json:"namespacedRef,omitempty"`
 }
