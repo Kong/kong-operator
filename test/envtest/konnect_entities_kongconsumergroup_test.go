@@ -69,7 +69,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongConsumerGroup creation")
 		sdk.ConsumerGroupSDK.EXPECT().
 			CreateConsumerGroup(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(cg sdkkonnectcomp.ConsumerGroupInput) bool {
+				mock.MatchedBy(func(cg sdkkonnectcomp.ConsumerGroup) bool {
 					return cg.Name == cgName
 				}),
 			).Return(&sdkkonnectops.CreateConsumerGroupResponse{
@@ -143,7 +143,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongConsumerGroup creation")
 		sdk.ConsumerGroupSDK.EXPECT().
 			CreateConsumerGroup(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(cg sdkkonnectcomp.ConsumerGroupInput) bool {
+				mock.MatchedBy(func(cg sdkkonnectcomp.ConsumerGroup) bool {
 					return cg.Name == cgName
 				}),
 			).Return(
@@ -199,7 +199,7 @@ func TestKongConsumerGroup(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongConsumerGroup creation")
 		sdk.ConsumerGroupSDK.EXPECT().
 			CreateConsumerGroup(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(cg sdkkonnectcomp.ConsumerGroupInput) bool {
+				mock.MatchedBy(func(cg sdkkonnectcomp.ConsumerGroup) bool {
 					return cg.Name == cgName
 				}),
 			).Return(&sdkkonnectops.CreateConsumerGroupResponse{
@@ -253,7 +253,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			CreateConsumerGroup(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ConsumerGroupInput) bool {
+				mock.MatchedBy(func(req sdkkonnectcomp.ConsumerGroup) bool {
 					return req.Name == name
 				}),
 			).

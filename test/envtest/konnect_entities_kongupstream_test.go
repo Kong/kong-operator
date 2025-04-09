@@ -61,7 +61,7 @@ func TestKongUpstream(t *testing.T) {
 			CreateUpstream(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.UpstreamInput) bool {
+				mock.MatchedBy(func(req sdkkonnectcomp.Upstream) bool {
 					return req.Algorithm != nil && *req.Algorithm == "round-robin"
 				}),
 			).
@@ -135,7 +135,7 @@ func TestKongUpstream(t *testing.T) {
 			CreateUpstream(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.UpstreamInput) bool {
+				mock.MatchedBy(func(req sdkkonnectcomp.Upstream) bool {
 					return req.Algorithm != nil && *req.Algorithm == "round-robin"
 				}),
 			).
@@ -187,7 +187,7 @@ func TestKongUpstream(t *testing.T) {
 			CreateUpstream(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.UpstreamInput) bool {
+				mock.MatchedBy(func(req sdkkonnectcomp.Upstream) bool {
 					return slices.Contains(req.Tags, "test-1")
 				}),
 			).

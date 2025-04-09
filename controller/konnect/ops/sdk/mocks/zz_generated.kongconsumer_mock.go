@@ -26,7 +26,7 @@ func (_m *MockConsumersSDK) EXPECT() *MockConsumersSDK_Expecter {
 }
 
 // CreateConsumer provides a mock function with given fields: ctx, controlPlaneID, consumerInput, opts
-func (_m *MockConsumersSDK) CreateConsumer(ctx context.Context, controlPlaneID string, consumerInput components.ConsumerInput, opts ...operations.Option) (*operations.CreateConsumerResponse, error) {
+func (_m *MockConsumersSDK) CreateConsumer(ctx context.Context, controlPlaneID string, consumerInput components.Consumer, opts ...operations.Option) (*operations.CreateConsumerResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -42,10 +42,10 @@ func (_m *MockConsumersSDK) CreateConsumer(ctx context.Context, controlPlaneID s
 
 	var r0 *operations.CreateConsumerResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.ConsumerInput, ...operations.Option) (*operations.CreateConsumerResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.Consumer, ...operations.Option) (*operations.CreateConsumerResponse, error)); ok {
 		return rf(ctx, controlPlaneID, consumerInput, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.ConsumerInput, ...operations.Option) *operations.CreateConsumerResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.Consumer, ...operations.Option) *operations.CreateConsumerResponse); ok {
 		r0 = rf(ctx, controlPlaneID, consumerInput, opts...)
 	} else {
 		if ret.Get(0) != nil {
@@ -53,7 +53,7 @@ func (_m *MockConsumersSDK) CreateConsumer(ctx context.Context, controlPlaneID s
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, components.ConsumerInput, ...operations.Option) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, components.Consumer, ...operations.Option) error); ok {
 		r1 = rf(ctx, controlPlaneID, consumerInput, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -70,14 +70,14 @@ type MockConsumersSDK_CreateConsumer_Call struct {
 // CreateConsumer is a helper method to define mock.On call
 //   - ctx context.Context
 //   - controlPlaneID string
-//   - consumerInput components.ConsumerInput
+//   - consumerInput components.Consumer
 //   - opts ...operations.Option
 func (_e *MockConsumersSDK_Expecter) CreateConsumer(ctx interface{}, controlPlaneID interface{}, consumerInput interface{}, opts ...interface{}) *MockConsumersSDK_CreateConsumer_Call {
 	return &MockConsumersSDK_CreateConsumer_Call{Call: _e.mock.On("CreateConsumer",
 		append([]interface{}{ctx, controlPlaneID, consumerInput}, opts...)...)}
 }
 
-func (_c *MockConsumersSDK_CreateConsumer_Call) Run(run func(ctx context.Context, controlPlaneID string, consumerInput components.ConsumerInput, opts ...operations.Option)) *MockConsumersSDK_CreateConsumer_Call {
+func (_c *MockConsumersSDK_CreateConsumer_Call) Run(run func(ctx context.Context, controlPlaneID string, consumerInput components.Consumer, opts ...operations.Option)) *MockConsumersSDK_CreateConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		variadicArgs := make([]operations.Option, len(args)-3)
 		for i, a := range args[3:] {
@@ -85,7 +85,7 @@ func (_c *MockConsumersSDK_CreateConsumer_Call) Run(run func(ctx context.Context
 				variadicArgs[i] = a.(operations.Option)
 			}
 		}
-		run(args[0].(context.Context), args[1].(string), args[2].(components.ConsumerInput), variadicArgs...)
+		run(args[0].(context.Context), args[1].(string), args[2].(components.Consumer), variadicArgs...)
 	})
 	return _c
 }
@@ -95,7 +95,7 @@ func (_c *MockConsumersSDK_CreateConsumer_Call) Return(_a0 *operations.CreateCon
 	return _c
 }
 
-func (_c *MockConsumersSDK_CreateConsumer_Call) RunAndReturn(run func(context.Context, string, components.ConsumerInput, ...operations.Option) (*operations.CreateConsumerResponse, error)) *MockConsumersSDK_CreateConsumer_Call {
+func (_c *MockConsumersSDK_CreateConsumer_Call) RunAndReturn(run func(context.Context, string, components.Consumer, ...operations.Option) (*operations.CreateConsumerResponse, error)) *MockConsumersSDK_CreateConsumer_Call {
 	_c.Call.Return(run)
 	return _c
 }

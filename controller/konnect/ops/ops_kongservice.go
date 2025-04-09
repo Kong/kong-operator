@@ -88,16 +88,14 @@ func deleteService(
 
 func kongServiceToSDKServiceInput(
 	svc *configurationv1alpha1.KongService,
-) sdkkonnectcomp.ServiceInput {
-	return sdkkonnectcomp.ServiceInput{
+) sdkkonnectcomp.Service {
+	s := sdkkonnectcomp.Service{
 		URL:            svc.Spec.URL,
 		ConnectTimeout: svc.Spec.ConnectTimeout,
 		Enabled:        svc.Spec.Enabled,
 		Host:           svc.Spec.Host,
 		Name:           svc.Spec.Name,
 		Path:           svc.Spec.Path,
-		Port:           svc.Spec.Port,
-		Protocol:       svc.Spec.Protocol,
 		ReadTimeout:    svc.Spec.ReadTimeout,
 		Retries:        svc.Spec.Retries,
 		Tags:           GenerateTagsForObject(svc, svc.Spec.Tags...),
@@ -105,6 +103,13 @@ func kongServiceToSDKServiceInput(
 		TLSVerifyDepth: svc.Spec.TLSVerifyDepth,
 		WriteTimeout:   svc.Spec.WriteTimeout,
 	}
+	if svc.Spec.Port != 0 {
+		s.Port = lo.ToPtr(svc.Spec.Port)
+	}
+	if svc.Spec.Protocol != "" {
+		s.Protocol = lo.ToPtr(svc.Spec.Protocol)
+	}
+	return s
 }
 
 // getKongServiceForUID returns the Konnect ID of the KongService

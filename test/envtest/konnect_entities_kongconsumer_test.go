@@ -76,7 +76,7 @@ func TestKongConsumer(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
 			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
+				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
 					return input.Username != nil && *input.Username == username
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
@@ -173,7 +173,7 @@ func TestKongConsumer(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongConsumer creation with ConsumerGroup")
 		sdk.ConsumersSDK.EXPECT().
 			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
+				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
 					return input.Username != nil && *input.Username == username
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
@@ -192,7 +192,7 @@ func TestKongConsumer(t *testing.T) {
 
 		sdk.ConsumerGroupSDK.EXPECT().
 			CreateConsumerGroup(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerGroupInput) bool {
+				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerGroup) bool {
 					return input.Name == consumerGroupName
 				}),
 			).Return(&sdkkonnectops.CreateConsumerGroupResponse{
@@ -312,7 +312,7 @@ func TestKongConsumer(t *testing.T) {
 		sdk.ConsumersSDK.EXPECT().CreateConsumer(
 			mock.Anything,
 			cpID,
-			mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
+			mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
 				return input.Username != nil && *input.Username == username
 			}),
 		).Return(&sdkkonnectops.CreateConsumerResponse{}, &sdkkonnecterrs.ConflictError{})
@@ -353,7 +353,7 @@ func TestKongConsumer(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
 			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
+				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
 					return input.Username != nil && *input.Username == username
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
@@ -415,7 +415,7 @@ func TestKongConsumer(t *testing.T) {
 			CreateConsumer(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ConsumerInput) bool {
+				mock.MatchedBy(func(req sdkkonnectcomp.Consumer) bool {
 					return req.Username != nil && *req.Username == name
 				}),
 			).
@@ -477,7 +477,7 @@ func TestKongConsumer(t *testing.T) {
 			CreateConsumer(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.ConsumerInput) bool {
+				mock.MatchedBy(func(req sdkkonnectcomp.Consumer) bool {
 					return req.Username != nil && *req.Username == name
 				}),
 			).
@@ -609,7 +609,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
 			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
+				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
 					return input.Username != nil && *input.Username == username
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
@@ -699,7 +699,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
 			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
+				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
 					return input.Username != nil && *input.Username == username
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
@@ -787,7 +787,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
 			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
+				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
 					return input.Username != nil && *input.Username == username
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
@@ -878,7 +878,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
 			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
+				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
 					return input.Username != nil && *input.Username == username
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{
@@ -969,7 +969,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongConsumer creation")
 		sdk.ConsumersSDK.EXPECT().
 			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.ConsumerInput) bool {
+				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
 					return input.Username != nil && *input.Username == username
 				}),
 			).Return(&sdkkonnectops.CreateConsumerResponse{

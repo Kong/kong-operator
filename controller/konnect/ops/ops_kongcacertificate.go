@@ -92,8 +92,8 @@ func deleteCACertificate(
 	return nil
 }
 
-func kongCACertificateToCACertificateInput(cert *configurationv1alpha1.KongCACertificate) sdkkonnectcomp.CACertificateInput {
-	return sdkkonnectcomp.CACertificateInput{
+func kongCACertificateToCACertificateInput(cert *configurationv1alpha1.KongCACertificate) sdkkonnectcomp.CACertificate {
+	return sdkkonnectcomp.CACertificate{
 		Cert: cert.Spec.Cert,
 		// Deduplicate tags to avoid rejection by Konnect.
 		Tags: GenerateTagsForObject(cert, cert.Spec.Tags...),

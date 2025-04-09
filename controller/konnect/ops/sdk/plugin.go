@@ -9,7 +9,7 @@ import (
 
 // PluginSDK is the interface for Konnect plugin SDK.
 type PluginSDK interface {
-	CreatePlugin(ctx context.Context, controlPlaneID string, plugin sdkkonnectcomp.PluginInput, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreatePluginResponse, error)
+	CreatePlugin(ctx context.Context, controlPlaneID string, plugin sdkkonnectcomp.Plugin, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreatePluginResponse, error)
 	UpsertPlugin(ctx context.Context, request sdkkonnectops.UpsertPluginRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertPluginResponse, error)
 	DeletePlugin(ctx context.Context, controlPlaneID string, pluginID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeletePluginResponse, error)
 	ListPlugin(ctx context.Context, request sdkkonnectops.ListPluginRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListPluginResponse, error)

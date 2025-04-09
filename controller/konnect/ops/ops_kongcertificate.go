@@ -120,8 +120,8 @@ func deleteCertificate(
 	return nil
 }
 
-func kongCertificateToCertificateInput(cert *configurationv1alpha1.KongCertificate) sdkkonnectcomp.CertificateInput {
-	input := sdkkonnectcomp.CertificateInput{
+func kongCertificateToCertificateInput(cert *configurationv1alpha1.KongCertificate) sdkkonnectcomp.Certificate {
+	input := sdkkonnectcomp.Certificate{
 		Cert: cert.Spec.Cert,
 		Key:  cert.Spec.Key,
 		Tags: GenerateTagsForObject(cert, cert.Spec.Tags...),

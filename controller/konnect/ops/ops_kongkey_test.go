@@ -19,7 +19,7 @@ func TestKongKeyToKeyInput(t *testing.T) {
 	testCases := []struct {
 		name           string
 		key            *configurationv1alpha1.KongKey
-		expectedOutput sdkkonnectcomp.KeyInput
+		expectedOutput sdkkonnectcomp.Key
 	}{
 		{
 			name: "kong key with all fields set without key set",
@@ -50,7 +50,7 @@ func TestKongKeyToKeyInput(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: sdkkonnectcomp.KeyInput{
+			expectedOutput: sdkkonnectcomp.Key{
 				Kid:  "kid",
 				Name: lo.ToPtr("name"),
 				Jwk:  lo.ToPtr("jwk"),
@@ -108,7 +108,7 @@ func TestKongKeyToKeyInput(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: sdkkonnectcomp.KeyInput{
+			expectedOutput: sdkkonnectcomp.Key{
 				Kid:  "kid",
 				Name: lo.ToPtr("name"),
 				Jwk:  lo.ToPtr("jwk"),

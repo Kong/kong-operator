@@ -88,8 +88,8 @@ func deleteUpstream(
 
 func kongUpstreamToSDKUpstreamInput(
 	upstream *configurationv1alpha1.KongUpstream,
-) sdkkonnectcomp.UpstreamInput {
-	return sdkkonnectcomp.UpstreamInput{
+) sdkkonnectcomp.Upstream {
+	return sdkkonnectcomp.Upstream{
 		Algorithm:              upstream.Spec.Algorithm,
 		ClientCertificate:      upstream.Spec.ClientCertificate,
 		HashFallback:           upstream.Spec.HashFallback,

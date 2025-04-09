@@ -26,7 +26,7 @@ func (_m *MockUpstreamsSDK) EXPECT() *MockUpstreamsSDK_Expecter {
 }
 
 // CreateUpstream provides a mock function with given fields: ctx, controlPlaneID, upstream, opts
-func (_m *MockUpstreamsSDK) CreateUpstream(ctx context.Context, controlPlaneID string, upstream components.UpstreamInput, opts ...operations.Option) (*operations.CreateUpstreamResponse, error) {
+func (_m *MockUpstreamsSDK) CreateUpstream(ctx context.Context, controlPlaneID string, upstream components.Upstream, opts ...operations.Option) (*operations.CreateUpstreamResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -42,10 +42,10 @@ func (_m *MockUpstreamsSDK) CreateUpstream(ctx context.Context, controlPlaneID s
 
 	var r0 *operations.CreateUpstreamResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.UpstreamInput, ...operations.Option) (*operations.CreateUpstreamResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.Upstream, ...operations.Option) (*operations.CreateUpstreamResponse, error)); ok {
 		return rf(ctx, controlPlaneID, upstream, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.UpstreamInput, ...operations.Option) *operations.CreateUpstreamResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.Upstream, ...operations.Option) *operations.CreateUpstreamResponse); ok {
 		r0 = rf(ctx, controlPlaneID, upstream, opts...)
 	} else {
 		if ret.Get(0) != nil {
@@ -53,7 +53,7 @@ func (_m *MockUpstreamsSDK) CreateUpstream(ctx context.Context, controlPlaneID s
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, components.UpstreamInput, ...operations.Option) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, components.Upstream, ...operations.Option) error); ok {
 		r1 = rf(ctx, controlPlaneID, upstream, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -70,14 +70,14 @@ type MockUpstreamsSDK_CreateUpstream_Call struct {
 // CreateUpstream is a helper method to define mock.On call
 //   - ctx context.Context
 //   - controlPlaneID string
-//   - upstream components.UpstreamInput
+//   - upstream components.Upstream
 //   - opts ...operations.Option
 func (_e *MockUpstreamsSDK_Expecter) CreateUpstream(ctx interface{}, controlPlaneID interface{}, upstream interface{}, opts ...interface{}) *MockUpstreamsSDK_CreateUpstream_Call {
 	return &MockUpstreamsSDK_CreateUpstream_Call{Call: _e.mock.On("CreateUpstream",
 		append([]interface{}{ctx, controlPlaneID, upstream}, opts...)...)}
 }
 
-func (_c *MockUpstreamsSDK_CreateUpstream_Call) Run(run func(ctx context.Context, controlPlaneID string, upstream components.UpstreamInput, opts ...operations.Option)) *MockUpstreamsSDK_CreateUpstream_Call {
+func (_c *MockUpstreamsSDK_CreateUpstream_Call) Run(run func(ctx context.Context, controlPlaneID string, upstream components.Upstream, opts ...operations.Option)) *MockUpstreamsSDK_CreateUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		variadicArgs := make([]operations.Option, len(args)-3)
 		for i, a := range args[3:] {
@@ -85,7 +85,7 @@ func (_c *MockUpstreamsSDK_CreateUpstream_Call) Run(run func(ctx context.Context
 				variadicArgs[i] = a.(operations.Option)
 			}
 		}
-		run(args[0].(context.Context), args[1].(string), args[2].(components.UpstreamInput), variadicArgs...)
+		run(args[0].(context.Context), args[1].(string), args[2].(components.Upstream), variadicArgs...)
 	})
 	return _c
 }
@@ -95,7 +95,7 @@ func (_c *MockUpstreamsSDK_CreateUpstream_Call) Return(_a0 *operations.CreateUps
 	return _c
 }
 
-func (_c *MockUpstreamsSDK_CreateUpstream_Call) RunAndReturn(run func(context.Context, string, components.UpstreamInput, ...operations.Option) (*operations.CreateUpstreamResponse, error)) *MockUpstreamsSDK_CreateUpstream_Call {
+func (_c *MockUpstreamsSDK_CreateUpstream_Call) RunAndReturn(run func(context.Context, string, components.Upstream, ...operations.Option) (*operations.CreateUpstreamResponse, error)) *MockUpstreamsSDK_CreateUpstream_Call {
 	_c.Call.Return(run)
 	return _c
 }
