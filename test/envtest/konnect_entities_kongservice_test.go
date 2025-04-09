@@ -224,7 +224,7 @@ func TestKongService(t *testing.T) {
 	})
 
 	t.Run("should handle konnectID control plane references", func(t *testing.T) {
-		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/922")
+		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/1469")
 		const (
 			upstreamID = "kup-12345"
 			serviceID  = "service-12345"
