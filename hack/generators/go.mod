@@ -1,6 +1,6 @@
 module github.com/kong/gateway-operator/hack/generators
 
-go 1.24.0
+go 1.24.2
 
 replace github.com/kong/gateway-operator => ../../
 
