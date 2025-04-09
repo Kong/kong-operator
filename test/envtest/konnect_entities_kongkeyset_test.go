@@ -176,7 +176,7 @@ func TestKongKeySet(t *testing.T) {
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
-		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/922")
+		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/1469")
 		t.Log("Setting up SDK expectations on KongKeySet creation")
 		sdk.KeySetsSDK.EXPECT().CreateKeySet(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
 			mock.MatchedBy(func(input sdkkonnectcomp.KeySet) bool {

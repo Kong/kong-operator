@@ -102,7 +102,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	}, waitTime, tickTime)
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
-		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/922")
+		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/1469")
 		t.Log("Setting up SDK expectations on KongDataPlaneClientCertificate creation")
 		const dpCertID = "dp-cert-id-with-konnectid-cp-ref"
 		sdk.DataPlaneCertificatesSDK.EXPECT().CreateDataplaneCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
