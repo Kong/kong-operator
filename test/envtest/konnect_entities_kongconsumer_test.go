@@ -345,7 +345,7 @@ func TestKongConsumer(t *testing.T) {
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
-		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/922")
+		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/1469")
 		const (
 			consumerID = "consumer-with-cp-konnect-id"
 			username   = "user-with-cp-konnect-id"
