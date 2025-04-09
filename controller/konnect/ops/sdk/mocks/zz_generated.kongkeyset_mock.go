@@ -26,7 +26,7 @@ func (_m *MockKeySetsSDK) EXPECT() *MockKeySetsSDK_Expecter {
 }
 
 // CreateKeySet provides a mock function with given fields: ctx, controlPlaneID, keySet, opts
-func (_m *MockKeySetsSDK) CreateKeySet(ctx context.Context, controlPlaneID string, keySet components.KeySetInput, opts ...operations.Option) (*operations.CreateKeySetResponse, error) {
+func (_m *MockKeySetsSDK) CreateKeySet(ctx context.Context, controlPlaneID string, keySet components.KeySet, opts ...operations.Option) (*operations.CreateKeySetResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -42,10 +42,10 @@ func (_m *MockKeySetsSDK) CreateKeySet(ctx context.Context, controlPlaneID strin
 
 	var r0 *operations.CreateKeySetResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.KeySetInput, ...operations.Option) (*operations.CreateKeySetResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.KeySet, ...operations.Option) (*operations.CreateKeySetResponse, error)); ok {
 		return rf(ctx, controlPlaneID, keySet, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.KeySetInput, ...operations.Option) *operations.CreateKeySetResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.KeySet, ...operations.Option) *operations.CreateKeySetResponse); ok {
 		r0 = rf(ctx, controlPlaneID, keySet, opts...)
 	} else {
 		if ret.Get(0) != nil {
@@ -53,7 +53,7 @@ func (_m *MockKeySetsSDK) CreateKeySet(ctx context.Context, controlPlaneID strin
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, components.KeySetInput, ...operations.Option) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, components.KeySet, ...operations.Option) error); ok {
 		r1 = rf(ctx, controlPlaneID, keySet, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -70,14 +70,14 @@ type MockKeySetsSDK_CreateKeySet_Call struct {
 // CreateKeySet is a helper method to define mock.On call
 //   - ctx context.Context
 //   - controlPlaneID string
-//   - keySet components.KeySetInput
+//   - keySet components.KeySet
 //   - opts ...operations.Option
 func (_e *MockKeySetsSDK_Expecter) CreateKeySet(ctx interface{}, controlPlaneID interface{}, keySet interface{}, opts ...interface{}) *MockKeySetsSDK_CreateKeySet_Call {
 	return &MockKeySetsSDK_CreateKeySet_Call{Call: _e.mock.On("CreateKeySet",
 		append([]interface{}{ctx, controlPlaneID, keySet}, opts...)...)}
 }
 
-func (_c *MockKeySetsSDK_CreateKeySet_Call) Run(run func(ctx context.Context, controlPlaneID string, keySet components.KeySetInput, opts ...operations.Option)) *MockKeySetsSDK_CreateKeySet_Call {
+func (_c *MockKeySetsSDK_CreateKeySet_Call) Run(run func(ctx context.Context, controlPlaneID string, keySet components.KeySet, opts ...operations.Option)) *MockKeySetsSDK_CreateKeySet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		variadicArgs := make([]operations.Option, len(args)-3)
 		for i, a := range args[3:] {
@@ -85,7 +85,7 @@ func (_c *MockKeySetsSDK_CreateKeySet_Call) Run(run func(ctx context.Context, co
 				variadicArgs[i] = a.(operations.Option)
 			}
 		}
-		run(args[0].(context.Context), args[1].(string), args[2].(components.KeySetInput), variadicArgs...)
+		run(args[0].(context.Context), args[1].(string), args[2].(components.KeySet), variadicArgs...)
 	})
 	return _c
 }
@@ -95,7 +95,7 @@ func (_c *MockKeySetsSDK_CreateKeySet_Call) Return(_a0 *operations.CreateKeySetR
 	return _c
 }
 
-func (_c *MockKeySetsSDK_CreateKeySet_Call) RunAndReturn(run func(context.Context, string, components.KeySetInput, ...operations.Option) (*operations.CreateKeySetResponse, error)) *MockKeySetsSDK_CreateKeySet_Call {
+func (_c *MockKeySetsSDK_CreateKeySet_Call) RunAndReturn(run func(context.Context, string, components.KeySet, ...operations.Option) (*operations.CreateKeySetResponse, error)) *MockKeySetsSDK_CreateKeySet_Call {
 	_c.Call.Return(run)
 	return _c
 }

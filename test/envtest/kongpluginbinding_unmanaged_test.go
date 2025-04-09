@@ -216,7 +216,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			CreatePlugin(
 				mock.Anything,
 				cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(pi sdkkonnectcomp.PluginInput) bool {
+				mock.MatchedBy(func(pi sdkkonnectcomp.Plugin) bool {
 					return pi.Route != nil && pi.Route.ID != nil && *pi.Route.ID == routeID &&
 						pi.Service != nil && pi.Service.ID != nil && *pi.Service.ID == serviceID
 				})).
@@ -307,7 +307,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			CreatePlugin(
 				mock.Anything,
 				cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(pi sdkkonnectcomp.PluginInput) bool {
+				mock.MatchedBy(func(pi sdkkonnectcomp.Plugin) bool {
 					return pi.Consumer != nil && pi.Consumer.ID != nil && *pi.Consumer.ID == consumerID &&
 						pi.Service != nil && pi.Service.ID != nil && *pi.Service.ID == serviceID
 				})).
@@ -391,7 +391,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			CreatePlugin(
 				mock.Anything,
 				cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(pi sdkkonnectcomp.PluginInput) bool {
+				mock.MatchedBy(func(pi sdkkonnectcomp.Plugin) bool {
 					return pi.ConsumerGroup != nil && pi.ConsumerGroup.ID != nil && *pi.ConsumerGroup.ID == consumerGroupID &&
 						pi.Service != nil && pi.Service.ID != nil && *pi.Service.ID == serviceID
 				})).
@@ -462,7 +462,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 			CreatePlugin(
 				mock.Anything,
 				cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(pi sdkkonnectcomp.PluginInput) bool {
+				mock.MatchedBy(func(pi sdkkonnectcomp.Plugin) bool {
 					return pi.Consumer == nil && pi.ConsumerGroup == nil && pi.Route == nil && pi.Service == nil
 				})).
 			Return(

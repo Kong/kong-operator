@@ -66,7 +66,7 @@ func TestKongVault(t *testing.T) {
 		)
 
 		t.Log("Setting up mock SDK for vault creation")
-		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.MatchedBy(func(input sdkkonnectcomp.VaultInput) bool {
+		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.MatchedBy(func(input sdkkonnectcomp.Vault) bool {
 			return input.Name == vaultBackend && input.Prefix == vaultPrefix
 		})).Return(&sdkkonnectops.CreateVaultResponse{
 			Vault: &sdkkonnectcomp.Vault{
@@ -116,7 +116,7 @@ func TestKongVault(t *testing.T) {
 		)
 
 		t.Log("Setting up mock SDK for vault creation with conflict")
-		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.MatchedBy(func(input sdkkonnectcomp.VaultInput) bool {
+		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.MatchedBy(func(input sdkkonnectcomp.Vault) bool {
 			return input.Name == vaultBackend && input.Prefix == vaultPrefix
 		})).Return(nil, &sdkkonnecterrs.SDKError{
 			StatusCode: 400,
@@ -179,7 +179,7 @@ func TestKongVault(t *testing.T) {
 		)
 
 		t.Log("Setting up mock SDK for vault creation")
-		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.MatchedBy(func(input sdkkonnectcomp.VaultInput) bool {
+		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.MatchedBy(func(input sdkkonnectcomp.Vault) bool {
 			return input.Name == vaultBackend && input.Prefix == vaultPrefix
 		})).Return(&sdkkonnectops.CreateVaultResponse{
 			Vault: &sdkkonnectcomp.Vault{
@@ -205,5 +205,4 @@ func TestKongVault(t *testing.T) {
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
 	})
-
 }

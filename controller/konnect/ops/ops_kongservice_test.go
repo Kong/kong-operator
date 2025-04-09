@@ -56,7 +56,7 @@ func TestCreateKongService(t *testing.T) {
 					CreateService(ctx, "123456789", kongServiceToSDKServiceInput(svc)).
 					Return(
 						&sdkkonnectops.CreateServiceResponse{
-							Service: &sdkkonnectcomp.Service{
+							Service: &sdkkonnectcomp.ServiceOutput{
 								ID:   lo.ToPtr("12345"),
 								Host: "example.com",
 								Name: lo.ToPtr("svc-1"),
@@ -366,7 +366,7 @@ func TestUpdateKongService(t *testing.T) {
 					Return(
 						&sdkkonnectops.UpsertServiceResponse{
 							StatusCode: 200,
-							Service: &sdkkonnectcomp.Service{
+							Service: &sdkkonnectcomp.ServiceOutput{
 								ID:   lo.ToPtr("123456789"),
 								Name: lo.ToPtr("svc-1"),
 							},

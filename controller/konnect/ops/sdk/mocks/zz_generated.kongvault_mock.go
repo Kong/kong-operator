@@ -26,7 +26,7 @@ func (_m *MockVaultSDK) EXPECT() *MockVaultSDK_Expecter {
 }
 
 // CreateVault provides a mock function with given fields: ctx, controlPlaneID, vault, opts
-func (_m *MockVaultSDK) CreateVault(ctx context.Context, controlPlaneID string, vault components.VaultInput, opts ...operations.Option) (*operations.CreateVaultResponse, error) {
+func (_m *MockVaultSDK) CreateVault(ctx context.Context, controlPlaneID string, vault components.Vault, opts ...operations.Option) (*operations.CreateVaultResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -42,10 +42,10 @@ func (_m *MockVaultSDK) CreateVault(ctx context.Context, controlPlaneID string, 
 
 	var r0 *operations.CreateVaultResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.VaultInput, ...operations.Option) (*operations.CreateVaultResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.Vault, ...operations.Option) (*operations.CreateVaultResponse, error)); ok {
 		return rf(ctx, controlPlaneID, vault, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.VaultInput, ...operations.Option) *operations.CreateVaultResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.Vault, ...operations.Option) *operations.CreateVaultResponse); ok {
 		r0 = rf(ctx, controlPlaneID, vault, opts...)
 	} else {
 		if ret.Get(0) != nil {
@@ -53,7 +53,7 @@ func (_m *MockVaultSDK) CreateVault(ctx context.Context, controlPlaneID string, 
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, components.VaultInput, ...operations.Option) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, components.Vault, ...operations.Option) error); ok {
 		r1 = rf(ctx, controlPlaneID, vault, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -70,14 +70,14 @@ type MockVaultSDK_CreateVault_Call struct {
 // CreateVault is a helper method to define mock.On call
 //   - ctx context.Context
 //   - controlPlaneID string
-//   - vault components.VaultInput
+//   - vault components.Vault
 //   - opts ...operations.Option
 func (_e *MockVaultSDK_Expecter) CreateVault(ctx interface{}, controlPlaneID interface{}, vault interface{}, opts ...interface{}) *MockVaultSDK_CreateVault_Call {
 	return &MockVaultSDK_CreateVault_Call{Call: _e.mock.On("CreateVault",
 		append([]interface{}{ctx, controlPlaneID, vault}, opts...)...)}
 }
 
-func (_c *MockVaultSDK_CreateVault_Call) Run(run func(ctx context.Context, controlPlaneID string, vault components.VaultInput, opts ...operations.Option)) *MockVaultSDK_CreateVault_Call {
+func (_c *MockVaultSDK_CreateVault_Call) Run(run func(ctx context.Context, controlPlaneID string, vault components.Vault, opts ...operations.Option)) *MockVaultSDK_CreateVault_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		variadicArgs := make([]operations.Option, len(args)-3)
 		for i, a := range args[3:] {
@@ -85,7 +85,7 @@ func (_c *MockVaultSDK_CreateVault_Call) Run(run func(ctx context.Context, contr
 				variadicArgs[i] = a.(operations.Option)
 			}
 		}
-		run(args[0].(context.Context), args[1].(string), args[2].(components.VaultInput), variadicArgs...)
+		run(args[0].(context.Context), args[1].(string), args[2].(components.Vault), variadicArgs...)
 	})
 	return _c
 }
@@ -95,7 +95,7 @@ func (_c *MockVaultSDK_CreateVault_Call) Return(_a0 *operations.CreateVaultRespo
 	return _c
 }
 
-func (_c *MockVaultSDK_CreateVault_Call) RunAndReturn(run func(context.Context, string, components.VaultInput, ...operations.Option) (*operations.CreateVaultResponse, error)) *MockVaultSDK_CreateVault_Call {
+func (_c *MockVaultSDK_CreateVault_Call) RunAndReturn(run func(context.Context, string, components.Vault, ...operations.Option) (*operations.CreateVaultResponse, error)) *MockVaultSDK_CreateVault_Call {
 	_c.Call.Return(run)
 	return _c
 }

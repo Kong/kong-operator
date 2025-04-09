@@ -9,7 +9,7 @@ import (
 
 // RoutesSDK is the interface for the Konnect Routes SDK.
 type RoutesSDK interface {
-	CreateRoute(ctx context.Context, controlPlaneID string, route sdkkonnectcomp.RouteInput, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateRouteResponse, error)
+	CreateRoute(ctx context.Context, controlPlaneID string, route sdkkonnectcomp.Route, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateRouteResponse, error)
 	UpsertRoute(ctx context.Context, req sdkkonnectops.UpsertRouteRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertRouteResponse, error)
 	DeleteRoute(ctx context.Context, controlPlaneID, routeID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteRouteResponse, error)
 	ListRoute(ctx context.Context, request sdkkonnectops.ListRouteRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListRouteResponse, error)

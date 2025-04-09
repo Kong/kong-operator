@@ -63,7 +63,7 @@ func TestKongKey(t *testing.T) {
 
 	t.Log("Setting up SDK expectations on KongKey creation")
 	sdk.KeysSDK.EXPECT().CreateKey(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-		mock.MatchedBy(func(input sdkkonnectcomp.KeyInput) bool {
+		mock.MatchedBy(func(input sdkkonnectcomp.Key) bool {
 			return input.Kid == keyKid &&
 				input.Name != nil && *input.Name == keyName
 		}),
@@ -125,7 +125,7 @@ func TestKongKey(t *testing.T) {
 		)
 		t.Log("Setting up SDK expectations on KongKey creation with conflict")
 		sdk.KeysSDK.EXPECT().CreateKey(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input sdkkonnectcomp.KeyInput) bool {
+			mock.MatchedBy(func(input sdkkonnectcomp.Key) bool {
 				return input.Kid == keyKid &&
 					input.Name != nil && *input.Name == keyName
 			}),
@@ -198,7 +198,7 @@ func TestKongKey(t *testing.T) {
 
 		t.Log("Setting up SDK expectations on KongKey creation with KeySetRef")
 		sdk.KeysSDK.EXPECT().CreateKey(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input sdkkonnectcomp.KeyInput) bool {
+			mock.MatchedBy(func(input sdkkonnectcomp.Key) bool {
 				return input.Kid == keyKid &&
 					input.Name != nil && *input.Name == keyName &&
 					input.Set != nil && input.Set.GetID() != nil && *input.Set.GetID() == keySetID
@@ -267,7 +267,7 @@ func TestKongKey(t *testing.T) {
 		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/922")
 		t.Log("Setting up SDK expectations on KongKey creation")
 		sdk.KeysSDK.EXPECT().CreateKey(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input sdkkonnectcomp.KeyInput) bool {
+			mock.MatchedBy(func(input sdkkonnectcomp.Key) bool {
 				return input.Kid == keyKid &&
 					input.Name != nil && *input.Name == keyName
 			}),
@@ -315,7 +315,7 @@ func TestKongKey(t *testing.T) {
 			CreateKey(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.KeyInput) bool {
+				mock.MatchedBy(func(req sdkkonnectcomp.Key) bool {
 					return slices.Contains(req.Tags, "test-1")
 				}),
 			).

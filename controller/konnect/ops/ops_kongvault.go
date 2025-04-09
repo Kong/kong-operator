@@ -78,13 +78,13 @@ func deleteVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv
 	return nil
 }
 
-func kongVaultToVaultInput(vault *configurationv1alpha1.KongVault) (sdkkonnectcomp.VaultInput, error) {
+func kongVaultToVaultInput(vault *configurationv1alpha1.KongVault) (sdkkonnectcomp.Vault, error) {
 	vaultConfig := map[string]any{}
 	err := json.Unmarshal(vault.Spec.Config.Raw, &vaultConfig)
 	if err != nil {
-		return sdkkonnectcomp.VaultInput{}, err
+		return sdkkonnectcomp.Vault{}, err
 	}
-	input := sdkkonnectcomp.VaultInput{
+	input := sdkkonnectcomp.Vault{
 		Config: vaultConfig,
 		Name:   vault.Spec.Backend,
 		Prefix: vault.Spec.Prefix,

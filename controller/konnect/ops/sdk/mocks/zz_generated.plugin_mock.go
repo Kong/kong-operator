@@ -26,7 +26,7 @@ func (_m *MockPluginSDK) EXPECT() *MockPluginSDK_Expecter {
 }
 
 // CreatePlugin provides a mock function with given fields: ctx, controlPlaneID, plugin, opts
-func (_m *MockPluginSDK) CreatePlugin(ctx context.Context, controlPlaneID string, plugin components.PluginInput, opts ...operations.Option) (*operations.CreatePluginResponse, error) {
+func (_m *MockPluginSDK) CreatePlugin(ctx context.Context, controlPlaneID string, plugin components.Plugin, opts ...operations.Option) (*operations.CreatePluginResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -42,10 +42,10 @@ func (_m *MockPluginSDK) CreatePlugin(ctx context.Context, controlPlaneID string
 
 	var r0 *operations.CreatePluginResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.PluginInput, ...operations.Option) (*operations.CreatePluginResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.Plugin, ...operations.Option) (*operations.CreatePluginResponse, error)); ok {
 		return rf(ctx, controlPlaneID, plugin, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.PluginInput, ...operations.Option) *operations.CreatePluginResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.Plugin, ...operations.Option) *operations.CreatePluginResponse); ok {
 		r0 = rf(ctx, controlPlaneID, plugin, opts...)
 	} else {
 		if ret.Get(0) != nil {
@@ -53,7 +53,7 @@ func (_m *MockPluginSDK) CreatePlugin(ctx context.Context, controlPlaneID string
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, components.PluginInput, ...operations.Option) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, components.Plugin, ...operations.Option) error); ok {
 		r1 = rf(ctx, controlPlaneID, plugin, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -70,14 +70,14 @@ type MockPluginSDK_CreatePlugin_Call struct {
 // CreatePlugin is a helper method to define mock.On call
 //   - ctx context.Context
 //   - controlPlaneID string
-//   - plugin components.PluginInput
+//   - plugin components.Plugin
 //   - opts ...operations.Option
 func (_e *MockPluginSDK_Expecter) CreatePlugin(ctx interface{}, controlPlaneID interface{}, plugin interface{}, opts ...interface{}) *MockPluginSDK_CreatePlugin_Call {
 	return &MockPluginSDK_CreatePlugin_Call{Call: _e.mock.On("CreatePlugin",
 		append([]interface{}{ctx, controlPlaneID, plugin}, opts...)...)}
 }
 
-func (_c *MockPluginSDK_CreatePlugin_Call) Run(run func(ctx context.Context, controlPlaneID string, plugin components.PluginInput, opts ...operations.Option)) *MockPluginSDK_CreatePlugin_Call {
+func (_c *MockPluginSDK_CreatePlugin_Call) Run(run func(ctx context.Context, controlPlaneID string, plugin components.Plugin, opts ...operations.Option)) *MockPluginSDK_CreatePlugin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		variadicArgs := make([]operations.Option, len(args)-3)
 		for i, a := range args[3:] {
@@ -85,7 +85,7 @@ func (_c *MockPluginSDK_CreatePlugin_Call) Run(run func(ctx context.Context, con
 				variadicArgs[i] = a.(operations.Option)
 			}
 		}
-		run(args[0].(context.Context), args[1].(string), args[2].(components.PluginInput), variadicArgs...)
+		run(args[0].(context.Context), args[1].(string), args[2].(components.Plugin), variadicArgs...)
 	})
 	return _c
 }
@@ -95,7 +95,7 @@ func (_c *MockPluginSDK_CreatePlugin_Call) Return(_a0 *operations.CreatePluginRe
 	return _c
 }
 
-func (_c *MockPluginSDK_CreatePlugin_Call) RunAndReturn(run func(context.Context, string, components.PluginInput, ...operations.Option) (*operations.CreatePluginResponse, error)) *MockPluginSDK_CreatePlugin_Call {
+func (_c *MockPluginSDK_CreatePlugin_Call) RunAndReturn(run func(context.Context, string, components.Plugin, ...operations.Option) (*operations.CreatePluginResponse, error)) *MockPluginSDK_CreatePlugin_Call {
 	_c.Call.Return(run)
 	return _c
 }

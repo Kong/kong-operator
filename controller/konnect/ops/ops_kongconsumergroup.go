@@ -88,8 +88,8 @@ func deleteConsumerGroup(
 
 func kongConsumerGroupToSDKConsumerGroupInput(
 	group *configurationv1beta1.KongConsumerGroup,
-) sdkkonnectcomp.ConsumerGroupInput {
-	return sdkkonnectcomp.ConsumerGroupInput{
+) sdkkonnectcomp.ConsumerGroup {
+	return sdkkonnectcomp.ConsumerGroup{
 		Tags: GenerateTagsForObject(group, group.Spec.Tags...),
 		Name: group.Spec.Name,
 	}

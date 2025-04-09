@@ -100,7 +100,7 @@ func (_c *MockConsumerGroupSDK_AddConsumerToGroup_Call) RunAndReturn(run func(co
 }
 
 // CreateConsumerGroup provides a mock function with given fields: ctx, controlPlaneID, consumerInput, opts
-func (_m *MockConsumerGroupSDK) CreateConsumerGroup(ctx context.Context, controlPlaneID string, consumerInput components.ConsumerGroupInput, opts ...operations.Option) (*operations.CreateConsumerGroupResponse, error) {
+func (_m *MockConsumerGroupSDK) CreateConsumerGroup(ctx context.Context, controlPlaneID string, consumerInput components.ConsumerGroup, opts ...operations.Option) (*operations.CreateConsumerGroupResponse, error) {
 	_va := make([]interface{}, len(opts))
 	for _i := range opts {
 		_va[_i] = opts[_i]
@@ -116,10 +116,10 @@ func (_m *MockConsumerGroupSDK) CreateConsumerGroup(ctx context.Context, control
 
 	var r0 *operations.CreateConsumerGroupResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.ConsumerGroupInput, ...operations.Option) (*operations.CreateConsumerGroupResponse, error)); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.ConsumerGroup, ...operations.Option) (*operations.CreateConsumerGroupResponse, error)); ok {
 		return rf(ctx, controlPlaneID, consumerInput, opts...)
 	}
-	if rf, ok := ret.Get(0).(func(context.Context, string, components.ConsumerGroupInput, ...operations.Option) *operations.CreateConsumerGroupResponse); ok {
+	if rf, ok := ret.Get(0).(func(context.Context, string, components.ConsumerGroup, ...operations.Option) *operations.CreateConsumerGroupResponse); ok {
 		r0 = rf(ctx, controlPlaneID, consumerInput, opts...)
 	} else {
 		if ret.Get(0) != nil {
@@ -127,7 +127,7 @@ func (_m *MockConsumerGroupSDK) CreateConsumerGroup(ctx context.Context, control
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(context.Context, string, components.ConsumerGroupInput, ...operations.Option) error); ok {
+	if rf, ok := ret.Get(1).(func(context.Context, string, components.ConsumerGroup, ...operations.Option) error); ok {
 		r1 = rf(ctx, controlPlaneID, consumerInput, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -144,14 +144,14 @@ type MockConsumerGroupSDK_CreateConsumerGroup_Call struct {
 // CreateConsumerGroup is a helper method to define mock.On call
 //   - ctx context.Context
 //   - controlPlaneID string
-//   - consumerInput components.ConsumerGroupInput
+//   - consumerInput components.ConsumerGroup
 //   - opts ...operations.Option
 func (_e *MockConsumerGroupSDK_Expecter) CreateConsumerGroup(ctx interface{}, controlPlaneID interface{}, consumerInput interface{}, opts ...interface{}) *MockConsumerGroupSDK_CreateConsumerGroup_Call {
 	return &MockConsumerGroupSDK_CreateConsumerGroup_Call{Call: _e.mock.On("CreateConsumerGroup",
 		append([]interface{}{ctx, controlPlaneID, consumerInput}, opts...)...)}
 }
 
-func (_c *MockConsumerGroupSDK_CreateConsumerGroup_Call) Run(run func(ctx context.Context, controlPlaneID string, consumerInput components.ConsumerGroupInput, opts ...operations.Option)) *MockConsumerGroupSDK_CreateConsumerGroup_Call {
+func (_c *MockConsumerGroupSDK_CreateConsumerGroup_Call) Run(run func(ctx context.Context, controlPlaneID string, consumerInput components.ConsumerGroup, opts ...operations.Option)) *MockConsumerGroupSDK_CreateConsumerGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		variadicArgs := make([]operations.Option, len(args)-3)
 		for i, a := range args[3:] {
@@ -159,7 +159,7 @@ func (_c *MockConsumerGroupSDK_CreateConsumerGroup_Call) Run(run func(ctx contex
 				variadicArgs[i] = a.(operations.Option)
 			}
 		}
-		run(args[0].(context.Context), args[1].(string), args[2].(components.ConsumerGroupInput), variadicArgs...)
+		run(args[0].(context.Context), args[1].(string), args[2].(components.ConsumerGroup), variadicArgs...)
 	})
 	return _c
 }
@@ -169,7 +169,7 @@ func (_c *MockConsumerGroupSDK_CreateConsumerGroup_Call) Return(_a0 *operations.
 	return _c
 }
 
-func (_c *MockConsumerGroupSDK_CreateConsumerGroup_Call) RunAndReturn(run func(context.Context, string, components.ConsumerGroupInput, ...operations.Option) (*operations.CreateConsumerGroupResponse, error)) *MockConsumerGroupSDK_CreateConsumerGroup_Call {
+func (_c *MockConsumerGroupSDK_CreateConsumerGroup_Call) RunAndReturn(run func(context.Context, string, components.ConsumerGroup, ...operations.Option) (*operations.CreateConsumerGroupResponse, error)) *MockConsumerGroupSDK_CreateConsumerGroup_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -18,8 +18,8 @@ github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161/go.mod h1:xomTg6
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
-github.com/Kong/sdk-konnect-go v0.2.22 h1:7Jm+LdqqDaypg30DIVeg9QiNS9Eg80dmsDw8Fz2v96U=
-github.com/Kong/sdk-konnect-go v0.2.22/go.mod h1:xsmTIkBbmVyUh1nRFjQMOhxYIPDl+sMfmRmPuZHtwLE=
+github.com/Kong/sdk-konnect-go v0.2.24 h1:WPIHYu4Qu6H12Fzd2sMPFAncxRsVum0TqlRF8bocFQQ=
+github.com/Kong/sdk-konnect-go v0.2.24/go.mod h1:xsmTIkBbmVyUh1nRFjQMOhxYIPDl+sMfmRmPuZHtwLE=
 github.com/Masterminds/semver v1.5.0 h1:H65muMkzWKEuNDnfl9d70GUjFniHKHRbFPGBuZ3QEww=
 github.com/Masterminds/semver v1.5.0/go.mod h1:MB6lktGJrhw8PrUyiEoblNEGEQ+RzHPF078ddwwvV3Y=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
@@ -309,8 +309,8 @@ github.com/klauspost/compress v1.18.0 h1:c/Cqfb0r+Yi+JtIEq73FWXVkRonBlf0CRNYc8Zt
 github.com/klauspost/compress v1.18.0/go.mod h1:2Pp+KzxcywXVXMr50+X0Q/Lsb43OQHYWRCY2AiWywWQ=
 github.com/kong/go-kong v0.65.0 h1:dZT+hiMhy7CQsrc9W5nHv3cFJGBGTrwlZhC5MLuf9H8=
 github.com/kong/go-kong v0.65.0/go.mod h1:sqdysTKrXIJ6mpxHwTwjgZhLW7jR1/puczTXHLUwJaE=
-github.com/kong/kubernetes-configuration v1.3.1 h1:mA36ROsWLA1/1PDPYC0mbTMB3D8sLG6FbsXBoq2LNog=
-github.com/kong/kubernetes-configuration v1.3.1/go.mod h1:wakGUhvbgYjrE9n0y9lXvNFcP2JTDOIoIoxJTTWw4oQ=
+github.com/kong/kubernetes-configuration v1.3.2-0.20250407143758-97a38355409a h1:Ff6NfW4N/LcTS42V+HAxEhMuT5VOUv+BXgDxzYZk46c=
+github.com/kong/kubernetes-configuration v1.3.2-0.20250407143758-97a38355409a/go.mod h1:HLTUw06SiSlGeDByfP3NeibT/dQIzbzvBHZj2yN1APo=
 github.com/kong/kubernetes-telemetry v0.1.9 h1:XbDMZjZZclHO4oyJGW1mmZ6bzbTnANjcRAYsBg+jpno=
 github.com/kong/kubernetes-telemetry v0.1.9/go.mod h1:lBSbaQdJkoMMO0d+cJWopoJiJ+QHFBttbhCp5VRibJ8=
 github.com/kong/kubernetes-testing-framework v0.47.2 h1:+2Z9anTpbV/hwNeN+NFQz53BMU+g3QJydkweBp3tULo=

@@ -85,9 +85,9 @@ func deleteRoute(
 
 func kongRouteToSDKRouteInput(
 	route *configurationv1alpha1.KongRoute,
-) sdkkonnectcomp.RouteInput {
-	r := sdkkonnectcomp.RouteInput{
-		RouteJSONInput: &sdkkonnectcomp.RouteJSONInput{
+) sdkkonnectcomp.Route {
+	r := sdkkonnectcomp.Route{
+		RouteJSON: &sdkkonnectcomp.RouteJSON{
 			Destinations:            route.Spec.Destinations,
 			Headers:                 route.Spec.Headers,
 			Hosts:                   route.Spec.Hosts,
@@ -97,20 +97,18 @@ func kongRouteToSDKRouteInput(
 			PathHandling:            route.Spec.PathHandling,
 			Paths:                   route.Spec.Paths,
 			PreserveHost:            route.Spec.PreserveHost,
-			Protocols: lo.Map(route.Spec.Protocols, func(protocol sdkkonnectcomp.RouteWithoutParentsProtocols, _ int) sdkkonnectcomp.RouteJSONProtocols {
-				return sdkkonnectcomp.RouteJSONProtocols(protocol)
-			}),
-			RegexPriority:     route.Spec.RegexPriority,
-			RequestBuffering:  route.Spec.RequestBuffering,
-			ResponseBuffering: route.Spec.ResponseBuffering,
-			Snis:              route.Spec.Snis,
-			Sources:           route.Spec.Sources,
-			StripPath:         route.Spec.StripPath,
-			Tags:              GenerateTagsForObject(route, route.Spec.Tags...),
+			Protocols:               route.Spec.Protocols,
+			RegexPriority:           route.Spec.RegexPriority,
+			RequestBuffering:        route.Spec.RequestBuffering,
+			ResponseBuffering:       route.Spec.ResponseBuffering,
+			Snis:                    route.Spec.Snis,
+			Sources:                 route.Spec.Sources,
+			StripPath:               route.Spec.StripPath,
+			Tags:                    GenerateTagsForObject(route, route.Spec.Tags...),
 		},
 	}
 	if route.Status.Konnect != nil && route.Status.Konnect.ServiceID != "" {
-		r.RouteJSONInput.Service = &sdkkonnectcomp.RouteJSONService{
+		r.RouteJSON.Service = &sdkkonnectcomp.RouteJSONService{
 			ID: sdkkonnectgo.String(route.Status.Konnect.ServiceID),
 		}
 	}

@@ -60,7 +60,7 @@ func TestKongCertificate(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongCertificate creation")
 		sdk.CertificatesSDK.EXPECT().
 			CreateCertificate(mock.Anything, cpID,
-				mock.MatchedBy(func(input sdkkonnectcomp.CertificateInput) bool {
+				mock.MatchedBy(func(input sdkkonnectcomp.Certificate) bool {
 					return input.Cert == deploy.TestValidCertPEM &&
 						input.Key == deploy.TestValidCertKeyPEM &&
 						slices.Contains(input.Tags, "tag1")
@@ -201,7 +201,7 @@ func TestKongCertificate(t *testing.T) {
 			)
 
 		sdk.CertificatesSDK.EXPECT().CreateCertificate(mock.Anything, cpID,
-			mock.MatchedBy(func(input sdkkonnectcomp.CertificateInput) bool {
+			mock.MatchedBy(func(input sdkkonnectcomp.Certificate) bool {
 				return input.Cert == deploy.TestValidCertPEM &&
 					input.Key == deploy.TestValidCertKeyPEM &&
 					slices.Contains(input.Tags, "tag2")
@@ -266,7 +266,7 @@ func TestKongCertificate(t *testing.T) {
 			CreateCertificate(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.CertificateInput) bool {
+				mock.MatchedBy(func(req sdkkonnectcomp.Certificate) bool {
 					return slices.Contains(req.Tags, "tag3")
 				}),
 			).
