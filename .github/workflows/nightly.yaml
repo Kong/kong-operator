@@ -12,10 +12,10 @@ jobs:
   build-push-images:
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
-      dockerhub-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
+      dockerhub-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN_NIGHTLY }}
       gh-pat: ${{ secrets.PAT_GITHUB }}
     with:
-      username: ${{ vars.DOCKERHUB_PUSH_USERNAME }}
+      username: ${{ vars.DOCKERHUB_PUSH_USERNAME_NIGHTLY }}
       registry: docker.io
       image-name: ${{ vars.DOCKERHUB_IMAGE_NAME_NIGHTLY }}
       push: true
