@@ -181,3 +181,12 @@ type KonnectEntityStatusWithControlPlaneAndCertificateRefs struct {
 	// CertificateID is the Konnect ID of the Certificate this entity is associated with.
 	CertificateID string `json:"certificateID,omitempty"`
 }
+
+// KonnectEntityStatusWithNetworkRef represents the status of a Konnect entity with reference to a Konnect cloud gateway network.
+type KonnectEntityStatusWithNetworkRef struct {
+	KonnectEntityStatus `json:",inline"`
+	// NetworkID is the Konnect ID of the Konnect cloud gateway network this entity is associated with.
+	//
+	// +kubebuilder:validation:Optional
+	NetworkID string `json:"networkID,omitempty"`
+}

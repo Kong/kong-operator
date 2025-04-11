@@ -221,6 +221,60 @@ func TestKonnectFuncsStandAlone(t *testing.T) {
 	}
 }
 
+func TestKonnectFuncsNetworkRef(t *testing.T) {
+	type KonnectEntity interface {
+		client.Object
+		GetTypeName() string
+		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
+		GetConditions() []metav1.Condition
+		SetConditions([]metav1.Condition)
+		GetNetworkID() string
+		SetNetworkID(string)
+	}
+
+	testcases := []struct {
+		object   KonnectEntity
+		typeName string
+	}{
+		{
+			typeName: "KonnectCloudGatewayTransitGateway",
+			object:   &konnectv1alpha1.KonnectCloudGatewayTransitGateway{},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.object.GetTypeName(), func(t *testing.T) {
+			obj := tc.object
+
+			require.Equal(t, obj.GetTypeName(), tc.typeName)
+			require.Empty(t, obj.GetKonnectStatus())
+			require.Empty(t, obj.GetKonnectStatus().GetKonnectID())
+			require.Empty(t, obj.GetKonnectStatus().GetOrgID())
+			require.Empty(t, obj.GetKonnectStatus().GetServerURL())
+			require.Empty(t, obj.GetConditions())
+
+			obj.SetConditions([]metav1.Condition{
+				{
+					Type:   "Ready",
+					Status: metav1.ConditionTrue,
+				},
+			})
+			require.Equal(t,
+				[]metav1.Condition{
+					{
+						Type:   "Ready",
+						Status: metav1.ConditionTrue,
+					},
+				},
+				obj.GetConditions(),
+			)
+
+			obj.SetNetworkID("network")
+			require.Equal(t, "network", obj.GetNetworkID())
+		})
+	}
+}
+
 func TestCredentialTypes(t *testing.T) {
 	type KonnectEntity interface {
 		client.Object
