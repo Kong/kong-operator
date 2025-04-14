@@ -32,6 +32,7 @@ type SDKWrapper interface {
 	GetSNIsSDK() SNIsSDK
 	GetDataPlaneCertificatesSDK() DataPlaneClientCertificatesSDK
 	GetCloudGatewaysSDK() CloudGatewaysSDK
+	GetTransitGatewaysSDK() TransitGatewaysSDK
 
 	// GetServerURL returns the server URL for recording metrics.
 	GetServerURL() string
@@ -167,6 +168,11 @@ func (w sdkWrapper) GetDataPlaneCertificatesSDK() DataPlaneClientCertificatesSDK
 
 // GetCloudGatewaysSDK returns the SDK to operate Konnect Dedicated Cloud Gateways SDK.
 func (w sdkWrapper) GetCloudGatewaysSDK() CloudGatewaysSDK {
+	return w.sdk.CloudGateways
+}
+
+// GetTransitGatewaysSDK returns the SDK to operate Konnect Transit Gateways.
+func (w sdkWrapper) GetTransitGatewaysSDK() TransitGatewaysSDK {
 	return w.sdk.CloudGateways
 }
 
