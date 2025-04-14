@@ -17,6 +17,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -24,13 +25,13 @@ import (
 // getKongCertificateRef gets the reference of KongCertificate.
 func getKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
 	e TEnt,
-) mo.Option[configurationv1alpha1.KongObjectRef] {
+) mo.Option[commonv1alpha1.NameRef] {
 	switch e := any(e).(type) {
 	case *configurationv1alpha1.KongSNI:
 		// Since certificateRef is required for KongSNI, we directly return spec.CertificateRef here.
 		return mo.Some(e.Spec.CertificateRef)
 	default:
-		return mo.None[configurationv1alpha1.KongObjectRef]()
+		return mo.None[commonv1alpha1.NameRef]()
 	}
 }
 

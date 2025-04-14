@@ -183,7 +183,7 @@ func TestHandleKeySetRef(t *testing.T) {
 					ControlPlaneRef: cpRef,
 					KeySetRef: &configurationv1alpha1.KeySetRef{
 						Type: configurationv1alpha1.KeySetRefNamespacedRef,
-						NamespacedRef: &configurationv1alpha1.KeySetNamespacedRef{
+						NamespacedRef: &commonv1alpha1.NameRef{
 							Name: "key-set-1",
 						},
 					},
@@ -204,7 +204,7 @@ func TestHandleKeySetRef(t *testing.T) {
 					ControlPlaneRef: cpRef,
 					KeySetRef: &configurationv1alpha1.KeySetRef{
 						Type: configurationv1alpha1.KeySetRefNamespacedRef,
-						NamespacedRef: &configurationv1alpha1.KeySetNamespacedRef{
+						NamespacedRef: &commonv1alpha1.NameRef{
 							Name: keySetDuringDeletion.Name,
 						},
 					},
@@ -225,7 +225,7 @@ func TestHandleKeySetRef(t *testing.T) {
 					ControlPlaneRef: cpRef,
 					KeySetRef: &configurationv1alpha1.KeySetRef{
 						Type: configurationv1alpha1.KeySetRefNamespacedRef,
-						NamespacedRef: &configurationv1alpha1.KeySetNamespacedRef{
+						NamespacedRef: &commonv1alpha1.NameRef{
 							Name: notProgrammedKeySet.Name,
 						},
 					},
@@ -246,7 +246,7 @@ func TestHandleKeySetRef(t *testing.T) {
 					ControlPlaneRef: cpRef,
 					KeySetRef: &configurationv1alpha1.KeySetRef{
 						Type: configurationv1alpha1.KeySetRefNamespacedRef,
-						NamespacedRef: &configurationv1alpha1.KeySetNamespacedRef{
+						NamespacedRef: &commonv1alpha1.NameRef{
 							Name: programmedKeySet.Name,
 						},
 					},

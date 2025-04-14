@@ -128,7 +128,7 @@ func TestHandleServiceRef(t *testing.T) {
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
-						NamespacedRef: &configurationv1alpha1.KongObjectRef{
+						NamespacedRef: &commonv1alpha1.NameRef{
 							Name: "svc-ok",
 						},
 					},
@@ -175,7 +175,7 @@ func TestHandleServiceRef(t *testing.T) {
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
-						NamespacedRef: &configurationv1alpha1.KongObjectRef{
+						NamespacedRef: &commonv1alpha1.NameRef{
 							Name: "svc-ok",
 						},
 					},
@@ -198,7 +198,7 @@ func TestHandleServiceRef(t *testing.T) {
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
-						NamespacedRef: &configurationv1alpha1.KongObjectRef{
+						NamespacedRef: &commonv1alpha1.NameRef{
 							Name: "svc-not-programmed",
 						},
 					},
@@ -237,7 +237,7 @@ func TestHandleServiceRef(t *testing.T) {
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
-						NamespacedRef: &configurationv1alpha1.KongObjectRef{
+						NamespacedRef: &commonv1alpha1.NameRef{
 							Name: "svc-with-cp-ref-unprogrammed",
 						},
 					},

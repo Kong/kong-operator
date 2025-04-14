@@ -307,10 +307,10 @@ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.18.0 h1:c/Cqfb0r+Yi+JtIEq73FWXVkRonBlf0CRNYc8Zttxdo=
 github.com/klauspost/compress v1.18.0/go.mod h1:2Pp+KzxcywXVXMr50+X0Q/Lsb43OQHYWRCY2AiWywWQ=
-github.com/kong/go-kong v0.65.0 h1:dZT+hiMhy7CQsrc9W5nHv3cFJGBGTrwlZhC5MLuf9H8=
-github.com/kong/go-kong v0.65.0/go.mod h1:sqdysTKrXIJ6mpxHwTwjgZhLW7jR1/puczTXHLUwJaE=
-github.com/kong/kubernetes-configuration v1.3.2-0.20250407143758-97a38355409a h1:Ff6NfW4N/LcTS42V+HAxEhMuT5VOUv+BXgDxzYZk46c=
-github.com/kong/kubernetes-configuration v1.3.2-0.20250407143758-97a38355409a/go.mod h1:HLTUw06SiSlGeDByfP3NeibT/dQIzbzvBHZj2yN1APo=
+github.com/kong/go-kong v0.65.1 h1:CM+8NlF+VbJckTxP2hGmSPKhA1GMliitXjQ7vJiPkaE=
+github.com/kong/go-kong v0.65.1/go.mod h1:sqdysTKrXIJ6mpxHwTwjgZhLW7jR1/puczTXHLUwJaE=
+github.com/kong/kubernetes-configuration v1.3.2-0.20250411121302-7dde593f190e h1:7UJfOI5LFtAtIjQWm9DSZaoGV7O68u1fkHsG6F2wHUE=
+github.com/kong/kubernetes-configuration v1.3.2-0.20250411121302-7dde593f190e/go.mod h1:+HRrz0eeoy7d5YJYiCkk736xaSq3y9fbV5SvucYo/tY=
 github.com/kong/kubernetes-telemetry v0.1.9 h1:XbDMZjZZclHO4oyJGW1mmZ6bzbTnANjcRAYsBg+jpno=
 github.com/kong/kubernetes-telemetry v0.1.9/go.mod h1:lBSbaQdJkoMMO0d+cJWopoJiJ+QHFBttbhCp5VRibJ8=
 github.com/kong/kubernetes-testing-framework v0.47.2 h1:+2Z9anTpbV/hwNeN+NFQz53BMU+g3QJydkweBp3tULo=
