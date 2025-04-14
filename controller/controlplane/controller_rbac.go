@@ -11,6 +11,7 @@ package controlplane
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=create;get;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=roles,verbs=create;get;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=rolebindings,verbs=create;get;list;watch;update;patch;delete
+// +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=watchnamespacegrants,verbs=list;watch
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=create;get;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=services,verbs=create;get;list;watch;update;patch;delete
 // +kubebuilder:rbac:groups=core,resources=serviceaccounts,verbs=create;get;list;watch;update;patch;delete

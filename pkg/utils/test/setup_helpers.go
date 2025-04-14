@@ -214,7 +214,7 @@ func ExtractModuleVersion(moduleName string) (string, error) {
 // DeployCRDs deploys the CRDs commonly used in tests.
 func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorclient.Clientset, cluster clusters.Cluster) error {
 	// CRDs for stable features.
-	kubectlFlags := []string{"--server-side", "-v5"}
+	kubectlFlags := []string{"--server-side", "-v5", "--force-conflicts"}
 	fmt.Printf("INFO: deploying KGO CRDs: %s\n", crdPath)
 	if err := clusters.KustomizeDeployForCluster(ctx, cluster, crdPath, kubectlFlags...); err != nil {
 		return err
@@ -247,7 +247,7 @@ func InstallKubernetesConfigurationCRDs(ctx context.Context, cluster clusters.Cl
 		return fmt.Errorf("failed to extract Kong CRDs (%s) module's version: %w", KubernetesConfigurationModuleName, err)
 	}
 
-	kubectlFlags := []string{"--server-side", "-v5"}
+	kubectlFlags := []string{"--server-side", "-v5", "--force-conflicts"}
 
 	// NOTE: this installs CRDs from https://github.com/Kong/kubernetes-configuration/tree/f1475e539fa92eb5318a8b0550c6012cfc945893/config/crd
 	kubernetesConfigurationCRDsDirs := []string{"gateway-operator", "ingress-controller"}

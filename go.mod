@@ -8,6 +8,8 @@ go 1.24.2
 // This retraction is to prevent it from being used and from breaking builds of dependent projects.
 retract v1.2.2
 
+exclude sigs.k8s.io/gateway-api v1.3.0
+
 require (
 	github.com/Kong/sdk-konnect-go v0.2.28
 	github.com/Masterminds/semver v1.5.0
@@ -42,7 +44,7 @@ require (
 	// https://github.com/oras-project/oras-go/pull/850 becomes part of it.
 	oras.land/oras-go/v2 v2.5.1-0.20250331092043-d0ac8e455584
 	sigs.k8s.io/controller-runtime v0.20.4
-	sigs.k8s.io/gateway-api v1.3.0
+	sigs.k8s.io/gateway-api v1.2.1
 	sigs.k8s.io/kustomize/api v0.19.0
 	sigs.k8s.io/kustomize/kyaml v0.19.0
 )

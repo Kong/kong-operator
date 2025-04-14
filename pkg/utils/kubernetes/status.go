@@ -71,9 +71,9 @@ func GetCondition(cType kcfgconsts.ConditionType, resource ConditionsAware) (met
 	return metav1.Condition{}, false
 }
 
-// hasConditionWithStatus returns true if the provided resource has a condition
+// HasConditionWithStatus returns true if the provided resource has a condition
 // with the given type and status.
-func hasConditionWithStatus(cType kcfgconsts.ConditionType, resource ConditionsAware, status metav1.ConditionStatus) bool {
+func HasConditionWithStatus(cType kcfgconsts.ConditionType, resource ConditionsAware, status metav1.ConditionStatus) bool {
 	for _, condition := range resource.GetConditions() {
 		if condition.Type == string(cType) {
 			return condition.Status == status
@@ -84,12 +84,22 @@ func hasConditionWithStatus(cType kcfgconsts.ConditionType, resource ConditionsA
 
 // HasConditionFalse returns true if the condition on the resource has Status set to ConditionFalse, false otherwise.
 func HasConditionFalse(cType kcfgconsts.ConditionType, resource ConditionsAware) bool {
-	return hasConditionWithStatus(cType, resource, metav1.ConditionFalse)
+	return HasConditionWithStatus(cType, resource, metav1.ConditionFalse)
 }
 
 // HasConditionTrue returns true if the condition on the resource has Status set to ConditionTrue, false otherwise.
 func HasConditionTrue(cType kcfgconsts.ConditionType, resource ConditionsAware) bool {
-	return hasConditionWithStatus(cType, resource, metav1.ConditionTrue)
+	return HasConditionWithStatus(cType, resource, metav1.ConditionTrue)
+}
+
+// HasCondition returns true if the condition on the resource exists.
+func HasCondition(cType kcfgconsts.ConditionType, resource ConditionsAware) bool {
+	for _, condition := range resource.GetConditions() {
+		if condition.Type == string(cType) {
+			return true
+		}
+	}
+	return false
 }
 
 // InitReady initializes the Ready status to False if Ready condition is not

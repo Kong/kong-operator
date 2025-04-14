@@ -6,6 +6,7 @@ func init() {
 		TestAIGatewayCreation,
 		TestControlPlaneEssentials,
 		TestControlPlaneUpdate,
+		TestControlPlaneWatchNamespaces,
 		TestControlPlaneWhenNoDataPlane,
 		TestDataPlaneBlueGreenHorizontalScaling,
 		TestDataPlaneBlueGreenResourcesNotDeletedUntilOwnerIsRemoved,

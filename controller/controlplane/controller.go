@@ -43,6 +43,7 @@ import (
 
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -140,7 +141,12 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		// reconciliation for all supported ControlPlane objects which use this RoleBinding.
 		Watches(
 			&rbacv1.RoleBinding{},
-			handler.EnqueueRequestsFromMapFunc(listControlPlanesFor[*rbacv1.RoleBinding]))
+			handler.EnqueueRequestsFromMapFunc(listControlPlanesFor[*rbacv1.RoleBinding])).
+		// Watch for events on WatchNamespaceGrants, if any WatchNamespaceGrant event happens,
+		// enqueue reconciliation for all supported ControlPlane objects which use this WatchNamespaceGrant.
+		Watches(
+			&operatorv1alpha1.WatchNamespaceGrant{},
+			handler.EnqueueRequestsFromMapFunc(r.listControlPlanesForWatchNamespaceGrants))
 
 	if r.KonnectEnabled {
 		// Watch for changes in KonnectExtension objects that are referenced by ControlPlane objects.
@@ -362,16 +368,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		log.Debug(logger, "DataPlane not set, deployment for ControlPlane will remain dormant")
 	}
 
-	const (
-		ConditionTypeWatchNamespaceGrantsValid   = "WatchNamespaceGrantsValid"
-		ConditionReasonWatchNamespaceGrantsValid = "WatchNamespaceGrantsValid"
-	)
 	log.Trace(logger, "validating WatchNamespaceGrants exist for the ControlPlane")
 	validatedWatchNamespaces, err := r.validateWatchNamespaceGrants(ctx, cp)
 	if err != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				ConditionTypeWatchNamespaceGrantsValid,
+				kcfgcontrolplane.ConditionTypeWatchNamespaceGrantValid,
 				metav1.ConditionFalse,
 				kcfgcontrolplane.ConditionReasonWatchNamespaceGrantInvalid,
 				fmt.Sprintf("WatchNamespaceGrant(s) are missing or invalid for the ControlPlane: %v", err),
@@ -386,9 +388,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	} else {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				ConditionTypeWatchNamespaceGrantsValid,
+				kcfgcontrolplane.ConditionTypeWatchNamespaceGrantValid,
 				metav1.ConditionTrue,
-				ConditionReasonWatchNamespaceGrantsValid,
+				kcfgcontrolplane.ConditionReasonWatchNamespaceGrantValid,
 				"WatchNamespaceGrant(s) are present and valid",
 				cp.GetGeneration(),
 			),
