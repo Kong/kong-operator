@@ -214,7 +214,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongTargetSpec{
-					UpstreamRef: configurationv1alpha1.TargetRef{
+					UpstreamRef: commonv1alpha1.NameRef{
 						Name: "upstream-ok",
 					},
 				},
@@ -251,7 +251,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongTargetSpec{
-					UpstreamRef: configurationv1alpha1.TargetRef{
+					UpstreamRef: commonv1alpha1.NameRef{
 						Name: "upstream-nonexist",
 					},
 				},
@@ -274,7 +274,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongTargetSpec{
-					UpstreamRef: configurationv1alpha1.TargetRef{
+					UpstreamRef: commonv1alpha1.NameRef{
 						Name: "upstream-not-programmed",
 					},
 				},
@@ -300,7 +300,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongTargetSpec{
-					UpstreamRef: configurationv1alpha1.TargetRef{
+					UpstreamRef: commonv1alpha1.NameRef{
 						Name: "upstream-no-cp-ref",
 					},
 				},
@@ -325,7 +325,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongTargetSpec{
-					UpstreamRef: configurationv1alpha1.TargetRef{
+					UpstreamRef: commonv1alpha1.NameRef{
 						Name: "upstream-being-deleted",
 					},
 				},
@@ -342,7 +342,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongTargetSpec{
-					UpstreamRef: configurationv1alpha1.TargetRef{
+					UpstreamRef: commonv1alpha1.NameRef{
 						Name: "upstream-cpref-not-found",
 					},
 				},
@@ -361,7 +361,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongTargetSpec{
-					UpstreamRef: configurationv1alpha1.TargetRef{
+					UpstreamRef: commonv1alpha1.NameRef{
 						Name: "upstream-cpref-not-programmed",
 					},
 				},
