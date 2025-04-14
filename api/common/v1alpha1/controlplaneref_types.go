@@ -41,7 +41,7 @@ type ControlPlaneRef struct {
 	// KonnectID is the schema for the KonnectID type.
 	// This field is required when the Type is konnectID.
 	// +optional
-	KonnectID *string `json:"konnectID,omitempty"`
+	KonnectID *KonnectIDType `json:"konnectID,omitempty"`
 
 	// KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
 	// It contains the name of the Konnect Control Plane.
@@ -49,6 +49,11 @@ type ControlPlaneRef struct {
 	// +optional
 	KonnectNamespacedRef *KonnectNamespacedRef `json:"konnectNamespacedRef,omitempty"`
 }
+
+// KonnectIDType is the schema for the KonnectID type.
+//
+// +kubebuilder:validation:Pattern=`^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$`
+type KonnectIDType string
 
 // KonnectNamespacedRef is the schema for the KonnectNamespacedRef type.
 //

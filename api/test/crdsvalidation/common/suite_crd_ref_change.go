@@ -127,7 +127,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 		obj := obj.DeepCopy()
 		obj.SetControlPlaneRef(&commonv1alpha1.ControlPlaneRef{
 			Type:      configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-			KonnectID: lo.ToPtr("123456"),
+			KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("123456")),
 		})
 		ret = append(ret, TestCase[T]{
 			Name:                 "providing konnectID when type is konnectNamespacedRef yields an error",
@@ -153,7 +153,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 		obj := obj.DeepCopy()
 		obj.SetControlPlaneRef(&commonv1alpha1.ControlPlaneRef{
 			Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-			KonnectID: lo.ToPtr("123456"),
+			KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("123456")),
 			KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 				Name: "test-konnect-control-plane",
 			},
@@ -168,7 +168,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 		obj := obj.DeepCopy()
 		obj.SetControlPlaneRef(&commonv1alpha1.ControlPlaneRef{
 			Type:      configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-			KonnectID: lo.ToPtr("123456"),
+			KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("123456")),
 			KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 				Name: "test-konnect-control-plane",
 			},
@@ -183,7 +183,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 		obj := obj.DeepCopy()
 		obj.SetControlPlaneRef(&commonv1alpha1.ControlPlaneRef{
 			Type:      commonv1alpha1.ControlPlaneRefKIC,
-			KonnectID: lo.ToPtr("123456"),
+			KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("123456")),
 		})
 		ret = append(ret, TestCase[T]{
 			Name:                 "providing konnectID when type is kic yields an error",
@@ -366,7 +366,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 		obj := obj.DeepCopy()
 		obj.SetControlPlaneRef(&commonv1alpha1.ControlPlaneRef{
 			Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-			KonnectID: lo.ToPtr("123456"),
+			KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("123456")),
 		})
 		ret = append(ret, TestCase[T]{
 			Name:                 "cpRef (type=konnectID) is not allowed",

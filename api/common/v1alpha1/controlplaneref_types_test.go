@@ -59,7 +59,7 @@ func TestControlPlaneRefStringer(t *testing.T) {
 			name: "konnectID with ID",
 			ref: &commonv1alpha1.ControlPlaneRef{
 				Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-				KonnectID: lo.ToPtr("foo"),
+				KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("foo")),
 			},
 			expected: "<konnectID:foo>",
 		},

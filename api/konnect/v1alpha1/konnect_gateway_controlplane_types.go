@@ -5,6 +5,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 )
 
 func init() {
@@ -47,15 +49,63 @@ type KonnectGatewayControlPlane struct {
 // +kubebuilder:validation:XValidation:message="spec.members is only applicable for ControlPlanes that are created as groups", rule="(has(self.cluster_type) && self.cluster_type != 'CLUSTER_TYPE_CONTROL_PLANE_GROUP') ? !has(self.members) : true"
 // +kubebuilder:validation:XValidation:message="spec.cluster_type is immutable", rule="!has(self.cluster_type) ? !has(oldSelf.cluster_type) : self.cluster_type == oldSelf.cluster_type"
 // +kubebuilder:validation:XValidation:message="cloud_gateway cannot be set for cluster_type 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER'", rule="has(self.cluster_type) && self.cluster_type == 'CLUSTER_TYPE_K8S_INGRESS_CONTROLLER' ? !has(self.cloud_gateway) : true"
+// +kubebuilder:validation:XValidation:message="createControlPlaneRequest fields cannot be set for type Mirror", rule="self.sourceType == 'Mirror' ? !has(self.name) && !has(self.description) && !has(self.cluster_type) && !has(self.auth_type) && !has(self.cloud_gateway) && !has(self.proxy_urls) && !has(self.labels) : true"
+// +kubebuilder:validation:XValidation:message="spec.sourceType is immutable", rule="self.sourceType == oldSelf.sourceType"
+// +kubebuilder:validation:XValidation:message="konnectID field must be set for type Mirror", rule="self.sourceType == 'Mirror' ? has(self.mirror) : true"
+// +kubebuilder:validation:XValidation:message="konnectID field cannot be set for type Origin", rule="self.sourceType == 'Origin' ? !has(self.mirror) : true"
+// +kubebuilder:validation:XValidation:message="Name must be set for type Origin", rule="self.sourceType == 'Origin' ? has(self.name) : true"
 // +apireference:kgo:include
 type KonnectGatewayControlPlaneSpec struct {
-	sdkkonnectcomp.CreateControlPlaneRequest `json:",inline"`
+	CreateControlPlaneRequest `json:",inline"`
+
+	// Mirror is the Konnect Mirror configuration.
+	// It is only applicable for ControlPlanes that are created as Mirrors.
+	//
+	// +kubebuilder:validation:Optional
+	Mirror *MirrorSpec `json:"mirror,omitempty"`
+
+	// SourceType represents the source type of the Konnect entity.
+	//
+	// +kubebuilder:validation:Enum=Origin;Mirror
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=Origin
+	SourceType *commonv1alpha1.EntitySource `json:"sourceType,omitempty"`
 
 	// Members is a list of references to the KonnectGatewayControlPlaneMembers that are part of this control plane group.
 	// Only applicable for ControlPlanes that are created as groups.
 	Members []corev1.LocalObjectReference `json:"members,omitempty"`
 
 	KonnectConfiguration KonnectConfiguration `json:"konnect,omitempty"`
+}
+
+// MirrorSpec contains the Konnect Mirror configuration.
+type MirrorSpec struct {
+	// KonnectID is the ID of the Konnect entity. It can be set only in case
+	// the ControlPlane type is Mirror.
+	//
+	// +kubebuilder:validation:Required
+	KonnectID commonv1alpha1.KonnectIDType `json:"konnectID"`
+}
+
+// CreateControlPlaneRequest - The request schema for the create control plane request.
+type CreateControlPlaneRequest struct {
+	// The name of the control plane.
+	Name *string `json:"name,omitempty"`
+	// The description of the control plane in Konnect.
+	Description *string `json:"description,omitempty"`
+	// The ClusterType value of the cluster associated with the Control Plane.
+	ClusterType *sdkkonnectcomp.CreateControlPlaneRequestClusterType `json:"cluster_type,omitempty"`
+	// The auth type value of the cluster associated with the Runtime Group.
+	AuthType *sdkkonnectcomp.AuthType `json:"auth_type,omitempty"`
+	// Whether this control-plane can be used for cloud-gateways.
+	CloudGateway *bool `json:"cloud_gateway,omitempty"`
+	// Array of proxy URLs associated with reaching the data-planes connected to a control-plane.
+	ProxyUrls []sdkkonnectcomp.ProxyURL `json:"proxy_urls,omitempty"`
+	// Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_".
+	//
+	Labels map[string]string `json:"labels,omitempty"`
 }
 
 // KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayControlPlane.

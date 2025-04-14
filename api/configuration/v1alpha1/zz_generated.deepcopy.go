@@ -33,7 +33,7 @@ func (in *ControlPlaneRef) DeepCopyInto(out *ControlPlaneRef) {
 	*out = *in
 	if in.KonnectID != nil {
 		in, out := &in.KonnectID, &out.KonnectID
-		*out = new(string)
+		*out = new(commonv1alpha1.KonnectIDType)
 		**out = **in
 	}
 	if in.KonnectNamespacedRef != nil {

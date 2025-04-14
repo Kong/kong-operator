@@ -176,7 +176,7 @@ func TestKonnectExtension(t *testing.T) {
 							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
 								Ref: commonv1alpha1.ControlPlaneRef{
 									Type:      configurationv1alpha1.ControlPlaneRefKonnectID,
-									KonnectID: lo.ToPtr("xyz"),
+									KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967")),
 								},
 							},
 							Configuration: &konnectv1alpha1.KonnectConfiguration{
@@ -197,7 +197,7 @@ func TestKonnectExtension(t *testing.T) {
 							ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
 								Ref: commonv1alpha1.ControlPlaneRef{
 									Type:      configurationv1alpha1.ControlPlaneRefKonnectID,
-									KonnectID: lo.ToPtr("xyz"),
+									KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967")),
 								},
 							},
 						},
