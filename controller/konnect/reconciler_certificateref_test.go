@@ -178,7 +178,7 @@ func TestHandleCertificateRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongSNISpec{
-					CertificateRef: configurationv1alpha1.KongObjectRef{
+					CertificateRef: commonv1alpha1.NameRef{
 						Name: "cert-ok",
 					},
 				},
@@ -215,7 +215,7 @@ func TestHandleCertificateRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongSNISpec{
-					CertificateRef: configurationv1alpha1.KongObjectRef{
+					CertificateRef: commonv1alpha1.NameRef{
 						Name: "cert-nonexist",
 					},
 				},
@@ -238,7 +238,7 @@ func TestHandleCertificateRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongSNISpec{
-					CertificateRef: configurationv1alpha1.KongObjectRef{
+					CertificateRef: commonv1alpha1.NameRef{
 						Name: "cert-not-programmed",
 					},
 				},
@@ -266,7 +266,7 @@ func TestHandleCertificateRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongSNISpec{
-					CertificateRef: configurationv1alpha1.KongObjectRef{
+					CertificateRef: commonv1alpha1.NameRef{
 						Name: "cert-no-cp-ref",
 					},
 				},
@@ -293,7 +293,7 @@ func TestHandleCertificateRef(t *testing.T) {
 					Namespace: "default",
 				},
 				Spec: configurationv1alpha1.KongSNISpec{
-					CertificateRef: configurationv1alpha1.KongObjectRef{
+					CertificateRef: commonv1alpha1.NameRef{
 						Name: "cert-being-deleted",
 					},
 				},
@@ -312,7 +312,7 @@ func TestHandleCertificateRef(t *testing.T) {
 					Name:      "sni-cp-ref-not-found",
 				},
 				Spec: configurationv1alpha1.KongSNISpec{
-					CertificateRef: configurationv1alpha1.KongObjectRef{
+					CertificateRef: commonv1alpha1.NameRef{
 						Name: "cert-cpref-not-found",
 					},
 				},
@@ -333,7 +333,7 @@ func TestHandleCertificateRef(t *testing.T) {
 					Name:      "sni-cp-ref-not-programmed",
 				},
 				Spec: configurationv1alpha1.KongSNISpec{
-					CertificateRef: configurationv1alpha1.KongObjectRef{
+					CertificateRef: commonv1alpha1.NameRef{
 						Name: "cert-cpref-not-programmed",
 					},
 				},

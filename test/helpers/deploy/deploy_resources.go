@@ -458,7 +458,7 @@ func KongRouteAttachedToService(
 			},
 			ServiceRef: &configurationv1alpha1.ServiceRef{
 				Type: configurationv1alpha1.ServiceRefNamespacedRef,
-				NamespacedRef: &configurationv1alpha1.KongObjectRef{
+				NamespacedRef: &commonv1alpha1.NameRef{
 					Name: kongService.Name,
 				},
 			},
@@ -780,7 +780,7 @@ func KongTargetAttachedToUpstream(
 			GenerateName: "upstream-",
 		},
 		Spec: configurationv1alpha1.KongTargetSpec{
-			UpstreamRef: configurationv1alpha1.TargetRef{
+			UpstreamRef: commonv1alpha1.NameRef{
 				Name: upstream.Name,
 			},
 		},
@@ -1040,7 +1040,7 @@ func KongSNIAttachedToCertificate(
 			Name: name,
 		},
 		Spec: configurationv1alpha1.KongSNISpec{
-			CertificateRef: configurationv1alpha1.KongObjectRef{
+			CertificateRef: commonv1alpha1.NameRef{
 				Name: cert.Name,
 			},
 			KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{

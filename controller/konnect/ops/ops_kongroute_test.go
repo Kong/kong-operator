@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
@@ -31,7 +32,7 @@ func TestKongRouteToSDKRouteInput_Tags(t *testing.T) {
 		Spec: configurationv1alpha1.KongRouteSpec{
 			ServiceRef: &configurationv1alpha1.ServiceRef{
 				Type: configurationv1alpha1.ServiceRefNamespacedRef,
-				NamespacedRef: &configurationv1alpha1.KongObjectRef{
+				NamespacedRef: &commonv1alpha1.NameRef{
 					Name: "service-1",
 				},
 			},
