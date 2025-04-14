@@ -22,7 +22,11 @@ func init() {
 // +kubebuilder:subresource:status
 // +kubebuilder:subresource:finalizer
 // +apireference:kgo:include
-// +kubebuilder:printcolumn:name="State",type=string,JSONPath=`.status.state`,description="State of the transit gateway in Konnect"
+// +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
+// +kubebuilder:printcolumn:name="State",description="The state the transit gateway is in",type=string,JSONPath=`.status.state`
+// +kubebuilder:printcolumn:name="ID",description="Konnect ID",type=string,JSONPath=`.status.id`
+// +kubebuilder:printcolumn:name="NetworkID",description="Network ID",type=string,JSONPath=`.status.networkID`
+// +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
 // +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : (!has(self.spec.awsTransitGateway) ? true : oldSelf.spec.awsTransitGateway.name == self.spec.awsTransitGateway.name)",message="spec.awsTransitGateway.name is immutable when transit gateway is already Programmed"
 // +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : (!has(self.spec.azureTransitGateway) ? true : oldSelf.spec.azureTransitGateway.name == self.spec.azureTransitGateway.name)",message="spec.azureTransitGateway.name is immutable when transit gateway is already Programmed"
 // +kong:channels=gateway-operator
