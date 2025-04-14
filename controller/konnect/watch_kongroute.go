@@ -17,6 +17,7 @@ import (
 	"github.com/kong/gateway-operator/internal/utils/index"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 // TODO(pmalek): this can be extracted and used in reconciler.go
@@ -48,6 +49,16 @@ func KongRouteReconciliationWatchOptions(
 				),
 				builder.WithPredicates(
 					predicate.NewPredicateFuncs(objRefersToKonnectGatewayControlPlane[configurationv1alpha1.KongService]),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&konnectv1alpha1.KonnectGatewayControlPlane{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectForKonnectGatewayControlPlane[configurationv1alpha1.KongRouteList](
+						cl, index.IndexFieldKongRouteOnKonnectGatewayControlPlane,
+					),
 				),
 			)
 		},

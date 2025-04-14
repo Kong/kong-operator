@@ -12,10 +12,12 @@ const (
 	IndexFieldKongRouteOnReferencedPluginNames = "kongRouteKongPluginRef"
 	// IndexFieldKongRouteOnReferencedKongService is the index field for KongRoute -> KongService.
 	IndexFieldKongRouteOnReferencedKongService = "kongRouteKongServiceRef"
+	// IndexFieldKongRouteOnKonnectGatewayControlPlane is the index field for KongRoute -> KonnectGatewayControlPlane.
+	IndexFieldKongRouteOnKonnectGatewayControlPlane = "kongRouteKonnectGatewayControlPlaneRef"
 )
 
 // OptionsForKongRoute returns required Index options for KongRoute reconciler.
-func OptionsForKongRoute() []Option {
+func OptionsForKongRoute(cl client.Client) []Option {
 	return []Option{
 		{
 			Object:         &configurationv1alpha1.KongRoute{},
@@ -26,6 +28,11 @@ func OptionsForKongRoute() []Option {
 			Object:         &configurationv1alpha1.KongRoute{},
 			Field:          IndexFieldKongRouteOnReferencedKongService,
 			ExtractValueFn: kongRouteRefersToKongService,
+		},
+		{
+			Object:         &configurationv1alpha1.KongRoute{},
+			Field:          IndexFieldKongRouteOnKonnectGatewayControlPlane,
+			ExtractValueFn: indexKonnectGatewayControlPlaneRef[configurationv1alpha1.KongRoute](cl),
 		},
 	}
 }
