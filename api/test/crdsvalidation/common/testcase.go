@@ -53,6 +53,9 @@ type TestCase[T client.Object] struct {
 	// Name is the name of the test case.
 	Name string
 
+	// SkipReason is the reason to skip the test case.
+	SkipReason string
+
 	// TestObject is the object to be tested.
 	TestObject T
 
@@ -73,6 +76,10 @@ type TestCase[T client.Object] struct {
 
 // RunWithConfig runs the test case against the provided rest.Config's cluster.
 func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *runtime.Scheme) {
+	if tc.SkipReason != "" {
+		t.Skip(tc.SkipReason)
+	}
+
 	timeout := DefaultEventuallyTimeout
 	if tc.ExpectedErrorEventuallyConfig.Timeout != 0 {
 		timeout = tc.ExpectedErrorEventuallyConfig.Timeout

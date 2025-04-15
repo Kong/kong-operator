@@ -303,6 +303,9 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			},
 			{
 				Name: "networkRef namespacedRef cannot specify namespace",
+				SkipReason: "cross namespace references are not allowed but using the CEL reserved fields like 'namespace' " +
+					"is only allowed in Kubernetes 1.32+ (https://github.com/kubernetes/kubernetes/pull/126977). " +
+					"Re-enable this test and reintroduce the rule that enforces this when 1.32 becomes the oldest supported version.",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{

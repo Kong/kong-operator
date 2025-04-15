@@ -326,7 +326,13 @@ func TestKonnectExtension(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Too long: may not be more than 63 bytes"),
+				// NOTE: Kubernetes 1.32 changed the validation error for values exceeding the maximum length.
+				// It used to be:
+				// "Too long: may not be longer than 63"
+				// In 1.32+ it is:
+				// "Too long: may not be more than 63 bytes"
+				// We're using here the common part of the error message to avoid breaking the test when upgrading Kubernetes.
+				ExpectedErrorMessage: lo.ToPtr("Too long: may not be "),
 			},
 			{
 				Name: "invalid label key 1",

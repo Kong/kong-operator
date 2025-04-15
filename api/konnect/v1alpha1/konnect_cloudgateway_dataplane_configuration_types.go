@@ -92,8 +92,11 @@ type KonnectConfigurationDataPlaneGroup struct {
 
 	// NetworkRef is the reference to the network that this data-plane group will be deployed on.
 	//
+	// Cross namespace references are not supported for networkRef of type namespacedRef.
+	// This will be enforced in the future but currently (due to limitation in CEL validation
+	// in Kubernetes 1.31 and older) it is not.
+	//
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:XValidation:rule="self.type == 'namespacedRef' && has(self.namespacedRef) ? !has(self.namespacedRef.namespace) : true", message="cross namespace references are not supported for networkRef of type namespacedRef"
 	NetworkRef commonv1alpha1.ObjectRef `json:"networkRef"`
 
 	// Autoscale configuration for the data-plane group.
