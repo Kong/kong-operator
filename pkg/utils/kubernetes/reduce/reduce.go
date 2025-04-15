@@ -72,7 +72,7 @@ func ReduceRoles(ctx context.Context, k8sClient client.Client, roles []rbacv1.Ro
 
 // ReduceClusterRoleBindings detects the best ClusterRoleBinding in the set and deletes all the others.
 func ReduceClusterRoleBindings(ctx context.Context, k8sClient client.Client, clusterRoleBindings []rbacv1.ClusterRoleBinding) error {
-	filteredClusterRoleBindings := filterBindings(clusterRoleBindings)
+	filteredClusterRoleBindings := filterRoleBindings(clusterRoleBindings)
 	return clientops.DeleteAll(ctx, k8sClient, filteredClusterRoleBindings)
 }
 
@@ -80,7 +80,7 @@ func ReduceClusterRoleBindings(ctx context.Context, k8sClient client.Client, clu
 
 // ReduceRoleBindings detects the best RoleBinding in the set and deletes all the others.
 func ReduceRoleBindings(ctx context.Context, k8sClient client.Client, roleBindings []rbacv1.RoleBinding) error {
-	filteredRoleBindings := filterBindings(roleBindings)
+	filteredRoleBindings := filterRoleBindings(roleBindings)
 	return clientops.DeleteAll(ctx, k8sClient, filteredRoleBindings)
 }
 

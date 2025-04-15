@@ -121,9 +121,9 @@ func filterRoles(roles []rbacv1.Role) []rbacv1.Role {
 // Filter functions - ClusterRoleBindings
 // -----------------------------------------------------------------------------
 
-// filterBindings filters out the ClusterRoleBinding or RoleBindings to be kept and returns
+// filterRoleBindings filters out the ClusterRoleBinding or RoleBindings to be kept and returns
 // all the objects to be deleted.
-func filterBindings[
+func filterRoleBindings[
 	T interface {
 		rbacv1.ClusterRoleBinding | rbacv1.RoleBinding
 	},
