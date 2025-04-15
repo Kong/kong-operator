@@ -55,8 +55,8 @@ func (_mock *MockControlPlaneSDK) CreateControlPlane(ctx context.Context, req co
 
 	var r0 *operations.CreateControlPlaneResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, components.CreateControlPlaneRequest, []operations.Option) (*operations.CreateControlPlaneResponse, error)); ok {
-		return returnFunc(ctx, req, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, components.CreateControlPlaneRequest, ...operations.Option) (*operations.CreateControlPlaneResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, components.CreateControlPlaneRequest, ...operations.Option) *operations.CreateControlPlaneResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
@@ -126,8 +126,8 @@ func (_mock *MockControlPlaneSDK) DeleteControlPlane(ctx context.Context, id str
 
 	var r0 *operations.DeleteControlPlaneResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []operations.Option) (*operations.DeleteControlPlaneResponse, error)); ok {
-		return returnFunc(ctx, id, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) (*operations.DeleteControlPlaneResponse, error)); ok {
+		return returnFunc(ctx, id, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) *operations.DeleteControlPlaneResponse); ok {
 		r0 = returnFunc(ctx, id, opts...)
@@ -197,8 +197,8 @@ func (_mock *MockControlPlaneSDK) ListControlPlanes(ctx context.Context, request
 
 	var r0 *operations.ListControlPlanesResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListControlPlanesRequest, []operations.Option) (*operations.ListControlPlanesResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListControlPlanesRequest, ...operations.Option) (*operations.ListControlPlanesResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListControlPlanesRequest, ...operations.Option) *operations.ListControlPlanesResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -268,8 +268,8 @@ func (_mock *MockControlPlaneSDK) UpdateControlPlane(ctx context.Context, id str
 
 	var r0 *operations.UpdateControlPlaneResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.UpdateControlPlaneRequest, []operations.Option) (*operations.UpdateControlPlaneResponse, error)); ok {
-		return returnFunc(ctx, id, req, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.UpdateControlPlaneRequest, ...operations.Option) (*operations.UpdateControlPlaneResponse, error)); ok {
+		return returnFunc(ctx, id, req, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.UpdateControlPlaneRequest, ...operations.Option) *operations.UpdateControlPlaneResponse); ok {
 		r0 = returnFunc(ctx, id, req, opts...)
@@ -367,8 +367,8 @@ func (_mock *MockControlPlaneGroupSDK) PutControlPlanesIDGroupMemberships(ctx co
 
 	var r0 *operations.PutControlPlanesIDGroupMembershipsResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *components.GroupMembership, []operations.Option) (*operations.PutControlPlanesIDGroupMembershipsResponse, error)); ok {
-		return returnFunc(ctx, id, groupMembership, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *components.GroupMembership, ...operations.Option) (*operations.PutControlPlanesIDGroupMembershipsResponse, error)); ok {
+		return returnFunc(ctx, id, groupMembership, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *components.GroupMembership, ...operations.Option) *operations.PutControlPlanesIDGroupMembershipsResponse); ok {
 		r0 = returnFunc(ctx, id, groupMembership, opts...)
@@ -466,8 +466,8 @@ func (_mock *MockKongCredentialACLSDK) CreateACLWithConsumer(ctx context.Context
 
 	var r0 *operations.CreateACLWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateACLWithConsumerRequest, []operations.Option) (*operations.CreateACLWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, req, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateACLWithConsumerRequest, ...operations.Option) (*operations.CreateACLWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateACLWithConsumerRequest, ...operations.Option) *operations.CreateACLWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
@@ -537,8 +537,8 @@ func (_mock *MockKongCredentialACLSDK) DeleteACLWithConsumer(ctx context.Context
 
 	var r0 *operations.DeleteACLWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteACLWithConsumerRequest, []operations.Option) (*operations.DeleteACLWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteACLWithConsumerRequest, ...operations.Option) (*operations.DeleteACLWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteACLWithConsumerRequest, ...operations.Option) *operations.DeleteACLWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -608,8 +608,8 @@ func (_mock *MockKongCredentialACLSDK) ListACL(ctx context.Context, request oper
 
 	var r0 *operations.ListACLResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListACLRequest, []operations.Option) (*operations.ListACLResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListACLRequest, ...operations.Option) (*operations.ListACLResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListACLRequest, ...operations.Option) *operations.ListACLResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -679,8 +679,8 @@ func (_mock *MockKongCredentialACLSDK) UpsertACLWithConsumer(ctx context.Context
 
 	var r0 *operations.UpsertACLWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertACLWithConsumerRequest, []operations.Option) (*operations.UpsertACLWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertACLWithConsumerRequest, ...operations.Option) (*operations.UpsertACLWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertACLWithConsumerRequest, ...operations.Option) *operations.UpsertACLWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -777,8 +777,8 @@ func (_mock *MockKongCredentialAPIKeySDK) CreateKeyAuthWithConsumer(ctx context.
 
 	var r0 *operations.CreateKeyAuthWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateKeyAuthWithConsumerRequest, []operations.Option) (*operations.CreateKeyAuthWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, req, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateKeyAuthWithConsumerRequest, ...operations.Option) (*operations.CreateKeyAuthWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateKeyAuthWithConsumerRequest, ...operations.Option) *operations.CreateKeyAuthWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
@@ -848,8 +848,8 @@ func (_mock *MockKongCredentialAPIKeySDK) DeleteKeyAuthWithConsumer(ctx context.
 
 	var r0 *operations.DeleteKeyAuthWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteKeyAuthWithConsumerRequest, []operations.Option) (*operations.DeleteKeyAuthWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteKeyAuthWithConsumerRequest, ...operations.Option) (*operations.DeleteKeyAuthWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteKeyAuthWithConsumerRequest, ...operations.Option) *operations.DeleteKeyAuthWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -919,8 +919,8 @@ func (_mock *MockKongCredentialAPIKeySDK) ListKeyAuth(ctx context.Context, reque
 
 	var r0 *operations.ListKeyAuthResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListKeyAuthRequest, []operations.Option) (*operations.ListKeyAuthResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListKeyAuthRequest, ...operations.Option) (*operations.ListKeyAuthResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListKeyAuthRequest, ...operations.Option) *operations.ListKeyAuthResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -990,8 +990,8 @@ func (_mock *MockKongCredentialAPIKeySDK) UpsertKeyAuthWithConsumer(ctx context.
 
 	var r0 *operations.UpsertKeyAuthWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertKeyAuthWithConsumerRequest, []operations.Option) (*operations.UpsertKeyAuthWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertKeyAuthWithConsumerRequest, ...operations.Option) (*operations.UpsertKeyAuthWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertKeyAuthWithConsumerRequest, ...operations.Option) *operations.UpsertKeyAuthWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -1088,8 +1088,8 @@ func (_mock *MockKongCredentialBasicAuthSDK) CreateBasicAuthWithConsumer(ctx con
 
 	var r0 *operations.CreateBasicAuthWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateBasicAuthWithConsumerRequest, []operations.Option) (*operations.CreateBasicAuthWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, req, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateBasicAuthWithConsumerRequest, ...operations.Option) (*operations.CreateBasicAuthWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateBasicAuthWithConsumerRequest, ...operations.Option) *operations.CreateBasicAuthWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
@@ -1159,8 +1159,8 @@ func (_mock *MockKongCredentialBasicAuthSDK) DeleteBasicAuthWithConsumer(ctx con
 
 	var r0 *operations.DeleteBasicAuthWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteBasicAuthWithConsumerRequest, []operations.Option) (*operations.DeleteBasicAuthWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteBasicAuthWithConsumerRequest, ...operations.Option) (*operations.DeleteBasicAuthWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteBasicAuthWithConsumerRequest, ...operations.Option) *operations.DeleteBasicAuthWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -1230,8 +1230,8 @@ func (_mock *MockKongCredentialBasicAuthSDK) ListBasicAuth(ctx context.Context, 
 
 	var r0 *operations.ListBasicAuthResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListBasicAuthRequest, []operations.Option) (*operations.ListBasicAuthResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListBasicAuthRequest, ...operations.Option) (*operations.ListBasicAuthResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListBasicAuthRequest, ...operations.Option) *operations.ListBasicAuthResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -1301,8 +1301,8 @@ func (_mock *MockKongCredentialBasicAuthSDK) UpsertBasicAuthWithConsumer(ctx con
 
 	var r0 *operations.UpsertBasicAuthWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertBasicAuthWithConsumerRequest, []operations.Option) (*operations.UpsertBasicAuthWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertBasicAuthWithConsumerRequest, ...operations.Option) (*operations.UpsertBasicAuthWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertBasicAuthWithConsumerRequest, ...operations.Option) *operations.UpsertBasicAuthWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -1399,8 +1399,8 @@ func (_mock *MockKongCredentialHMACSDK) CreateHmacAuthWithConsumer(ctx context.C
 
 	var r0 *operations.CreateHmacAuthWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateHmacAuthWithConsumerRequest, []operations.Option) (*operations.CreateHmacAuthWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, req, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateHmacAuthWithConsumerRequest, ...operations.Option) (*operations.CreateHmacAuthWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateHmacAuthWithConsumerRequest, ...operations.Option) *operations.CreateHmacAuthWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
@@ -1470,8 +1470,8 @@ func (_mock *MockKongCredentialHMACSDK) DeleteHmacAuthWithConsumer(ctx context.C
 
 	var r0 *operations.DeleteHmacAuthWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteHmacAuthWithConsumerRequest, []operations.Option) (*operations.DeleteHmacAuthWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteHmacAuthWithConsumerRequest, ...operations.Option) (*operations.DeleteHmacAuthWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteHmacAuthWithConsumerRequest, ...operations.Option) *operations.DeleteHmacAuthWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -1541,8 +1541,8 @@ func (_mock *MockKongCredentialHMACSDK) ListHmacAuth(ctx context.Context, reques
 
 	var r0 *operations.ListHmacAuthResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListHmacAuthRequest, []operations.Option) (*operations.ListHmacAuthResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListHmacAuthRequest, ...operations.Option) (*operations.ListHmacAuthResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListHmacAuthRequest, ...operations.Option) *operations.ListHmacAuthResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -1612,8 +1612,8 @@ func (_mock *MockKongCredentialHMACSDK) UpsertHmacAuthWithConsumer(ctx context.C
 
 	var r0 *operations.UpsertHmacAuthWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertHmacAuthWithConsumerRequest, []operations.Option) (*operations.UpsertHmacAuthWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertHmacAuthWithConsumerRequest, ...operations.Option) (*operations.UpsertHmacAuthWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertHmacAuthWithConsumerRequest, ...operations.Option) *operations.UpsertHmacAuthWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -1710,8 +1710,8 @@ func (_mock *MockKongCredentialJWTSDK) CreateJwtWithConsumer(ctx context.Context
 
 	var r0 *operations.CreateJwtWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateJwtWithConsumerRequest, []operations.Option) (*operations.CreateJwtWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, req, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateJwtWithConsumerRequest, ...operations.Option) (*operations.CreateJwtWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateJwtWithConsumerRequest, ...operations.Option) *operations.CreateJwtWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
@@ -1781,8 +1781,8 @@ func (_mock *MockKongCredentialJWTSDK) DeleteJwtWithConsumer(ctx context.Context
 
 	var r0 *operations.DeleteJwtWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteJwtWithConsumerRequest, []operations.Option) (*operations.DeleteJwtWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteJwtWithConsumerRequest, ...operations.Option) (*operations.DeleteJwtWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteJwtWithConsumerRequest, ...operations.Option) *operations.DeleteJwtWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -1852,8 +1852,8 @@ func (_mock *MockKongCredentialJWTSDK) ListJwt(ctx context.Context, request oper
 
 	var r0 *operations.ListJwtResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListJwtRequest, []operations.Option) (*operations.ListJwtResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListJwtRequest, ...operations.Option) (*operations.ListJwtResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListJwtRequest, ...operations.Option) *operations.ListJwtResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -1923,8 +1923,8 @@ func (_mock *MockKongCredentialJWTSDK) UpsertJwtWithConsumer(ctx context.Context
 
 	var r0 *operations.UpsertJwtWithConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertJwtWithConsumerRequest, []operations.Option) (*operations.UpsertJwtWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertJwtWithConsumerRequest, ...operations.Option) (*operations.UpsertJwtWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertJwtWithConsumerRequest, ...operations.Option) *operations.UpsertJwtWithConsumerResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -2021,8 +2021,8 @@ func (_mock *MockCloudGatewaysSDK) CreateConfiguration(ctx context.Context, requ
 
 	var r0 *operations.CreateConfigurationResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, components.CreateConfigurationRequest, []operations.Option) (*operations.CreateConfigurationResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, components.CreateConfigurationRequest, ...operations.Option) (*operations.CreateConfigurationResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, components.CreateConfigurationRequest, ...operations.Option) *operations.CreateConfigurationResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -2092,8 +2092,8 @@ func (_mock *MockCloudGatewaysSDK) CreateNetwork(ctx context.Context, request co
 
 	var r0 *operations.CreateNetworkResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, components.CreateNetworkRequest, []operations.Option) (*operations.CreateNetworkResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, components.CreateNetworkRequest, ...operations.Option) (*operations.CreateNetworkResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, components.CreateNetworkRequest, ...operations.Option) *operations.CreateNetworkResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -2163,8 +2163,8 @@ func (_mock *MockCloudGatewaysSDK) DeleteNetwork(ctx context.Context, networkID 
 
 	var r0 *operations.DeleteNetworkResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []operations.Option) (*operations.DeleteNetworkResponse, error)); ok {
-		return returnFunc(ctx, networkID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) (*operations.DeleteNetworkResponse, error)); ok {
+		return returnFunc(ctx, networkID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) *operations.DeleteNetworkResponse); ok {
 		r0 = returnFunc(ctx, networkID, opts...)
@@ -2234,8 +2234,8 @@ func (_mock *MockCloudGatewaysSDK) GetConfiguration(ctx context.Context, configu
 
 	var r0 *operations.GetConfigurationResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []operations.Option) (*operations.GetConfigurationResponse, error)); ok {
-		return returnFunc(ctx, configurationID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) (*operations.GetConfigurationResponse, error)); ok {
+		return returnFunc(ctx, configurationID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) *operations.GetConfigurationResponse); ok {
 		r0 = returnFunc(ctx, configurationID, opts...)
@@ -2305,8 +2305,8 @@ func (_mock *MockCloudGatewaysSDK) GetNetwork(ctx context.Context, networkID str
 
 	var r0 *operations.GetNetworkResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []operations.Option) (*operations.GetNetworkResponse, error)); ok {
-		return returnFunc(ctx, networkID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) (*operations.GetNetworkResponse, error)); ok {
+		return returnFunc(ctx, networkID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) *operations.GetNetworkResponse); ok {
 		r0 = returnFunc(ctx, networkID, opts...)
@@ -2376,8 +2376,8 @@ func (_mock *MockCloudGatewaysSDK) ListConfigurations(ctx context.Context, reque
 
 	var r0 *operations.ListConfigurationsResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConfigurationsRequest, []operations.Option) (*operations.ListConfigurationsResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConfigurationsRequest, ...operations.Option) (*operations.ListConfigurationsResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConfigurationsRequest, ...operations.Option) *operations.ListConfigurationsResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -2447,8 +2447,8 @@ func (_mock *MockCloudGatewaysSDK) ListNetworks(ctx context.Context, request ope
 
 	var r0 *operations.ListNetworksResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListNetworksRequest, []operations.Option) (*operations.ListNetworksResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListNetworksRequest, ...operations.Option) (*operations.ListNetworksResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListNetworksRequest, ...operations.Option) *operations.ListNetworksResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -2518,8 +2518,8 @@ func (_mock *MockCloudGatewaysSDK) UpdateNetwork(ctx context.Context, networkID 
 
 	var r0 *operations.UpdateNetworkResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.PatchNetworkRequest, []operations.Option) (*operations.UpdateNetworkResponse, error)); ok {
-		return returnFunc(ctx, networkID, patchNetworkRequest, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.PatchNetworkRequest, ...operations.Option) (*operations.UpdateNetworkResponse, error)); ok {
+		return returnFunc(ctx, networkID, patchNetworkRequest, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.PatchNetworkRequest, ...operations.Option) *operations.UpdateNetworkResponse); ok {
 		r0 = returnFunc(ctx, networkID, patchNetworkRequest, opts...)
@@ -2617,8 +2617,8 @@ func (_mock *MockCACertificatesSDK) CreateCaCertificate(ctx context.Context, con
 
 	var r0 *operations.CreateCaCertificateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.CACertificate, []operations.Option) (*operations.CreateCaCertificateResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, caCertificate, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.CACertificate, ...operations.Option) (*operations.CreateCaCertificateResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, caCertificate, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.CACertificate, ...operations.Option) *operations.CreateCaCertificateResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, caCertificate, opts...)
@@ -2689,8 +2689,8 @@ func (_mock *MockCACertificatesSDK) DeleteCaCertificate(ctx context.Context, con
 
 	var r0 *operations.DeleteCaCertificateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []operations.Option) (*operations.DeleteCaCertificateResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, caCertificateID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.DeleteCaCertificateResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, caCertificateID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.DeleteCaCertificateResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, caCertificateID, opts...)
@@ -2761,8 +2761,8 @@ func (_mock *MockCACertificatesSDK) ListCaCertificate(ctx context.Context, reque
 
 	var r0 *operations.ListCaCertificateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListCaCertificateRequest, []operations.Option) (*operations.ListCaCertificateResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListCaCertificateRequest, ...operations.Option) (*operations.ListCaCertificateResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListCaCertificateRequest, ...operations.Option) *operations.ListCaCertificateResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -2832,8 +2832,8 @@ func (_mock *MockCACertificatesSDK) UpsertCaCertificate(ctx context.Context, req
 
 	var r0 *operations.UpsertCaCertificateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertCaCertificateRequest, []operations.Option) (*operations.UpsertCaCertificateResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertCaCertificateRequest, ...operations.Option) (*operations.UpsertCaCertificateResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertCaCertificateRequest, ...operations.Option) *operations.UpsertCaCertificateResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -2930,8 +2930,8 @@ func (_mock *MockCertificatesSDK) CreateCertificate(ctx context.Context, control
 
 	var r0 *operations.CreateCertificateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Certificate, []operations.Option) (*operations.CreateCertificateResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, certificate, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Certificate, ...operations.Option) (*operations.CreateCertificateResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, certificate, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Certificate, ...operations.Option) *operations.CreateCertificateResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, certificate, opts...)
@@ -3002,8 +3002,8 @@ func (_mock *MockCertificatesSDK) DeleteCertificate(ctx context.Context, control
 
 	var r0 *operations.DeleteCertificateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []operations.Option) (*operations.DeleteCertificateResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, certificateID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.DeleteCertificateResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, certificateID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.DeleteCertificateResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, certificateID, opts...)
@@ -3074,8 +3074,8 @@ func (_mock *MockCertificatesSDK) ListCertificate(ctx context.Context, request o
 
 	var r0 *operations.ListCertificateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListCertificateRequest, []operations.Option) (*operations.ListCertificateResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListCertificateRequest, ...operations.Option) (*operations.ListCertificateResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListCertificateRequest, ...operations.Option) *operations.ListCertificateResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -3145,8 +3145,8 @@ func (_mock *MockCertificatesSDK) UpsertCertificate(ctx context.Context, request
 
 	var r0 *operations.UpsertCertificateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertCertificateRequest, []operations.Option) (*operations.UpsertCertificateResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertCertificateRequest, ...operations.Option) (*operations.UpsertCertificateResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertCertificateRequest, ...operations.Option) *operations.UpsertCertificateResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -3243,8 +3243,8 @@ func (_mock *MockConsumersSDK) CreateConsumer(ctx context.Context, controlPlaneI
 
 	var r0 *operations.CreateConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Consumer, []operations.Option) (*operations.CreateConsumerResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, consumerInput, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Consumer, ...operations.Option) (*operations.CreateConsumerResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, consumerInput, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Consumer, ...operations.Option) *operations.CreateConsumerResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, consumerInput, opts...)
@@ -3315,8 +3315,8 @@ func (_mock *MockConsumersSDK) DeleteConsumer(ctx context.Context, controlPlaneI
 
 	var r0 *operations.DeleteConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []operations.Option) (*operations.DeleteConsumerResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, consumerID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.DeleteConsumerResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, consumerID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.DeleteConsumerResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, consumerID, opts...)
@@ -3387,8 +3387,8 @@ func (_mock *MockConsumersSDK) ListConsumer(ctx context.Context, request operati
 
 	var r0 *operations.ListConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConsumerRequest, []operations.Option) (*operations.ListConsumerResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConsumerRequest, ...operations.Option) (*operations.ListConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConsumerRequest, ...operations.Option) *operations.ListConsumerResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -3458,8 +3458,8 @@ func (_mock *MockConsumersSDK) UpsertConsumer(ctx context.Context, upsertConsume
 
 	var r0 *operations.UpsertConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertConsumerRequest, []operations.Option) (*operations.UpsertConsumerResponse, error)); ok {
-		return returnFunc(ctx, upsertConsumerRequest, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertConsumerRequest, ...operations.Option) (*operations.UpsertConsumerResponse, error)); ok {
+		return returnFunc(ctx, upsertConsumerRequest, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertConsumerRequest, ...operations.Option) *operations.UpsertConsumerResponse); ok {
 		r0 = returnFunc(ctx, upsertConsumerRequest, opts...)
@@ -3556,8 +3556,8 @@ func (_mock *MockConsumerGroupSDK) AddConsumerToGroup(ctx context.Context, reque
 
 	var r0 *operations.AddConsumerToGroupResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.AddConsumerToGroupRequest, []operations.Option) (*operations.AddConsumerToGroupResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.AddConsumerToGroupRequest, ...operations.Option) (*operations.AddConsumerToGroupResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.AddConsumerToGroupRequest, ...operations.Option) *operations.AddConsumerToGroupResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -3627,8 +3627,8 @@ func (_mock *MockConsumerGroupSDK) CreateConsumerGroup(ctx context.Context, cont
 
 	var r0 *operations.CreateConsumerGroupResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.ConsumerGroup, []operations.Option) (*operations.CreateConsumerGroupResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, consumerInput, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.ConsumerGroup, ...operations.Option) (*operations.CreateConsumerGroupResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, consumerInput, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.ConsumerGroup, ...operations.Option) *operations.CreateConsumerGroupResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, consumerInput, opts...)
@@ -3699,8 +3699,8 @@ func (_mock *MockConsumerGroupSDK) DeleteConsumerGroup(ctx context.Context, cont
 
 	var r0 *operations.DeleteConsumerGroupResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []operations.Option) (*operations.DeleteConsumerGroupResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, consumerID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.DeleteConsumerGroupResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, consumerID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.DeleteConsumerGroupResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, consumerID, opts...)
@@ -3771,8 +3771,8 @@ func (_mock *MockConsumerGroupSDK) ListConsumerGroup(ctx context.Context, reques
 
 	var r0 *operations.ListConsumerGroupResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConsumerGroupRequest, []operations.Option) (*operations.ListConsumerGroupResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConsumerGroupRequest, ...operations.Option) (*operations.ListConsumerGroupResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConsumerGroupRequest, ...operations.Option) *operations.ListConsumerGroupResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -3842,8 +3842,8 @@ func (_mock *MockConsumerGroupSDK) ListConsumerGroupsForConsumer(ctx context.Con
 
 	var r0 *operations.ListConsumerGroupsForConsumerResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConsumerGroupsForConsumerRequest, []operations.Option) (*operations.ListConsumerGroupsForConsumerResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConsumerGroupsForConsumerRequest, ...operations.Option) (*operations.ListConsumerGroupsForConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConsumerGroupsForConsumerRequest, ...operations.Option) *operations.ListConsumerGroupsForConsumerResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -3913,8 +3913,8 @@ func (_mock *MockConsumerGroupSDK) RemoveConsumerFromGroup(ctx context.Context, 
 
 	var r0 *operations.RemoveConsumerFromGroupResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.RemoveConsumerFromGroupRequest, []operations.Option) (*operations.RemoveConsumerFromGroupResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.RemoveConsumerFromGroupRequest, ...operations.Option) (*operations.RemoveConsumerFromGroupResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.RemoveConsumerFromGroupRequest, ...operations.Option) *operations.RemoveConsumerFromGroupResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -3984,8 +3984,8 @@ func (_mock *MockConsumerGroupSDK) UpsertConsumerGroup(ctx context.Context, upse
 
 	var r0 *operations.UpsertConsumerGroupResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertConsumerGroupRequest, []operations.Option) (*operations.UpsertConsumerGroupResponse, error)); ok {
-		return returnFunc(ctx, upsertConsumerRequest, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertConsumerGroupRequest, ...operations.Option) (*operations.UpsertConsumerGroupResponse, error)); ok {
+		return returnFunc(ctx, upsertConsumerRequest, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertConsumerGroupRequest, ...operations.Option) *operations.UpsertConsumerGroupResponse); ok {
 		r0 = returnFunc(ctx, upsertConsumerRequest, opts...)
@@ -4082,8 +4082,8 @@ func (_mock *MockDataPlaneClientCertificatesSDK) CreateDataplaneCertificate(ctx 
 
 	var r0 *operations.CreateDataplaneCertificateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *components.DataPlaneClientCertificateRequest, []operations.Option) (*operations.CreateDataplaneCertificateResponse, error)); ok {
-		return returnFunc(ctx, cpID, dpReq, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *components.DataPlaneClientCertificateRequest, ...operations.Option) (*operations.CreateDataplaneCertificateResponse, error)); ok {
+		return returnFunc(ctx, cpID, dpReq, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *components.DataPlaneClientCertificateRequest, ...operations.Option) *operations.CreateDataplaneCertificateResponse); ok {
 		r0 = returnFunc(ctx, cpID, dpReq, opts...)
@@ -4154,8 +4154,8 @@ func (_mock *MockDataPlaneClientCertificatesSDK) DeleteDataplaneCertificate(ctx 
 
 	var r0 *operations.DeleteDataplaneCertificateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []operations.Option) (*operations.DeleteDataplaneCertificateResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, certificateID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.DeleteDataplaneCertificateResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, certificateID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.DeleteDataplaneCertificateResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, certificateID, opts...)
@@ -4226,8 +4226,8 @@ func (_mock *MockDataPlaneClientCertificatesSDK) ListDpClientCertificates(ctx co
 
 	var r0 *operations.ListDpClientCertificatesResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, []operations.Option) (*operations.ListDpClientCertificatesResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) (*operations.ListDpClientCertificatesResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, ...operations.Option) *operations.ListDpClientCertificatesResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, opts...)
@@ -4324,8 +4324,8 @@ func (_mock *MockKeysSDK) CreateKey(ctx context.Context, controlPlaneID string, 
 
 	var r0 *operations.CreateKeyResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Key, []operations.Option) (*operations.CreateKeyResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, Key, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Key, ...operations.Option) (*operations.CreateKeyResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, Key, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Key, ...operations.Option) *operations.CreateKeyResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, Key, opts...)
@@ -4396,8 +4396,8 @@ func (_mock *MockKeysSDK) DeleteKey(ctx context.Context, controlPlaneID string, 
 
 	var r0 *operations.DeleteKeyResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []operations.Option) (*operations.DeleteKeyResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, KeyID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.DeleteKeyResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, KeyID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.DeleteKeyResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, KeyID, opts...)
@@ -4468,8 +4468,8 @@ func (_mock *MockKeysSDK) ListKey(ctx context.Context, request operations.ListKe
 
 	var r0 *operations.ListKeyResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListKeyRequest, []operations.Option) (*operations.ListKeyResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListKeyRequest, ...operations.Option) (*operations.ListKeyResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListKeyRequest, ...operations.Option) *operations.ListKeyResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -4539,8 +4539,8 @@ func (_mock *MockKeysSDK) UpsertKey(ctx context.Context, request operations.Upse
 
 	var r0 *operations.UpsertKeyResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertKeyRequest, []operations.Option) (*operations.UpsertKeyResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertKeyRequest, ...operations.Option) (*operations.UpsertKeyResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertKeyRequest, ...operations.Option) *operations.UpsertKeyResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -4637,8 +4637,8 @@ func (_mock *MockKeySetsSDK) CreateKeySet(ctx context.Context, controlPlaneID st
 
 	var r0 *operations.CreateKeySetResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.KeySet, []operations.Option) (*operations.CreateKeySetResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, keySet, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.KeySet, ...operations.Option) (*operations.CreateKeySetResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, keySet, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.KeySet, ...operations.Option) *operations.CreateKeySetResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, keySet, opts...)
@@ -4709,8 +4709,8 @@ func (_mock *MockKeySetsSDK) DeleteKeySet(ctx context.Context, controlPlaneID st
 
 	var r0 *operations.DeleteKeySetResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []operations.Option) (*operations.DeleteKeySetResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, keySetID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.DeleteKeySetResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, keySetID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.DeleteKeySetResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, keySetID, opts...)
@@ -4781,8 +4781,8 @@ func (_mock *MockKeySetsSDK) ListKeySet(ctx context.Context, request operations.
 
 	var r0 *operations.ListKeySetResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListKeySetRequest, []operations.Option) (*operations.ListKeySetResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListKeySetRequest, ...operations.Option) (*operations.ListKeySetResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListKeySetRequest, ...operations.Option) *operations.ListKeySetResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -4852,8 +4852,8 @@ func (_mock *MockKeySetsSDK) UpsertKeySet(ctx context.Context, request operation
 
 	var r0 *operations.UpsertKeySetResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertKeySetRequest, []operations.Option) (*operations.UpsertKeySetResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertKeySetRequest, ...operations.Option) (*operations.UpsertKeySetResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertKeySetRequest, ...operations.Option) *operations.UpsertKeySetResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -4950,8 +4950,8 @@ func (_mock *MockRoutesSDK) CreateRoute(ctx context.Context, controlPlaneID stri
 
 	var r0 *operations.CreateRouteResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Route, []operations.Option) (*operations.CreateRouteResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, route, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Route, ...operations.Option) (*operations.CreateRouteResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, route, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Route, ...operations.Option) *operations.CreateRouteResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, route, opts...)
@@ -5022,8 +5022,8 @@ func (_mock *MockRoutesSDK) DeleteRoute(ctx context.Context, controlPlaneID stri
 
 	var r0 *operations.DeleteRouteResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []operations.Option) (*operations.DeleteRouteResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, routeID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.DeleteRouteResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, routeID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.DeleteRouteResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, routeID, opts...)
@@ -5094,8 +5094,8 @@ func (_mock *MockRoutesSDK) ListRoute(ctx context.Context, request operations.Li
 
 	var r0 *operations.ListRouteResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListRouteRequest, []operations.Option) (*operations.ListRouteResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListRouteRequest, ...operations.Option) (*operations.ListRouteResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListRouteRequest, ...operations.Option) *operations.ListRouteResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -5165,8 +5165,8 @@ func (_mock *MockRoutesSDK) UpsertRoute(ctx context.Context, req operations.Upse
 
 	var r0 *operations.UpsertRouteResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertRouteRequest, []operations.Option) (*operations.UpsertRouteResponse, error)); ok {
-		return returnFunc(ctx, req, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertRouteRequest, ...operations.Option) (*operations.UpsertRouteResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertRouteRequest, ...operations.Option) *operations.UpsertRouteResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
@@ -5263,8 +5263,8 @@ func (_mock *MockServicesSDK) CreateService(ctx context.Context, controlPlaneID 
 
 	var r0 *operations.CreateServiceResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Service, []operations.Option) (*operations.CreateServiceResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, service, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Service, ...operations.Option) (*operations.CreateServiceResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, service, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Service, ...operations.Option) *operations.CreateServiceResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, service, opts...)
@@ -5335,8 +5335,8 @@ func (_mock *MockServicesSDK) DeleteService(ctx context.Context, controlPlaneID 
 
 	var r0 *operations.DeleteServiceResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []operations.Option) (*operations.DeleteServiceResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, serviceID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.DeleteServiceResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, serviceID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.DeleteServiceResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, serviceID, opts...)
@@ -5407,8 +5407,8 @@ func (_mock *MockServicesSDK) ListService(ctx context.Context, request operation
 
 	var r0 *operations.ListServiceResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListServiceRequest, []operations.Option) (*operations.ListServiceResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListServiceRequest, ...operations.Option) (*operations.ListServiceResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListServiceRequest, ...operations.Option) *operations.ListServiceResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -5478,8 +5478,8 @@ func (_mock *MockServicesSDK) UpsertService(ctx context.Context, req operations.
 
 	var r0 *operations.UpsertServiceResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertServiceRequest, []operations.Option) (*operations.UpsertServiceResponse, error)); ok {
-		return returnFunc(ctx, req, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertServiceRequest, ...operations.Option) (*operations.UpsertServiceResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertServiceRequest, ...operations.Option) *operations.UpsertServiceResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
@@ -5576,8 +5576,8 @@ func (_mock *MockSNIsSDK) CreateSniWithCertificate(context1 context.Context, cre
 
 	var r0 *operations.CreateSniWithCertificateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateSniWithCertificateRequest, []operations.Option) (*operations.CreateSniWithCertificateResponse, error)); ok {
-		return returnFunc(context1, createSniWithCertificateRequest, options)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateSniWithCertificateRequest, ...operations.Option) (*operations.CreateSniWithCertificateResponse, error)); ok {
+		return returnFunc(context1, createSniWithCertificateRequest, options...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateSniWithCertificateRequest, ...operations.Option) *operations.CreateSniWithCertificateResponse); ok {
 		r0 = returnFunc(context1, createSniWithCertificateRequest, options...)
@@ -5647,8 +5647,8 @@ func (_mock *MockSNIsSDK) DeleteSniWithCertificate(ctx context.Context, request 
 
 	var r0 *operations.DeleteSniWithCertificateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteSniWithCertificateRequest, []operations.Option) (*operations.DeleteSniWithCertificateResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteSniWithCertificateRequest, ...operations.Option) (*operations.DeleteSniWithCertificateResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteSniWithCertificateRequest, ...operations.Option) *operations.DeleteSniWithCertificateResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -5718,8 +5718,8 @@ func (_mock *MockSNIsSDK) ListSni(ctx context.Context, request operations.ListSn
 
 	var r0 *operations.ListSniResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListSniRequest, []operations.Option) (*operations.ListSniResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListSniRequest, ...operations.Option) (*operations.ListSniResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListSniRequest, ...operations.Option) *operations.ListSniResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -5789,8 +5789,8 @@ func (_mock *MockSNIsSDK) UpsertSniWithCertificate(ctx context.Context, request 
 
 	var r0 *operations.UpsertSniWithCertificateResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertSniWithCertificateRequest, []operations.Option) (*operations.UpsertSniWithCertificateResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertSniWithCertificateRequest, ...operations.Option) (*operations.UpsertSniWithCertificateResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertSniWithCertificateRequest, ...operations.Option) *operations.UpsertSniWithCertificateResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -5887,8 +5887,8 @@ func (_mock *MockTargetsSDK) CreateTargetWithUpstream(ctx context.Context, req o
 
 	var r0 *operations.CreateTargetWithUpstreamResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateTargetWithUpstreamRequest, []operations.Option) (*operations.CreateTargetWithUpstreamResponse, error)); ok {
-		return returnFunc(ctx, req, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateTargetWithUpstreamRequest, ...operations.Option) (*operations.CreateTargetWithUpstreamResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.CreateTargetWithUpstreamRequest, ...operations.Option) *operations.CreateTargetWithUpstreamResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
@@ -5958,8 +5958,8 @@ func (_mock *MockTargetsSDK) DeleteTargetWithUpstream(ctx context.Context, req o
 
 	var r0 *operations.DeleteTargetWithUpstreamResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteTargetWithUpstreamRequest, []operations.Option) (*operations.DeleteTargetWithUpstreamResponse, error)); ok {
-		return returnFunc(ctx, req, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteTargetWithUpstreamRequest, ...operations.Option) (*operations.DeleteTargetWithUpstreamResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.DeleteTargetWithUpstreamRequest, ...operations.Option) *operations.DeleteTargetWithUpstreamResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
@@ -6029,8 +6029,8 @@ func (_mock *MockTargetsSDK) ListTargetWithUpstream(ctx context.Context, request
 
 	var r0 *operations.ListTargetWithUpstreamResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListTargetWithUpstreamRequest, []operations.Option) (*operations.ListTargetWithUpstreamResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListTargetWithUpstreamRequest, ...operations.Option) (*operations.ListTargetWithUpstreamResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListTargetWithUpstreamRequest, ...operations.Option) *operations.ListTargetWithUpstreamResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -6100,8 +6100,8 @@ func (_mock *MockTargetsSDK) UpsertTargetWithUpstream(ctx context.Context, req o
 
 	var r0 *operations.UpsertTargetWithUpstreamResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertTargetWithUpstreamRequest, []operations.Option) (*operations.UpsertTargetWithUpstreamResponse, error)); ok {
-		return returnFunc(ctx, req, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertTargetWithUpstreamRequest, ...operations.Option) (*operations.UpsertTargetWithUpstreamResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertTargetWithUpstreamRequest, ...operations.Option) *operations.UpsertTargetWithUpstreamResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
@@ -6198,8 +6198,8 @@ func (_mock *MockUpstreamsSDK) CreateUpstream(ctx context.Context, controlPlaneI
 
 	var r0 *operations.CreateUpstreamResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Upstream, []operations.Option) (*operations.CreateUpstreamResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, upstream, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Upstream, ...operations.Option) (*operations.CreateUpstreamResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, upstream, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Upstream, ...operations.Option) *operations.CreateUpstreamResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, upstream, opts...)
@@ -6270,8 +6270,8 @@ func (_mock *MockUpstreamsSDK) DeleteUpstream(ctx context.Context, controlPlaneI
 
 	var r0 *operations.DeleteUpstreamResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []operations.Option) (*operations.DeleteUpstreamResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, upstreamID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.DeleteUpstreamResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, upstreamID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.DeleteUpstreamResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, upstreamID, opts...)
@@ -6342,8 +6342,8 @@ func (_mock *MockUpstreamsSDK) ListUpstream(ctx context.Context, request operati
 
 	var r0 *operations.ListUpstreamResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListUpstreamRequest, []operations.Option) (*operations.ListUpstreamResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListUpstreamRequest, ...operations.Option) (*operations.ListUpstreamResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListUpstreamRequest, ...operations.Option) *operations.ListUpstreamResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -6413,8 +6413,8 @@ func (_mock *MockUpstreamsSDK) UpsertUpstream(ctx context.Context, req operation
 
 	var r0 *operations.UpsertUpstreamResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertUpstreamRequest, []operations.Option) (*operations.UpsertUpstreamResponse, error)); ok {
-		return returnFunc(ctx, req, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertUpstreamRequest, ...operations.Option) (*operations.UpsertUpstreamResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertUpstreamRequest, ...operations.Option) *operations.UpsertUpstreamResponse); ok {
 		r0 = returnFunc(ctx, req, opts...)
@@ -6511,8 +6511,8 @@ func (_mock *MockVaultSDK) CreateVault(ctx context.Context, controlPlaneID strin
 
 	var r0 *operations.CreateVaultResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Vault, []operations.Option) (*operations.CreateVaultResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, vault, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Vault, ...operations.Option) (*operations.CreateVaultResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, vault, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Vault, ...operations.Option) *operations.CreateVaultResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, vault, opts...)
@@ -6583,8 +6583,8 @@ func (_mock *MockVaultSDK) DeleteVault(ctx context.Context, controlPlaneID strin
 
 	var r0 *operations.DeleteVaultResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []operations.Option) (*operations.DeleteVaultResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, vaultID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.DeleteVaultResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, vaultID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.DeleteVaultResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, vaultID, opts...)
@@ -6655,8 +6655,8 @@ func (_mock *MockVaultSDK) ListVault(ctx context.Context, request operations.Lis
 
 	var r0 *operations.ListVaultResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListVaultRequest, []operations.Option) (*operations.ListVaultResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListVaultRequest, ...operations.Option) (*operations.ListVaultResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListVaultRequest, ...operations.Option) *operations.ListVaultResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -6726,8 +6726,8 @@ func (_mock *MockVaultSDK) UpsertVault(ctx context.Context, request operations.U
 
 	var r0 *operations.UpsertVaultResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertVaultRequest, []operations.Option) (*operations.UpsertVaultResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertVaultRequest, ...operations.Option) (*operations.UpsertVaultResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertVaultRequest, ...operations.Option) *operations.UpsertVaultResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -6824,8 +6824,8 @@ func (_mock *MockMeSDK) GetOrganizationsMe(ctx context.Context, opts ...operatio
 
 	var r0 *operations.GetOrganizationsMeResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, []operations.Option) (*operations.GetOrganizationsMeResponse, error)); ok {
-		return returnFunc(ctx, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, ...operations.Option) (*operations.GetOrganizationsMeResponse, error)); ok {
+		return returnFunc(ctx, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, ...operations.Option) *operations.GetOrganizationsMeResponse); ok {
 		r0 = returnFunc(ctx, opts...)
@@ -6921,8 +6921,8 @@ func (_mock *MockPluginSDK) CreatePlugin(ctx context.Context, controlPlaneID str
 
 	var r0 *operations.CreatePluginResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Plugin, []operations.Option) (*operations.CreatePluginResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, plugin, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Plugin, ...operations.Option) (*operations.CreatePluginResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, plugin, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.Plugin, ...operations.Option) *operations.CreatePluginResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, plugin, opts...)
@@ -6993,8 +6993,8 @@ func (_mock *MockPluginSDK) DeletePlugin(ctx context.Context, controlPlaneID str
 
 	var r0 *operations.DeletePluginResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []operations.Option) (*operations.DeletePluginResponse, error)); ok {
-		return returnFunc(ctx, controlPlaneID, pluginID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.DeletePluginResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, pluginID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.DeletePluginResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, pluginID, opts...)
@@ -7065,8 +7065,8 @@ func (_mock *MockPluginSDK) ListPlugin(ctx context.Context, request operations.L
 
 	var r0 *operations.ListPluginResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListPluginRequest, []operations.Option) (*operations.ListPluginResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListPluginRequest, ...operations.Option) (*operations.ListPluginResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListPluginRequest, ...operations.Option) *operations.ListPluginResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
@@ -7136,8 +7136,8 @@ func (_mock *MockPluginSDK) UpsertPlugin(ctx context.Context, request operations
 
 	var r0 *operations.UpsertPluginResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertPluginRequest, []operations.Option) (*operations.UpsertPluginResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertPluginRequest, ...operations.Option) (*operations.UpsertPluginResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.UpsertPluginRequest, ...operations.Option) *operations.UpsertPluginResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)
