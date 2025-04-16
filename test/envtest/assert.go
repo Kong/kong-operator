@@ -35,9 +35,29 @@ func assertCollectObjectExistsAndHasKonnectID(
 	}
 }
 
+// MockTestingTAdapter allows to use assert.CollectT where a mock.TestingT is
+// required. This is useful when in functions like AssertExpectations.
+//
+// Ref: https://pkg.go.dev/github.com/stretchr/testify/mock#TestingT
+type MockTestingTAdapter struct {
+	*assert.CollectT
+	t *testing.T
+}
+
+// Logf is a method that allows to log messages in the context of a test.
+func (a MockTestingTAdapter) Logf(format string, args ...any) {
+	a.t.Logf(format, args...)
+}
+
 // eventuallyAssertSDKExpectations waits for the SDK to have all its expectations met.
 // This is useful to ensure that all expected calls to the SDK have been made up
 // to a certain point in the test.
+//
+// Thanks to using the require.EventuallyWithT and assert.CollectT, the test is
+// not marked as failed on first assertion failure.
+//
+// This function uses an adapter for assert.CollectT to allow it to be used with
+// AssertExpectations, which requires a mock.TestingT interface.
 func eventuallyAssertSDKExpectations(
 	t *testing.T,
 	sdk interface {
@@ -51,7 +71,11 @@ func eventuallyAssertSDKExpectations(
 
 	require.EventuallyWithT(t,
 		func(c *assert.CollectT) {
-			assert.True(c, sdk.AssertExpectations(t))
+			// We're not passing t to AssertExpectations to prevent failing the test
+			// on the first assertion failure.
+			// MockTestingTAdapter allows us to pass the assert.CollectT to the
+			// AssertExpectations method, which requires a mock.TestingT interface.
+			assert.True(c, sdk.AssertExpectations(MockTestingTAdapter{c, t}))
 		},
 		waitTime, tickTime,
 	)

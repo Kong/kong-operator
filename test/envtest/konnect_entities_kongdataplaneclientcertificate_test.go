@@ -7,7 +7,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,9 +84,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	}, "KongDataPlaneClientCertificate's Programmed condition should be true eventually")
 
 	t.Log("Waiting for KongDataPlaneClientCertificate to be created in the SDK")
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, factory.SDK.CACertificatesSDK.AssertExpectations(t))
-	}, waitTime, tickTime)
+	eventuallyAssertSDKExpectations(t, factory.SDK.DataPlaneCertificatesSDK, waitTime, tickTime)
 
 	t.Log("Setting up SDK expectations on KongDataPlaneClientCertificate deletion")
 	sdk.DataPlaneCertificatesSDK.EXPECT().DeleteDataplaneCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), dpCertID).
@@ -97,9 +94,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	require.NoError(t, cl.Delete(ctx, createdCert))
 
 	t.Log("Waiting for KongDataPlaneClientCertificate to be deleted in the SDK")
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, factory.SDK.CACertificatesSDK.AssertExpectations(t))
-	}, waitTime, tickTime)
+	eventuallyAssertSDKExpectations(t, factory.SDK.DataPlaneCertificatesSDK, waitTime, tickTime)
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
 		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/1469")

@@ -6,7 +6,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
@@ -121,9 +120,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		}, "KonnectCloudGatewayDataPlaneGroupConfiguration didn't get Programmed status condition or didn't get the correct Konnect ID assigned")
 
 		t.Log("Checking SDK operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.CloudGatewaysSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
 
 		// NOTE: we delete the data plane group configuration by "creating" (using PUT)
 		// because Cloud Gateways DataPlane Group connfiguration API doesn't support
@@ -148,9 +145,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		eventually.WaitForObjectToNotExist(t, ctx, cl, dpg, waitTime, tickTime)
 
 		t.Log("Waiting for object to be deleted in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.CloudGatewaysSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
 	})
 
 	t.Run("namespacedRef adding and deleting", func(t *testing.T) {
@@ -206,9 +201,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		}, "KonnectCloudGatewayDataPlaneGroupConfiguration didn't get Programmed status condition or didn't get the correct Konnect ID assigned")
 
 		t.Log("Checking SDK operations")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.CloudGatewaysSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
 
 		// NOTE: we delete the data plane group configuration by "creating" (using PUT)
 		// because Cloud Gateways DataPlane Group connfiguration API doesn't support
@@ -233,8 +226,6 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		eventually.WaitForObjectToNotExist(t, ctx, cl, dpg, waitTime, tickTime)
 
 		t.Log("Waiting for object to be deleted in the SDK")
-		require.EventuallyWithT(t, func(c *assert.CollectT) {
-			assert.True(c, factory.SDK.CloudGatewaysSDK.AssertExpectations(t))
-		}, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
 	})
 }
