@@ -27,10 +27,54 @@ func TestKongRoute(t *testing.T) {
 		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefNotRequired).Run(t)
 	})
 
-	t.Run("cp ref, type=kic", func(t *testing.T) {
-		// NOTE: empty cp ref is not allowed in this context because a route can be attached to a service
-		// but this test doesn't check that.
-		common.NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes(t, obj, common.EmptyControlPlaneRefNotAllowed).Run(t)
+	t.Run("service ref", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongRoute]{
+			{
+				Name: "bind servicebound to controlplane too",
+				TestObject: &configurationv1alpha1.KongRoute{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: configurationv1alpha1.KongRouteSpec{
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type: configurationv1alpha1.ServiceRefNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NameRef{
+								Name: "test-konnect-service",
+							},
+						},
+					},
+				},
+				Update: func(kr *configurationv1alpha1.KongRoute) {
+					kr.Spec.ControlPlaneRef = &commonv1alpha1.ControlPlaneRef{
+						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "test-konnect-control-plane",
+						},
+					}
+				},
+			},
+			{
+				Name: "make serviceless",
+				TestObject: &configurationv1alpha1.KongRoute{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: configurationv1alpha1.KongRouteSpec{
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type: configurationv1alpha1.ServiceRefNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NameRef{
+								Name: "test-konnect-service",
+							},
+						},
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+					},
+				},
+				Update: func(kr *configurationv1alpha1.KongRoute) {
+					kr.Spec.ServiceRef = nil
+				},
+			},
+		}.Run(t)
 	})
 
 	t.Run("protocols", func(t *testing.T) {
@@ -81,23 +125,6 @@ func TestKongRoute(t *testing.T) {
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set"),
-			},
-		}.Run(t)
-	})
-
-	t.Run("no service ref and no cp ref provided", func(t *testing.T) {
-		common.TestCasesGroup[*configurationv1alpha1.KongRoute]{
-			{
-				Name: "have to provide either controlPlaneRef or serviceRef",
-				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: configurationv1alpha1.KongRouteSpec{
-						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-							Paths: []string{"/"},
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("Has to set either controlPlaneRef or serviceRef"),
 			},
 		}.Run(t)
 	})
@@ -168,68 +195,6 @@ func TestKongRoute(t *testing.T) {
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("when type is namespacedRef, namespacedRef must be set"),
-			},
-			{
-				Name: "NamespacedRef reference name cannot be changed when an entity is Programmed",
-				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: configurationv1alpha1.KongRouteSpec{
-						ServiceRef: &configurationv1alpha1.ServiceRef{
-							Type: configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &commonv1alpha1.NameRef{
-								Name: "test-konnect-service",
-							},
-						},
-						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-							Paths: []string{"/"},
-						},
-					},
-					Status: configurationv1alpha1.KongRouteStatus{
-						Conditions: []metav1.Condition{
-							{
-								Type:               "Programmed",
-								Status:             metav1.ConditionTrue,
-								Reason:             "Programmed",
-								LastTransitionTime: metav1.Now(),
-							},
-						},
-					},
-				},
-				Update: func(ks *configurationv1alpha1.KongRoute) {
-					ks.Spec.ServiceRef.NamespacedRef.Name = "new-konnect-service"
-				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("spec.serviceRef is immutable when an entity is already Programmed"),
-			},
-			{
-				Name: "NamespacedRef reference type cannot be changed when an entity is Programmed",
-				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: configurationv1alpha1.KongRouteSpec{
-						ServiceRef: &configurationv1alpha1.ServiceRef{
-							Type: configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &commonv1alpha1.NameRef{
-								Name: "test-konnect-service",
-							},
-						},
-						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-							Paths: []string{"/"},
-						},
-					},
-					Status: configurationv1alpha1.KongRouteStatus{
-						Conditions: []metav1.Condition{
-							{
-								Type:               "Programmed",
-								Status:             metav1.ConditionTrue,
-								Reason:             "Programmed",
-								LastTransitionTime: metav1.Now(),
-							},
-						},
-					},
-				},
-				Update: func(ks *configurationv1alpha1.KongRoute) {
-					ks.Spec.ServiceRef.Type = "otherRef"
-				},
-				ExpectedUpdateErrorMessage: lo.ToPtr("Unsupported value: \"otherRef\": supported values: \"namespacedRef\""),
 			},
 		}.Run(t)
 	})

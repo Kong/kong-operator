@@ -38,12 +38,10 @@ import (
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Programmed",description="The Resource is Programmed on Konnect",type=string,JSONPath=`.status.conditions[?(@.type=='Programmed')].status`
-// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.serviceRef) || has(self.spec.serviceRef)", message="serviceRef is required once set"
 // +kubebuilder:validation:XValidation:rule="has(self.spec.protocols) && self.spec.protocols.exists(p, p == 'http') ? (has(self.spec.hosts) || has(self.spec.methods) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.headers) ) : true", message="If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set"
-// +kubebuilder:validation:XValidation:rule="has(self.spec.controlPlaneRef) && !has(self.spec.serviceRef) || !has(self.spec.controlPlaneRef) && has(self.spec.serviceRef)", message="Has to set either controlPlaneRef or serviceRef"
 // +kubebuilder:validation:XValidation:rule="(!has(self.spec.controlPlaneRef) || !has(self.spec.controlPlaneRef.konnectNamespacedRef)) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)", message="spec.controlPlaneRef cannot specify namespace for namespaced resource"
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.serviceRef) ? true : (!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.serviceRef == self.spec.serviceRef", message="spec.serviceRef is immutable when an entity is already Programmed"
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.controlPlaneRef) ? true :(!self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
+// +kubebuilder:validation:XValidation:rule="(!has(self.spec) || !has(self.spec.controlPlaneRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
 // +apireference:kgo:include
 // +kong:channels=gateway-operator
 type KongRoute struct {
