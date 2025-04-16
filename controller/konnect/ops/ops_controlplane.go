@@ -18,6 +18,22 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
+// convertCreateControlPlaneRequestToSDK converts the konnectv1alpha1.CreateControlPlaneRequest
+// to sdkkonnectcomp.CreateControlPlaneRequest (they're basically the same).
+func convertCreateControlPlaneRequestToSDK(
+	req konnectv1alpha1.CreateControlPlaneRequest,
+) sdkkonnectcomp.CreateControlPlaneRequest {
+	return sdkkonnectcomp.CreateControlPlaneRequest{
+		Name:         lo.FromPtr(req.Name),
+		Description:  req.Description,
+		AuthType:     req.AuthType,
+		ProxyUrls:    req.ProxyUrls,
+		Labels:       req.Labels,
+		ClusterType:  req.ClusterType,
+		CloudGateway: req.CloudGateway,
+	}
+}
+
 // createControlPlane creates the ControlPlane as specified in provided ControlPlane's
 // spec. Besides creating the ControlPlane, it also creates the group membership if the
 // ControlPlane is a group. If the group membership creation fails, KonnectEntityCreatedButRelationsFailedError
@@ -32,8 +48,7 @@ func createControlPlane(
 	req := cp.Spec.CreateControlPlaneRequest
 	req.Labels = WithKubernetesMetadataLabels(cp, req.Labels)
 
-	resp, err := sdk.CreateControlPlane(ctx, req)
-
+	resp, err := sdk.CreateControlPlane(ctx, convertCreateControlPlaneRequestToSDK(req))
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cp); errWrap != nil {
 		return errWrap
 	}
@@ -89,7 +104,7 @@ func updateControlPlane(
 ) error {
 	id := cp.GetKonnectStatus().GetKonnectID()
 	req := sdkkonnectcomp.UpdateControlPlaneRequest{
-		Name:        sdkkonnectgo.String(cp.Spec.Name),
+		Name:        sdkkonnectgo.String(*cp.Spec.Name),
 		Description: cp.Spec.Description,
 		AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
 		ProxyUrls:   cp.Spec.ProxyUrls,

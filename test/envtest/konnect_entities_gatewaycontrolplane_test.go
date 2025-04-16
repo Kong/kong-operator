@@ -35,7 +35,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				func(obj client.Object) {
 					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
 					cp.Name = "cp-1"
-					cp.Spec.Name = "cp-1"
+					cp.Spec.Name = lo.ToPtr("cp-1")
 					cp.Spec.Description = lo.ToPtr("test control plane 1")
 				},
 			)
@@ -114,14 +114,14 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				func(obj client.Object) {
 					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
 					cp.Name = "cp-groupmember-1"
-					cp.Spec.Name = "cp-groupmember-1"
+					cp.Spec.Name = lo.ToPtr("cp-groupmember-1")
 				},
 			)
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
 				func(obj client.Object) {
 					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
 					cp.Name = "cp-2"
-					cp.Spec.Name = "cp-2"
+					cp.Spec.Name = lo.ToPtr("cp-2")
 					cp.Spec.ClusterType = lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup)
 					cp.Spec.Members = []corev1.LocalObjectReference{
 						{
@@ -280,14 +280,14 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				func(obj client.Object) {
 					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
 					cp.Name = "cp-groupmember-2"
-					cp.Spec.Name = "cp-groupmember-2"
+					cp.Spec.Name = lo.ToPtr("cp-groupmember-2")
 				},
 			)
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
 				func(obj client.Object) {
 					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
 					cp.Name = "cp-3"
-					cp.Spec.Name = "cp-3"
+					cp.Spec.Name = lo.ToPtr("cp-3")
 					cp.Spec.ClusterType = lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup)
 					cp.Spec.Members = []corev1.LocalObjectReference{
 						{
@@ -443,7 +443,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				func(obj client.Object) {
 					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
 					cp.Name = "cp-4"
-					cp.Spec.Name = "cp-4"
+					cp.Spec.Name = lo.ToPtr("cp-4")
 				},
 			)
 		},
@@ -543,7 +543,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				func(obj client.Object) {
 					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
 					cp.Name = "cp-5"
-					cp.Spec.Name = "cp-5"
+					cp.Spec.Name = lo.ToPtr("cp-5")
 				},
 			)
 
@@ -551,7 +551,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				func(obj client.Object) {
 					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
 					cp.Name = "cp-group-1"
-					cp.Spec.Name = "cp-group-1"
+					cp.Spec.Name = lo.ToPtr("cp-group-1")
 					cp.Spec.ClusterType = lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup)
 					cp.Spec.Members = []corev1.LocalObjectReference{
 						{Name: "cp-5"},
@@ -730,7 +730,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				func(obj client.Object) {
 					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
 					cp.Name = "cp-group-no-members"
-					cp.Spec.Name = "cp-group-no-members"
+					cp.Spec.Name = lo.ToPtr("cp-group-no-members")
 					cp.Spec.ClusterType = lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup)
 				},
 			)

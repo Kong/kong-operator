@@ -59,7 +59,7 @@ func TestHandleControlPlaneRef(t *testing.T) {
 				Name:      "cp-group",
 			},
 			Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-				CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
+				CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 					ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 				},
 			},

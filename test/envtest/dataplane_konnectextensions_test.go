@@ -54,7 +54,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 
 	const (
 		clusterCASecretName   = "cluster-ca"
-		konnectControlPlaneID = "konnect-cp-id"
+		konnectControlPlaneID = "aee0667a-90c6-45a6-a2d8-575e1e487b86"
 	)
 
 	clusterCAKeyConfig := secrets.KeyConfig{
@@ -131,7 +131,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 				ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
 					Ref: commonv1alpha1.ControlPlaneRef{
 						Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-						KonnectID: lo.ToPtr(konnectControlPlaneID),
+						KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType(konnectControlPlaneID)),
 					},
 				},
 				Configuration: &konnectv1alpha1.KonnectConfiguration{
