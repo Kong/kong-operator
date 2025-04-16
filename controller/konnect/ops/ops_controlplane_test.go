@@ -4,6 +4,7 @@ import (
 	"errors"
 	"testing"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
@@ -429,7 +430,7 @@ func TestUpdateControlPlane(t *testing.T) {
 					EXPECT().
 					UpdateControlPlane(ctx, "12345",
 						sdkkonnectcomp.UpdateControlPlaneRequest{
-							Name:        cp.Spec.Name,
+							Name:        sdkkonnectgo.String(*cp.Spec.Name),
 							Description: cp.Spec.Description,
 							AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
 							ProxyUrls:   cp.Spec.ProxyUrls,
@@ -475,7 +476,7 @@ func TestUpdateControlPlane(t *testing.T) {
 					EXPECT().
 					UpdateControlPlane(ctx, "12345",
 						sdkkonnectcomp.UpdateControlPlaneRequest{
-							Name:        cp.Spec.Name,
+							Name:        sdkkonnectgo.String(*cp.Spec.Name),
 							Description: cp.Spec.Description,
 							AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
 							ProxyUrls:   cp.Spec.ProxyUrls,
@@ -520,7 +521,7 @@ func TestUpdateControlPlane(t *testing.T) {
 					EXPECT().
 					UpdateControlPlane(ctx, "12345",
 						sdkkonnectcomp.UpdateControlPlaneRequest{
-							Name:        cp.Spec.Name,
+							Name:        sdkkonnectgo.String(*cp.Spec.Name),
 							Description: cp.Spec.Description,
 							AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
 							ProxyUrls:   cp.Spec.ProxyUrls,
@@ -657,8 +658,8 @@ func TestSetGroupMembers(t *testing.T) {
 				},
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
-						Name:        lo.ToPtr("cp-group"),
 						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
+						Name:        lo.ToPtr("cp-group"),
 					},
 				},
 			},
@@ -687,8 +688,8 @@ func TestSetGroupMembers(t *testing.T) {
 				},
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
-						Name:        lo.ToPtr("cp-group"),
 						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
+						Name:        lo.ToPtr("cp-group"),
 					},
 					Members: []corev1.LocalObjectReference{
 						{
@@ -742,8 +743,8 @@ func TestSetGroupMembers(t *testing.T) {
 				},
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
-						Name:        lo.ToPtr("cp-group"),
 						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
+						Name:        lo.ToPtr("cp-group"),
 					},
 					Members: []corev1.LocalObjectReference{
 						{
@@ -778,8 +779,8 @@ func TestSetGroupMembers(t *testing.T) {
 				},
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
-						Name:        lo.ToPtr("cp-group"),
 						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
+						Name:        lo.ToPtr("cp-group"),
 					},
 					Members: []corev1.LocalObjectReference{
 						{
@@ -850,8 +851,8 @@ func TestSetGroupMembers(t *testing.T) {
 				},
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
-						Name:        lo.ToPtr("cp-group"),
 						ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
+						Name:        lo.ToPtr("cp-group"),
 					},
 					Members: []corev1.LocalObjectReference{
 						{

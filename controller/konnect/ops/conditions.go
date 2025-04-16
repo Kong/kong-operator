@@ -16,13 +16,14 @@ type entityType interface {
 	GetGeneration() int64
 }
 
-// SetKonnectEntityProgrammedCondition sets the KonnectEntityProgrammed condition to true
+// SetKonnectEntityProgrammedConditionTrue sets the KonnectEntityProgrammed condition to true
 // on the provided object.
-func SetKonnectEntityProgrammedCondition(
+func SetKonnectEntityProgrammedConditionTrue(
 	obj entityType,
 ) {
-	_setKonnectEntityProgrammedConditon(
+	_setKonnectEntityConditon(
 		obj,
+		konnectv1alpha1.KonnectEntityProgrammedConditionType,
 		metav1.ConditionTrue,
 		konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
 		"",
@@ -40,23 +41,59 @@ func SetKonnectEntityProgrammedConditionFalse(
 	// because of the trace ID in the instance field is different for each request.
 	err = ClearInstanceFromError(err)
 
-	_setKonnectEntityProgrammedConditon(
+	_setKonnectEntityConditon(
 		obj,
+		konnectv1alpha1.KonnectEntityProgrammedConditionType,
 		metav1.ConditionFalse,
 		reason,
 		err.Error(),
 	)
 }
 
-func _setKonnectEntityProgrammedConditon(
+// SetKonnectEntityProgrammedConditionTrue sets the KonnectEntityProgrammed condition to true
+// on the provided object.
+func SetKonnectEntityMirroredConditionTrue(
 	obj entityType,
+) {
+	_setKonnectEntityConditon(
+		obj,
+		konnectv1alpha1.ControlPlaneMirroredConditionType,
+		metav1.ConditionTrue,
+		konnectv1alpha1.ControlPlaneMirroredSucceededConditionReason,
+		"",
+	)
+}
+
+// SetKonnectEntityProgrammedConditionFalse sets the KonnectEntityProgrammed condition
+// to false on the provided object.
+func SetKonnectEntityMirroredConditionFalse(
+	obj entityType,
+	reason kcfgconsts.ConditionReason,
+	err error,
+) {
+	// Clear the instance field from the error to avoid requeueing the resource
+	// because of the trace ID in the instance field is different for each request.
+	err = ClearInstanceFromError(err)
+
+	_setKonnectEntityConditon(
+		obj,
+		konnectv1alpha1.ControlPlaneMirroredConditionType,
+		metav1.ConditionTrue,
+		konnectv1alpha1.ControlPlaneMirroredSucceededConditionReason,
+		"",
+	)
+}
+
+func _setKonnectEntityConditon(
+	obj entityType,
+	cType kcfgconsts.ConditionType,
 	status metav1.ConditionStatus,
 	reason kcfgconsts.ConditionReason,
 	msg string,
 ) {
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			konnectv1alpha1.KonnectEntityProgrammedConditionType,
+			cType,
 			status,
 			reason,
 			msg,

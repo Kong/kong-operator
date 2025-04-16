@@ -19,6 +19,7 @@ import (
 	"github.com/kong/gateway-operator/internal/metrics"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -61,7 +62,7 @@ func Create[
 
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		err = createControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+		err = ensureControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = createKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
@@ -182,7 +183,7 @@ func Create[
 
 		if errGet == nil && id != "" {
 			e.SetKonnectID(id)
-			SetKonnectEntityProgrammedCondition(e)
+			SetKonnectEntityProgrammedConditionTrue(e)
 		} else {
 			if errGet != nil {
 				err = fmt.Errorf("trying to find a matching Konnect entity matching the ID failed: %w, %w", errGet, err)
@@ -193,14 +194,15 @@ func Create[
 
 	case errors.As(err, &errSDK):
 		statusCode = errSDK.StatusCode
-		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, errSDK)
+		SetKonnectEntityProgrammedConditionFalse(
+			e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, errSDK)
 	case errors.As(err, &errRelationsFailed):
 		e.SetKonnectID(errRelationsFailed.KonnectID)
 		SetKonnectEntityProgrammedConditionFalse(e, errRelationsFailed.Reason, errRelationsFailed.Err)
 	case err != nil:
 		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToCreateReason, err)
 	default:
-		SetKonnectEntityProgrammedCondition(e)
+		SetKonnectEntityProgrammedConditionTrue(e)
 	}
 
 	if err != nil {
@@ -219,6 +221,20 @@ func Create[
 			time.Since(start),
 		)
 	}
+
+	// For ControlPlane entities, we need to check if the source type is mirror
+	// and set the mirrored condition accordingly.
+	switch cp := any(e).(type) {
+	case *konnectv1alpha1.KonnectGatewayControlPlane:
+		if *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
+			if err == nil {
+				SetKonnectEntityMirroredConditionTrue(e)
+			} else {
+				SetKonnectEntityMirroredConditionFalse(e, konnectv1alpha1.ControlPlaneMirroredFailedConditionReason, err)
+			}
+		}
+	}
+
 	logOpComplete(ctx, start, CreateOp, e, err)
 
 	return e, IgnoreUnrecoverableAPIErr(err, loggerForEntity(ctx, e, CreateOp))
@@ -400,7 +416,10 @@ func Update[
 	)
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+		// if the ControlPlane is of type origin, enforce the spec on Konnect.
+		if *ent.Spec.Source == commonv1alpha1.EntitySourceOrigin {
+			err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+		}
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = updateKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
@@ -467,7 +486,7 @@ func Update[
 	case err != nil:
 		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToUpdateReason, err)
 	default:
-		SetKonnectEntityProgrammedCondition(e)
+		SetKonnectEntityProgrammedConditionTrue(e)
 	}
 
 	if err != nil {
@@ -486,6 +505,20 @@ func Update[
 			time.Since(start),
 		)
 	}
+
+	// For ControlPlane entities, we need to check if the source type is mirror
+	// and set the mirrored condition accordingly.
+	switch cp := any(e).(type) {
+	case *konnectv1alpha1.KonnectGatewayControlPlane:
+		if *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
+			if err == nil {
+				SetKonnectEntityMirroredConditionTrue(e)
+			} else {
+				SetKonnectEntityMirroredConditionFalse(e, konnectv1alpha1.ControlPlaneMirroredFailedConditionReason, err)
+			}
+		}
+	}
+
 	logOpComplete(ctx, start, UpdateOp, e, err)
 
 	return ctrl.Result{}, IgnoreUnrecoverableAPIErr(err, loggerForEntity(ctx, e, UpdateOp))
@@ -511,6 +544,16 @@ func logOpComplete[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ctx context.Context, start time.Time, op Op, e TEnt, err error) {
+	switch ent := any(e).(type) {
+
+	// if the entity is a Mirror KonnectGatewayControlPlane, don't log the konnect operation,
+	// as no operation occurred.
+	case *konnectv1alpha1.KonnectGatewayControlPlane:
+		if *ent.Spec.Source == commonv1alpha1.EntitySourceMirror {
+			return
+		}
+	}
+
 	logger := loggerForEntity(ctx, e, op).
 		WithValues("duration", time.Since(start).String())
 

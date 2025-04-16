@@ -15,6 +15,7 @@ import (
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
@@ -31,6 +32,36 @@ func convertCreateControlPlaneRequestToSDK(
 		Labels:       req.Labels,
 		ClusterType:  req.ClusterType,
 		CloudGateway: req.CloudGateway,
+	}
+}
+
+// ensureControlPlane ensures that the Konnect ControlPlane exists in Konnect. It is created
+// if it does not exist and the source is Origin. If the source is Mirror, it checks
+// if the ControlPlane exists in Konnect and returns an error if it does not.
+func ensureControlPlane(
+	ctx context.Context,
+	sdk sdkops.ControlPlaneSDK,
+	sdkGroups sdkops.ControlPlaneGroupSDK,
+	cl client.Client,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+) error {
+	switch *cp.Spec.Source {
+	case commonv1alpha1.EntitySourceOrigin:
+		return createControlPlane(ctx, sdk, sdkGroups, cl, cp)
+	case commonv1alpha1.EntitySourceMirror:
+		if _, err := GetControlPlaneByID(
+			ctx,
+			sdk,
+			// not nilness is ensured by CEL rules
+			string(cp.Spec.Mirror.Konnect.ID),
+		); err != nil {
+			return err
+		}
+		cp.SetKonnectID(string(cp.Spec.Mirror.Konnect.ID))
+		return nil
+	default:
+		// This should never happen, as the source type is validated by CEL rules.
+		return fmt.Errorf("unsupported source type: %s", *cp.Spec.Source)
 	}
 }
 
@@ -81,6 +112,10 @@ func deleteControlPlane(
 	sdk sdkops.ControlPlaneSDK,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) error {
+	// if the source type is Mirror, don't touch the Konnect entity.
+	if *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		return nil
+	}
 	id := cp.GetKonnectStatus().GetKonnectID()
 	_, err := sdk.DeleteControlPlane(ctx, id)
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, cp); errWrap != nil {
@@ -102,6 +137,10 @@ func updateControlPlane(
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) error {
+	// if the source type is Mirror, don't touch the Konnect entity.
+	if *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		return nil
+	}
 	id := cp.GetKonnectStatus().GetKonnectID()
 	req := sdkkonnectcomp.UpdateControlPlaneRequest{
 		Name:        sdkkonnectgo.String(*cp.Spec.Name),
@@ -143,6 +182,10 @@ func setGroupMembers(
 	id string,
 	sdkGroups sdkops.ControlPlaneGroupSDK,
 ) error {
+	// if the source type is Mirror, don't touch the Konnect entity.
+	if *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		return nil
+	}
 	if cp.Spec.ClusterType == nil ||
 		*cp.Spec.ClusterType != sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup {
 		return nil
