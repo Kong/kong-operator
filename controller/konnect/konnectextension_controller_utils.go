@@ -66,7 +66,7 @@ func (r *KonnectExtensionReconciler) getGatewayKonnectControlPlane(
 	case commonv1alpha1.ControlPlaneRefKonnectID:
 		kgcpList := &konnectv1alpha1.KonnectGatewayControlPlaneList{}
 		if err := r.List(ctx, kgcpList, client.InNamespace(ext.Namespace), client.MatchingFields{
-			index.IndexFieldKonnectGatewayControlPlaneOnKonnectID: *ext.Spec.Konnect.ControlPlane.Ref.KonnectID,
+			index.IndexFieldKonnectGatewayControlPlaneOnKonnectID: string(*ext.Spec.Konnect.ControlPlane.Ref.KonnectID),
 		}); err != nil {
 			return nil, ctrl.Result{}, err
 		}

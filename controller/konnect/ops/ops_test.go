@@ -8,6 +8,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -47,8 +48,8 @@ func TestCreate(t *testing.T) {
 					Namespace: "test-ns",
 				},
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-					CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
-						Name: "test-cp",
+					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
+						Name: lo.ToPtr("test-cp"),
 						Labels: map[string]string{
 							"label": "very-long-label-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 						},
@@ -110,8 +111,8 @@ func TestCreate(t *testing.T) {
 					Namespace: "test-ns",
 				},
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-					CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
-						Name: "test-cp",
+					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
+						Name: lo.ToPtr("test-cp"),
 					},
 				},
 			},
@@ -176,8 +177,8 @@ func TestCreate(t *testing.T) {
 					Namespace: "test-ns",
 				},
 				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-					CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
-						Name: "test-cp",
+					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
+						Name: lo.ToPtr("test-cp"),
 					},
 				},
 			},

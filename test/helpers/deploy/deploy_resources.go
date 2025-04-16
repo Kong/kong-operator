@@ -111,7 +111,7 @@ func WithKonnectIDControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane
 		o.SetControlPlaneRef(
 			&commonv1alpha1.ControlPlaneRef{
 				Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-				KonnectID: lo.ToPtr(cp.GetKonnectStatus().GetKonnectID()),
+				KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType(cp.GetKonnectStatus().GetKonnectID())),
 			},
 		)
 	}
@@ -208,8 +208,8 @@ func KonnectGatewayControlPlane(
 					Name: apiAuth.Name,
 				},
 			},
-			CreateControlPlaneRequest: sdkkonnectcomp.CreateControlPlaneRequest{
-				Name: name,
+			CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
+				Name: lo.ToPtr(name),
 			},
 		},
 	}
