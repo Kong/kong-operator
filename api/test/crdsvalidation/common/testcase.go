@@ -160,18 +160,21 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 
 		// If the Update function was defined, update the object and check if the update is allowed.
 		if tc.Update != nil {
-			// Update the object state and push the update to the server.
-			tc.Update(tc.TestObject)
-			err := cl.Update(ctx, tc.TestObject)
-
-			// If the expected update error message is defined, check if the error message contains the expected message
-			// and return. Otherwise, expect no error.
-			if tc.ExpectedUpdateErrorMessage != nil {
-				require.NotNil(t, err)
-				assert.Contains(t, err.Error(), *tc.ExpectedUpdateErrorMessage)
-				return
-			}
-			require.NoError(t, err)
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				err := cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject)
+				require.NoError(c, err)
+				// Update the object state and push the update to the server.
+				tc.Update(tc.TestObject)
+				err = cl.Update(ctx, tc.TestObject)
+				// If the expected update error message is defined, check if the error message contains the expected message
+				// and return. Otherwise, expect no error.
+				if tc.ExpectedUpdateErrorMessage != nil {
+					require.NotNil(c, err)
+					assert.Contains(c, err.Error(), *tc.ExpectedUpdateErrorMessage)
+					return
+				}
+				require.NoError(c, err)
+			}, timeout, period)
 		}
 	})
 }
