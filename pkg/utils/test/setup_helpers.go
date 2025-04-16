@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kong/gateway-operator/modules/manager"
+	"github.com/kong/gateway-operator/test"
 
 	operatorclient "github.com/kong/kubernetes-configuration/pkg/clientset"
 )
@@ -213,6 +214,10 @@ func ExtractModuleVersion(moduleName string) (string, error) {
 
 // DeployCRDs deploys the CRDs commonly used in tests.
 func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorclient.Clientset, cluster clusters.Cluster) error {
+	if test.IsInstallingCRDsDisabled() {
+		return nil
+	}
+
 	// CRDs for stable features.
 	kubectlFlags := []string{"--server-side", "-v5"}
 	fmt.Printf("INFO: deploying KGO CRDs: %s\n", crdPath)
