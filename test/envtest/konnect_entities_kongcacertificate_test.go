@@ -9,7 +9,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -92,9 +91,7 @@ func TestKongCACertificate(t *testing.T) {
 	}, "KongCACertificate's Programmed condition should be true eventually")
 
 	t.Log("Waiting for KongCACertificate to be created in the SDK")
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, factory.SDK.CACertificatesSDK.AssertExpectations(t))
-	}, waitTime, tickTime)
+	eventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
 
 	t.Log("Setting up SDK expectations on KongCACertificate update")
 	sdk.CACertificatesSDK.EXPECT().UpsertCaCertificate(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertCaCertificateRequest) bool {
@@ -108,9 +105,7 @@ func TestKongCACertificate(t *testing.T) {
 	require.NoError(t, clientNamespaced.Patch(ctx, certToPatch, client.MergeFrom(createdCert)))
 
 	t.Log("Waiting for KongCACertificate to be updated in the SDK")
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, factory.SDK.CACertificatesSDK.AssertExpectations(t))
-	}, waitTime, tickTime)
+	eventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
 
 	t.Log("Setting up SDK expectations on KongCACertificate deletion")
 	sdk.CACertificatesSDK.EXPECT().DeleteCaCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), "12345").
@@ -120,9 +115,7 @@ func TestKongCACertificate(t *testing.T) {
 	require.NoError(t, cl.Delete(ctx, createdCert))
 
 	t.Log("Waiting for KongCACertificate to be deleted in the SDK")
-	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		assert.True(c, factory.SDK.CACertificatesSDK.AssertExpectations(t))
-	}, waitTime, tickTime)
+	eventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
 
 	t.Run("should handle conflict in creation correctly", func(t *testing.T) {
 		const (
