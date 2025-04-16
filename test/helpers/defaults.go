@@ -8,7 +8,7 @@ import (
 
 var (
 	_defaultDataPlaneImageLock sync.RWMutex
-	_defaultDataPlaneImage     = consts.DefaultDataPlaneImage
+	_defaultDataPlaneImage     = consts.DefaultDataPlaneEnterpriseImage
 	_defaultDataPlaneBaseImage = consts.DefaultDataPlaneBaseImage
 )
 
