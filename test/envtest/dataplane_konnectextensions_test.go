@@ -67,7 +67,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		ClusterCASecretName:      clusterCASecretName,
 		ClusterCASecretNamespace: ns.Name,
 		ClusterCAKeyConfig:       clusterCAKeyConfig,
-		DefaultImage:             consts.DefaultDataPlaneImage,
+		DefaultImage:             consts.DefaultDataPlaneEnterpriseImage,
 		LoggingMode:              logging.DevelopmentMode,
 		ValidateDataPlaneImage:   true,
 		KonnectEnabled:           true,
@@ -168,7 +168,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 								Containers: []corev1.Container{
 									{
 										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
+										Image: consts.DefaultDataPlaneEnterpriseImage,
 									},
 								},
 							},
