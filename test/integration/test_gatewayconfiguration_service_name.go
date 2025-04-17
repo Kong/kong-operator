@@ -2,13 +2,10 @@ package integration
 
 import (
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	gwtypes "github.com/kong/gateway-operator/internal/types"
@@ -105,18 +102,16 @@ func TestGatewayConfigurationServiceName(t *testing.T) {
 		return *dp.Spec.Network.Services.Ingress.Name == customServiceName
 	}, testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
 
-	t.Log("verifying that the service has the custom name")
+	t.Log("verifying that the service has the custom name using DataPlane's status.service field")
 	require.Eventually(t, func() bool {
-		var serviceList corev1.ServiceList
-		err := GetClients().MgrClient.List(GetCtx(), &serviceList, client.InNamespace(namespace.Name))
+		dataplanes, err := gatewayutils.ListDataPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
 		if err != nil {
 			return false
 		}
-		for _, svc := range serviceList.Items {
-			if svc.Name == customServiceName {
-				return true
-			}
+		if len(dataplanes) != 1 {
+			return false
 		}
-		return false
+		dp := dataplanes[0]
+		return dp.Status.Service == customServiceName
 	}, testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
 }
