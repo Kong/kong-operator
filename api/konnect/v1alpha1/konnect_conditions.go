@@ -214,3 +214,18 @@ const (
 	// condition type indicating that the Konnect network reference is invalid.
 	KonnectNetworkRefsReasonInvalid = "Invalid"
 )
+
+const (
+	// ControlPlaneMirroredConditionType is the type of the condition that indicates
+	// the status for the control plane mirroring.
+	ControlPlaneMirroredConditionType = "Mirrored"
+
+	// ControlPlaneMirroredReasonMirrored is the reason used with the
+	// Mirrored condition type indicating that the control plane
+	// mirroring has succeeded.
+	ControlPlaneMirroredReasonMirrored = "Mirrored"
+	// ControlPlaneMirroredReasonFailed is the reason used with the
+	// Mirrored condition type indicating that the control plane
+	// mirroring has failed.
+	ControlPlaneMirroredReasonFailed = "Failed"
+)
