@@ -146,6 +146,8 @@ func getKonnectNetworkRefs[T constraints.SupportedKonnectEntityType, TEnt constr
 			},
 		)
 		return mo.Some(m)
+	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
+		return mo.Some([]commonv1alpha1.ObjectRef{e.Spec.NetworkRef})
 	default:
 		return mo.None[[]commonv1alpha1.ObjectRef]()
 	}
