@@ -47,6 +47,8 @@ func ReconciliationWatchOptionsForEntity[
 		return KonnectCloudGatewayNetworkReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
 		return KonnectCloudGatewayDataPlaneGroupConfigurationReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
+		return KonnectCloudGatewayTransitGatewayWatchOptions(cl)
 	case *configurationv1alpha1.KongPluginBinding:
 		return KongPluginBindingReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.KongUpstream:

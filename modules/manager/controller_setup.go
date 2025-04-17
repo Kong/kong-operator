@@ -72,6 +72,8 @@ const (
 	KonnectCloudGatewayNetworkControllerName = "KonnectCloudGatewayNetwork"
 	// KonnectCloudGatewayDataPlaneGroupConfigurationControllerName is the name of the KonnectCloudGatewayDataPlaneGroupConfiguration controller.
 	KonnectCloudGatewayDataPlaneGroupConfigurationControllerName = "KonnectCloudGatewayDataPlaneGroupConfiguration"
+	// KonnectCloudGatewayTransitGatewayControllerName is the name of the KonnectCloudGatewayTransitGateway controller.
+	KonnectCloudGatewayTransitGatewayControllerName = "KonnectCloudGatewayTransitGateway"
 	// KongServiceControllerName is the name of the KongService controller.
 	KongServiceControllerName = "KongService"
 	// KongRouteControllerName is the name of the KongRoute controller.
@@ -621,6 +623,7 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			KonnectGatewayControlPlaneControllerName:                     newKonnectEntityController[konnectv1alpha1.KonnectGatewayControlPlane](controllerFactory),
 			KonnectCloudGatewayNetworkControllerName:                     newKonnectEntityController[konnectv1alpha1.KonnectCloudGatewayNetwork](controllerFactory),
 			KonnectCloudGatewayDataPlaneGroupConfigurationControllerName: newKonnectEntityController[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration](controllerFactory),
+			KonnectCloudGatewayTransitGatewayControllerName:              newKonnectEntityController[konnectv1alpha1.KonnectCloudGatewayTransitGateway](controllerFactory),
 			KongServiceControllerName:                                    newKonnectEntityController[configurationv1alpha1.KongService](controllerFactory),
 			KongRouteControllerName:                                      newKonnectEntityController[configurationv1alpha1.KongRoute](controllerFactory),
 			KongConsumerControllerName:                                   newKonnectEntityController[configurationv1.KongConsumer](controllerFactory),

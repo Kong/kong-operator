@@ -6824,8 +6824,8 @@ func (_mock *MockTransitGatewaysSDK) CreateTransitGateway(ctx context.Context, n
 
 	var r0 *operations.CreateTransitGatewayResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.CreateTransitGatewayRequest, []operations.Option) (*operations.CreateTransitGatewayResponse, error)); ok {
-		return returnFunc(ctx, networkID, createTransitGatewayRequest, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.CreateTransitGatewayRequest, ...operations.Option) (*operations.CreateTransitGatewayResponse, error)); ok {
+		return returnFunc(ctx, networkID, createTransitGatewayRequest, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.CreateTransitGatewayRequest, ...operations.Option) *operations.CreateTransitGatewayResponse); ok {
 		r0 = returnFunc(ctx, networkID, createTransitGatewayRequest, opts...)
@@ -6896,8 +6896,8 @@ func (_mock *MockTransitGatewaysSDK) DeleteTransitGateway(ctx context.Context, n
 
 	var r0 *operations.DeleteTransitGatewayResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []operations.Option) (*operations.DeleteTransitGatewayResponse, error)); ok {
-		return returnFunc(ctx, networkID, transitGatewayID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.DeleteTransitGatewayResponse, error)); ok {
+		return returnFunc(ctx, networkID, transitGatewayID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.DeleteTransitGatewayResponse); ok {
 		r0 = returnFunc(ctx, networkID, transitGatewayID, opts...)
@@ -6968,8 +6968,8 @@ func (_mock *MockTransitGatewaysSDK) GetTransitGateway(ctx context.Context, netw
 
 	var r0 *operations.GetTransitGatewayResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, []operations.Option) (*operations.GetTransitGatewayResponse, error)); ok {
-		return returnFunc(ctx, networkID, transitGatewayID, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.GetTransitGatewayResponse, error)); ok {
+		return returnFunc(ctx, networkID, transitGatewayID, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.GetTransitGatewayResponse); ok {
 		r0 = returnFunc(ctx, networkID, transitGatewayID, opts...)
@@ -7040,8 +7040,8 @@ func (_mock *MockTransitGatewaysSDK) ListTransitGateways(ctx context.Context, re
 
 	var r0 *operations.ListTransitGatewaysResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListTransitGatewaysRequest, []operations.Option) (*operations.ListTransitGatewaysResponse, error)); ok {
-		return returnFunc(ctx, request, opts)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListTransitGatewaysRequest, ...operations.Option) (*operations.ListTransitGatewaysResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
 	}
 	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListTransitGatewaysRequest, ...operations.Option) *operations.ListTransitGatewaysResponse); ok {
 		r0 = returnFunc(ctx, request, opts...)

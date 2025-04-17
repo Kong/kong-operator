@@ -394,6 +394,7 @@ rules:
   - konnectapiauthconfigurations
   - konnectcloudgatewaydataplanegroupconfigurations
   - konnectcloudgatewaynetworks
+  - konnectcloudgatewaytransitgateways
   - konnectextensions
   - konnectgatewaycontrolplanes
   verbs:
@@ -411,6 +412,8 @@ rules:
   - konnectcloudgatewaydataplanegroupconfigurations/status
   - konnectcloudgatewaynetworks/finalizers
   - konnectcloudgatewaynetworks/status
+  - konnectcloudgatewaytransitgateways/finalizers
+  - konnectcloudgatewaytransitgateways/status
   - konnectextensions/finalizers
   - konnectextensions/status
   - konnectgatewaycontrolplanes/finalizers

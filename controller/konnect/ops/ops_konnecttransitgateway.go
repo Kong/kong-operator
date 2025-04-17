@@ -5,8 +5,9 @@ import (
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/samber/lo"
+
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -158,6 +159,9 @@ func extractKonnectIDFromTransitGatewayResponse(resp *sdkkonnectcomp.TransitGate
 		return resp.AwsTransitGatewayResponse.ID
 	case sdkkonnectcomp.TransitGatewayResponseTypeAzureTransitGatewayResponse:
 		return resp.AzureTransitGatewayResponse.ID
+	case sdkkonnectcomp.TransitGatewayResponseTypeAwsVpcPeeringGatewayResponse:
+		// AWS VPC peering gateway is not supported yet.
+		return ""
 	}
 	return ""
 }
@@ -168,6 +172,9 @@ func extractStateFromTransitGatewayResponse(resp *sdkkonnectcomp.TransitGatewayR
 		return resp.AwsTransitGatewayResponse.State
 	case sdkkonnectcomp.TransitGatewayResponseTypeAzureTransitGatewayResponse:
 		return resp.AzureTransitGatewayResponse.State
+	case sdkkonnectcomp.TransitGatewayResponseTypeAwsVpcPeeringGatewayResponse:
+		// AWS VPC peering gateway is not supported yet.
+		return sdkkonnectcomp.TransitGatewayState("")
 	}
 	return sdkkonnectcomp.TransitGatewayState("")
 }
