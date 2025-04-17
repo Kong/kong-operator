@@ -103,7 +103,7 @@ func TestGatewayConfigurationServiceName(t *testing.T) {
 			return false
 		}
 		return *dp.Spec.Network.Services.Ingress.Name == customServiceName
-	}, testutils.GatewayReadyTimeLimit, time.Second)
+	}, testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
 
 	t.Log("verifying that the service has the custom name")
 	require.Eventually(t, func() bool {
@@ -118,5 +118,5 @@ func TestGatewayConfigurationServiceName(t *testing.T) {
 			}
 		}
 		return false
-	}, testutils.GatewayReadyTimeLimit, time.Second)
+	}, testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
 }

@@ -65,7 +65,7 @@
   timeouts and/or delays are specified. Now the HTTPGet field is set to `/status/ready`
   as expected with the `Gateway` scenario.
   [#1395](https://github.com/Kong/gateway-operator/pull/1395)
-- Fix ingress service name is not applied when using GatewayConfiguration.
+- Fix ingress service name not being applied when using `GatewayConfiguration`.
   [#1515](https://github.com/Kong/gateway-operator/pull/1515)
 
 ## [v1.5.1]
