@@ -1,0 +1,42 @@
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: dataplane-node-port
+spec:
+  deployment:
+    podTemplateSpec:
+      spec:
+        containers:
+        - name: proxy
+          # renovate: datasource=docker versioning=docker
+          image: kong/kong-gateway:3.10
+          env:
+          - name: KONG_LOG_LEVEL
+            value: debug
+          - name: KONG_PROXY_LISTEN
+            value: 0.0.0.0:9000 reuseport backlog=16384
+          - name: KONG_PORT_MAPS
+            value: 8080:9000
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 1
+  network:
+    services:
+      ingress:
+        annotations:
+          foo: bar
+        ports:
+          - name: http
+            port: 8080
+            targetPort: 9000
+          - name: http
+            port: 8083
+            targetPort: 9000
+            nodePort: 30083

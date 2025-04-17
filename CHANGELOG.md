@@ -60,6 +60,8 @@
   [#1409](https://github.com/Kong/gateway-operator/pull/1409)
 - Support `NodePort` as ingress service type for `DataPlane`
   [#1430](https://github.com/Kong/gateway-operator/pull/1430)
+- Allow setting `NodePort` port number for ingress service for `DataPlane`.
+  [#1516](https://github.com/Kong/gateway-operator/pull/1516)
 - Bump default `DataPlane` image to 3.10
   Default image changes from `kong` to `kong/kong-gateway`.
   [#1405](https://github.com/Kong/gateway-operator/pull/1405)

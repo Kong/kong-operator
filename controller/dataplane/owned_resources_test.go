@@ -331,3 +331,76 @@ func TestEnsureIngressServiceForDataPlane(t *testing.T) {
 		})
 	}
 }
+
+func TestComparePorts(t *testing.T) {
+	testCases := []struct {
+		name      string
+		a         []corev1.ServicePort
+		b         []corev1.ServicePort
+		dataPlane *operatorv1beta1.DataPlane
+		expected  bool
+	}{
+		{
+			name: "should return true when NodePort differs but not specified in DataPlane spec",
+			a:    []corev1.ServicePort{{Name: "port-80", Port: 80, NodePort: 30080}},
+			b:    []corev1.ServicePort{{Name: "port-80", Port: 80, NodePort: 30081}},
+			dataPlane: builder.NewDataPlaneBuilder().
+				WithIngressServicePorts([]operatorv1beta1.DataPlaneServicePort{
+					{
+						Name:       "http",
+						Port:       80,
+						TargetPort: intstr.FromInt(8000),
+						// NodePort not specified
+					},
+				}).Build(),
+			expected: true,
+		},
+		{
+			name: "should return false when NodePort differs and is specified in DataPlane spec",
+			a:    []corev1.ServicePort{{Name: "port-80", Port: 80, NodePort: 30080}},
+			b:    []corev1.ServicePort{{Name: "port-80", Port: 80, NodePort: 30081}},
+			dataPlane: builder.NewDataPlaneBuilder().
+				WithIngressServicePorts([]operatorv1beta1.DataPlaneServicePort{
+					{
+						Name:       "http",
+						Port:       80,
+						TargetPort: intstr.FromInt(8000),
+						NodePort:   30080,
+					},
+				}).Build(),
+			expected: false,
+		},
+		{
+			name: "should return true when multiple ports match except NodePort which is not specified",
+			a: []corev1.ServicePort{
+				{Name: "port-80", Port: 80, NodePort: 30080},
+				{Name: "port-443", Port: 443, NodePort: 30443},
+			},
+			b: []corev1.ServicePort{
+				{Name: "port-80", Port: 80, NodePort: 30081},
+				{Name: "port-443", Port: 443, NodePort: 30444},
+			},
+			dataPlane: builder.NewDataPlaneBuilder().
+				WithIngressServicePorts([]operatorv1beta1.DataPlaneServicePort{
+					{
+						Name:       "http",
+						Port:       80,
+						TargetPort: intstr.FromInt(8000),
+					},
+					{
+						Name:       "https",
+						Port:       443,
+						TargetPort: intstr.FromInt(8443),
+					},
+				}).Build(),
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual := comparePorts(tc.a, tc.b, tc.dataPlane)
+			require.Equal(t, tc.expected, actual)
+		})
+	}
+}

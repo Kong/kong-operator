@@ -364,11 +364,7 @@ func ensureIngressServiceForDataPlane(
 			existingService.Spec.Selector = generatedService.Spec.Selector
 			updated = true
 		}
-		if !cmp.Equal(generatedService.Spec.Ports, existingService.Spec.Ports, cmp.FilterPath(func(p cmp.Path) bool {
-			// We need to check all the service values but the NodePort, as this field is assigned by
-			// the K8S controlplane components.
-			return p.Last().String() == ".NodePort"
-		}, cmp.Ignore())) {
+		if !comparePorts(existingService.Spec.Ports, generatedService.Spec.Ports, dataPlane) {
 			existingService.Spec.Ports = generatedService.Spec.Ports
 			updated = true
 		}
@@ -384,4 +380,45 @@ func ensureIngressServiceForDataPlane(
 	}
 
 	return op.Created, generatedService, cl.Create(ctx, generatedService)
+}
+
+// comparePorts compares the ports of two services.
+// It returns true if the ports are equal, ignoring the NodePort field
+// for the ingress service if it was not set in the dataplane spec.
+func comparePorts(
+	a, b []corev1.ServicePort,
+	dataPlane *operatorv1beta1.DataPlane,
+) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].Name != b[i].Name {
+			return false
+		}
+		if a[i].Protocol != b[i].Protocol {
+			return false
+		}
+		if a[i].Port != b[i].Port {
+			return false
+		}
+		if a[i].TargetPort != b[i].TargetPort {
+			return false
+		}
+		if a[i].AppProtocol != b[i].AppProtocol {
+			return false
+		}
+
+		if a[i].NodePort != b[i].NodePort {
+			if dataPlane != nil &&
+				dataPlane.Spec.Network.Services != nil &&
+				dataPlane.Spec.Network.Services.Ingress != nil &&
+				len(dataPlane.Spec.Network.Services.Ingress.Ports) > i &&
+				dataPlane.Spec.Network.Services.Ingress.Ports[i].NodePort != 0 {
+				return false
+			}
+		}
+
+	}
+	return true
 }
