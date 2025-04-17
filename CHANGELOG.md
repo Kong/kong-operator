@@ -53,6 +53,13 @@
   [#1526](https://github.com/Kong/gateway-operator/pull/1526)
 - Added `spec.watchNamespace` field to `ControlPlane` and `GatewayConfiguration` CRDs
   to allow watching resources only in the specified namespace.
+- Implemented `Mirror` and `Origin` `KonnectGatewayControlPlane`s.
+  [#1496](https://github.com/Kong/gateway-operator/pull/1496)
+
+### Changes
+
+- Added `spec.watchNamespace` field to `ControlPlane` CRD to allow watching resources
+  only in the specified namespace.
   When `spec.watchNamespace.type=list` is used, each specified namespace requires
   a `WatchNamespaceGrant` that allows the `ControlPlane` to watch resources in the specified namespace.
   Aforementioned list is extended with `ControlPlane`'s own namespace which doesn't
