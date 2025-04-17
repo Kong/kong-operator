@@ -149,8 +149,10 @@ func TestMain(
 	err = os.Setenv("POD_NAMESPACE", "kong-system")
 	exitOnErr(err)
 
-	fmt.Println("INFO: deploying CRDs to test cluster")
-	exitOnErr(testutils.DeployCRDs(GetCtx(), path.Join(configPath, "/crd"), GetClients().OperatorClient, GetEnv().Cluster()))
+	if !test.IsInstallingCRDsDisabled() {
+		fmt.Println("INFO: deploying CRDs to test cluster")
+		exitOnErr(testutils.DeployCRDs(GetCtx(), path.Join(configPath, "/crd"), GetClients().OperatorClient, GetEnv().Cluster()))
+	}
 
 	fmt.Println("INFO: starting the operator's controller manager")
 	// Spawn the controller manager based on passed config in

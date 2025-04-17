@@ -39,6 +39,17 @@ func IsMetalLBDisabled() bool {
 	return ret
 }
 
+// IsInstallingCRDsDisabled returns true if installing CRDs is disabled in the test environment.
+func IsInstallingCRDsDisabled() bool {
+	ret := strings.ToLower(os.Getenv("KONG_TEST_DISABLE_CRD_INSTALL")) == "true"
+	if ret {
+		fmt.Println("INFO: Installing CRDs is disabled")
+	} else {
+		fmt.Println("INFO: Installing CRDs is enabled")
+	}
+	return ret
+}
+
 // KonnectAccessToken returns the Konnect access token for the test environment.
 func KonnectAccessToken() string {
 	return os.Getenv("KONG_TEST_KONNECT_ACCESS_TOKEN")
