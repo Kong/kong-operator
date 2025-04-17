@@ -224,8 +224,7 @@ func Create[
 
 	// For ControlPlane entities, we need to check if the source type is mirror
 	// and set the mirrored condition accordingly.
-	switch cp := any(e).(type) {
-	case *konnectv1alpha1.KonnectGatewayControlPlane:
+	if cp, ok := any(e).(*konnectv1alpha1.KonnectGatewayControlPlane); ok {
 		if *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
 			if err == nil {
 				SetKonnectEntityMirroredConditionTrue(e)
@@ -508,8 +507,7 @@ func Update[
 
 	// For ControlPlane entities, we need to check if the source type is mirror
 	// and set the mirrored condition accordingly.
-	switch cp := any(e).(type) {
-	case *konnectv1alpha1.KonnectGatewayControlPlane:
+	if cp, ok := any(e).(*konnectv1alpha1.KonnectGatewayControlPlane); ok {
 		if *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
 			if err == nil {
 				SetKonnectEntityMirroredConditionTrue(e)
@@ -544,12 +542,11 @@ func logOpComplete[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ctx context.Context, start time.Time, op Op, e TEnt, err error) {
-	switch ent := any(e).(type) {
 
 	// if the entity is a Mirror KonnectGatewayControlPlane, don't log the konnect operation,
 	// as no operation occurred.
-	case *konnectv1alpha1.KonnectGatewayControlPlane:
-		if *ent.Spec.Source == commonv1alpha1.EntitySourceMirror {
+	if cp, ok := any(e).(*konnectv1alpha1.KonnectGatewayControlPlane); ok {
+		if *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
 			return
 		}
 	}
