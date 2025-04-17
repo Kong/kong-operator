@@ -215,12 +215,12 @@ func (r *Reconciler) ensureDeployment(
 		// existing Deployment with the spec hash of the desired Deployment. If
 		// the hashes match, we skip the update.
 		if !params.EnforceConfig {
-			hash, err := k8sresources.CalculateHash(params.ControlPlane.Spec)
+			match, err := k8sresources.SpecHashMatchesAnnotation(params.ControlPlane.Spec, existingDeployment)
 			if err != nil {
-				return op.Noop, nil, fmt.Errorf("failed to calculate hash spec from ControlPlane: %w", err)
+				return op.Noop, nil, err
 			}
-			if h, ok := existingDeployment.GetAnnotations()[consts.AnnotationPodTemplateSpecHash]; ok && h == hash {
-				log.Debug(logger, "ControlPlane Deployment spec hash matches existing Deployment, skipping update", "hash", hash)
+			if match {
+				log.Debug(logger, "ControlPlane Deployment spec hash matches existing Deployment, skipping update")
 				return op.Noop, existingDeployment, nil
 			}
 			// If the spec hash does not match, we need to enforce the configuration
@@ -720,6 +720,7 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	cp *operatorv1beta1.ControlPlane,
 	certSecret *corev1.Secret,
 	webhookService *corev1.Service,
+	enforceConfig bool,
 ) (op.Result, error) {
 	logger := log.GetLogger(ctx, "controlplane.ensureValidatingWebhookConfiguration", r.LoggingMode)
 
@@ -776,10 +777,30 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 		return op.Noop, fmt.Errorf("failed generating ControlPlane's ValidatingWebhookConfiguration: %w", err)
 	}
 	k8sutils.SetOwnerForObjectThroughLabels(generatedWebhookConfiguration, cp)
+	if err := k8sresources.AnnotateObjWithHash(generatedWebhookConfiguration, cp.Spec); err != nil {
+		return op.Noop, err
+	}
 
 	if count == 1 {
 		var updated bool
 		webhookConfiguration := validatingWebhookConfigurations[0]
+
+		// If the enforceConfig flag is not set, we compare the spec hash of the
+		// existing ValidatingWebhookConfiguration with the spec hash of the desired
+		// ValidatingWebhookConfiguration. If the hashes match, we skip the update.
+		if !enforceConfig {
+			match, err := k8sresources.SpecHashMatchesAnnotation(cp.Spec, &webhookConfiguration)
+			if err != nil {
+				return op.Noop, err
+			}
+			if match {
+				log.Debug(logger, "ControlPlane ValidatingWebhookConfiguration spec hash matches existing ValidatingWebhookConfiguration, skipping update")
+				return op.Noop, nil
+			}
+			// If the spec hash does not match, we need to enforce the configuration
+			// so fall through to the update logic.
+		}
+
 		old := webhookConfiguration.DeepCopy()
 
 		updated, webhookConfiguration.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(webhookConfiguration.ObjectMeta, generatedWebhookConfiguration.ObjectMeta)

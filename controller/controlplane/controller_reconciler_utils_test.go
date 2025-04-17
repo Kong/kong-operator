@@ -21,6 +21,8 @@ import (
 )
 
 func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
+	const enforceConfig = true
+
 	webhookSvc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "webhook-svc",
@@ -88,14 +90,14 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 					},
 				}
 
-				res, err := r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
+				res, err := r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc, enforceConfig)
 				require.NoError(t, err)
 				require.Equal(t, op.Created, res)
 
 				require.NoError(t, r.List(ctx, &webhooks))
 				require.Len(t, webhooks.Items, 1)
 
-				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
+				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc, enforceConfig)
 				require.NoError(t, err)
 				require.Equal(t, op.Noop, res)
 			},
@@ -154,14 +156,14 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 					},
 				}
 
-				res, err := r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
+				res, err := r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc, enforceConfig)
 				require.NoError(t, err)
 				require.Equal(t, op.Created, res)
 
 				require.NoError(t, r.List(ctx, &webhooks))
 				require.Len(t, webhooks.Items, 1, "webhook configuration should be created")
 
-				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
+				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc, enforceConfig)
 				require.NoError(t, err)
 				require.Equal(t, op.Noop, res)
 
@@ -173,7 +175,7 @@ func Test_ensureValidatingWebhookConfiguration(t *testing.T) {
 				}
 
 				t.Log("running ensureValidatingWebhookConfiguration to enforce ObjectMeta")
-				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc)
+				res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, certSecret, webhookSvc, enforceConfig)
 				require.NoError(t, err)
 				require.Equal(t, op.Updated, res)
 
