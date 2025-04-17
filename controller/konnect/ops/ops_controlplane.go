@@ -113,7 +113,7 @@ func deleteControlPlane(
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) error {
 	// if the source type is Mirror, don't touch the Konnect entity.
-	if *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
+	if cp.Spec.Source != nil && *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
 		return nil
 	}
 	id := cp.GetKonnectStatus().GetKonnectID()
@@ -138,7 +138,7 @@ func updateControlPlane(
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
 ) error {
 	// if the source type is Mirror, don't touch the Konnect entity.
-	if *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
+	if cp.Spec.Source != nil && *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
 		return nil
 	}
 	id := cp.GetKonnectStatus().GetKonnectID()
@@ -183,7 +183,7 @@ func setGroupMembers(
 	sdkGroups sdkops.ControlPlaneGroupSDK,
 ) error {
 	// if the source type is Mirror, don't touch the Konnect entity.
-	if *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
+	if cp.Spec.Source != nil && *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
 		return nil
 	}
 	if cp.Spec.ClusterType == nil ||
