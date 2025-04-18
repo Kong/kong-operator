@@ -22,6 +22,7 @@ func init() {
 		TestGatewayClassCreation,
 		TestGatewayClassUpdates,
 		TestGatewayConfigurationEssentials,
+		TestGatewayConfigurationServiceName,
 		TestGatewayDataPlaneNetworkPolicy,
 		TestGatewayEssentials,
 		TestGatewayMultiple,

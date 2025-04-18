@@ -1159,6 +1159,30 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 	}
 }
 
+func TestServiceNameIsApplied(t *testing.T) {
+	// Create a GatewayConfigDataPlaneOptions with a service name
+	gatewayConfigOpts := operatorv1beta1.GatewayConfigDataPlaneOptions{
+		Network: operatorv1beta1.GatewayConfigDataPlaneNetworkOptions{
+			Services: &operatorv1beta1.GatewayConfigDataPlaneServices{
+				Ingress: &operatorv1beta1.GatewayConfigServiceOptions{
+					ServiceOptions: operatorv1beta1.ServiceOptions{
+						Name: lo.ToPtr("custom-service-name"),
+					},
+				},
+			},
+		},
+	}
+
+	// Convert to DataPlaneOptions
+	dataPlaneOpts := gatewayConfigDataPlaneOptionsToDataPlaneOptions("default", gatewayConfigOpts)
+
+	// Verify that the service name was copied
+	require.NotNil(t, dataPlaneOpts.Network.Services)
+	require.NotNil(t, dataPlaneOpts.Network.Services.Ingress)
+	require.NotNil(t, dataPlaneOpts.Network.Services.Ingress.Name)
+	require.Equal(t, "custom-service-name", *dataPlaneOpts.Network.Services.Ingress.Name)
+}
+
 func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 	testCases := []struct {
 		Name           string
