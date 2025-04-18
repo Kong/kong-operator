@@ -135,7 +135,7 @@ func Create[
 			// TODO: can't get the ID for a DataPlaneGroupConfiguration
 			// as this resource type does not support labels/tags.
 		case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
-			// TODO: get transit gateway by name and extract its ID.
+			id, err = getKonnectTransitGatewayMatchingSpecName(ctx, sdk.GetTransitGatewaysSDK(), ent)
 		case *configurationv1alpha1.KongService:
 			id, errGet = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
 		case *configurationv1alpha1.KongRoute:
