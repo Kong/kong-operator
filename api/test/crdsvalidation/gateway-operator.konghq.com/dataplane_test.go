@@ -6,6 +6,7 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	"github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
@@ -219,7 +220,7 @@ func TestDataplane(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr(" DataPlane supports only db mode 'off'"),
+				ExpectedErrorMessage: lo.ToPtr("DataPlane supports only db mode 'off'"),
 			},
 			{
 				Name: "db mode off",
@@ -227,6 +228,144 @@ func TestDataplane(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: validDataplaneOptions,
+					},
+				},
+			},
+		}.Run(t)
+	})
+	t.Run("service options", func(t *testing.T) {
+		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
+			{
+				Name: "nodePort can be specified when service type is set to NodePort",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Type: corev1.ServiceTypeNodePort,
+										},
+										Ports: []operatorv1beta1.DataPlaneServicePort{
+											{
+												Name:       "http",
+												Port:       80,
+												NodePort:   30080,
+												TargetPort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "can leave nodePort empty when when service type is not specified",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										Ports: []operatorv1beta1.DataPlaneServicePort{
+											{
+												Name:       "http",
+												Port:       80,
+												TargetPort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "nodePort can be specified when service type is set to LoadBalancer",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Type: corev1.ServiceTypeLoadBalancer,
+										},
+										Ports: []operatorv1beta1.DataPlaneServicePort{
+											{
+												Name:       "http",
+												Port:       80,
+												NodePort:   30080,
+												TargetPort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "cannot specify nodePort when service type is ClusterIP",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										ServiceOptions: operatorv1beta1.ServiceOptions{
+											Type: corev1.ServiceTypeClusterIP,
+										},
+										Ports: []operatorv1beta1.DataPlaneServicePort{
+											{
+												Name:       "http",
+												Port:       80,
+												NodePort:   30080,
+												TargetPort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("Cannot set NodePort when service type is not NodePort or LoadBalancer"),
+			},
+			{
+				Name: "can specify nodePort when service type is not set (default LoadBalancer)",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										Ports: []operatorv1beta1.DataPlaneServicePort{
+											{
+												Name:       "http",
+												Port:       80,
+												NodePort:   30080,
+												TargetPort: intstr.FromInt(80),
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 			},

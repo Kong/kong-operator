@@ -202,6 +202,7 @@ type DataPlaneServices struct {
 
 // DataPlaneServiceOptions contains Services related DataPlane configuration.
 // +apireference:kgo:include
+// +kubebuilder:validation:XValidation:message="Cannot set NodePort when service type is not NodePort or LoadBalancer", rule="!has(self.ports) || !(self.ports.exists(p, has(p.nodePort))) ? true : has(self.type) && ['LoadBalancer', 'NodePort'].exists(t, t == self.type)"
 type DataPlaneServiceOptions struct {
 	// Ports defines the list of ports that are exposed by the service.
 	// The ports field allows defining the name, port and targetPort of
@@ -240,6 +241,22 @@ type DataPlaneServicePort struct {
 	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#defining-a-service
 	// +optional
 	TargetPort intstr.IntOrString `json:"targetPort,omitempty"`
+
+	// The port on each node on which this service is exposed when type is
+	// NodePort or LoadBalancer. Usually assigned by the system. If a value is
+	// specified, in-range, and not in use it will be used, otherwise the
+	// operation will fail. If not specified, a port will be allocated if this
+	// Service requires one. If this field is specified when creating a
+	// Service which does not need it, creation will fail. This field will be
+	// wiped when updating a Service to no longer need it (e.g. changing type
+	// from NodePort to ClusterIP).
+	//
+	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+	//
+	// Can only be specified if type is NodePort or LoadBalancer.
+	//
+	// +optional
+	NodePort int32 `json:"nodePort,omitempty"`
 }
 
 // ServiceOptions is used to includes options to customize the ingress service,
