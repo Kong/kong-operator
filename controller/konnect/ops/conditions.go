@@ -59,7 +59,7 @@ func SetKonnectEntityMirroredConditionTrue(
 		obj,
 		konnectv1alpha1.ControlPlaneMirroredConditionType,
 		metav1.ConditionTrue,
-		konnectv1alpha1.ControlPlaneMirroredSucceededConditionReason,
+		konnectv1alpha1.ControlPlaneMirroredReasonMirrored,
 		"",
 	)
 }
@@ -68,7 +68,6 @@ func SetKonnectEntityMirroredConditionTrue(
 // to false on the provided object.
 func SetKonnectEntityMirroredConditionFalse(
 	obj entityType,
-	reason kcfgconsts.ConditionReason,
 	err error,
 ) {
 	// Clear the instance field from the error to avoid requeueing the resource
@@ -79,7 +78,7 @@ func SetKonnectEntityMirroredConditionFalse(
 		obj,
 		konnectv1alpha1.ControlPlaneMirroredConditionType,
 		metav1.ConditionTrue,
-		konnectv1alpha1.ControlPlaneMirroredSucceededConditionReason,
+		konnectv1alpha1.ControlPlaneMirroredReasonFailed,
 		err.Error(),
 	)
 }

@@ -7,7 +7,7 @@ spec:
   source: Mirror
   mirror:
     konnect:
-      ID: 03b496a0-a38a-4370-8e50-9a9e71cef6df
+      id: 03b496a0-a38a-4370-8e50-9a9e71cef6df
   konnect:
     authRef:
       name: konnect-api-auth-dev
