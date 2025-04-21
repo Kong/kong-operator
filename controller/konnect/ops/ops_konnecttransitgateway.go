@@ -6,6 +6,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/Kong/sdk-konnect-go/retry"
 	"github.com/samber/lo"
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
@@ -26,12 +27,13 @@ func createKonnectTransitGateway(
 			Op:     CreateOp,
 		}
 	}
-
-	resp, err := sdk.CreateTransitGateway(ctx, networkID, transitGatewaySpecToTransitGatewayInput(tg.Spec.KonnectTransitGatewayAPISpec))
-	if err != nil {
-		return err
-	}
-
+	// Failures on creating transit gateway causes `sdk.CreateTransitGateway` stuck because the SDK performs a retry that can take up to 1 hour:
+	// https://github.com/Kong/gateway-operator/issues/1521
+	// So we disable the retry here. The reconciler retries the creation by the requeue mechanism of the controller runtime.
+	resp, err := sdk.CreateTransitGateway(
+		ctx, networkID, transitGatewaySpecToTransitGatewayInput(tg.Spec.KonnectTransitGatewayAPISpec),
+		sdkkonnectops.WithRetries(retry.Config{}),
+	)
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, tg); errWrap != nil {
 		return errWrap
 	}
@@ -39,7 +41,6 @@ func createKonnectTransitGateway(
 	if resp == nil || resp.TransitGatewayResponse == nil {
 		return fmt.Errorf("failed creating %s: %w", tg.GetTypeName(), ErrNilResponse)
 	}
-
 	tg.SetKonnectID(extractKonnectIDFromTransitGatewayResponse(resp.TransitGatewayResponse))
 	tg.Status.State = extractStateFromTransitGatewayResponse(resp.TransitGatewayResponse)
 	return nil
@@ -88,7 +89,10 @@ func deleteKonnectTransitGateway(
 		}
 	}
 
-	resp, err := sdk.DeleteTransitGateway(ctx, networkID, tg.GetKonnectID())
+	// Failures on deleting transit gateway causes `sdk.DeleteTransitGateway` stuck because the SDK performs a retry that can take up to 1 hour:
+	// https://github.com/Kong/gateway-operator/issues/1521
+	// So we disable the retry here. The reconciler retries the creation by the requeue mechanism of the controller runtime.
+	resp, err := sdk.DeleteTransitGateway(ctx, networkID, tg.GetKonnectID(), sdkkonnectops.WithRetries(retry.Config{}))
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, tg); errWrap != nil {
 		return errWrap

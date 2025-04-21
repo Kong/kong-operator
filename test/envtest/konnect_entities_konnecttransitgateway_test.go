@@ -66,6 +66,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 					req.AWSTransitGateway.Name == transitGatewayName &&
 					req.AWSTransitGateway.TransitGatewayAttachmentConfig.Kind == sdkkonnectcomp.AWSTransitGatewayAttachmentTypeAwsTransitGatewayAttachment
 			}),
+			mock.Anything,
 		).Return(
 			&sdkkonnectops.CreateTransitGatewayResponse{
 				TransitGatewayResponse: &sdkkonnectcomp.TransitGatewayResponse{
@@ -147,7 +148,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		}, "Did not see KonnectCloudGatewayTransitGateway get status.state updated")
 
 		t.Log("Setting up SDK expectations on deletion")
-		sdk.TransitGatewaysSDK.EXPECT().DeleteTransitGateway(mock.Anything, networkID, id).Return(
+		sdk.TransitGatewaysSDK.EXPECT().DeleteTransitGateway(mock.Anything, networkID, id, mock.Anything).Return(
 			&sdkkonnectops.DeleteTransitGatewayResponse{}, nil,
 		)
 		t.Log("Deleting")
@@ -177,6 +178,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 					req.AWSTransitGateway.Name == transitGatewayName &&
 					req.AWSTransitGateway.TransitGatewayAttachmentConfig.Kind == sdkkonnectcomp.AWSTransitGatewayAttachmentTypeAwsTransitGatewayAttachment
 			}),
+			mock.Anything,
 		).Return(
 			nil,
 			&sdkkonnecterrs.ConflictError{},
