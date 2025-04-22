@@ -63,6 +63,8 @@
 - Bump default `DataPlane` image to 3.10
   Default image changes from `kong` to `kong/kong-gateway`.
   [#1405](https://github.com/Kong/gateway-operator/pull/1405)
+- Updated `kubernetes-configuration` dependency for adding `scale` subresource for `DataPlane` CRD.
+  [#1523](https://github.com/Kong/gateway-operator/pull/1523)
 
 ### Fixes
 
