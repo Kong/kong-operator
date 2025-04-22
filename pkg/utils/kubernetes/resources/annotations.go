@@ -31,13 +31,13 @@ func AnnotateObjWithHash[T any](
 ) error {
 	hash, err := CalculateHash(toHash)
 	if err != nil {
-		return fmt.Errorf("failed to calculate hash spec from DataPlane: %w", err)
+		return fmt.Errorf("failed to calculate hash spec from %T: %w", toHash, err)
 	}
 	anns := obj.GetAnnotations()
 	if anns == nil {
 		anns = make(map[string]string)
 	}
-	anns[consts.AnnotationPodTemplateSpecHash] = hash
+	anns[consts.AnnotationSpecHash] = hash
 	obj.SetAnnotations(anns)
 
 	return nil

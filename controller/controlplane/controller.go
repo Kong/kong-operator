@@ -407,7 +407,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		WatchNamespaces:         validatedWatchNamespaces,
 	}
 
-	admissionWebhookCertificateSecretName, res, err := r.ensureWebhookResources(ctx, logger, cp)
+	admissionWebhookCertificateSecretName, res, err := r.ensureWebhookResources(ctx, logger, cp, r.EnforceConfig)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure webhook resources: %w", err)
 	} else if res != op.Noop {
@@ -510,7 +510,10 @@ func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, update
 }
 
 func (r *Reconciler) ensureWebhookResources(
-	ctx context.Context, logger logr.Logger, cp *operatorv1beta1.ControlPlane,
+	ctx context.Context,
+	logger logr.Logger,
+	cp *operatorv1beta1.ControlPlane,
+	enforceConfig bool,
 ) (string, op.Result, error) {
 	webhookEnabled := isAdmissionWebhookEnabled(ctx, r.Client, logger, cp)
 	if !webhookEnabled {
@@ -548,7 +551,7 @@ func (r *Reconciler) ensureWebhookResources(
 	}
 
 	log.Trace(logger, "ensuring admission webhook configuration")
-	res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, admissionWebhookCertificateSecret, admissionWebhookService)
+	res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, admissionWebhookCertificateSecret, admissionWebhookService, enforceConfig)
 	if err != nil {
 		return "", res, err
 	}

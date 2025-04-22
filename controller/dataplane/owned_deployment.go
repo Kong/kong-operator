@@ -289,12 +289,12 @@ func reconcileDataPlaneDeployment(
 		// existing Deployment with the spec hash of the desired Deployment. If
 		// the hashes match, we skip the update.
 		if !enforceConfig {
-			hash, err := k8sresources.CalculateHash(dataplane.Spec)
+			match, err := k8sresources.SpecHashMatchesAnnotation(dataplane.Spec, existing)
 			if err != nil {
-				return op.Noop, nil, fmt.Errorf("failed to calculate hash spec from DataPlane: %w", err)
+				return op.Noop, nil, err
 			}
-			if h, ok := existing.GetAnnotations()[consts.AnnotationPodTemplateSpecHash]; ok && h == hash {
-				log.Debug(logger, "DataPlane Deployment spec hash matches existing Deployment, skipping update", "hash", hash)
+			if match {
+				log.Debug(logger, "DataPlane Deployment spec hash matches existing Deployment, skipping update")
 				return op.Noop, existing, nil
 			}
 			// If the spec hash does not match, we need to enforce the configuration

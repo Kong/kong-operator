@@ -41,6 +41,9 @@
   - `--validate-images` (or `GATEWAY_OPERATOR_VALIDATE_IMAGES` env var) to enable ControlPlane and DataPlane image 
     validation (it's set by default to `true`).
   [#1435](https://github.com/Kong/gateway-operator/pull/1435)
+- Add support for `-enforce-config` for `ControlPlane`'s `ValidatingWebhookConfiguration`.
+  This allows to use operator's `ControlPlane` resources in AKS clusters.
+  [#1512](https://github.com/Kong/gateway-operator/pull/1512)
 
 ### Changes
 

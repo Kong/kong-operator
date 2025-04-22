@@ -60,7 +60,7 @@ func TestSpecHash(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, deployment.Annotations[consts.AnnotationPodTemplateSpecHash])
+			assert.Equal(t, tt.want, deployment.Annotations[consts.AnnotationSpecHash])
 
 			// Running twice yields the same result
 			err = AnnotateObjWithHash(&deployment, tt.opts)
@@ -69,7 +69,7 @@ func TestSpecHash(t *testing.T) {
 				return
 			}
 			require.NoError(t, err)
-			assert.Equal(t, tt.want, deployment.Annotations[consts.AnnotationPodTemplateSpecHash])
+			assert.Equal(t, tt.want, deployment.Annotations[consts.AnnotationSpecHash])
 		})
 	}
 }
