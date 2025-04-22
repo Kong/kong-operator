@@ -451,7 +451,6 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// Org ID, Server URL and status conditions.
 		// Konnect ID will be needed for the finalizer to work.
 		if res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, any(ent).(client.Object), obj); err != nil {
-			// if err := r.Client.Status().Patch(ctx, ent, client.MergeFrom(obj)); err != nil {
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}

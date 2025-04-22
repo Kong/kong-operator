@@ -473,6 +473,42 @@ func KongRouteAttachedToService(
 	return &kongRoute
 }
 
+// KongRouteAttachedToControlPlane deploys a KongRoute resource and returns the resource.
+func KongRouteAttachedToControlPlane(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	opts ...ObjOption,
+) *configurationv1alpha1.KongRoute {
+	t.Helper()
+
+	name := "kongroute-" + uuid.NewString()[:8]
+	kongRoute := configurationv1alpha1.KongRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: configurationv1alpha1.KongRouteSpec{
+			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+				Name: lo.ToPtr(name),
+			},
+			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+					Name: cp.Name,
+				},
+			},
+		},
+	}
+	for _, opt := range opts {
+		opt(&kongRoute)
+	}
+	require.NoError(t, cl.Create(ctx, &kongRoute))
+	logObjectCreate(t, &kongRoute)
+
+	return &kongRoute
+}
+
 // KongConsumerWithProgrammed deploys a KongConsumer resource and returns the resource.
 func KongConsumerWithProgrammed(
 	t *testing.T,

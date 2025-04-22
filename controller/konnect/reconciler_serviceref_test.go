@@ -143,11 +143,6 @@ func TestHandleServiceRef(t *testing.T) {
 			updatedEntAssertions: []func(*configurationv1alpha1.KongRoute) (bool, string){
 				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
 					return lo.ContainsBy(ks.Status.Conditions, func(c metav1.Condition) bool {
-						return c.Type == konnectv1alpha1.ControlPlaneRefValidConditionType && c.Status == metav1.ConditionTrue
-					}), "KongRoute does not have ControlPlaneRefValid condition set to True"
-				},
-				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
-					return lo.ContainsBy(ks.Status.Conditions, func(c metav1.Condition) bool {
 						return c.Type == konnectv1alpha1.KongServiceRefValidConditionType && c.Status == metav1.ConditionTrue
 					}), "KongRoute does not have KongServiceRefValid condition set to True"
 				},
@@ -158,10 +153,6 @@ func TestHandleServiceRef(t *testing.T) {
 				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
 					return ks.Status.Konnect.ServiceID == "12345",
 						"KongRoute does not have Konnect Service ID set"
-				},
-				func(ks *configurationv1alpha1.KongRoute) (bool, string) {
-					return ks.Status.Konnect.ControlPlaneID == "123456789",
-						"KongRoute does not have Konnect ControlPlane ID set (should be inherited from ControlPlane)"
 				},
 			},
 		},
