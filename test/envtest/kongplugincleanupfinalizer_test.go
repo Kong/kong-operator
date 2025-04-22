@@ -91,7 +91,9 @@ func TestKongPluginFinalizer(t *testing.T) {
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		)
 		wKongRoute := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
-		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService,
+		kongRoute := deploy.KongRoute(
+			t, ctx, clientNamespaced,
+			deploy.WithNamespacedKongServiceRef(kongService),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 

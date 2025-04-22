@@ -79,7 +79,9 @@ func TestKongRoute(t *testing.T) {
 			)
 
 		t.Log("Creating a KongRoute")
-		createdRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, svc,
+		createdRoute := deploy.KongRoute(
+			t, ctx, clientNamespaced,
+			deploy.WithNamespacedKongServiceRef(svc),
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongRoute)
 				s.Spec.Paths = []string{"/path"}
