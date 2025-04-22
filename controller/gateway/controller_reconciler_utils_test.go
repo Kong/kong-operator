@@ -1159,28 +1159,169 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 	}
 }
 
-func TestServiceNameIsApplied(t *testing.T) {
-	// Create a GatewayConfigDataPlaneOptions with a service name
-	gatewayConfigOpts := operatorv1beta1.GatewayConfigDataPlaneOptions{
-		Network: operatorv1beta1.GatewayConfigDataPlaneNetworkOptions{
-			Services: &operatorv1beta1.GatewayConfigDataPlaneServices{
-				Ingress: &operatorv1beta1.GatewayConfigServiceOptions{
-					ServiceOptions: operatorv1beta1.ServiceOptions{
-						Name: lo.ToPtr("custom-service-name"),
+func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
+	testCases := []struct {
+		name                  string
+		gatewayConfigNS       string
+		opts                  operatorv1beta1.GatewayConfigDataPlaneOptions
+		expectedDataPlaneOpts *operatorv1beta1.DataPlaneOptions
+	}{
+		{
+			name:                  "empty options",
+			gatewayConfigNS:       "default",
+			opts:                  operatorv1beta1.GatewayConfigDataPlaneOptions{},
+			expectedDataPlaneOpts: &operatorv1beta1.DataPlaneOptions{},
+		},
+		{
+			name:            "deployment options",
+			gatewayConfigNS: "default",
+			opts: operatorv1beta1.GatewayConfigDataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name: "test-container",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedDataPlaneOpts: &operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name: "test-container",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:            "plugins to install (same namespace)",
+			gatewayConfigNS: "default",
+			opts: operatorv1beta1.GatewayConfigDataPlaneOptions{
+				PluginsToInstall: []operatorv1beta1.NamespacedName{
+					{
+						Name: "plugin1",
+					},
+					{
+						Name:      "plugin2",
+						Namespace: "default",
+					},
+				},
+			},
+			expectedDataPlaneOpts: &operatorv1beta1.DataPlaneOptions{
+				PluginsToInstall: []operatorv1beta1.NamespacedName{
+					{
+						Name:      "plugin1",
+						Namespace: "default",
+					},
+					{
+						Name:      "plugin2",
+						Namespace: "default",
+					},
+				},
+			},
+		},
+		{
+			name:            "plugins to install (different namespace)",
+			gatewayConfigNS: "default",
+			opts: operatorv1beta1.GatewayConfigDataPlaneOptions{
+				PluginsToInstall: []operatorv1beta1.NamespacedName{
+					{
+						Name: "plugin1",
+					},
+					{
+						Name:      "plugin2",
+						Namespace: "other",
+					},
+				},
+			},
+			expectedDataPlaneOpts: &operatorv1beta1.DataPlaneOptions{
+				PluginsToInstall: []operatorv1beta1.NamespacedName{
+					{
+						Name:      "plugin1",
+						Namespace: "default",
+					},
+					{
+						Name:      "plugin2",
+						Namespace: "other",
+					},
+				},
+			},
+		},
+		{
+			name:            "network services options with ingress",
+			gatewayConfigNS: "default",
+			opts: operatorv1beta1.GatewayConfigDataPlaneOptions{
+				Network: operatorv1beta1.GatewayConfigDataPlaneNetworkOptions{
+					Services: &operatorv1beta1.GatewayConfigDataPlaneServices{
+						Ingress: &operatorv1beta1.GatewayConfigServiceOptions{
+							ServiceOptions: operatorv1beta1.ServiceOptions{
+								Name: lo.ToPtr("custom-ingress"),
+								Annotations: map[string]string{
+									"service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedDataPlaneOpts: &operatorv1beta1.DataPlaneOptions{
+				Network: operatorv1beta1.DataPlaneNetworkOptions{
+					Services: &operatorv1beta1.DataPlaneServices{
+						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+							ServiceOptions: operatorv1beta1.ServiceOptions{
+								Name: lo.ToPtr("custom-ingress"),
+								Annotations: map[string]string{
+									"service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:            "PodDisruptionBudget",
+			gatewayConfigNS: "default",
+			opts: operatorv1beta1.GatewayConfigDataPlaneOptions{
+				Resources: &operatorv1beta1.GatewayConfigDataPlaneResources{
+					PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
+						Spec: operatorv1beta1.PodDisruptionBudgetSpec{
+							MinAvailable: lo.ToPtr(intstr.FromInt(1)),
+						},
+					},
+				},
+			},
+			expectedDataPlaneOpts: &operatorv1beta1.DataPlaneOptions{
+				Resources: operatorv1beta1.DataPlaneResources{
+					PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
+						Spec: operatorv1beta1.PodDisruptionBudgetSpec{
+							MinAvailable: lo.ToPtr(intstr.FromInt(1)),
+						},
 					},
 				},
 			},
 		},
 	}
 
-	// Convert to DataPlaneOptions
-	dataPlaneOpts := gatewayConfigDataPlaneOptionsToDataPlaneOptions("default", gatewayConfigOpts)
-
-	// Verify that the service name was copied
-	require.NotNil(t, dataPlaneOpts.Network.Services)
-	require.NotNil(t, dataPlaneOpts.Network.Services.Ingress)
-	require.NotNil(t, dataPlaneOpts.Network.Services.Ingress.Name)
-	require.Equal(t, "custom-service-name", *dataPlaneOpts.Network.Services.Ingress.Name)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := gatewayConfigDataPlaneOptionsToDataPlaneOptions(tc.gatewayConfigNS, tc.opts)
+			assert.Equal(t, tc.expectedDataPlaneOpts, result)
+		})
+	}
 }
 
 func TestCountAttachedRoutesForGatewayListener(t *testing.T) {

@@ -138,18 +138,25 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 	gatewayConfigNamespace string,
 	opts operatorv1beta1.GatewayConfigDataPlaneOptions,
 ) *operatorv1beta1.DataPlaneOptions {
-	// When Namespace is not provided, the GatewayConfiguration's namespace is assumed.
-	pluginsToInstall := lo.Map(opts.PluginsToInstall, func(pluginReference operatorv1beta1.NamespacedName, _ int) operatorv1beta1.NamespacedName {
-		if pluginReference.Namespace == "" {
-			pluginReference.Namespace = gatewayConfigNamespace
-		}
-		return pluginReference
-	})
-
 	dataPlaneOptions := &operatorv1beta1.DataPlaneOptions{
-		Deployment:       opts.Deployment,
-		Extensions:       opts.Extensions,
-		PluginsToInstall: pluginsToInstall,
+		Deployment: opts.Deployment,
+		Extensions: opts.Extensions,
+	}
+
+	if len(opts.PluginsToInstall) > 0 {
+		dataPlaneOptions.PluginsToInstall = lo.Map(opts.PluginsToInstall,
+			func(pluginReference operatorv1beta1.NamespacedName, _ int) operatorv1beta1.NamespacedName {
+				// When Namespace is not provided, the GatewayConfiguration's namespace is assumed.
+				if pluginReference.Namespace == "" {
+					pluginReference.Namespace = gatewayConfigNamespace
+				}
+				return pluginReference
+			},
+		)
+	}
+
+	if opts.Resources != nil {
+		dataPlaneOptions.Resources.PodDisruptionBudget = opts.Resources.PodDisruptionBudget
 	}
 
 	if opts.Network.Services != nil && opts.Network.Services.Ingress != nil {
