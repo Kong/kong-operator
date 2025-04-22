@@ -72,6 +72,8 @@
   [#1395](https://github.com/Kong/gateway-operator/pull/1395)
 - Fix ingress service name not being applied when using `GatewayConfiguration`.
   [#1515](https://github.com/Kong/gateway-operator/pull/1515)
+- Fix ingress service port name setting.
+  [#1524](https://github.com/Kong/gateway-operator/pull/1524)
 
 ## [v1.5.1]
 
