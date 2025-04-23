@@ -215,8 +215,10 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		})
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService,
+		kongRoute := deploy.KongRoute(
+			t, ctx, clientNamespaced,
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
+			deploy.WithNamespacedKongServiceRef(kongService),
 		)
 		t.Cleanup(func() {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongRoute))
@@ -320,7 +322,8 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		})
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService,
+		kongRoute := deploy.KongRoute(t, ctx, clientNamespaced,
+			deploy.WithNamespacedKongServiceRef(kongService),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 		t.Cleanup(func() {
@@ -447,7 +450,9 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		})
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService,
+		kongRoute := deploy.KongRoute(
+			t, ctx, clientNamespaced,
+			deploy.WithNamespacedKongServiceRef(kongService),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 		t.Cleanup(func() {
@@ -646,7 +651,9 @@ func TestKongPluginBindingManaged(t *testing.T) {
 			require.NoError(t, clientNamespaced.Delete(ctx, kongService))
 		})
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService,
+		kongRoute := deploy.KongRoute(
+			t, ctx, clientNamespaced,
+			deploy.WithNamespacedKongServiceRef(kongService),
 			deploy.WithAnnotation(metadata.AnnotationKeyPlugins, rateLimitingkongPlugin.Name),
 		)
 		t.Cleanup(func() {
