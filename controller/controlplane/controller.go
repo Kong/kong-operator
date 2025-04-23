@@ -363,18 +363,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	const (
-		ConditionTypeReferenceGrantsValid   = "ReferenceGrantsValid"
-		ConditionReasonReferenceGrantsValid = "ReferenceGrantsValid"
+		ConditionTypeWatchNamespaceGrantsValid   = "WatchNamespaceGrantsValid"
+		ConditionReasonWatchNamespaceGrantsValid = "WatchNamespaceGrantsValid"
 	)
-	log.Trace(logger, "validating ReferenceGrants exist for the ControlPlane")
-	validatedWatchNamespaces, err := r.validateReferenceGrants(ctx, cp)
+	log.Trace(logger, "validating WatchNamespaceGrants exist for the ControlPlane")
+	validatedWatchNamespaces, err := r.validateWatchNamespaceGrants(ctx, cp)
 	if err != nil {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				ConditionTypeReferenceGrantsValid,
+				ConditionTypeWatchNamespaceGrantsValid,
 				metav1.ConditionFalse,
 				kcfgcontrolplane.ConditionReasonMissingReferenceGrant,
-				fmt.Sprintf("ReferenceGrant(s) are missing for the ControlPlane: %v", err),
+				fmt.Sprintf("WatchNamespaceGrant(s) are missing for the ControlPlane: %v", err),
 				cp.GetGeneration(),
 			),
 			cp,
@@ -386,10 +386,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	} else {
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				ConditionTypeReferenceGrantsValid,
+				ConditionTypeWatchNamespaceGrantsValid,
 				metav1.ConditionTrue,
-				ConditionReasonReferenceGrantsValid,
-				"ReferenceGrant(s) are present and valid",
+				ConditionReasonWatchNamespaceGrantsValid,
+				"WatchNamespaceGrant(s) are present and valid",
 				cp.GetGeneration(),
 			),
 			cp,

@@ -18,7 +18,6 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
@@ -33,6 +32,7 @@ import (
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -1188,7 +1188,7 @@ func (r *Reconciler) ensureValidatingWebhookConfiguration(
 	return op.Created, r.Create(ctx, generatedWebhookConfiguration)
 }
 
-func (r *Reconciler) validateReferenceGrants(
+func (r *Reconciler) validateWatchNamespaceGrants(
 	ctx context.Context,
 	cp *operatorv1beta1.ControlPlane,
 ) ([]string, error) {
@@ -1207,7 +1207,7 @@ func (r *Reconciler) validateReferenceGrants(
 	case operatorv1beta1.WatchNamespacesTypeList:
 		var nsList []string
 		for _, ns := range cp.Spec.WatchNamespaces.List {
-			if err := ensureReferenceGrantsForNamespace(ctx, r.Client, cp, ns); err != nil {
+			if err := ensureWatchNamespaceGrantsForNamespace(ctx, r.Client, cp, ns); err != nil {
 				return nsList, err
 			}
 			nsList = append(nsList, ns)
@@ -1224,40 +1224,31 @@ func (r *Reconciler) validateReferenceGrants(
 	}
 }
 
-// +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=referencegrants,verbs=list
+// +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=watchnamespacegrants,verbs=list
 
-// ensureReferenceGrantsForNamespace ensures that a ReferenceGrant exists for the
+// ensureWatchNamespaceGrantsForNamespace ensures that a WatchNamespaceGrant exists for the
 // given namespace and ControlPlane.
-// It returns an error if a ReferenceGrant is missing.
-func ensureReferenceGrantsForNamespace(
+// It returns an error if a WatchNamespaceGrant is missing.
+func ensureWatchNamespaceGrantsForNamespace(
 	ctx context.Context,
 	cl client.Client,
 	cp *operatorv1beta1.ControlPlane,
 	ns string,
 ) error {
-	var refGrants gatewayv1beta1.ReferenceGrantList
-	if err := cl.List(ctx, &refGrants, client.InNamespace(ns)); err != nil {
-		return fmt.Errorf("failed listing ReferenceGrants in namespace %s: %w", ns, err)
+	var grants operatorv1alpha1.WatchNamespaceGrantList
+	if err := cl.List(ctx, &grants, client.InNamespace(ns)); err != nil {
+		return fmt.Errorf("failed listing WatchNamespaceGrants in namespace %s: %w", ns, err)
 	}
-	for _, refGrant := range refGrants.Items {
-		if !lo.ContainsBy(refGrant.Spec.From, func(from gatewayv1beta1.ReferenceGrantFrom) bool {
-			return string(from.Group) == operatorv1beta1.SchemeGroupVersion.Group &&
+	for _, refGrant := range grants.Items {
+		if !lo.ContainsBy(refGrant.Spec.From, func(from operatorv1alpha1.WatchNamespaceGrantFrom) bool {
+			return from.Group == operatorv1beta1.SchemeGroupVersion.Group &&
 				from.Kind == "ControlPlane" &&
-				string(from.Namespace) == cp.Namespace
-		}) {
-			continue
-		}
-
-		if !lo.ContainsBy(refGrant.Spec.To, func(to gatewayv1beta1.ReferenceGrantTo) bool {
-			return to.Group == "" &&
-				to.Kind == "Namespace" &&
-				to.Name != nil &&
-				string(*to.Name) == ns
+				from.Namespace == cp.Namespace
 		}) {
 			continue
 		}
 
 		return nil
 	}
-	return fmt.Errorf("ReferenceGrant in Namespace %s to ControlPlane in Namespace %s not found", ns, cp.Namespace)
+	return fmt.Errorf("WatchNamespaceGrant in Namespace %s to ControlPlane in Namespace %s not found", ns, cp.Namespace)
 }
