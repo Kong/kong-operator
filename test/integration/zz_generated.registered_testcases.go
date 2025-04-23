@@ -13,6 +13,7 @@ func init() {
 		TestDataPlaneEssentials,
 		TestDataPlaneHorizontalScaling,
 		TestDataPlanePodDisruptionBudget,
+		TestDataPlaneScaleSubresource,
 		TestDataPlaneServiceExternalTrafficPolicy,
 		TestDataPlaneServiceTypes,
 		TestDataPlaneSpecifyingServiceName,

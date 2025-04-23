@@ -65,6 +65,8 @@
 - Bump default `DataPlane` image to 3.10
   Default image changes from `kong` to `kong/kong-gateway`.
   [#1405](https://github.com/Kong/gateway-operator/pull/1405)
+- Updated `kubernetes-configuration` dependency for adding `scale` subresource for `DataPlane` CRD.
+  [#1523](https://github.com/Kong/gateway-operator/pull/1523)
 
 ### Fixes
 
@@ -74,6 +76,8 @@
   [#1395](https://github.com/Kong/gateway-operator/pull/1395)
 - Fix ingress service name not being applied when using `GatewayConfiguration`.
   [#1515](https://github.com/Kong/gateway-operator/pull/1515)
+- Fix ingress service port name setting.
+  [#1524](https://github.com/Kong/gateway-operator/pull/1524)
 
 ## [v1.5.1]
 

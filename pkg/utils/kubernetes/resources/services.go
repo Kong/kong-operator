@@ -145,7 +145,7 @@ func ServicePortsFromDataPlaneIngressOpt(dataplane *operatorv1beta1.DataPlane) S
 			len(dataplane.Spec.Network.Services.Ingress.Ports) == 0 {
 			return
 		}
-		newPorts := make([]corev1.ServicePort, 0)
+		newPorts := make([]corev1.ServicePort, 0, len(dataplane.Spec.Network.Services.Ingress.Ports))
 		alreadyUsedPorts := make(map[int32]struct{})
 		for _, p := range dataplane.Spec.Network.Services.Ingress.Ports {
 			targetPort := intstr.FromInt(consts.DataPlaneProxyPort)
@@ -154,9 +154,8 @@ func ServicePortsFromDataPlaneIngressOpt(dataplane *operatorv1beta1.DataPlane) S
 			}
 			if _, ok := alreadyUsedPorts[p.Port]; !ok {
 				newPorts = append(newPorts, corev1.ServicePort{
-					// Currently, only TCP protocol supported.
-					Name:       fmt.Sprintf("port-%d", p.Port),
-					Protocol:   corev1.ProtocolTCP,
+					Name:       p.Name,
+					Protocol:   corev1.ProtocolTCP, // Currently, only TCP protocol supported.
 					Port:       p.Port,
 					TargetPort: targetPort,
 					NodePort:   p.NodePort,
