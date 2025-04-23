@@ -13,6 +13,7 @@ import (
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
 func getCPAuthRefForRef(
@@ -150,6 +151,37 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 			return types.NamespacedName{}, fmt.Errorf("KongCertificate %s does not have a ControlPlaneRef", nn)
 		}
 		return getCPAuthRefForRef(ctx, cl, cpRef, ent.GetNamespace())
+	}
+
+	// If the entity has a NetworkRef, get the KonnectAPIAuthConfiguration
+	// ref from the referenced KonnectCloudGatewayNetwork.
+	networkRefs, _ := getKonnectNetworkRefs(ent).Get()
+	for _, networkRef := range networkRefs {
+		if networkRef.NamespacedRef == nil {
+			continue
+		}
+		namespace := ent.GetNamespace()
+		if networkRef.NamespacedRef.Namespace != nil {
+			namespace = *networkRef.NamespacedRef.Namespace
+		}
+		nn := types.NamespacedName{
+			Name:      networkRef.NamespacedRef.Name,
+			Namespace: namespace,
+		}
+
+		var network konnectv1alpha1.KonnectCloudGatewayNetwork
+
+		err := cl.Get(ctx, nn, &network)
+		if err != nil {
+			continue
+		}
+
+		authRef := network.Spec.KonnectConfiguration.APIAuthConfigurationRef
+		return types.NamespacedName{
+			Name: authRef.Name,
+			// TODO: enable if cross namespace refs are allowed
+			Namespace: network.GetNamespace(),
+		}, nil
 	}
 
 	return types.NamespacedName{}, fmt.Errorf(

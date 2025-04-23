@@ -2147,6 +2147,78 @@ func (_c *MockCloudGatewaysSDK_CreateNetwork_Call) RunAndReturn(run func(ctx con
 	return _c
 }
 
+// CreateTransitGateway provides a mock function for the type MockCloudGatewaysSDK
+func (_mock *MockCloudGatewaysSDK) CreateTransitGateway(ctx context.Context, networkID string, createTransitGatewayRequest components.CreateTransitGatewayRequest, opts ...operations.Option) (*operations.CreateTransitGatewayResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, networkID, createTransitGatewayRequest, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, networkID, createTransitGatewayRequest)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for CreateTransitGateway")
+	}
+
+	var r0 *operations.CreateTransitGatewayResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.CreateTransitGatewayRequest, ...operations.Option) (*operations.CreateTransitGatewayResponse, error)); ok {
+		return returnFunc(ctx, networkID, createTransitGatewayRequest, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.CreateTransitGatewayRequest, ...operations.Option) *operations.CreateTransitGatewayResponse); ok {
+		r0 = returnFunc(ctx, networkID, createTransitGatewayRequest, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.CreateTransitGatewayResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, components.CreateTransitGatewayRequest, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, networkID, createTransitGatewayRequest, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudGatewaysSDK_CreateTransitGateway_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'CreateTransitGateway'
+type MockCloudGatewaysSDK_CreateTransitGateway_Call struct {
+	*mock.Call
+}
+
+// CreateTransitGateway is a helper method to define mock.On call
+//   - ctx
+//   - networkID
+//   - createTransitGatewayRequest
+//   - opts
+func (_e *MockCloudGatewaysSDK_Expecter) CreateTransitGateway(ctx interface{}, networkID interface{}, createTransitGatewayRequest interface{}, opts ...interface{}) *MockCloudGatewaysSDK_CreateTransitGateway_Call {
+	return &MockCloudGatewaysSDK_CreateTransitGateway_Call{Call: _e.mock.On("CreateTransitGateway",
+		append([]interface{}{ctx, networkID, createTransitGatewayRequest}, opts...)...)}
+}
+
+func (_c *MockCloudGatewaysSDK_CreateTransitGateway_Call) Run(run func(ctx context.Context, networkID string, createTransitGatewayRequest components.CreateTransitGatewayRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_CreateTransitGateway_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-3)
+		for i, a := range args[3:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(string), args[2].(components.CreateTransitGatewayRequest), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockCloudGatewaysSDK_CreateTransitGateway_Call) Return(createTransitGatewayResponse *operations.CreateTransitGatewayResponse, err error) *MockCloudGatewaysSDK_CreateTransitGateway_Call {
+	_c.Call.Return(createTransitGatewayResponse, err)
+	return _c
+}
+
+func (_c *MockCloudGatewaysSDK_CreateTransitGateway_Call) RunAndReturn(run func(ctx context.Context, networkID string, createTransitGatewayRequest components.CreateTransitGatewayRequest, opts ...operations.Option) (*operations.CreateTransitGatewayResponse, error)) *MockCloudGatewaysSDK_CreateTransitGateway_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // DeleteNetwork provides a mock function for the type MockCloudGatewaysSDK
 func (_mock *MockCloudGatewaysSDK) DeleteNetwork(ctx context.Context, networkID string, opts ...operations.Option) (*operations.DeleteNetworkResponse, error) {
 	var tmpRet mock.Arguments
@@ -2214,6 +2286,78 @@ func (_c *MockCloudGatewaysSDK_DeleteNetwork_Call) Return(deleteNetworkResponse 
 }
 
 func (_c *MockCloudGatewaysSDK_DeleteNetwork_Call) RunAndReturn(run func(ctx context.Context, networkID string, opts ...operations.Option) (*operations.DeleteNetworkResponse, error)) *MockCloudGatewaysSDK_DeleteNetwork_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// DeleteTransitGateway provides a mock function for the type MockCloudGatewaysSDK
+func (_mock *MockCloudGatewaysSDK) DeleteTransitGateway(ctx context.Context, networkID string, transitGatewayID string, opts ...operations.Option) (*operations.DeleteTransitGatewayResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, networkID, transitGatewayID, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, networkID, transitGatewayID)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for DeleteTransitGateway")
+	}
+
+	var r0 *operations.DeleteTransitGatewayResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.DeleteTransitGatewayResponse, error)); ok {
+		return returnFunc(ctx, networkID, transitGatewayID, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.DeleteTransitGatewayResponse); ok {
+		r0 = returnFunc(ctx, networkID, transitGatewayID, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.DeleteTransitGatewayResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, networkID, transitGatewayID, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudGatewaysSDK_DeleteTransitGateway_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'DeleteTransitGateway'
+type MockCloudGatewaysSDK_DeleteTransitGateway_Call struct {
+	*mock.Call
+}
+
+// DeleteTransitGateway is a helper method to define mock.On call
+//   - ctx
+//   - networkID
+//   - transitGatewayID
+//   - opts
+func (_e *MockCloudGatewaysSDK_Expecter) DeleteTransitGateway(ctx interface{}, networkID interface{}, transitGatewayID interface{}, opts ...interface{}) *MockCloudGatewaysSDK_DeleteTransitGateway_Call {
+	return &MockCloudGatewaysSDK_DeleteTransitGateway_Call{Call: _e.mock.On("DeleteTransitGateway",
+		append([]interface{}{ctx, networkID, transitGatewayID}, opts...)...)}
+}
+
+func (_c *MockCloudGatewaysSDK_DeleteTransitGateway_Call) Run(run func(ctx context.Context, networkID string, transitGatewayID string, opts ...operations.Option)) *MockCloudGatewaysSDK_DeleteTransitGateway_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-3)
+		for i, a := range args[3:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockCloudGatewaysSDK_DeleteTransitGateway_Call) Return(deleteTransitGatewayResponse *operations.DeleteTransitGatewayResponse, err error) *MockCloudGatewaysSDK_DeleteTransitGateway_Call {
+	_c.Call.Return(deleteTransitGatewayResponse, err)
+	return _c
+}
+
+func (_c *MockCloudGatewaysSDK_DeleteTransitGateway_Call) RunAndReturn(run func(ctx context.Context, networkID string, transitGatewayID string, opts ...operations.Option) (*operations.DeleteTransitGatewayResponse, error)) *MockCloudGatewaysSDK_DeleteTransitGateway_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -2360,6 +2504,78 @@ func (_c *MockCloudGatewaysSDK_GetNetwork_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// GetTransitGateway provides a mock function for the type MockCloudGatewaysSDK
+func (_mock *MockCloudGatewaysSDK) GetTransitGateway(ctx context.Context, networkID string, transitGatewayID string, opts ...operations.Option) (*operations.GetTransitGatewayResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, networkID, transitGatewayID, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, networkID, transitGatewayID)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetTransitGateway")
+	}
+
+	var r0 *operations.GetTransitGatewayResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.GetTransitGatewayResponse, error)); ok {
+		return returnFunc(ctx, networkID, transitGatewayID, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.GetTransitGatewayResponse); ok {
+		r0 = returnFunc(ctx, networkID, transitGatewayID, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.GetTransitGatewayResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, networkID, transitGatewayID, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudGatewaysSDK_GetTransitGateway_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTransitGateway'
+type MockCloudGatewaysSDK_GetTransitGateway_Call struct {
+	*mock.Call
+}
+
+// GetTransitGateway is a helper method to define mock.On call
+//   - ctx
+//   - networkID
+//   - transitGatewayID
+//   - opts
+func (_e *MockCloudGatewaysSDK_Expecter) GetTransitGateway(ctx interface{}, networkID interface{}, transitGatewayID interface{}, opts ...interface{}) *MockCloudGatewaysSDK_GetTransitGateway_Call {
+	return &MockCloudGatewaysSDK_GetTransitGateway_Call{Call: _e.mock.On("GetTransitGateway",
+		append([]interface{}{ctx, networkID, transitGatewayID}, opts...)...)}
+}
+
+func (_c *MockCloudGatewaysSDK_GetTransitGateway_Call) Run(run func(ctx context.Context, networkID string, transitGatewayID string, opts ...operations.Option)) *MockCloudGatewaysSDK_GetTransitGateway_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-3)
+		for i, a := range args[3:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockCloudGatewaysSDK_GetTransitGateway_Call) Return(getTransitGatewayResponse *operations.GetTransitGatewayResponse, err error) *MockCloudGatewaysSDK_GetTransitGateway_Call {
+	_c.Call.Return(getTransitGatewayResponse, err)
+	return _c
+}
+
+func (_c *MockCloudGatewaysSDK_GetTransitGateway_Call) RunAndReturn(run func(ctx context.Context, networkID string, transitGatewayID string, opts ...operations.Option) (*operations.GetTransitGatewayResponse, error)) *MockCloudGatewaysSDK_GetTransitGateway_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListConfigurations provides a mock function for the type MockCloudGatewaysSDK
 func (_mock *MockCloudGatewaysSDK) ListConfigurations(ctx context.Context, request operations.ListConfigurationsRequest, opts ...operations.Option) (*operations.ListConfigurationsResponse, error) {
 	var tmpRet mock.Arguments
@@ -2498,6 +2714,77 @@ func (_c *MockCloudGatewaysSDK_ListNetworks_Call) Return(listNetworksResponse *o
 }
 
 func (_c *MockCloudGatewaysSDK_ListNetworks_Call) RunAndReturn(run func(ctx context.Context, request operations.ListNetworksRequest, opts ...operations.Option) (*operations.ListNetworksResponse, error)) *MockCloudGatewaysSDK_ListNetworks_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// ListTransitGateways provides a mock function for the type MockCloudGatewaysSDK
+func (_mock *MockCloudGatewaysSDK) ListTransitGateways(ctx context.Context, request operations.ListTransitGatewaysRequest, opts ...operations.Option) (*operations.ListTransitGatewaysResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, request, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, request)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListTransitGateways")
+	}
+
+	var r0 *operations.ListTransitGatewaysResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListTransitGatewaysRequest, ...operations.Option) (*operations.ListTransitGatewaysResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListTransitGatewaysRequest, ...operations.Option) *operations.ListTransitGatewaysResponse); ok {
+		r0 = returnFunc(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.ListTransitGatewaysResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, operations.ListTransitGatewaysRequest, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCloudGatewaysSDK_ListTransitGateways_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListTransitGateways'
+type MockCloudGatewaysSDK_ListTransitGateways_Call struct {
+	*mock.Call
+}
+
+// ListTransitGateways is a helper method to define mock.On call
+//   - ctx
+//   - request
+//   - opts
+func (_e *MockCloudGatewaysSDK_Expecter) ListTransitGateways(ctx interface{}, request interface{}, opts ...interface{}) *MockCloudGatewaysSDK_ListTransitGateways_Call {
+	return &MockCloudGatewaysSDK_ListTransitGateways_Call{Call: _e.mock.On("ListTransitGateways",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockCloudGatewaysSDK_ListTransitGateways_Call) Run(run func(ctx context.Context, request operations.ListTransitGatewaysRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_ListTransitGateways_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]operations.Option, len(args)-2)
+		for i, a := range args[2:] {
+			if a != nil {
+				variadicArgs[i] = a.(operations.Option)
+			}
+		}
+		run(args[0].(context.Context), args[1].(operations.ListTransitGatewaysRequest), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockCloudGatewaysSDK_ListTransitGateways_Call) Return(listTransitGatewaysResponse *operations.ListTransitGatewaysResponse, err error) *MockCloudGatewaysSDK_ListTransitGateways_Call {
+	_c.Call.Return(listTransitGatewaysResponse, err)
+	return _c
+}
+
+func (_c *MockCloudGatewaysSDK_ListTransitGateways_Call) RunAndReturn(run func(ctx context.Context, request operations.ListTransitGatewaysRequest, opts ...operations.Option) (*operations.ListTransitGatewaysResponse, error)) *MockCloudGatewaysSDK_ListTransitGateways_Call {
 	_c.Call.Return(run)
 	return _c
 }

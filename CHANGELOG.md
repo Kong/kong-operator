@@ -46,6 +46,9 @@
   [#1512](https://github.com/Kong/gateway-operator/pull/1512)
 - `KongRoute` can be migrated from serviceless to service bound and vice versa.
   [#1492](https://github.com/Kong/gateway-operator/pull/1492)
+- Add `KonnectCloudGatewayTransitGateway` controller to support managing Konnect
+  transit gateways.
+  [#1489](https://github.com/Kong/gateway-operator/pull/1489)
 
 ### Changes
 

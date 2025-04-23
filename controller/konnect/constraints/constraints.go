@@ -37,6 +37,7 @@ type SupportedKonnectEntityType interface {
 	konnectv1alpha1.KonnectGatewayControlPlane |
 		konnectv1alpha1.KonnectCloudGatewayNetwork |
 		konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration |
+		konnectv1alpha1.KonnectCloudGatewayTransitGateway |
 		configurationv1alpha1.KongService |
 		configurationv1alpha1.KongRoute |
 		configurationv1.KongConsumer |

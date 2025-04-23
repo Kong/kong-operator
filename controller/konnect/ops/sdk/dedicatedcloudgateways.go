@@ -18,4 +18,9 @@ type CloudGatewaysSDK interface {
 	CreateConfiguration(ctx context.Context, request sdkkonnectcomp.CreateConfigurationRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateConfigurationResponse, error)
 	GetConfiguration(ctx context.Context, configurationID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.GetConfigurationResponse, error)
 	ListConfigurations(ctx context.Context, request sdkkonnectops.ListConfigurationsRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListConfigurationsResponse, error)
+
+	ListTransitGateways(ctx context.Context, request sdkkonnectops.ListTransitGatewaysRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListTransitGatewaysResponse, error)
+	CreateTransitGateway(ctx context.Context, networkID string, createTransitGatewayRequest sdkkonnectcomp.CreateTransitGatewayRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateTransitGatewayResponse, error)
+	GetTransitGateway(ctx context.Context, networkID string, transitGatewayID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.GetTransitGatewayResponse, error)
+	DeleteTransitGateway(ctx context.Context, networkID string, transitGatewayID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteTransitGatewayResponse, error)
 }
