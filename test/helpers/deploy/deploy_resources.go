@@ -96,6 +96,30 @@ func WithKonnectNamespacedRefControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayC
 	}
 }
 
+// WithNamespacedKongServiceRef returns an ObjOption that sets
+// the ServiceRef on the object to a namespaced ref.
+func WithNamespacedKongServiceRef(svc *configurationv1alpha1.KongService) ObjOption {
+	return func(obj client.Object) {
+		o, ok := obj.(interface {
+			GetServiceRef() *configurationv1alpha1.ServiceRef
+			SetServiceRef(*configurationv1alpha1.ServiceRef)
+		})
+		if !ok {
+			// As it's only used in tests, we can panic here - it will mean test code is incorrect.
+			panic(fmt.Errorf("%T does not implement GetServiceRef/SetServiceRef method", obj))
+		}
+
+		svcRef := &configurationv1alpha1.ServiceRef{
+			Type: string(commonv1alpha1.ObjectRefTypeNamespacedRef),
+			NamespacedRef: &commonv1alpha1.NameRef{
+				Name: svc.GetName(),
+			},
+		}
+
+		o.SetServiceRef(svcRef)
+	}
+}
+
 // WithKonnectIDControlPlaneRef returns an ObjOption that sets the ControlPlaneRef on the object to a KonnectID.
 func WithKonnectIDControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane) ObjOption {
 	return func(obj client.Object) {
@@ -437,12 +461,11 @@ func KongService(
 	return &kongService
 }
 
-// KongRouteAttachedToService deploys a KongRoute resource and returns the resource.
-func KongRouteAttachedToService(
+// KongRoute deploys a KongRoute resource and returns the resource.
+func KongRoute(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	kongService *configurationv1alpha1.KongService,
 	opts ...ObjOption,
 ) *configurationv1alpha1.KongRoute {
 	t.Helper()
@@ -455,48 +478,6 @@ func KongRouteAttachedToService(
 		Spec: configurationv1alpha1.KongRouteSpec{
 			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 				Name: lo.ToPtr(name),
-			},
-			ServiceRef: &configurationv1alpha1.ServiceRef{
-				Type: configurationv1alpha1.ServiceRefNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NameRef{
-					Name: kongService.Name,
-				},
-			},
-		},
-	}
-	for _, opt := range opts {
-		opt(&kongRoute)
-	}
-	require.NoError(t, cl.Create(ctx, &kongRoute))
-	logObjectCreate(t, &kongRoute)
-
-	return &kongRoute
-}
-
-// KongRouteAttachedToControlPlane deploys a KongRoute resource and returns the resource.
-func KongRouteAttachedToControlPlane(
-	t *testing.T,
-	ctx context.Context,
-	cl client.Client,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-	opts ...ObjOption,
-) *configurationv1alpha1.KongRoute {
-	t.Helper()
-
-	name := "kongroute-" + uuid.NewString()[:8]
-	kongRoute := configurationv1alpha1.KongRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
-		Spec: configurationv1alpha1.KongRouteSpec{
-			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-				Name: lo.ToPtr(name),
-			},
-			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
-				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-					Name: cp.Name,
-				},
 			},
 		},
 	}

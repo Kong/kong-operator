@@ -133,7 +133,9 @@ func TestKonnectExtension(t *testing.T) {
 		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 		t.Cleanup(deleteObjectAndWaitForDeletionFn(t, ks))
 
-		kr := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, ks,
+		kr := deploy.KongRoute(
+			t, ctx, clientNamespaced,
+			deploy.WithNamespacedKongServiceRef(ks),
 			func(obj client.Object) {
 				s := obj.(*configurationv1alpha1.KongRoute)
 				s.Spec.Paths = []string{"/test"}

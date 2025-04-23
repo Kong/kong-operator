@@ -144,7 +144,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService)
+		kongRoute := deploy.KongRoute(t, ctx, clientNamespaced, deploy.WithNamespacedKongServiceRef(kongService))
 		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
 
 		kpb := deploy.KongPluginBinding(t, ctx, clientNamespaced,
@@ -209,7 +209,7 @@ func TestKongPluginBindingUnmanaged(t *testing.T) {
 		)
 
 		updateKongServiceStatusWithProgrammed(t, ctx, clientNamespaced, kongService, serviceID, cp.GetKonnectStatus().GetKonnectID())
-		kongRoute := deploy.KongRouteAttachedToService(t, ctx, clientNamespaced, kongService)
+		kongRoute := deploy.KongRoute(t, ctx, clientNamespaced, deploy.WithNamespacedKongServiceRef(kongService))
 		updateKongRouteStatusWithProgrammed(t, ctx, clientNamespaced, kongRoute, routeID, cp.GetKonnectStatus().GetKonnectID(), serviceID)
 
 		sdk.PluginSDK.EXPECT().
