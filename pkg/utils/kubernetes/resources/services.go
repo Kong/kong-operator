@@ -158,6 +158,7 @@ func ServicePortsFromDataPlaneIngressOpt(dataplane *operatorv1beta1.DataPlane) S
 					Protocol:   corev1.ProtocolTCP, // Currently, only TCP protocol supported.
 					Port:       p.Port,
 					TargetPort: targetPort,
+					NodePort:   p.NodePort,
 				})
 				alreadyUsedPorts[p.Port] = struct{}{}
 			}
