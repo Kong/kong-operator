@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/samber/lo"
+	policyv1 "k8s.io/api/policy/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -94,6 +96,67 @@ func TestGatewayConfiguration(t *testing.T) {
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("KonnectExtension must be set at the Gateway level"),
+			},
+		}.Run(t)
+	})
+
+	t.Run("DataPlaneOptions", func(t *testing.T) {
+		common.TestCasesGroup[*operatorv1beta1.GatewayConfiguration]{
+			{
+				Name: "no DataPlaneOptions",
+				TestObject: &operatorv1beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: nil,
+					},
+				},
+			},
+			{
+				Name: "specifying resources.PodDisruptionBudget",
+				TestObject: &operatorv1beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									Replicas: lo.ToPtr(int32(4)),
+								},
+							},
+							Resources: &operatorv1beta1.GatewayConfigDataPlaneResources{
+								PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
+									Spec: operatorv1beta1.PodDisruptionBudgetSpec{
+										MinAvailable:               lo.ToPtr(intstr.FromInt(1)),
+										UnhealthyPodEvictionPolicy: lo.ToPtr(policyv1.IfHealthyBudget),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "specifying resources.PodDisruptionBudget can only specify onf of maxUnavailable and minAvailable",
+				TestObject: &operatorv1beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
+							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv1beta1.DeploymentOptions{
+									Replicas: lo.ToPtr(int32(4)),
+								},
+							},
+							Resources: &operatorv1beta1.GatewayConfigDataPlaneResources{
+								PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
+									Spec: operatorv1beta1.PodDisruptionBudgetSpec{
+										MinAvailable:   lo.ToPtr(intstr.FromInt(1)),
+										MaxUnavailable: lo.ToPtr(intstr.FromInt(1)),
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("You can specify only one of maxUnavailable and minAvailable in a single PodDisruptionBudgetSpec."),
 			},
 		}.Run(t)
 	})

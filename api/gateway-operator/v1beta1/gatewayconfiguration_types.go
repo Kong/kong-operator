@@ -83,6 +83,9 @@ type GatewayConfigDataPlaneOptions struct {
 	// +optional
 	Network GatewayConfigDataPlaneNetworkOptions `json:"network"`
 
+	// +optional
+	Resources *GatewayConfigDataPlaneResources `json:"resources,omitempty"`
+
 	// Extensions provide additional or replacement features for the DataPlane
 	// resources to influence or enhance functionality.
 	// NOTE: since we have one extension only (KonnectExtension), we limit the amount of extensions to 1.
@@ -120,6 +123,17 @@ type GatewayConfigDataPlaneServices struct {
 	//
 	// +optional
 	Ingress *GatewayConfigServiceOptions `json:"ingress,omitempty"`
+}
+
+// GatewayConfigDataPlaneResources defines the resources that will be
+// created and managed for Gateway's DataPlane.
+// +apireference:kgo:include
+type GatewayConfigDataPlaneResources struct {
+	// PodDisruptionBudget is the configuration for the PodDisruptionBudget
+	// that will be created for the DataPlane.
+	//
+	// +optional
+	PodDisruptionBudget *PodDisruptionBudget `json:"podDisruptionBudget,omitempty"`
 }
 
 // GatewayConfigServiceOptions is used to includes options to customize the ingress service,
