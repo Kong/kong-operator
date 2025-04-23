@@ -114,16 +114,20 @@ func TestKonnectEntities(t *testing.T) {
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	t.Log("Making KongRoute service bound")
-	err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, kr)
-	require.NoError(t, err)
-	kr.Spec.ServiceRef = &configurationv1alpha1.ServiceRef{
-		Type: configurationv1alpha1.ServiceRefNamespacedRef,
-		NamespacedRef: &commonv1alpha1.NameRef{
-			Name: ks.Name,
-		},
-	}
-	err = GetClients().MgrClient.Update(GetCtx(), kr)
-	require.NoError(t, err)
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, kr)
+		if !assert.NoError(c, err) {
+			return
+		}
+		kr.Spec.ServiceRef = &configurationv1alpha1.ServiceRef{
+			Type: configurationv1alpha1.ServiceRefNamespacedRef,
+			NamespacedRef: &commonv1alpha1.NameRef{
+				Name: ks.Name,
+			},
+		}
+		assert.NoError(c, GetClients().MgrClient.Update(GetCtx(), kr))
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, kr)
 		require.NoError(t, err)
@@ -134,11 +138,15 @@ func TestKonnectEntities(t *testing.T) {
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	t.Log("Making KongRoute serviceless again")
-	err = GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, kr)
-	require.NoError(t, err)
-	kr.Spec.ServiceRef = nil
-	err = GetClients().MgrClient.Update(GetCtx(), kr)
-	require.NoError(t, err)
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, kr)
+		if !assert.NoError(c, err) {
+			return
+		}
+		kr.Spec.ServiceRef = nil
+		assert.NoError(c, GetClients().MgrClient.Update(GetCtx(), kr))
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, kr)
 		require.NoError(t, err)
