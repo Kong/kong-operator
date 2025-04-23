@@ -309,8 +309,8 @@ github.com/klauspost/compress v1.18.0 h1:c/Cqfb0r+Yi+JtIEq73FWXVkRonBlf0CRNYc8Zt
 github.com/klauspost/compress v1.18.0/go.mod h1:2Pp+KzxcywXVXMr50+X0Q/Lsb43OQHYWRCY2AiWywWQ=
 github.com/kong/go-kong v0.65.1 h1:CM+8NlF+VbJckTxP2hGmSPKhA1GMliitXjQ7vJiPkaE=
 github.com/kong/go-kong v0.65.1/go.mod h1:sqdysTKrXIJ6mpxHwTwjgZhLW7jR1/puczTXHLUwJaE=
-github.com/kong/kubernetes-configuration v1.3.2-0.20250416141332-1c6842bc66da h1:LLP1I+lIdU+hbasONUxnjpK2TUAr0juMqw+bqygwYd8=
-github.com/kong/kubernetes-configuration v1.3.2-0.20250416141332-1c6842bc66da/go.mod h1:+HRrz0eeoy7d5YJYiCkk736xaSq3y9fbV5SvucYo/tY=
+github.com/kong/kubernetes-configuration v1.3.2-0.20250422040405-9a4e025f1ccb h1:jQCvZ7rKYcYLLSR7QXmwpGKIK8j3P7mBYARP8WHYVf8=
+github.com/kong/kubernetes-configuration v1.3.2-0.20250422040405-9a4e025f1ccb/go.mod h1:3p31CROMO9LZmAB18Udn0luTPl/xu5XLls6DQj4IjB4=
 github.com/kong/kubernetes-telemetry v0.1.9 h1:XbDMZjZZclHO4oyJGW1mmZ6bzbTnANjcRAYsBg+jpno=
 github.com/kong/kubernetes-telemetry v0.1.9/go.mod h1:lBSbaQdJkoMMO0d+cJWopoJiJ+QHFBttbhCp5VRibJ8=
 github.com/kong/kubernetes-testing-framework v0.47.2 h1:+2Z9anTpbV/hwNeN+NFQz53BMU+g3QJydkweBp3tULo=
