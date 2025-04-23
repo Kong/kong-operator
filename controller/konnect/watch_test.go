@@ -44,7 +44,7 @@ func testReconciliationWatchOptionsForEntity[
 	t.Run(tt.GetTypeName(), func(t *testing.T) {
 		cl := fakectrlruntimeclient.NewFakeClient()
 		require.NotNil(t, cl)
-		watchOptions := ReconciliationWatchOptionsForEntity[T, TEnt](cl, ent)
+		watchOptions := ReconciliationWatchOptionsForEntity(cl, ent)
 		_ = watchOptions
 	})
 }

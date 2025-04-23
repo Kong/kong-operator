@@ -43,6 +43,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 		)
 	}
 
+	var networkID string
 	for _, ref := range networkRefs {
 		switch ref.Type {
 		case commonv1alpha1.ObjectRefTypeNamespacedRef:
@@ -91,6 +92,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 					Msg:       msg,
 				}
 			}
+			networkID = network.GetKonnectID()
 
 		case commonv1alpha1.ObjectRefTypeKonnectID:
 			n, err := sdk.GetCloudGatewaysSDK().GetNetwork(ctx, *ref.KonnectID)
@@ -110,6 +112,7 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 					Msg:       msg,
 				}
 			}
+			networkID = *ref.KonnectID
 
 		default:
 			return ctrl.Result{}, fmt.Errorf("unsupported network ref type: %s", ref.Type)
@@ -117,6 +120,11 @@ func handleKonnectNetworkRef[T constraints.SupportedKonnectEntityType, TEnt cons
 	}
 
 	old := ent.DeepCopyObject().(TEnt)
+
+	// Set status.networkID for KonnectCloudGatewayTransitGateway because it is required for creating transit gateway on Konnect.
+	if tg, ok := any(ent).(*konnectv1alpha1.KonnectCloudGatewayTransitGateway); ok {
+		tg.SetNetworkID(networkID)
+	}
 	if patch.SetStatusWithConditionIfDifferent(
 		ent,
 		konnectv1alpha1.KonnectNetworkRefsValidConditionType,
@@ -146,6 +154,8 @@ func getKonnectNetworkRefs[T constraints.SupportedKonnectEntityType, TEnt constr
 			},
 		)
 		return mo.Some(m)
+	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
+		return mo.Some([]commonv1alpha1.ObjectRef{e.Spec.NetworkRef})
 	default:
 		return mo.None[[]commonv1alpha1.ObjectRef]()
 	}

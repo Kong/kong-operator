@@ -36,8 +36,7 @@ type MockSDKWrapper struct {
 	KeySetsSDK                  *MockKeySetsSDK
 	SNIsSDK                     *MockSNIsSDK
 	DataPlaneCertificatesSDK    *MockDataPlaneClientCertificatesSDK
-
-	server server.Server
+	server                      server.Server
 }
 
 var _ sdkops.SDKWrapper = MockSDKWrapper{}
