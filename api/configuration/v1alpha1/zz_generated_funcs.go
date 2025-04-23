@@ -857,6 +857,16 @@ func (obj *KongRoute) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
 }
 
+// SetServiceRef sets the SetServiceRef.
+func (obj *KongRoute) SetServiceRef(ref *ServiceRef) {
+	obj.Spec.ServiceRef = ref
+}
+
+// GetServiceRef returns the ServiceRef.
+func (obj *KongRoute) GetServiceRef() *ServiceRef {
+	return obj.Spec.ServiceRef
+}
+
 
 func (obj *KongUpstream) initKonnectStatus() {
 	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{}

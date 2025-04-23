@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -271,6 +272,43 @@ func TestKonnectFuncsNetworkRef(t *testing.T) {
 
 			obj.SetNetworkID("network")
 			require.Equal(t, "network", obj.GetNetworkID())
+		})
+	}
+}
+
+func TestServiceRef(t *testing.T) {
+	type CfgEntity interface {
+		client.Object
+		GetTypeName() string
+		GetServiceRef() *configurationv1alpha1.ServiceRef
+		SetServiceRef(*configurationv1alpha1.ServiceRef)
+	}
+
+	testcases := []struct {
+		object   CfgEntity
+		typeName string
+	}{
+		{
+			typeName: "KongRoute",
+			object:   &configurationv1alpha1.KongRoute{},
+		},
+	}
+
+	for _, tc := range testcases {
+		t.Run(tc.object.GetTypeName(), func(t *testing.T) {
+			obj := tc.object
+
+			require.Equal(t, obj.GetTypeName(), tc.typeName)
+			require.Nil(t, obj.GetServiceRef())
+
+			serviceRef := &configurationv1alpha1.ServiceRef{
+				Type: configurationv1alpha1.ServiceRefNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NameRef{
+					Name: "test-service",
+				},
+			}
+			obj.SetServiceRef(serviceRef)
+			require.Equal(t, serviceRef, obj.GetServiceRef())
 		})
 	}
 }
