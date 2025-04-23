@@ -58,7 +58,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		t.Log("Setting up a watch for KonnectCloudGatewayTransitGateway events")
 		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayTransitGatewayList](t, ctx, cl, client.InNamespace(ns.Name))
 		t.Log("Setting up SDK expectations on creation")
-		sdk.TransitGatewaysSDK.EXPECT().CreateTransitGateway(
+		sdk.CloudGatewaysSDK.EXPECT().CreateTransitGateway(
 			mock.Anything,
 			networkID,
 			mock.MatchedBy(func(req sdkkonnectcomp.CreateTransitGatewayRequest) bool {
@@ -125,7 +125,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		}, "Did not see KonnectCloudGatewayTransitGateway get Programmed and Konnect ID set.")
 
 		t.Log("Setting up SDK expctations on updating/get")
-		sdk.TransitGatewaysSDK.EXPECT().GetTransitGateway(mock.Anything, networkID, id).Return(
+		sdk.CloudGatewaysSDK.EXPECT().GetTransitGateway(mock.Anything, networkID, id).Return(
 			&sdkkonnectops.GetTransitGatewayResponse{
 				TransitGatewayResponse: &sdkkonnectcomp.TransitGatewayResponse{
 					Type: sdkkonnectcomp.TransitGatewayResponseTypeAwsTransitGatewayResponse,
@@ -148,7 +148,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		}, "Did not see KonnectCloudGatewayTransitGateway get status.state updated")
 
 		t.Log("Setting up SDK expectations on deletion")
-		sdk.TransitGatewaysSDK.EXPECT().DeleteTransitGateway(mock.Anything, networkID, id, mock.Anything).Return(
+		sdk.CloudGatewaysSDK.EXPECT().DeleteTransitGateway(mock.Anything, networkID, id, mock.Anything).Return(
 			&sdkkonnectops.DeleteTransitGatewayResponse{}, nil,
 		)
 		t.Log("Deleting")
@@ -156,7 +156,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		eventually.WaitForObjectToNotExist(t, ctx, cl, tg, waitTime, tickTime)
 
 		t.Log("Waiting for object to be deleted in the SDK")
-		eventuallyAssertSDKExpectations(t, factory.SDK.TransitGatewaysSDK, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
 	})
 
 	t.Run("Creating a transit gateway with existing name", func(t *testing.T) {
@@ -170,7 +170,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		t.Log("Setting up a watch for KonnectCloudGatewayTransitGateway events")
 		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayTransitGatewayList](t, ctx, cl, client.InNamespace(ns.Name))
 		t.Log("Setting up SDK expectations on creation and listing")
-		sdk.TransitGatewaysSDK.EXPECT().CreateTransitGateway(
+		sdk.CloudGatewaysSDK.EXPECT().CreateTransitGateway(
 			mock.Anything,
 			networkID,
 			mock.MatchedBy(func(req sdkkonnectcomp.CreateTransitGatewayRequest) bool {
@@ -183,7 +183,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 			nil,
 			&sdkkonnecterrs.ConflictError{},
 		)
-		sdk.TransitGatewaysSDK.EXPECT().ListTransitGateways(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.ListTransitGatewaysRequest) bool {
+		sdk.CloudGatewaysSDK.EXPECT().ListTransitGateways(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.ListTransitGatewaysRequest) bool {
 			return req.NetworkID == networkID
 		})).Return(
 			&sdkkonnectops.ListTransitGatewaysResponse{
@@ -246,6 +246,6 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		}, "Did not see KonnectCloudGatewayTransitGateway get Programmed and Konnect ID set.")
 
 		t.Log("Waiting for object to be deleted in the SDK")
-		eventuallyAssertSDKExpectations(t, factory.SDK.TransitGatewaysSDK, waitTime, tickTime)
+		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
 	})
 }

@@ -36,9 +36,7 @@ type MockSDKWrapper struct {
 	KeySetsSDK                  *MockKeySetsSDK
 	SNIsSDK                     *MockSNIsSDK
 	DataPlaneCertificatesSDK    *MockDataPlaneClientCertificatesSDK
-	TransitGatewaysSDK          *MockTransitGatewaysSDK
-
-	server server.Server
+	server                      server.Server
 }
 
 var _ sdkops.SDKWrapper = MockSDKWrapper{}
@@ -68,7 +66,6 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		KeySetsSDK:                  NewMockKeySetsSDK(t),
 		SNIsSDK:                     NewMockSNIsSDK(t),
 		DataPlaneCertificatesSDK:    NewMockDataPlaneClientCertificatesSDK(t),
-		TransitGatewaysSDK:          NewMockTransitGatewaysSDK(t),
 
 		server: lo.Must(server.NewServer[*operatorv1beta1.ControlPlane](SDKServerURL)),
 	}
@@ -177,10 +174,6 @@ func (m MockSDKWrapper) GetDataPlaneCertificatesSDK() sdkops.DataPlaneClientCert
 
 func (m MockSDKWrapper) GetCloudGatewaysSDK() sdkops.CloudGatewaysSDK {
 	return m.CloudGatewaysSDK
-}
-
-func (m MockSDKWrapper) GetTransitGatewaysSDK() sdkops.TransitGatewaysSDK {
-	return m.TransitGatewaysSDK
 }
 
 type MockSDKFactory struct {

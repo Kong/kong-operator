@@ -17,7 +17,7 @@ import (
 // createKonnectTransitGateway creates a transit gateway on the Konnect side.
 func createKonnectTransitGateway(
 	ctx context.Context,
-	sdk sdkops.TransitGatewaysSDK,
+	sdk sdkops.CloudGatewaysSDK,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
 ) error {
 	networkID := tg.GetNetworkID()
@@ -27,9 +27,9 @@ func createKonnectTransitGateway(
 			Op:     CreateOp,
 		}
 	}
-	// Failures on creating transit gateway causes `sdk.CreateTransitGateway` stuck because the SDK performs a retry that can take up to 1 hour:
+
+	// We need to set the empty retry config to prevent using the default retry which causes failures and blocks the reconciliation:
 	// https://github.com/Kong/gateway-operator/issues/1521
-	// So we disable the retry here. The reconciler retries the creation by the requeue mechanism of the controller runtime.
 	resp, err := sdk.CreateTransitGateway(
 		ctx, networkID, transitGatewaySpecToTransitGatewayInput(tg.Spec.KonnectTransitGatewayAPISpec),
 		sdkkonnectops.WithRetries(retry.Config{}),
@@ -41,6 +41,7 @@ func createKonnectTransitGateway(
 	if resp == nil || resp.TransitGatewayResponse == nil {
 		return fmt.Errorf("failed creating %s: %w", tg.GetTypeName(), ErrNilResponse)
 	}
+
 	tg.SetKonnectID(extractKonnectIDFromTransitGatewayResponse(resp.TransitGatewayResponse))
 	tg.Status.State = extractStateFromTransitGatewayResponse(resp.TransitGatewayResponse)
 	return nil
@@ -51,7 +52,7 @@ func createKonnectTransitGateway(
 // KonnectCloudGatewayTransitGateway resource based on the state of the transit gateway on the Konnect side.
 func updateKonnectTransitGateway(
 	ctx context.Context,
-	sdk sdkops.TransitGatewaysSDK,
+	sdk sdkops.CloudGatewaysSDK,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
 ) error {
 	networkID := tg.GetNetworkID()
@@ -78,7 +79,7 @@ func updateKonnectTransitGateway(
 // deleteKonnectTransitGateway deletes a Konnect transit gateway.
 func deleteKonnectTransitGateway(
 	ctx context.Context,
-	sdk sdkops.TransitGatewaysSDK,
+	sdk sdkops.CloudGatewaysSDK,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
 ) error {
 	networkID := tg.GetNetworkID()
@@ -89,9 +90,8 @@ func deleteKonnectTransitGateway(
 		}
 	}
 
-	// Failures on deleting transit gateway causes `sdk.DeleteTransitGateway` stuck because the SDK performs a retry that can take up to 1 hour:
+	// We need to set the empty retry config to prevent using the default retry which causes failures and blocks the reconciliation:
 	// https://github.com/Kong/gateway-operator/issues/1521
-	// So we disable the retry here. The reconciler retries the creation by the requeue mechanism of the controller runtime.
 	resp, err := sdk.DeleteTransitGateway(ctx, networkID, tg.GetKonnectID(), sdkkonnectops.WithRetries(retry.Config{}))
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, tg); errWrap != nil {
@@ -107,7 +107,7 @@ func deleteKonnectTransitGateway(
 
 func getKonnectTransitGatewayMatchingSpecName(
 	ctx context.Context,
-	sdk sdkops.TransitGatewaysSDK,
+	sdk sdkops.CloudGatewaysSDK,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
 ) (string, error) {
 	networkID := tg.GetNetworkID()
@@ -129,7 +129,8 @@ func getKonnectTransitGatewayMatchingSpecName(
 	if resp == nil || resp.ListTransitGatewaysResponse == nil {
 		return "", fmt.Errorf("failed listing %s: %w", tg.GetTypeName(), ErrNilResponse)
 	}
-	// TODO: update KonnectCloudGatewayTransitGateway to satisfy the GetID() interface to reuse getMatchingEntryFromListResponseData?
+	// TODO: Reuse getMatchingEntryFromListResponseData to match transit gateways by name.
+	// https://github.com/Kong/gateway-operator/issues/1527
 	for _, tgResp := range resp.ListTransitGatewaysResponse.Data {
 		id := extractKonnectIDFromTransitGatewayResponse(&tgResp)
 		name := extractNameFromTransitGatewayResponse(&tgResp)
@@ -204,6 +205,7 @@ func extractKonnectIDFromTransitGatewayResponse(resp *sdkkonnectcomp.TransitGate
 		return resp.AzureTransitGatewayResponse.ID
 	case sdkkonnectcomp.TransitGatewayResponseTypeAwsVpcPeeringGatewayResponse:
 		// AWS VPC peering gateway is not supported yet.
+		// It is not valid in the KonnectCloudGatewayTransitGateway's spec.type.
 		return ""
 	}
 	return ""
@@ -217,6 +219,7 @@ func extractStateFromTransitGatewayResponse(resp *sdkkonnectcomp.TransitGatewayR
 		return resp.AzureTransitGatewayResponse.State
 	case sdkkonnectcomp.TransitGatewayResponseTypeAwsVpcPeeringGatewayResponse:
 		// AWS VPC peering gateway is not supported yet.
+		// It is not valid in the KonnectCloudGatewayTransitGateway's spec.type.
 		return sdkkonnectcomp.TransitGatewayState("")
 	}
 	return sdkkonnectcomp.TransitGatewayState("")
@@ -230,6 +233,7 @@ func extractNameFromTransitGatewayResponse(resp *sdkkonnectcomp.TransitGatewayRe
 		return resp.AzureTransitGatewayResponse.Name
 	case sdkkonnectcomp.TransitGatewayResponseTypeAwsVpcPeeringGatewayResponse:
 		// AWS VPC peering gateway is not supported yet.
+		// It is not valid in the KonnectCloudGatewayTransitGateway's spec.type.
 		return ""
 	}
 	return ""

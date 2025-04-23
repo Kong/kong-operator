@@ -67,7 +67,7 @@ func Create[
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
 		err = createKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), cl, ent, sdk.GetServer().Region())
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
-		err = createKonnectTransitGateway(ctx, sdk.GetTransitGatewaysSDK(), ent)
+		err = createKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = createService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -135,7 +135,7 @@ func Create[
 			// TODO: can't get the ID for a DataPlaneGroupConfiguration
 			// as this resource type does not support labels/tags.
 		case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
-			id, err = getKonnectTransitGatewayMatchingSpecName(ctx, sdk.GetTransitGatewaysSDK(), ent)
+			id, err = getKonnectTransitGatewayMatchingSpecName(ctx, sdk.GetCloudGatewaysSDK(), ent)
 		case *configurationv1alpha1.KongService:
 			id, errGet = getKongServiceForUID(ctx, sdk.GetServicesSDK(), ent)
 		case *configurationv1alpha1.KongRoute:
@@ -255,7 +255,7 @@ func Delete[
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
 		err = deleteKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), ent, sdk.GetServer().Region())
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
-		err = deleteKonnectTransitGateway(ctx, sdk.GetTransitGatewaysSDK(), ent)
+		err = deleteKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = deleteService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:
@@ -406,7 +406,7 @@ func Update[
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
 		err = updateKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), cl, ent, sdk.GetServer())
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
-		err = updateKonnectTransitGateway(ctx, sdk.GetTransitGatewaysSDK(), ent)
+		err = updateKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *configurationv1alpha1.KongService:
 		err = updateService(ctx, sdk.GetServicesSDK(), ent)
 	case *configurationv1alpha1.KongRoute:

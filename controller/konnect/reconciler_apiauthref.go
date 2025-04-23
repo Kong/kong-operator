@@ -155,8 +155,6 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 
 	// If the entity has a NetworkRef, get the KonnectAPIAuthConfiguration
 	// ref from the referenced KonnectCloudGatewayNetwork.
-	// TODO: This is used for reconciling transit gateways.
-	// Should we define interfaces to contrain the method only applies to KonnectCloudGatewayTransitGateway?
 	networkRefs, _ := getKonnectNetworkRefs(ent).Get()
 	for _, networkRef := range networkRefs {
 		if networkRef.NamespacedRef == nil {
