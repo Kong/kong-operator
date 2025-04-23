@@ -146,7 +146,7 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 
 		// Check with reflect if the status field is set and Update the status if so before updating the object.
 		// That's required to populate Status that is not set on Create.
-		if statusToUpdate := !reflect.ValueOf(desiredObj).Elem().FieldByName("Status").IsZero(); statusToUpdate {
+		if status := reflect.ValueOf(desiredObj).Elem().FieldByName("Status"); status.IsValid() && !status.IsZero() {
 			// Populate name and resource version obtained from the server on Create.
 			desiredObj.SetName(tc.TestObject.GetName())
 			desiredObj.SetResourceVersion(tc.TestObject.GetResourceVersion())
