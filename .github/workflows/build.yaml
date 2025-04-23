@@ -28,6 +28,8 @@ jobs:
     secrets:
       dockerhub-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
       gh-pat: ${{ secrets.PAT_GITHUB }}
+      slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
+      slack-team-id: ${{ secrets.SLACK_TEAM_ID }}
     with:
       username: ${{ vars.DOCKERHUB_PUSH_USERNAME }}
       registry: docker.io
@@ -35,3 +37,4 @@ jobs:
       # If we pushed then it means we want to build and push the image.
       # Branch filter above will decide pushes to which branch will trigger this.
       push: ${{ github.event.action == 'push' }}
+      slack-send: true

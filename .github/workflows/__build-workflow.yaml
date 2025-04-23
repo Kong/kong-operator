@@ -9,6 +9,12 @@ on:
       gh-pat:
         description: GitHub Personal Access Token (used to recursively checkout submodules).
         required: false
+      slack-webhook-url:
+        description: Slack webhook URL to send notifications to in case of failures.
+        required: false
+      slack-team-id:
+        description: Slack team ID to mention in slack notification in case of failures.
+        required: false
 
     inputs:
       username:
@@ -62,6 +68,12 @@ on:
         description: Tag used for tagging the image(s)
         type: string
         required: false
+      slack-send:
+        description: |
+          Indicates whether to send slack notification in case of failure.
+          When set to true, specify the slack-webhook-url and slack-team-id secrets.
+        default: false
+        type: boolean
 
     outputs:
       full_tag:
@@ -115,6 +127,11 @@ jobs:
   build:
     name: Build image
     runs-on: ubuntu-latest
+
+    # NOTE: Needed by https://github.com/8398a7/action-slack?tab=readme-ov-file#require-permissions
+    permissions:
+      contents: read
+      actions: read
 
     needs:
     - semver
@@ -262,10 +279,25 @@ jobs:
           name: image-${{ matrix.os }}-${{ matrix.arch }}
           path: /tmp/image.tar
 
+      - name: Send slack notification if job fails.
+        if: ${{ failure() && inputs.slack-send }}
+        uses: 8398a7/action-slack@1750b5085f3ec60384090fb7c52965ef822e869e # v3.18.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.slack-webhook-url }}
+        with:
+          status: failure
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          text: ':red_circle: Docker build failed. cc: <!subteam^${{ secrets.slack-team-id }}>'
+
   build-multi-arch:
     name: Build and push multi-arch manifest
     runs-on: ubuntu-latest
     if: ${{ inputs.push }}
+
+    # NOTE: Needed by https://github.com/8398a7/action-slack?tab=readme-ov-file#require-permissions
+    permissions:
+      contents: read
+      actions: read
 
     outputs:
       full_tag: ${{ steps.tag.outputs.tag }}
@@ -368,3 +400,13 @@ jobs:
         id: tag
         run: |
           echo "tag=${{ inputs.registry }}/${{ inputs.image-name }}:${{ needs.semver.outputs.fullversion }}" >> $GITHUB_OUTPUT
+
+      - name: Send slack notification if job fails.
+        if: ${{ failure() && inputs.slack-send }}
+        uses: 8398a7/action-slack@1750b5085f3ec60384090fb7c52965ef822e869e # v3.18.0
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.slack-webhook-url }}
+        with:
+          status: failure
+          fields: repo,message,commit,author,action,eventName,ref,workflow
+          text: ':red_circle: Docker build failed. cc: <!subteam^${{ secrets.slack-team-id }}>'
