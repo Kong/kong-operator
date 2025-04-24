@@ -1,6 +1,8 @@
 package reduce
 
 import (
+	"slices"
+
 	"github.com/samber/lo"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"

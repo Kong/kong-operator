@@ -135,12 +135,12 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		// reconciliation for all supported ControlPlane objects which use this Role.
 		Watches(
 			&rbacv1.Role{},
-			handler.EnqueueRequestsFromMapFunc(r.listControlPlanesForRoles)).
+			handler.EnqueueRequestsFromMapFunc(listControlPlanesFor[*rbacv1.Role])).
 		// Watch for events on RoleBindings, if any RoleBinding event happens, enqueue
 		// reconciliation for all supported ControlPlane objects which use this RoleBinding.
 		Watches(
 			&rbacv1.RoleBinding{},
-			handler.EnqueueRequestsFromMapFunc(r.listControlPlanesForRoleBindings))
+			handler.EnqueueRequestsFromMapFunc(listControlPlanesFor[*rbacv1.RoleBinding]))
 
 	if r.KonnectEnabled {
 		// Watch for changes in KonnectExtension objects that are referenced by ControlPlane objects.

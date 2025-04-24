@@ -2,6 +2,7 @@ package controlplane
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	"github.com/samber/lo"
@@ -289,47 +290,23 @@ func (r *Reconciler) listControlPlanesForReferenceGrants(
 	return recs
 }
 
-func (r *Reconciler) listControlPlanesForRoles(
+func listControlPlanesFor[
+	T *rbacv1.Role | *rbacv1.RoleBinding,
+](
 	ctx context.Context,
 	obj client.Object,
 ) []reconcile.Request {
-	role, ok := obj.(*rbacv1.Role)
-	if !ok {
+	if _, ok := obj.(T); !ok {
+		var t T
 		ctrllog.FromContext(ctx).Error(
 			operatorerrors.ErrUnexpectedObject,
-			"failed to map Role on ControlPlane",
-			"expected", "Role", "found", reflect.TypeOf(obj),
+			fmt.Sprintf("failed to map %T on ControlPlane", t),
+			"expected", reflect.TypeOf(t), "found", reflect.TypeOf(obj),
 		)
 		return nil
 	}
 
-	nn, ok := isManagedByControlPlane(role)
-	if !ok {
-		return nil
-	}
-
-	return []reconcile.Request{
-		{
-			NamespacedName: nn,
-		},
-	}
-}
-
-func (r *Reconciler) listControlPlanesForRoleBindings(
-	ctx context.Context,
-	obj client.Object,
-) []reconcile.Request {
-	roleBinding, ok := obj.(*rbacv1.RoleBinding)
-	if !ok {
-		ctrllog.FromContext(ctx).Error(
-			operatorerrors.ErrUnexpectedObject,
-			"failed to map RoleBinding on ControlPlane",
-			"expected", "RoleBinding", "found", reflect.TypeOf(obj),
-		)
-		return nil
-	}
-
-	nn, ok := isManagedByControlPlane(roleBinding)
+	nn, ok := isManagedByControlPlane(obj)
 	if !ok {
 		return nil
 	}
