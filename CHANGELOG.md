@@ -49,6 +49,8 @@
 - Add `KonnectCloudGatewayTransitGateway` controller to support managing Konnect
   transit gateways.
   [#1489](https://github.com/Kong/gateway-operator/pull/1489)
+- Added support for setting `PodDisruptionBudget` in `GatewayConfiguration`'s `DataPlane` options.
+  [#1526](https://github.com/Kong/gateway-operator/pull/1526)
 
 ### Changes
 
