@@ -120,6 +120,14 @@ func getKonnectTransitGatewayMatchingSpecName(
 
 	resp, err := sdk.ListTransitGateways(ctx, sdkkonnectops.ListTransitGatewaysRequest{
 		NetworkID: networkID,
+		Filter: &sdkkonnectcomp.TransitGatewaysFilterParameters{
+			Name: &sdkkonnectcomp.CloudGatewaysStringFieldFilterOverride{
+				CloudGatewaysStringFieldEqualsFilterOverride: &sdkkonnectcomp.CloudGatewaysStringFieldEqualsFilterOverride{
+					Str:  lo.ToPtr(extractNameFromKonnectCloudGatewayTransitGatewaySpec(tg.Spec.KonnectTransitGatewayAPISpec)),
+					Type: sdkkonnectcomp.CloudGatewaysStringFieldEqualsFilterOverrideTypeStr,
+				},
+			},
+		},
 	})
 
 	if err != nil {
@@ -129,19 +137,9 @@ func getKonnectTransitGatewayMatchingSpecName(
 	if resp == nil || resp.ListTransitGatewaysResponse == nil {
 		return "", fmt.Errorf("failed listing %s: %w", tg.GetTypeName(), ErrNilResponse)
 	}
-	// TODO: Reuse getMatchingEntryFromListResponseData to match transit gateways by name.
-	// https://github.com/Kong/gateway-operator/issues/1527
-	for _, tgResp := range resp.ListTransitGatewaysResponse.Data {
-		id := extractKonnectIDFromTransitGatewayResponse(&tgResp)
-		name := extractNameFromTransitGatewayResponse(&tgResp)
-		if name != "" && name == extractNameFromKonnectCloudGatewayTransitGatewaySpec(tg.Spec.KonnectTransitGatewayAPISpec) {
-			return id, nil
-		}
-	}
 
-	return "", EntityWithMatchingUIDNotFoundError{
-		Entity: tg,
-	}
+	return getMatchingEntryFromListResponseData(listTransitGatewayResponseDataToEntityWithIDSlice(resp.ListTransitGatewaysResponse.Data), tg)
+
 }
 
 var trasitGatewayTypeToSDKTransitGatewayType = map[konnectv1alpha1.TransitGatewayType]sdkkonnectcomp.CreateTransitGatewayRequestType{
@@ -225,20 +223,6 @@ func extractStateFromTransitGatewayResponse(resp *sdkkonnectcomp.TransitGatewayR
 	return sdkkonnectcomp.TransitGatewayState("")
 }
 
-func extractNameFromTransitGatewayResponse(resp *sdkkonnectcomp.TransitGatewayResponse) string {
-	switch resp.Type {
-	case sdkkonnectcomp.TransitGatewayResponseTypeAwsTransitGatewayResponse:
-		return resp.AwsTransitGatewayResponse.Name
-	case sdkkonnectcomp.TransitGatewayResponseTypeAzureTransitGatewayResponse:
-		return resp.AzureTransitGatewayResponse.Name
-	case sdkkonnectcomp.TransitGatewayResponseTypeAwsVpcPeeringGatewayResponse:
-		// AWS VPC peering gateway is not supported yet.
-		// It is not valid in the KonnectCloudGatewayTransitGateway's spec.type.
-		return ""
-	}
-	return ""
-}
-
 func extractNameFromKonnectCloudGatewayTransitGatewaySpec(spec konnectv1alpha1.KonnectTransitGatewayAPISpec) string {
 	switch spec.Type {
 	case konnectv1alpha1.TransitGatewayTypeAWSTransitGateway:
@@ -247,4 +231,10 @@ func extractNameFromKonnectCloudGatewayTransitGatewaySpec(spec konnectv1alpha1.K
 		return spec.AzureTransitGateway.Name
 	}
 	return ""
+}
+
+func listTransitGatewayResponseDataToEntityWithIDSlice(resps []sdkkonnectcomp.TransitGatewayResponse) []extractedEntityID {
+	return lo.Map(resps, func(resp sdkkonnectcomp.TransitGatewayResponse, _ int) extractedEntityID {
+		return extractedEntityID(extractKonnectIDFromTransitGatewayResponse(&resp))
+	})
 }
