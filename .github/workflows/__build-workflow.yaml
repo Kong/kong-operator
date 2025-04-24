@@ -85,6 +85,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   semver:
@@ -155,14 +156,6 @@ jobs:
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         run: git config --global url."https://${{ secrets.gh-pat }}@github.com".insteadOf "https://github.com"
 
-      - name: Cache Docker layers
-        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
-        with:
-          path: /tmp/.buildx-cache
-          key: ${{ runner.os }}-buildx-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-buildx-
-
       - name: Log in to the Container registry
         if: ${{ inputs.push }}
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
@@ -222,8 +215,16 @@ jobs:
         if: ${{ inputs.additional-build-contexts != ''}}
         run: go mod download
 
-      - run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
-      - run: echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_ENV
+      - name: Go Build Cache for Docker
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4
+        with:
+          path: go-build-cache
+          key: ${{ runner.os }}-${{ matrix.arch }}-go-build-cache-${{ hashFiles('**/go.sum') }}
+
+      - name: Inject go-build-cache
+        uses: reproducible-containers/buildkit-cache-dance@4b2444fec0c0fb9dbf175a96c094720a692ef810 # v2.1.4
+        with:
+          cache-source: go-build-cache
 
       - name: Build image
         id: build
@@ -233,8 +234,8 @@ jobs:
           build-contexts: ${{ inputs.additional-build-contexts }}
           push: ${{ inputs.push }}
           file: ${{ inputs.file }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           target: ${{ inputs.target }}
           platforms: ${{ matrix.os }}/${{ matrix.arch }}
           build-args: |

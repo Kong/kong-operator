@@ -5,13 +5,13 @@
 FROM --platform=$BUILDPLATFORM golang:1.24.2@sha256:d9db32125db0c3a680cfb7a1afcaefb89c898a075ec148fdc2f0f646cc2ed509 AS builder
 
 WORKDIR /workspace
-ARG GOPATH
-ARG GOCACHE
+
+RUN go env -w GOMODCACHE=/root/.cache/go-build
+
 # Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
 # layers when using COPY instructions for go.mod and go.sum.
 # https://docs.docker.com/build/guide/mounts/
-RUN --mount=type=cache,target=$GOPATH/pkg/mod \
-    --mount=type=cache,target=$GOCACHE \
+RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \
     go mod download -x
@@ -40,8 +40,7 @@ RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
 # Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
 # layers when using COPY instructions for go.mod and go.sum.
 # https://docs.docker.com/build/guide/mounts/
-RUN --mount=type=cache,target=$GOPATH/pkg/mod \
-    --mount=type=cache,target=$GOCACHE \
+RUN --mount=type=cache,target=/root/.cache/go-build \
     --mount=type=bind,source=go.sum,target=go.sum \
     --mount=type=bind,source=go.mod,target=go.mod \
     CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" \
