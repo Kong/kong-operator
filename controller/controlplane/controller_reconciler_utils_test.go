@@ -7,16 +7,18 @@ import (
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -210,11 +212,11 @@ func TestEnsureReferenceGrantsForNamespace(t *testing.T) {
 		name      string
 		namespace string
 		cp        *operatorv1beta1.ControlPlane
-		refGrants []client.Object
+		grants    []client.Object
 		wantErr   bool
 	}{
 		{
-			name:      "reference grant exists and matches",
+			name:      "watch namespace grant exists and matches",
 			namespace: "test-ns",
 			cp: &operatorv1beta1.ControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
@@ -222,25 +224,18 @@ func TestEnsureReferenceGrantsForNamespace(t *testing.T) {
 					Namespace: "cp-ns",
 				},
 			},
-			refGrants: []client.Object{
-				&gatewayv1beta1.ReferenceGrant{
+			grants: []client.Object{
+				&operatorv1alpha1.WatchNamespaceGrant{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "valid-grant",
 						Namespace: "test-ns",
 					},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{
+					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
+						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
 							{
 								Group:     "gateway-operator.konghq.com",
 								Kind:      "ControlPlane",
 								Namespace: "cp-ns",
-							},
-						},
-						To: []gatewayv1beta1.ReferenceGrantTo{
-							{
-								Group: "",
-								Kind:  "Namespace",
-								Name:  lo.ToPtr(gatewayv1beta1.ObjectName("test-ns")),
 							},
 						},
 					},
@@ -249,7 +244,7 @@ func TestEnsureReferenceGrantsForNamespace(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:      "reference grant doesn't exist",
+			name:      "watch namespace grant doesn't exist",
 			namespace: "test-ns",
 			cp: &operatorv1beta1.ControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
@@ -257,11 +252,11 @@ func TestEnsureReferenceGrantsForNamespace(t *testing.T) {
 					Namespace: "cp-ns",
 				},
 			},
-			refGrants: []client.Object{},
-			wantErr:   true,
+			grants:  []client.Object{},
+			wantErr: true,
 		},
 		{
-			name:      "reference grant exists but from namespace doesn't match",
+			name:      "watch namespace grant exists but from namespace doesn't match",
 			namespace: "test-ns",
 			cp: &operatorv1beta1.ControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
@@ -269,60 +264,18 @@ func TestEnsureReferenceGrantsForNamespace(t *testing.T) {
 					Namespace: "cp-ns",
 				},
 			},
-			refGrants: []client.Object{
-				&gatewayv1beta1.ReferenceGrant{
+			grants: []client.Object{
+				&operatorv1alpha1.WatchNamespaceGrant{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "invalid-from-namespace",
 						Namespace: "test-ns",
 					},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{
+					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
+						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
 							{
 								Group:     "gateway-operator.konghq.com",
 								Kind:      "ControlPlane",
 								Namespace: "wrong-namespace",
-							},
-						},
-						To: []gatewayv1beta1.ReferenceGrantTo{
-							{
-								Group: "",
-								Kind:  "Namespace",
-								Name:  lo.ToPtr(gatewayv1beta1.ObjectName("test-ns")),
-							},
-						},
-					},
-				},
-			},
-			wantErr: true,
-		},
-		{
-			name:      "reference grant exists but to name doesn't match",
-			namespace: "test-ns",
-			cp: &operatorv1beta1.ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
-			},
-			refGrants: []client.Object{
-				&gatewayv1beta1.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "invalid-to-name",
-						Namespace: "test-ns",
-					},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{
-							{
-								Group:     "gateway-operator.konghq.com",
-								Kind:      "ControlPlane",
-								Namespace: "cp-ns",
-							},
-						},
-						To: []gatewayv1beta1.ReferenceGrantTo{
-							{
-								Group: "",
-								Kind:  "Namespace",
-								Name:  lo.ToPtr(gatewayv1beta1.ObjectName("wrong-name")),
 							},
 						},
 					},
@@ -339,47 +292,33 @@ func TestEnsureReferenceGrantsForNamespace(t *testing.T) {
 					Namespace: "cp-ns",
 				},
 			},
-			refGrants: []client.Object{
-				&gatewayv1beta1.ReferenceGrant{
+			grants: []client.Object{
+				&operatorv1alpha1.WatchNamespaceGrant{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "invalid-grant",
 						Namespace: "test-ns",
 					},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{
+					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
+						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
 							{
 								Group:     "wrong.group",
 								Kind:      "WrongKind",
 								Namespace: "wrong-ns",
 							},
 						},
-						To: []gatewayv1beta1.ReferenceGrantTo{
-							{
-								Group: "",
-								Kind:  "Namespace",
-								Name:  lo.ToPtr(gatewayv1beta1.ObjectName("wrong-name")),
-							},
-						},
 					},
 				},
-				&gatewayv1beta1.ReferenceGrant{
+				&operatorv1alpha1.WatchNamespaceGrant{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "valid-grant",
 						Namespace: "test-ns",
 					},
-					Spec: gatewayv1beta1.ReferenceGrantSpec{
-						From: []gatewayv1beta1.ReferenceGrantFrom{
+					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
+						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
 							{
 								Group:     "gateway-operator.konghq.com",
 								Kind:      "ControlPlane",
 								Namespace: "cp-ns",
-							},
-						},
-						To: []gatewayv1beta1.ReferenceGrantTo{
-							{
-								Group: "",
-								Kind:  "Namespace",
-								Name:  lo.ToPtr(gatewayv1beta1.ObjectName("test-ns")),
 							},
 						},
 					},
@@ -394,14 +333,319 @@ func TestEnsureReferenceGrantsForNamespace(t *testing.T) {
 			fakeClient := fakectrlruntimeclient.
 				NewClientBuilder().
 				WithScheme(scheme.Get()).
-				WithObjects(tt.refGrants...).
+				WithObjects(tt.grants...).
 				Build()
 
-			err := ensureReferenceGrantsForNamespace(t.Context(), fakeClient, tt.cp, tt.namespace)
+			err := ensureWatchNamespaceGrantsForNamespace(t.Context(), fakeClient, tt.cp, tt.namespace)
 			if tt.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestProcessClusterRole(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		rules                []rbacv1.PolicyRule
+		gvl                  map[schema.GroupVersion]*metav1.APIResourceList
+		expectedRoleRules    []rbacv1.PolicyRule
+		expectedClusterRules []rbacv1.PolicyRule
+	}{
+		{
+			name: "namespaced resource",
+			rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+			gvl: map[schema.GroupVersion]*metav1.APIResourceList{
+				{Group: "", Version: "v1"}: {
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "configmaps",
+							Group:      "",
+							Namespaced: true,
+						},
+					},
+				},
+			},
+			expectedRoleRules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+			expectedClusterRules: nil,
+		},
+		{
+			name: "cluster-scoped resource",
+			rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"namespaces"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+			gvl: map[schema.GroupVersion]*metav1.APIResourceList{
+				{Group: "", Version: "v1"}: {
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "namespaces",
+							Group:      "",
+							Namespaced: false,
+						},
+					},
+				},
+			},
+			expectedRoleRules: nil,
+			expectedClusterRules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"namespaces"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+		},
+		{
+			name: "mixed resources",
+			rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps", "namespaces"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+			gvl: map[schema.GroupVersion]*metav1.APIResourceList{
+				{Group: "", Version: "v1"}: {
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "configmaps",
+							Group:      "",
+							Namespaced: true,
+						},
+						{
+							Name:       "namespaces",
+							Group:      "",
+							Namespaced: false,
+						},
+					},
+				},
+			},
+			expectedRoleRules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"configmaps"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+			expectedClusterRules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{""},
+					Resources: []string{"namespaces"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+		},
+		{
+			name: "unknown resource falls back to cluster role",
+			rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"unknown"},
+					Resources: []string{"custom-resource"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+			gvl: map[schema.GroupVersion]*metav1.APIResourceList{
+				{Group: "", Version: "v1"}: {
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "configmaps",
+							Group:      "",
+							Namespaced: true,
+						},
+					},
+				},
+			},
+			expectedRoleRules: nil,
+			expectedClusterRules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"unknown"},
+					Resources: []string{"custom-resource"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+		},
+		{
+			name: "multiple group versions in gvl",
+			rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"deployments"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+			gvl: map[schema.GroupVersion]*metav1.APIResourceList{
+				{Group: "apps", Version: "v1"}: {
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "deployments",
+							Group:      "apps",
+							Namespaced: true,
+						},
+					},
+				},
+				{Group: "apps", Version: "v1beta1"}: {
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "deployments",
+							Group:      "apps",
+							Namespaced: true,
+						},
+					},
+				},
+			},
+			expectedRoleRules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"apps"},
+					Resources: []string{"deployments"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+			expectedClusterRules: nil,
+		},
+		{
+			name: "resource exists in multiple API groups",
+			rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"networking.k8s.io"},
+					Resources: []string{"ingresses"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+			gvl: map[schema.GroupVersion]*metav1.APIResourceList{
+				{Group: "networking.k8s.io", Version: "v1"}: {
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "ingresses",
+							Group:      "networking.k8s.io",
+							Namespaced: true,
+						},
+					},
+				},
+				{Group: "extensions", Version: "v1beta1"}: {
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "ingresses",
+							Group:      "extensions",
+							Namespaced: true,
+						},
+					},
+				},
+			},
+			expectedRoleRules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"networking.k8s.io"},
+					Resources: []string{"ingresses"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+			expectedClusterRules: nil,
+		},
+		{
+			name: "multiple resources with different scopes",
+			rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"rbac.authorization.k8s.io"},
+					Resources: []string{"roles", "clusterroles"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+			gvl: map[schema.GroupVersion]*metav1.APIResourceList{
+				{Group: "rbac.authorization.k8s.io", Version: "v1"}: {
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "roles",
+							Group:      "rbac.authorization.k8s.io",
+							Namespaced: true,
+						},
+						{
+							Name:       "clusterroles",
+							Group:      "rbac.authorization.k8s.io",
+							Namespaced: false,
+						},
+					},
+				},
+			},
+			expectedRoleRules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"rbac.authorization.k8s.io"},
+					Resources: []string{"roles"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+			expectedClusterRules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"rbac.authorization.k8s.io"},
+					Resources: []string{"clusterroles"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+		},
+		{
+			name: "not found in gvl",
+			rules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"rbac.authorization.k8s.io"},
+					Resources: []string{"clusterroles"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+			gvl: map[schema.GroupVersion]*metav1.APIResourceList{
+				{Group: "rbac.authorization.k8s.io", Version: "v1"}: {
+					APIResources: []metav1.APIResource{
+						{
+							Name:       "roles",
+							Group:      "rbac.authorization.k8s.io",
+							Namespaced: true,
+						},
+					},
+				},
+			},
+			expectedClusterRules: []rbacv1.PolicyRule{
+				{
+					APIGroups: []string{"rbac.authorization.k8s.io"},
+					Resources: []string{"clusterroles"},
+					Verbs:     []string{"get", "list"},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			clusterRole := &rbacv1.ClusterRole{
+				Rules: tc.rules,
+			}
+			roleRules, clusterRules := processClusterRole(clusterRole, tc.gvl)
+
+			// Compare role rules
+			if len(tc.expectedRoleRules) == 0 {
+				require.Empty(t, roleRules)
+			} else {
+				require.Equal(t, tc.expectedRoleRules, roleRules)
+			}
+
+			// Compare cluster rules
+			if len(tc.expectedClusterRules) == 0 {
+				require.Empty(t, clusterRules)
+			} else {
+				require.Equal(t, tc.expectedClusterRules, clusterRules)
 			}
 		})
 	}

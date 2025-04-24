@@ -2,6 +2,7 @@ package controlplane
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	"github.com/samber/lo"
@@ -287,4 +288,58 @@ func (r *Reconciler) listControlPlanesForReferenceGrants(
 	}
 
 	return recs
+}
+
+func listControlPlanesFor[
+	T *rbacv1.Role | *rbacv1.RoleBinding,
+](
+	ctx context.Context,
+	obj client.Object,
+) []reconcile.Request {
+	if _, ok := obj.(T); !ok {
+		var t T
+		ctrllog.FromContext(ctx).Error(
+			operatorerrors.ErrUnexpectedObject,
+			fmt.Sprintf("failed to map %T on ControlPlane", t),
+			"expected", reflect.TypeOf(t), "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+
+	nn, ok := isManagedByControlPlane(obj)
+	if !ok {
+		return nil
+	}
+
+	return []reconcile.Request{
+		{
+			NamespacedName: nn,
+		},
+	}
+}
+
+func isManagedByControlPlane(
+	obj client.Object,
+) (types.NamespacedName, bool) {
+	labels := obj.GetLabels()
+	if len(labels) == 0 {
+		return types.NamespacedName{}, false
+	}
+	managedBy, ok := labels[consts.GatewayOperatorManagedByLabel]
+	if !ok || managedBy != consts.ControlPlaneManagedLabelValue {
+		return types.NamespacedName{}, false
+	}
+
+	managedByName, ok := labels[consts.GatewayOperatorManagedByNameLabel]
+	if !ok {
+		return types.NamespacedName{}, false
+	}
+	managedByNamespace, ok := labels[consts.GatewayOperatorManagedByNamespaceLabel]
+	if !ok {
+		return types.NamespacedName{}, false
+	}
+	return types.NamespacedName{
+		Namespace: managedByNamespace,
+		Name:      managedByName,
+	}, true
 }

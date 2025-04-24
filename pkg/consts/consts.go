@@ -40,6 +40,12 @@ const (
 	// Kubernetes API.
 	GatewayOperatorManagedByNamespaceLabel = OperatorLabelPrefix + "managed-by-namespace"
 
+	// GatewayOperatorOwnerUIDControlPlane is the label that is used for objects
+	// to indicate a ControlPlane resource is the owner of the object.
+	// The value set for this label is the UID of the ControlPlane resource that
+	// owns the object.
+	GatewayOperatorOwnerUIDControlPlane = OperatorLabelPrefix + "controlplane-owner-uid"
+
 	// GatewayManagedLabelValue indicates that the object's lifecycle is managed by
 	// the gateway controller.
 	GatewayManagedLabelValue = "gateway"

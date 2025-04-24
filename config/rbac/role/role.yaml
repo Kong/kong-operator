@@ -307,6 +307,12 @@ rules:
   - update
   - watch
 - apiGroups:
+  - gateway-operator.konghq.com
+  resources:
+  - watchnamespacegrants
+  verbs:
+  - list
+- apiGroups:
   - gateway.networking.k8s.io
   resources:
   - backendtlspolicies
@@ -467,6 +473,8 @@ rules:
   resources:
   - clusterrolebindings
   - clusterroles
+  - rolebindings
+  - roles
   verbs:
   - create
   - delete

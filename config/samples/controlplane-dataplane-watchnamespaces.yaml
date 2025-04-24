@@ -2,6 +2,7 @@ apiVersion: gateway-operator.konghq.com/v1beta1
 kind: DataPlane
 metadata:
   name: dataplane-cp-watchnamespace
+  namespace: default
 spec:
   deployment:
     podTemplateSpec:
@@ -27,34 +28,52 @@ spec:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: kong-system
+  name: namespace-a
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
-kind: ReferenceGrant
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: WatchNamespaceGrant
 metadata:
-  name: ref
-  namespace: kong-system
+  name: watchnamespacegrant
+  namespace: namespace-a
 spec:
   from:
   - group: gateway-operator.konghq.com
     kind: ControlPlane
     namespace: default
-  to:
-  - group: ""
-    kind: Namespace
-    name: kong-system
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: namespace-b
+---
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: WatchNamespaceGrant
+metadata:
+  name: watchnamespacegrant
+  namespace: namespace-b
+spec:
+  from:
+  - group: gateway-operator.konghq.com
+    kind: ControlPlane
+    namespace: default
 ---
 apiVersion: gateway-operator.konghq.com/v1beta1
 kind: ControlPlane
 metadata:
   name: controlplane-example
+  namespace: default
 spec:
   dataplane: dataplane-cp-watchnamespace
   gatewayClass: kong
   watchNamespaces:
+    # Using "list" also adds ControlPlane's own namespace to the list
+    # of watched namespaces because that's that KIC does. The reason
+    # for this is the publish service (DataPlane's Service exposed by Kong) by default
+    # would exist in the same namespace as ControlPlane.
     type: list
     list:
-    - kong-system
+    - namespace-a
+    - namespace-b
   deployment:
     podTemplateSpec:
       metadata:
@@ -68,9 +87,6 @@ spec:
           readinessProbe:
             initialDelaySeconds: 1
             periodSeconds: 3
-          env:
-          - name: CONTROLLER_DUMP_CONFIG
-            value: "true"
           resources:
             requests:
               memory: "64Mi"
