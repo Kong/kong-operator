@@ -57,31 +57,13 @@
 - Added `spec.watchNamespace` field to `ControlPlane` CRD to allow watching resources
   only in the specified namespace.
   When `spec.watchNamespace.type=list` is used, each specified namespace requires
-  a `ReferenceGrant` that allows the `ControlPlane` to watch resources in the specified namespace.
-  For example:
-
-  ```yaml
-  apiVersion: gateway.networking.k8s.io/v1beta1
-  kind: ReferenceGrant
-  metadata:
-    name: ref
-    namespace: namespace-a
-  spec:
-    from:
-    - group: gateway-operator.konghq.com
-      kind: ControlPlane
-      namespace: controlplane-namespace
-    to:
-    - group: ""
-      kind: Namespace
-      name: namespace-a
-  ```
-
+  a `WatchNamespaceGrant` that allows the `ControlPlane` to watch resources in the specified namespace.
   Aforementioned list is extended with `ControlPlane`'s own namespace which doesn't
-  require said `ReferenceGrant`.
+  require said `WatchNamespaceGrant`.
   [#1388](https://github.com/Kong/gateway-operator/pull/1388)
   [#1410](https://github.com/Kong/gateway-operator/pull/1410)
-
+  <!-- TODO: https://github.com/Kong/gateway-operator/issues/1501 add link to guide from documentation. -->
+  For more information on this please see: https://docs.konghq.com/gateway-operator/latest/
 - Deduce `KonnectCloudGatewayDataPlaneGroupConfiguration` region based on the attached
   `KonnectAPIAuthConfiguration` instead of using a hardcoded `eu` value.
   [#1409](https://github.com/Kong/gateway-operator/pull/1409)
