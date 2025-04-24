@@ -371,7 +371,8 @@ func (r *Reconciler) ensureRolesAndClusterRoles(
 		res, err := r.ensureRoleBindings(ctx, cp, controlplaneServiceAccount, controlplaneRoles)
 		if err != nil {
 			return op.Noop, err
-		} else if res != op.Noop {
+		}
+		if res != op.Noop {
 			log.Debug(logger, "RoleBindings created/updated")
 			return res, nil
 		}
@@ -492,8 +493,7 @@ rolesLoop:
 			return false, nil, err
 		}
 
-		count := len(existingRoles)
-		switch count {
+		switch count := len(existingRoles); count {
 		case 0:
 			if err := r.Create(ctx, generatedRole); err != nil {
 				return false, nil, err
@@ -523,7 +523,7 @@ rolesLoop:
 			if err := k8sreduce.ReduceRoles(ctx, r.Client, existingRoles); err != nil {
 				return false, nil, err
 			}
-			return false, nil, errors.New("number of Roles reduced")
+			return false, nil, fmt.Errorf("number of Roles reduced from: %d to 1", count)
 		}
 
 	}

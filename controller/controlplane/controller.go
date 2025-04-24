@@ -131,12 +131,12 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Watches(
 			&gatewayv1beta1.ReferenceGrant{},
 			handler.EnqueueRequestsFromMapFunc(r.listControlPlanesForReferenceGrants)).
-		// watch for events on Roles, if any Role event happen, enqueue
+		// Watch for events on Roles, if any Role event happens, enqueue
 		// reconciliation for all supported ControlPlane objects which use this Role.
 		Watches(
 			&rbacv1.Role{},
 			handler.EnqueueRequestsFromMapFunc(r.listControlPlanesForRoles)).
-		// watch for events on RoleBindings, if any RoleBinding event happen, enqueue
+		// Watch for events on RoleBindings, if any RoleBinding event happens, enqueue
 		// reconciliation for all supported ControlPlane objects which use this RoleBinding.
 		Watches(
 			&rbacv1.RoleBinding{},

@@ -114,7 +114,7 @@ func filterRoles(roles []rbacv1.Role) []rbacv1.Role {
 		}
 	}
 
-	return append(roles[:best], roles[best+1:]...)
+	return slices.Delete(roles, best, best+1)
 }
 
 // -----------------------------------------------------------------------------
