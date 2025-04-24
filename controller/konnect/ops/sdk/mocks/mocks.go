@@ -89,12 +89,7 @@ func (_e *MockControlPlaneSDK_Expecter) CreateControlPlane(ctx interface{}, req 
 
 func (_c *MockControlPlaneSDK_CreateControlPlane_Call) Run(run func(ctx context.Context, req components.CreateControlPlaneRequest, opts ...operations.Option)) *MockControlPlaneSDK_CreateControlPlane_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(components.CreateControlPlaneRequest), variadicArgs...)
 	})
 	return _c
@@ -160,12 +155,7 @@ func (_e *MockControlPlaneSDK_Expecter) DeleteControlPlane(ctx interface{}, id i
 
 func (_c *MockControlPlaneSDK_DeleteControlPlane_Call) Run(run func(ctx context.Context, id string, opts ...operations.Option)) *MockControlPlaneSDK_DeleteControlPlane_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), variadicArgs...)
 	})
 	return _c
@@ -231,12 +221,7 @@ func (_e *MockControlPlaneSDK_Expecter) ListControlPlanes(ctx interface{}, reque
 
 func (_c *MockControlPlaneSDK_ListControlPlanes_Call) Run(run func(ctx context.Context, request operations.ListControlPlanesRequest, opts ...operations.Option)) *MockControlPlaneSDK_ListControlPlanes_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListControlPlanesRequest), variadicArgs...)
 	})
 	return _c
@@ -303,12 +288,7 @@ func (_e *MockControlPlaneSDK_Expecter) UpdateControlPlane(ctx interface{}, id i
 
 func (_c *MockControlPlaneSDK_UpdateControlPlane_Call) Run(run func(ctx context.Context, id string, req components.UpdateControlPlaneRequest, opts ...operations.Option)) *MockControlPlaneSDK_UpdateControlPlane_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(components.UpdateControlPlaneRequest), variadicArgs...)
 	})
 	return _c
@@ -402,12 +382,7 @@ func (_e *MockControlPlaneGroupSDK_Expecter) PutControlPlanesIDGroupMemberships(
 
 func (_c *MockControlPlaneGroupSDK_PutControlPlanesIDGroupMemberships_Call) Run(run func(ctx context.Context, id string, groupMembership *components.GroupMembership, opts ...operations.Option)) *MockControlPlaneGroupSDK_PutControlPlanesIDGroupMemberships_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(*components.GroupMembership), variadicArgs...)
 	})
 	return _c
@@ -500,12 +475,7 @@ func (_e *MockKongCredentialACLSDK_Expecter) CreateACLWithConsumer(ctx interface
 
 func (_c *MockKongCredentialACLSDK_CreateACLWithConsumer_Call) Run(run func(ctx context.Context, req operations.CreateACLWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialACLSDK_CreateACLWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.CreateACLWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -571,12 +541,7 @@ func (_e *MockKongCredentialACLSDK_Expecter) DeleteACLWithConsumer(ctx interface
 
 func (_c *MockKongCredentialACLSDK_DeleteACLWithConsumer_Call) Run(run func(ctx context.Context, request operations.DeleteACLWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialACLSDK_DeleteACLWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.DeleteACLWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -642,12 +607,7 @@ func (_e *MockKongCredentialACLSDK_Expecter) ListACL(ctx interface{}, request in
 
 func (_c *MockKongCredentialACLSDK_ListACL_Call) Run(run func(ctx context.Context, request operations.ListACLRequest, opts ...operations.Option)) *MockKongCredentialACLSDK_ListACL_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListACLRequest), variadicArgs...)
 	})
 	return _c
@@ -713,12 +673,7 @@ func (_e *MockKongCredentialACLSDK_Expecter) UpsertACLWithConsumer(ctx interface
 
 func (_c *MockKongCredentialACLSDK_UpsertACLWithConsumer_Call) Run(run func(ctx context.Context, request operations.UpsertACLWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialACLSDK_UpsertACLWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertACLWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -811,12 +766,7 @@ func (_e *MockKongCredentialAPIKeySDK_Expecter) CreateKeyAuthWithConsumer(ctx in
 
 func (_c *MockKongCredentialAPIKeySDK_CreateKeyAuthWithConsumer_Call) Run(run func(ctx context.Context, req operations.CreateKeyAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialAPIKeySDK_CreateKeyAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.CreateKeyAuthWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -882,12 +832,7 @@ func (_e *MockKongCredentialAPIKeySDK_Expecter) DeleteKeyAuthWithConsumer(ctx in
 
 func (_c *MockKongCredentialAPIKeySDK_DeleteKeyAuthWithConsumer_Call) Run(run func(ctx context.Context, request operations.DeleteKeyAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialAPIKeySDK_DeleteKeyAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.DeleteKeyAuthWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -953,12 +898,7 @@ func (_e *MockKongCredentialAPIKeySDK_Expecter) ListKeyAuth(ctx interface{}, req
 
 func (_c *MockKongCredentialAPIKeySDK_ListKeyAuth_Call) Run(run func(ctx context.Context, request operations.ListKeyAuthRequest, opts ...operations.Option)) *MockKongCredentialAPIKeySDK_ListKeyAuth_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListKeyAuthRequest), variadicArgs...)
 	})
 	return _c
@@ -1024,12 +964,7 @@ func (_e *MockKongCredentialAPIKeySDK_Expecter) UpsertKeyAuthWithConsumer(ctx in
 
 func (_c *MockKongCredentialAPIKeySDK_UpsertKeyAuthWithConsumer_Call) Run(run func(ctx context.Context, request operations.UpsertKeyAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialAPIKeySDK_UpsertKeyAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertKeyAuthWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -1122,12 +1057,7 @@ func (_e *MockKongCredentialBasicAuthSDK_Expecter) CreateBasicAuthWithConsumer(c
 
 func (_c *MockKongCredentialBasicAuthSDK_CreateBasicAuthWithConsumer_Call) Run(run func(ctx context.Context, req operations.CreateBasicAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialBasicAuthSDK_CreateBasicAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.CreateBasicAuthWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -1193,12 +1123,7 @@ func (_e *MockKongCredentialBasicAuthSDK_Expecter) DeleteBasicAuthWithConsumer(c
 
 func (_c *MockKongCredentialBasicAuthSDK_DeleteBasicAuthWithConsumer_Call) Run(run func(ctx context.Context, request operations.DeleteBasicAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialBasicAuthSDK_DeleteBasicAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.DeleteBasicAuthWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -1264,12 +1189,7 @@ func (_e *MockKongCredentialBasicAuthSDK_Expecter) ListBasicAuth(ctx interface{}
 
 func (_c *MockKongCredentialBasicAuthSDK_ListBasicAuth_Call) Run(run func(ctx context.Context, request operations.ListBasicAuthRequest, opts ...operations.Option)) *MockKongCredentialBasicAuthSDK_ListBasicAuth_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListBasicAuthRequest), variadicArgs...)
 	})
 	return _c
@@ -1335,12 +1255,7 @@ func (_e *MockKongCredentialBasicAuthSDK_Expecter) UpsertBasicAuthWithConsumer(c
 
 func (_c *MockKongCredentialBasicAuthSDK_UpsertBasicAuthWithConsumer_Call) Run(run func(ctx context.Context, request operations.UpsertBasicAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialBasicAuthSDK_UpsertBasicAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertBasicAuthWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -1433,12 +1348,7 @@ func (_e *MockKongCredentialHMACSDK_Expecter) CreateHmacAuthWithConsumer(ctx int
 
 func (_c *MockKongCredentialHMACSDK_CreateHmacAuthWithConsumer_Call) Run(run func(ctx context.Context, req operations.CreateHmacAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialHMACSDK_CreateHmacAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.CreateHmacAuthWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -1504,12 +1414,7 @@ func (_e *MockKongCredentialHMACSDK_Expecter) DeleteHmacAuthWithConsumer(ctx int
 
 func (_c *MockKongCredentialHMACSDK_DeleteHmacAuthWithConsumer_Call) Run(run func(ctx context.Context, request operations.DeleteHmacAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialHMACSDK_DeleteHmacAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.DeleteHmacAuthWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -1575,12 +1480,7 @@ func (_e *MockKongCredentialHMACSDK_Expecter) ListHmacAuth(ctx interface{}, requ
 
 func (_c *MockKongCredentialHMACSDK_ListHmacAuth_Call) Run(run func(ctx context.Context, request operations.ListHmacAuthRequest, opts ...operations.Option)) *MockKongCredentialHMACSDK_ListHmacAuth_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListHmacAuthRequest), variadicArgs...)
 	})
 	return _c
@@ -1646,12 +1546,7 @@ func (_e *MockKongCredentialHMACSDK_Expecter) UpsertHmacAuthWithConsumer(ctx int
 
 func (_c *MockKongCredentialHMACSDK_UpsertHmacAuthWithConsumer_Call) Run(run func(ctx context.Context, request operations.UpsertHmacAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialHMACSDK_UpsertHmacAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertHmacAuthWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -1744,12 +1639,7 @@ func (_e *MockKongCredentialJWTSDK_Expecter) CreateJwtWithConsumer(ctx interface
 
 func (_c *MockKongCredentialJWTSDK_CreateJwtWithConsumer_Call) Run(run func(ctx context.Context, req operations.CreateJwtWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialJWTSDK_CreateJwtWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.CreateJwtWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -1815,12 +1705,7 @@ func (_e *MockKongCredentialJWTSDK_Expecter) DeleteJwtWithConsumer(ctx interface
 
 func (_c *MockKongCredentialJWTSDK_DeleteJwtWithConsumer_Call) Run(run func(ctx context.Context, request operations.DeleteJwtWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialJWTSDK_DeleteJwtWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.DeleteJwtWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -1886,12 +1771,7 @@ func (_e *MockKongCredentialJWTSDK_Expecter) ListJwt(ctx interface{}, request in
 
 func (_c *MockKongCredentialJWTSDK_ListJwt_Call) Run(run func(ctx context.Context, request operations.ListJwtRequest, opts ...operations.Option)) *MockKongCredentialJWTSDK_ListJwt_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListJwtRequest), variadicArgs...)
 	})
 	return _c
@@ -1957,12 +1837,7 @@ func (_e *MockKongCredentialJWTSDK_Expecter) UpsertJwtWithConsumer(ctx interface
 
 func (_c *MockKongCredentialJWTSDK_UpsertJwtWithConsumer_Call) Run(run func(ctx context.Context, request operations.UpsertJwtWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialJWTSDK_UpsertJwtWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertJwtWithConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -2055,12 +1930,7 @@ func (_e *MockCloudGatewaysSDK_Expecter) CreateConfiguration(ctx interface{}, re
 
 func (_c *MockCloudGatewaysSDK_CreateConfiguration_Call) Run(run func(ctx context.Context, request components.CreateConfigurationRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_CreateConfiguration_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(components.CreateConfigurationRequest), variadicArgs...)
 	})
 	return _c
@@ -2126,12 +1996,7 @@ func (_e *MockCloudGatewaysSDK_Expecter) CreateNetwork(ctx interface{}, request 
 
 func (_c *MockCloudGatewaysSDK_CreateNetwork_Call) Run(run func(ctx context.Context, request components.CreateNetworkRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_CreateNetwork_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(components.CreateNetworkRequest), variadicArgs...)
 	})
 	return _c
@@ -2198,12 +2063,7 @@ func (_e *MockCloudGatewaysSDK_Expecter) CreateTransitGateway(ctx interface{}, n
 
 func (_c *MockCloudGatewaysSDK_CreateTransitGateway_Call) Run(run func(ctx context.Context, networkID string, createTransitGatewayRequest components.CreateTransitGatewayRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_CreateTransitGateway_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(components.CreateTransitGatewayRequest), variadicArgs...)
 	})
 	return _c
@@ -2269,12 +2129,7 @@ func (_e *MockCloudGatewaysSDK_Expecter) DeleteNetwork(ctx interface{}, networkI
 
 func (_c *MockCloudGatewaysSDK_DeleteNetwork_Call) Run(run func(ctx context.Context, networkID string, opts ...operations.Option)) *MockCloudGatewaysSDK_DeleteNetwork_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), variadicArgs...)
 	})
 	return _c
@@ -2341,12 +2196,7 @@ func (_e *MockCloudGatewaysSDK_Expecter) DeleteTransitGateway(ctx interface{}, n
 
 func (_c *MockCloudGatewaysSDK_DeleteTransitGateway_Call) Run(run func(ctx context.Context, networkID string, transitGatewayID string, opts ...operations.Option)) *MockCloudGatewaysSDK_DeleteTransitGateway_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
 	})
 	return _c
@@ -2412,12 +2262,7 @@ func (_e *MockCloudGatewaysSDK_Expecter) GetConfiguration(ctx interface{}, confi
 
 func (_c *MockCloudGatewaysSDK_GetConfiguration_Call) Run(run func(ctx context.Context, configurationID string, opts ...operations.Option)) *MockCloudGatewaysSDK_GetConfiguration_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), variadicArgs...)
 	})
 	return _c
@@ -2483,12 +2328,7 @@ func (_e *MockCloudGatewaysSDK_Expecter) GetNetwork(ctx interface{}, networkID i
 
 func (_c *MockCloudGatewaysSDK_GetNetwork_Call) Run(run func(ctx context.Context, networkID string, opts ...operations.Option)) *MockCloudGatewaysSDK_GetNetwork_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), variadicArgs...)
 	})
 	return _c
@@ -2555,12 +2395,7 @@ func (_e *MockCloudGatewaysSDK_Expecter) GetTransitGateway(ctx interface{}, netw
 
 func (_c *MockCloudGatewaysSDK_GetTransitGateway_Call) Run(run func(ctx context.Context, networkID string, transitGatewayID string, opts ...operations.Option)) *MockCloudGatewaysSDK_GetTransitGateway_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
 	})
 	return _c
@@ -2626,12 +2461,7 @@ func (_e *MockCloudGatewaysSDK_Expecter) ListConfigurations(ctx interface{}, req
 
 func (_c *MockCloudGatewaysSDK_ListConfigurations_Call) Run(run func(ctx context.Context, request operations.ListConfigurationsRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_ListConfigurations_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListConfigurationsRequest), variadicArgs...)
 	})
 	return _c
@@ -2697,12 +2527,7 @@ func (_e *MockCloudGatewaysSDK_Expecter) ListNetworks(ctx interface{}, request i
 
 func (_c *MockCloudGatewaysSDK_ListNetworks_Call) Run(run func(ctx context.Context, request operations.ListNetworksRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_ListNetworks_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListNetworksRequest), variadicArgs...)
 	})
 	return _c
@@ -2768,12 +2593,7 @@ func (_e *MockCloudGatewaysSDK_Expecter) ListTransitGateways(ctx interface{}, re
 
 func (_c *MockCloudGatewaysSDK_ListTransitGateways_Call) Run(run func(ctx context.Context, request operations.ListTransitGatewaysRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_ListTransitGateways_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListTransitGatewaysRequest), variadicArgs...)
 	})
 	return _c
@@ -2840,12 +2660,7 @@ func (_e *MockCloudGatewaysSDK_Expecter) UpdateNetwork(ctx interface{}, networkI
 
 func (_c *MockCloudGatewaysSDK_UpdateNetwork_Call) Run(run func(ctx context.Context, networkID string, patchNetworkRequest components.PatchNetworkRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_UpdateNetwork_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(components.PatchNetworkRequest), variadicArgs...)
 	})
 	return _c
@@ -2939,12 +2754,7 @@ func (_e *MockCACertificatesSDK_Expecter) CreateCaCertificate(ctx interface{}, c
 
 func (_c *MockCACertificatesSDK_CreateCaCertificate_Call) Run(run func(ctx context.Context, controlPlaneID string, caCertificate components.CACertificate, opts ...operations.Option)) *MockCACertificatesSDK_CreateCaCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(components.CACertificate), variadicArgs...)
 	})
 	return _c
@@ -3011,12 +2821,7 @@ func (_e *MockCACertificatesSDK_Expecter) DeleteCaCertificate(ctx interface{}, c
 
 func (_c *MockCACertificatesSDK_DeleteCaCertificate_Call) Run(run func(ctx context.Context, controlPlaneID string, caCertificateID string, opts ...operations.Option)) *MockCACertificatesSDK_DeleteCaCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
 	})
 	return _c
@@ -3082,12 +2887,7 @@ func (_e *MockCACertificatesSDK_Expecter) ListCaCertificate(ctx interface{}, req
 
 func (_c *MockCACertificatesSDK_ListCaCertificate_Call) Run(run func(ctx context.Context, request operations.ListCaCertificateRequest, opts ...operations.Option)) *MockCACertificatesSDK_ListCaCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListCaCertificateRequest), variadicArgs...)
 	})
 	return _c
@@ -3153,12 +2953,7 @@ func (_e *MockCACertificatesSDK_Expecter) UpsertCaCertificate(ctx interface{}, r
 
 func (_c *MockCACertificatesSDK_UpsertCaCertificate_Call) Run(run func(ctx context.Context, request operations.UpsertCaCertificateRequest, opts ...operations.Option)) *MockCACertificatesSDK_UpsertCaCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertCaCertificateRequest), variadicArgs...)
 	})
 	return _c
@@ -3252,12 +3047,7 @@ func (_e *MockCertificatesSDK_Expecter) CreateCertificate(ctx interface{}, contr
 
 func (_c *MockCertificatesSDK_CreateCertificate_Call) Run(run func(ctx context.Context, controlPlaneID string, certificate components.Certificate, opts ...operations.Option)) *MockCertificatesSDK_CreateCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(components.Certificate), variadicArgs...)
 	})
 	return _c
@@ -3324,12 +3114,7 @@ func (_e *MockCertificatesSDK_Expecter) DeleteCertificate(ctx interface{}, contr
 
 func (_c *MockCertificatesSDK_DeleteCertificate_Call) Run(run func(ctx context.Context, controlPlaneID string, certificateID string, opts ...operations.Option)) *MockCertificatesSDK_DeleteCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
 	})
 	return _c
@@ -3395,12 +3180,7 @@ func (_e *MockCertificatesSDK_Expecter) ListCertificate(ctx interface{}, request
 
 func (_c *MockCertificatesSDK_ListCertificate_Call) Run(run func(ctx context.Context, request operations.ListCertificateRequest, opts ...operations.Option)) *MockCertificatesSDK_ListCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListCertificateRequest), variadicArgs...)
 	})
 	return _c
@@ -3466,12 +3246,7 @@ func (_e *MockCertificatesSDK_Expecter) UpsertCertificate(ctx interface{}, reque
 
 func (_c *MockCertificatesSDK_UpsertCertificate_Call) Run(run func(ctx context.Context, request operations.UpsertCertificateRequest, opts ...operations.Option)) *MockCertificatesSDK_UpsertCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertCertificateRequest), variadicArgs...)
 	})
 	return _c
@@ -3565,12 +3340,7 @@ func (_e *MockConsumersSDK_Expecter) CreateConsumer(ctx interface{}, controlPlan
 
 func (_c *MockConsumersSDK_CreateConsumer_Call) Run(run func(ctx context.Context, controlPlaneID string, consumerInput components.Consumer, opts ...operations.Option)) *MockConsumersSDK_CreateConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(components.Consumer), variadicArgs...)
 	})
 	return _c
@@ -3637,12 +3407,7 @@ func (_e *MockConsumersSDK_Expecter) DeleteConsumer(ctx interface{}, controlPlan
 
 func (_c *MockConsumersSDK_DeleteConsumer_Call) Run(run func(ctx context.Context, controlPlaneID string, consumerID string, opts ...operations.Option)) *MockConsumersSDK_DeleteConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
 	})
 	return _c
@@ -3708,12 +3473,7 @@ func (_e *MockConsumersSDK_Expecter) ListConsumer(ctx interface{}, request inter
 
 func (_c *MockConsumersSDK_ListConsumer_Call) Run(run func(ctx context.Context, request operations.ListConsumerRequest, opts ...operations.Option)) *MockConsumersSDK_ListConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -3779,12 +3539,7 @@ func (_e *MockConsumersSDK_Expecter) UpsertConsumer(ctx interface{}, upsertConsu
 
 func (_c *MockConsumersSDK_UpsertConsumer_Call) Run(run func(ctx context.Context, upsertConsumerRequest operations.UpsertConsumerRequest, opts ...operations.Option)) *MockConsumersSDK_UpsertConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -3877,12 +3632,7 @@ func (_e *MockConsumerGroupSDK_Expecter) AddConsumerToGroup(ctx interface{}, req
 
 func (_c *MockConsumerGroupSDK_AddConsumerToGroup_Call) Run(run func(ctx context.Context, request operations.AddConsumerToGroupRequest, opts ...operations.Option)) *MockConsumerGroupSDK_AddConsumerToGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.AddConsumerToGroupRequest), variadicArgs...)
 	})
 	return _c
@@ -3949,12 +3699,7 @@ func (_e *MockConsumerGroupSDK_Expecter) CreateConsumerGroup(ctx interface{}, co
 
 func (_c *MockConsumerGroupSDK_CreateConsumerGroup_Call) Run(run func(ctx context.Context, controlPlaneID string, consumerInput components.ConsumerGroup, opts ...operations.Option)) *MockConsumerGroupSDK_CreateConsumerGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(components.ConsumerGroup), variadicArgs...)
 	})
 	return _c
@@ -4021,12 +3766,7 @@ func (_e *MockConsumerGroupSDK_Expecter) DeleteConsumerGroup(ctx interface{}, co
 
 func (_c *MockConsumerGroupSDK_DeleteConsumerGroup_Call) Run(run func(ctx context.Context, controlPlaneID string, consumerID string, opts ...operations.Option)) *MockConsumerGroupSDK_DeleteConsumerGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
 	})
 	return _c
@@ -4092,12 +3832,7 @@ func (_e *MockConsumerGroupSDK_Expecter) ListConsumerGroup(ctx interface{}, requ
 
 func (_c *MockConsumerGroupSDK_ListConsumerGroup_Call) Run(run func(ctx context.Context, request operations.ListConsumerGroupRequest, opts ...operations.Option)) *MockConsumerGroupSDK_ListConsumerGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListConsumerGroupRequest), variadicArgs...)
 	})
 	return _c
@@ -4163,12 +3898,7 @@ func (_e *MockConsumerGroupSDK_Expecter) ListConsumerGroupsForConsumer(ctx inter
 
 func (_c *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call) Run(run func(ctx context.Context, request operations.ListConsumerGroupsForConsumerRequest, opts ...operations.Option)) *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListConsumerGroupsForConsumerRequest), variadicArgs...)
 	})
 	return _c
@@ -4234,12 +3964,7 @@ func (_e *MockConsumerGroupSDK_Expecter) RemoveConsumerFromGroup(ctx interface{}
 
 func (_c *MockConsumerGroupSDK_RemoveConsumerFromGroup_Call) Run(run func(ctx context.Context, request operations.RemoveConsumerFromGroupRequest, opts ...operations.Option)) *MockConsumerGroupSDK_RemoveConsumerFromGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.RemoveConsumerFromGroupRequest), variadicArgs...)
 	})
 	return _c
@@ -4305,12 +4030,7 @@ func (_e *MockConsumerGroupSDK_Expecter) UpsertConsumerGroup(ctx interface{}, up
 
 func (_c *MockConsumerGroupSDK_UpsertConsumerGroup_Call) Run(run func(ctx context.Context, upsertConsumerRequest operations.UpsertConsumerGroupRequest, opts ...operations.Option)) *MockConsumerGroupSDK_UpsertConsumerGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertConsumerGroupRequest), variadicArgs...)
 	})
 	return _c
@@ -4404,12 +4124,7 @@ func (_e *MockDataPlaneClientCertificatesSDK_Expecter) CreateDataplaneCertificat
 
 func (_c *MockDataPlaneClientCertificatesSDK_CreateDataplaneCertificate_Call) Run(run func(ctx context.Context, cpID string, dpReq *components.DataPlaneClientCertificateRequest, opts ...operations.Option)) *MockDataPlaneClientCertificatesSDK_CreateDataplaneCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(*components.DataPlaneClientCertificateRequest), variadicArgs...)
 	})
 	return _c
@@ -4476,12 +4191,7 @@ func (_e *MockDataPlaneClientCertificatesSDK_Expecter) DeleteDataplaneCertificat
 
 func (_c *MockDataPlaneClientCertificatesSDK_DeleteDataplaneCertificate_Call) Run(run func(ctx context.Context, controlPlaneID string, certificateID string, opts ...operations.Option)) *MockDataPlaneClientCertificatesSDK_DeleteDataplaneCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
 	})
 	return _c
@@ -4547,12 +4257,7 @@ func (_e *MockDataPlaneClientCertificatesSDK_Expecter) ListDpClientCertificates(
 
 func (_c *MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call) Run(run func(ctx context.Context, controlPlaneID string, opts ...operations.Option)) *MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), variadicArgs...)
 	})
 	return _c
@@ -4646,12 +4351,7 @@ func (_e *MockKeysSDK_Expecter) CreateKey(ctx interface{}, controlPlaneID interf
 
 func (_c *MockKeysSDK_CreateKey_Call) Run(run func(ctx context.Context, controlPlaneID string, Key components.Key, opts ...operations.Option)) *MockKeysSDK_CreateKey_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(components.Key), variadicArgs...)
 	})
 	return _c
@@ -4718,12 +4418,7 @@ func (_e *MockKeysSDK_Expecter) DeleteKey(ctx interface{}, controlPlaneID interf
 
 func (_c *MockKeysSDK_DeleteKey_Call) Run(run func(ctx context.Context, controlPlaneID string, KeyID string, opts ...operations.Option)) *MockKeysSDK_DeleteKey_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
 	})
 	return _c
@@ -4789,12 +4484,7 @@ func (_e *MockKeysSDK_Expecter) ListKey(ctx interface{}, request interface{}, op
 
 func (_c *MockKeysSDK_ListKey_Call) Run(run func(ctx context.Context, request operations.ListKeyRequest, opts ...operations.Option)) *MockKeysSDK_ListKey_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListKeyRequest), variadicArgs...)
 	})
 	return _c
@@ -4860,12 +4550,7 @@ func (_e *MockKeysSDK_Expecter) UpsertKey(ctx interface{}, request interface{}, 
 
 func (_c *MockKeysSDK_UpsertKey_Call) Run(run func(ctx context.Context, request operations.UpsertKeyRequest, opts ...operations.Option)) *MockKeysSDK_UpsertKey_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertKeyRequest), variadicArgs...)
 	})
 	return _c
@@ -4959,12 +4644,7 @@ func (_e *MockKeySetsSDK_Expecter) CreateKeySet(ctx interface{}, controlPlaneID 
 
 func (_c *MockKeySetsSDK_CreateKeySet_Call) Run(run func(ctx context.Context, controlPlaneID string, keySet components.KeySet, opts ...operations.Option)) *MockKeySetsSDK_CreateKeySet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(components.KeySet), variadicArgs...)
 	})
 	return _c
@@ -5031,12 +4711,7 @@ func (_e *MockKeySetsSDK_Expecter) DeleteKeySet(ctx interface{}, controlPlaneID 
 
 func (_c *MockKeySetsSDK_DeleteKeySet_Call) Run(run func(ctx context.Context, controlPlaneID string, keySetID string, opts ...operations.Option)) *MockKeySetsSDK_DeleteKeySet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
 	})
 	return _c
@@ -5102,12 +4777,7 @@ func (_e *MockKeySetsSDK_Expecter) ListKeySet(ctx interface{}, request interface
 
 func (_c *MockKeySetsSDK_ListKeySet_Call) Run(run func(ctx context.Context, request operations.ListKeySetRequest, opts ...operations.Option)) *MockKeySetsSDK_ListKeySet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListKeySetRequest), variadicArgs...)
 	})
 	return _c
@@ -5173,12 +4843,7 @@ func (_e *MockKeySetsSDK_Expecter) UpsertKeySet(ctx interface{}, request interfa
 
 func (_c *MockKeySetsSDK_UpsertKeySet_Call) Run(run func(ctx context.Context, request operations.UpsertKeySetRequest, opts ...operations.Option)) *MockKeySetsSDK_UpsertKeySet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertKeySetRequest), variadicArgs...)
 	})
 	return _c
@@ -5272,12 +4937,7 @@ func (_e *MockRoutesSDK_Expecter) CreateRoute(ctx interface{}, controlPlaneID in
 
 func (_c *MockRoutesSDK_CreateRoute_Call) Run(run func(ctx context.Context, controlPlaneID string, route components.Route, opts ...operations.Option)) *MockRoutesSDK_CreateRoute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(components.Route), variadicArgs...)
 	})
 	return _c
@@ -5344,12 +5004,7 @@ func (_e *MockRoutesSDK_Expecter) DeleteRoute(ctx interface{}, controlPlaneID in
 
 func (_c *MockRoutesSDK_DeleteRoute_Call) Run(run func(ctx context.Context, controlPlaneID string, routeID string, opts ...operations.Option)) *MockRoutesSDK_DeleteRoute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
 	})
 	return _c
@@ -5415,12 +5070,7 @@ func (_e *MockRoutesSDK_Expecter) ListRoute(ctx interface{}, request interface{}
 
 func (_c *MockRoutesSDK_ListRoute_Call) Run(run func(ctx context.Context, request operations.ListRouteRequest, opts ...operations.Option)) *MockRoutesSDK_ListRoute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListRouteRequest), variadicArgs...)
 	})
 	return _c
@@ -5486,12 +5136,7 @@ func (_e *MockRoutesSDK_Expecter) UpsertRoute(ctx interface{}, req interface{}, 
 
 func (_c *MockRoutesSDK_UpsertRoute_Call) Run(run func(ctx context.Context, req operations.UpsertRouteRequest, opts ...operations.Option)) *MockRoutesSDK_UpsertRoute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertRouteRequest), variadicArgs...)
 	})
 	return _c
@@ -5585,12 +5230,7 @@ func (_e *MockServicesSDK_Expecter) CreateService(ctx interface{}, controlPlaneI
 
 func (_c *MockServicesSDK_CreateService_Call) Run(run func(ctx context.Context, controlPlaneID string, service components.Service, opts ...operations.Option)) *MockServicesSDK_CreateService_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(components.Service), variadicArgs...)
 	})
 	return _c
@@ -5657,12 +5297,7 @@ func (_e *MockServicesSDK_Expecter) DeleteService(ctx interface{}, controlPlaneI
 
 func (_c *MockServicesSDK_DeleteService_Call) Run(run func(ctx context.Context, controlPlaneID string, serviceID string, opts ...operations.Option)) *MockServicesSDK_DeleteService_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
 	})
 	return _c
@@ -5728,12 +5363,7 @@ func (_e *MockServicesSDK_Expecter) ListService(ctx interface{}, request interfa
 
 func (_c *MockServicesSDK_ListService_Call) Run(run func(ctx context.Context, request operations.ListServiceRequest, opts ...operations.Option)) *MockServicesSDK_ListService_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListServiceRequest), variadicArgs...)
 	})
 	return _c
@@ -5799,12 +5429,7 @@ func (_e *MockServicesSDK_Expecter) UpsertService(ctx interface{}, req interface
 
 func (_c *MockServicesSDK_UpsertService_Call) Run(run func(ctx context.Context, req operations.UpsertServiceRequest, opts ...operations.Option)) *MockServicesSDK_UpsertService_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertServiceRequest), variadicArgs...)
 	})
 	return _c
@@ -5897,12 +5522,7 @@ func (_e *MockSNIsSDK_Expecter) CreateSniWithCertificate(context1 interface{}, c
 
 func (_c *MockSNIsSDK_CreateSniWithCertificate_Call) Run(run func(context1 context.Context, createSniWithCertificateRequest operations.CreateSniWithCertificateRequest, options ...operations.Option)) *MockSNIsSDK_CreateSniWithCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.CreateSniWithCertificateRequest), variadicArgs...)
 	})
 	return _c
@@ -5968,12 +5588,7 @@ func (_e *MockSNIsSDK_Expecter) DeleteSniWithCertificate(ctx interface{}, reques
 
 func (_c *MockSNIsSDK_DeleteSniWithCertificate_Call) Run(run func(ctx context.Context, request operations.DeleteSniWithCertificateRequest, opts ...operations.Option)) *MockSNIsSDK_DeleteSniWithCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.DeleteSniWithCertificateRequest), variadicArgs...)
 	})
 	return _c
@@ -6039,12 +5654,7 @@ func (_e *MockSNIsSDK_Expecter) ListSni(ctx interface{}, request interface{}, op
 
 func (_c *MockSNIsSDK_ListSni_Call) Run(run func(ctx context.Context, request operations.ListSniRequest, opts ...operations.Option)) *MockSNIsSDK_ListSni_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListSniRequest), variadicArgs...)
 	})
 	return _c
@@ -6110,12 +5720,7 @@ func (_e *MockSNIsSDK_Expecter) UpsertSniWithCertificate(ctx interface{}, reques
 
 func (_c *MockSNIsSDK_UpsertSniWithCertificate_Call) Run(run func(ctx context.Context, request operations.UpsertSniWithCertificateRequest, opts ...operations.Option)) *MockSNIsSDK_UpsertSniWithCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertSniWithCertificateRequest), variadicArgs...)
 	})
 	return _c
@@ -6208,12 +5813,7 @@ func (_e *MockTargetsSDK_Expecter) CreateTargetWithUpstream(ctx interface{}, req
 
 func (_c *MockTargetsSDK_CreateTargetWithUpstream_Call) Run(run func(ctx context.Context, req operations.CreateTargetWithUpstreamRequest, opts ...operations.Option)) *MockTargetsSDK_CreateTargetWithUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.CreateTargetWithUpstreamRequest), variadicArgs...)
 	})
 	return _c
@@ -6279,12 +5879,7 @@ func (_e *MockTargetsSDK_Expecter) DeleteTargetWithUpstream(ctx interface{}, req
 
 func (_c *MockTargetsSDK_DeleteTargetWithUpstream_Call) Run(run func(ctx context.Context, req operations.DeleteTargetWithUpstreamRequest, opts ...operations.Option)) *MockTargetsSDK_DeleteTargetWithUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.DeleteTargetWithUpstreamRequest), variadicArgs...)
 	})
 	return _c
@@ -6350,12 +5945,7 @@ func (_e *MockTargetsSDK_Expecter) ListTargetWithUpstream(ctx interface{}, reque
 
 func (_c *MockTargetsSDK_ListTargetWithUpstream_Call) Run(run func(ctx context.Context, request operations.ListTargetWithUpstreamRequest, opts ...operations.Option)) *MockTargetsSDK_ListTargetWithUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListTargetWithUpstreamRequest), variadicArgs...)
 	})
 	return _c
@@ -6421,12 +6011,7 @@ func (_e *MockTargetsSDK_Expecter) UpsertTargetWithUpstream(ctx interface{}, req
 
 func (_c *MockTargetsSDK_UpsertTargetWithUpstream_Call) Run(run func(ctx context.Context, req operations.UpsertTargetWithUpstreamRequest, opts ...operations.Option)) *MockTargetsSDK_UpsertTargetWithUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertTargetWithUpstreamRequest), variadicArgs...)
 	})
 	return _c
@@ -6520,12 +6105,7 @@ func (_e *MockUpstreamsSDK_Expecter) CreateUpstream(ctx interface{}, controlPlan
 
 func (_c *MockUpstreamsSDK_CreateUpstream_Call) Run(run func(ctx context.Context, controlPlaneID string, upstream components.Upstream, opts ...operations.Option)) *MockUpstreamsSDK_CreateUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(components.Upstream), variadicArgs...)
 	})
 	return _c
@@ -6592,12 +6172,7 @@ func (_e *MockUpstreamsSDK_Expecter) DeleteUpstream(ctx interface{}, controlPlan
 
 func (_c *MockUpstreamsSDK_DeleteUpstream_Call) Run(run func(ctx context.Context, controlPlaneID string, upstreamID string, opts ...operations.Option)) *MockUpstreamsSDK_DeleteUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
 	})
 	return _c
@@ -6663,12 +6238,7 @@ func (_e *MockUpstreamsSDK_Expecter) ListUpstream(ctx interface{}, request inter
 
 func (_c *MockUpstreamsSDK_ListUpstream_Call) Run(run func(ctx context.Context, request operations.ListUpstreamRequest, opts ...operations.Option)) *MockUpstreamsSDK_ListUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListUpstreamRequest), variadicArgs...)
 	})
 	return _c
@@ -6734,12 +6304,7 @@ func (_e *MockUpstreamsSDK_Expecter) UpsertUpstream(ctx interface{}, req interfa
 
 func (_c *MockUpstreamsSDK_UpsertUpstream_Call) Run(run func(ctx context.Context, req operations.UpsertUpstreamRequest, opts ...operations.Option)) *MockUpstreamsSDK_UpsertUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertUpstreamRequest), variadicArgs...)
 	})
 	return _c
@@ -6833,12 +6398,7 @@ func (_e *MockVaultSDK_Expecter) CreateVault(ctx interface{}, controlPlaneID int
 
 func (_c *MockVaultSDK_CreateVault_Call) Run(run func(ctx context.Context, controlPlaneID string, vault components.Vault, opts ...operations.Option)) *MockVaultSDK_CreateVault_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(components.Vault), variadicArgs...)
 	})
 	return _c
@@ -6905,12 +6465,7 @@ func (_e *MockVaultSDK_Expecter) DeleteVault(ctx interface{}, controlPlaneID int
 
 func (_c *MockVaultSDK_DeleteVault_Call) Run(run func(ctx context.Context, controlPlaneID string, vaultID string, opts ...operations.Option)) *MockVaultSDK_DeleteVault_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
 	})
 	return _c
@@ -6976,12 +6531,7 @@ func (_e *MockVaultSDK_Expecter) ListVault(ctx interface{}, request interface{},
 
 func (_c *MockVaultSDK_ListVault_Call) Run(run func(ctx context.Context, request operations.ListVaultRequest, opts ...operations.Option)) *MockVaultSDK_ListVault_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListVaultRequest), variadicArgs...)
 	})
 	return _c
@@ -7047,12 +6597,7 @@ func (_e *MockVaultSDK_Expecter) UpsertVault(ctx interface{}, request interface{
 
 func (_c *MockVaultSDK_UpsertVault_Call) Run(run func(ctx context.Context, request operations.UpsertVaultRequest, opts ...operations.Option)) *MockVaultSDK_UpsertVault_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertVaultRequest), variadicArgs...)
 	})
 	return _c
@@ -7144,12 +6689,7 @@ func (_e *MockMeSDK_Expecter) GetOrganizationsMe(ctx interface{}, opts ...interf
 
 func (_c *MockMeSDK_GetOrganizationsMe_Call) Run(run func(ctx context.Context, opts ...operations.Option)) *MockMeSDK_GetOrganizationsMe_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-1)
-		for i, a := range args[1:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[1].([]operations.Option)
 		run(args[0].(context.Context), variadicArgs...)
 	})
 	return _c
@@ -7243,12 +6783,7 @@ func (_e *MockPluginSDK_Expecter) CreatePlugin(ctx interface{}, controlPlaneID i
 
 func (_c *MockPluginSDK_CreatePlugin_Call) Run(run func(ctx context.Context, controlPlaneID string, plugin components.Plugin, opts ...operations.Option)) *MockPluginSDK_CreatePlugin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(components.Plugin), variadicArgs...)
 	})
 	return _c
@@ -7315,12 +6850,7 @@ func (_e *MockPluginSDK_Expecter) DeletePlugin(ctx interface{}, controlPlaneID i
 
 func (_c *MockPluginSDK_DeletePlugin_Call) Run(run func(ctx context.Context, controlPlaneID string, pluginID string, opts ...operations.Option)) *MockPluginSDK_DeletePlugin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-3)
-		for i, a := range args[3:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[3].([]operations.Option)
 		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
 	})
 	return _c
@@ -7386,12 +6916,7 @@ func (_e *MockPluginSDK_Expecter) ListPlugin(ctx interface{}, request interface{
 
 func (_c *MockPluginSDK_ListPlugin_Call) Run(run func(ctx context.Context, request operations.ListPluginRequest, opts ...operations.Option)) *MockPluginSDK_ListPlugin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.ListPluginRequest), variadicArgs...)
 	})
 	return _c
@@ -7457,12 +6982,7 @@ func (_e *MockPluginSDK_Expecter) UpsertPlugin(ctx interface{}, request interfac
 
 func (_c *MockPluginSDK_UpsertPlugin_Call) Run(run func(ctx context.Context, request operations.UpsertPluginRequest, opts ...operations.Option)) *MockPluginSDK_UpsertPlugin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]operations.Option, len(args)-2)
-		for i, a := range args[2:] {
-			if a != nil {
-				variadicArgs[i] = a.(operations.Option)
-			}
-		}
+		variadicArgs := args[2].([]operations.Option)
 		run(args[0].(context.Context), args[1].(operations.UpsertPluginRequest), variadicArgs...)
 	})
 	return _c
