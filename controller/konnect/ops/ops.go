@@ -596,7 +596,7 @@ func sliceToEntityWithIDSlice[
 
 // extractedEntityID represents the ID of an entity.
 // The type is defined to satisfy the interface in the parameter of getMatchingEntryFromListResponseData.
-// Some types of responses does not provide a GetID in sdk-konnect-go
+// Some types of responses do not provide a GetID in sdk-konnect-go
 // so we need to extract the ID and return this type for getMatchingEntryFromListResponseData.
 type extractedEntityID string
 
