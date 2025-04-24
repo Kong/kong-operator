@@ -1,5 +1,5 @@
 # renovate: datasource=github-tags depName=kubernetes/code-generator
-code-generator: "0.32.3"
+code-generator: "0.32.4"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
 controller-tools: "0.17.3"
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
@@ -15,7 +15,7 @@ gotestsum: "1.12.1"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
 crd-ref-docs: "0.1.0"
 # renovate: datasource=github-releases depName=vektra/mockery
-mockery: "3.2.3"
+mockery: "3.2.4"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
 setup-envtest: "0.20.4"
 # renovate: datasource=github-releases depName=rhysd/actionlint

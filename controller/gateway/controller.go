@@ -726,12 +726,10 @@ func (r *Reconciler) patchStatus(ctx context.Context, gateway, oldGateway *gwtyp
 
 func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1beta1.DataPlaneOptions) bool {
 	// TODO: Doesn't take .Rollout field into account.
-	if !deploymentOptionsDeepEqual(&spec1.Deployment.DeploymentOptions, &spec2.Deployment.DeploymentOptions) ||
-		!compare.NetworkOptionsDeepEqual(&spec1.Network, &spec2.Network) {
-		return false
-	}
-
-	return reflect.DeepEqual(spec1.Extensions, spec2.Extensions)
+	return deploymentOptionsDeepEqual(&spec1.Deployment.DeploymentOptions, &spec2.Deployment.DeploymentOptions) &&
+		compare.NetworkOptionsDeepEqual(&spec1.Network, &spec2.Network) &&
+		compare.DataPlaneResourceOptionsDeepEqual(&spec1.Resources, &spec2.Resources) &&
+		reflect.DeepEqual(spec1.Extensions, spec2.Extensions)
 }
 
 func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVarsToIgnore ...string) bool {
