@@ -1,0 +1,13 @@
+[[IgnoredVulns]]
+# https://osv.dev/vulnerability/GO-2025-3521
+# Kubernetes GitRepo Volume Inadvertent Local Repository Access in k8s.io/kubernetes
+id = "GO-2025-3521"
+# ignoreUntil = 2022-11-09 # Optional exception expiry date
+reason = "GitRepo volume is not used by this project"
+
+[[IgnoredVulns]]
+# https://osv.dev/vulnerability/GO-2025-3547
+# Kubernetes kube-apiserver Vulnerable to Race Condition in k8s.io/kubernetes
+id = "GO-2025-3547"
+# ignoreUntil = 2022-11-09 # Optional exception expiry date
+reason = "Low severity, no known fix yet"
