@@ -11,6 +11,11 @@ const (
 	// not all Deployments (or Daemonsets) for the ControlPlane have been provisioned
 	// successfully.
 	ConditionTypeProvisioned consts.ConditionType = "Provisioned"
+
+	// ConditionTypeWatchNamespaceGrantValid is a condition type used to
+	// indicate whether or not the ControlPlane has been granted permission to
+	// watch resources in the requested namespaces.
+	ConditionTypeWatchNamespaceGrantValid consts.ConditionType = "WatchNamespaceGrantValid"
 )
 
 // -----------------------------------------------------------------------------
@@ -33,8 +38,13 @@ const (
 	// has been provisioned.
 	ConditionReasonNoDataPlane consts.ConditionReason = "NoDataPlane"
 
-	// ConditionReasonMissingReferenceGrant is a reason which indicates that
-	// ReferenceGrants are missing for the ControlPlane to be able to watch
+	// ConditionReasonWatchNamespaceGrantInvalid is a reason which indicates that
+	// WatchNamespaceGrants are invalid or missing for the ControlPlane to be able
+	// to watch resources in requested namespaces.
+	ConditionReasonWatchNamespaceGrantInvalid consts.ConditionReason = "WatchNamespaceGrantInvalid"
+
+	// ConditionReasonWatchNamespaceGrantValid is a reason which indicates that
+	// WatchNamespaceGrants are valid for the ControlPlane to be able to watch
 	// resources in requested namespaces.
-	ConditionReasonMissingReferenceGrant consts.ConditionReason = "MissingReferenceGrants"
+	ConditionReasonWatchNamespaceGrantValid consts.ConditionReason = "WatchNamespaceGrantValid"
 )
