@@ -6,7 +6,6 @@ import (
 
 type (
 	Gateway              = gatewayv1.Gateway
-	GatewayAddress       = gatewayv1.GatewayAddress
 	GatewayClass         = gatewayv1.GatewayClass
 	GatewaySpec          = gatewayv1.GatewaySpec
 	GatewayStatusAddress = gatewayv1.GatewayStatusAddress
