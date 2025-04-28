@@ -50,7 +50,7 @@ func SetKonnectEntityProgrammedConditionFalse(
 	)
 }
 
-// SetKonnectEntityMirroredConditionTrue sets the KonnectEntityProgrammed condition to true
+// SetKonnectEntityMirroredConditionTrue sets the KonnectEntityMirrored condition to true
 // on the provided object.
 func SetKonnectEntityMirroredConditionTrue(
 	obj entityType,
@@ -64,7 +64,7 @@ func SetKonnectEntityMirroredConditionTrue(
 	)
 }
 
-// SetKonnectEntityMirroredConditionFalse sets the KonnectEntityProgrammed condition
+// SetKonnectEntityMirroredConditionFalse sets the KonnectEntityMirrored condition
 // to false on the provided object.
 func SetKonnectEntityMirroredConditionFalse(
 	obj entityType,

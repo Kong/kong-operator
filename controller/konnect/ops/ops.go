@@ -225,7 +225,7 @@ func Create[
 	// For ControlPlane entities, we need to check if the source type is mirror
 	// and set the mirrored condition accordingly.
 	if cp, ok := any(e).(*konnectv1alpha1.KonnectGatewayControlPlane); ok {
-		if *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		if isMirrorControlPlane(cp) {
 			if err == nil {
 				SetKonnectEntityMirroredConditionTrue(e)
 			} else {
@@ -508,7 +508,7 @@ func Update[
 	// For ControlPlane entities, we need to check if the source type is mirror
 	// and set the mirrored condition accordingly.
 	if cp, ok := any(e).(*konnectv1alpha1.KonnectGatewayControlPlane); ok {
-		if *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		if isMirrorControlPlane(cp) {
 			if err == nil {
 				SetKonnectEntityMirroredConditionTrue(e)
 			} else {
@@ -546,7 +546,7 @@ func logOpComplete[
 	// if the entity is a Mirror KonnectGatewayControlPlane, don't log the konnect operation,
 	// as no operation occurred.
 	if cp, ok := any(e).(*konnectv1alpha1.KonnectGatewayControlPlane); ok {
-		if *cp.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		if isMirrorControlPlane(cp) {
 			return
 		}
 	}
