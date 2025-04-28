@@ -137,8 +137,6 @@ func (cm *ConditionMatcher[T]) Message(msg string) *ConditionMatcher[T] {
 // match all the predicates defined in the ConditionMatcher.
 // It is supposed to be used with require's/assert's Eventually function.
 func (cm ConditionMatcher[T]) Predicate() func(T) bool {
-	cm.t.Helper()
-
 	return func(obj T) bool {
 		conds := obj.GetConditions()
 		if len(conds) == 0 {

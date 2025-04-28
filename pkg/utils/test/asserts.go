@@ -53,6 +53,22 @@ func MustListControlPlaneClusterRoles(t *testing.T, ctx context.Context, control
 	return clusterRoles
 }
 
+// MustListControlPlaneRoles is a helper function for tests that
+// conveniently lists all roles owned by a given controlplane.
+func MustListControlPlaneRoles(t require.TestingT, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, cl client.Client, opts ...client.ListOption) []rbacv1.Role {
+	managedByLabelSet := k8sutils.GetManagedByLabelSet(controlplane)
+	roles, err := k8sutils.ListRoles(
+		ctx,
+		cl,
+		append(
+			[]client.ListOption{client.MatchingLabels(managedByLabelSet)},
+			opts...,
+		)...,
+	)
+	require.NoError(t, err)
+	return roles
+}
+
 // MustListControlPlaneClusterRoleBindings is a helper function for tests that
 // conveniently lists all clusterrolebindings owned by a given controlplane.
 func MustListControlPlaneClusterRoleBindings(t *testing.T, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, clients K8sClients) []rbacv1.ClusterRoleBinding {
@@ -61,6 +77,22 @@ func MustListControlPlaneClusterRoleBindings(t *testing.T, ctx context.Context, 
 		ctx,
 		clients.MgrClient,
 		client.MatchingLabels(managedByLabelSet),
+	)
+	require.NoError(t, err)
+	return clusterRoleBindings
+}
+
+// MustListControlPlaneRoleBindings is a helper function for tests that
+// conveniently lists all clusterrolebindings owned by a given controlplane.
+func MustListControlPlaneRoleBindings(t require.TestingT, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, cl client.Client, opts ...client.ListOption) []rbacv1.ClusterRoleBinding {
+	managedByLabelSet := k8sutils.GetManagedByLabelSet(controlplane)
+	clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
+		ctx,
+		cl,
+		append(
+			[]client.ListOption{client.MatchingLabels(managedByLabelSet)},
+			opts...,
+		)...,
 	)
 	require.NoError(t, err)
 	return clusterRoleBindings

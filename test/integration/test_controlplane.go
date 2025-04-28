@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -433,14 +434,14 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	cleaner.Add(dp)
 
 	createNamespace := func(t *testing.T, cl client.Client, cleaner *clusters.Cleaner, generateName string) *corev1.Namespace {
-		nsA := &corev1.Namespace{
+		ns := &corev1.Namespace{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: generateName,
 			},
 		}
-		require.NoError(t, cl.Create(GetCtx(), nsA))
-		cleaner.Add(nsA)
-		return nsA
+		require.NoError(t, cl.Create(GetCtx(), ns))
+		cleaner.AddNamespace(ns)
+		return ns
 	}
 	nsA := createNamespace(t, GetClients().MgrClient, cleaner, "test-namespace-a")
 	nsB := createNamespace(t, GetClients().MgrClient, cleaner, "test-namespace-b")
@@ -537,6 +538,24 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 				Status(metav1.ConditionTrue).
 				Predicate(),
 		).Match(cp),
+		testutils.ControlPlaneCondDeadline, 2*testutils.ControlPlaneCondTick,
+	)
+
+	t.Log("verifying that operator creates Roles and RoleBindings in the watched namespaces")
+	require.EventuallyWithT(t,
+		func(t *assert.CollectT) {
+			check := func(t require.TestingT, namespace string) {
+				nsOpt := client.InNamespace(namespace)
+
+				roles := testutils.MustListControlPlaneRoles(t, GetCtx(), cp, clients.MgrClient, nsOpt)
+				require.Lenf(t, roles, 1, "There must be only one Role in the watched namespace %s", namespace)
+				roleBindings := testutils.MustListControlPlaneRoleBindings(t, GetCtx(), cp, clients.MgrClient, nsOpt)
+				require.Lenf(t, roleBindings, 1, "There must be only one RoleBinding in the watched namespace %s", namespace)
+			}
+
+			check(t, nsA.Name)
+			check(t, nsB.Name)
+		},
 		testutils.ControlPlaneCondDeadline, 2*testutils.ControlPlaneCondTick,
 	)
 
