@@ -666,6 +666,9 @@ func countAttachedRoutesForGatewayListener(ctx context.Context, g *gwtypes.Gatew
 	}
 
 	switch *namespaces.From {
+	case gatewayv1.NamespacesFromNone:
+		// No namespaces are allowed, so no routes can be attached.
+		return 0, nil
 	case gatewayv1.NamespacesFromAll:
 	case gatewayv1.NamespacesFromSame:
 		opts = append(opts, client.InNamespace(g.Namespace))
