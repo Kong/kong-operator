@@ -917,6 +917,82 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 			},
 			equal: true,
 		},
+		{
+			name: "different watch namespaces yield unequal specs",
+			spec1: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "controller",
+								},
+							},
+						},
+					},
+				},
+				WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+					Type: operatorv1beta1.WatchNamespacesTypeList,
+					List: []string{"ns1", "ns2"},
+				},
+			},
+			spec2: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "controller",
+								},
+							},
+						},
+					},
+				},
+				WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+					Type: operatorv1beta1.WatchNamespacesTypeList,
+					List: []string{"ns1", "ns2", "ns3"},
+				},
+			},
+			equal: false,
+		},
+		{
+			name: "the same watch namespaces yield equal specs",
+			spec1: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "controller",
+								},
+							},
+						},
+					},
+				},
+				WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+					Type: operatorv1beta1.WatchNamespacesTypeList,
+					List: []string{"ns1", "ns2"},
+				},
+			},
+			spec2: &operatorv1beta1.ControlPlaneOptions{
+				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{
+									Name: "controller",
+								},
+							},
+						},
+					},
+				},
+				WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+					Type: operatorv1beta1.WatchNamespacesTypeList,
+					List: []string{"ns1", "ns2"},
+				},
+			},
+			equal: true,
+		},
 	}
 
 	for _, tc := range testCases {

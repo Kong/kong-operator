@@ -19,7 +19,7 @@ require (
 	github.com/google/go-containerregistry v0.20.3
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.48.2
-	github.com/kong/kubernetes-configuration v1.3.2-0.20250423105439-a4983cc581e8
+	github.com/kong/kubernetes-configuration v1.4.0-rc.0.0.20250428151527-d1989707dabb
 	github.com/kong/kubernetes-telemetry v0.1.9
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
@@ -34,7 +34,7 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/mod v0.24.0
 	k8s.io/api v0.33.0
-	k8s.io/apiextensions-apiserver v0.32.3
+	k8s.io/apiextensions-apiserver v0.33.0
 	k8s.io/apimachinery v0.33.0
 	k8s.io/client-go v0.33.0
 	k8s.io/kubernetes v1.33.0
