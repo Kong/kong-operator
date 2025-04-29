@@ -20,6 +20,7 @@ import (
 	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/consts"
 
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -275,6 +276,49 @@ func (r *Reconciler) listControlPlanesForReferenceGrants(
 			client.InNamespace(from.Namespace),
 		); err != nil {
 			ctrllog.FromContext(ctx).Error(err, "failed to map ReferenceGrant to ControlPlane")
+			return nil
+		}
+		for _, cp := range controlPlaneList.Items {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: cp.Namespace,
+					Name:      cp.Name,
+				},
+			})
+		}
+	}
+
+	return recs
+}
+
+func (r *Reconciler) listControlPlanesForWatchNamespaceGrants(
+	ctx context.Context,
+	obj client.Object,
+) []reconcile.Request {
+	rg, ok := obj.(*operatorv1alpha1.WatchNamespaceGrant)
+	if !ok {
+		ctrllog.FromContext(ctx).Error(
+			operatorerrors.ErrUnexpectedObject,
+			"failed to map WatchNamespaceGrant on ControlPlane",
+			"expected", "WatchNamespaceGrant", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+
+	fromsForControlPlane := lo.Filter(rg.Spec.From,
+		func(from operatorv1alpha1.WatchNamespaceGrantFrom, _ int) bool {
+			return from.Group == operatorv1beta1.ControlPlaneGVR().Group &&
+				from.Kind == "ControlPlane"
+		},
+	)
+
+	var recs []reconcile.Request
+	for _, from := range fromsForControlPlane {
+		var controlPlaneList operatorv1beta1.ControlPlaneList
+		if err := r.List(ctx, &controlPlaneList,
+			client.InNamespace(from.Namespace),
+		); err != nil {
+			ctrllog.FromContext(ctx).Error(err, "failed to map WatchNamespaceGrant to ControlPlane")
 			return nil
 		}
 		for _, cp := range controlPlaneList.Items {

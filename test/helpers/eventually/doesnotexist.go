@@ -25,13 +25,13 @@ func WaitForObjectToNotExist(
 	msg ...string,
 ) bool {
 	t.Helper()
-	t.Logf("Waiting for %T %s to disappear", obj, obj)
-
 	nn := client.ObjectKeyFromObject(obj)
 
-	errMsg := fmt.Sprintf("%T %s still exists", obj, obj)
+	t.Logf("Waiting for %T %s to disappear", obj, nn)
+
+	errMsg := fmt.Sprintf("%T %s still exists", obj, nn)
 	if len(msg) > 0 {
-		errMsg = fmt.Sprintf("%T %s still exists: %s", obj, obj, msg)
+		errMsg = fmt.Sprintf("%T %s still exists: %s", obj, nn, msg)
 	}
 
 	return assert.EventuallyWithT(t,
