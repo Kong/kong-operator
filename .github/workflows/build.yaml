@@ -38,4 +38,4 @@ jobs:
       # If we pushed then it means we want to build and push the image.
       # Branch filter above will decide pushes to which branch will trigger this.
       push: ${{ github.event.action == 'push' }}
-      slack-send: true
+      slack-send: ${{ github.event.action == 'push' }}

@@ -118,6 +118,7 @@ jobs:
       image-name: ${{ inputs.image-name }}
       additional-build-contexts: ${{ inputs.additional-build-contexts }}
       push: true
+      slack-send: true
       latest: ${{ inputs.latest }}
       tag: ${{ inputs.tag }}
       verify-image-script: ${{ inputs.verify-image-script }}
