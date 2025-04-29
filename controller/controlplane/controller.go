@@ -373,8 +373,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			k8sutils.NewConditionWithGeneration(
 				ConditionTypeWatchNamespaceGrantsValid,
 				metav1.ConditionFalse,
-				kcfgcontrolplane.ConditionReasonMissingReferenceGrant,
-				fmt.Sprintf("WatchNamespaceGrant(s) are missing for the ControlPlane: %v", err),
+				kcfgcontrolplane.ConditionReasonWatchNamespaceGrantInvalid,
+				fmt.Sprintf("WatchNamespaceGrant(s) are missing or invalid for the ControlPlane: %v", err),
 				cp.GetGeneration(),
 			),
 			cp,

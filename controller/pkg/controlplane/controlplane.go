@@ -250,6 +250,10 @@ func SpecDeepEqual(spec1, spec2 *operatorv1beta1.ControlPlaneOptions, envVarsToI
 		return false
 	}
 
+	if !reflect.DeepEqual(spec1.WatchNamespaces, spec2.WatchNamespaces) {
+		return false
+	}
+
 	return true
 }
 
