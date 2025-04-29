@@ -84,12 +84,6 @@ type ControlPlaneSpec struct {
 	//
 	// +optional
 	IngressClass *string `json:"ingressClass,omitempty"`
-
-	// WatchNamespaces indicates the namespaces to watch for resources.
-	//
-	// +optional
-	// +kubebuilder:default={type: all}
-	WatchNamespaces *WatchNamespaces `json:"watchNamespaces,omitempty"`
 }
 
 // ControlPlaneOptions indicates the specific information needed to
@@ -114,6 +108,12 @@ type ControlPlaneOptions struct {
 	// +kubebuilder:validation:MinItems=0
 	// +kubebuilder:validation:MaxItems=2
 	Extensions []commonv1alpha1.ExtensionRef `json:"extensions,omitempty"`
+
+	// WatchNamespaces indicates the namespaces to watch for resources.
+	//
+	// +optional
+	// +kubebuilder:default={type: all}
+	WatchNamespaces *WatchNamespaces `json:"watchNamespaces,omitempty"`
 }
 
 // ControlPlaneDeploymentOptions is a shared type used on objects to indicate that their

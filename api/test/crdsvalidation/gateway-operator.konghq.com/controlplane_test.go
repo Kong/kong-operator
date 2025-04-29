@@ -12,20 +12,22 @@ import (
 )
 
 func TestControlPlane(t *testing.T) {
-	validControlPlaneOptions := operatorv1beta1.ControlPlaneOptions{
-		Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-			PodTemplateSpec: &corev1.PodTemplateSpec{
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{
-						{
-							Name:  "controller",
-							Image: "kong:over9000",
-						},
+	validDeploymentOptions := operatorv1beta1.ControlPlaneDeploymentOptions{
+		PodTemplateSpec: &corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:  "controller",
+						Image: "kong:over9000",
 					},
 				},
 			},
 		},
 	}
+	validControlPlaneOptions := operatorv1beta1.ControlPlaneOptions{
+		Deployment: validDeploymentOptions,
+	}
+
 	t.Run("extensions", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.ControlPlane]{
 			{
@@ -213,9 +215,11 @@ func TestControlPlane(t *testing.T) {
 				TestObject: &operatorv1beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.ControlPlaneSpec{
-						ControlPlaneOptions: validControlPlaneOptions,
-						WatchNamespaces: &operatorv1beta1.WatchNamespaces{
-							Type: operatorv1beta1.WatchNamespacesTypeAll,
+						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+							Deployment: validDeploymentOptions,
+							WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+								Type: operatorv1beta1.WatchNamespacesTypeAll,
+							},
 						},
 					},
 				},
@@ -225,11 +229,13 @@ func TestControlPlane(t *testing.T) {
 				TestObject: &operatorv1beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.ControlPlaneSpec{
-						ControlPlaneOptions: validControlPlaneOptions,
-						WatchNamespaces: &operatorv1beta1.WatchNamespaces{
-							Type: operatorv1beta1.WatchNamespacesTypeList,
-							List: []string{
-								"namespace1",
+						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+							Deployment: validDeploymentOptions,
+							WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+								Type: operatorv1beta1.WatchNamespacesTypeList,
+								List: []string{
+									"namespace1",
+								},
 							},
 						},
 					},
@@ -240,9 +246,11 @@ func TestControlPlane(t *testing.T) {
 				TestObject: &operatorv1beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.ControlPlaneSpec{
-						ControlPlaneOptions: validControlPlaneOptions,
-						WatchNamespaces: &operatorv1beta1.WatchNamespaces{
-							Type: operatorv1beta1.WatchNamespacesTypeList,
+						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+							Deployment: validDeploymentOptions,
+							WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+								Type: operatorv1beta1.WatchNamespacesTypeList,
+							},
 						},
 					},
 				},
@@ -253,9 +261,11 @@ func TestControlPlane(t *testing.T) {
 				TestObject: &operatorv1beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.ControlPlaneSpec{
-						ControlPlaneOptions: validControlPlaneOptions,
-						WatchNamespaces: &operatorv1beta1.WatchNamespaces{
-							Type: operatorv1beta1.WatchNamespacesTypeOwn,
+						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+							Deployment: validDeploymentOptions,
+							WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+								Type: operatorv1beta1.WatchNamespacesTypeOwn,
+							},
 						},
 					},
 				},
@@ -265,11 +275,13 @@ func TestControlPlane(t *testing.T) {
 				TestObject: &operatorv1beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.ControlPlaneSpec{
-						ControlPlaneOptions: validControlPlaneOptions,
-						WatchNamespaces: &operatorv1beta1.WatchNamespaces{
-							Type: operatorv1beta1.WatchNamespacesTypeOwn,
-							List: []string{
-								"namespace1",
+						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+							Deployment: validDeploymentOptions,
+							WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+								Type: operatorv1beta1.WatchNamespacesTypeOwn,
+								List: []string{
+									"namespace1",
+								},
 							},
 						},
 					},

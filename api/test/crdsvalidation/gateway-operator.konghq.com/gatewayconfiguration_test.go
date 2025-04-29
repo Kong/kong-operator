@@ -160,4 +160,61 @@ func TestGatewayConfiguration(t *testing.T) {
 			},
 		}.Run(t)
 	})
+
+	t.Run("ControlPlaneOptions", func(t *testing.T) {
+		common.TestCasesGroup[*operatorv1beta1.GatewayConfiguration]{
+			{
+				Name: "no ControlPlaneOptions",
+				TestObject: &operatorv1beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: nil,
+					},
+				},
+			},
+			{
+				Name: "specifying watch namespaces, type=all",
+				TestObject: &operatorv1beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
+							WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+								Type: operatorv1beta1.WatchNamespacesTypeAll,
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "specifying watch namespaces, type=own",
+				TestObject: &operatorv1beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
+							WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+								Type: operatorv1beta1.WatchNamespacesTypeOwn,
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "specifying watch namespaces, type=list",
+				TestObject: &operatorv1beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
+							WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+								Type: operatorv1beta1.WatchNamespacesTypeList,
+								List: []string{
+									"namespace1",
+									"namespace2",
+								},
+							},
+						},
+					},
+				},
+			},
+		}.Run(t)
+	})
 }
