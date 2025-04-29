@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/gateway-operator/controller/pkg/builder"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
@@ -402,30 +403,23 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 	cl := GetClients().MgrClient
 
-	dp := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
+	dp := builder.NewDataPlaneBuilder().
+		WithObjectMeta(metav1.ObjectMeta{
 			Namespace:    namespace.Name,
 			GenerateName: "dp-watchnamespaces-",
-		},
-		Spec: operatorv1beta1.DataPlaneSpec{
-			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
-				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						PodTemplateSpec: &corev1.PodTemplateSpec{
-							Spec: corev1.PodSpec{
-								Containers: []corev1.Container{
-									{
-										Name:  consts.DataPlaneProxyContainerName,
-										Image: helpers.GetDefaultDataPlaneImage(),
-									},
-								},
-							},
-						},
+		}).
+		WithPodTemplateSpec(&corev1.PodTemplateSpec{
+			Spec: corev1.PodSpec{
+				Containers: []corev1.Container{
+					{
+						Name:  consts.DataPlaneProxyContainerName,
+						Image: helpers.GetDefaultDataPlaneImage(),
 					},
 				},
 			},
-		},
-	}
+		}).
+		Build()
+
 	t.Log("deploying dataplane resource")
 	require.NoError(t, cl.Create(GetCtx(), dp))
 	cleaner.Add(dp)
