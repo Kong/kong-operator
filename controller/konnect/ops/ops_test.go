@@ -20,6 +20,7 @@ import (
 	"github.com/kong/gateway-operator/internal/metrics"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -54,6 +55,7 @@ func TestCreate(t *testing.T) {
 							"label": "very-long-label-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 						},
 					},
+					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 				},
 			},
 			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
@@ -114,6 +116,7 @@ func TestCreate(t *testing.T) {
 					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 						Name: lo.ToPtr("test-cp"),
 					},
+					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 				},
 			},
 			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
@@ -180,6 +183,7 @@ func TestCreate(t *testing.T) {
 					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 						Name: lo.ToPtr("test-cp"),
 					},
+					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 				},
 			},
 			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
@@ -283,6 +287,12 @@ func TestDelete(t *testing.T) {
 					Name:      "test-cp",
 					Namespace: "test-ns",
 				},
+				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
+						Name: lo.ToPtr("test-cp"),
+					},
+					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+				},
 				Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
@@ -299,6 +309,12 @@ func TestDelete(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cp",
 					Namespace: "test-ns",
+				},
+				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
+						Name: lo.ToPtr("test-cp"),
+					},
+					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 				},
 				Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
 					Conditions: []metav1.Condition{

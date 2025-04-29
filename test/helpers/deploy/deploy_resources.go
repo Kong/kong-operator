@@ -233,7 +233,7 @@ func KonnectGatewayControlPlane(
 				},
 			},
 			CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
-				Name: lo.ToPtr(name),
+				Name: &name,
 			},
 		},
 	}

@@ -62,6 +62,8 @@
   [#1555](https://github.com/Kong/gateway-operator/pull/1555)
   <!-- TODO: https://github.com/Kong/gateway-operator/issues/1501 add link to guide from documentation. -->
   For more information on this please see: https://docs.konghq.com/gateway-operator/latest/
+- Implemented `Mirror` and `Origin` `KonnectGatewayControlPlane`s.
+  [#1496](https://github.com/Kong/gateway-operator/pull/1496)
 
 ### Changes
 
