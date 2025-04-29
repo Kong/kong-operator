@@ -488,27 +488,6 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 		testutils.ControlPlaneCondDeadline, 2*testutils.ControlPlaneCondTick,
 	)
 
-	watchNamespaceGrantForNamespace := func(t *testing.T, cl client.Client, cp *operatorv1beta1.ControlPlane, ns string) *operatorv1alpha1.WatchNamespaceGrant {
-		wng := &operatorv1alpha1.WatchNamespaceGrant{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: ns + "-refgrant-",
-				Namespace:    ns,
-			},
-			Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
-				From: []operatorv1alpha1.WatchNamespaceGrantFrom{
-					{
-						Group:     operatorv1beta1.SchemeGroupVersion.Group,
-						Kind:      "ControlPlane",
-						Namespace: cp.Namespace,
-					},
-				},
-			},
-		}
-
-		require.NoError(t, cl.Create(GetCtx(), wng))
-		return wng
-	}
-
 	t.Log("add missing WatchNamespaceGrants")
 	wA := watchNamespaceGrantForNamespace(t, cl, cp, nsA.Name)
 	cleaner.Add(wA)
@@ -565,6 +544,27 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 		).Match(cp),
 		testutils.ControlPlaneCondDeadline, 2*testutils.ControlPlaneCondTick,
 	)
+}
+
+func watchNamespaceGrantForNamespace(t *testing.T, cl client.Client, cp *operatorv1beta1.ControlPlane, ns string) *operatorv1alpha1.WatchNamespaceGrant {
+	wng := &operatorv1alpha1.WatchNamespaceGrant{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: ns + "-refgrant-",
+			Namespace:    ns,
+		},
+		Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
+			From: []operatorv1alpha1.WatchNamespaceGrantFrom{
+				{
+					Group:     operatorv1beta1.SchemeGroupVersion.Group,
+					Kind:      "ControlPlane",
+					Namespace: cp.Namespace,
+				},
+			},
+		},
+	}
+
+	require.NoError(t, cl.Create(GetCtx(), wng))
+	return wng
 }
 
 func checkControlPlaneDeploymentEnvVars(t *testing.T, deployment *appsv1.Deployment, controlplaneName string) {
