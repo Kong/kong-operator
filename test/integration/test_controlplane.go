@@ -457,12 +457,12 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 					},
 				},
 				DataPlane: lo.ToPtr(dp.Name),
-			},
-			WatchNamespaces: &operatorv1beta1.WatchNamespaces{
-				Type: operatorv1beta1.WatchNamespacesTypeList,
-				List: []string{
-					nsA.Name,
-					nsB.Name,
+				WatchNamespaces: &operatorv1beta1.WatchNamespaces{
+					Type: operatorv1beta1.WatchNamespacesTypeList,
+					List: []string{
+						nsA.Name,
+						nsB.Name,
+					},
 				},
 			},
 		},
