@@ -400,9 +400,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 func TestControlPlaneWatchNamespaces(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
-
-	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
-	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().ControlPlanes(namespace.Name)
+	cl := GetClients().MgrClient
 
 	dp := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
@@ -429,8 +427,7 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 		},
 	}
 	t.Log("deploying dataplane resource")
-	dp, err := dataplaneClient.Create(GetCtx(), dp, metav1.CreateOptions{})
-	require.NoError(t, err)
+	require.NoError(t, cl.Create(GetCtx(), dp))
 	cleaner.Add(dp)
 
 	createNamespace := func(t *testing.T, cl client.Client, cleaner *clusters.Cleaner, generateName string) *corev1.Namespace {
@@ -443,8 +440,8 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 		cleaner.AddNamespace(ns)
 		return ns
 	}
-	nsA := createNamespace(t, GetClients().MgrClient, cleaner, "test-namespace-a")
-	nsB := createNamespace(t, GetClients().MgrClient, cleaner, "test-namespace-b")
+	nsA := createNamespace(t, cl, cleaner, "test-namespace-a")
+	nsB := createNamespace(t, cl, cleaner, "test-namespace-b")
 
 	cp := &operatorv1beta1.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
@@ -478,8 +475,7 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	}
 
 	t.Log("deploying controlplane resource")
-	cp, err = controlplaneClient.Create(GetCtx(), cp, metav1.CreateOptions{})
-	require.NoError(t, err)
+	require.NoError(t, cl.Create(GetCtx(), cp))
 	cleaner.Add(cp)
 
 	t.Log("verifying controlplane has a status condition indicating missing WatchNamespaceGrants")
@@ -520,9 +516,9 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	}
 
 	t.Log("add missing WatchNamespaceGrants")
-	wA := watchNamespaceGrantForNamespace(t, GetClients().MgrClient, cp, nsA.Name)
+	wA := watchNamespaceGrantForNamespace(t, cl, cp, nsA.Name)
 	cleaner.Add(wA)
-	wB := watchNamespaceGrantForNamespace(t, GetClients().MgrClient, cp, nsB.Name)
+	wB := watchNamespaceGrantForNamespace(t, cl, cp, nsB.Name)
 	cleaner.Add(wB)
 
 	t.Log("verifying controlplane has a status condition indicating no missing WatchNamespaceGrants and it's Ready")
@@ -559,7 +555,7 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 		testutils.ControlPlaneCondDeadline, 2*testutils.ControlPlaneCondTick,
 	)
 
-	require.NoError(t, GetClients().MgrClient.Delete(GetCtx(), wA))
+	require.NoError(t, cl.Delete(GetCtx(), wA))
 	t.Log("verifying that after removing a WatchNamespaceGrant for a watched namesace controlplane has a status condition indicating invalid/missing WatchNamespaceGrants")
 	require.Eventually(t,
 		testutils.ObjectPredicates(t, clients.MgrClient,

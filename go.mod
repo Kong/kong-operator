@@ -8,8 +8,6 @@ go 1.24.2
 // This retraction is to prevent it from being used and from breaking builds of dependent projects.
 retract v1.2.2
 
-exclude sigs.k8s.io/gateway-api v1.3.0
-
 require (
 	github.com/Kong/sdk-konnect-go v0.2.28
 	github.com/Masterminds/semver v1.5.0
