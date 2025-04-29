@@ -222,10 +222,10 @@ func Create[
 		)
 	}
 
-	// For ControlPlane entities, we need to check if the source type is mirror
+	// For mirrorable entities, we need to check if the source type is mirror
 	// and set the mirrored condition accordingly.
-	if cp, ok := any(e).(*konnectv1alpha1.KonnectGatewayControlPlane); ok {
-		if isMirrorControlPlane(cp) {
+	if isMirrorableEntity(e) {
+		if isMirrorEntity(e) {
 			if err == nil {
 				SetKonnectEntityMirroredConditionTrue(e)
 			} else {
@@ -505,10 +505,10 @@ func Update[
 		)
 	}
 
-	// For ControlPlane entities, we need to check if the source type is mirror
+	// For mirrorable entities, we need to check if the source type is mirror
 	// and set the mirrored condition accordingly.
-	if cp, ok := any(e).(*konnectv1alpha1.KonnectGatewayControlPlane); ok {
-		if isMirrorControlPlane(cp) {
+	if isMirrorableEntity(e) {
+		if isMirrorEntity(e) {
 			if err == nil {
 				SetKonnectEntityMirroredConditionTrue(e)
 			} else {
@@ -543,10 +543,10 @@ func logOpComplete[
 	TEnt constraints.EntityType[T],
 ](ctx context.Context, start time.Time, op Op, e TEnt, err error) {
 
-	// if the entity is a Mirror KonnectGatewayControlPlane, don't log the konnect operation,
+	// if the entity is a Mirror, don't log the konnect operation,
 	// as no operation occurred.
-	if cp, ok := any(e).(*konnectv1alpha1.KonnectGatewayControlPlane); ok {
-		if isMirrorControlPlane(cp) {
+	if isMirrorableEntity(e) {
+		if isMirrorEntity(e) {
 			return
 		}
 	}
@@ -708,4 +708,32 @@ func ClearInstanceFromError(err error) error {
 	}
 
 	return err
+}
+
+// isMirrorableEntity checks if the entity is mirrorable.
+// This is used to determine if the entity can be mirrored to Konnect.
+func isMirrorableEntity[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	switch any(ent).(type) {
+	case *konnectv1alpha1.KonnectGatewayControlPlane:
+		return true
+	default:
+		return false
+	}
+}
+
+// isMirrorEntity checks if the entity is a mirror entity.
+// This is used to determine if the entity is a mirror of a Konnect entity.
+func isMirrorEntity[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt) bool {
+	switch cp := any(ent).(type) {
+	case *konnectv1alpha1.KonnectGatewayControlPlane:
+		return cp.Spec.Source != nil && *cp.Spec.Source == commonv1alpha1.EntitySourceMirror
+	default:
+		return false
+	}
 }
