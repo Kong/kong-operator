@@ -141,6 +141,24 @@ func WithKonnectIDControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane
 	}
 }
 
+// WithMirrorSource returns an ObjOption that sets the Source as Mirror and Mirror fields on the object.
+func WithMirrorSource(konnectID string) ObjOption {
+	return func(obj client.Object) {
+		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+		if !ok {
+			// As it's only used in tests, we can panic here - it will mean test code is incorrect.
+			panic(fmt.Errorf("%T does not implement GetServiceRef/SetServiceRef method", obj))
+		}
+		cp.Spec.Source = lo.ToPtr(commonv1alpha1.EntitySourceMirror)
+		cp.Spec.Mirror = &konnectv1alpha1.MirrorSpec{
+			Konnect: konnectv1alpha1.MirrorKonnect{
+				ID: commonv1alpha1.KonnectIDType(konnectID),
+			},
+		}
+		cp.Spec.CreateControlPlaneRequest = konnectv1alpha1.CreateControlPlaneRequest{}
+	}
+}
+
 // WithKonnectID returns an ObjOption that sets the Konnect ID on the object.
 func WithKonnectID(id string) ObjOption {
 	return func(obj client.Object) {
