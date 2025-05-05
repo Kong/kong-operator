@@ -142,11 +142,17 @@ func TestKonnectExtension(t *testing.T) {
 				require.NoError(t, err)
 				assertKonnectEntityProgrammed(t, mirrorCP)
 			}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
-			require.EventuallyWithT(t, func(t *assert.CollectT) {
-				err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: mirrorCP.Name, Namespace: mirrorCP.Namespace}, mirrorCP)
-				require.NoError(t, err)
-				assertKonnectGatewayControlPlaneMirrored(t, mirrorCP)
-			}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+
+			require.Eventually(t,
+				testutils.ObjectPredicates(t, clients.MgrClient,
+					testutils.MatchCondition[*konnectv1alpha1.KonnectGatewayControlPlane](t).
+						Type(string(konnectv1alpha1.ControlPlaneMirroredConditionType)).
+						Status(metav1.ConditionTrue).
+						Reason(string(konnectv1alpha1.ControlPlaneMirroredReasonMirrored)).
+						Predicate(),
+				).Match(mirrorCP),
+				testutils.ControlPlaneCondDeadline, 2*testutils.ControlPlaneCondTick,
+			)
 
 			// Create entities to check proper working on Konnect.
 			deployKonnectEntitiesForKonnectExtensionTest(t, KonnectExtensionTestCaseParams{

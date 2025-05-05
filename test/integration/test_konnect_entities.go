@@ -103,11 +103,17 @@ func TestKonnectEntities(t *testing.T) {
 			require.NoError(t, err)
 			assertKonnectEntityProgrammed(t, mirrorCP)
 		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
-		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: mirrorCP.Name, Namespace: mirrorCP.Namespace}, mirrorCP)
-			require.NoError(t, err)
-			assertKonnectGatewayControlPlaneMirrored(t, mirrorCP)
-		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+
+		require.Eventually(t,
+			testutils.ObjectPredicates(t, clients.MgrClient,
+				testutils.MatchCondition[*konnectv1alpha1.KonnectGatewayControlPlane](t).
+					Type(string(konnectv1alpha1.ControlPlaneMirroredConditionType)).
+					Status(metav1.ConditionTrue).
+					Reason(string(konnectv1alpha1.ControlPlaneMirroredReasonMirrored)).
+					Predicate(),
+			).Match(mirrorCP),
+			testutils.ControlPlaneCondDeadline, 2*testutils.ControlPlaneCondTick,
+		)
 
 		KonnectEntitiesTestCase(t, konnectEntitiesTestCaseParams{
 			cp:     mirrorCP,
@@ -394,15 +400,4 @@ func assertKonnectEntityProgrammed(
 		return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
 			condition.Status == metav1.ConditionTrue
 	}), "condition %s is not set to True", konnectv1alpha1.KonnectEntityProgrammedConditionType)
-}
-
-// assertKonnectGatewayControlPlaneMirrored asserts that the ControlPlaneMirrored condition is set to true.
-func assertKonnectGatewayControlPlaneMirrored(
-	t assert.TestingT,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-) {
-	assert.True(t, lo.ContainsBy(cp.GetConditions(), func(condition metav1.Condition) bool {
-		return condition.Type == konnectv1alpha1.ControlPlaneMirroredConditionType &&
-			condition.Status == metav1.ConditionTrue
-	}), "condition %s is not set to True", konnectv1alpha1.ControlPlaneMirroredConditionType)
 }
