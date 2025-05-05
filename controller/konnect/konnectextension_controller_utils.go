@@ -79,13 +79,8 @@ func (r *KonnectExtensionReconciler) getGatewayKonnectControlPlane(
 					*ext.Spec.Konnect.ControlPlane.Ref.KonnectID, ext.Namespace,
 				),
 			)
-		case 1:
-			cp = &kgcps[0]
 		default:
-			return nil, ctrl.Result{}, fmt.Errorf(
-				"multiple KonnectGatewayControlPlanes found %d with the same KonnectID %s",
-				l, *ext.Spec.Konnect.ControlPlane.Ref.KonnectID,
-			)
+			cp = &kgcps[0]
 		}
 	}
 

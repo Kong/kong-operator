@@ -84,7 +84,6 @@ func TestKonnectExtension(t *testing.T) {
 			authCfg.Spec.ServerURL = test.KonnectServerURL()
 		},
 	)
-	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat()
 
 	t.Log("deploying backend deployment (httpbin) of HTTPRoute")
 	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
@@ -100,174 +99,249 @@ func TestKonnectExtension(t *testing.T) {
 		cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
 			deploy.WithTestIDLabel(testID),
 		)
+		t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
+
 		t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 			require.NoError(t, err)
 			assertKonnectEntityProgrammed(t, cp)
 		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
-		// Order of deleting objects with finalizers:
-		// KongRoute & KongService -> DataPlane -> KonnectExtension -> Secret -> KonnectGatewayControlPlane.
-		// The first object deleted by calling `deleteObjectAndWaitForDeletionFn` will be deleted last when added by `CleanUp`,
-		// so the order of calling the deleting function should be a reverse of the order above.
-		// After they are all deleted, the namespace can be deleted in the final clean up.
-		t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
 
-		ks := deploy.KongService(t, ctx, clientNamespaced,
-			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-			func(obj client.Object) {
-				ks, ok := obj.(*configurationv1alpha1.KongService)
-				require.True(t, ok)
-				ks.Spec.KongServiceAPISpec = configurationv1alpha1.KongServiceAPISpec{
-					Name: lo.ToPtr("httpbin"),
-					URL:  lo.ToPtr(fmt.Sprintf("http://%s.%s.svc.cluster.local/", service.Name, ns.Name)),
-					Host: fmt.Sprintf("%s.%s.svc.cluster.local", service.Name, ns.Name),
-				}
-			},
-		)
-		t.Logf("Waiting for KongService to be updated with Konnect ID")
-		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: ks.Name, Namespace: ks.Namespace}, ks)
-			require.NoError(t, err)
-			assertKonnectEntityProgrammed(t, ks)
-		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
-		t.Cleanup(deleteObjectAndWaitForDeletionFn(t, ks))
-
-		kr := deploy.KongRoute(
-			t, ctx, clientNamespaced,
-			deploy.WithNamespacedKongServiceRef(ks),
-			func(obj client.Object) {
-				s := obj.(*configurationv1alpha1.KongRoute)
-				s.Spec.Paths = []string{"/test"}
-			},
-		)
-		t.Logf("Waiting for KongRoute to be updated with Konnect ID")
-		require.EventuallyWithT(t, func(t *assert.CollectT) {
-			err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, kr)
-			require.NoError(t, err)
-
-			assertKonnectEntityProgrammed(t, kr)
-		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
-		t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kr))
-
-		t.Run("KonnectExtension with KonnectID control plane ref", func(t *testing.T) {
-			t.Run("manual secret provisioning", func(t *testing.T) {
-				t.Logf("Creating a Secret Certificate for the KonnectExtension")
-				secretCert := deploy.Secret(
-					t, ctx, clientNamespaced,
-					map[string][]byte{
-						consts.TLSCRT: cert,
-						consts.TLSKey: key,
-					},
-					deploy.WithLabel("konghq.com/konnect-dp-cert", "true"),
-				)
-				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, secretCert.DeepCopy()))
-
-				keWithKonnectIDCPRef := deploy.KonnectExtension(
-					t, ctx, clientNamespaced,
-					deploy.WithKonnectConfiguration[*konnectv1alpha1.KonnectExtension](konnectv1alpha1.KonnectConfiguration{
-						APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
-							Name: authCfg.Name,
-						},
-					}),
-					deploy.WithKonnectIDControlPlaneRef(cp),
-					setKonnectExtensionDPCertSecretRef(t, secretCert),
-				)
-				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
-
-				params := KonnectExtensionTestBodyParams{
-					konnectControlPlane: cp,
-					konnectExtension:    keWithKonnectIDCPRef,
-					secret:              secretCert,
-					client:              clientNamespaced,
-					authConfigName:      authCfg.Name,
-					namespace:           ns.Name,
-				}
-				konnectExtensionTestBody(t, params)
+		t.Run("Origin ControlPlane", func(t *testing.T) {
+			// Create entities to check proper working on Konnect.
+			deployKonnectEntitiesForKonnectExtensionTest(t, KonnectExtensionTestCaseParams{
+				konnectControlPlane: cp,
+				client:              clientNamespaced,
+				namespace:           ns.Name,
+				service:             service,
+				authConfigName:      authCfg.Name,
 			})
 
-			t.Run("automatic secret provisioning", func(t *testing.T) {
-				keWithKonnectIDCPRef := deploy.KonnectExtension(
-					t, ctx, clientNamespaced,
-					deploy.WithKonnectConfiguration[*konnectv1alpha1.KonnectExtension](konnectv1alpha1.KonnectConfiguration{
-						APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
-							Name: authCfg.Name,
-						},
-					}),
-					deploy.WithKonnectIDControlPlaneRef(cp),
-				)
-				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
-				params := KonnectExtensionTestBodyParams{
-					konnectControlPlane: cp,
-					konnectExtension:    keWithKonnectIDCPRef,
-					secret:              nil, // automatic provisioning
-					client:              clientNamespaced,
-					authConfigName:      authCfg.Name,
-					namespace:           ns.Name,
-				}
-				konnectExtensionTestBody(t, params)
+			// run the KonnectExtension test cases.
+			KonnectExtensionTestCases(t, KonnectExtensionTestCaseParams{
+				konnectControlPlane: cp,
+				service:             service,
+				client:              clientNamespaced,
+				namespace:           ns.Name,
+				authConfigName:      authCfg.Name,
 			})
 		})
 
-		t.Run("KonnectExtension with KonnectNamespacedRef control plane ref", func(t *testing.T) {
-			t.Run("manual secret provisioning", func(t *testing.T) {
-				t.Logf("Creating a Secret Certificate for the KonnectExtension")
-				secretCert := deploy.Secret(
-					t, ctx, clientNamespaced,
-					map[string][]byte{
-						consts.TLSCRT: cert,
-						consts.TLSKey: key,
+		t.Run("Mirror ControlPlane", func(t *testing.T) {
+			// Create a Mirror Konnect control plane for the KonnectExtension to attach to.
+			mirrorCP := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
+				deploy.WithTestIDLabel(testID),
+				deploy.WithMirrorSource(cp.GetKonnectID()),
+			)
+			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, mirrorCP.DeepCopy()))
+
+			t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", mirrorCP.Namespace, mirrorCP.Name)
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: mirrorCP.Name, Namespace: mirrorCP.Namespace}, mirrorCP)
+				require.NoError(t, err)
+				assertKonnectEntityProgrammed(t, mirrorCP)
+			}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+
+			require.Eventually(t,
+				testutils.ObjectPredicates(t, clients.MgrClient,
+					testutils.MatchCondition[*konnectv1alpha1.KonnectGatewayControlPlane](t).
+						Type(string(konnectv1alpha1.ControlPlaneMirroredConditionType)).
+						Status(metav1.ConditionTrue).
+						Reason(string(konnectv1alpha1.ControlPlaneMirroredReasonMirrored)).
+						Predicate(),
+				).Match(mirrorCP),
+				testutils.ControlPlaneCondDeadline, 2*testutils.ControlPlaneCondTick,
+			)
+
+			// Create entities to check proper working on Konnect.
+			deployKonnectEntitiesForKonnectExtensionTest(t, KonnectExtensionTestCaseParams{
+				konnectControlPlane: mirrorCP,
+				client:              clientNamespaced,
+				namespace:           ns.Name,
+				service:             service,
+				authConfigName:      authCfg.Name,
+			})
+
+			KonnectExtensionTestCases(t, KonnectExtensionTestCaseParams{
+				konnectControlPlane: mirrorCP,
+				service:             service,
+				client:              clientNamespaced,
+				namespace:           ns.Name,
+				authConfigName:      authCfg.Name,
+			})
+		})
+	})
+}
+
+type KonnectExtensionTestCaseParams struct {
+	konnectControlPlane *konnectv1alpha1.KonnectGatewayControlPlane
+	service             *corev1.Service
+	namespace           string
+	client              client.Client
+	authConfigName      string
+}
+
+func KonnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCaseParams) {
+	var cert, key = certificate.MustGenerateSelfSignedCertPEMFormat()
+	t.Run("KonnectExtension with KonnectID control plane ref", func(t *testing.T) {
+		t.Run("manual secret provisioning", func(t *testing.T) {
+			t.Logf("Creating a Secret Certificate for the KonnectExtension")
+			secretCert := deploy.Secret(
+				t, ctx, params.client,
+				map[string][]byte{
+					consts.TLSCRT: cert,
+					consts.TLSKey: key,
+				},
+				deploy.WithLabel("konghq.com/konnect-dp-cert", "true"),
+			)
+			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, secretCert.DeepCopy()))
+
+			keWithKonnectIDCPRef := deploy.KonnectExtension(
+				t, ctx, params.client,
+				deploy.WithKonnectConfiguration[*konnectv1alpha1.KonnectExtension](konnectv1alpha1.KonnectConfiguration{
+					APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						Name: params.authConfigName,
 					},
-					deploy.WithLabel("konghq.com/konnect-dp-cert", "true"),
-				)
-				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, secretCert.DeepCopy()))
+				}),
+				deploy.WithKonnectIDControlPlaneRef(params.konnectControlPlane),
+				setKonnectExtensionDPCertSecretRef(t, secretCert),
+			)
+			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
 
-				keWithKonnectIDCPRef := deploy.KonnectExtension(
-					t, ctx, clientNamespaced,
-					deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-					setKonnectExtensionDPCertSecretRef(t, secretCert),
-				)
-				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
-
-				params := KonnectExtensionTestBodyParams{
-					konnectControlPlane: cp,
-					konnectExtension:    keWithKonnectIDCPRef,
-					secret:              secretCert,
-					client:              clientNamespaced,
-					authConfigName:      authCfg.Name,
-					namespace:           ns.Name,
-				}
-				konnectExtensionTestBody(t, params)
+			konnectExtensionTestBody(t, KonnectExtensionTestBodyParams{
+				konnectControlPlane: params.konnectControlPlane,
+				konnectExtension:    keWithKonnectIDCPRef,
+				secret:              secretCert,
+				client:              params.client,
+				authConfigName:      params.authConfigName,
+				namespace:           params.namespace,
 			})
+		})
 
-			t.Run("automatic secret provisioning", func(t *testing.T) {
-				keWithKonnectIDCPRef := deploy.KonnectExtension(
-					t, ctx, clientNamespaced,
-					deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-				)
-				t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
-				params := KonnectExtensionTestBodyParams{
-					konnectControlPlane: cp,
-					konnectExtension:    keWithKonnectIDCPRef,
-					secret:              nil, // automatic provisioning
-					client:              clientNamespaced,
-					authConfigName:      authCfg.Name,
-					namespace:           ns.Name,
-				}
-				konnectExtensionTestBody(t, params)
+		t.Run("automatic secret provisioning", func(t *testing.T) {
+			keWithKonnectIDCPRef := deploy.KonnectExtension(
+				t, ctx, params.client,
+				deploy.WithKonnectConfiguration[*konnectv1alpha1.KonnectExtension](konnectv1alpha1.KonnectConfiguration{
+					APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						Name: params.authConfigName,
+					},
+				}),
+				deploy.WithKonnectIDControlPlaneRef(params.konnectControlPlane),
+			)
+			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
+			konnectExtensionTestBody(t, KonnectExtensionTestBodyParams{
+				konnectControlPlane: params.konnectControlPlane,
+				konnectExtension:    keWithKonnectIDCPRef,
+				secret:              nil, // automatic provisioning
+				client:              params.client,
+				authConfigName:      params.authConfigName,
+				namespace:           params.namespace,
 			})
+		})
+	})
+
+	t.Run("KonnectExtension with KonnectNamespacedRef control plane ref", func(t *testing.T) {
+		t.Run("manual secret provisioning", func(t *testing.T) {
+			t.Logf("Creating a Secret Certificate for the KonnectExtension")
+			secretCert := deploy.Secret(
+				t, ctx, params.client,
+				map[string][]byte{
+					consts.TLSCRT: cert,
+					consts.TLSKey: key,
+				},
+				deploy.WithLabel("konghq.com/konnect-dp-cert", "true"),
+			)
+			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, secretCert.DeepCopy()))
+
+			keWithKonnectIDCPRef := deploy.KonnectExtension(
+				t, ctx, params.client,
+				deploy.WithKonnectNamespacedRefControlPlaneRef(params.konnectControlPlane),
+				setKonnectExtensionDPCertSecretRef(t, secretCert),
+			)
+			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
+
+			params := KonnectExtensionTestBodyParams{
+				konnectControlPlane: params.konnectControlPlane,
+				konnectExtension:    keWithKonnectIDCPRef,
+				secret:              secretCert,
+				client:              params.client,
+				authConfigName:      params.authConfigName,
+				namespace:           params.namespace,
+			}
+			konnectExtensionTestBody(t, params)
+		})
+
+		t.Run("automatic secret provisioning", func(t *testing.T) {
+			keWithKonnectIDCPRef := deploy.KonnectExtension(
+				t, ctx, params.client,
+				deploy.WithKonnectNamespacedRefControlPlaneRef(params.konnectControlPlane),
+			)
+			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
+			params := KonnectExtensionTestBodyParams{
+				konnectControlPlane: params.konnectControlPlane,
+				konnectExtension:    keWithKonnectIDCPRef,
+				secret:              nil, // automatic provisioning
+				client:              params.client,
+				authConfigName:      params.authConfigName,
+				namespace:           params.namespace,
+			}
+			konnectExtensionTestBody(t, params)
 		})
 	})
 }
 
 // KonnectExtensionTestBodyParams is a struct that holds the parameters for the test body function.
 type KonnectExtensionTestBodyParams struct {
-	konnectControlPlane *konnectv1alpha1.KonnectGatewayControlPlane
+	KonnectExtensionTestCaseParams
 	konnectExtension    *konnectv1alpha1.KonnectExtension
 	secret              *corev1.Secret
-	client              client.Client
 	authConfigName      string
+	konnectControlPlane *konnectv1alpha1.KonnectGatewayControlPlane
 	namespace           string
+	client              client.Client
+}
+
+func deployKonnectEntitiesForKonnectExtensionTest(
+	t *testing.T,
+	params KonnectExtensionTestCaseParams,
+) {
+	ks := deploy.KongService(t, ctx, params.client,
+		deploy.WithKonnectNamespacedRefControlPlaneRef(params.konnectControlPlane),
+		func(obj client.Object) {
+			ks, ok := obj.(*configurationv1alpha1.KongService)
+			require.True(t, ok)
+			ks.Spec.KongServiceAPISpec = configurationv1alpha1.KongServiceAPISpec{
+				Name: lo.ToPtr("httpbin"),
+				URL:  lo.ToPtr(fmt.Sprintf("http://%s.%s.svc.cluster.local/", params.service.Name, params.namespace)),
+				Host: fmt.Sprintf("%s.%s.svc.cluster.local", params.service.Name, params.namespace),
+			}
+		},
+	)
+	t.Logf("Waiting for KongService to be updated with Konnect ID")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: ks.Name, Namespace: ks.Namespace}, ks)
+		require.NoError(t, err)
+		assertKonnectEntityProgrammed(t, ks)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, ks))
+
+	kr := deploy.KongRoute(
+		t, ctx, params.client,
+		deploy.WithNamespacedKongServiceRef(ks),
+		func(obj client.Object) {
+			s := obj.(*configurationv1alpha1.KongRoute)
+			s.Spec.Paths = []string{"/test"}
+		},
+	)
+	t.Logf("Waiting for KongRoute to be updated with Konnect ID")
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, kr)
+		require.NoError(t, err)
+
+		assertKonnectEntityProgrammed(t, kr)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kr))
 }
 
 // konnectExtensionTestBody is a function that runs the test body for KonnectExtension.
