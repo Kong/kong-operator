@@ -42,7 +42,7 @@ spec:
         containers:
         - name: proxy
           # renovate: datasource=docker versioning=docker
-          image: kong/kong-gateway:3.10
+          image: kong/kong-gateway:3.9
           env:
           - name: KONG_LOG_LEVEL
             value: debug

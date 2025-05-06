@@ -17,7 +17,7 @@ import (
 var testSuiteToRun = integration.GetTestSuite()
 
 func TestMain(m *testing.M) {
-	helpers.SetDefaultDataPlaneImage(consts.DefaultDataPlaneEnterpriseImage)
+	helpers.SetDefaultDataPlaneImage(consts.DefaultDataPlaneImage)
 	helpers.SetDefaultDataPlaneBaseImage(consts.DefaultDataPlaneBaseImage)
 
 	testSuiteToRun = helpers.ParseGoTestFlags(TestIntegration, testSuiteToRun)
