@@ -35,7 +35,7 @@ spec:
         containers:
         - name: proxy
           # renovate: datasource=docker versioning=docker
-          image: kong/kong-gateway:3.9
+          image: kong:3.9
           env:
             - name: KONG_ROLE
               value: data_plane
