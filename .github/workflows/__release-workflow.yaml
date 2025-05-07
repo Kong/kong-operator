@@ -108,6 +108,9 @@ jobs:
           version_extractor_regex: 'v(.*)$'
 
   build-push-images:
+    permissions:
+      actions: read
+      contents: read
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
       dockerhub-token: ${{ secrets.dockerhub-push-token }}
