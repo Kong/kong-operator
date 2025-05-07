@@ -77,6 +77,7 @@
 - Updated `kubernetes-configuration` dependency for adding `scale` subresource for `DataPlane` CRD.
   [#1523](https://github.com/Kong/gateway-operator/pull/1523)
 - Bump `kong/kubernetes-configuration` dependency to v1.4.0
+  [#1574](https://github.com/Kong/gateway-operator/pull/1574)
 
 ### Fixes
 
