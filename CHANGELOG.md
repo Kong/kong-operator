@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v1.6.0](#v160)
 - [v1.5.1](#v151)
 - [v1.5.0](#v150)
 - [v1.4.2](#v142)
@@ -26,7 +27,9 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v1.6.0]
+
+> Release date: 2025-05-07
 
 ### Added
 
@@ -81,7 +84,7 @@
 
 ### Fixes
 
-- Fix setting the defaults for `GatewayConfiguration`'s `ReadinessProbe when only
+- Fix setting the defaults for `GatewayConfiguration`'s `ReadinessProbe` when only
   timeouts and/or delays are specified. Now the HTTPGet field is set to `/status/ready`
   as expected with the `Gateway` scenario.
   [#1395](https://github.com/Kong/gateway-operator/pull/1395)
