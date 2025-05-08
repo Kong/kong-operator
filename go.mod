@@ -38,9 +38,7 @@ require (
 	k8s.io/apimachinery v0.33.0
 	k8s.io/client-go v0.33.0
 	k8s.io/kubernetes v1.33.0
-	// TODO: Use official release when
-	// https://github.com/oras-project/oras-go/pull/850 becomes part of it.
-	oras.land/oras-go/v2 v2.5.1-0.20250331092043-d0ac8e455584
+	oras.land/oras-go/v2 v2.6.0
 	sigs.k8s.io/controller-runtime v0.20.4
 	sigs.k8s.io/gateway-api v1.3.0
 	sigs.k8s.io/kustomize/api v0.19.0
@@ -219,7 +217,7 @@ require (
 	golang.org/x/exp v0.0.0-20250210185358-939b2ce775ac // indirect
 	golang.org/x/net v0.39.0 // indirect
 	golang.org/x/oauth2 v0.28.0 // indirect
-	golang.org/x/sync v0.13.0 // indirect
+	golang.org/x/sync v0.14.0 // indirect
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/term v0.31.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
