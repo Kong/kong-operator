@@ -11,6 +11,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -18,6 +19,8 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/gateway-operator/controller/controlplane"
+	"github.com/kong/gateway-operator/controller/controlplane_extensions"
+	"github.com/kong/gateway-operator/controller/controlplane_extensions/metricsscraper"
 	"github.com/kong/gateway-operator/controller/dataplane"
 	"github.com/kong/gateway-operator/controller/gateway"
 	"github.com/kong/gateway-operator/controller/gatewayclass"
@@ -124,6 +127,9 @@ const (
 	KongSNIControllerName = "KongSNI"
 	// KongDataPlaneClientCertificateControllerName is the name of KongDataPlaneClientCertificate controller.
 	KongDataPlaneClientCertificateControllerName = "KongDataPlaneClientCertificate"
+	// ControlPlaneExtensionsControllerName is the name of the controller that manages extensions
+	// for ControlPlane resources.
+	ControlPlaneExtensionsControllerName = "ControlPlaneExtensions"
 )
 
 // SetupControllersShim runs SetupControllers and returns its result as a slice of the map values.
@@ -426,6 +432,24 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 		Size: c.ClusterCAKeySize,
 	}
 
+	const (
+		// NOTE: This will be parametrized.
+		metricsScrapeInterval = 10 * time.Second
+	)
+	scrapersMgr := metricsscraper.NewManager(
+		mgr.GetLogger(),
+		metricsScrapeInterval,
+		mgr.GetClient(),
+		k8stypes.NamespacedName{
+			Name:      c.ClusterCASecretName,
+			Namespace: c.ClusterCASecretNamespace,
+		},
+		clusterCAKeyConfig,
+	)
+	if err := mgr.Add(scrapersMgr); err != nil {
+		return nil, fmt.Errorf("failed to add scrapers manager to controller-runtime manager: %w", err)
+	}
+
 	controllers := map[string]ControllerDef{
 		// GatewayClass controller
 		GatewayClassControllerName: {
@@ -558,6 +582,14 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 				Client:      mgr.GetClient(),
 				Scheme:      mgr.GetScheme(),
 				LoggingMode: c.LoggingMode,
+			},
+		},
+		ControlPlaneExtensionsControllerName: {
+			Enabled: c.ControlPlaneExtensionsControllerEnabled,
+			Controller: &controlplane_extensions.Reconciler{
+				Client:                          mgr.GetClient(),
+				LoggingMode:                     c.LoggingMode,
+				DataPlaneScraperManagerNotifier: scrapersMgr,
 			},
 		},
 	}

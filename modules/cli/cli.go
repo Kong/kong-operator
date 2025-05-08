@@ -55,6 +55,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.BoolVar(&cfg.ControlPlaneControllerEnabled, "enable-controller-controlplane", true, "Enable the ControlPlane controller.")
 	flagSet.BoolVar(&cfg.DataPlaneControllerEnabled, "enable-controller-dataplane", true, "Enable the DataPlane controller.")
 	flagSet.BoolVar(&cfg.DataPlaneBlueGreenControllerEnabled, "enable-controller-dataplane-bluegreen", true, "Enable the DataPlane BlueGreen controller. Mutually exclusive with DataPlane controller.")
+	flagSet.BoolVar(&cfg.ControlPlaneExtensionsControllerEnabled, "enable-controller-controlplaneextensions", true, "Enable the ControlPlane extensions controller.")
 
 	// controllers for specialized APIs and features
 	flagSet.BoolVar(&cfg.AIGatewayControllerEnabled, "enable-controller-aigateway", false, "Enable the AIGateway controller. (Experimental).")

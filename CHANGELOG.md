@@ -27,6 +27,13 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased for Kong Operator
+
+### Added
+
+- Move implementation of ControlPlane Extensions mechanism and DataPlaneMetricsExtension from EE.
+  [#1583](https://github.com/Kong/gateway-operator/pull/1583)
+
 ## [v1.6.0]
 
 > Release date: 2025-05-07
