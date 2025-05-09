@@ -1,6 +1,7 @@
 package scheme
 
 import (
+	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -31,6 +32,8 @@ func Get() *runtime.Scheme {
 	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
 
 	utilruntime.Must(konnectv1alpha1.AddToScheme(scheme))
+
+	utilruntime.Must(certmanagerv1.AddToScheme(scheme))
 
 	return scheme
 }

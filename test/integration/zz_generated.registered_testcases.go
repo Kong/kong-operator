@@ -14,6 +14,7 @@ func init() {
 		TestDataPlaneBlueGreenRollout,
 		TestDataPlaneEssentials,
 		TestDataPlaneHorizontalScaling,
+		TestDataPlaneKonnectCert,
 		TestDataPlanePodDisruptionBudget,
 		TestDataPlaneScaleSubresource,
 		TestDataPlaneServiceExternalTrafficPolicy,

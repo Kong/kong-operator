@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	certmanagerv1client "github.com/cert-manager/cert-manager/pkg/client/clientset/versioned/typed/certmanager/v1"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -19,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/gateway-operator/controller/dataplane/certificates"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
@@ -1214,4 +1217,95 @@ func TestDataPlaneSpecifyingServiceName(t *testing.T) {
 	}, waitTime, tickTime)
 
 	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+dataplaneIP), waitTime, tickTime)
+}
+
+func TestDataPlaneKonnectCert(t *testing.T) {
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+
+	t.Log("deploying dataplane resource")
+	dataplaneName := types.NamespacedName{
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
+	}
+	issuer := &certmanagerv1.ClusterIssuer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "fake-cluster-issuer",
+		},
+		Spec: certmanagerv1.IssuerSpec{
+			IssuerConfig: certmanagerv1.IssuerConfig{
+				SelfSigned: &certmanagerv1.SelfSignedIssuer{},
+			},
+		},
+	}
+	certClient, err := certmanagerv1client.NewForConfig(GetEnv().Cluster().Config())
+	require.NoError(t, err)
+	_, err = certClient.ClusterIssuers().Create(GetCtx(), issuer, metav1.CreateOptions{})
+	require.NoError(t, err)
+	dataplane := &operatorv1beta1.DataPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: dataplaneName.Namespace,
+			Name:      dataplaneName.Name,
+		},
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{
+										Name:  consts.DataPlaneProxyContainerName,
+										Image: helpers.GetDefaultDataPlaneImage(),
+									},
+								},
+							},
+						},
+					},
+				},
+				Network: operatorv1beta1.DataPlaneNetworkOptions{
+					KonnectCertificateOptions: &operatorv1beta1.KonnectCertificateOptions{
+						Issuer: operatorv1beta1.NamespacedName{
+							Name: "fake-cluster-issuer",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
+	dataplane, err = dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(dataplane)
+
+	t.Log("verifying dataplane gets marked provisioned")
+	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dataplaneName, GetClients().OperatorClient), time.Minute, time.Second)
+
+	t.Log("verifying deployments managed by the dataplane")
+	require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t, GetCtx(), dataplaneName, &appsv1.Deployment{}, client.MatchingLabels{
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+	}, GetClients()), time.Minute*2, time.Second)
+
+	t.Log("verifying dataplane Deployment.Pods.Env vars")
+	deployments := testutils.MustListDataPlaneDeployments(t, GetCtx(), dataplane, GetClients(), client.MatchingLabels{
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+	})
+	require.Len(t, deployments, 1, "There must be only one DataPlane deployment")
+	deployment := &deployments[0]
+
+	proxyContainer := k8sutils.GetPodContainerByName(
+		&deployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+	require.NotNil(t, proxyContainer)
+	envs := proxyContainer.Env
+
+	// check cluster cert added by callback
+	certEnv := GetEnvValueByName(envs, consts.ClusterCertEnvKey)
+	keyEnv := GetEnvValueByName(envs, consts.ClusterCertKeyEnvKey)
+	require.Equal(t, certificates.DataPlaneKonnectClientCertificatePath+"tls.crt", certEnv)
+	require.Equal(t, certificates.DataPlaneKonnectClientCertificatePath+"tls.key", keyEnv)
+
+	require.NotEmpty(t, GetVolumeByName(deployment.Spec.Template.Spec.Volumes, certificates.DataPlaneKonnectClientCertificateName))
+	mount := GetVolumeMountsByVolumeName(deployment.Spec.Template.Spec.Containers[0].VolumeMounts, certificates.DataPlaneKonnectClientCertificateName)[0]
+	require.Equal(t, certificates.DataPlaneKonnectClientCertificatePath, mount.MountPath)
 }

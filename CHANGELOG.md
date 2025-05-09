@@ -33,6 +33,8 @@
 
 - Move implementation of ControlPlane Extensions mechanism and DataPlaneMetricsExtension from EE.
   [#1583](https://github.com/Kong/gateway-operator/pull/1583)
+- Move implementation of certificate management for Konnect DPs from EE.
+  [#1590](https://github.com/Kong/gateway-operator/pull/1590)
 
 ## [v1.6.0]
 
