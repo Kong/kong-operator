@@ -22,6 +22,7 @@ import (
 	"github.com/kong/gateway-operator/controller/controlplane_extensions"
 	"github.com/kong/gateway-operator/controller/controlplane_extensions/metricsscraper"
 	"github.com/kong/gateway-operator/controller/dataplane"
+	"github.com/kong/gateway-operator/controller/dataplane/certificates"
 	"github.com/kong/gateway-operator/controller/gateway"
 	"github.com/kong/gateway-operator/controller/gatewayclass"
 	"github.com/kong/gateway-operator/controller/kongplugininstallation"
@@ -687,6 +688,41 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 			}
 			controllers[name] = controller
 		}
+	}
+
+	// Add Konnect certificate callbacks to DataPlane controllers
+	dataplaneController, ok := controllers[DataPlaneControllerName].Controller.(*dataplane.Reconciler)
+	if !ok {
+		return nil, fmt.Errorf("%s controller is not expected type", DataPlaneControllerName)
+	}
+	dataplaneBGController, ok := controllers[DataPlaneBlueGreenControllerName].Controller.(*dataplane.BlueGreenReconciler)
+	if !ok {
+		return nil, fmt.Errorf("%s controller is not expected type", DataPlaneBlueGreenControllerName)
+	}
+	dataplaneDelController, ok := dataplaneBGController.DataPlaneController.(*dataplane.Reconciler)
+	if !ok {
+		return nil, fmt.Errorf("%s controller subcontroller is not expected type", DataPlaneBlueGreenControllerName)
+	}
+
+	if err := dataplaneController.Callbacks.BeforeDeployment.Register(certificates.CreateKonnectCert, "create-konnect-cert"); err != nil {
+		return nil, err
+	}
+	if err := dataplaneController.Callbacks.AfterDeployment.Register(certificates.MountAndUseKonnectCert, "mount-konnect-cert"); err != nil {
+		return nil, err
+	}
+
+	if err := dataplaneBGController.Callbacks.BeforeDeployment.Register(certificates.CreateKonnectCert, "create-konnect-cert"); err != nil {
+		return nil, err
+	}
+	if err := dataplaneBGController.Callbacks.AfterDeployment.Register(certificates.MountAndUseKonnectCert, "mount-konnect-cert"); err != nil {
+		return nil, err
+	}
+
+	if err := dataplaneDelController.Callbacks.BeforeDeployment.Register(certificates.CreateKonnectCert, "create-konnect-cert"); err != nil {
+		return nil, err
+	}
+	if err := dataplaneDelController.Callbacks.AfterDeployment.Register(certificates.MountAndUseKonnectCert, "mount-konnect-cert"); err != nil {
+		return nil, err
 	}
 
 	return controllers, nil
