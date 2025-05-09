@@ -5,6 +5,7 @@ func init() {
 	addTestsToTestSuite(
 		TestAIGatewayCreation,
 		TestControlPlaneEssentials,
+		TestControlPlaneExtensionsDataPlaneMetrics,
 		TestControlPlaneUpdate,
 		TestControlPlaneWatchNamespaces,
 		TestControlPlaneWhenNoDataPlane,

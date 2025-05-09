@@ -558,6 +558,7 @@ _run:
 		-enable-controller-kongplugininstallation \
 		-enable-controller-aigateway \
 		-enable-controller-konnect \
+		-enable-controller-controlplaneextensions \
 		-zap-time-encoding iso8601 \
 		-zap-log-level 2 \
 		-zap-devel true

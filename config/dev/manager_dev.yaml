@@ -25,6 +25,7 @@ spec:
             - -enable-controller-kongplugininstallation
             - -enable-validating-webhook
             - -enable-controller-konnect
+            - -enable-controller-controlplaneextensions
           name: manager
           env:
             - name: GATEWAY_OPERATOR_ANONYMOUS_REPORTS

@@ -40,6 +40,11 @@ const (
 	// Kubernetes API.
 	GatewayOperatorManagedByNamespaceLabel = OperatorLabelPrefix + "managed-by-namespace"
 
+	// GatewayOperatorKongPluginTypeLabel is the label set on KongPlugin instances
+	// to indicate the type of the plugin.
+	// It is used to filter KongPlugin instances that are managed by the ControlPlane.
+	GatewayOperatorKongPluginTypeLabel = OperatorLabelPrefix + "kong-plugin-type"
+
 	// GatewayOperatorOwnerUIDControlPlane is the label that is used for objects
 	// to indicate a ControlPlane resource is the owner of the object.
 	// The value set for this label is the UID of the ControlPlane resource that
@@ -171,4 +176,16 @@ const (
 
 	// DefaultKonnectMaxConcurrentReconciles is the default max concurrent reconciles for Konnect entities.
 	DefaultKonnectMaxConcurrentReconciles = uint(8)
+)
+
+const (
+	// KongIngressControllerPluginsAnnotation is the name of the annotation set on Services
+	// which indicates to ControlPlane which KongPlugin instances to enable
+	// for the Service.
+	//
+	// Ref: https://docs.konghq.com/kubernetes-ingress-controller/latest/reference/custom-resources/#kongplugin
+	KongIngressControllerPluginsAnnotation = "konghq.com/plugins"
+
+	// KongPluginNamePrometheus is the name of the KongPlugin for the Prometheus plugin.
+	KongPluginNamePrometheus = "prometheus"
 )

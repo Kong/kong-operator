@@ -37,6 +37,9 @@ linters:
         # Incorrectly formatted error string.
         # https://staticcheck.dev/docs/checks/#ST1005
         - -ST1005
+        # Underscore in the name of a package.
+        # https://staticcheck.dev/docs/checks/#ST1003
+        - -ST1003
     exhaustive:
       default-signifies-exhaustive: true
     forbidigo:

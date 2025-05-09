@@ -88,6 +88,7 @@ type Config struct {
 	KonnectSyncPeriod                       time.Duration
 	KonnectMaxConcurrentReconciles          uint
 	GatewayAPIExperimentalEnabled           bool
+	ControlPlaneExtensionsControllerEnabled bool
 
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool

@@ -290,6 +290,7 @@ rules:
   - gateway-operator.konghq.com
   resources:
   - controlplane
+  - dataplanemetricsextensions
   - gatewayconfigurations
   verbs:
   - get

@@ -186,6 +186,7 @@ func expectedDefaultCfg() manager.Config {
 		ControlPlaneControllerEnabled:           true,
 		DataPlaneControllerEnabled:              true,
 		DataPlaneBlueGreenControllerEnabled:     true,
+		ControlPlaneExtensionsControllerEnabled: true,
 		KonnectControllersEnabled:               false,
 		KonnectSyncPeriod:                       consts.DefaultKonnectSyncPeriod,
 		KongPluginInstallationControllerEnabled: false,
