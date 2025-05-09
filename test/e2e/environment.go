@@ -63,21 +63,6 @@ var (
 )
 
 // -----------------------------------------------------------------------------
-// Test Suite - list of tests to run
-// -----------------------------------------------------------------------------
-
-var testSuite []func(*testing.T)
-
-// GetTestSuite returns all e2e tests that should be run.
-func GetTestSuite() []func(*testing.T) {
-	return testSuite
-}
-
-func addTestsToTestSuite(tests ...func(*testing.T)) {
-	testSuite = append(testSuite, tests...)
-}
-
-// -----------------------------------------------------------------------------
 // Testing Vars - Testing Environment
 // -----------------------------------------------------------------------------
 

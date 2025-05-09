@@ -30,10 +30,6 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
-func init() {
-	addTestsToTestSuite(TestHelmUpgrade)
-}
-
 func TestHelmUpgrade(t *testing.T) {
 	const (
 		// Rel: https://github.com/Kong/charts/tree/main/charts/gateway-operator
