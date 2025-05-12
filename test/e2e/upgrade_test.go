@@ -15,10 +15,6 @@ import (
 	"github.com/kong/gateway-operator/test"
 )
 
-func init() {
-	addTestsToTestSuite(TestDeployAndUpgradeFromLatestTagToOverride)
-}
-
 type upgradeTestParams struct {
 	// fromImage is the image to start the upgrade test with.
 	fromImage string

@@ -22,10 +22,6 @@ import (
 	"github.com/kong/gateway-operator/test/helpers"
 )
 
-func init() {
-	addTestsToTestSuite(TestOperatorLogs)
-}
-
 const (
 	// parallelGateways is the total number of gateways that are created and deleted one after the other
 	parallelGateways = 3
