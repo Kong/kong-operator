@@ -268,8 +268,6 @@ type ServiceOptions struct {
 	// Type determines how the Service is exposed.
 	// Defaults to `LoadBalancer`.
 	//
-	// Valid options are `LoadBalancer` and `ClusterIP`.
-	//
 	// `ClusterIP` allocates a cluster-internal IP address for load-balancing
 	// to endpoints.
 	//
