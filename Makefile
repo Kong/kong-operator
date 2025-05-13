@@ -54,10 +54,15 @@ tools: kic-role-generator controller-gen kustomize client-gen golangci-lint gote
 MISE := $(shell which mise)
 .PHONY: mise
 mise:
-	@mise -V >/dev/null || (echo "mise - https://github.com/jdx/mise - not found. Please install it." && exit 1)
+	@mise -V >/dev/null 2>/dev/null || (echo "mise - https://github.com/jdx/mise - not found. Please install it." && exit 1)
 
+.PHONY: mise-plugin-install
 mise-plugin-install: mise
 	@$(MISE) plugin install --yes -q $(DEP) $(URL)
+
+.PHONY: mise-install
+mise-install: mise
+	@$(MISE) install -q $(DEP_VER)
 
 KIC_ROLE_GENERATOR = $(PROJECT_DIR)/bin/kic-role-generator
 .PHONY: kic-role-generator
@@ -141,7 +146,7 @@ SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSIO
 .PHONY: setup-envtest
 setup-envtest: mise ## Download setup-envtest locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=setup-envtest URL=https://github.com/pmalek/mise-setup-envtest.git
-	@$(MISE) install setup-envtest@$(SETUP_ENVTEST_VERSION)
+	@$(MAKE) mise-install DEP_VER=setup-envtest@$(SETUP_ENVTEST_VERSION)
 
 ACTIONLINT_VERSION = $(shell $(YQ) -r '.actionlint' < $(TOOLS_VERSIONS_FILE))
 ACTIONLINT = $(PROJECT_DIR)/bin/installs/actionlint/$(ACTIONLINT_VERSION)/bin/actionlint
@@ -163,6 +168,18 @@ GOVULNCHECK = $(PROJECT_DIR)/bin/installs/govulncheck/$(GOVULNCHECK_VERSION)/bin
 download.govulncheck: mise yq ## Download govulncheck locally if necessary.
 	@$(MISE) plugin install --yes -q govulncheck https://github.com/wizzardich/asdf-govulncheck.git
 	@$(MISE) install -q govulncheck@$(GOVULNCHECK_VERSION)
+
+CHARTSNAP_VERSION = $(shell yq -ojson -r '.chartsnap' < $(TOOLS_VERSIONS_FILE))
+.PHONY: download.chartsnap
+download.chartsnap:
+	CHARTSNAP_VERSION=${CHARTSNAP_VERSION} ./scripts/install-chartsnap.sh
+
+KUBE_LINTER_VERSION = $(shell yq -ojson -r '.kube-linter' < $(TOOLS_VERSIONS_FILE))
+KUBE_LINTER = $(PROJECT_DIR)/bin/installs/kube-linter/v$(KUBE_LINTER_VERSION)/bin/kube-linter
+.PHONY: kube-linter
+download.kube-linter:
+	@$(MAKE) mise-plugin-install DEP=kube-linter
+	@$(MAKE) mise-install DEP_VER=kube-linter@v$(KUBE_LINTER_VERSION)
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
@@ -217,6 +234,10 @@ GOLANGCI_LINT_CONFIG ?= $(PROJECT_DIR)/.golangci.yaml
 .PHONY: lint
 lint: golangci-lint
 	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) $(GOLANGCI_LINT_FLAGS)
+
+.PHONY: lint.charts
+lint.charts: download.kube-linter
+	$(KUBE_LINTER) lint charts/
 
 .PHONY: lint.actions
 lint.actions: download.actionlint download.shellcheck
@@ -312,8 +333,12 @@ CONTROLLER_GEN_PATHS := $(patsubst %,%;,$(strip $(CONTROLLER_GEN_PATHS_RAW)))
 CONFIG_CRD_PATH = config/crd
 CONFIG_CRD_BASE_PATH = $(CONFIG_CRD_PATH)/bases
 
+KUBERNETES_CONFIGURATION_PACKAGE ?= github.com/kong/kubernetes-configuration
+KUBERNETES_CONFIGURATION_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(KUBERNETES_CONFIGURATION_PACKAGE))
+KUBERNETES_CONFIGURATION_PACKAGE_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_PACKAGE)@$(KUBERNETES_CONFIGURATION_VERSION)
+
 .PHONY: manifests
-manifests: controller-gen manifests.versions manifests.crds ## Generate ClusterRole and CustomResourceDefinition objects.
+manifests: controller-gen manifests.versions manifests.crds manifests.charts.crds ## Generate ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" rbac:roleName=manager-role output:rbac:dir=config/rbac/role
 
 .PHONY: manifests.crds
@@ -325,6 +350,12 @@ manifests.crds: controller-gen manifests.versions ## Generate CustomResourceDefi
 manifests.versions: kustomize yq
 	cd config/components/manager-image/ && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
 
+.PHONY: manifests.charts.crds
+manifests.charts.crds: kustomize ## Update custom-resource-definitions.yaml in charts/kong-operator/crds.
+	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_PACKAGE_PATH)/config/crd/gateway-operator > \
+		$(PROJECT_DIR)/charts/kong-operator/crds/custom-resource-definitions.yaml
+	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_PACKAGE_PATH)/config/crd/ingress-controller > \
+		$(PROJECT_DIR)/charts/kong-operator/charts/kic-crds/crds/kic-crds.yaml
 # ------------------------------------------------------------------------------
 # Build - Container Images
 # ------------------------------------------------------------------------------
@@ -472,6 +503,31 @@ test.conformance:
 .PHONY: test.samples
 test.samples:
 	@cd config/samples/ && find . -not -name "kustomization.*" -type f | sort | xargs -I{} bash -c "echo;echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
+
+.PHONY: test.charts.golden
+test.charts.golden:
+	@ \
+		$(MAKE) _chartsnap CHART=kong-operator || \
+	(echo "$$GOLDEN_TEST_FAILURE_MSG" && exit 1)
+
+.PHONY: test.charts.golden.update
+test.charts.golden.update:
+	@ $(MAKE) _chartsnap CHART=kong-operator CHARTSNAP_ARGS="-u"
+
+# Defining multi-line strings to echo: https://stackoverflow.com/a/649462/7958339
+define GOLDEN_TEST_FAILURE_MSG
+>> Golden tests have failed.
+>> Please run 'make test.golden.update' to update golden files and commit the changes if they're expected.
+endef
+export GOLDEN_TEST_FAILURE_MSG
+
+.PHONY: _chartsnap
+_chartsnap: download.chartsnap
+	helm chartsnap -c ./charts/$(CHART) -f ./charts/$(CHART)/ci/ $(CHARTSNAP_ARGS) \
+		-- \
+		--api-versions gateway.networking.k8s.io/v1 \
+		--api-versions admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy \
+		--api-versions admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding
 
 # https://github.com/vektra/mockery/issues/803#issuecomment-2287198024
 .PHONY: generate.mocks
