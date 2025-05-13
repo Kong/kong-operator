@@ -36,3 +36,7 @@ shellcheck: "0.10.0"
 #
 # renovate: datasource=git-tags depName=vuln registryUrl=https://go.googlesource.com
 govulncheck: "1.1.4"
+# renovate: datasource=github-releases depName=jlandowner/helm-chartsnap
+chartsnap: "0.4.3"
+# renovate: datasource=github-releases depName=stackrox/kube-linter
+kube-linter: "0.7.2"
