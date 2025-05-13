@@ -5,4 +5,4 @@
 For more details, please refer to the following documents:
 
 * https://docs.konghq.com/gateway-operator/latest/get-started/kic/create-gateway/
-* https://docs.konghq.com/konnect/gateway-manager/data-plane-nodes/
+* https://docs.konghq.com/gateway-operator/latest/get-started/konnect/deploy-data-plane-with-konnectextension/
