@@ -512,7 +512,6 @@ test.charts.golden:
 
 .PHONY: test.charts.golden.update
 test.charts.golden.update:
-	helm repo update kong
 	@ $(MAKE) _chartsnap CHART=kong-operator CHARTSNAP_ARGS="-u"
 
 # Defining multi-line strings to echo: https://stackoverflow.com/a/649462/7958339
