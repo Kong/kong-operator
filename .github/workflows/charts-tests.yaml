@@ -29,6 +29,9 @@ permissions:
 env:
   MISE_VERBOSE: 1
   MISE_DEBUG: 1
+  # Specify this here because these tests rely on ktf to run kind for cluster creation.
+  # renovate: datasource=github-releases depName=kubernetes-sigs/kind
+  KIND_VERSION: "0.27.0"
 
 jobs:
   lint:
@@ -44,6 +47,58 @@ jobs:
 
       - name: Run linters
         run: make lint.charts
+
+  matrix_k8s_node_versions:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - id: set-matrix
+        run: |
+          (
+            echo 'matrix<<EOF'
+            yq eval -o=json '.' .github/supported_k8s_node_versions.yaml
+            echo 'EOF'
+          ) >> "${GITHUB_OUTPUT}"
+
+  lint-test:
+    timeout-minutes: 30
+    needs:
+      - matrix_k8s_node_versions
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        kubernetes-node-version: ${{ fromJson(needs.matrix_k8s_node_versions.outputs.matrix) }}
+        chart-name:
+          - kong-operator
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - uses: azure/setup-helm@b9e51907a09c216f16ebe8536097933489208112 # v4.3.0
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.13"
+
+      - uses: helm/chart-testing-action@0d28d3144d3a25ea2cc349d6e59901c4ff469b3b # v2.7.0
+
+      - name: Run chart-testing (lint)
+        run: ct lint --target-branch main --check-version-increment=false
+
+      - name: setup testing environment (kind-cluster)
+        env:
+          KUBERNETES_VERSION: ${{ matrix.kubernetes-node-version }}
+          CHART_NAME: ${{ matrix.chart-name }}
+        run: ./scripts/charts-test-env.sh
+
+      - name: Run chart-testing (install)
+        run: |
+          kubectl create ns kong-test
+          ct install --target-branch main --charts charts/${{ matrix.chart-name}} --namespace kong-test
+          # No need to delete the ns the cluster is scrapped after the job anyway.
 
   golden-tests:
     timeout-minutes: 30
@@ -70,6 +125,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - lint
+      - lint-test
       - golden-tests
     if: always()
     steps:
