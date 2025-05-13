@@ -1,16 +1,18 @@
 ## Kong Operator
 
-[Kong Operator](https://docs.konghq.com/kong-operator/latest/) is a Kubernetes Operator that can manage and configure your Kong Gateway Data Planes when running on Kubernetes.
+[Kong Operator](https://docs.konghq.com/kong-operator/latest/) is a Kubernetes Operator
+that can manage and configure your Kong Gateway Data Planes when running on Kubernetes.
 
 ## Usage
 
-TODO: Update instructions
+TODO: https://github.com/Kong/gateway-operator/issues/1360 Update instructions
+
 
 ```bash
 helm repo add kong https://charts.konghq.com
 helm repo update
 
-helm install kgo kong/kong-operator -n kong-system --create-namespace
+helm install ko kong/kong-operator -n kong-system --create-namespace
 ```
 
 ### CRD management
