@@ -22,20 +22,21 @@ If the troubleshooting section does not contain the answer to the problem you en
 - [ ] Ask on the `team-k8s` Slack channel for granting the CI DockerHub account temporary permission to push images to the `kong/gateway-operator-oss` repository.
 - [ ] From [GitHub release action][release-action], start a new workflow run:
   - Set the `Use workflow from` to the release branch: e.g. `release/1.2.x`
+    - If you want to release a major version, set the `Use workflow from` to the `main` branch otherwise set it to the release branch.
   - Set the `release` input set to the target version (e.g. `v1.2.0`).
 - [ ] Wait for the workflow to complete.
 - [ ] Once the workflow completes, ask for revoking the temporary permission to push images to the `kong/gateway-operator-oss` repository.
-- [ ] The CI should create a PR in the [Gateway Operator][kgo-prs] repo that bumps KGO version in VERSION file and manifests. Merge it.
+- [ ] The CI should create a PR in the [Gateway Operator][kgo-prs] repo that bumps KGO version in `VERSION` file and manifests. Merge it.
 - [ ] After the PR is merged, [release-bot][release-bot-workflow] workflow will be triggered. It will create a new GH release, as well as a release branch (if not patch or prerelease):
   - [ ] Check the [releases][releases] page. The release has to be marked manually as `latest` if this is the case.
   - [ ] Check the `release/N.M.x` release branch exists.
 - [ ] Update the official documentation at [github.com/Kong/docs.konghq.com][docs_repo]
-  - [ ] Run post processing script for `docs/api-reference.md`, providing a tagged version of CRD reference from docs repo as an argument, e.g. `app/_src/gateway-operator/reference/custom-resources/1.2.x.md`.
+  - [ ] Run post processing script for `${KUBERNETES_CONFIGURATION_REPO}/docs/gateway-operator-api-reference.md`, providing a tagged version of CRD reference from docs repo as an argument, e.g. `app/_src/gateway-operator/reference/custom-resources/1.2.x.md`.
     This will add the necessary skaffolding so that the reference is rendered correctly on docs.konghq.com.
 
     Example:
     ```
-    ${GATEWAY_OPERATOR_REPO}/scripts/apidocs-gen/post-process-for-konghq.sh ~/docs.konghq.com/app/_src/gateway-operator/reference/custom-resources/1.2.x.md
+    ${KUBERNETES_CONFIGURATION_REPO}/scripts/apidocs-gen/post-process-for-konghq.sh ${KUBERNETES_CONFIGURATION_REPO}/docs/gateway-operator-api-reference.md ${KONGHQ_DOCS_REPO}/app/_src/gateway-operator/reference/custom-resources/1.2.x.md
     ```
 
   - NOTE: [CLI configuration options docs][cli_ref_docs] should be updated when releasing KGO EE as that's the source of truth for those.
