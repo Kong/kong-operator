@@ -58,3 +58,16 @@ const (
 	// Example: konnect.konghq.com/certificate-ids: "xxxxxx,yyyyyy,zzzzzz"
 	DataPlaneCertificateIDAnnotationKey = "konnect.konghq.com/certificate-ids"
 )
+
+// -----------------------------------------------------------------------------
+// Consts - KongDataPlaneClientCertificate labels
+// -----------------------------------------------------------------------------
+
+const (
+	// SecretPrefix is used as a name prefix to generate secret-owned objects' name.
+	SecretPrefix = "secret"
+
+	// SecretManagedLabelValue indicates that an object's lifecycle is managed
+	// by the secret controller.
+	SecretManagedLabelValue = "secret"
+)
