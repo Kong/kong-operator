@@ -291,8 +291,8 @@ func filterKongPluginBindings(kpbs []configurationv1alpha1.KongPluginBinding) []
 
 // filterKongCredentials filters out the KongCredentials to be kept and returns all the KongCredentials
 // to be deleted.
-// The KongPluginBinding with Programmed status condition is kept.
-// If no such binding is found the oldest is kept.
+// The KongCredential with Programmed status condition is kept.
+// If no such credential is found the oldest is kept.
 func filterKongCredentials[
 	T constraints.SupportedCredentialType,
 	TPtr constraints.KongCredential[T],
@@ -335,4 +335,44 @@ func filterKongCredentials[
 	}
 
 	return append(creds[:best], creds[best+1:]...)
+}
+
+// -----------------------------------------------------------------------------
+// Filter functions - KongDataPlaneClientCertificates
+// -----------------------------------------------------------------------------
+
+// KongDataPlaneClientCertificates filters out the KongDataPlaneClientCertificates to be kept and returns all the KongDataPlaneClientCertificates
+// to be deleted.
+// The KongDataPlaneClientCertificate with Programmed status condition is kept.
+// If no such certificate is found the oldest is kept.
+func filterKongDataPlaneClientCertificates(certs []configurationv1alpha1.KongDataPlaneClientCertificate) []configurationv1alpha1.KongDataPlaneClientCertificate {
+	if len(certs) < 2 {
+		return []configurationv1alpha1.KongDataPlaneClientCertificate{}
+	}
+
+	programmed := -1
+	best := 0
+	for i, kpb := range certs {
+		if lo.ContainsBy(kpb.Status.Conditions, func(c metav1.Condition) bool {
+			return c.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+				c.Status == metav1.ConditionTrue
+		}) {
+
+			if programmed != -1 && kpb.CreationTimestamp.Before(&certs[programmed].CreationTimestamp) {
+				best = i
+				programmed = i
+			} else if programmed == -1 {
+				best = i
+				programmed = i
+			}
+
+			continue
+		}
+
+		if kpb.CreationTimestamp.Before(&certs[best].CreationTimestamp) && programmed == -1 {
+			best = i
+		}
+	}
+
+	return append(certs[:best], certs[best+1:]...)
 }

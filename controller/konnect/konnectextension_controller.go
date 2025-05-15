@@ -56,18 +56,15 @@ type KonnectExtensionReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	ls := metav1.LabelSelector{
+	var konnectExtensionSecretLabelSelector = metav1.LabelSelector{
 		// A secret must have `konghq.com/konnect-dp-cert` label to be watched by the controller.
 		// This constraint is added to prevent from watching all secrets which may cause high resource consumption.
 		// TODO: https://github.com/kong/kong-operator/issues/1255 set label constraints of `Secret`s on manager level if possible.
 		MatchExpressions: []metav1.LabelSelectorRequirement{
-			{
-				Key:      SecretKonnectDataPlaneCertificateLabel,
-				Operator: metav1.LabelSelectorOpExists,
-			},
+			konnectDataPlaneCertificateLabelMatchExpression,
 		},
 	}
-	labelSelectorPredicate, err := predicate.LabelSelectorPredicate(ls)
+	labelSelectorPredicate, err := predicate.LabelSelectorPredicate(konnectExtensionSecretLabelSelector)
 	if err != nil {
 		return err
 	}

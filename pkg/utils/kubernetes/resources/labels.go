@@ -39,6 +39,11 @@ func LabelObjectAsControlPlaneManaged(obj metav1.Object) {
 	setLabel(obj, consts.GatewayOperatorManagedByLabel, consts.ControlPlaneManagedLabelValue)
 }
 
+// TODO: comment
+func LabelObjectAsSecretManaged(obj metav1.Object) {
+	setLabel(obj, consts.GatewayOperatorManagedByLabel, consts.SecretManagedLabelValue)
+}
+
 func setLabel(obj metav1.Object, key string, value string) { //nolint:unparam
 	labels := obj.GetLabels()
 	if labels == nil {
