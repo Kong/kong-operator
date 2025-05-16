@@ -32,7 +32,7 @@ jobs:
           echo "🔎 Listing stale and closed issues..."
           echo ""
           echo "## 📌 Staled Issues: $(echo "$STALE_JSON" | jq -r '. | length')"
-          echo "$STALE_JSON" | jq -r '.[] | "#\(.number) - \(.title) - \(.html_url)"'
+          echo "$STALE_JSON" | jq -r '.[] | "#\(.number) - \(.title) - https://github.com/${{ github.repository }}/issues/\(.number)"'
           echo ""
           echo "## ❌ Closed Issues: $(echo "$CLOSED_JSON" | jq -r '. | length')"
-          echo "$CLOSED_JSON" | jq -r '.[] | "#\(.number) - \(.title) - \(.html_url)"'
+          echo "$CLOSED_JSON" | jq -r '.[] | "#\(.number) - \(.title) - https://github.com/${{ github.repository }}/issues/\(.number)"'
