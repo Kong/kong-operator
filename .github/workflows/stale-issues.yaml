@@ -1,0 +1,38 @@
+name: Mark stale issues
+
+on:
+  schedule:
+    - cron: '30 1 * * *'  # Runs daily at 01:30 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark stale issues
+        id: stale
+        uses: actions/stale@5bef64f19d7facfb25b37b414482c7164d639639 # v9.1.0
+        with:
+          days-before-stale: 60
+          days-before-close: 700
+          stale-issue-label: 'stale'
+          stale-issue-message: 'This issue has been automatically marked as stale due to 60 days of inactivity. Please update or comment if this is still relevant.'
+          remove-issue-stale-when-updated: true
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          debug-only: 'true'
+
+      - name: List marked stale and closed issues
+        run: |
+          STALE_JSON='${{ steps.stale.outputs.staled-issues-prs }}'
+          CLOSED_JSON='${{ steps.stale.outputs.closed-issues-prs }}'
+          echo "🔎 Listing stale and closed issues..."
+          echo ""
+          echo "## 📌 Staled Issues: $(echo "$STALE_JSON" | jq -r '. | length')"
+          echo "$STALE_JSON" | jq -r '.[] | "#\(.number) - \(.title) - \(.html_url)"'
+          echo ""
+          echo "## ❌ Closed Issues: $(echo "$CLOSED_JSON" | jq -r '. | length')"
+          echo "$CLOSED_JSON" | jq -r '.[] | "#\(.number) - \(.title) - \(.html_url)"'
