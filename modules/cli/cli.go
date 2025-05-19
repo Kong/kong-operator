@@ -30,7 +30,7 @@ func New(m metadata.Info) *CLI {
 	var deferCfg flagsForFurtherEvaluation
 
 	flagSet.BoolVar(&cfg.ValidateImages, "validate-images", true, "Validate the images set in ControlPlane and DataPlane specifications.")
-	flagSet.Var(NewValidatedValue[logging.Mode](&cfg.LoggingMode, logging.NewMode, WithDefault(logging.ProductionMode)), "logging-mode", "Logging mode to use. Possible values: production, development.")
+	flagSet.Var(newValidatedValue(&cfg.LoggingMode, logging.NewMode, withDefault(logging.ProductionMode)), "logging-mode", "Logging mode to use. Possible values: production, development.")
 
 	flagSet.BoolVar(&cfg.AnonymousReports, "anonymous-reports", true, "Send anonymized usage data to help improve Kong.")
 	flagSet.StringVar(&cfg.APIServerPath, "apiserver-host", "", "The Kubernetes API server URL. If not set, the operator will use cluster config discovery.")
@@ -146,7 +146,7 @@ func (c *CLI) Metadata() metadata.Info {
 // by the program. It returns config for controller manager.
 func (c *CLI) Parse(arguments []string) manager.Config {
 	// Flags take precedence over environment variables,
-	// so we bind env vars first then parse aruments to override the values from flags.
+	// so we bind env vars first then parse arguments to override the values from flags.
 	if err := c.bindEnvVarsToFlags(); err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
@@ -207,9 +207,10 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	return *c.cfg
 }
 
-// FlagSet returns bare underlying flagset of the cli. It can be used to register
-// additional flags. They will be parsed by Parse() method. Caller needs to take
-// care of values set by flags added to this flagset.
+// FlagSet returns bare underlying flagset of the cli. It can be used to generate
+// documentation for CLI or to register additional flags. They will be parsed by
+// Parse() method. Caller needs to take care of values set by flags added to this
+// flagset.
 func (c *CLI) FlagSet() *flag.FlagSet {
 	return c.flagSet
 }

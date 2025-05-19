@@ -178,7 +178,7 @@ func startControllerManager(metadata metadata.Info) <-chan struct{} {
 
 	startedChan := make(chan struct{})
 	go func() {
-		exitOnErr(manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, startedChan, metadata))
+		exitOnErr(manager.Run(cfg, scheme.Get(), manager.SetupControllers, startedChan, metadata))
 	}()
 
 	return startedChan

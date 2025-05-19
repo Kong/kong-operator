@@ -36,7 +36,7 @@ func main() {
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(cfg.LoggerOpts)))
 
-	if err := manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, nil, m); err != nil {
+	if err := manager.Run(cfg, scheme.Get(), manager.SetupControllers, nil, m); err != nil {
 		ctrl.Log.Error(err, "failed to run manager")
 		os.Exit(1)
 	}

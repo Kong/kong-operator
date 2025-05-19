@@ -21,7 +21,7 @@ const (
 	IndexFieldKongPluginBindingKonnectGatewayControlPlane = "kongPluginBindingKonnectGatewayControlPlaneRef"
 )
 
-// OptionsForKongPluginBinding returns required Index options for KongPluginBinding reconclier.
+// OptionsForKongPluginBinding returns required Index options for KongPluginBinding reconciler.
 func OptionsForKongPluginBinding() []Option {
 	return []Option{
 		{

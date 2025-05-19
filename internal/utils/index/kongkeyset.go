@@ -11,7 +11,7 @@ const (
 	IndexFieldKongKeySetOnKonnectGatewayControlPlane = "kongKeySetKonnectGatewayControlPlaneRef"
 )
 
-// OptionsForKongKeySet returns required Index options for KongKeySet reconclier.
+// OptionsForKongKeySet returns required Index options for KongKeySet reconciler.
 func OptionsForKongKeySet(cl client.Client) []Option {
 	return []Option{
 		{
