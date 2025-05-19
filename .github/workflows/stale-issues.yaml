@@ -29,8 +29,8 @@ jobs:
 
       - name: List marked stale and closed issues
         run: |
-          STALE_JSON='${{ steps.stale.outputs.staled-issues-prs }}'
-          CLOSED_JSON='${{ steps.stale.outputs.closed-issues-prs }}'
+          STALE_JSON="${{ steps.stale.outputs.staled-issues-prs }}"
+          CLOSED_JSON="${{ steps.stale.outputs.closed-issues-prs }}"
           echo "🔎 Listing stale and closed issues..."
           echo ""
           echo "## 📌 Staled Issues: $(echo "$STALE_JSON" | jq -r '. | length')"
