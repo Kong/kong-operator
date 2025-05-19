@@ -6,11 +6,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  issues: write
+  issues: read
 
 jobs:
   stale:
     runs-on: ubuntu-latest
+    permissions:
+      issues: write
     steps:
       - name: Mark stale issues
         id: stale
