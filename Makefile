@@ -270,7 +270,7 @@ verify.generators: verify.repo generate verify.diff
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.rbacs generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.kic-webhook-config generate.mocks
+generate: generate.rbacs generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.kic-webhook-config generate.mocks generate.cli-arguments-docs
 
 .PHONY: generate.crd-kustomize
 generate.crd-kustomize:
@@ -310,6 +310,11 @@ generate.k8sio-gomod-replace:
 .PHONY: generate.kic-webhook-config
 generate.kic-webhook-config: kustomize kic-webhook-config-generator
 	KUSTOMIZE=$(KUSTOMIZE) $(KIC_WEBHOOKCONFIG_GENERATOR)
+
+.PHONY: generate.cli-arguments-docs
+generate.cli-arguments-docs:
+# Use ./scripts/cli-arguments-docs-gen/post-process-for-konghq.sh to postprocess the output for docs.konghq.com
+	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments.md
 
 # ------------------------------------------------------------------------------
 # Files generation checks
