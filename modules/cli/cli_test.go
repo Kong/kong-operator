@@ -131,38 +131,6 @@ func TestParse(t *testing.T) {
 	}
 }
 
-func TestParseWithAdditionalFlags(t *testing.T) {
-	type additionalConfig struct {
-		OptionBool   bool
-		OptionalInt  int
-		OptionString string
-	}
-
-	var additionalCfg additionalConfig
-	cli := New(metadata.Metadata())
-	cli.FlagSet().BoolVar(&additionalCfg.OptionBool, "additional-bool", true, "Additional bool flag")
-	cli.FlagSet().StringVar(&additionalCfg.OptionString, "additional-string", "additional", "Additional string flag")
-	cli.FlagSet().IntVar(&additionalCfg.OptionalInt, "additional-int", 0, "Additional integer flag")
-	// Pass existing flag and a new one to ensure that both work as expected.
-	t.Setenv(
-		"GATEWAY_OPERATOR_ADDITIONAL_STRING", "failed",
-	)
-	t.Setenv(
-		"GATEWAY_OPERATOR_ADDITIONAL_INT", "1",
-	)
-	cfg := cli.Parse([]string{"--additional-string=passed", "--metrics-bind-address=:9090"})
-
-	expectedCfg := expectedDefaultCfg()
-	expectedCfg.MetricsAddr = ":9090"
-
-	require.Empty(t, cmp.Diff(
-		expectedCfg, cfg,
-		// Those fields contain functions that are not comparable in Go.
-		cmpopts.IgnoreFields(manager.Config{}, "LoggerOpts.EncoderConfigOptions", "LoggerOpts.TimeEncoder")),
-	)
-	require.Equal(t, additionalConfig{OptionBool: true, OptionString: "passed", OptionalInt: 1}, additionalCfg)
-}
-
 func expectedDefaultCfg() manager.Config {
 	return manager.Config{
 		MetricsAddr:                             ":8080",

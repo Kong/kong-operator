@@ -134,7 +134,7 @@ func TestMain(m *testing.M) {
 	// Spawn the controller manager based on passed config in
 	// a separate goroutine and report whether that succeeded.
 	managerToTest := func(startedChan chan struct{}) error {
-		return manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, startedChan, metadata.Metadata())
+		return manager.Run(cfg, scheme.Get(), manager.SetupControllers, startedChan, metadata.Metadata())
 	}
 	startedChan := make(chan struct{})
 	go func() {

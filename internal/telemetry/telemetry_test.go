@@ -497,7 +497,6 @@ func TestCreateManager(t *testing.T) {
 			)
 			meta := metadata.Info{
 				Release: "0.6.2",
-				Flavor:  metadata.OSSFlavor,
 			}
 			cfg := Config{
 				DataPlaneControllerEnabled: true,
@@ -651,7 +650,6 @@ func TestTelemetryUpdates(t *testing.T) {
 
 			meta := metadata.Info{
 				Release: "0.6.2",
-				Flavor:  metadata.OSSFlavor,
 			}
 			cfg := Config{
 				DataPlaneControllerEnabled: true,

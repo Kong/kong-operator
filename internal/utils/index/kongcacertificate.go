@@ -11,7 +11,7 @@ const (
 	IndexFieldKongCACertificateOnKonnectGatewayControlPlane = "kongCACertificateKonnectGatewayControlPlaneRef"
 )
 
-// OptionsForKongCACertificate returns required Index options for KongCACertificate reconclier.
+// OptionsForKongCACertificate returns required Index options for KongCACertificate reconciler.
 func OptionsForKongCACertificate(cl client.Client) []Option {
 	return []Option{
 		{

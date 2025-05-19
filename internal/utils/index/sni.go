@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	// IndexFieldKongSNIOnCertificateRefNmae is the index field for KongSNI -> Certificate.
-	IndexFieldKongSNIOnCertificateRefNmae = "kongSNICertificateRefName"
+	// IndexFieldKongSNIOnCertificateRefName is the index field for KongSNI -> Certificate.
+	IndexFieldKongSNIOnCertificateRefName = "kongSNICertificateRefName"
 )
 
 // OptionsForKongSNI returns required Index options for KongSNI reconciler.
@@ -16,7 +16,7 @@ func OptionsForKongSNI() []Option {
 	return []Option{
 		{
 			Object:         &configurationv1alpha1.KongSNI{},
-			Field:          IndexFieldKongSNIOnCertificateRefNmae,
+			Field:          IndexFieldKongSNIOnCertificateRefName,
 			ExtractValueFn: kongSNIReferencesCertificate,
 		},
 	}

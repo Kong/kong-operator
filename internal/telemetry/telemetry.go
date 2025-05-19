@@ -263,7 +263,6 @@ func createManager(
 		} else {
 			payload := Payload{
 				"v":                                         meta.Release,
-				"flavor":                                    meta.Flavor,
 				"controller_dataplane_enabled":              cfg.DataPlaneControllerEnabled,
 				"controller_dataplane_bg_enabled":           cfg.DataPlaneBlueGreenControllerEnabled,
 				"controller_controlplane_enabled":           cfg.ControlPlaneControllerEnabled,

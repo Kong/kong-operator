@@ -21,6 +21,7 @@ require (
 	github.com/google/go-containerregistry v0.20.3
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.49.0
+	github.com/kong/go-kong v0.66.1
 	github.com/kong/kubernetes-configuration v1.4.1
 	github.com/kong/kubernetes-telemetry v0.1.9
 	github.com/kong/kubernetes-testing-framework v0.47.2
@@ -157,7 +158,6 @@ require (
 	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/kong/go-kong v0.66.1
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
