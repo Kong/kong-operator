@@ -30,14 +30,14 @@ jobs:
           debug-only: true
 
       - name: List marked stale and closed issues
-        env:
-          STALE_JSON: ${{ steps.stale.outputs.staled-issues-prs }}
-          CLOSED_JSON: ${{ steps.stale.outputs.closed-issues-prs }}
         run: |
+          echo "${{ steps.stale.outputs.staled-issues-prs }}" > stale.json
+          echo "${{ steps.stale.outputs.closed-issues-prs }}" > closed.json
           echo "🔎 Listing stale and closed issues..."
           echo ""
-          echo "## 📌 Staled Issues: $(echo "$STALE_JSON" | jq -r '. | length')"
-          echo "$STALE_JSON" | jq -r '.[] | "#\(.number) - \(.title) - https://github.com/${{ github.repository }}/issues/\(.number)"'
+          echo "## 📌 Staled Issues: $(jq -r '. | length' stale.json)"
+          jq -r '.[] | "#\(.number) - \(.title) - https://github.com/${{ github.repository }}/issues/\(.number)"' stale.json
           echo ""
-          echo "## ❌ Closed Issues: $(echo "$CLOSED_JSON" | jq -r '. | length')"
-          echo "$CLOSED_JSON" | jq -r '.[] | "#\(.number) - \(.title) - https://github.com/${{ github.repository }}/issues/\(.number)"'
+          echo "## ❌ Closed Issues: $(jq -r '. | length' closed.json)"
+          jq -r '.[] | "#\(.number) - \(.title) - https://github.com/${{ github.repository }}/issues/\(.number)"' closed.json
+          rm stale.json closed.json
