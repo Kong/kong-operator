@@ -19,6 +19,9 @@ import (
 	"github.com/kong/gateway-operator/modules/manager"
 	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
 	"github.com/kong/gateway-operator/modules/manager/logging"
+	"github.com/kong/gateway-operator/modules/manager/metadata"
+	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/gateway-operator/pkg/consts"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 	"github.com/kong/gateway-operator/test"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -34,21 +37,6 @@ var (
 	skipClusterCleanup   = strings.ToLower(os.Getenv("KONG_TEST_CLUSTER_PERSIST")) == "true"
 	bluegreenController  = strings.ToLower(os.Getenv("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER")) == "true"
 )
-
-// -----------------------------------------------------------------------------
-// Testing Vars - Testing Environment
-// -----------------------------------------------------------------------------
-
-var testSuite []func(*testing.T)
-
-// GetTestSuite returns all integration tests that should be run.
-func GetTestSuite() []func(*testing.T) {
-	return testSuite
-}
-
-func addTestsToTestSuite(tests ...func(*testing.T)) {
-	testSuite = append(testSuite, tests...)
-}
 
 var (
 	ctx     context.Context
@@ -77,24 +65,12 @@ func GetClients() testutils.K8sClients {
 	return clients
 }
 
-// -----------------------------------------------------------------------------
-// Testing Main
-// -----------------------------------------------------------------------------
+func TestMain(m *testing.M) {
+	helpers.SetDefaultDataPlaneImage(consts.DefaultDataPlaneImage)
+	helpers.SetDefaultDataPlaneBaseImage(consts.DefaultDataPlaneBaseImage)
 
-// SetUpAndRunManagerFunc is the type of the callback that is passed to TestMain.
-// This id called to set up and run the controller manager. Returned error should be
-// a result of calling manager.Run.
-type SetUpAndRunManagerFunc func(startedChan chan struct{}) error
+	cfg := defaultControllerConfigForTests()
 
-// TestMain is the entrypoint for the integration test suite. It bootstraps
-// the testing environment and runs the test suite on instance of KGO
-// constructed by the argument setUpAndRunManager. This callback is called,
-// when the whole cluster is ready and the controller manager can be started.
-// Thus it can be used e.g. to apply additional resources to the cluster too.
-func TestMain(
-	m *testing.M,
-	setUpAndRunManager SetUpAndRunManagerFunc,
-) {
 	var code int
 	defer func() {
 		if r := recover(); r != nil {
@@ -157,9 +133,12 @@ func TestMain(
 	fmt.Println("INFO: starting the operator's controller manager")
 	// Spawn the controller manager based on passed config in
 	// a separate goroutine and report whether that succeeded.
+	managerToTest := func(startedChan chan struct{}) error {
+		return manager.Run(cfg, scheme.Get(), manager.SetupControllersShim, startedChan, metadata.Metadata())
+	}
 	startedChan := make(chan struct{})
 	go func() {
-		exitOnErr(setUpAndRunManager(startedChan))
+		exitOnErr(managerToTest(startedChan))
 	}()
 	<-startedChan
 
@@ -191,9 +170,9 @@ func exitOnErr(err error) {
 	}
 }
 
-// DefaultControllerConfigForTests returns a default configuration for the controller manager used in tests.
+// defaultControllerConfigForTests returns a default configuration for the controller manager used in tests.
 // It can be adjusted by overriding arbitrary fields in the returned config.
-func DefaultControllerConfigForTests() manager.Config {
+func defaultControllerConfigForTests() manager.Config {
 	cfg := manager.DefaultConfig()
 	cfg.LeaderElection = false
 	cfg.LoggingMode = logging.DevelopmentMode
