@@ -28,16 +28,3 @@ jobs:
           days-before-pr-close: -1
           operations-per-run: 1000
           debug-only: true
-
-      - name: List marked stale and closed issues
-        run: |
-          echo "${{ steps.stale.outputs.staled-issues-prs }}" > stale.json
-          echo "${{ steps.stale.outputs.closed-issues-prs }}" > closed.json
-          echo "🔎 Listing stale and closed issues..."
-          echo ""
-          echo "## 📌 Staled Issues: $(jq -r '. | length' stale.json)"
-          jq -r '.[] | "#\(.number) - \(.title) - https://github.com/${{ github.repository }}/issues/\(.number)"' stale.json
-          echo ""
-          echo "## ❌ Closed Issues: $(jq -r '. | length' closed.json)"
-          jq -r '.[] | "#\(.number) - \(.title) - https://github.com/${{ github.repository }}/issues/\(.number)"' closed.json
-          rm stale.json closed.json
