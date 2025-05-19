@@ -208,27 +208,20 @@ func ListNetworkPoliciesForGateway(
 	gateway *gwtypes.Gateway,
 ) ([]networkingv1.NetworkPolicy, error) {
 	if gateway.Namespace == "" {
-		return nil, fmt.Errorf("can't list networkpolicies for gateway: gateway resource was missing namespace")
+		return nil, fmt.Errorf("can't list NetworkPolicies for gateway: gateway resource was missing namespace")
 	}
 
 	networkPolicyList := &networkingv1.NetworkPolicyList{}
-
-	err := c.List(
+	if err := c.List(
 		ctx,
 		networkPolicyList,
 		client.InNamespace(gateway.Namespace),
 		client.MatchingLabels{consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue},
-	)
-	if err != nil {
+	); err != nil {
 		return nil, err
 	}
 
-	networkPolicies := make([]networkingv1.NetworkPolicy, 0)
-	for _, networkPolicy := range networkPolicyList.Items {
-		if k8sutils.IsOwnedByRefUID(&networkPolicy, gateway.UID) {
-			networkPolicies = append(networkPolicies, networkPolicy)
-		}
-	}
-
-	return networkPolicies, nil
+	return lo.Filter(networkPolicyList.Items, func(np networkingv1.NetworkPolicy, _ int) bool {
+		return k8sutils.IsOwnedByRefUID(&np, gateway.UID)
+	}), nil
 }

@@ -40,6 +40,12 @@
 
 > Release date: 2025-05-07
 
+### Fixes
+
+- Adjustment of `KONG_PROXY_LISTEN` and `KONG_PORT_MAPS` in `GatewayConfiguration` no longer results in a reconciliation
+  error for a `Gateway`.
+  [#1308](https://github.com/Kong/gateway-operator/pull/1308)
+
 ### Added
 
 - In `KonnectGatewayControlPlane` fields `Status.Endpoints.ControlPlaneEndpoint`

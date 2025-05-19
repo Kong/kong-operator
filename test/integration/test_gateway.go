@@ -643,19 +643,18 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 			}, time.Minute, time.Second)
 
 			t.Log("verifying the deployment managed by the controlplane is ready")
-			controlplanes := testutils.MustListControlPlanesForGateway(t, GetCtx(), gateway, clients)
-			require.Len(t, controlplanes, 1)
-			controlplaneNN := client.ObjectKeyFromObject(&controlplanes[0])
+			controlPlanes := testutils.MustListControlPlanesForGateway(t, GetCtx(), gateway, clients)
+			require.Len(t, controlPlanes, 1)
+			controlplaneNN := client.ObjectKeyFromObject(&controlPlanes[0])
 			require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t,
 				GetCtx(),
 				controlplaneNN,
 				clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 			t.Logf("verifying the deployment managed by the dataplane is ready and has %d available dataplane replicas", tc.expectedReplicasCount)
-			dataplanes := testutils.MustListDataPlanesForGateway(t, GetCtx(), gateway, clients)
-			require.Len(t, dataplanes, 1)
-			dataplane := dataplanes[0]
-			dataplaneNN := client.ObjectKeyFromObject(&dataplane)
+			dataPlanes := testutils.MustListDataPlanesForGateway(t, GetCtx(), gateway, clients)
+			require.Len(t, dataPlanes, 1)
+			dataplaneNN := client.ObjectKeyFromObject(&dataPlanes[0])
 			require.Eventually(t, testutils.DataPlaneHasActiveDeployment(t,
 				GetCtx(),
 				dataplaneNN,
@@ -723,9 +722,9 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 
 	t.Log("verifying DataPlane's NetworkPolicies is created")
 	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
-	networkpolicies := testutils.MustListNetworkPoliciesForGateway(t, GetCtx(), gateway, clients)
-	require.Len(t, networkpolicies, 1)
-	networkPolicy := networkpolicies[0]
+	networkPolicies := testutils.MustListNetworkPoliciesForGateway(t, GetCtx(), gateway, clients)
+	require.Len(t, networkPolicies, 1)
+	networkPolicy := networkPolicies[0]
 	require.Equal(t, map[string]string{"app": dataplane.Name}, networkPolicy.Spec.PodSelector.MatchLabels)
 
 	t.Log("verifying that the DataPlane's Pod Admin API is network restricted to ControlPlane Pods")
@@ -759,9 +758,9 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 
 	t.Log("verifying NetworkPolicies are recreated")
 	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
-	networkpolicies = testutils.MustListNetworkPoliciesForGateway(t, GetCtx(), gateway, clients)
-	require.Len(t, networkpolicies, 1)
-	networkPolicy = networkpolicies[0]
+	networkPolicies = testutils.MustListNetworkPoliciesForGateway(t, GetCtx(), gateway, clients)
+	require.Len(t, networkPolicies, 1)
+	networkPolicy = networkPolicies[0]
 	t.Logf("NetworkPolicy generation %d", networkPolicy.Generation)
 
 	t.Log("verifying DataPlane's NetworkPolicies ingress rules correctness")
@@ -770,9 +769,6 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowMetricsIngress.Rule)
 
 	t.Run("verifying DataPlane's NetworkPolicies get updated after customizing kong proxy listen port through GatewayConfiguration", func(t *testing.T) {
-		// TODO: https://github.com/Kong/gateway-operator/issues/184
-		t.Skip("re-enable once https://github.com/Kong/gateway-operator/issues/184 is fixed")
-
 		gwcClient := GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name)
 
 		setGatewayConfigurationEnvProxyPort(t, gatewayConfig, 8005, 8999)
@@ -805,14 +801,16 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 			map[string]string{"app": controlplane.Name},
 			map[string]string{"kubernetes.io/metadata.name": controlplane.Namespace},
 		)
-		if !assert.Eventually(t,
+		if !assert.Eventually(
+			t,
 			testutils.GatewayNetworkPolicyForGatewayContainsRules(t, GetCtx(), gateway, clients, expectedUpdatedLimitedAdminAPI.Rule),
 			2*testutils.SubresourceReadinessWait, time.Second,
-			"NetworkPolicy didn't get updated with port 8555 after a corresponding change to GatewayConfiguration") {
-			networkpolicies, err := gatewayutils.ListNetworkPoliciesForGateway(GetCtx(), GetClients().MgrClient, gateway)
+			"NetworkPolicy didn't get updated with port 8555 after a corresponding change to GatewayConfiguration",
+		) {
+			networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(GetCtx(), GetClients().MgrClient, gateway)
 			require.NoError(t, err)
 			t.Log("DataPlane's NetworkPolicies")
-			for _, np := range networkpolicies {
+			for _, np := range networkPolicies {
 				t.Logf("%# v\n", pretty.Formatter(np))
 			}
 		}
@@ -832,7 +830,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 		t.Log("deleting Gateway resource")
 		require.NoError(t, GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Delete(GetCtx(), gateway.Name, metav1.DeleteOptions{}))
 
-		t.Log("verifying networkpolicies are deleted")
+		t.Log("verifying NetworkPolicies are deleted")
 		require.Eventually(t, testutils.Not(testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients)), time.Minute, time.Second)
 	})
 }
