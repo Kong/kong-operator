@@ -270,7 +270,7 @@ verify.generators: verify.repo generate verify.diff
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.rbacs generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.testcases-registration generate.kic-webhook-config generate.mocks
+generate: generate.rbacs generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.kic-webhook-config generate.mocks
 
 .PHONY: generate.crd-kustomize
 generate.crd-kustomize:
@@ -306,10 +306,6 @@ generate.rbacs: kic-role-generator
 .PHONY: generate.k8sio-gomod-replace
 generate.k8sio-gomod-replace:
 	./hack/update-k8sio-gomod-replace.sh
-
-.PHONY: generate.testcases-registration
-generate.testcases-registration:
-	go run ./hack/generators/testcases-registration/main.go
 
 .PHONY: generate.kic-webhook-config
 generate.kic-webhook-config: kustomize kic-webhook-config-generator
