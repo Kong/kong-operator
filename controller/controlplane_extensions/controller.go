@@ -22,7 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	ossctxinjector "github.com/kong/gateway-operator/controller/pkg/ctxinjector"
 	"github.com/kong/gateway-operator/controller/pkg/extensions"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	osslogging "github.com/kong/gateway-operator/modules/manager/logging"
@@ -71,7 +70,6 @@ type Reconciler struct {
 	client.Client
 	LoggingMode                     osslogging.Mode
 	DataPlaneScraperManagerNotifier ScrapeUpdateNotifier
-	CtxInjector                     ossctxinjector.CtxInjector
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -131,8 +129,6 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	ctx = r.CtxInjector.InjectKeyValues(ctx)
-
 	logger := log.GetLogger(ctx, "controlplane_extensions", r.LoggingMode)
 
 	log.Trace(logger, "reconciling ControlPlane extensions", "req", req)
