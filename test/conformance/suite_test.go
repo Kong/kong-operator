@@ -19,8 +19,6 @@ import (
 
 	"github.com/kong/gateway-operator/config"
 	"github.com/kong/gateway-operator/modules/manager"
-	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
-	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	testutils "github.com/kong/gateway-operator/pkg/utils/test"
@@ -164,17 +162,7 @@ func exitOnErr(err error) {
 // startControllerManager will configure the manager and start it in a separate goroutine.
 // It returns a channel which will get closed when manager.Start() gets called.
 func startControllerManager(metadata metadata.Info) <-chan struct{} {
-	cfg := manager.DefaultConfig()
-	cfg.LeaderElection = false
-	cfg.LoggingMode = logging.DevelopmentMode
-	cfg.ControllerName = "konghq.com/gateway-operator-integration-tests"
-	cfg.GatewayControllerEnabled = true
-	cfg.ControlPlaneControllerEnabled = true
-	cfg.DataPlaneControllerEnabled = true
-	cfg.AnonymousReports = false
-	cfg.ClusterCAKeyType = mgrconfig.ECDSA
-	cfg.GatewayAPIExperimentalEnabled = true
-	cfg.ServiceAccountToImpersonate = testutils.ServiceAccountToImpersonate
+	cfg := testutils.DefaultControllerConfigForTests()
 
 	startedChan := make(chan struct{})
 	go func() {

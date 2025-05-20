@@ -29,7 +29,7 @@ import (
 )
 
 func TestDataPlaneBlueGreenRollout(t *testing.T) {
-	if !bluegreenController {
+	if !blueGreenController {
 		t.Skipf("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER not set, skipping")
 	}
 	const (
@@ -240,7 +240,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 }
 
 func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
-	if !bluegreenController {
+	if !blueGreenController {
 		t.Skipf("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER not set, skipping")
 	}
 	const (
@@ -339,7 +339,7 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 }
 
 func TestDataPlaneBlueGreenResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T) {
-	if !bluegreenController {
+	if !blueGreenController {
 		t.Skipf("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER not set, skipping")
 	}
 	const (
