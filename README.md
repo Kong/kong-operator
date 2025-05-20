@@ -2,6 +2,8 @@
 
 <img src="./logo/logo.png" alt="KGO logo" title="Kong Gateway Operator" height="150" width="150" />
 
+Test
+
 Kong Gateway Operator is a [Kubernetes Operator][operator-concept] that can manage
 your Kong Ingress Controller, Kong Gateway Data Planes, or both together when running
 on Kubernetes.
