@@ -16,6 +16,7 @@ on:
       - 'CHANGELOG.md'
       - 'README.md'
       - 'SECURITY.md'
+      - 'FEATURES.md'
       - 'LICENSE'
       - 'LICENSES'
       - '.github/ISSUE_TEMPLATE/**'
