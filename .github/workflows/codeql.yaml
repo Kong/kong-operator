@@ -10,9 +10,25 @@ on:
   push:
     branches:
       - 'main'
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'README.md'
+      - 'SECURITY.md'
+      - 'FEATURES.md'
+      - 'LICENSE'
+      - 'LICENSES'
+      - '.github/ISSUE_TEMPLATE/**'
   pull_request:
     branches:
       - 'main'
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'README.md'
+      - 'SECURITY.md'
+      - 'FEATURES.md'
+      - 'LICENSE'
+      - 'LICENSES'
+      - '.github/ISSUE_TEMPLATE/**'
   schedule:
     - cron: '42 1 * * 4'
   workflow_dispatch: {}
