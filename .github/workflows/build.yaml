@@ -14,9 +14,23 @@ on:
   push:
     branches:
     - 'main'
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'README.md'
+      - 'SECURITY.md'
+      - 'LICENSE'
+      - 'LICENSES'
+      - '.github/ISSUE_TEMPLATE/**'
   pull_request:
     branches:
       - '**'
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'README.md'
+      - 'SECURITY.md'
+      - 'LICENSE'
+      - 'LICENSES'
+      - '.github/ISSUE_TEMPLATE/**'
   workflow_dispatch: {}
 
 permissions:

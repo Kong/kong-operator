@@ -12,6 +12,13 @@ on:
     branches:
       - main
       - release/*
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'README.md'
+      - 'SECURITY.md'
+      - 'LICENSE'
+      - 'LICENSES'
+      - '.github/ISSUE_TEMPLATE/**'
   workflow_dispatch: {}
 
 permissions:

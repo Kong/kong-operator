@@ -15,12 +15,26 @@ on:
     branches:
       - '**'
       - 'release/*'
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'README.md'
+      - 'SECURITY.md'
+      - 'LICENSE'
+      - 'LICENSES'
+      - '.github/ISSUE_TEMPLATE/**'
   push:
     branches:
       - 'main'
       - 'release/*'
     tags:
       - '*'
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - 'README.md'
+      - 'SECURITY.md'
+      - 'LICENSE'
+      - 'LICENSES'
+      - '.github/ISSUE_TEMPLATE/**'
   workflow_dispatch: {}
 
 permissions:
