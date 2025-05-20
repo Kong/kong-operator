@@ -44,9 +44,11 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
+	call := sdk.MeSDK.EXPECT().
+		GetOrganizationsMe(mock.Anything, mock.Anything)
+
 	t.Run("gets APIAuthValid=true status condition set on success", func(t *testing.T) {
-		call := sdk.MeSDK.EXPECT().
-			GetOrganizationsMe(mock.Anything, mock.Anything).
+		call = call.
 			Return(
 				&sdkkonnectops.GetOrganizationsMeResponse{
 					MeOrganization: &sdkkonnectcomp.MeOrganization{
@@ -56,7 +58,6 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 				},
 				nil,
 			)
-		t.Cleanup(func() { call.Unset() })
 
 		w := setupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced)
@@ -71,8 +72,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 	})
 
 	t.Run("gets APIAuthValid=false status condition set on invalid token", func(t *testing.T) {
-		call := sdk.MeSDK.EXPECT().
-			GetOrganizationsMe(mock.Anything, mock.Anything).
+		call = call.
 			Return(
 				nil,
 				&sdkkonnecterrs.UnauthorizedError{
@@ -81,7 +81,6 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 					Detail: "A valid token is required",
 				},
 			)
-		t.Cleanup(func() { call.Unset() })
 
 		w := setupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced)
@@ -95,15 +94,13 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 	})
 
 	t.Run("does not panic when response MeOrganization has no ID", func(t *testing.T) {
-		call := sdk.MeSDK.EXPECT().
-			GetOrganizationsMe(mock.Anything, mock.Anything).
+		call = call.
 			Return(
 				&sdkkonnectops.GetOrganizationsMeResponse{
 					MeOrganization: &sdkkonnectcomp.MeOrganization{},
 				},
 				nil,
 			)
-		t.Cleanup(func() { call.Unset() })
 
 		w := setupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced)
@@ -117,15 +114,13 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 	})
 
 	t.Run("does not panic when response MeOrganization is nil", func(t *testing.T) {
-		call := sdk.MeSDK.EXPECT().
-			GetOrganizationsMe(mock.Anything, mock.Anything).
+		call = call.
 			Return(
 				&sdkkonnectops.GetOrganizationsMeResponse{
 					MeOrganization: nil,
 				},
 				nil,
 			)
-		t.Cleanup(func() { call.Unset() })
 
 		w := setupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced)
@@ -139,13 +134,11 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 	})
 
 	t.Run("does not panic when response is nil", func(t *testing.T) {
-		call := sdk.MeSDK.EXPECT().
-			GetOrganizationsMe(mock.Anything, mock.Anything).
+		call = call.
 			Return(
 				nil,
 				nil,
 			)
-		t.Cleanup(func() { call.Unset() })
 
 		w := setupWatch[konnectv1alpha1.KonnectAPIAuthConfigurationList](t, ctx, cl, client.InNamespace(ns.Name))
 		apiAuth := deploy.KonnectAPIAuthConfiguration(t, ctx, clientNamespaced)
