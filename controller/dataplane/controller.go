@@ -13,7 +13,6 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/pkg/ctxinjector"
 	"github.com/kong/gateway-operator/controller/pkg/extensions"
 	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
 	"github.com/kong/gateway-operator/controller/pkg/log"
@@ -41,7 +40,6 @@ type Reconciler struct {
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
 	Callbacks                DataPlaneCallbacks
-	ContextInjector          ctxinjector.CtxInjector
 	DefaultImage             string
 	KonnectEnabled           bool
 	EnforceConfig            bool
@@ -63,8 +61,6 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// Calling it here ensures that evaluated values will be used for the duration of this function.
-	ctx = r.ContextInjector.InjectKeyValues(ctx)
 	logger := log.GetLogger(ctx, "dataplane", r.LoggingMode)
 
 	log.Trace(logger, "reconciling DataPlane resource")
