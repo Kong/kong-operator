@@ -14,9 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	certutils "github.com/kong/gateway-operator/controller/dataplane/utils/certificates"
+	"github.com/kong/gateway-operator/controller/pkg/log"
 	ossop "github.com/kong/gateway-operator/controller/pkg/op"
 	osspatch "github.com/kong/gateway-operator/controller/pkg/patch"
-	osslogging "github.com/kong/gateway-operator/modules/manager/logging"
 	ossconsts "github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	ossk8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
@@ -55,23 +55,22 @@ func certificateCRDNotInstalled(logger logr.Logger, cl client.Client) bool {
 	checker := k8sutils.CRDChecker{Client: cl}
 	exist, err := checker.CRDExists(certificateGVR)
 	if err != nil {
-		logger.Error(err, "failed to check if certifiacte CRD installed")
+		log.Error(logger, err, "failed to check if certificate CRD installed")
 		return false
 	}
 	return !exist
 }
 
-// CreateKonnectCert is a dynamic.Callback that creates a cert-manager certificate request for a DataPlane.
-func CreateKonnectCert(ctx context.Context, dataplane *operatorv1beta1.DataPlane, cl client.Client, _ any) error {
-	logger := logr.FromContextOrDiscard(ctx)
+// CreateKonnectCert creates a cert-manager certificate request for a DataPlane.
+func CreateKonnectCert(ctx context.Context, logger logr.Logger, dataplane *operatorv1beta1.DataPlane, cl client.Client) error {
 	// Skip creating Konnect certificate if KonnectCertificateOptions is not specified and certificate CRD is not installed.
 	if dataplane.Spec.Network.KonnectCertificateOptions == nil && certificateCRDNotInstalled(logger, cl) {
-		logger.V(osslogging.DebugLevel.Value()).Info("skipping because dataplane does not have Konnect certificate options and certificate CRD is not installed",
+		log.Debug(logger, "skipping because dataplane does not have Konnect certificate options and certificate CRD is not installed",
 			"namespace", dataplane.Namespace, "dataplane", dataplane.Name)
 		return nil
 	}
 
-	logger.V(osslogging.DebugLevel.Value()).Info("running Konnect Certificate provisioning callback",
+	log.Debug(logger, "running Konnect Certificate provisioning",
 		"namespace", dataplane.Namespace, "dataplane", dataplane.Name)
 
 	labels := k8sresources.GetManagedLabelForOwner(dataplane)
@@ -90,7 +89,7 @@ func CreateKonnectCert(ctx context.Context, dataplane *operatorv1beta1.DataPlane
 	}
 
 	if len(certs) > 1 {
-		logger.V(osslogging.DebugLevel.Value()).Info("reducing excess Konnect Certificates",
+		log.Debug(logger, "reducing excess Konnect Certificates",
 			"namespace", dataplane.Namespace, "dataplane", dataplane.Name)
 		if err := certutils.ReduceCMCertificates(ctx, cl, certs, certutils.FilterCMCertificates); err != nil {
 			return fmt.Errorf("failed reducing Certificates for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
@@ -112,7 +111,7 @@ func CreateKonnectCert(ctx context.Context, dataplane *operatorv1beta1.DataPlane
 		issuer = &dataplane.Spec.Network.KonnectCertificateOptions.Issuer
 	}
 	if issuer != nil {
-		logger.V(osslogging.DebugLevel.Value()).Info("Konnect Issuer configured, ensuring Certificate",
+		log.Debug(logger, "Konnect Issuer configured, ensuring Certificate",
 			"namespace", dataplane.Namespace, "dataplane", dataplane.Name, "issuer", issuer.Name)
 		labels[ossconsts.CertPurposeLabel] = KonnectDataPlaneCertPurpose
 		generatedCertificate, err = certutils.GenerateCMCertificateForOwner(
@@ -125,8 +124,7 @@ func CreateKonnectCert(ctx context.Context, dataplane *operatorv1beta1.DataPlane
 			return fmt.Errorf("could not generate Certificate: %w", err)
 		}
 	} else {
-		logger.V(osslogging.DebugLevel.Value()).Info("no Konnect Issuer configured",
-			"namespace", dataplane.Namespace, "dataplane", dataplane.Name)
+		log.Debug(logger, "no Konnect Issuer configured", "namespace", dataplane.Namespace, "dataplane", dataplane.Name)
 		// no issuer, check for existing certs to delete
 		if len(certs) == 1 {
 			if err := certutils.ReduceCMCertificates(ctx, cl, certs, ossk8sreduce.FilterNone); err != nil {
@@ -158,10 +156,10 @@ func CreateKonnectCert(ctx context.Context, dataplane *operatorv1beta1.DataPlane
 		op, _, err := osspatch.ApplyPatchIfNotEmpty(ctx, cl, logr.Discard(), existingCertificate, oldExistingCertificate, updated)
 		switch op { //nolint:exhaustive
 		case ossop.Created, ossop.Updated:
-			logger.V(osslogging.DebugLevel.Value()).Info("updated Konnect Certificate",
+			log.Debug(logger, "updated Konnect Certificate",
 				"namespace", dataplane.Namespace, "dataplane", dataplane.Name, "Certificate", generatedCertificate.Name)
 		case ossop.Noop:
-			logger.V(osslogging.DebugLevel.Value()).Info("no update to Konnect Certificate",
+			log.Debug(logger, "no update to Konnect Certificate",
 				"namespace", dataplane.Namespace, "dataplane", dataplane.Name, "Certificate", generatedCertificate.Name)
 		}
 		return err
@@ -174,19 +172,18 @@ func CreateKonnectCert(ctx context.Context, dataplane *operatorv1beta1.DataPlane
 	return nil
 }
 
-// MountAndUseKonnectCert is a dynamic.Callback that looks for an operator-managed Konnect certificate for a DataPlane,
-// modifies that DataPlane's Deployment to mount it in the proxy container, and configures the proxy environment to
-// authenticate to Konnect using it.
-func MountAndUseKonnectCert(ctx context.Context, dataplane *operatorv1beta1.DataPlane, cl client.Client, subj any) error {
-	logger := logr.FromContextOrDiscard(ctx)
+// MountAndUseKonnectCert looks for an operator-managed Konnect certificate for a DataPlane,
+// modifies that DataPlane's Deployment to mount it in the proxy container, and configures
+// the proxy environment to authenticate to Konnect using it.
+func MountAndUseKonnectCert(ctx context.Context, logger logr.Logger, dataplane *operatorv1beta1.DataPlane, cl client.Client, desiredDeployment *k8sresources.Deployment) error {
 	// Skip mounting Konnect certificate if KonnectCertificateOptions is not specified and certificate CRD is not installed.
 	if dataplane.Spec.Network.KonnectCertificateOptions == nil && certificateCRDNotInstalled(logger, cl) {
-		logger.V(osslogging.DebugLevel.Value()).Info("skipping because dataplane does not have Konnect certificate options and certificate CRD is not installed",
+		log.Debug(logger, "skipping because dataplane does not have Konnect certificate options and certificate CRD is not installed",
 			"namespace", dataplane.Namespace, "dataplane", dataplane.Name)
 		return nil
 	}
 
-	logger.V(osslogging.DebugLevel.Value()).Info("running Konnect certificate mount callback",
+	log.Debug(logger, "Konnect certificate mount",
 		"namespace", dataplane.Namespace, "dataplane", dataplane.Name)
 
 	var issuer *operatorv1beta1.NamespacedName
@@ -194,14 +191,9 @@ func MountAndUseKonnectCert(ctx context.Context, dataplane *operatorv1beta1.Data
 		issuer = &dataplane.Spec.Network.KonnectCertificateOptions.Issuer
 	}
 	if issuer == nil {
-		logger.V(osslogging.DebugLevel.Value()).Info("no Konnect Issuer configured, skipping certificate mount",
+		log.Debug(logger, "no Konnect Issuer configured, skipping certificate mount",
 			"namespace", dataplane.Namespace, "dataplane", dataplane.Name)
 		return nil
-	}
-
-	deployment, ok := subj.(*k8sresources.Deployment)
-	if !ok {
-		return fmt.Errorf("Invalid subject type for MountAndUseKonnectCert: %T", subj)
 	}
 
 	labels := k8sresources.GetManagedLabelForOwner(dataplane)
@@ -211,17 +203,17 @@ func MountAndUseKonnectCert(ctx context.Context, dataplane *operatorv1beta1.Data
 	secrets, err := certutils.ListCMSecretsForOwner(ctx, cl, dataplane, labels)
 	if err != nil {
 		return fmt.Errorf("failed listing Secrets for Deployment %s/%s: %w",
-			deployment.GetNamespace(), dataplane.GetName(), err)
+			desiredDeployment.GetNamespace(), dataplane.GetName(), err)
 	}
 	if len(secrets) > 1 {
 		return fmt.Errorf("too many %s Secrets for Deployment %s/%s",
-			labels[ossconsts.CertPurposeLabel], deployment.GetNamespace(), dataplane.GetName())
+			labels[ossconsts.CertPurposeLabel], desiredDeployment.GetNamespace(), dataplane.GetName())
 	}
 	if len(secrets) < 1 {
 		return fmt.Errorf("no %s Secrets for Deployment %s/%s",
-			labels[ossconsts.CertPurposeLabel], deployment.GetNamespace(), dataplane.GetName())
+			labels[ossconsts.CertPurposeLabel], desiredDeployment.GetNamespace(), dataplane.GetName())
 	}
-	logger.V(osslogging.DebugLevel.Value()).Info("found Secret for Konnect Certificate",
+	log.Debug(logger, "found Secret for Konnect Certificate",
 		"namespace", dataplane.Namespace, "dataplane", dataplane.Name, "secret", secrets[0].Name)
 
 	konnectCertVolume := corev1.Volume{
@@ -238,7 +230,7 @@ func MountAndUseKonnectCert(ctx context.Context, dataplane *operatorv1beta1.Data
 		MountPath: DataPlaneKonnectClientCertificatePath,
 	}
 
-	_ = deployment.WithVolume(konnectCertVolume).
+	_ = desiredDeployment.WithVolume(konnectCertVolume).
 		WithVolumeMount(mount, ossconsts.DataPlaneProxyContainerName).
 		WithEnvVar(
 			corev1.EnvVar{
@@ -254,7 +246,7 @@ func MountAndUseKonnectCert(ctx context.Context, dataplane *operatorv1beta1.Data
 			},
 			ossconsts.DataPlaneProxyContainerName,
 		)
-	logger.V(osslogging.DebugLevel.Value()).Info("successfully added Konnect Certificate mount",
+	log.Debug(logger, "successfully added Konnect Certificate mount",
 		"namespace", dataplane.Namespace, "dataplane", dataplane.Name)
 	return nil
 }

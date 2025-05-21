@@ -61,9 +61,6 @@ type BlueGreenReconciler struct {
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
 
-	// Callbacks is a set of Callback functions to run at various stages of reconciliation.
-	Callbacks DataPlaneCallbacks
-
 	DefaultImage string
 
 	KonnectEnabled bool
@@ -522,8 +519,6 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 	}
 
 	deploymentBuilder := NewDeploymentBuilder(logger.WithName("deployment_builder"), r.Client).
-		WithBeforeCallbacks(r.Callbacks.BeforeDeployment).
-		WithAfterCallbacks(r.Callbacks.AfterDeployment).
 		WithClusterCertificate(certSecret.Name).
 		WithOpts(deploymentOpts...).
 		WithDefaultImage(r.DefaultImage).

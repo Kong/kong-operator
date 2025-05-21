@@ -1299,7 +1299,6 @@ func TestDataPlaneKonnectCert(t *testing.T) {
 	require.NotNil(t, proxyContainer)
 	envs := proxyContainer.Env
 
-	// check cluster cert added by callback
 	certEnv := GetEnvValueByName(envs, consts.ClusterCertEnvKey)
 	keyEnv := GetEnvValueByName(envs, consts.ClusterCertKeyEnvKey)
 	require.Equal(t, certificates.DataPlaneKonnectClientCertificatePath+"tls.crt", certEnv)

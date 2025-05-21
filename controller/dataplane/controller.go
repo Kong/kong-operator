@@ -39,7 +39,6 @@ type Reconciler struct {
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
-	Callbacks                DataPlaneCallbacks
 	DefaultImage             string
 	KonnectEnabled           bool
 	EnforceConfig            bool
@@ -199,8 +198,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	deploymentOpts = append(deploymentOpts, withCustomPlugins(kpisForDeployment...))
 
 	deploymentBuilder := NewDeploymentBuilder(logger.WithName("deployment_builder"), r.Client).
-		WithBeforeCallbacks(r.Callbacks.BeforeDeployment).
-		WithAfterCallbacks(r.Callbacks.AfterDeployment).
 		WithClusterCertificate(certSecret.Name).
 		WithOpts(deploymentOpts...).
 		WithDefaultImage(r.DefaultImage).
