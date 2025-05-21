@@ -505,11 +505,12 @@ jobs:
 
   buildpulse-report:
     needs:
+      - check-docs-only
       - unit-tests
       - integration-tests
       - conformance-tests
       - e2e-tests
-    if: ${{ always() }}
+    if: ${{ always() && needs.check-docs-only.outputs.docs_only != 'true' }}
     runs-on: ubuntu-latest
     steps:
 
@@ -539,7 +540,23 @@ jobs:
   # Ref: https://github.com/orgs/community/discussions/26822#discussioncomment-3305794
   passed:
     runs-on: ubuntu-latest
-    needs: [check-docs-only]
+    needs:
+      - check-docs-only
+      - ensure-actions-sha-pin
+      - ossf-scorecard
+      - lint
+      - govulncheck
+      - verify
+      - samples
+      - install-with-kustomize
+      - build
+      - CRDs-validation
+      - envtest-tests
+      - conformance-tests
+      - integration-tests
+      - integration-tests-bluegreen
+      - e2e-tests
+      - buildpulse-report
     if: always()
     steps:
       - name: Check if docs-only changes
@@ -563,6 +580,22 @@ jobs:
     needs:
       - check-docs-only
       - passed
+      - ensure-actions-sha-pin
+      - ossf-scorecard
+      - lint
+      - govulncheck
+      - verify
+      - samples
+      - install-with-kustomize
+      - build
+      - CRDs-validation
+      - envtest-tests
+      - buildpulse-report
+      - unit-tests
+      - integration-tests
+      - integration-tests-bluegreen
+      - e2e-tests
+      - conformance-tests
     if: always()
     steps:
       - name: Check if docs-only changes
