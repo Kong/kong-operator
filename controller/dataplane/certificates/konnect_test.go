@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
+	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,8 +18,8 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	certutils "github.com/kong/gateway-operator/controller/dataplane/utils/certificates"
-	ossscheme "github.com/kong/gateway-operator/modules/manager/scheme"
-	ossconsts "github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
@@ -168,7 +169,7 @@ func TestCreateKonnectCert(t *testing.T) {
 				ObjectsToAdd = append(ObjectsToAdd, dataplaneSubresource)
 			}
 
-			testScheme := ossscheme.Get()
+			testScheme := scheme.Get()
 			if !tc.noCertificateCRD {
 				utilruntime.Must(certmanagerv1.AddToScheme(testScheme))
 			}
@@ -181,7 +182,7 @@ func TestCreateKonnectCert(t *testing.T) {
 				Build()
 
 			ctx := t.Context()
-			err := CreateKonnectCert(ctx, tc.dataplane, fakeClient, nil)
+			err := CreateKonnectCert(ctx, logr.Discard(), tc.dataplane, fakeClient)
 			require.Equal(t, tc.wantErr, err)
 
 			if tc.noCertificateCRD {
@@ -190,7 +191,7 @@ func TestCreateKonnectCert(t *testing.T) {
 			}
 
 			labels := k8sresources.GetManagedLabelForOwner(tc.dataplane)
-			labels[ossconsts.CertPurposeLabel] = KonnectDataPlaneCertPurpose
+			labels[consts.CertPurposeLabel] = KonnectDataPlaneCertPurpose
 			labels[certutils.ManagerUIDLabel] = string(tc.dataplane.UID)
 
 			certs, err := certutils.ListCMCertificatesForOwner(
@@ -368,7 +369,7 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
 								{
-									Name:         ossconsts.DataPlaneProxyContainerName,
+									Name:         consts.DataPlaneProxyContainerName,
 									Env:          []corev1.EnvVar{},
 									VolumeMounts: []corev1.VolumeMount{},
 								},
@@ -415,7 +416,7 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 				ObjectsToAdd = append(ObjectsToAdd, dataplaneSubresource)
 			}
 
-			testScheme := ossscheme.Get()
+			testScheme := scheme.Get()
 			utilruntime.Must(certmanagerv1.AddToScheme(testScheme))
 
 			fakeClient := fakectrlruntimeclient.
@@ -437,7 +438,7 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{
 								{
-									Name:         ossconsts.DataPlaneProxyContainerName,
+									Name:         consts.DataPlaneProxyContainerName,
 									Env:          []corev1.EnvVar{},
 									VolumeMounts: []corev1.VolumeMount{},
 								},
@@ -448,7 +449,7 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 				},
 			}
 
-			err := MountAndUseKonnectCert(ctx, tc.dataplane, fakeClient, deployment)
+			err := MountAndUseKonnectCert(ctx, logr.Discard(), tc.dataplane, fakeClient, deployment)
 			require.Equal(t, tc.wantErr, err)
 
 			if len(tc.wantEnvVar) > 0 {

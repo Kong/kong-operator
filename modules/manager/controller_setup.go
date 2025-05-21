@@ -21,7 +21,6 @@ import (
 	"github.com/kong/gateway-operator/controller/controlplane_extensions"
 	"github.com/kong/gateway-operator/controller/controlplane_extensions/metricsscraper"
 	"github.com/kong/gateway-operator/controller/dataplane"
-	"github.com/kong/gateway-operator/controller/dataplane/certificates"
 	"github.com/kong/gateway-operator/controller/gateway"
 	"github.com/kong/gateway-operator/controller/gatewayclass"
 	"github.com/kong/gateway-operator/controller/kongplugininstallation"
@@ -352,75 +351,6 @@ func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 		return nil, fmt.Errorf("failed to add scrapers manager to controller-runtime manager: %w", err)
 	}
 
-	// Controllers that uses callbacks mechanism to provide features migrated from EE.
-	dataplaneController := &dataplane.Reconciler{
-		Client:                   mgr.GetClient(),
-		Scheme:                   mgr.GetScheme(),
-		ClusterCASecretName:      c.ClusterCASecretName,
-		ClusterCASecretNamespace: c.ClusterCASecretNamespace,
-		ClusterCAKeyConfig:       clusterCAKeyConfig,
-		Callbacks: dataplane.DataPlaneCallbacks{
-			BeforeDeployment: dataplane.CreateCallbackManager(),
-			AfterDeployment:  dataplane.CreateCallbackManager(),
-		},
-		DefaultImage:           consts.DefaultDataPlaneImage,
-		KonnectEnabled:         c.KonnectControllersEnabled,
-		EnforceConfig:          c.EnforceConfig,
-		LoggingMode:            c.LoggingMode,
-		ValidateDataPlaneImage: c.ValidateImages,
-	}
-	if err := dataplaneController.Callbacks.BeforeDeployment.Register(certificates.CreateKonnectCert, "create-konnect-cert"); err != nil {
-		return nil, err
-	}
-	if err := dataplaneController.Callbacks.AfterDeployment.Register(certificates.MountAndUseKonnectCert, "mount-konnect-cert"); err != nil {
-		return nil, err
-	}
-
-	dataplaneBGController := &dataplane.BlueGreenReconciler{
-		Client:                   mgr.GetClient(),
-		ClusterCASecretName:      c.ClusterCASecretName,
-		ClusterCASecretNamespace: c.ClusterCASecretNamespace,
-		ClusterCAKeyConfig:       clusterCAKeyConfig,
-		DataPlaneController: &dataplane.Reconciler{
-			Client:                   mgr.GetClient(),
-			Scheme:                   mgr.GetScheme(),
-			ClusterCASecretName:      c.ClusterCASecretName,
-			ClusterCASecretNamespace: c.ClusterCASecretNamespace,
-			ClusterCAKeyConfig:       clusterCAKeyConfig,
-			DefaultImage:             consts.DefaultDataPlaneImage,
-			Callbacks: dataplane.DataPlaneCallbacks{
-				BeforeDeployment: dataplane.CreateCallbackManager(),
-				AfterDeployment:  dataplane.CreateCallbackManager(),
-			},
-			KonnectEnabled:         c.KonnectControllersEnabled,
-			EnforceConfig:          c.EnforceConfig,
-			ValidateDataPlaneImage: c.ValidateImages,
-			LoggingMode:            c.LoggingMode,
-		},
-		Callbacks: dataplane.DataPlaneCallbacks{
-			BeforeDeployment: dataplane.CreateCallbackManager(),
-			AfterDeployment:  dataplane.CreateCallbackManager(),
-		},
-		DefaultImage:           consts.DefaultDataPlaneImage,
-		KonnectEnabled:         c.KonnectControllersEnabled,
-		EnforceConfig:          c.EnforceConfig,
-		ValidateDataPlaneImage: c.ValidateImages,
-		LoggingMode:            c.LoggingMode,
-	}
-	if err := dataplaneBGController.Callbacks.BeforeDeployment.Register(certificates.CreateKonnectCert, "create-konnect-cert"); err != nil {
-		return nil, err
-	}
-	if err := dataplaneBGController.Callbacks.AfterDeployment.Register(certificates.MountAndUseKonnectCert, "mount-konnect-cert"); err != nil {
-		return nil, err
-	}
-	if err := dataplaneBGController.DataPlaneController.(*dataplane.Reconciler).Callbacks.BeforeDeployment.Register(certificates.CreateKonnectCert, "create-konnect-cert"); err != nil {
-		return nil, err
-	}
-	if err := dataplaneBGController.DataPlaneController.(*dataplane.Reconciler).Callbacks.AfterDeployment.Register(certificates.MountAndUseKonnectCert, "mount-konnect-cert"); err != nil {
-		return nil, err
-	}
-	// End of controllers migrated from EE that needs hook to be registered.
-
 	controllers := []ControllerDef{
 		// GatewayClass controller
 		{
@@ -463,13 +393,46 @@ func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 		},
 		// DataPlane controller
 		{
-			Enabled:    (c.DataPlaneControllerEnabled || c.GatewayControllerEnabled) && !c.DataPlaneBlueGreenControllerEnabled,
-			Controller: dataplaneController,
+			Enabled: (c.DataPlaneControllerEnabled || c.GatewayControllerEnabled) && !c.DataPlaneBlueGreenControllerEnabled,
+			Controller: &dataplane.Reconciler{
+				Client:                   mgr.GetClient(),
+				Scheme:                   mgr.GetScheme(),
+				ClusterCASecretName:      c.ClusterCASecretName,
+				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				ClusterCAKeyConfig:       clusterCAKeyConfig,
+				DefaultImage:             consts.DefaultDataPlaneImage,
+				KonnectEnabled:           c.KonnectControllersEnabled,
+				EnforceConfig:            c.EnforceConfig,
+				LoggingMode:              c.LoggingMode,
+				ValidateDataPlaneImage:   c.ValidateImages,
+			},
 		},
 		// DataPlaneBlueGreen controller
 		{
-			Enabled:    c.DataPlaneBlueGreenControllerEnabled,
-			Controller: dataplaneBGController,
+			Enabled: c.DataPlaneBlueGreenControllerEnabled,
+			Controller: &dataplane.BlueGreenReconciler{
+				Client:                   mgr.GetClient(),
+				ClusterCASecretName:      c.ClusterCASecretName,
+				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				ClusterCAKeyConfig:       clusterCAKeyConfig,
+				DataPlaneController: &dataplane.Reconciler{
+					Client:                   mgr.GetClient(),
+					Scheme:                   mgr.GetScheme(),
+					ClusterCASecretName:      c.ClusterCASecretName,
+					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+					ClusterCAKeyConfig:       clusterCAKeyConfig,
+					DefaultImage:             consts.DefaultDataPlaneImage,
+					KonnectEnabled:           c.KonnectControllersEnabled,
+					EnforceConfig:            c.EnforceConfig,
+					ValidateDataPlaneImage:   c.ValidateImages,
+					LoggingMode:              c.LoggingMode,
+				},
+				DefaultImage:           consts.DefaultDataPlaneImage,
+				KonnectEnabled:         c.KonnectControllersEnabled,
+				EnforceConfig:          c.EnforceConfig,
+				ValidateDataPlaneImage: c.ValidateImages,
+				LoggingMode:            c.LoggingMode,
+			},
 		},
 		// DataPlaneOwnedServiceFinalizer controller
 		{

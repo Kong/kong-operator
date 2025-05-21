@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
-	"reflect"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -13,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/gateway-operator/controller/dataplane/certificates"
 	dataplanepkg "github.com/kong/gateway-operator/controller/pkg/dataplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
@@ -30,8 +30,6 @@ import (
 // DeploymentBuilder builds a Deployment for a DataPlane.
 type DeploymentBuilder struct {
 	clusterCertificateName string
-	beforeCallbacks        CallbackManager
-	afterCallbacks         CallbackManager
 	logger                 logr.Logger
 	client                 client.Client
 	additionalLabels       client.MatchingLabels
@@ -44,18 +42,6 @@ func NewDeploymentBuilder(logger logr.Logger, client client.Client) *DeploymentB
 	d := &DeploymentBuilder{}
 	d.logger = logger
 	d.client = client
-	return d
-}
-
-// WithBeforeCallbacks sets callbacks to run before initial Deployment generation.
-func (d *DeploymentBuilder) WithBeforeCallbacks(c CallbackManager) *DeploymentBuilder {
-	d.beforeCallbacks = c
-	return d
-}
-
-// WithAfterCallbacks sets callbacks to run after initial Deployment generation.
-func (d *DeploymentBuilder) WithAfterCallbacks(c CallbackManager) *DeploymentBuilder {
-	d.afterCallbacks = c
 	return d
 }
 
@@ -92,14 +78,8 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	enforceConfig bool,
 	validateDataPlaneImage bool,
 ) (*appsv1.Deployment, op.Result, error) {
-	// run any preparatory callbacks
-	beforeDeploymentCallbacks := NewCallbackRunner(d.client)
-	cbErrors := beforeDeploymentCallbacks.For(dataplane).Runs(d.beforeCallbacks).Do(ctx, nil)
-	if len(cbErrors) > 0 {
-		for _, err := range cbErrors {
-			d.logger.Error(err, "callback failed")
-		}
-		return nil, op.Noop, fmt.Errorf("before generation callbacks failed")
+	if err := certificates.CreateKonnectCert(ctx, d.logger, dataplane, d.client); err != nil {
+		return nil, op.Noop, fmt.Errorf("failed creating konnect cert: %w", err)
 	}
 
 	// if there is more than one Deployment, delete the extras
@@ -120,15 +100,8 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	// Add the cluster certificate to the generated Deployment
 	desiredDeployment = setClusterCertVars(desiredDeployment, d.clusterCertificateName)
 
-	// run any callbacks that patch the initial Deployment struct
-	afterDeploymentCallbacks := NewCallbackRunner(d.client)
-	cbErrors = afterDeploymentCallbacks.For(dataplane).Runs(d.afterCallbacks).
-		Modifies(reflect.TypeFor[k8sresources.Deployment]()).Do(ctx, desiredDeployment)
-	if len(cbErrors) > 0 {
-		for _, err := range cbErrors {
-			d.logger.Error(err, "callback failed")
-		}
-		return nil, op.Noop, fmt.Errorf("after generation callbacks failed")
+	if err := certificates.MountAndUseKonnectCert(ctx, d.logger, dataplane, d.client, desiredDeployment); err != nil {
+		return nil, op.Noop, fmt.Errorf("failed to mount konnect cert: %w", err)
 	}
 
 	// TODO https://github.com/Kong/gateway-operator/issues/128
