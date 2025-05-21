@@ -17,8 +17,6 @@ import (
 
 	"github.com/kong/gateway-operator/config"
 	"github.com/kong/gateway-operator/modules/manager"
-	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
-	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -35,7 +33,7 @@ var (
 	existingCluster      = os.Getenv("KONG_TEST_CLUSTER")
 	controllerManagerOut = os.Getenv("KONG_CONTROLLER_OUT")
 	skipClusterCleanup   = strings.ToLower(os.Getenv("KONG_TEST_CLUSTER_PERSIST")) == "true"
-	bluegreenController  = strings.ToLower(os.Getenv("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER")) == "true"
+	blueGreenController  = strings.ToLower(os.Getenv("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER")) == "true"
 )
 
 var (
@@ -69,7 +67,7 @@ func TestMain(m *testing.M) {
 	helpers.SetDefaultDataPlaneImage(consts.DefaultDataPlaneImage)
 	helpers.SetDefaultDataPlaneBaseImage(consts.DefaultDataPlaneBaseImage)
 
-	cfg := defaultControllerConfigForTests()
+	cfg := testutils.DefaultControllerConfigForTests(testutils.WithBlueGreenController(blueGreenController))
 
 	var code int
 	defer func() {
@@ -168,28 +166,4 @@ func exitOnErr(err error) {
 		}
 		panic(fmt.Sprintf("ERROR: %s\n", err.Error()))
 	}
-}
-
-// defaultControllerConfigForTests returns a default configuration for the controller manager used in tests.
-// It can be adjusted by overriding arbitrary fields in the returned config.
-func defaultControllerConfigForTests() manager.Config {
-	cfg := manager.DefaultConfig()
-	cfg.LeaderElection = false
-	cfg.LoggingMode = logging.DevelopmentMode
-	cfg.ControllerName = "konghq.com/gateway-operator-integration-tests"
-	cfg.GatewayControllerEnabled = true
-	cfg.ControlPlaneControllerEnabled = true
-	cfg.ControlPlaneExtensionsControllerEnabled = true
-	cfg.DataPlaneControllerEnabled = true
-	cfg.DataPlaneBlueGreenControllerEnabled = bluegreenController
-	cfg.KongPluginInstallationControllerEnabled = true
-	cfg.AIGatewayControllerEnabled = true
-	cfg.AnonymousReports = false
-	cfg.KonnectControllersEnabled = true
-	cfg.ClusterCAKeyType = mgrconfig.ECDSA
-	cfg.GatewayAPIExperimentalEnabled = true
-	cfg.EnforceConfig = true
-	cfg.ServiceAccountToImpersonate = testutils.ServiceAccountToImpersonate
-
-	return cfg
 }

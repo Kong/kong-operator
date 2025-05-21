@@ -16,6 +16,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	kgomanager "github.com/kong/gateway-operator/modules/manager"
+	testutils "github.com/kong/gateway-operator/pkg/utils/test"
 )
 
 // Reconciler represents a reconciler.
@@ -76,8 +77,7 @@ func StartReconcilers(
 	t.Helper()
 
 	// Setup cache indices for all types.
-	cfg := kgomanager.DefaultConfig()
-	cfg.KonnectControllersEnabled = true
+	cfg := testutils.DefaultControllerConfigForTests()
 	require.NoError(t, kgomanager.SetupCacheIndexes(ctx, mgr, cfg))
 
 	for _, r := range reconcilers {
