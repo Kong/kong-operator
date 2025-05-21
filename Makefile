@@ -339,7 +339,7 @@ KUBERNETES_CONFIGURATION_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(KUB
 KUBERNETES_CONFIGURATION_PACKAGE_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_PACKAGE)@$(KUBERNETES_CONFIGURATION_VERSION)
 
 .PHONY: manifests
-manifests: controller-gen manifests.versions manifests.crds manifests.charts.crds ## Generate ClusterRole and CustomResourceDefinition objects.
+manifests: controller-gen manifests.versions manifests.crds ## Generate ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" rbac:roleName=manager-role output:rbac:dir=config/rbac/role
 
 .PHONY: manifests.crds
@@ -351,12 +351,77 @@ manifests.crds: controller-gen manifests.versions ## Generate CustomResourceDefi
 manifests.versions: kustomize yq
 	cd config/components/manager-image/ && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
 
-.PHONY: manifests.charts.crds
-manifests.charts.crds: kustomize ## Update custom-resource-definitions.yaml in charts/kong-operator/crds.
+.PHONY: manifests.charts
+manifests.charts:
+	@$(MAKE) manifests.charts.kong-operator.crds.operator
+	@$(MAKE) manifests.charts.kong-operator.crds.kic
+	@$(MAKE) manifests.charts.kong-operator.crds.gwapi-standard
+	@$(MAKE) manifests.charts.kong-operator.crds.gwapi-experimental
+	@$(MAKE) manifests.charts.kong-operator.chart.yaml
+
+KONG_OPERATOR_CHART_DIR = $(PROJECT_DIR)/charts/kong-operator
+
+.PHONY: manifests.charts.kong-operator.crds.operator
+manifests.charts.kong-operator.crds.operator: kustomize
 	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_PACKAGE_PATH)/config/crd/gateway-operator > \
-		$(PROJECT_DIR)/charts/kong-operator/crds/custom-resource-definitions.yaml
+		$(KONG_OPERATOR_CHART_DIR)/crds/custom-resource-definitions.yaml
+
+.PHONY: manifests.charts.kong-operator.crds.kic
+manifests.charts.kong-operator.crds.kic: kustomize
 	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_PACKAGE_PATH)/config/crd/ingress-controller > \
-		$(PROJECT_DIR)/charts/kong-operator/charts/kic-crds/crds/kic-crds.yaml
+		$(KONG_OPERATOR_CHART_DIR)/charts/kic-crds/crds/kic-crds.yaml
+
+GATEWAY_API_STANDARD_CRDS_SUBCHART_CHART_YAML_PATH = $(KONG_OPERATOR_CHART_DIR)/charts/gwapi-standard-crds/Chart.yaml
+GATEWAY_API_STANDARD_CRDS_SUBCHART_MANIFEST_PATH = $(KONG_OPERATOR_CHART_DIR)/charts/gwapi-standard-crds/crds/gwapi-crds.yaml
+
+.PHONY: manifests.charts.kong-operator.crds.gwapi-standard
+manifests.charts.kong-operator.crds.gwapi-standard: kustomize
+	@$(MAKE) manifests.charts.print.chart.yaml \
+		NAME=gwapi-standard-crds \
+		DESCRIPTION="A Helm chart for Kubernetes Gateway API standard channel CRDs" \
+		VERSION=$(GATEWAY_API_VERSION:v%=%) \
+		CHART_YAML_PATH=$(GATEWAY_API_STANDARD_CRDS_SUBCHART_CHART_YAML_PATH)
+	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_KUSTOMIZE_STANDARD_LOCAL_PATH) > $(GATEWAY_API_STANDARD_CRDS_SUBCHART_MANIFEST_PATH)
+
+GATEWAY_API_EXPERIMENTAL_CRDS_SUBCHART_CHART_YAML_PATH = $(KONG_OPERATOR_CHART_DIR)/charts/gwapi-experimental-crds/Chart.yaml
+GATEWAY_API_EXPERIMENTAL_CRDS_SUBCHART_MANIFEST_PATH = $(KONG_OPERATOR_CHART_DIR)/charts/gwapi-experimental-crds/crds/gwapi-crds.yaml
+
+.PHONY: manifests.charts.kong-operator.crds.gwapi-experimental
+manifests.charts.kong-operator.crds.gwapi-experimental: kustomize
+	$(MAKE) manifests.charts.print.chart.yaml \
+		NAME=gwapi-experimental-crds \
+		DESCRIPTION="A Helm chart for Kubernetes Gateway API experimental channel CRDs" \
+		VERSION=$(GATEWAY_API_VERSION:v%=%) \
+		CHART_YAML_PATH=$(GATEWAY_API_EXPERIMENTAL_CRDS_SUBCHART_CHART_YAML_PATH)
+	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_KUSTOMIZE_EXPERIMENTAL_LOCAL_PATH) > $(GATEWAY_API_EXPERIMENTAL_CRDS_SUBCHART_MANIFEST_PATH)
+
+.PHONY: manifests.charts.print.chart.yaml
+manifests.charts.print.chart.yaml: yq
+	@echo "Generating $(CHART_YAML_PATH)"
+	@touch $(CHART_YAML_PATH)
+	@$(YQ) eval '.apiVersion = "v2"' -i $(CHART_YAML_PATH)
+	@$(YQ) eval '.name = "$(NAME)"' -i $(CHART_YAML_PATH)
+	@$(YQ) eval '.version = "$(VERSION)"' -i $(CHART_YAML_PATH)
+	@$(YQ) eval 'with(.appVersion ; . = "$(VERSION)" | . style="double")' -i $(CHART_YAML_PATH)
+	@$(YQ) eval '.description = "$(DESCRIPTION)"' -i $(CHART_YAML_PATH)
+
+KONG_OPERATOR_CHART_YAML_PATH = $(KONG_OPERATOR_CHART_DIR)/Chart.yaml
+
+# NOTE: Below yq invocations are split into multiple lines to make it slightly more readable. 
+# yq command lines splitting in Makefiles proves to be rather hard.
+.PHONY: manifests.charts.kong-operator.chart.yaml
+manifests.charts.kong-operator.chart.yaml: yq
+	@echo "Generating $(KONG_OPERATOR_CHART_YAML_PATH)"
+	@$(YQ) eval \
+		'.dependencies = [ {"name":"kic-crds","version":"1.2.0","condition":"kic-crds.enabled"}]' \
+		-i $(KONG_OPERATOR_CHART_YAML_PATH)
+	@$(YQ) eval \
+		'.dependencies += [ {"name":"gwapi-standard-crds","version":"$(GATEWAY_API_VERSION:v%=%)","condition":"gwapi-standard-crds.enabled"}]' \
+		-i $(KONG_OPERATOR_CHART_YAML_PATH)
+	@$(YQ) eval \
+		'.dependencies += [ {"name":"gwapi-experimental-crds","version":"$(GATEWAY_API_VERSION:v%=%)","condition":"gwapi-experimental-crds.enabled"}]' \
+		-i $(KONG_OPERATOR_CHART_YAML_PATH)
+
 # ------------------------------------------------------------------------------
 # Build - Container Images
 # ------------------------------------------------------------------------------
@@ -549,7 +614,10 @@ generate.mocks: mockery
 GATEWAY_API_PACKAGE ?= sigs.k8s.io/gateway-api
 GATEWAY_API_RELEASE_CHANNEL ?= experimental
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(GATEWAY_API_PACKAGE))
-GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)/config/crd/experimental
+
+GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)/config/crd
+GATEWAY_API_CRDS_KUSTOMIZE_STANDARD_LOCAL_PATH = $(GATEWAY_API_CRDS_LOCAL_PATH)/
+GATEWAY_API_CRDS_KUSTOMIZE_EXPERIMENTAL_LOCAL_PATH = $(GATEWAY_API_CRDS_LOCAL_PATH)/experimental
 GATEWAY_API_REPO ?= kubernetes-sigs/gateway-api
 GATEWAY_API_RAW_REPO ?= https://raw.githubusercontent.com/$(GATEWAY_API_REPO)
 GATEWAY_API_CRDS_STANDARD_URL = github.com/$(GATEWAY_API_REPO)/config/crd?ref=$(GATEWAY_API_VERSION)
@@ -571,11 +639,11 @@ go-mod-download-gateway-api:
 
 .PHONY: install-gateway-api-crds
 install-gateway-api-crds: go-mod-download-gateway-api kustomize
-	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH) | kubectl apply -f -
+	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_KUSTOMIZE_EXPERIMENTAL_LOCAL_PATH) | kubectl apply -f -
 
 .PHONY: uninstall-gateway-api-crds
 uninstall-gateway-api-crds: go-mod-download-gateway-api kustomize
-	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH) | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_KUSTOMIZE_EXPERIMENTAL_LOCAL_PATH) | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 # ------------------------------------------------------------------------------
 # Debug

@@ -20,7 +20,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/gateway-operator/controller/pkg/address"
-	"github.com/kong/gateway-operator/controller/pkg/ctxinjector"
 	"github.com/kong/gateway-operator/controller/pkg/dataplane"
 	"github.com/kong/gateway-operator/controller/pkg/extensions"
 	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
@@ -65,8 +64,6 @@ type BlueGreenReconciler struct {
 	// Callbacks is a set of Callback functions to run at various stages of reconciliation.
 	Callbacks DataPlaneCallbacks
 
-	ContextInjector ctxinjector.CtxInjector
-
 	DefaultImage string
 
 	KonnectEnabled bool
@@ -93,8 +90,6 @@ func (r *BlueGreenReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 
 // Reconcile moves the current state of an object to the intended state.
 func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// Calling it here ensures that evaluated values will be used for the duration of this function.
-	ctx = r.ContextInjector.InjectKeyValues(ctx)
 	var dataplane operatorv1beta1.DataPlane
 	if err := r.Get(ctx, req.NamespacedName, &dataplane); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
