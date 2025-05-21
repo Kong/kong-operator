@@ -370,14 +370,12 @@ ensure.go.pkg.downloaded.gateway-api:
 	@go mod download $(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)
 
 .PHONY: manifests.charts.kong-operator.crds.operator
-manifests.charts.kong-operator.crds.operator: kustomize
-	@$(MAKE) ensure.go.pkg.downloaded.kubernetes-configuration
+manifests.charts.kong-operator.crds.operator: kustomize ensure.go.pkg.downloaded.kubernetes-configuration
 	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_PACKAGE_PATH)/config/crd/gateway-operator > \
 		$(KONG_OPERATOR_CHART_DIR)/crds/custom-resource-definitions.yaml
 
 .PHONY: manifests.charts.kong-operator.crds.kic
-manifests.charts.kong-operator.crds.kic: kustomize
-	@$(MAKE) ensure.go.pkg.downloaded.kubernetes-configuration
+manifests.charts.kong-operator.crds.kic: kustomize ensure.go.pkg.downloaded.kubernetes-configuration
 	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_PACKAGE_PATH)/config/crd/ingress-controller > \
 		$(KONG_OPERATOR_CHART_DIR)/charts/kic-crds/crds/kic-crds.yaml
 
@@ -385,26 +383,24 @@ GATEWAY_API_STANDARD_CRDS_SUBCHART_CHART_YAML_PATH = $(KONG_OPERATOR_CHART_DIR)/
 GATEWAY_API_STANDARD_CRDS_SUBCHART_MANIFEST_PATH = $(KONG_OPERATOR_CHART_DIR)/charts/gwapi-standard-crds/crds/gwapi-crds.yaml
 
 .PHONY: manifests.charts.kong-operator.crds.gwapi-standard
-manifests.charts.kong-operator.crds.gwapi-standard: kustomize
+manifests.charts.kong-operator.crds.gwapi-standard: kustomize ensure.go.pkg.downloaded.gateway-api
 	@$(MAKE) manifests.charts.print.chart.yaml \
 		NAME=gwapi-standard-crds \
 		DESCRIPTION="A Helm chart for Kubernetes Gateway API standard channel CRDs" \
 		VERSION=$(GATEWAY_API_VERSION:v%=%) \
 		CHART_YAML_PATH=$(GATEWAY_API_STANDARD_CRDS_SUBCHART_CHART_YAML_PATH)
-	@$(MAKE) ensure.go.pkg.downloaded.gateway-api
 	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_KUSTOMIZE_STANDARD_LOCAL_PATH) > $(GATEWAY_API_STANDARD_CRDS_SUBCHART_MANIFEST_PATH)
 
 GATEWAY_API_EXPERIMENTAL_CRDS_SUBCHART_CHART_YAML_PATH = $(KONG_OPERATOR_CHART_DIR)/charts/gwapi-experimental-crds/Chart.yaml
 GATEWAY_API_EXPERIMENTAL_CRDS_SUBCHART_MANIFEST_PATH = $(KONG_OPERATOR_CHART_DIR)/charts/gwapi-experimental-crds/crds/gwapi-crds.yaml
 
 .PHONY: manifests.charts.kong-operator.crds.gwapi-experimental
-manifests.charts.kong-operator.crds.gwapi-experimental: kustomize
+manifests.charts.kong-operator.crds.gwapi-experimental: kustomize ensure.go.pkg.downloaded.gateway-api
 	@$(MAKE) manifests.charts.print.chart.yaml \
 		NAME=gwapi-experimental-crds \
 		DESCRIPTION="A Helm chart for Kubernetes Gateway API experimental channel CRDs" \
 		VERSION=$(GATEWAY_API_VERSION:v%=%) \
 		CHART_YAML_PATH=$(GATEWAY_API_EXPERIMENTAL_CRDS_SUBCHART_CHART_YAML_PATH)
-	@$(MAKE) ensure.go.pkg.downloaded.gateway-api
 	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_KUSTOMIZE_EXPERIMENTAL_LOCAL_PATH) > $(GATEWAY_API_EXPERIMENTAL_CRDS_SUBCHART_MANIFEST_PATH)
 
 .PHONY: manifests.charts.print.chart.yaml
