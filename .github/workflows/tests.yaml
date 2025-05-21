@@ -37,22 +37,7 @@ jobs:
           fetch-depth: 0
       - id: check-files
         name: Check if only documentation files changed
-        run: |
-          # Get changed files compared to the base
-          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha || 'HEAD~1' }} ${{ github.sha }})
-          
-          # Check if all changed files are documentation or license files
-          DOCS_ONLY=true
-          for file in $CHANGED_FILES; do
-            if [[ ! "$file" =~ ^(.*\.md|LICENSE|LICENSES|\.github/ISSUE_TEMPLATE/.*)$ ]]; then
-              DOCS_ONLY=false
-              break
-            fi
-          done
-          
-          echo "docs_only=$DOCS_ONLY" >> $GITHUB_OUTPUT
-          echo "Changed files: $CHANGED_FILES"
-          echo "Docs only: $DOCS_ONLY"
+        run: ./scripts/check-docs-only-changes.sh ${{ github.event.pull_request.base.sha || 'HEAD~1' }} ${{ github.sha }}
 
   ensure-actions-sha-pin:
     runs-on: ubuntu-latest
@@ -523,6 +508,7 @@ jobs:
     needs:
       - check-docs-only
       - unit-tests
+      - envtest-tests
       - integration-tests
       - conformance-tests
       - e2e-tests
