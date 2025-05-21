@@ -590,39 +590,4 @@ jobs:
             exit 1
           fi
 
-  # This job exists to satisfy all required checks when only docs change
-  real-passed:
-    runs-on: ubuntu-latest
-    needs:
-      - check-docs-only
-      - passed
-      - ensure-actions-sha-pin
-      - ossf-scorecard
-      - lint
-      - govulncheck
-      - verify
-      - samples
-      - install-with-kustomize
-      - build
-      - CRDs-validation
-      - envtest-tests
-      - buildpulse-report
-      - unit-tests
-      - integration-tests
-      - integration-tests-bluegreen
-      - e2e-tests
-      - conformance-tests
-    if: always()
-    steps:
-      - name: Check if docs-only changes
-        run: |
-          if [[ "${{ needs.check-docs-only.outputs.docs_only }}" == "true" ]]; then
-            echo "Only documentation files were changed, all checks pass"
-            exit 0
-          fi
 
-      - name: Check test results
-        if: ${{ needs.check-docs-only.outputs.docs_only != 'true' && (contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')) }}
-        run: |
-          echo "Some jobs failed or were cancelled."
-          exit 1
