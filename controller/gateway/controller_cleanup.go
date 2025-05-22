@@ -149,7 +149,7 @@ func (r *Reconciler) cleanup(
 	}
 
 	log.Debug(logger, "owned resources cleanup completed")
-	return false, ctrl.Result{}, nil
+	return true, ctrl.Result{}, nil
 }
 
 func handleGatewayFinalizerPatchOrUpdateError(err error, logger logr.Logger) (ctrl.Result, error) {

@@ -179,8 +179,9 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, o
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			Type:      corev1.ServiceTypeClusterIP,
-			ClusterIP: corev1.ClusterIPNone,
+			// TODO: Use LoadBalancer type only in tests or find a better way to access Admin API from outside the cluster.
+			// https://github.com/Kong/gateway-operator/issues/1373
+			Type: corev1.ServiceTypeLoadBalancer,
 			Selector: map[string]string{
 				"app": dataplane.Name,
 			},

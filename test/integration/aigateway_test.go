@@ -21,6 +21,8 @@ import (
 )
 
 func TestAIGatewayCreation(t *testing.T) {
+	t.Skip("Using KIC as a library in ControlPlane controller broke this test (https://github.com/Kong/gateway-operator/issues/1198)")
+
 	t.Parallel()
 
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())

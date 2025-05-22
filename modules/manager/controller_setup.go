@@ -7,6 +7,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/multiinstance"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -129,7 +130,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 }
 
 // SetupControllers returns a list of ControllerDefs based on config.
-func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
+func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Manager) ([]ControllerDef, error) {
 	// metricRecorder is the recorder used to record custom metrics in the controller manager's metrics server.
 	metricRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
 
@@ -378,17 +379,17 @@ func SetupControllers(mgr manager.Manager, c *Config) ([]ControllerDef, error) {
 		{
 			Enabled: c.GatewayControllerEnabled || c.ControlPlaneControllerEnabled,
 			Controller: &controlplane.Reconciler{
-				DiscoveryClient:           controlplane.NewDiscoveryClient(mgr.GetConfig(), time.Minute),
-				Client:                    mgr.GetClient(),
-				Scheme:                    mgr.GetScheme(),
-				ClusterCASecretName:       c.ClusterCASecretName,
-				ClusterCASecretNamespace:  c.ClusterCASecretNamespace,
-				ClusterCAKeyConfig:        clusterCAKeyConfig,
-				KonnectEnabled:            c.KonnectControllersEnabled,
-				EnforceConfig:             c.EnforceConfig,
-				AnonymousReportsEnabled:   c.AnonymousReports,
-				LoggingMode:               c.LoggingMode,
-				ValidateControlPlaneImage: c.ValidateImages,
+				AnonymousReportsEnabled:  c.AnonymousReports,
+				LoggingMode:              c.LoggingMode,
+				Client:                   mgr.GetClient(),
+				Scheme:                   mgr.GetScheme(),
+				ClusterCASecretName:      c.ClusterCASecretName,
+				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				ClusterCAKeyConfig:       clusterCAKeyConfig,
+				KonnectEnabled:           c.KonnectControllersEnabled,
+				EnforceConfig:            c.EnforceConfig,
+				RestConfig:               mgr.GetConfig(),
+				InstancesManager:         cpsMgr,
 			},
 		},
 		// DataPlane controller
