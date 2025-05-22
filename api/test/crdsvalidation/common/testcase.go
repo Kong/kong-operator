@@ -110,8 +110,10 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 		desiredObj := tc.TestObject.DeepCopyObject().(T)
 
 		tCleanupObject := func(ctx context.Context, t *testing.T, obj client.Object) {
+			// NOTE: Deep copy the object as without this we end up causing a data race:
+			objToDelete := obj.DeepCopyObject().(T)
 			t.Cleanup(func() {
-				assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, obj)))
+				assert.NoError(t, client.IgnoreNotFound(cl.Delete(ctx, objToDelete)))
 			})
 		}
 

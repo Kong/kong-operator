@@ -42,7 +42,7 @@ func init() {
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:validation:XValidation:message="DataPlane requires an image to be set on proxy container",rule="has(self.spec.deployment.podTemplateSpec) && has(self.spec.deployment.podTemplateSpec.spec.containers) && self.spec.deployment.podTemplateSpec.spec.containers.exists(c, c.name == 'proxy' && has(c.image))"
 // +kubebuilder:validation:XValidation:message="DataPlane supports only db mode 'off'",rule="!has(self.spec.deployment.podTemplateSpec) ? true : ( self.spec.deployment.podTemplateSpec.spec.containers.size() == 0 || self.spec.deployment.podTemplateSpec.spec.containers[0].name == 'proxy' ? (!has(self.spec.deployment.podTemplateSpec.spec.containers[0].env) ? true : self.spec.deployment.podTemplateSpec.spec.containers[0].env.all(e, e.name != 'KONG_DATABASE' || e.value == 'off' || size(e.value)==0)) : true)"
-// +kubebuilder:validation:XValidation:message="DataPlane spec cannot be updated when promotion is in progress",rule="(self.spec != oldSelf.spec && has(self.status) && has (self.status.rollout)) ? self.status.rollout.conditions.all(c, c.type != 'RolledOut' || c.reason != 'PromotionInProgress') : true"
+// +kubebuilder:validation:XValidation:message="DataPlane spec cannot be updated when promotion is in progress",rule="(self.spec != oldSelf.spec && has(self.status) && has(self.status.rollout) && has(self.status.rollout.conditions)) ? self.status.rollout.conditions.all(c, c.type != 'RolledOut' || c.reason != 'PromotionInProgress') : true"
 type DataPlane struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -487,6 +487,36 @@ func TestDataplane(t *testing.T) {
 				ExpectedUpdateErrorMessage: lo.ToPtr("DataPlane spec cannot be updated when promotion is in progress"),
 			},
 			{
+				Name: "rollout status without conditions doesn't prevent spec updates",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+						},
+					},
+					Status: operatorv1beta1.DataPlaneStatus{
+						RolloutStatus: &operatorv1beta1.DataPlaneRolloutStatus{
+							Services: &operatorv1beta1.DataPlaneRolloutStatusServices{
+								Ingress: &operatorv1beta1.RolloutStatusService{
+									Name: "ingress",
+									Addresses: []operatorv1beta1.Address{
+										{
+											Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
+											Value:      "10.1.2.3",
+											SourceType: operatorv1beta1.PublicIPAddressSourceType,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Update: func(d *operatorv1beta1.DataPlane) {
+					d.Spec.Deployment.PodTemplateSpec.Labels = map[string]string{"foo": "bar"}
+				},
+			},
+			{
 				Name: "can update spec when promotion complete",
 				TestObject: &operatorv1beta1.DataPlane{
 					ObjectMeta: common.CommonObjectMeta,
