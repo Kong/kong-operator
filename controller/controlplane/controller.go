@@ -125,13 +125,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		// remove finalizer
-		controllerutil.RemoveFinalizer(cp, string(ControlPlaneFinalizerCPInstanceTeardown))
-		if err := r.Update(ctx, cp); err != nil {
-			if k8serrors.IsConflict(err) {
-				log.Debug(logger, "conflict found when updating ControlPlane, retrying")
-				return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
+		if controllerutil.RemoveFinalizer(cp, string(ControlPlaneFinalizerCPInstanceTeardown)) {
+			if err := r.Update(ctx, cp); err != nil {
+				if k8serrors.IsConflict(err) {
+					log.Debug(logger, "conflict found when updating ControlPlane, retrying")
+					return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
+				}
+				return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane: %w", err)
 			}
-			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane: %w", err)
 		}
 
 		// cleanup completed
@@ -140,8 +141,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// ensure the controlplane has a finalizer to delete owned cluster wide resources on delete.
-	finalizerSet := controllerutil.AddFinalizer(cp, string(ControlPlaneFinalizerCPInstanceTeardown))
-	if finalizerSet {
+	if controllerutil.AddFinalizer(cp, string(ControlPlaneFinalizerCPInstanceTeardown)) {
 		log.Trace(logger, "setting finalizers")
 		if err := r.Update(ctx, cp); err != nil {
 			if k8serrors.IsConflict(err) {
