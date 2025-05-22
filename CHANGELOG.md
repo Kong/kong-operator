@@ -36,6 +36,11 @@
 - Move implementation of certificate management for Konnect DPs from EE.
   [#1590](https://github.com/Kong/gateway-operator/pull/1590)
 
+## Changed
+
+- Allowed the `kubectl rollout restart` operation for Deployment resources created via DataPlane CRD.
+  [#1540](https://github.com/Kong/gateway-operator/pull/1540)
+
 ## [v1.6.0]
 
 > Release date: 2025-05-07

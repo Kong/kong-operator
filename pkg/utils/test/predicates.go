@@ -917,3 +917,48 @@ func Not(predicate func() bool) func() bool {
 		return !predicate()
 	}
 }
+
+// GetDataPlaneReplicaSets returns all ReplicaSets owned by the DataPlane's deployment.
+// Returns nil if the deployment or replicasets cannot be found.
+func GetDataPlaneReplicaSets(
+	ctx context.Context,
+	cli client.Client,
+	dp *operatorv1beta1.DataPlane,
+) ([]*appsv1.ReplicaSet, error) {
+	// First find the deployment for this dataplane
+	deployList := &appsv1.DeploymentList{}
+	if err := cli.List(ctx, deployList,
+		client.InNamespace(dp.Namespace),
+		client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		}); err != nil {
+		return nil, err
+	}
+
+	if len(deployList.Items) != 1 {
+		return nil, nil
+	}
+	deploy := &deployList.Items[0]
+
+	// Find replicasets owned by this deployment
+	rsList := &appsv1.ReplicaSetList{}
+	if err := cli.List(ctx, rsList,
+		client.InNamespace(dp.Namespace),
+		client.MatchingLabels(deploy.Spec.Selector.MatchLabels),
+	); err != nil {
+		return nil, err
+	}
+
+	var ownedRS []*appsv1.ReplicaSet
+	for i := range rsList.Items {
+		rs := &rsList.Items[i]
+		for _, owner := range rs.OwnerReferences {
+			if owner.UID == deploy.UID {
+				ownedRS = append(ownedRS, rs)
+				break
+			}
+		}
+	}
+
+	return ownedRS, nil
+}
