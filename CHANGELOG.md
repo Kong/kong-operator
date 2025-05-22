@@ -28,7 +28,6 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-
 ## Unreleased for Kong Operator
 
 ### Added
@@ -45,7 +44,7 @@
 ## Changed
 
 - Allowed the `kubectl rollout restart` operation for Deployment resources created via DataPlane CRD.
-  [#1660](hhttps://github.com/Kong/gateway-operator/pull/1660)
+  [#1660](https://github.com/Kong/gateway-operator/pull/1660)
 
 ## [v1.6.0]
 
