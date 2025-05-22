@@ -1,0 +1,34 @@
+name: charts tests
+run-name: charts tests, branch:${{ github.ref_name }}, triggered by @${{ github.actor }}
+
+concurrency:
+  # Run only for most recent commit in PRs but for all tags and commits on main
+  # Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
+  group: ${{ github.workflow }}-${{ github.head_ref || github.sha }}
+  cancel-in-progress: true
+
+on:
+  merge_group:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - '**'
+      - 'release/*'
+  push:
+    branches:
+      - 'main'
+      - 'release/*'
+    tags:
+      - '*'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  charts-passed:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "This is a stub job, allowing the CI to pass. GitHub Actions supports only 1 set of required checks and this is a workaround for that limitation."
