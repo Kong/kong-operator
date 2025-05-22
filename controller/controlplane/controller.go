@@ -2,151 +2,74 @@ package controlplane
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
+	"github.com/cloudflare/cfssl/config"
+	"github.com/cloudflare/cfssl/signer"
+	"github.com/cloudflare/cfssl/signer/local"
 	"github.com/go-logr/logr"
-	admregv1 "k8s.io/api/admissionregistration/v1"
-	appsv1 "k8s.io/api/apps/v1"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/multiinstance"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/gateway-operator/controller"
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
-	"github.com/kong/gateway-operator/controller/pkg/extensions"
-	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
 	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/index"
-	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
-	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
+// requeueAfterBoot gives the instance of ControlPlane controller in goroutine some time to start up.
+const requeueAfterBoot = time.Second
+
 // Reconciler reconciles a ControlPlane object
 type Reconciler struct {
 	client.Client
-	DiscoveryClient           *CachedDiscoveryClient
-	Scheme                    *runtime.Scheme
-	ClusterCASecretName       string
-	ClusterCASecretNamespace  string
-	ClusterCAKeyConfig        secrets.KeyConfig
-	KonnectEnabled            bool
-	EnforceConfig             bool
-	LoggingMode               logging.Mode
-	ValidateControlPlaneImage bool
-	AnonymousReportsEnabled   bool
+	Scheme                   *runtime.Scheme
+	ClusterCASecretName      string
+	ClusterCASecretNamespace string
+	ClusterCAKeyConfig       secrets.KeyConfig
+
+	RestConfig              *rest.Config
+	InstancesManager        *multiinstance.Manager
+	KonnectEnabled          bool
+	EnforceConfig           bool
+	LoggingMode             logging.Mode
+	AnonymousReportsEnabled bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	// for owned objects we need to check if updates to the objects resulted in the
-	// removal of an OwnerReference to the parent object, and if so we need to
-	// enqueue the parent object so that reconciliation can create a replacement.
-	clusterRoleOwnerPredicate := predicate.NewPredicateFuncs(r.clusterRoleHasControlPlaneOwner)
-	clusterRoleOwnerPredicate.UpdateFunc = func(e event.UpdateEvent) bool {
-		return r.clusterRoleHasControlPlaneOwner(e.ObjectOld)
-	}
-	clusterRoleBindingOwnerPredicate := predicate.NewPredicateFuncs(r.clusterRoleBindingHasControlPlaneOwner)
-	clusterRoleBindingOwnerPredicate.UpdateFunc = func(e event.UpdateEvent) bool {
-		return r.clusterRoleBindingHasControlPlaneOwner(e.ObjectOld)
-	}
-	validatinWebhookConfigurationOwnerPredicate := predicate.NewPredicateFuncs(r.validatingWebhookConfigurationHasControlPlaneOwner)
-	validatinWebhookConfigurationOwnerPredicate.UpdateFunc = func(e event.UpdateEvent) bool {
-		return r.validatingWebhookConfigurationHasControlPlaneOwner(e.ObjectOld)
-	}
-
-	builder := ctrl.NewControllerManagedBy(mgr).
-		// watch ControlPlane objects
-		For(&operatorv1beta1.ControlPlane{}).
-		// watch for changes in Secrets created by the controlplane controller
-		Owns(&corev1.Secret{}).
-		// watch for changes in ServiceAccounts created by the controlplane controller
-		Owns(&corev1.ServiceAccount{}).
-		// watch for changes in Deployments created by the controlplane controller
-		Owns(&appsv1.Deployment{}).
-		// watch for changes in Services created by the controlplane controller
-		Owns(&corev1.Service{}).
-		// watch for changes in ValidatingWebhookConfigurations created by the controlplane controller.
-		// Since the ValidatingWebhookConfigurations are cluster-wide but controlplanes are namespaced,
-		// we need to manually detect the owner by means of the UID
-		// (Owns cannot be used in this case)
-		Watches(
-			&admregv1.ValidatingWebhookConfiguration{},
-			handler.EnqueueRequestsFromMapFunc(r.getControlPlaneForValidatingWebhookConfiguration),
-			builder.WithPredicates(validatinWebhookConfigurationOwnerPredicate),
-		).
-		// watch for changes in ClusterRoles created by the controlplane controller.
-		// Since the ClusterRoles are cluster-wide but controlplanes are namespaced,
-		// we need to manually detect the owner by means of the UID
-		// (Owns cannot be used in this case)
-		Watches(
-			&rbacv1.ClusterRole{},
-			handler.EnqueueRequestsFromMapFunc(r.getControlPlaneForClusterRole),
-			builder.WithPredicates(clusterRoleOwnerPredicate)).
-		// watch for changes in ClusterRoleBindings created by the controlplane controller.
-		// Since the ClusterRoleBindings are cluster-wide but controlplanes are namespaced,
-		// we need to manually detect the owner by means of the UID
-		// (Owns cannot be used in this case)
-		Watches(
-			&rbacv1.ClusterRoleBinding{},
-			handler.EnqueueRequestsFromMapFunc(r.getControlPlaneForClusterRoleBinding),
-			builder.WithPredicates(clusterRoleBindingOwnerPredicate)).
-		Watches(
-			&operatorv1beta1.DataPlane{},
-			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlane)).
-		// watch for changes in the DataPlane deployments, as we want to be aware of all
-		// the DataPlane pod changes (every time a new pod gets ready, the deployment
-		// status gets updated accordingly, leading to a reconciliation loop trigger)
-		Watches(
-			&appsv1.Deployment{},
-			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlaneDeployment)).
-		// watch for events on ReferenceGrants, if any ReferenceGrant event happen, enqueue
-		// reconciliation for all supported ControlPlane objects which namespaces
-		// are referenced in a "from" instance.
-		Watches(
-			&gatewayv1beta1.ReferenceGrant{},
-			handler.EnqueueRequestsFromMapFunc(r.listControlPlanesForReferenceGrants)).
-		// Watch for events on Roles, if any Role event happens, enqueue
-		// reconciliation for all supported ControlPlane objects which use this Role.
-		Watches(
-			&rbacv1.Role{},
-			handler.EnqueueRequestsFromMapFunc(listControlPlanesFor[*rbacv1.Role])).
-		// Watch for events on RoleBindings, if any RoleBinding event happens, enqueue
-		// reconciliation for all supported ControlPlane objects which use this RoleBinding.
-		Watches(
-			&rbacv1.RoleBinding{},
-			handler.EnqueueRequestsFromMapFunc(listControlPlanesFor[*rbacv1.RoleBinding])).
-		// Watch for events on WatchNamespaceGrants, if any WatchNamespaceGrant event happens,
-		// enqueue reconciliation for all supported ControlPlane objects which use this WatchNamespaceGrant.
-		Watches(
-			&operatorv1alpha1.WatchNamespaceGrant{},
-			handler.EnqueueRequestsFromMapFunc(r.listControlPlanesForWatchNamespaceGrants))
+func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
+	builder := ctrl.NewControllerManagedBy(mgr).For(&operatorv1beta1.ControlPlane{})
 
 	if r.KonnectEnabled {
 		// Watch for changes in KonnectExtension objects that are referenced by ControlPlane objects.
@@ -173,6 +96,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	mgrID, err := manager.NewID(cp.Name)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to create manager ID: %w", err)
+	}
+
 	// controlplane is deleted, just run garbage collection for cluster wide resources.
 	if !cp.DeletionTimestamp.IsZero() {
 		// wait for termination grace period before cleaning up roles and bindings
@@ -188,65 +116,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			}, nil
 		}
 
-		log.Trace(logger, "controlplane marked for deletion, removing owned cluster roles, cluster role bindings and validating webhook configurations")
-
-		newControlPlane := cp.DeepCopy()
-
-		// ensure that the ValidatingWebhookConfigurations which was created for the ControlPlane is deleted
-		deletions, err := r.ensureOwnedValidatingWebhookConfigurationDeleted(ctx, cp)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if deletions {
-			log.Debug(logger, "ValidatingWebhookConfiguration deleted")
-			return ctrl.Result{}, nil // ValidatingWebhookConfiguration deletion will requeue
-		}
-
-		// now that ValidatingWebhookConfigurations are cleaned up, remove the relevant finalizer
-		if controllerutil.RemoveFinalizer(newControlPlane, string(ControlPlaneFinalizerCleanupValidatingWebhookConfiguration)) {
-			if err := r.Patch(ctx, newControlPlane, client.MergeFrom(cp)); err != nil {
-				return ctrl.Result{}, err
+		if err := r.InstancesManager.StopInstance(mgrID); err != nil {
+			if errors.As(err, &multiinstance.InstanceNotFoundError{}) {
+				log.Debug(logger, "control plane instance not found, skipping cleanup")
+			} else {
+				return ctrl.Result{}, fmt.Errorf("failed to stop instance: %w", err)
 			}
-			log.Debug(logger, "ValidatingWebhookConfigurations finalizer removed")
-			return ctrl.Result{}, nil // ControlPlane update will requeue
 		}
 
-		// ensure that the clusterrolebindings which were created for the ControlPlane are deleted
-		deletions, err = r.ensureOwnedClusterRoleBindingsDeleted(ctx, cp)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if deletions {
-			log.Debug(logger, "clusterRoleBinding deleted")
-			return ctrl.Result{}, nil // ClusterRoleBinding deletion will requeue
-		}
-
-		// now that ClusterRoleBindings are cleaned up, remove the relevant finalizer
-		if controllerutil.RemoveFinalizer(newControlPlane, string(ControlPlaneFinalizerCleanupClusterRoleBinding)) {
-			if err := r.Patch(ctx, newControlPlane, client.MergeFrom(cp)); err != nil {
-				return ctrl.Result{}, err
+		// remove finalizer
+		controllerutil.RemoveFinalizer(cp, string(ControlPlaneFinalizerCPInstanceTeardown))
+		if err := r.Update(ctx, cp); err != nil {
+			if k8serrors.IsConflict(err) {
+				log.Debug(logger, "conflict found when updating ControlPlane, retrying")
+				return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
 			}
-			log.Debug(logger, "clusterRoleBinding finalizer removed")
-			return ctrl.Result{}, nil // ControlPlane update will requeue
-		}
-
-		// ensure that the clusterroles created for the controlplane are deleted
-		deletions, err = r.ensureOwnedClusterRolesDeleted(ctx, cp)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if deletions {
-			log.Debug(logger, "clusterRole deleted")
-			return ctrl.Result{}, nil // ClusterRole deletion will requeue
-		}
-
-		// now that ClusterRoles are cleaned up, remove the relevant finalizer
-		if controllerutil.RemoveFinalizer(newControlPlane, string(ControlPlaneFinalizerCleanupClusterRole)) {
-			if err := r.Patch(ctx, newControlPlane, client.MergeFrom(cp)); err != nil {
-				return ctrl.Result{}, err
-			}
-			log.Debug(logger, "clusterRole finalizer removed")
-			return ctrl.Result{}, nil // ControlPlane update will requeue
+			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane: %w", err)
 		}
 
 		// cleanup completed
@@ -255,10 +140,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// ensure the controlplane has a finalizer to delete owned cluster wide resources on delete.
-	crFinalizerSet := controllerutil.AddFinalizer(cp, string(ControlPlaneFinalizerCleanupClusterRole))
-	crbFinalizerSet := controllerutil.AddFinalizer(cp, string(ControlPlaneFinalizerCleanupClusterRoleBinding))
-	vwcFinalizerSet := controllerutil.AddFinalizer(cp, string(ControlPlaneFinalizerCleanupValidatingWebhookConfiguration))
-	if crFinalizerSet || crbFinalizerSet || vwcFinalizerSet {
+	finalizerSet := controllerutil.AddFinalizer(cp, string(ControlPlaneFinalizerCPInstanceTeardown))
+	if finalizerSet {
 		log.Trace(logger, "setting finalizers")
 		if err := r.Update(ctx, cp); err != nil {
 			if k8serrors.IsConflict(err) {
@@ -312,13 +195,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 	}
 
-	log.Trace(logger, "validating ControlPlane configuration")
-	if err := validateControlPlane(cp, r.ValidateControlPlaneImage); err != nil {
-		return ctrl.Result{}, err
-	}
-
 	log.Trace(logger, "configuring ControlPlane resource")
-
 	defaultArgs := controlplane.DefaultsArgs{
 		Namespace:                   cp.Namespace,
 		ControlPlaneName:            cp.Name,
@@ -332,33 +209,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			continue
 		}
 	}
-	_ = controlplane.SetDefaults(
+	changed := controlplane.SetDefaults(
 		&cp.Spec.ControlPlaneOptions,
 		defaultArgs)
-	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, cp, r.KonnectEnabled)
-	if err != nil {
-		if extensionserrors.IsKonnectExtensionError(err) {
-			log.Debug(logger, "failed to apply extensions", "err", err)
-			return ctrl.Result{}, nil
+	if changed {
+		log.Debug(logger, "updating ControlPlane resource after defaults are set since resource has changed")
+		err := r.Update(ctx, cp)
+		if err != nil {
+			if k8serrors.IsConflict(err) {
+				log.Debug(logger, "conflict found when updating ControlPlane resource, retrying")
+				return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane: %w", err)
 		}
-		return ctrl.Result{}, err
-	}
-	if stop || !result.IsZero() {
-		return ctrl.Result{}, nil
+		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
 	}
 
-	log.Trace(logger, "validating that the ControlPlane's DataPlane configuration is up to date")
-	if err = r.ensureDataPlaneConfiguration(ctx, cp, dataplaneIngressServiceName); err != nil {
-		if k8serrors.IsConflict(err) {
-			log.Debug(
-				logger,
-				"conflict found when trying to ensure ControlPlane's DataPlane configuration was up to date, retrying",
-				"controlPlane", cp,
-			)
-			return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
-		}
-		return ctrl.Result{}, err
-	}
+	// TODO(czeslavo): Make sure we reschedule the instance if the spec has changed.
+	// https://github.com/Kong/gateway-operator/issues/1374
 
 	log.Trace(logger, "validating ControlPlane's DataPlane status")
 	dataplaneIsSet := r.ensureDataPlaneStatus(cp, dataplane)
@@ -368,110 +236,82 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		log.Debug(logger, "DataPlane not set, deployment for ControlPlane will remain dormant")
 	}
 
-	log.Trace(logger, "validating WatchNamespaceGrants exist for the ControlPlane")
-	validatedWatchNamespaces, err := r.validateWatchNamespaceGrants(ctx, cp)
-	if err != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				kcfgcontrolplane.ConditionTypeWatchNamespaceGrantValid,
-				metav1.ConditionFalse,
-				kcfgcontrolplane.ConditionReasonWatchNamespaceGrantInvalid,
-				fmt.Sprintf("WatchNamespaceGrant(s) are missing or invalid for the ControlPlane: %v", err),
-				cp.GetGeneration(),
-			),
-			cp,
-		)
-		// We do not return here as we want to proceed with reconciling the Deployment.
-		// This will prevent users using the ControlPlane Deployment with previous
-		// WatchNamespaces spec.
-		// We do not patch the status here either because that's done below.
-	} else {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				kcfgcontrolplane.ConditionTypeWatchNamespaceGrantValid,
-				metav1.ConditionTrue,
-				kcfgcontrolplane.ConditionReasonWatchNamespaceGrantValid,
-				"WatchNamespaceGrant(s) are present and valid",
-				cp.GetGeneration(),
-			),
-			cp,
-		)
-	}
+	// TODO: Make sure there are no error logs from the manager constructor when DP instances are not ready.
+	// https://github.com/Kong/gateway-operator/issues/1375
 
-	log.Trace(logger, "ensuring ServiceAccount for ControlPlane deployment exists")
-	createdOrUpdated, controlplaneServiceAccount, err := r.ensureServiceAccount(ctx, cp)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if createdOrUpdated {
-		log.Debug(logger, "serviceAccount updated")
-		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
-	}
+	log.Trace(logger, "checking readiness of ControlPlane instance")
+	if err := r.InstancesManager.IsInstanceReady(mgrID); err != nil {
+		log.Trace(logger, "control plane instance not ready yet", "error", err)
 
-	res, err := r.ensureRolesAndClusterRoles(ctx, logger, cp, controlplaneServiceAccount, validatedWatchNamespaces)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to ensure roles or cluster roles: %w", err)
-	} else if res != op.Noop {
-		return ctrl.Result{Requeue: true}, nil
-	}
+		if errors.As(err, &multiinstance.InstanceNotFoundError{}) {
+			log.Debug(logger, "control plane instance not found, creating new instance")
 
-	log.Trace(logger, "creating mTLS certificate")
-	res, adminCertificate, err := r.ensureAdminMTLSCertificateSecret(ctx, cp)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if res != op.Noop {
-		log.Debug(logger, "mTLS certificate created/updated")
-		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
-	}
+			var caSecret corev1.Secret
+			if err := r.Get(ctx, types.NamespacedName{
+				Namespace: r.ClusterCASecretNamespace,
+				Name:      r.ClusterCASecretName,
+			}, &caSecret); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to get CA secret: %w", err)
+			}
 
-	deploymentParams := ensureDeploymentParams{
-		ControlPlane:            cp,
-		ServiceAccountName:      controlplaneServiceAccount.Name,
-		AdminMTLSCertSecretName: adminCertificate.Name,
-		EnforceConfig:           r.EnforceConfig,
-		WatchNamespaces:         validatedWatchNamespaces,
-	}
-
-	admissionWebhookCertificateSecretName, res, err := r.ensureWebhookResources(ctx, logger, cp, r.EnforceConfig)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to ensure webhook resources: %w", err)
-	} else if res != op.Noop {
-		return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
-	}
-	deploymentParams.AdmissionWebhookCertSecretName = admissionWebhookCertificateSecretName
-
-	log.Trace(logger, "looking for existing Deployments for ControlPlane resource")
-	res, controlplaneDeployment, err := r.ensureDeployment(ctx, logger, deploymentParams)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if res != op.Noop {
-		if !dataplaneIsSet {
-			log.Debug(logger, "DataPlane not set, deployment for ControlPlane has been scaled down to 0 replicas")
-			res, err := r.patchStatus(ctx, logger, cp)
+			log.Trace(logger, "creating mTLS certificate")
+			clientCert, clientKey, err := r.generateClientCert(client.ObjectKeyFromObject(cp), caSecret)
 			if err != nil {
-				log.Debug(logger, "unable to reconcile ControlPlane status", "error", err)
-				return ctrl.Result{}, err
+				return ctrl.Result{}, fmt.Errorf("failed to generate client certificate: %w", err)
 			}
-			if !res.IsZero() {
-				log.Debug(logger, "unable to update ControlPlane resource")
-				return res, nil
-			}
-			return ctrl.Result{}, nil
-		}
-		return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
-	}
-	log.Trace(logger, "checking readiness of ControlPlane deployments")
 
-	if controlplaneDeployment.Status.Replicas == 0 || controlplaneDeployment.Status.AvailableReplicas < controlplaneDeployment.Status.Replicas {
-		log.Trace(logger, "deployment for ControlPlane not ready yet", "deployment", controlplaneDeployment)
-		// Set Ready to false for controlplane as the underlying deployment is not ready.
+			// TODO: Configure the manager with Konnect options if KonnectExtension is attached to the ControlPlane.
+			//  https://github.com/Kong/gateway-operator/issues/1361
+
+			mgrCfg, err := manager.NewConfig(
+				WithRestConfig(r.RestConfig),
+				WithKongAdminService(types.NamespacedName{
+					Name:      dataplaneAdminServiceName,
+					Namespace: cp.Namespace,
+				}),
+				WithKongAdminServicePortName(consts.DataPlaneAdminServicePortName),
+				WithKongAdminInitializationRetryDelay(5*time.Second),
+				// We only want to retry once as the constructor can be called multiple times.
+				// Retries will be handled on the reconciler level.
+				WithKongAdminInitializationRetries(1),
+				WithGatewayToReconcile(types.NamespacedName{
+					Namespace: cp.Namespace,
+					Name:      defaultArgs.OwnedByGateway,
+				}),
+				WithGatewayAPIControllerName(),
+				WithKongAdminAPIConfig(managercfg.AdminAPIClientConfig{
+					CACert: string(caSecret.Data["tls.crt"]),
+					TLSClient: managercfg.TLSClientConfig{
+						Cert: string(clientCert),
+						Key:  string(clientKey),
+					},
+				}),
+				WithDisabledLeaderElection(),
+				WithPublishService(types.NamespacedName{
+					Namespace: cp.Namespace,
+					Name:      dataplaneIngressServiceName,
+				}),
+				WithMetricsServerOff(),
+			)
+			if err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to create manager config: %w", err)
+			}
+
+			log.Debug(logger, "creating new instance", "manager_id", mgrID, "manager_config", mgrCfg)
+			mgr, err := manager.NewManager(ctx, mgrID, logger, mgrCfg)
+			if err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to create manager: %w", err)
+			}
+
+			if err := r.InstancesManager.ScheduleInstance(mgr); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to schedule instance: %w", err)
+			}
+		}
+
 		k8sutils.SetCondition(
 			k8sutils.NewCondition(kcfgdataplane.ReadyType, metav1.ConditionFalse, kcfgdataplane.WaitingToBecomeReadyReason, kcfgdataplane.WaitingToBecomeReadyMessage),
 			cp,
 		)
-
 		res, err := r.patchStatus(ctx, logger, cp)
 		if err != nil {
 			log.Debug(logger, "unable to patch ControlPlane status", "error", err)
@@ -481,13 +321,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			log.Debug(logger, "unable to patch ControlPlane status")
 			return res, nil
 		}
-		return ctrl.Result{}, nil
+
+		return ctrl.Result{RequeueAfter: requeueAfterBoot}, nil
 	}
 
 	markAsProvisioned(cp)
 	k8sutils.SetReady(cp)
 
-	result, err = r.patchStatus(ctx, logger, cp)
+	result, err := r.patchStatus(ctx, logger, cp)
 	if err != nil {
 		log.Debug(logger, "unable to patch ControlPlane status", "error", err)
 		return ctrl.Result{}, err
@@ -499,16 +340,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	log.Debug(logger, "reconciliation complete for ControlPlane resource")
 	return ctrl.Result{}, nil
-}
-
-// validateControlPlane validates the control plane.
-func validateControlPlane(controlPlane *operatorv1beta1.ControlPlane, validateControlPlaneImage bool) error {
-	versionValidationOptions := make([]versions.VersionValidationOption, 0)
-	if validateControlPlaneImage {
-		versionValidationOptions = append(versionValidationOptions, versions.IsControlPlaneImageVersionSupported)
-	}
-	_, err := controlplane.GenerateImage(&controlPlane.Spec.ControlPlaneOptions, versionValidationOptions...)
-	return err
 }
 
 // patchStatus Patches the resource status only when there are changes in the Conditions
@@ -535,82 +366,74 @@ func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, update
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) ensureWebhookResources(
-	ctx context.Context,
-	logger logr.Logger,
-	cp *operatorv1beta1.ControlPlane,
-	enforceConfig bool,
-) (string, op.Result, error) {
-	webhookEnabled := isAdmissionWebhookEnabled(ctx, r.Client, logger, cp)
-	if !webhookEnabled {
-		log.Debug(logger, "admission webhook disabled, ensuring admission webhook resources are not present")
-	} else {
-		log.Debug(logger, "admission webhook enabled, enforcing admission webhook resources")
-	}
-
-	log.Trace(logger, "ensuring admission webhook service")
-	res, admissionWebhookService, err := r.ensureAdmissionWebhookService(ctx, logger, r.Client, cp)
+func (r *Reconciler) generateClientCert(
+	cp types.NamespacedName,
+	caSecret corev1.Secret,
+) ([]byte, []byte, error) {
+	priv, privPem, signatureAlgorithm, err := secrets.CreatePrivateKey(r.ClusterCAKeyConfig)
 	if err != nil {
-		return "", res, fmt.Errorf("failed to ensure admission webhook service: %w", err)
-	}
-	if res != op.Noop {
-		if !webhookEnabled {
-			log.Debug(logger, "admission webhook service has been removed")
-		} else {
-			log.Debug(logger, "admission webhook service has been created/updated")
-		}
-		return "", res, nil // requeue will be triggered by the creation or update of the owned object
+		return nil, nil, fmt.Errorf("failed to create private key: %w", err)
 	}
 
-	log.Trace(logger, "ensuring admission webhook certificate")
-	res, admissionWebhookCertificateSecret, err := r.ensureAdmissionWebhookCertificateSecret(ctx, logger, cp, admissionWebhookService)
+	subject := fmt.Sprintf("%s.%s", cp.Name, cp.Namespace)
+	template := x509.CertificateRequest{
+		Subject: pkix.Name{
+			CommonName:   subject,
+			Organization: []string{"Kong, Inc."},
+			Country:      []string{"US"},
+		},
+		SignatureAlgorithm: signatureAlgorithm,
+		DNSNames:           []string{subject},
+	}
+
+	caCertBlock, _ := pem.Decode(caSecret.Data["tls.crt"])
+	if caCertBlock == nil {
+		return nil, nil, errors.New("failed to decode CA certificate")
+	}
+	caCert, err := x509.ParseCertificate(caCertBlock.Bytes)
 	if err != nil {
-		return "", res, err
+		return nil, nil, fmt.Errorf("failed to parse CA certificate from Secret %s: %w", client.ObjectKeyFromObject(&caSecret), err)
 	}
-	if res != op.Noop {
-		if !webhookEnabled {
-			log.Debug(logger, "admission webhook service certificate has been removed")
-		} else {
-			log.Debug(logger, "admission webhook service certificate has been created/updated")
-		}
-		return "", res, nil // requeue will be triggered by the creation or update of the owned object
+	caKeyBlock, _ := pem.Decode(caSecret.Data["tls.key"])
+	if caKeyBlock == nil {
+		return nil, nil, errors.New("failed to decode CA key")
 	}
 
-	log.Trace(logger, "ensuring admission webhook configuration")
-	res, err = r.ensureValidatingWebhookConfiguration(ctx, cp, admissionWebhookCertificateSecret, admissionWebhookService, enforceConfig)
+	caSigner, signatureAlgorithm, err := secrets.ParsePrivateKey(caKeyBlock)
 	if err != nil {
-		return "", res, err
-	}
-	if res != op.Noop {
-		if !webhookEnabled {
-			log.Debug(logger, "ValidatingWebhookConfiguration has been removed")
-		} else {
-			log.Debug(logger, "ValidatingWebhookConfiguration has been created/updated")
-		}
-	}
-	if webhookEnabled {
-		return admissionWebhookCertificateSecret.Name, res, nil
-	}
-	return "", res, nil
-}
-
-func isAdmissionWebhookEnabled(ctx context.Context, cl client.Client, logger logr.Logger, cp *operatorv1beta1.ControlPlane) bool {
-	if cp.Spec.Deployment.PodTemplateSpec == nil {
-		return false
+		return nil, nil, fmt.Errorf("failed to parse CA key from Secret %s: %w", client.ObjectKeyFromObject(&caSecret), err)
 	}
 
-	container := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-	if container == nil {
-		return false
-	}
-	admissionWebhookListen, ok, err := k8sutils.GetEnvValueFromContainer(ctx, container, cp.Namespace, "CONTROLLER_ADMISSION_WEBHOOK_LISTEN", cl)
+	der, err := x509.CreateCertificateRequest(rand.Reader, &template, priv)
 	if err != nil {
-		log.Debug(logger, "unable to get CONTROLLER_ADMISSION_WEBHOOK_LISTEN env var", "error", err)
-		return false
+		return nil, nil, fmt.Errorf("failed to create certificate request with Secret %s: %w", client.ObjectKeyFromObject(&caSecret), err)
 	}
-	if !ok {
-		return false
+
+	policy := &config.Signing{
+		Default: &config.SigningProfile{
+			Usage: []string{
+				string(certificatesv1.UsageKeyEncipherment),
+				string(certificatesv1.UsageDigitalSignature),
+				string(certificatesv1.UsageClientAuth),
+			},
+			// TODO: https://github.com/Kong/gateway-operator/issues/1666
+			Expiry: 365 * 24 * time.Hour,
+		},
 	}
-	// We don't validate the value of the env var here, just that it is set.
-	return len(admissionWebhookListen) > 0 && admissionWebhookListen != "off"
+	cfs, err := local.NewSigner(caSigner, caCert, signatureAlgorithm, policy)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to create signer: %w", err)
+	}
+
+	cert, err := cfs.Sign(signer.SignRequest{
+		Request: string(pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE REQUEST",
+			Bytes: der,
+		})),
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to sign certificate: %w", err)
+	}
+
+	return cert, pem.EncodeToMemory(privPem), nil
 }

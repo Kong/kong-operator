@@ -1,21 +1,16 @@
 package reduce
 
 import (
-	"slices"
-
 	"github.com/samber/lo"
-	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
-	"github.com/kong/gateway-operator/pkg/consts"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -48,139 +43,6 @@ func filterSecrets(secrets []corev1.Secret) []corev1.Secret {
 	}
 
 	return append(secrets[:toFilter], secrets[toFilter+1:]...)
-}
-
-// -----------------------------------------------------------------------------
-// Filter functions - ServiceAccounts
-// -----------------------------------------------------------------------------
-
-// filterServiceAccounts filters out the ServiceAccount to be kept and returns
-// all the ServiceAccounts to be deleted.
-// The filtered-out ServiceAccount is decided as follows:
-// 1. creationTimestamp (older is better)
-func filterServiceAccounts(serviceAccounts []corev1.ServiceAccount) []corev1.ServiceAccount {
-	if len(serviceAccounts) < 2 {
-		return []corev1.ServiceAccount{}
-	}
-
-	toFilter := 0
-	for i, serviceAccount := range serviceAccounts {
-		if serviceAccount.CreationTimestamp.Before(&serviceAccounts[toFilter].CreationTimestamp) {
-			toFilter = i
-		}
-	}
-
-	return append(serviceAccounts[:toFilter], serviceAccounts[toFilter+1:]...)
-}
-
-// -----------------------------------------------------------------------------
-// Filter functions - ClusterRoles
-// -----------------------------------------------------------------------------
-
-// filterClusterRoles filters out the ClusterRole to be kept and returns
-// all the ClusterRoles to be deleted.
-// The filtered-out ClusterRole is decided as follows:
-//  1. creationTimestamp (newer is better, because newer ClusterRoles can contain new policy rules)
-func filterClusterRoles(clusterRoles []rbacv1.ClusterRole) []rbacv1.ClusterRole {
-	if len(clusterRoles) == 1 {
-		return []rbacv1.ClusterRole{}
-	}
-
-	best := 0
-	for i, cr := range clusterRoles {
-		if cr.CreationTimestamp.After(clusterRoles[best].CreationTimestamp.Time) {
-			best = i
-		}
-	}
-
-	return append(clusterRoles[:best], clusterRoles[best+1:]...)
-}
-
-// -----------------------------------------------------------------------------
-// Filter functions - Roles
-// -----------------------------------------------------------------------------
-
-// filterRoles filters out the Role to be kept and returns
-// all the Roles to be deleted.
-// The filtered-out Role is decided as follows:
-//  1. creationTimestamp (newer is better, because newer Roles can contain new policy rules)
-func filterRoles(roles []rbacv1.Role) []rbacv1.Role {
-	if len(roles) == 1 {
-		return []rbacv1.Role{}
-	}
-
-	best := 0
-	for i, cr := range roles {
-		if cr.CreationTimestamp.After(roles[best].CreationTimestamp.Time) {
-			best = i
-		}
-	}
-
-	return slices.Delete(roles, best, best+1)
-}
-
-// -----------------------------------------------------------------------------
-// Filter functions - ClusterRoleBindings
-// -----------------------------------------------------------------------------
-
-// filterRoleBindings filters out the ClusterRoleBinding or RoleBindings to be kept and returns
-// all the objects to be deleted.
-func filterRoleBindings[
-	T interface {
-		rbacv1.ClusterRoleBinding | rbacv1.RoleBinding
-	},
-	TPtr interface {
-		*T
-		GetLabels() map[string]string
-		GetCreationTimestamp() metav1.Time
-	},
-](clusterRoleBindings []T) []T {
-	if len(clusterRoleBindings) < 2 {
-		return []T{}
-	}
-
-	oldestWithManagedByLabels := -1
-	oldestLegacy := -1
-	for i, clusterRoleBinding := range clusterRoleBindings {
-		ptr := TPtr(&clusterRoleBinding)
-		creationTS := ptr.GetCreationTimestamp()
-
-		labels := ptr.GetLabels()
-		_, okManagedBy := labels[consts.GatewayOperatorManagedByLabel]
-		_, okManagedByNs := labels[consts.GatewayOperatorManagedByNamespaceLabel]
-		_, okManagedByName := labels[consts.GatewayOperatorManagedByNameLabel]
-		if okManagedBy && okManagedByNs && okManagedByName {
-			if oldestWithManagedByLabels == -1 {
-				oldestWithManagedByLabels = i
-				continue
-			}
-
-			ptrOldest := TPtr(&clusterRoleBindings[oldestWithManagedByLabels])
-			creationTSOldest := ptrOldest.GetCreationTimestamp()
-
-			if creationTS.Before(&creationTSOldest) {
-				oldestWithManagedByLabels = i
-			}
-			continue
-		}
-
-		if oldestLegacy == -1 {
-			oldestLegacy = i
-			continue
-		}
-
-		ptrOldestLegacy := TPtr(&clusterRoleBindings[oldestLegacy])
-		creationTSOldestLegacy := ptrOldestLegacy.GetCreationTimestamp()
-		if creationTS.Before(&creationTSOldestLegacy) {
-			oldestLegacy = i
-		}
-		continue
-	}
-
-	if oldestWithManagedByLabels != -1 {
-		return append(clusterRoleBindings[:oldestWithManagedByLabels], clusterRoleBindings[oldestWithManagedByLabels+1:]...)
-	}
-	return append(clusterRoleBindings[:oldestLegacy], clusterRoleBindings[oldestLegacy+1:]...)
 }
 
 // -----------------------------------------------------------------------------
@@ -360,29 +222,6 @@ func FilterPodDisruptionBudgets(pdbs []policyv1.PodDisruptionBudget) []policyv1.
 	}
 
 	return append(pdbs[:best], pdbs[best+1:]...)
-}
-
-// -----------------------------------------------------------------------------
-// Filter functions - ValidatingWebhookConfigurations
-// -----------------------------------------------------------------------------
-
-// filterValidatingWebhookConfigurations filters out the ValidatingWebhookConfigurations
-// to be kept and returns all the ValidatingWebhookConfigurations to be deleted.
-// The following criteria are used:
-//  1. creationTimestamp (newer is better, because newer ValidatingWebhookConfiguration can contain new rules)
-func filterValidatingWebhookConfigurations(vwcs []admregv1.ValidatingWebhookConfiguration) []admregv1.ValidatingWebhookConfiguration {
-	if len(vwcs) == 1 {
-		return []admregv1.ValidatingWebhookConfiguration{}
-	}
-
-	best := 0
-	for i, vwc := range vwcs {
-		if vwc.CreationTimestamp.After(vwcs[best].CreationTimestamp.Time) {
-			best = i
-		}
-	}
-
-	return append(vwcs[:best], vwcs[best+1:]...)
 }
 
 // -----------------------------------------------------------------------------

@@ -17,7 +17,7 @@ require (
 )
 
 require (
-	dario.cat/mergo v1.0.1 // indirect
+	dario.cat/mergo v1.0.2 // indirect
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.8.0 // indirect

@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/multiinstance"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -119,7 +120,7 @@ func DefaultConfig() Config {
 
 // SetupControllersFunc represents function to setup controllers, which is called
 // in Run function.
-type SetupControllersFunc func(manager.Manager, *Config) ([]ControllerDef, error)
+type SetupControllersFunc func(manager.Manager, *Config, *multiinstance.Manager) ([]ControllerDef, error)
 
 // Run runs the manager. Parameter cfg represents the configuration for the manager
 // that for normal operation is derived from command-line flags. The function
@@ -222,7 +223,12 @@ func Run(
 		return err
 	}
 
-	controllers, err := setupControllers(mgr, &cfg)
+	cpInstancesMgr := multiinstance.NewManager(mgr.GetLogger())
+	if err := mgr.Add(cpInstancesMgr); err != nil {
+		return fmt.Errorf("unable to add CP instances manager: %w", err)
+	}
+
+	controllers, err := setupControllers(mgr, &cfg, cpInstancesMgr)
 	if err != nil {
 		setupLog.Error(err, "failed setting up controllers")
 		return err
