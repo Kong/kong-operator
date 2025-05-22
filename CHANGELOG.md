@@ -27,6 +27,13 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+## Changed
+
+- Allowed the `kubectl rollout restart` operation for Deployment resources created via DataPlane CRD.
+  [#1540](https://github.com/Kong/gateway-operator/pull/1540)
+
 ## [v1.6.0]
 
 > Release date: 2025-05-07

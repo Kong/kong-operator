@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"reflect"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -17,6 +18,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
+	"github.com/kong/gateway-operator/controller/pkg/utils"
 	"github.com/kong/gateway-operator/internal/utils/config"
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -26,6 +28,13 @@ import (
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
+
+// restartAnnotationKey is the annotation key used to mark a Deployment as restarted.
+// This is used to detect if a Deployment was restarted using `kubectl rollout restart`.
+// The value is a timestamp in RFC3339 format.
+// It's hardcoded here to match the annotation used by the kubectl command.
+// https://github.com/kubernetes/kubernetes/blob/82db38a23c7820b1924d89f458fd368023f3980c/staging/src/k8s.io/kubectl/pkg/polymorphichelpers/objectrestarter.go#L51
+const restartAnnotationKey = "kubectl.kubernetes.io/restartedAt"
 
 // DeploymentBuilder builds a Deployment for a DataPlane.
 type DeploymentBuilder struct {
@@ -271,6 +280,46 @@ func listOrReduceDataPlaneDeployments(
 	return false, &deployments[0], nil
 }
 
+func podTemplateSpecHasRestartAnnotation(template *corev1.PodTemplateSpec) (string, bool) {
+	if template == nil || template.Annotations == nil {
+		return "", false
+	}
+	v, ok := template.Annotations[restartAnnotationKey]
+	return v, ok && v != ""
+}
+
+// isRecentDeploymentRestart detects if a deployment is undergoing a recent restart operation.
+// It checks for the presence of the kubectl restart annotation and verifies if it's recent (within 5 minutes).
+// Returns the restart timestamp if present, and a boolean indicating if a recent restart is detected.
+func isRecentDeploymentRestart(template *corev1.PodTemplateSpec, logger logr.Logger) (string, bool) {
+	// Check if we have a fresh restart annotation (from the last 5 minutes)
+	// This prevents us from treating all deployments with old restart annotations
+	// as perpetually in a restart state, fixing issue #1390
+	restartTimeStr, hasRestartAnnotation := podTemplateSpecHasRestartAnnotation(template)
+	if !hasRestartAnnotation {
+		return "", false
+	}
+
+	// Only treat it as a restart if the timestamp is recent (within 5 minutes)
+	restartTime, err := time.Parse(time.RFC3339, restartTimeStr)
+	if err != nil {
+		log.Debug(logger, "detected restart with unparseable timestamp", "timestamp", restartTimeStr)
+		return restartTimeStr, true // If we can't parse time, assume it's a restart for safety
+	}
+
+	// Check if restart annotation is less than 5 minutes old
+	// We use 5m here as threshold as that correlates with constants used by Kubernetes itself.
+	// Restart annotations older than this duration shouldn't cause a reconciliation effect.
+	// See: https://github.com/kubernetes/kubernetes/blob/82db38a23c7820b1924d89f458fd368023f3980c/pkg/controller/namespace/config/v1alpha1/defaults.go#L41
+	if time.Since(restartTime) < 5*time.Minute {
+		log.Debug(logger, "detected recent restart operation", "isRestartOperation", true, "restartTime", restartTime)
+		return restartTimeStr, true
+	}
+
+	log.Debug(logger, "found old restart annotation, not treating as restart", "restartTime", restartTime)
+	return restartTimeStr, false
+}
+
 // reconcileDataPlaneDeployment takes any existing DataPlane Deployment and a desired DataPlane Deployment and
 // reconciles the existing state to the desired state by either updating an existing Deployment, creating a new one,
 // or doing nothing.
@@ -306,17 +355,30 @@ func reconcileDataPlaneDeployment(
 
 		k8sresources.SetDefaultsPodTemplateSpec(&desired.Spec.Template)
 
+		// Keep track of this for logging purposes
+		originalReplicaCount := existing.Spec.Replicas
+
 		// ensure that object metadata is up to date
 		updated, existing.ObjectMeta = k8sutils.EnsureObjectMetaIsUpdated(existing.ObjectMeta, desired.ObjectMeta)
 
-		// some custom comparison rules are needed for some PodTemplateSpec sub-attributes, in particular
-		// resources and affinity.
+		// some custom comparison rules are needed for some PodTemplateSpec sub-attributes
 		opts := []cmp.Option{
 			cmp.Comparer(k8sresources.ResourceRequirementsEqual),
+			utils.IgnoreAnnotationKeysComparer(restartAnnotationKey),
 		}
 
-		// ensure that PodTemplateSpec is up to date
 		if !cmp.Equal(existing.Spec.Template, desired.Spec.Template, opts...) {
+			restartTimeStr, isRestartOperation := isRecentDeploymentRestart(&existing.Spec.Template, logger)
+			if isRestartOperation {
+				log.Debug(logger, "found restart annotation", "timestamp", restartTimeStr)
+				// Preserve the restart annotation
+				if desired.Spec.Template.Annotations == nil {
+					desired.Spec.Template.Annotations = make(map[string]string)
+				}
+				// Use the restart timestamp we already retrieved
+				desired.Spec.Template.Annotations[restartAnnotationKey] = restartTimeStr
+			}
+
 			existing.Spec.Template = desired.Spec.Template
 			updated = true
 		}
@@ -327,6 +389,8 @@ func reconcileDataPlaneDeployment(
 			updated = true
 		}
 
+		// Always process replica updates, even during/after restart operations
+		// This ensures that if a user scales after a restart, the changes take effect
 		if scaling := dataplane.Spec.Deployment.Scaling; false ||
 			// If the scaling strategy is not specified, we compare the replicas.
 			(scaling == nil || scaling.HorizontalScaling == nil) ||
@@ -339,7 +403,11 @@ func reconcileDataPlaneDeployment(
 				scaling.HorizontalScaling.MinReplicas != nil &&
 				existing.Spec.Replicas != nil &&
 				*existing.Spec.Replicas < *scaling.HorizontalScaling.MinReplicas) {
+
+			// Always check for replica changes, regardless of restart status
+			// Fixed issue #1390: Ensure replicas update correctly after restart
 			if !cmp.Equal(existing.Spec.Replicas, desired.Spec.Replicas) {
+				log.Debug(logger, "updating replica count", "original", originalReplicaCount, "from", existing.Spec.Replicas, "to", desired.Spec.Replicas)
 				existing.Spec.Replicas = desired.Spec.Replicas
 				updated = true
 			}
