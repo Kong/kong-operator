@@ -41,4 +41,4 @@ chartsnap: "0.4.3"
 # renovate: datasource=github-releases depName=stackrox/kube-linter
 kube-linter: "0.7.2"
 # renovate: datasource=github-releases depName=telepresenceio/telepresence
-telepresence: "2.21.3"
+telepresence: "2.22.4"
