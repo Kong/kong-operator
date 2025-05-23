@@ -325,8 +325,8 @@ github.com/kong/go-database-reconciler v1.22.7 h1:7sjQBpGvL46pHpEdjLRUX9+D7fjk2l
 github.com/kong/go-database-reconciler v1.22.7/go.mod h1:hLtPRsuxqTYv1rt6h/YrimjDQzkxlAFSIWoG1jEjWKE=
 github.com/kong/go-kong v0.66.1 h1:UVdemzcCpfXEl6O/VHdf0rT2bXdIO5ykuJbf2z1JTko=
 github.com/kong/go-kong v0.66.1/go.mod h1:wRMPAXGOB3kn53TF6zN4l2JhIWPUfXDFKNHkMHBB3iQ=
-github.com/kong/kubernetes-configuration v1.4.1 h1:fZpWUjN8zAzckZS15cULP/tuEdYswRkLPiA4AP588L8=
-github.com/kong/kubernetes-configuration v1.4.1/go.mod h1:71lWQH8PZGLsBFq4UYPP7gyQuoJtD1u88WtOq/jOZNg=
+github.com/kong/kubernetes-configuration v1.4.2 h1:/OafLbl2NucvgQV7Xf/uneIgjxmPPUeE92BrssfVAQY=
+github.com/kong/kubernetes-configuration v1.4.2/go.mod h1:71lWQH8PZGLsBFq4UYPP7gyQuoJtD1u88WtOq/jOZNg=
 github.com/kong/kubernetes-ingress-controller/v3 v3.4.6-0.20250521090853-72926b1f6506 h1:FOo00t/Qd3DrPoRe5cmuBIWCR5wb/z7c1lWm1sonhAA=
 github.com/kong/kubernetes-ingress-controller/v3 v3.4.6-0.20250521090853-72926b1f6506/go.mod h1:5owoNqZlqLPBY897i85GGBi2X3amA1pjIQgm6GZwA7Q=
 github.com/kong/kubernetes-telemetry v0.1.9 h1:XbDMZjZZclHO4oyJGW1mmZ6bzbTnANjcRAYsBg+jpno=
