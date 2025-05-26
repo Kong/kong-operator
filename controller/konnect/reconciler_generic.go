@@ -285,7 +285,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
-	} else if res.Requeue {
+	} else if !res.IsZero() {
 		return res, nil
 	}
 
