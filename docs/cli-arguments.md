@@ -36,6 +36,6 @@
 | `--webhook-certificate-config-shell-image` | `string` | The shell image for the certgen Jobs. DEPRECATED: This flag is no-op and will be removed in a future release. | `busybox` |
 | `--zap-devel` | `bool` | Development Mode defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn). Production Mode defaults(encoder=jsonEncoder,logLevel=Info,stackTraceLevel=Error). | `false` |
 | `--zap-encoder` | `string` | Zap log encoding (one of 'json' or 'console'). | `""` |
-| `--zap-log-level` | `string` | Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error', or any integer value > 0 which corresponds to custom debug levels of increasing verbosity. | `""` |
+| `--zap-log-level` | `string` | Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error', 'panic'or any integer value > 0 which corresponds to custom debug levels of increasing verbosity. | `""` |
 | `--zap-stacktrace-level` | `string` | Zap Level at and above which stacktraces are captured (one of 'info', 'error', 'panic'). | `""` |
 | `--zap-time-encoding` | `string` | Zap time encoding (one of 'epoch', 'millis', 'nano', 'iso8601', 'rfc3339' or 'rfc3339nano'). Defaults to 'epoch'. | `""` |

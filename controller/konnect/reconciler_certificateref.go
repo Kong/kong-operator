@@ -59,7 +59,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 			metav1.ConditionFalse,
 			konnectv1alpha1.KongCertificateRefReasonInvalid,
 			err.Error(),
-		); errStatus != nil || res.Requeue {
+		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 
@@ -88,7 +88,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 			metav1.ConditionFalse,
 			konnectv1alpha1.KongCertificateRefReasonInvalid,
 			fmt.Sprintf("Referenced KongCertificate %s is not programmed yet", nn),
-		); err != nil || res.Requeue {
+		); err != nil || !res.IsZero() {
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{Requeue: true}, nil
@@ -113,7 +113,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		metav1.ConditionTrue,
 		konnectv1alpha1.KongCertificateRefReasonValid,
 		fmt.Sprintf("Referenced KongCertificate %s programmed", nn),
-	); errStatus != nil || res.Requeue {
+	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
 
@@ -135,7 +135,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 			metav1.ConditionFalse,
 			konnectv1alpha1.ControlPlaneRefReasonInvalid,
 			err.Error(),
-		); errStatus != nil || res.Requeue {
+		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 		if k8serrors.IsNotFound(err) {
@@ -155,7 +155,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 			metav1.ConditionFalse,
 			konnectv1alpha1.ControlPlaneRefReasonInvalid,
 			fmt.Sprintf("Referenced ControlPlane %s is not programmed yet", nn),
-		); errStatus != nil || res.Requeue {
+		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
 
@@ -180,7 +180,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		metav1.ConditionTrue,
 		konnectv1alpha1.ControlPlaneRefReasonValid,
 		fmt.Sprintf("Referenced ControlPlane %s is programmed", nn),
-	); errStatus != nil || res.Requeue {
+	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}
 

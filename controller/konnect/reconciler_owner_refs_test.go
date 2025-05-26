@@ -42,7 +42,7 @@ func TestRemoveOwnerRefIfSet(t *testing.T) {
 		consumer,
 		func(t *testing.T, obj *configurationv1alpha1.KongCredentialBasicAuth, result ctrl.Result, err error) {
 			require.NoError(t, err)
-			require.False(t, result.Requeue)
+			require.True(t, result.IsZero())
 		},
 	)
 
@@ -57,7 +57,7 @@ func TestRemoveOwnerRefIfSet(t *testing.T) {
 		consumer,
 		func(t *testing.T, obj *configurationv1alpha1.KongCredentialBasicAuth, result ctrl.Result, err error) {
 			require.NoError(t, err)
-			require.False(t, result.Requeue)
+			require.True(t, result.IsZero())
 		},
 	)
 }
