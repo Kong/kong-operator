@@ -15,7 +15,7 @@ gotestsum: "1.12.2"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
 crd-ref-docs: "0.1.0"
 # renovate: datasource=github-releases depName=vektra/mockery
-mockery: "3.2.5"
+mockery: "3.3.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
 setup-envtest: "0.21.0"
 # renovate: datasource=github-releases depName=rhysd/actionlint
@@ -37,7 +37,7 @@ shellcheck: "0.10.0"
 # renovate: datasource=git-tags depName=vuln registryUrl=https://go.googlesource.com
 govulncheck: "1.1.4"
 # renovate: datasource=github-releases depName=jlandowner/helm-chartsnap
-chartsnap: "0.4.3"
+chartsnap: "0.5.0"
 # renovate: datasource=github-releases depName=stackrox/kube-linter
 kube-linter: "0.7.2"
 # renovate: datasource=github-releases depName=telepresenceio/telepresence
