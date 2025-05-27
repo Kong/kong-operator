@@ -79,9 +79,9 @@ type MockControlPlaneSDK_CreateControlPlane_Call struct {
 }
 
 // CreateControlPlane is a helper method to define mock.On call
-//   - ctx
-//   - req
-//   - opts
+//   - ctx context.Context
+//   - req components.CreateControlPlaneRequest
+//   - opts ...operations.Option
 func (_e *MockControlPlaneSDK_Expecter) CreateControlPlane(ctx interface{}, req interface{}, opts ...interface{}) *MockControlPlaneSDK_CreateControlPlane_Call {
 	return &MockControlPlaneSDK_CreateControlPlane_Call{Call: _e.mock.On("CreateControlPlane",
 		append([]interface{}{ctx, req}, opts...)...)}
@@ -89,8 +89,22 @@ func (_e *MockControlPlaneSDK_Expecter) CreateControlPlane(ctx interface{}, req 
 
 func (_c *MockControlPlaneSDK_CreateControlPlane_Call) Run(run func(ctx context.Context, req components.CreateControlPlaneRequest, opts ...operations.Option)) *MockControlPlaneSDK_CreateControlPlane_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 components.CreateControlPlaneRequest
+		if args[1] != nil {
+			arg1 = args[1].(components.CreateControlPlaneRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(components.CreateControlPlaneRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -145,9 +159,9 @@ type MockControlPlaneSDK_DeleteControlPlane_Call struct {
 }
 
 // DeleteControlPlane is a helper method to define mock.On call
-//   - ctx
-//   - id
-//   - opts
+//   - ctx context.Context
+//   - id string
+//   - opts ...operations.Option
 func (_e *MockControlPlaneSDK_Expecter) DeleteControlPlane(ctx interface{}, id interface{}, opts ...interface{}) *MockControlPlaneSDK_DeleteControlPlane_Call {
 	return &MockControlPlaneSDK_DeleteControlPlane_Call{Call: _e.mock.On("DeleteControlPlane",
 		append([]interface{}{ctx, id}, opts...)...)}
@@ -155,8 +169,22 @@ func (_e *MockControlPlaneSDK_Expecter) DeleteControlPlane(ctx interface{}, id i
 
 func (_c *MockControlPlaneSDK_DeleteControlPlane_Call) Run(run func(ctx context.Context, id string, opts ...operations.Option)) *MockControlPlaneSDK_DeleteControlPlane_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -211,9 +239,9 @@ type MockControlPlaneSDK_ListControlPlanes_Call struct {
 }
 
 // ListControlPlanes is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListControlPlanesRequest
+//   - opts ...operations.Option
 func (_e *MockControlPlaneSDK_Expecter) ListControlPlanes(ctx interface{}, request interface{}, opts ...interface{}) *MockControlPlaneSDK_ListControlPlanes_Call {
 	return &MockControlPlaneSDK_ListControlPlanes_Call{Call: _e.mock.On("ListControlPlanes",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -221,8 +249,22 @@ func (_e *MockControlPlaneSDK_Expecter) ListControlPlanes(ctx interface{}, reque
 
 func (_c *MockControlPlaneSDK_ListControlPlanes_Call) Run(run func(ctx context.Context, request operations.ListControlPlanesRequest, opts ...operations.Option)) *MockControlPlaneSDK_ListControlPlanes_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListControlPlanesRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListControlPlanesRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListControlPlanesRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -277,10 +319,10 @@ type MockControlPlaneSDK_UpdateControlPlane_Call struct {
 }
 
 // UpdateControlPlane is a helper method to define mock.On call
-//   - ctx
-//   - id
-//   - req
-//   - opts
+//   - ctx context.Context
+//   - id string
+//   - req components.UpdateControlPlaneRequest
+//   - opts ...operations.Option
 func (_e *MockControlPlaneSDK_Expecter) UpdateControlPlane(ctx interface{}, id interface{}, req interface{}, opts ...interface{}) *MockControlPlaneSDK_UpdateControlPlane_Call {
 	return &MockControlPlaneSDK_UpdateControlPlane_Call{Call: _e.mock.On("UpdateControlPlane",
 		append([]interface{}{ctx, id, req}, opts...)...)}
@@ -288,8 +330,27 @@ func (_e *MockControlPlaneSDK_Expecter) UpdateControlPlane(ctx interface{}, id i
 
 func (_c *MockControlPlaneSDK_UpdateControlPlane_Call) Run(run func(ctx context.Context, id string, req components.UpdateControlPlaneRequest, opts ...operations.Option)) *MockControlPlaneSDK_UpdateControlPlane_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 components.UpdateControlPlaneRequest
+		if args[2] != nil {
+			arg2 = args[2].(components.UpdateControlPlaneRequest)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(components.UpdateControlPlaneRequest), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -371,10 +432,10 @@ type MockControlPlaneGroupSDK_PutControlPlanesIDGroupMemberships_Call struct {
 }
 
 // PutControlPlanesIDGroupMemberships is a helper method to define mock.On call
-//   - ctx
-//   - id
-//   - groupMembership
-//   - opts
+//   - ctx context.Context
+//   - id string
+//   - groupMembership *components.GroupMembership
+//   - opts ...operations.Option
 func (_e *MockControlPlaneGroupSDK_Expecter) PutControlPlanesIDGroupMemberships(ctx interface{}, id interface{}, groupMembership interface{}, opts ...interface{}) *MockControlPlaneGroupSDK_PutControlPlanesIDGroupMemberships_Call {
 	return &MockControlPlaneGroupSDK_PutControlPlanesIDGroupMemberships_Call{Call: _e.mock.On("PutControlPlanesIDGroupMemberships",
 		append([]interface{}{ctx, id, groupMembership}, opts...)...)}
@@ -382,8 +443,27 @@ func (_e *MockControlPlaneGroupSDK_Expecter) PutControlPlanesIDGroupMemberships(
 
 func (_c *MockControlPlaneGroupSDK_PutControlPlanesIDGroupMemberships_Call) Run(run func(ctx context.Context, id string, groupMembership *components.GroupMembership, opts ...operations.Option)) *MockControlPlaneGroupSDK_PutControlPlanesIDGroupMemberships_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 *components.GroupMembership
+		if args[2] != nil {
+			arg2 = args[2].(*components.GroupMembership)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(*components.GroupMembership), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -465,9 +545,9 @@ type MockKongCredentialACLSDK_CreateACLWithConsumer_Call struct {
 }
 
 // CreateACLWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - req
-//   - opts
+//   - ctx context.Context
+//   - req operations.CreateACLWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialACLSDK_Expecter) CreateACLWithConsumer(ctx interface{}, req interface{}, opts ...interface{}) *MockKongCredentialACLSDK_CreateACLWithConsumer_Call {
 	return &MockKongCredentialACLSDK_CreateACLWithConsumer_Call{Call: _e.mock.On("CreateACLWithConsumer",
 		append([]interface{}{ctx, req}, opts...)...)}
@@ -475,8 +555,22 @@ func (_e *MockKongCredentialACLSDK_Expecter) CreateACLWithConsumer(ctx interface
 
 func (_c *MockKongCredentialACLSDK_CreateACLWithConsumer_Call) Run(run func(ctx context.Context, req operations.CreateACLWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialACLSDK_CreateACLWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.CreateACLWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.CreateACLWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.CreateACLWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -531,9 +625,9 @@ type MockKongCredentialACLSDK_DeleteACLWithConsumer_Call struct {
 }
 
 // DeleteACLWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.DeleteACLWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialACLSDK_Expecter) DeleteACLWithConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialACLSDK_DeleteACLWithConsumer_Call {
 	return &MockKongCredentialACLSDK_DeleteACLWithConsumer_Call{Call: _e.mock.On("DeleteACLWithConsumer",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -541,8 +635,22 @@ func (_e *MockKongCredentialACLSDK_Expecter) DeleteACLWithConsumer(ctx interface
 
 func (_c *MockKongCredentialACLSDK_DeleteACLWithConsumer_Call) Run(run func(ctx context.Context, request operations.DeleteACLWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialACLSDK_DeleteACLWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.DeleteACLWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.DeleteACLWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.DeleteACLWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -597,9 +705,9 @@ type MockKongCredentialACLSDK_ListACL_Call struct {
 }
 
 // ListACL is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListACLRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialACLSDK_Expecter) ListACL(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialACLSDK_ListACL_Call {
 	return &MockKongCredentialACLSDK_ListACL_Call{Call: _e.mock.On("ListACL",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -607,8 +715,22 @@ func (_e *MockKongCredentialACLSDK_Expecter) ListACL(ctx interface{}, request in
 
 func (_c *MockKongCredentialACLSDK_ListACL_Call) Run(run func(ctx context.Context, request operations.ListACLRequest, opts ...operations.Option)) *MockKongCredentialACLSDK_ListACL_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListACLRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListACLRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListACLRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -663,9 +785,9 @@ type MockKongCredentialACLSDK_UpsertACLWithConsumer_Call struct {
 }
 
 // UpsertACLWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.UpsertACLWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialACLSDK_Expecter) UpsertACLWithConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialACLSDK_UpsertACLWithConsumer_Call {
 	return &MockKongCredentialACLSDK_UpsertACLWithConsumer_Call{Call: _e.mock.On("UpsertACLWithConsumer",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -673,8 +795,22 @@ func (_e *MockKongCredentialACLSDK_Expecter) UpsertACLWithConsumer(ctx interface
 
 func (_c *MockKongCredentialACLSDK_UpsertACLWithConsumer_Call) Run(run func(ctx context.Context, request operations.UpsertACLWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialACLSDK_UpsertACLWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertACLWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertACLWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertACLWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -756,9 +892,9 @@ type MockKongCredentialAPIKeySDK_CreateKeyAuthWithConsumer_Call struct {
 }
 
 // CreateKeyAuthWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - req
-//   - opts
+//   - ctx context.Context
+//   - req operations.CreateKeyAuthWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialAPIKeySDK_Expecter) CreateKeyAuthWithConsumer(ctx interface{}, req interface{}, opts ...interface{}) *MockKongCredentialAPIKeySDK_CreateKeyAuthWithConsumer_Call {
 	return &MockKongCredentialAPIKeySDK_CreateKeyAuthWithConsumer_Call{Call: _e.mock.On("CreateKeyAuthWithConsumer",
 		append([]interface{}{ctx, req}, opts...)...)}
@@ -766,8 +902,22 @@ func (_e *MockKongCredentialAPIKeySDK_Expecter) CreateKeyAuthWithConsumer(ctx in
 
 func (_c *MockKongCredentialAPIKeySDK_CreateKeyAuthWithConsumer_Call) Run(run func(ctx context.Context, req operations.CreateKeyAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialAPIKeySDK_CreateKeyAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.CreateKeyAuthWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.CreateKeyAuthWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.CreateKeyAuthWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -822,9 +972,9 @@ type MockKongCredentialAPIKeySDK_DeleteKeyAuthWithConsumer_Call struct {
 }
 
 // DeleteKeyAuthWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.DeleteKeyAuthWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialAPIKeySDK_Expecter) DeleteKeyAuthWithConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialAPIKeySDK_DeleteKeyAuthWithConsumer_Call {
 	return &MockKongCredentialAPIKeySDK_DeleteKeyAuthWithConsumer_Call{Call: _e.mock.On("DeleteKeyAuthWithConsumer",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -832,8 +982,22 @@ func (_e *MockKongCredentialAPIKeySDK_Expecter) DeleteKeyAuthWithConsumer(ctx in
 
 func (_c *MockKongCredentialAPIKeySDK_DeleteKeyAuthWithConsumer_Call) Run(run func(ctx context.Context, request operations.DeleteKeyAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialAPIKeySDK_DeleteKeyAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.DeleteKeyAuthWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.DeleteKeyAuthWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.DeleteKeyAuthWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -888,9 +1052,9 @@ type MockKongCredentialAPIKeySDK_ListKeyAuth_Call struct {
 }
 
 // ListKeyAuth is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListKeyAuthRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialAPIKeySDK_Expecter) ListKeyAuth(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialAPIKeySDK_ListKeyAuth_Call {
 	return &MockKongCredentialAPIKeySDK_ListKeyAuth_Call{Call: _e.mock.On("ListKeyAuth",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -898,8 +1062,22 @@ func (_e *MockKongCredentialAPIKeySDK_Expecter) ListKeyAuth(ctx interface{}, req
 
 func (_c *MockKongCredentialAPIKeySDK_ListKeyAuth_Call) Run(run func(ctx context.Context, request operations.ListKeyAuthRequest, opts ...operations.Option)) *MockKongCredentialAPIKeySDK_ListKeyAuth_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListKeyAuthRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListKeyAuthRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListKeyAuthRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -954,9 +1132,9 @@ type MockKongCredentialAPIKeySDK_UpsertKeyAuthWithConsumer_Call struct {
 }
 
 // UpsertKeyAuthWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.UpsertKeyAuthWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialAPIKeySDK_Expecter) UpsertKeyAuthWithConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialAPIKeySDK_UpsertKeyAuthWithConsumer_Call {
 	return &MockKongCredentialAPIKeySDK_UpsertKeyAuthWithConsumer_Call{Call: _e.mock.On("UpsertKeyAuthWithConsumer",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -964,8 +1142,22 @@ func (_e *MockKongCredentialAPIKeySDK_Expecter) UpsertKeyAuthWithConsumer(ctx in
 
 func (_c *MockKongCredentialAPIKeySDK_UpsertKeyAuthWithConsumer_Call) Run(run func(ctx context.Context, request operations.UpsertKeyAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialAPIKeySDK_UpsertKeyAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertKeyAuthWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertKeyAuthWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertKeyAuthWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -1047,9 +1239,9 @@ type MockKongCredentialBasicAuthSDK_CreateBasicAuthWithConsumer_Call struct {
 }
 
 // CreateBasicAuthWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - req
-//   - opts
+//   - ctx context.Context
+//   - req operations.CreateBasicAuthWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialBasicAuthSDK_Expecter) CreateBasicAuthWithConsumer(ctx interface{}, req interface{}, opts ...interface{}) *MockKongCredentialBasicAuthSDK_CreateBasicAuthWithConsumer_Call {
 	return &MockKongCredentialBasicAuthSDK_CreateBasicAuthWithConsumer_Call{Call: _e.mock.On("CreateBasicAuthWithConsumer",
 		append([]interface{}{ctx, req}, opts...)...)}
@@ -1057,8 +1249,22 @@ func (_e *MockKongCredentialBasicAuthSDK_Expecter) CreateBasicAuthWithConsumer(c
 
 func (_c *MockKongCredentialBasicAuthSDK_CreateBasicAuthWithConsumer_Call) Run(run func(ctx context.Context, req operations.CreateBasicAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialBasicAuthSDK_CreateBasicAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.CreateBasicAuthWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.CreateBasicAuthWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.CreateBasicAuthWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -1113,9 +1319,9 @@ type MockKongCredentialBasicAuthSDK_DeleteBasicAuthWithConsumer_Call struct {
 }
 
 // DeleteBasicAuthWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.DeleteBasicAuthWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialBasicAuthSDK_Expecter) DeleteBasicAuthWithConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialBasicAuthSDK_DeleteBasicAuthWithConsumer_Call {
 	return &MockKongCredentialBasicAuthSDK_DeleteBasicAuthWithConsumer_Call{Call: _e.mock.On("DeleteBasicAuthWithConsumer",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -1123,8 +1329,22 @@ func (_e *MockKongCredentialBasicAuthSDK_Expecter) DeleteBasicAuthWithConsumer(c
 
 func (_c *MockKongCredentialBasicAuthSDK_DeleteBasicAuthWithConsumer_Call) Run(run func(ctx context.Context, request operations.DeleteBasicAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialBasicAuthSDK_DeleteBasicAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.DeleteBasicAuthWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.DeleteBasicAuthWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.DeleteBasicAuthWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -1179,9 +1399,9 @@ type MockKongCredentialBasicAuthSDK_ListBasicAuth_Call struct {
 }
 
 // ListBasicAuth is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListBasicAuthRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialBasicAuthSDK_Expecter) ListBasicAuth(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialBasicAuthSDK_ListBasicAuth_Call {
 	return &MockKongCredentialBasicAuthSDK_ListBasicAuth_Call{Call: _e.mock.On("ListBasicAuth",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -1189,8 +1409,22 @@ func (_e *MockKongCredentialBasicAuthSDK_Expecter) ListBasicAuth(ctx interface{}
 
 func (_c *MockKongCredentialBasicAuthSDK_ListBasicAuth_Call) Run(run func(ctx context.Context, request operations.ListBasicAuthRequest, opts ...operations.Option)) *MockKongCredentialBasicAuthSDK_ListBasicAuth_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListBasicAuthRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListBasicAuthRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListBasicAuthRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -1245,9 +1479,9 @@ type MockKongCredentialBasicAuthSDK_UpsertBasicAuthWithConsumer_Call struct {
 }
 
 // UpsertBasicAuthWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.UpsertBasicAuthWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialBasicAuthSDK_Expecter) UpsertBasicAuthWithConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialBasicAuthSDK_UpsertBasicAuthWithConsumer_Call {
 	return &MockKongCredentialBasicAuthSDK_UpsertBasicAuthWithConsumer_Call{Call: _e.mock.On("UpsertBasicAuthWithConsumer",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -1255,8 +1489,22 @@ func (_e *MockKongCredentialBasicAuthSDK_Expecter) UpsertBasicAuthWithConsumer(c
 
 func (_c *MockKongCredentialBasicAuthSDK_UpsertBasicAuthWithConsumer_Call) Run(run func(ctx context.Context, request operations.UpsertBasicAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialBasicAuthSDK_UpsertBasicAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertBasicAuthWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertBasicAuthWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertBasicAuthWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -1338,9 +1586,9 @@ type MockKongCredentialHMACSDK_CreateHmacAuthWithConsumer_Call struct {
 }
 
 // CreateHmacAuthWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - req
-//   - opts
+//   - ctx context.Context
+//   - req operations.CreateHmacAuthWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialHMACSDK_Expecter) CreateHmacAuthWithConsumer(ctx interface{}, req interface{}, opts ...interface{}) *MockKongCredentialHMACSDK_CreateHmacAuthWithConsumer_Call {
 	return &MockKongCredentialHMACSDK_CreateHmacAuthWithConsumer_Call{Call: _e.mock.On("CreateHmacAuthWithConsumer",
 		append([]interface{}{ctx, req}, opts...)...)}
@@ -1348,8 +1596,22 @@ func (_e *MockKongCredentialHMACSDK_Expecter) CreateHmacAuthWithConsumer(ctx int
 
 func (_c *MockKongCredentialHMACSDK_CreateHmacAuthWithConsumer_Call) Run(run func(ctx context.Context, req operations.CreateHmacAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialHMACSDK_CreateHmacAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.CreateHmacAuthWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.CreateHmacAuthWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.CreateHmacAuthWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -1404,9 +1666,9 @@ type MockKongCredentialHMACSDK_DeleteHmacAuthWithConsumer_Call struct {
 }
 
 // DeleteHmacAuthWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.DeleteHmacAuthWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialHMACSDK_Expecter) DeleteHmacAuthWithConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialHMACSDK_DeleteHmacAuthWithConsumer_Call {
 	return &MockKongCredentialHMACSDK_DeleteHmacAuthWithConsumer_Call{Call: _e.mock.On("DeleteHmacAuthWithConsumer",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -1414,8 +1676,22 @@ func (_e *MockKongCredentialHMACSDK_Expecter) DeleteHmacAuthWithConsumer(ctx int
 
 func (_c *MockKongCredentialHMACSDK_DeleteHmacAuthWithConsumer_Call) Run(run func(ctx context.Context, request operations.DeleteHmacAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialHMACSDK_DeleteHmacAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.DeleteHmacAuthWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.DeleteHmacAuthWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.DeleteHmacAuthWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -1470,9 +1746,9 @@ type MockKongCredentialHMACSDK_ListHmacAuth_Call struct {
 }
 
 // ListHmacAuth is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListHmacAuthRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialHMACSDK_Expecter) ListHmacAuth(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialHMACSDK_ListHmacAuth_Call {
 	return &MockKongCredentialHMACSDK_ListHmacAuth_Call{Call: _e.mock.On("ListHmacAuth",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -1480,8 +1756,22 @@ func (_e *MockKongCredentialHMACSDK_Expecter) ListHmacAuth(ctx interface{}, requ
 
 func (_c *MockKongCredentialHMACSDK_ListHmacAuth_Call) Run(run func(ctx context.Context, request operations.ListHmacAuthRequest, opts ...operations.Option)) *MockKongCredentialHMACSDK_ListHmacAuth_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListHmacAuthRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListHmacAuthRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListHmacAuthRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -1536,9 +1826,9 @@ type MockKongCredentialHMACSDK_UpsertHmacAuthWithConsumer_Call struct {
 }
 
 // UpsertHmacAuthWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.UpsertHmacAuthWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialHMACSDK_Expecter) UpsertHmacAuthWithConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialHMACSDK_UpsertHmacAuthWithConsumer_Call {
 	return &MockKongCredentialHMACSDK_UpsertHmacAuthWithConsumer_Call{Call: _e.mock.On("UpsertHmacAuthWithConsumer",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -1546,8 +1836,22 @@ func (_e *MockKongCredentialHMACSDK_Expecter) UpsertHmacAuthWithConsumer(ctx int
 
 func (_c *MockKongCredentialHMACSDK_UpsertHmacAuthWithConsumer_Call) Run(run func(ctx context.Context, request operations.UpsertHmacAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialHMACSDK_UpsertHmacAuthWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertHmacAuthWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertHmacAuthWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertHmacAuthWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -1629,9 +1933,9 @@ type MockKongCredentialJWTSDK_CreateJwtWithConsumer_Call struct {
 }
 
 // CreateJwtWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - req
-//   - opts
+//   - ctx context.Context
+//   - req operations.CreateJwtWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialJWTSDK_Expecter) CreateJwtWithConsumer(ctx interface{}, req interface{}, opts ...interface{}) *MockKongCredentialJWTSDK_CreateJwtWithConsumer_Call {
 	return &MockKongCredentialJWTSDK_CreateJwtWithConsumer_Call{Call: _e.mock.On("CreateJwtWithConsumer",
 		append([]interface{}{ctx, req}, opts...)...)}
@@ -1639,8 +1943,22 @@ func (_e *MockKongCredentialJWTSDK_Expecter) CreateJwtWithConsumer(ctx interface
 
 func (_c *MockKongCredentialJWTSDK_CreateJwtWithConsumer_Call) Run(run func(ctx context.Context, req operations.CreateJwtWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialJWTSDK_CreateJwtWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.CreateJwtWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.CreateJwtWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.CreateJwtWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -1695,9 +2013,9 @@ type MockKongCredentialJWTSDK_DeleteJwtWithConsumer_Call struct {
 }
 
 // DeleteJwtWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.DeleteJwtWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialJWTSDK_Expecter) DeleteJwtWithConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialJWTSDK_DeleteJwtWithConsumer_Call {
 	return &MockKongCredentialJWTSDK_DeleteJwtWithConsumer_Call{Call: _e.mock.On("DeleteJwtWithConsumer",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -1705,8 +2023,22 @@ func (_e *MockKongCredentialJWTSDK_Expecter) DeleteJwtWithConsumer(ctx interface
 
 func (_c *MockKongCredentialJWTSDK_DeleteJwtWithConsumer_Call) Run(run func(ctx context.Context, request operations.DeleteJwtWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialJWTSDK_DeleteJwtWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.DeleteJwtWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.DeleteJwtWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.DeleteJwtWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -1761,9 +2093,9 @@ type MockKongCredentialJWTSDK_ListJwt_Call struct {
 }
 
 // ListJwt is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListJwtRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialJWTSDK_Expecter) ListJwt(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialJWTSDK_ListJwt_Call {
 	return &MockKongCredentialJWTSDK_ListJwt_Call{Call: _e.mock.On("ListJwt",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -1771,8 +2103,22 @@ func (_e *MockKongCredentialJWTSDK_Expecter) ListJwt(ctx interface{}, request in
 
 func (_c *MockKongCredentialJWTSDK_ListJwt_Call) Run(run func(ctx context.Context, request operations.ListJwtRequest, opts ...operations.Option)) *MockKongCredentialJWTSDK_ListJwt_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListJwtRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListJwtRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListJwtRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -1827,9 +2173,9 @@ type MockKongCredentialJWTSDK_UpsertJwtWithConsumer_Call struct {
 }
 
 // UpsertJwtWithConsumer is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.UpsertJwtWithConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockKongCredentialJWTSDK_Expecter) UpsertJwtWithConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialJWTSDK_UpsertJwtWithConsumer_Call {
 	return &MockKongCredentialJWTSDK_UpsertJwtWithConsumer_Call{Call: _e.mock.On("UpsertJwtWithConsumer",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -1837,8 +2183,22 @@ func (_e *MockKongCredentialJWTSDK_Expecter) UpsertJwtWithConsumer(ctx interface
 
 func (_c *MockKongCredentialJWTSDK_UpsertJwtWithConsumer_Call) Run(run func(ctx context.Context, request operations.UpsertJwtWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialJWTSDK_UpsertJwtWithConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertJwtWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertJwtWithConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertJwtWithConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -1920,9 +2280,9 @@ type MockCloudGatewaysSDK_CreateConfiguration_Call struct {
 }
 
 // CreateConfiguration is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request components.CreateConfigurationRequest
+//   - opts ...operations.Option
 func (_e *MockCloudGatewaysSDK_Expecter) CreateConfiguration(ctx interface{}, request interface{}, opts ...interface{}) *MockCloudGatewaysSDK_CreateConfiguration_Call {
 	return &MockCloudGatewaysSDK_CreateConfiguration_Call{Call: _e.mock.On("CreateConfiguration",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -1930,8 +2290,22 @@ func (_e *MockCloudGatewaysSDK_Expecter) CreateConfiguration(ctx interface{}, re
 
 func (_c *MockCloudGatewaysSDK_CreateConfiguration_Call) Run(run func(ctx context.Context, request components.CreateConfigurationRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_CreateConfiguration_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 components.CreateConfigurationRequest
+		if args[1] != nil {
+			arg1 = args[1].(components.CreateConfigurationRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(components.CreateConfigurationRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -1986,9 +2360,9 @@ type MockCloudGatewaysSDK_CreateNetwork_Call struct {
 }
 
 // CreateNetwork is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request components.CreateNetworkRequest
+//   - opts ...operations.Option
 func (_e *MockCloudGatewaysSDK_Expecter) CreateNetwork(ctx interface{}, request interface{}, opts ...interface{}) *MockCloudGatewaysSDK_CreateNetwork_Call {
 	return &MockCloudGatewaysSDK_CreateNetwork_Call{Call: _e.mock.On("CreateNetwork",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -1996,8 +2370,22 @@ func (_e *MockCloudGatewaysSDK_Expecter) CreateNetwork(ctx interface{}, request 
 
 func (_c *MockCloudGatewaysSDK_CreateNetwork_Call) Run(run func(ctx context.Context, request components.CreateNetworkRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_CreateNetwork_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 components.CreateNetworkRequest
+		if args[1] != nil {
+			arg1 = args[1].(components.CreateNetworkRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(components.CreateNetworkRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -2052,10 +2440,10 @@ type MockCloudGatewaysSDK_CreateTransitGateway_Call struct {
 }
 
 // CreateTransitGateway is a helper method to define mock.On call
-//   - ctx
-//   - networkID
-//   - createTransitGatewayRequest
-//   - opts
+//   - ctx context.Context
+//   - networkID string
+//   - createTransitGatewayRequest components.CreateTransitGatewayRequest
+//   - opts ...operations.Option
 func (_e *MockCloudGatewaysSDK_Expecter) CreateTransitGateway(ctx interface{}, networkID interface{}, createTransitGatewayRequest interface{}, opts ...interface{}) *MockCloudGatewaysSDK_CreateTransitGateway_Call {
 	return &MockCloudGatewaysSDK_CreateTransitGateway_Call{Call: _e.mock.On("CreateTransitGateway",
 		append([]interface{}{ctx, networkID, createTransitGatewayRequest}, opts...)...)}
@@ -2063,8 +2451,27 @@ func (_e *MockCloudGatewaysSDK_Expecter) CreateTransitGateway(ctx interface{}, n
 
 func (_c *MockCloudGatewaysSDK_CreateTransitGateway_Call) Run(run func(ctx context.Context, networkID string, createTransitGatewayRequest components.CreateTransitGatewayRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_CreateTransitGateway_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 components.CreateTransitGatewayRequest
+		if args[2] != nil {
+			arg2 = args[2].(components.CreateTransitGatewayRequest)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(components.CreateTransitGatewayRequest), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -2119,9 +2526,9 @@ type MockCloudGatewaysSDK_DeleteNetwork_Call struct {
 }
 
 // DeleteNetwork is a helper method to define mock.On call
-//   - ctx
-//   - networkID
-//   - opts
+//   - ctx context.Context
+//   - networkID string
+//   - opts ...operations.Option
 func (_e *MockCloudGatewaysSDK_Expecter) DeleteNetwork(ctx interface{}, networkID interface{}, opts ...interface{}) *MockCloudGatewaysSDK_DeleteNetwork_Call {
 	return &MockCloudGatewaysSDK_DeleteNetwork_Call{Call: _e.mock.On("DeleteNetwork",
 		append([]interface{}{ctx, networkID}, opts...)...)}
@@ -2129,8 +2536,22 @@ func (_e *MockCloudGatewaysSDK_Expecter) DeleteNetwork(ctx interface{}, networkI
 
 func (_c *MockCloudGatewaysSDK_DeleteNetwork_Call) Run(run func(ctx context.Context, networkID string, opts ...operations.Option)) *MockCloudGatewaysSDK_DeleteNetwork_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -2185,10 +2606,10 @@ type MockCloudGatewaysSDK_DeleteTransitGateway_Call struct {
 }
 
 // DeleteTransitGateway is a helper method to define mock.On call
-//   - ctx
-//   - networkID
-//   - transitGatewayID
-//   - opts
+//   - ctx context.Context
+//   - networkID string
+//   - transitGatewayID string
+//   - opts ...operations.Option
 func (_e *MockCloudGatewaysSDK_Expecter) DeleteTransitGateway(ctx interface{}, networkID interface{}, transitGatewayID interface{}, opts ...interface{}) *MockCloudGatewaysSDK_DeleteTransitGateway_Call {
 	return &MockCloudGatewaysSDK_DeleteTransitGateway_Call{Call: _e.mock.On("DeleteTransitGateway",
 		append([]interface{}{ctx, networkID, transitGatewayID}, opts...)...)}
@@ -2196,8 +2617,27 @@ func (_e *MockCloudGatewaysSDK_Expecter) DeleteTransitGateway(ctx interface{}, n
 
 func (_c *MockCloudGatewaysSDK_DeleteTransitGateway_Call) Run(run func(ctx context.Context, networkID string, transitGatewayID string, opts ...operations.Option)) *MockCloudGatewaysSDK_DeleteTransitGateway_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -2252,9 +2692,9 @@ type MockCloudGatewaysSDK_GetConfiguration_Call struct {
 }
 
 // GetConfiguration is a helper method to define mock.On call
-//   - ctx
-//   - configurationID
-//   - opts
+//   - ctx context.Context
+//   - configurationID string
+//   - opts ...operations.Option
 func (_e *MockCloudGatewaysSDK_Expecter) GetConfiguration(ctx interface{}, configurationID interface{}, opts ...interface{}) *MockCloudGatewaysSDK_GetConfiguration_Call {
 	return &MockCloudGatewaysSDK_GetConfiguration_Call{Call: _e.mock.On("GetConfiguration",
 		append([]interface{}{ctx, configurationID}, opts...)...)}
@@ -2262,8 +2702,22 @@ func (_e *MockCloudGatewaysSDK_Expecter) GetConfiguration(ctx interface{}, confi
 
 func (_c *MockCloudGatewaysSDK_GetConfiguration_Call) Run(run func(ctx context.Context, configurationID string, opts ...operations.Option)) *MockCloudGatewaysSDK_GetConfiguration_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -2318,9 +2772,9 @@ type MockCloudGatewaysSDK_GetNetwork_Call struct {
 }
 
 // GetNetwork is a helper method to define mock.On call
-//   - ctx
-//   - networkID
-//   - opts
+//   - ctx context.Context
+//   - networkID string
+//   - opts ...operations.Option
 func (_e *MockCloudGatewaysSDK_Expecter) GetNetwork(ctx interface{}, networkID interface{}, opts ...interface{}) *MockCloudGatewaysSDK_GetNetwork_Call {
 	return &MockCloudGatewaysSDK_GetNetwork_Call{Call: _e.mock.On("GetNetwork",
 		append([]interface{}{ctx, networkID}, opts...)...)}
@@ -2328,8 +2782,22 @@ func (_e *MockCloudGatewaysSDK_Expecter) GetNetwork(ctx interface{}, networkID i
 
 func (_c *MockCloudGatewaysSDK_GetNetwork_Call) Run(run func(ctx context.Context, networkID string, opts ...operations.Option)) *MockCloudGatewaysSDK_GetNetwork_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -2384,10 +2852,10 @@ type MockCloudGatewaysSDK_GetTransitGateway_Call struct {
 }
 
 // GetTransitGateway is a helper method to define mock.On call
-//   - ctx
-//   - networkID
-//   - transitGatewayID
-//   - opts
+//   - ctx context.Context
+//   - networkID string
+//   - transitGatewayID string
+//   - opts ...operations.Option
 func (_e *MockCloudGatewaysSDK_Expecter) GetTransitGateway(ctx interface{}, networkID interface{}, transitGatewayID interface{}, opts ...interface{}) *MockCloudGatewaysSDK_GetTransitGateway_Call {
 	return &MockCloudGatewaysSDK_GetTransitGateway_Call{Call: _e.mock.On("GetTransitGateway",
 		append([]interface{}{ctx, networkID, transitGatewayID}, opts...)...)}
@@ -2395,8 +2863,27 @@ func (_e *MockCloudGatewaysSDK_Expecter) GetTransitGateway(ctx interface{}, netw
 
 func (_c *MockCloudGatewaysSDK_GetTransitGateway_Call) Run(run func(ctx context.Context, networkID string, transitGatewayID string, opts ...operations.Option)) *MockCloudGatewaysSDK_GetTransitGateway_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -2451,9 +2938,9 @@ type MockCloudGatewaysSDK_ListConfigurations_Call struct {
 }
 
 // ListConfigurations is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListConfigurationsRequest
+//   - opts ...operations.Option
 func (_e *MockCloudGatewaysSDK_Expecter) ListConfigurations(ctx interface{}, request interface{}, opts ...interface{}) *MockCloudGatewaysSDK_ListConfigurations_Call {
 	return &MockCloudGatewaysSDK_ListConfigurations_Call{Call: _e.mock.On("ListConfigurations",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -2461,8 +2948,22 @@ func (_e *MockCloudGatewaysSDK_Expecter) ListConfigurations(ctx interface{}, req
 
 func (_c *MockCloudGatewaysSDK_ListConfigurations_Call) Run(run func(ctx context.Context, request operations.ListConfigurationsRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_ListConfigurations_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListConfigurationsRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListConfigurationsRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListConfigurationsRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -2517,9 +3018,9 @@ type MockCloudGatewaysSDK_ListNetworks_Call struct {
 }
 
 // ListNetworks is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListNetworksRequest
+//   - opts ...operations.Option
 func (_e *MockCloudGatewaysSDK_Expecter) ListNetworks(ctx interface{}, request interface{}, opts ...interface{}) *MockCloudGatewaysSDK_ListNetworks_Call {
 	return &MockCloudGatewaysSDK_ListNetworks_Call{Call: _e.mock.On("ListNetworks",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -2527,8 +3028,22 @@ func (_e *MockCloudGatewaysSDK_Expecter) ListNetworks(ctx interface{}, request i
 
 func (_c *MockCloudGatewaysSDK_ListNetworks_Call) Run(run func(ctx context.Context, request operations.ListNetworksRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_ListNetworks_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListNetworksRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListNetworksRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListNetworksRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -2583,9 +3098,9 @@ type MockCloudGatewaysSDK_ListTransitGateways_Call struct {
 }
 
 // ListTransitGateways is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListTransitGatewaysRequest
+//   - opts ...operations.Option
 func (_e *MockCloudGatewaysSDK_Expecter) ListTransitGateways(ctx interface{}, request interface{}, opts ...interface{}) *MockCloudGatewaysSDK_ListTransitGateways_Call {
 	return &MockCloudGatewaysSDK_ListTransitGateways_Call{Call: _e.mock.On("ListTransitGateways",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -2593,8 +3108,22 @@ func (_e *MockCloudGatewaysSDK_Expecter) ListTransitGateways(ctx interface{}, re
 
 func (_c *MockCloudGatewaysSDK_ListTransitGateways_Call) Run(run func(ctx context.Context, request operations.ListTransitGatewaysRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_ListTransitGateways_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListTransitGatewaysRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListTransitGatewaysRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListTransitGatewaysRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -2649,10 +3178,10 @@ type MockCloudGatewaysSDK_UpdateNetwork_Call struct {
 }
 
 // UpdateNetwork is a helper method to define mock.On call
-//   - ctx
-//   - networkID
-//   - patchNetworkRequest
-//   - opts
+//   - ctx context.Context
+//   - networkID string
+//   - patchNetworkRequest components.PatchNetworkRequest
+//   - opts ...operations.Option
 func (_e *MockCloudGatewaysSDK_Expecter) UpdateNetwork(ctx interface{}, networkID interface{}, patchNetworkRequest interface{}, opts ...interface{}) *MockCloudGatewaysSDK_UpdateNetwork_Call {
 	return &MockCloudGatewaysSDK_UpdateNetwork_Call{Call: _e.mock.On("UpdateNetwork",
 		append([]interface{}{ctx, networkID, patchNetworkRequest}, opts...)...)}
@@ -2660,8 +3189,27 @@ func (_e *MockCloudGatewaysSDK_Expecter) UpdateNetwork(ctx interface{}, networkI
 
 func (_c *MockCloudGatewaysSDK_UpdateNetwork_Call) Run(run func(ctx context.Context, networkID string, patchNetworkRequest components.PatchNetworkRequest, opts ...operations.Option)) *MockCloudGatewaysSDK_UpdateNetwork_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 components.PatchNetworkRequest
+		if args[2] != nil {
+			arg2 = args[2].(components.PatchNetworkRequest)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(components.PatchNetworkRequest), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -2743,10 +3291,10 @@ type MockCACertificatesSDK_CreateCaCertificate_Call struct {
 }
 
 // CreateCaCertificate is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - caCertificate
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - caCertificate components.CACertificate
+//   - opts ...operations.Option
 func (_e *MockCACertificatesSDK_Expecter) CreateCaCertificate(ctx interface{}, controlPlaneID interface{}, caCertificate interface{}, opts ...interface{}) *MockCACertificatesSDK_CreateCaCertificate_Call {
 	return &MockCACertificatesSDK_CreateCaCertificate_Call{Call: _e.mock.On("CreateCaCertificate",
 		append([]interface{}{ctx, controlPlaneID, caCertificate}, opts...)...)}
@@ -2754,8 +3302,27 @@ func (_e *MockCACertificatesSDK_Expecter) CreateCaCertificate(ctx interface{}, c
 
 func (_c *MockCACertificatesSDK_CreateCaCertificate_Call) Run(run func(ctx context.Context, controlPlaneID string, caCertificate components.CACertificate, opts ...operations.Option)) *MockCACertificatesSDK_CreateCaCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 components.CACertificate
+		if args[2] != nil {
+			arg2 = args[2].(components.CACertificate)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(components.CACertificate), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -2810,10 +3377,10 @@ type MockCACertificatesSDK_DeleteCaCertificate_Call struct {
 }
 
 // DeleteCaCertificate is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - caCertificateID
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - caCertificateID string
+//   - opts ...operations.Option
 func (_e *MockCACertificatesSDK_Expecter) DeleteCaCertificate(ctx interface{}, controlPlaneID interface{}, caCertificateID interface{}, opts ...interface{}) *MockCACertificatesSDK_DeleteCaCertificate_Call {
 	return &MockCACertificatesSDK_DeleteCaCertificate_Call{Call: _e.mock.On("DeleteCaCertificate",
 		append([]interface{}{ctx, controlPlaneID, caCertificateID}, opts...)...)}
@@ -2821,8 +3388,27 @@ func (_e *MockCACertificatesSDK_Expecter) DeleteCaCertificate(ctx interface{}, c
 
 func (_c *MockCACertificatesSDK_DeleteCaCertificate_Call) Run(run func(ctx context.Context, controlPlaneID string, caCertificateID string, opts ...operations.Option)) *MockCACertificatesSDK_DeleteCaCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -2877,9 +3463,9 @@ type MockCACertificatesSDK_ListCaCertificate_Call struct {
 }
 
 // ListCaCertificate is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListCaCertificateRequest
+//   - opts ...operations.Option
 func (_e *MockCACertificatesSDK_Expecter) ListCaCertificate(ctx interface{}, request interface{}, opts ...interface{}) *MockCACertificatesSDK_ListCaCertificate_Call {
 	return &MockCACertificatesSDK_ListCaCertificate_Call{Call: _e.mock.On("ListCaCertificate",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -2887,8 +3473,22 @@ func (_e *MockCACertificatesSDK_Expecter) ListCaCertificate(ctx interface{}, req
 
 func (_c *MockCACertificatesSDK_ListCaCertificate_Call) Run(run func(ctx context.Context, request operations.ListCaCertificateRequest, opts ...operations.Option)) *MockCACertificatesSDK_ListCaCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListCaCertificateRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListCaCertificateRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListCaCertificateRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -2943,9 +3543,9 @@ type MockCACertificatesSDK_UpsertCaCertificate_Call struct {
 }
 
 // UpsertCaCertificate is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.UpsertCaCertificateRequest
+//   - opts ...operations.Option
 func (_e *MockCACertificatesSDK_Expecter) UpsertCaCertificate(ctx interface{}, request interface{}, opts ...interface{}) *MockCACertificatesSDK_UpsertCaCertificate_Call {
 	return &MockCACertificatesSDK_UpsertCaCertificate_Call{Call: _e.mock.On("UpsertCaCertificate",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -2953,8 +3553,22 @@ func (_e *MockCACertificatesSDK_Expecter) UpsertCaCertificate(ctx interface{}, r
 
 func (_c *MockCACertificatesSDK_UpsertCaCertificate_Call) Run(run func(ctx context.Context, request operations.UpsertCaCertificateRequest, opts ...operations.Option)) *MockCACertificatesSDK_UpsertCaCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertCaCertificateRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertCaCertificateRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertCaCertificateRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -3036,10 +3650,10 @@ type MockCertificatesSDK_CreateCertificate_Call struct {
 }
 
 // CreateCertificate is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - certificate
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - certificate components.Certificate
+//   - opts ...operations.Option
 func (_e *MockCertificatesSDK_Expecter) CreateCertificate(ctx interface{}, controlPlaneID interface{}, certificate interface{}, opts ...interface{}) *MockCertificatesSDK_CreateCertificate_Call {
 	return &MockCertificatesSDK_CreateCertificate_Call{Call: _e.mock.On("CreateCertificate",
 		append([]interface{}{ctx, controlPlaneID, certificate}, opts...)...)}
@@ -3047,8 +3661,27 @@ func (_e *MockCertificatesSDK_Expecter) CreateCertificate(ctx interface{}, contr
 
 func (_c *MockCertificatesSDK_CreateCertificate_Call) Run(run func(ctx context.Context, controlPlaneID string, certificate components.Certificate, opts ...operations.Option)) *MockCertificatesSDK_CreateCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 components.Certificate
+		if args[2] != nil {
+			arg2 = args[2].(components.Certificate)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(components.Certificate), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -3103,10 +3736,10 @@ type MockCertificatesSDK_DeleteCertificate_Call struct {
 }
 
 // DeleteCertificate is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - certificateID
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - certificateID string
+//   - opts ...operations.Option
 func (_e *MockCertificatesSDK_Expecter) DeleteCertificate(ctx interface{}, controlPlaneID interface{}, certificateID interface{}, opts ...interface{}) *MockCertificatesSDK_DeleteCertificate_Call {
 	return &MockCertificatesSDK_DeleteCertificate_Call{Call: _e.mock.On("DeleteCertificate",
 		append([]interface{}{ctx, controlPlaneID, certificateID}, opts...)...)}
@@ -3114,8 +3747,27 @@ func (_e *MockCertificatesSDK_Expecter) DeleteCertificate(ctx interface{}, contr
 
 func (_c *MockCertificatesSDK_DeleteCertificate_Call) Run(run func(ctx context.Context, controlPlaneID string, certificateID string, opts ...operations.Option)) *MockCertificatesSDK_DeleteCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -3170,9 +3822,9 @@ type MockCertificatesSDK_ListCertificate_Call struct {
 }
 
 // ListCertificate is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListCertificateRequest
+//   - opts ...operations.Option
 func (_e *MockCertificatesSDK_Expecter) ListCertificate(ctx interface{}, request interface{}, opts ...interface{}) *MockCertificatesSDK_ListCertificate_Call {
 	return &MockCertificatesSDK_ListCertificate_Call{Call: _e.mock.On("ListCertificate",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -3180,8 +3832,22 @@ func (_e *MockCertificatesSDK_Expecter) ListCertificate(ctx interface{}, request
 
 func (_c *MockCertificatesSDK_ListCertificate_Call) Run(run func(ctx context.Context, request operations.ListCertificateRequest, opts ...operations.Option)) *MockCertificatesSDK_ListCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListCertificateRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListCertificateRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListCertificateRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -3236,9 +3902,9 @@ type MockCertificatesSDK_UpsertCertificate_Call struct {
 }
 
 // UpsertCertificate is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.UpsertCertificateRequest
+//   - opts ...operations.Option
 func (_e *MockCertificatesSDK_Expecter) UpsertCertificate(ctx interface{}, request interface{}, opts ...interface{}) *MockCertificatesSDK_UpsertCertificate_Call {
 	return &MockCertificatesSDK_UpsertCertificate_Call{Call: _e.mock.On("UpsertCertificate",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -3246,8 +3912,22 @@ func (_e *MockCertificatesSDK_Expecter) UpsertCertificate(ctx interface{}, reque
 
 func (_c *MockCertificatesSDK_UpsertCertificate_Call) Run(run func(ctx context.Context, request operations.UpsertCertificateRequest, opts ...operations.Option)) *MockCertificatesSDK_UpsertCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertCertificateRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertCertificateRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertCertificateRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -3329,10 +4009,10 @@ type MockConsumersSDK_CreateConsumer_Call struct {
 }
 
 // CreateConsumer is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - consumerInput
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - consumerInput components.Consumer
+//   - opts ...operations.Option
 func (_e *MockConsumersSDK_Expecter) CreateConsumer(ctx interface{}, controlPlaneID interface{}, consumerInput interface{}, opts ...interface{}) *MockConsumersSDK_CreateConsumer_Call {
 	return &MockConsumersSDK_CreateConsumer_Call{Call: _e.mock.On("CreateConsumer",
 		append([]interface{}{ctx, controlPlaneID, consumerInput}, opts...)...)}
@@ -3340,8 +4020,27 @@ func (_e *MockConsumersSDK_Expecter) CreateConsumer(ctx interface{}, controlPlan
 
 func (_c *MockConsumersSDK_CreateConsumer_Call) Run(run func(ctx context.Context, controlPlaneID string, consumerInput components.Consumer, opts ...operations.Option)) *MockConsumersSDK_CreateConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 components.Consumer
+		if args[2] != nil {
+			arg2 = args[2].(components.Consumer)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(components.Consumer), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -3396,10 +4095,10 @@ type MockConsumersSDK_DeleteConsumer_Call struct {
 }
 
 // DeleteConsumer is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - consumerID
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - consumerID string
+//   - opts ...operations.Option
 func (_e *MockConsumersSDK_Expecter) DeleteConsumer(ctx interface{}, controlPlaneID interface{}, consumerID interface{}, opts ...interface{}) *MockConsumersSDK_DeleteConsumer_Call {
 	return &MockConsumersSDK_DeleteConsumer_Call{Call: _e.mock.On("DeleteConsumer",
 		append([]interface{}{ctx, controlPlaneID, consumerID}, opts...)...)}
@@ -3407,8 +4106,27 @@ func (_e *MockConsumersSDK_Expecter) DeleteConsumer(ctx interface{}, controlPlan
 
 func (_c *MockConsumersSDK_DeleteConsumer_Call) Run(run func(ctx context.Context, controlPlaneID string, consumerID string, opts ...operations.Option)) *MockConsumersSDK_DeleteConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -3463,9 +4181,9 @@ type MockConsumersSDK_ListConsumer_Call struct {
 }
 
 // ListConsumer is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockConsumersSDK_Expecter) ListConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockConsumersSDK_ListConsumer_Call {
 	return &MockConsumersSDK_ListConsumer_Call{Call: _e.mock.On("ListConsumer",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -3473,8 +4191,22 @@ func (_e *MockConsumersSDK_Expecter) ListConsumer(ctx interface{}, request inter
 
 func (_c *MockConsumersSDK_ListConsumer_Call) Run(run func(ctx context.Context, request operations.ListConsumerRequest, opts ...operations.Option)) *MockConsumersSDK_ListConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -3529,9 +4261,9 @@ type MockConsumersSDK_UpsertConsumer_Call struct {
 }
 
 // UpsertConsumer is a helper method to define mock.On call
-//   - ctx
-//   - upsertConsumerRequest
-//   - opts
+//   - ctx context.Context
+//   - upsertConsumerRequest operations.UpsertConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockConsumersSDK_Expecter) UpsertConsumer(ctx interface{}, upsertConsumerRequest interface{}, opts ...interface{}) *MockConsumersSDK_UpsertConsumer_Call {
 	return &MockConsumersSDK_UpsertConsumer_Call{Call: _e.mock.On("UpsertConsumer",
 		append([]interface{}{ctx, upsertConsumerRequest}, opts...)...)}
@@ -3539,8 +4271,22 @@ func (_e *MockConsumersSDK_Expecter) UpsertConsumer(ctx interface{}, upsertConsu
 
 func (_c *MockConsumersSDK_UpsertConsumer_Call) Run(run func(ctx context.Context, upsertConsumerRequest operations.UpsertConsumerRequest, opts ...operations.Option)) *MockConsumersSDK_UpsertConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -3622,9 +4368,9 @@ type MockConsumerGroupSDK_AddConsumerToGroup_Call struct {
 }
 
 // AddConsumerToGroup is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.AddConsumerToGroupRequest
+//   - opts ...operations.Option
 func (_e *MockConsumerGroupSDK_Expecter) AddConsumerToGroup(ctx interface{}, request interface{}, opts ...interface{}) *MockConsumerGroupSDK_AddConsumerToGroup_Call {
 	return &MockConsumerGroupSDK_AddConsumerToGroup_Call{Call: _e.mock.On("AddConsumerToGroup",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -3632,8 +4378,22 @@ func (_e *MockConsumerGroupSDK_Expecter) AddConsumerToGroup(ctx interface{}, req
 
 func (_c *MockConsumerGroupSDK_AddConsumerToGroup_Call) Run(run func(ctx context.Context, request operations.AddConsumerToGroupRequest, opts ...operations.Option)) *MockConsumerGroupSDK_AddConsumerToGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.AddConsumerToGroupRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.AddConsumerToGroupRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.AddConsumerToGroupRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -3688,10 +4448,10 @@ type MockConsumerGroupSDK_CreateConsumerGroup_Call struct {
 }
 
 // CreateConsumerGroup is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - consumerInput
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - consumerInput components.ConsumerGroup
+//   - opts ...operations.Option
 func (_e *MockConsumerGroupSDK_Expecter) CreateConsumerGroup(ctx interface{}, controlPlaneID interface{}, consumerInput interface{}, opts ...interface{}) *MockConsumerGroupSDK_CreateConsumerGroup_Call {
 	return &MockConsumerGroupSDK_CreateConsumerGroup_Call{Call: _e.mock.On("CreateConsumerGroup",
 		append([]interface{}{ctx, controlPlaneID, consumerInput}, opts...)...)}
@@ -3699,8 +4459,27 @@ func (_e *MockConsumerGroupSDK_Expecter) CreateConsumerGroup(ctx interface{}, co
 
 func (_c *MockConsumerGroupSDK_CreateConsumerGroup_Call) Run(run func(ctx context.Context, controlPlaneID string, consumerInput components.ConsumerGroup, opts ...operations.Option)) *MockConsumerGroupSDK_CreateConsumerGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 components.ConsumerGroup
+		if args[2] != nil {
+			arg2 = args[2].(components.ConsumerGroup)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(components.ConsumerGroup), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -3755,10 +4534,10 @@ type MockConsumerGroupSDK_DeleteConsumerGroup_Call struct {
 }
 
 // DeleteConsumerGroup is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - consumerID
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - consumerID string
+//   - opts ...operations.Option
 func (_e *MockConsumerGroupSDK_Expecter) DeleteConsumerGroup(ctx interface{}, controlPlaneID interface{}, consumerID interface{}, opts ...interface{}) *MockConsumerGroupSDK_DeleteConsumerGroup_Call {
 	return &MockConsumerGroupSDK_DeleteConsumerGroup_Call{Call: _e.mock.On("DeleteConsumerGroup",
 		append([]interface{}{ctx, controlPlaneID, consumerID}, opts...)...)}
@@ -3766,8 +4545,27 @@ func (_e *MockConsumerGroupSDK_Expecter) DeleteConsumerGroup(ctx interface{}, co
 
 func (_c *MockConsumerGroupSDK_DeleteConsumerGroup_Call) Run(run func(ctx context.Context, controlPlaneID string, consumerID string, opts ...operations.Option)) *MockConsumerGroupSDK_DeleteConsumerGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -3822,9 +4620,9 @@ type MockConsumerGroupSDK_ListConsumerGroup_Call struct {
 }
 
 // ListConsumerGroup is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListConsumerGroupRequest
+//   - opts ...operations.Option
 func (_e *MockConsumerGroupSDK_Expecter) ListConsumerGroup(ctx interface{}, request interface{}, opts ...interface{}) *MockConsumerGroupSDK_ListConsumerGroup_Call {
 	return &MockConsumerGroupSDK_ListConsumerGroup_Call{Call: _e.mock.On("ListConsumerGroup",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -3832,8 +4630,22 @@ func (_e *MockConsumerGroupSDK_Expecter) ListConsumerGroup(ctx interface{}, requ
 
 func (_c *MockConsumerGroupSDK_ListConsumerGroup_Call) Run(run func(ctx context.Context, request operations.ListConsumerGroupRequest, opts ...operations.Option)) *MockConsumerGroupSDK_ListConsumerGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListConsumerGroupRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListConsumerGroupRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListConsumerGroupRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -3888,9 +4700,9 @@ type MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call struct {
 }
 
 // ListConsumerGroupsForConsumer is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListConsumerGroupsForConsumerRequest
+//   - opts ...operations.Option
 func (_e *MockConsumerGroupSDK_Expecter) ListConsumerGroupsForConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call {
 	return &MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call{Call: _e.mock.On("ListConsumerGroupsForConsumer",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -3898,8 +4710,22 @@ func (_e *MockConsumerGroupSDK_Expecter) ListConsumerGroupsForConsumer(ctx inter
 
 func (_c *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call) Run(run func(ctx context.Context, request operations.ListConsumerGroupsForConsumerRequest, opts ...operations.Option)) *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListConsumerGroupsForConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListConsumerGroupsForConsumerRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListConsumerGroupsForConsumerRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -3954,9 +4780,9 @@ type MockConsumerGroupSDK_RemoveConsumerFromGroup_Call struct {
 }
 
 // RemoveConsumerFromGroup is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.RemoveConsumerFromGroupRequest
+//   - opts ...operations.Option
 func (_e *MockConsumerGroupSDK_Expecter) RemoveConsumerFromGroup(ctx interface{}, request interface{}, opts ...interface{}) *MockConsumerGroupSDK_RemoveConsumerFromGroup_Call {
 	return &MockConsumerGroupSDK_RemoveConsumerFromGroup_Call{Call: _e.mock.On("RemoveConsumerFromGroup",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -3964,8 +4790,22 @@ func (_e *MockConsumerGroupSDK_Expecter) RemoveConsumerFromGroup(ctx interface{}
 
 func (_c *MockConsumerGroupSDK_RemoveConsumerFromGroup_Call) Run(run func(ctx context.Context, request operations.RemoveConsumerFromGroupRequest, opts ...operations.Option)) *MockConsumerGroupSDK_RemoveConsumerFromGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.RemoveConsumerFromGroupRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.RemoveConsumerFromGroupRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.RemoveConsumerFromGroupRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -4020,9 +4860,9 @@ type MockConsumerGroupSDK_UpsertConsumerGroup_Call struct {
 }
 
 // UpsertConsumerGroup is a helper method to define mock.On call
-//   - ctx
-//   - upsertConsumerRequest
-//   - opts
+//   - ctx context.Context
+//   - upsertConsumerRequest operations.UpsertConsumerGroupRequest
+//   - opts ...operations.Option
 func (_e *MockConsumerGroupSDK_Expecter) UpsertConsumerGroup(ctx interface{}, upsertConsumerRequest interface{}, opts ...interface{}) *MockConsumerGroupSDK_UpsertConsumerGroup_Call {
 	return &MockConsumerGroupSDK_UpsertConsumerGroup_Call{Call: _e.mock.On("UpsertConsumerGroup",
 		append([]interface{}{ctx, upsertConsumerRequest}, opts...)...)}
@@ -4030,8 +4870,22 @@ func (_e *MockConsumerGroupSDK_Expecter) UpsertConsumerGroup(ctx interface{}, up
 
 func (_c *MockConsumerGroupSDK_UpsertConsumerGroup_Call) Run(run func(ctx context.Context, upsertConsumerRequest operations.UpsertConsumerGroupRequest, opts ...operations.Option)) *MockConsumerGroupSDK_UpsertConsumerGroup_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertConsumerGroupRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertConsumerGroupRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertConsumerGroupRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -4113,10 +4967,10 @@ type MockDataPlaneClientCertificatesSDK_CreateDataplaneCertificate_Call struct {
 }
 
 // CreateDataplaneCertificate is a helper method to define mock.On call
-//   - ctx
-//   - cpID
-//   - dpReq
-//   - opts
+//   - ctx context.Context
+//   - cpID string
+//   - dpReq *components.DataPlaneClientCertificateRequest
+//   - opts ...operations.Option
 func (_e *MockDataPlaneClientCertificatesSDK_Expecter) CreateDataplaneCertificate(ctx interface{}, cpID interface{}, dpReq interface{}, opts ...interface{}) *MockDataPlaneClientCertificatesSDK_CreateDataplaneCertificate_Call {
 	return &MockDataPlaneClientCertificatesSDK_CreateDataplaneCertificate_Call{Call: _e.mock.On("CreateDataplaneCertificate",
 		append([]interface{}{ctx, cpID, dpReq}, opts...)...)}
@@ -4124,8 +4978,27 @@ func (_e *MockDataPlaneClientCertificatesSDK_Expecter) CreateDataplaneCertificat
 
 func (_c *MockDataPlaneClientCertificatesSDK_CreateDataplaneCertificate_Call) Run(run func(ctx context.Context, cpID string, dpReq *components.DataPlaneClientCertificateRequest, opts ...operations.Option)) *MockDataPlaneClientCertificatesSDK_CreateDataplaneCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 *components.DataPlaneClientCertificateRequest
+		if args[2] != nil {
+			arg2 = args[2].(*components.DataPlaneClientCertificateRequest)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(*components.DataPlaneClientCertificateRequest), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -4180,10 +5053,10 @@ type MockDataPlaneClientCertificatesSDK_DeleteDataplaneCertificate_Call struct {
 }
 
 // DeleteDataplaneCertificate is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - certificateID
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - certificateID string
+//   - opts ...operations.Option
 func (_e *MockDataPlaneClientCertificatesSDK_Expecter) DeleteDataplaneCertificate(ctx interface{}, controlPlaneID interface{}, certificateID interface{}, opts ...interface{}) *MockDataPlaneClientCertificatesSDK_DeleteDataplaneCertificate_Call {
 	return &MockDataPlaneClientCertificatesSDK_DeleteDataplaneCertificate_Call{Call: _e.mock.On("DeleteDataplaneCertificate",
 		append([]interface{}{ctx, controlPlaneID, certificateID}, opts...)...)}
@@ -4191,8 +5064,27 @@ func (_e *MockDataPlaneClientCertificatesSDK_Expecter) DeleteDataplaneCertificat
 
 func (_c *MockDataPlaneClientCertificatesSDK_DeleteDataplaneCertificate_Call) Run(run func(ctx context.Context, controlPlaneID string, certificateID string, opts ...operations.Option)) *MockDataPlaneClientCertificatesSDK_DeleteDataplaneCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -4247,9 +5139,9 @@ type MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call struct {
 }
 
 // ListDpClientCertificates is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - opts ...operations.Option
 func (_e *MockDataPlaneClientCertificatesSDK_Expecter) ListDpClientCertificates(ctx interface{}, controlPlaneID interface{}, opts ...interface{}) *MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call {
 	return &MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call{Call: _e.mock.On("ListDpClientCertificates",
 		append([]interface{}{ctx, controlPlaneID}, opts...)...)}
@@ -4257,8 +5149,22 @@ func (_e *MockDataPlaneClientCertificatesSDK_Expecter) ListDpClientCertificates(
 
 func (_c *MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call) Run(run func(ctx context.Context, controlPlaneID string, opts ...operations.Option)) *MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -4340,10 +5246,10 @@ type MockKeysSDK_CreateKey_Call struct {
 }
 
 // CreateKey is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - Key
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - Key components.Key
+//   - opts ...operations.Option
 func (_e *MockKeysSDK_Expecter) CreateKey(ctx interface{}, controlPlaneID interface{}, Key interface{}, opts ...interface{}) *MockKeysSDK_CreateKey_Call {
 	return &MockKeysSDK_CreateKey_Call{Call: _e.mock.On("CreateKey",
 		append([]interface{}{ctx, controlPlaneID, Key}, opts...)...)}
@@ -4351,8 +5257,27 @@ func (_e *MockKeysSDK_Expecter) CreateKey(ctx interface{}, controlPlaneID interf
 
 func (_c *MockKeysSDK_CreateKey_Call) Run(run func(ctx context.Context, controlPlaneID string, Key components.Key, opts ...operations.Option)) *MockKeysSDK_CreateKey_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 components.Key
+		if args[2] != nil {
+			arg2 = args[2].(components.Key)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(components.Key), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -4407,10 +5332,10 @@ type MockKeysSDK_DeleteKey_Call struct {
 }
 
 // DeleteKey is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - KeyID
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - KeyID string
+//   - opts ...operations.Option
 func (_e *MockKeysSDK_Expecter) DeleteKey(ctx interface{}, controlPlaneID interface{}, KeyID interface{}, opts ...interface{}) *MockKeysSDK_DeleteKey_Call {
 	return &MockKeysSDK_DeleteKey_Call{Call: _e.mock.On("DeleteKey",
 		append([]interface{}{ctx, controlPlaneID, KeyID}, opts...)...)}
@@ -4418,8 +5343,27 @@ func (_e *MockKeysSDK_Expecter) DeleteKey(ctx interface{}, controlPlaneID interf
 
 func (_c *MockKeysSDK_DeleteKey_Call) Run(run func(ctx context.Context, controlPlaneID string, KeyID string, opts ...operations.Option)) *MockKeysSDK_DeleteKey_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -4474,9 +5418,9 @@ type MockKeysSDK_ListKey_Call struct {
 }
 
 // ListKey is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListKeyRequest
+//   - opts ...operations.Option
 func (_e *MockKeysSDK_Expecter) ListKey(ctx interface{}, request interface{}, opts ...interface{}) *MockKeysSDK_ListKey_Call {
 	return &MockKeysSDK_ListKey_Call{Call: _e.mock.On("ListKey",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -4484,8 +5428,22 @@ func (_e *MockKeysSDK_Expecter) ListKey(ctx interface{}, request interface{}, op
 
 func (_c *MockKeysSDK_ListKey_Call) Run(run func(ctx context.Context, request operations.ListKeyRequest, opts ...operations.Option)) *MockKeysSDK_ListKey_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListKeyRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListKeyRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListKeyRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -4540,9 +5498,9 @@ type MockKeysSDK_UpsertKey_Call struct {
 }
 
 // UpsertKey is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.UpsertKeyRequest
+//   - opts ...operations.Option
 func (_e *MockKeysSDK_Expecter) UpsertKey(ctx interface{}, request interface{}, opts ...interface{}) *MockKeysSDK_UpsertKey_Call {
 	return &MockKeysSDK_UpsertKey_Call{Call: _e.mock.On("UpsertKey",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -4550,8 +5508,22 @@ func (_e *MockKeysSDK_Expecter) UpsertKey(ctx interface{}, request interface{}, 
 
 func (_c *MockKeysSDK_UpsertKey_Call) Run(run func(ctx context.Context, request operations.UpsertKeyRequest, opts ...operations.Option)) *MockKeysSDK_UpsertKey_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertKeyRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertKeyRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertKeyRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -4633,10 +5605,10 @@ type MockKeySetsSDK_CreateKeySet_Call struct {
 }
 
 // CreateKeySet is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - keySet
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - keySet components.KeySet
+//   - opts ...operations.Option
 func (_e *MockKeySetsSDK_Expecter) CreateKeySet(ctx interface{}, controlPlaneID interface{}, keySet interface{}, opts ...interface{}) *MockKeySetsSDK_CreateKeySet_Call {
 	return &MockKeySetsSDK_CreateKeySet_Call{Call: _e.mock.On("CreateKeySet",
 		append([]interface{}{ctx, controlPlaneID, keySet}, opts...)...)}
@@ -4644,8 +5616,27 @@ func (_e *MockKeySetsSDK_Expecter) CreateKeySet(ctx interface{}, controlPlaneID 
 
 func (_c *MockKeySetsSDK_CreateKeySet_Call) Run(run func(ctx context.Context, controlPlaneID string, keySet components.KeySet, opts ...operations.Option)) *MockKeySetsSDK_CreateKeySet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 components.KeySet
+		if args[2] != nil {
+			arg2 = args[2].(components.KeySet)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(components.KeySet), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -4700,10 +5691,10 @@ type MockKeySetsSDK_DeleteKeySet_Call struct {
 }
 
 // DeleteKeySet is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - keySetID
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - keySetID string
+//   - opts ...operations.Option
 func (_e *MockKeySetsSDK_Expecter) DeleteKeySet(ctx interface{}, controlPlaneID interface{}, keySetID interface{}, opts ...interface{}) *MockKeySetsSDK_DeleteKeySet_Call {
 	return &MockKeySetsSDK_DeleteKeySet_Call{Call: _e.mock.On("DeleteKeySet",
 		append([]interface{}{ctx, controlPlaneID, keySetID}, opts...)...)}
@@ -4711,8 +5702,27 @@ func (_e *MockKeySetsSDK_Expecter) DeleteKeySet(ctx interface{}, controlPlaneID 
 
 func (_c *MockKeySetsSDK_DeleteKeySet_Call) Run(run func(ctx context.Context, controlPlaneID string, keySetID string, opts ...operations.Option)) *MockKeySetsSDK_DeleteKeySet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -4767,9 +5777,9 @@ type MockKeySetsSDK_ListKeySet_Call struct {
 }
 
 // ListKeySet is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListKeySetRequest
+//   - opts ...operations.Option
 func (_e *MockKeySetsSDK_Expecter) ListKeySet(ctx interface{}, request interface{}, opts ...interface{}) *MockKeySetsSDK_ListKeySet_Call {
 	return &MockKeySetsSDK_ListKeySet_Call{Call: _e.mock.On("ListKeySet",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -4777,8 +5787,22 @@ func (_e *MockKeySetsSDK_Expecter) ListKeySet(ctx interface{}, request interface
 
 func (_c *MockKeySetsSDK_ListKeySet_Call) Run(run func(ctx context.Context, request operations.ListKeySetRequest, opts ...operations.Option)) *MockKeySetsSDK_ListKeySet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListKeySetRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListKeySetRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListKeySetRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -4833,9 +5857,9 @@ type MockKeySetsSDK_UpsertKeySet_Call struct {
 }
 
 // UpsertKeySet is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.UpsertKeySetRequest
+//   - opts ...operations.Option
 func (_e *MockKeySetsSDK_Expecter) UpsertKeySet(ctx interface{}, request interface{}, opts ...interface{}) *MockKeySetsSDK_UpsertKeySet_Call {
 	return &MockKeySetsSDK_UpsertKeySet_Call{Call: _e.mock.On("UpsertKeySet",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -4843,8 +5867,22 @@ func (_e *MockKeySetsSDK_Expecter) UpsertKeySet(ctx interface{}, request interfa
 
 func (_c *MockKeySetsSDK_UpsertKeySet_Call) Run(run func(ctx context.Context, request operations.UpsertKeySetRequest, opts ...operations.Option)) *MockKeySetsSDK_UpsertKeySet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertKeySetRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertKeySetRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertKeySetRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -4926,10 +5964,10 @@ type MockRoutesSDK_CreateRoute_Call struct {
 }
 
 // CreateRoute is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - route
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - route components.Route
+//   - opts ...operations.Option
 func (_e *MockRoutesSDK_Expecter) CreateRoute(ctx interface{}, controlPlaneID interface{}, route interface{}, opts ...interface{}) *MockRoutesSDK_CreateRoute_Call {
 	return &MockRoutesSDK_CreateRoute_Call{Call: _e.mock.On("CreateRoute",
 		append([]interface{}{ctx, controlPlaneID, route}, opts...)...)}
@@ -4937,8 +5975,27 @@ func (_e *MockRoutesSDK_Expecter) CreateRoute(ctx interface{}, controlPlaneID in
 
 func (_c *MockRoutesSDK_CreateRoute_Call) Run(run func(ctx context.Context, controlPlaneID string, route components.Route, opts ...operations.Option)) *MockRoutesSDK_CreateRoute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 components.Route
+		if args[2] != nil {
+			arg2 = args[2].(components.Route)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(components.Route), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -4993,10 +6050,10 @@ type MockRoutesSDK_DeleteRoute_Call struct {
 }
 
 // DeleteRoute is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - routeID
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - routeID string
+//   - opts ...operations.Option
 func (_e *MockRoutesSDK_Expecter) DeleteRoute(ctx interface{}, controlPlaneID interface{}, routeID interface{}, opts ...interface{}) *MockRoutesSDK_DeleteRoute_Call {
 	return &MockRoutesSDK_DeleteRoute_Call{Call: _e.mock.On("DeleteRoute",
 		append([]interface{}{ctx, controlPlaneID, routeID}, opts...)...)}
@@ -5004,8 +6061,27 @@ func (_e *MockRoutesSDK_Expecter) DeleteRoute(ctx interface{}, controlPlaneID in
 
 func (_c *MockRoutesSDK_DeleteRoute_Call) Run(run func(ctx context.Context, controlPlaneID string, routeID string, opts ...operations.Option)) *MockRoutesSDK_DeleteRoute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -5060,9 +6136,9 @@ type MockRoutesSDK_ListRoute_Call struct {
 }
 
 // ListRoute is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListRouteRequest
+//   - opts ...operations.Option
 func (_e *MockRoutesSDK_Expecter) ListRoute(ctx interface{}, request interface{}, opts ...interface{}) *MockRoutesSDK_ListRoute_Call {
 	return &MockRoutesSDK_ListRoute_Call{Call: _e.mock.On("ListRoute",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -5070,8 +6146,22 @@ func (_e *MockRoutesSDK_Expecter) ListRoute(ctx interface{}, request interface{}
 
 func (_c *MockRoutesSDK_ListRoute_Call) Run(run func(ctx context.Context, request operations.ListRouteRequest, opts ...operations.Option)) *MockRoutesSDK_ListRoute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListRouteRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListRouteRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListRouteRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -5126,9 +6216,9 @@ type MockRoutesSDK_UpsertRoute_Call struct {
 }
 
 // UpsertRoute is a helper method to define mock.On call
-//   - ctx
-//   - req
-//   - opts
+//   - ctx context.Context
+//   - req operations.UpsertRouteRequest
+//   - opts ...operations.Option
 func (_e *MockRoutesSDK_Expecter) UpsertRoute(ctx interface{}, req interface{}, opts ...interface{}) *MockRoutesSDK_UpsertRoute_Call {
 	return &MockRoutesSDK_UpsertRoute_Call{Call: _e.mock.On("UpsertRoute",
 		append([]interface{}{ctx, req}, opts...)...)}
@@ -5136,8 +6226,22 @@ func (_e *MockRoutesSDK_Expecter) UpsertRoute(ctx interface{}, req interface{}, 
 
 func (_c *MockRoutesSDK_UpsertRoute_Call) Run(run func(ctx context.Context, req operations.UpsertRouteRequest, opts ...operations.Option)) *MockRoutesSDK_UpsertRoute_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertRouteRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertRouteRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertRouteRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -5219,10 +6323,10 @@ type MockServicesSDK_CreateService_Call struct {
 }
 
 // CreateService is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - service
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - service components.Service
+//   - opts ...operations.Option
 func (_e *MockServicesSDK_Expecter) CreateService(ctx interface{}, controlPlaneID interface{}, service interface{}, opts ...interface{}) *MockServicesSDK_CreateService_Call {
 	return &MockServicesSDK_CreateService_Call{Call: _e.mock.On("CreateService",
 		append([]interface{}{ctx, controlPlaneID, service}, opts...)...)}
@@ -5230,8 +6334,27 @@ func (_e *MockServicesSDK_Expecter) CreateService(ctx interface{}, controlPlaneI
 
 func (_c *MockServicesSDK_CreateService_Call) Run(run func(ctx context.Context, controlPlaneID string, service components.Service, opts ...operations.Option)) *MockServicesSDK_CreateService_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 components.Service
+		if args[2] != nil {
+			arg2 = args[2].(components.Service)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(components.Service), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -5286,10 +6409,10 @@ type MockServicesSDK_DeleteService_Call struct {
 }
 
 // DeleteService is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - serviceID
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - serviceID string
+//   - opts ...operations.Option
 func (_e *MockServicesSDK_Expecter) DeleteService(ctx interface{}, controlPlaneID interface{}, serviceID interface{}, opts ...interface{}) *MockServicesSDK_DeleteService_Call {
 	return &MockServicesSDK_DeleteService_Call{Call: _e.mock.On("DeleteService",
 		append([]interface{}{ctx, controlPlaneID, serviceID}, opts...)...)}
@@ -5297,8 +6420,27 @@ func (_e *MockServicesSDK_Expecter) DeleteService(ctx interface{}, controlPlaneI
 
 func (_c *MockServicesSDK_DeleteService_Call) Run(run func(ctx context.Context, controlPlaneID string, serviceID string, opts ...operations.Option)) *MockServicesSDK_DeleteService_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -5353,9 +6495,9 @@ type MockServicesSDK_ListService_Call struct {
 }
 
 // ListService is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListServiceRequest
+//   - opts ...operations.Option
 func (_e *MockServicesSDK_Expecter) ListService(ctx interface{}, request interface{}, opts ...interface{}) *MockServicesSDK_ListService_Call {
 	return &MockServicesSDK_ListService_Call{Call: _e.mock.On("ListService",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -5363,8 +6505,22 @@ func (_e *MockServicesSDK_Expecter) ListService(ctx interface{}, request interfa
 
 func (_c *MockServicesSDK_ListService_Call) Run(run func(ctx context.Context, request operations.ListServiceRequest, opts ...operations.Option)) *MockServicesSDK_ListService_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListServiceRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListServiceRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListServiceRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -5419,9 +6575,9 @@ type MockServicesSDK_UpsertService_Call struct {
 }
 
 // UpsertService is a helper method to define mock.On call
-//   - ctx
-//   - req
-//   - opts
+//   - ctx context.Context
+//   - req operations.UpsertServiceRequest
+//   - opts ...operations.Option
 func (_e *MockServicesSDK_Expecter) UpsertService(ctx interface{}, req interface{}, opts ...interface{}) *MockServicesSDK_UpsertService_Call {
 	return &MockServicesSDK_UpsertService_Call{Call: _e.mock.On("UpsertService",
 		append([]interface{}{ctx, req}, opts...)...)}
@@ -5429,8 +6585,22 @@ func (_e *MockServicesSDK_Expecter) UpsertService(ctx interface{}, req interface
 
 func (_c *MockServicesSDK_UpsertService_Call) Run(run func(ctx context.Context, req operations.UpsertServiceRequest, opts ...operations.Option)) *MockServicesSDK_UpsertService_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertServiceRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertServiceRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertServiceRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -5512,9 +6682,9 @@ type MockSNIsSDK_CreateSniWithCertificate_Call struct {
 }
 
 // CreateSniWithCertificate is a helper method to define mock.On call
-//   - context1
-//   - createSniWithCertificateRequest
-//   - options
+//   - context1 context.Context
+//   - createSniWithCertificateRequest operations.CreateSniWithCertificateRequest
+//   - options ...operations.Option
 func (_e *MockSNIsSDK_Expecter) CreateSniWithCertificate(context1 interface{}, createSniWithCertificateRequest interface{}, options ...interface{}) *MockSNIsSDK_CreateSniWithCertificate_Call {
 	return &MockSNIsSDK_CreateSniWithCertificate_Call{Call: _e.mock.On("CreateSniWithCertificate",
 		append([]interface{}{context1, createSniWithCertificateRequest}, options...)...)}
@@ -5522,8 +6692,22 @@ func (_e *MockSNIsSDK_Expecter) CreateSniWithCertificate(context1 interface{}, c
 
 func (_c *MockSNIsSDK_CreateSniWithCertificate_Call) Run(run func(context1 context.Context, createSniWithCertificateRequest operations.CreateSniWithCertificateRequest, options ...operations.Option)) *MockSNIsSDK_CreateSniWithCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.CreateSniWithCertificateRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.CreateSniWithCertificateRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.CreateSniWithCertificateRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -5578,9 +6762,9 @@ type MockSNIsSDK_DeleteSniWithCertificate_Call struct {
 }
 
 // DeleteSniWithCertificate is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.DeleteSniWithCertificateRequest
+//   - opts ...operations.Option
 func (_e *MockSNIsSDK_Expecter) DeleteSniWithCertificate(ctx interface{}, request interface{}, opts ...interface{}) *MockSNIsSDK_DeleteSniWithCertificate_Call {
 	return &MockSNIsSDK_DeleteSniWithCertificate_Call{Call: _e.mock.On("DeleteSniWithCertificate",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -5588,8 +6772,22 @@ func (_e *MockSNIsSDK_Expecter) DeleteSniWithCertificate(ctx interface{}, reques
 
 func (_c *MockSNIsSDK_DeleteSniWithCertificate_Call) Run(run func(ctx context.Context, request operations.DeleteSniWithCertificateRequest, opts ...operations.Option)) *MockSNIsSDK_DeleteSniWithCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.DeleteSniWithCertificateRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.DeleteSniWithCertificateRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.DeleteSniWithCertificateRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -5644,9 +6842,9 @@ type MockSNIsSDK_ListSni_Call struct {
 }
 
 // ListSni is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListSniRequest
+//   - opts ...operations.Option
 func (_e *MockSNIsSDK_Expecter) ListSni(ctx interface{}, request interface{}, opts ...interface{}) *MockSNIsSDK_ListSni_Call {
 	return &MockSNIsSDK_ListSni_Call{Call: _e.mock.On("ListSni",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -5654,8 +6852,22 @@ func (_e *MockSNIsSDK_Expecter) ListSni(ctx interface{}, request interface{}, op
 
 func (_c *MockSNIsSDK_ListSni_Call) Run(run func(ctx context.Context, request operations.ListSniRequest, opts ...operations.Option)) *MockSNIsSDK_ListSni_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListSniRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListSniRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListSniRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -5710,9 +6922,9 @@ type MockSNIsSDK_UpsertSniWithCertificate_Call struct {
 }
 
 // UpsertSniWithCertificate is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.UpsertSniWithCertificateRequest
+//   - opts ...operations.Option
 func (_e *MockSNIsSDK_Expecter) UpsertSniWithCertificate(ctx interface{}, request interface{}, opts ...interface{}) *MockSNIsSDK_UpsertSniWithCertificate_Call {
 	return &MockSNIsSDK_UpsertSniWithCertificate_Call{Call: _e.mock.On("UpsertSniWithCertificate",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -5720,8 +6932,22 @@ func (_e *MockSNIsSDK_Expecter) UpsertSniWithCertificate(ctx interface{}, reques
 
 func (_c *MockSNIsSDK_UpsertSniWithCertificate_Call) Run(run func(ctx context.Context, request operations.UpsertSniWithCertificateRequest, opts ...operations.Option)) *MockSNIsSDK_UpsertSniWithCertificate_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertSniWithCertificateRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertSniWithCertificateRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertSniWithCertificateRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -5803,9 +7029,9 @@ type MockTargetsSDK_CreateTargetWithUpstream_Call struct {
 }
 
 // CreateTargetWithUpstream is a helper method to define mock.On call
-//   - ctx
-//   - req
-//   - opts
+//   - ctx context.Context
+//   - req operations.CreateTargetWithUpstreamRequest
+//   - opts ...operations.Option
 func (_e *MockTargetsSDK_Expecter) CreateTargetWithUpstream(ctx interface{}, req interface{}, opts ...interface{}) *MockTargetsSDK_CreateTargetWithUpstream_Call {
 	return &MockTargetsSDK_CreateTargetWithUpstream_Call{Call: _e.mock.On("CreateTargetWithUpstream",
 		append([]interface{}{ctx, req}, opts...)...)}
@@ -5813,8 +7039,22 @@ func (_e *MockTargetsSDK_Expecter) CreateTargetWithUpstream(ctx interface{}, req
 
 func (_c *MockTargetsSDK_CreateTargetWithUpstream_Call) Run(run func(ctx context.Context, req operations.CreateTargetWithUpstreamRequest, opts ...operations.Option)) *MockTargetsSDK_CreateTargetWithUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.CreateTargetWithUpstreamRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.CreateTargetWithUpstreamRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.CreateTargetWithUpstreamRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -5869,9 +7109,9 @@ type MockTargetsSDK_DeleteTargetWithUpstream_Call struct {
 }
 
 // DeleteTargetWithUpstream is a helper method to define mock.On call
-//   - ctx
-//   - req
-//   - opts
+//   - ctx context.Context
+//   - req operations.DeleteTargetWithUpstreamRequest
+//   - opts ...operations.Option
 func (_e *MockTargetsSDK_Expecter) DeleteTargetWithUpstream(ctx interface{}, req interface{}, opts ...interface{}) *MockTargetsSDK_DeleteTargetWithUpstream_Call {
 	return &MockTargetsSDK_DeleteTargetWithUpstream_Call{Call: _e.mock.On("DeleteTargetWithUpstream",
 		append([]interface{}{ctx, req}, opts...)...)}
@@ -5879,8 +7119,22 @@ func (_e *MockTargetsSDK_Expecter) DeleteTargetWithUpstream(ctx interface{}, req
 
 func (_c *MockTargetsSDK_DeleteTargetWithUpstream_Call) Run(run func(ctx context.Context, req operations.DeleteTargetWithUpstreamRequest, opts ...operations.Option)) *MockTargetsSDK_DeleteTargetWithUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.DeleteTargetWithUpstreamRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.DeleteTargetWithUpstreamRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.DeleteTargetWithUpstreamRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -5935,9 +7189,9 @@ type MockTargetsSDK_ListTargetWithUpstream_Call struct {
 }
 
 // ListTargetWithUpstream is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListTargetWithUpstreamRequest
+//   - opts ...operations.Option
 func (_e *MockTargetsSDK_Expecter) ListTargetWithUpstream(ctx interface{}, request interface{}, opts ...interface{}) *MockTargetsSDK_ListTargetWithUpstream_Call {
 	return &MockTargetsSDK_ListTargetWithUpstream_Call{Call: _e.mock.On("ListTargetWithUpstream",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -5945,8 +7199,22 @@ func (_e *MockTargetsSDK_Expecter) ListTargetWithUpstream(ctx interface{}, reque
 
 func (_c *MockTargetsSDK_ListTargetWithUpstream_Call) Run(run func(ctx context.Context, request operations.ListTargetWithUpstreamRequest, opts ...operations.Option)) *MockTargetsSDK_ListTargetWithUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListTargetWithUpstreamRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListTargetWithUpstreamRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListTargetWithUpstreamRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -6001,9 +7269,9 @@ type MockTargetsSDK_UpsertTargetWithUpstream_Call struct {
 }
 
 // UpsertTargetWithUpstream is a helper method to define mock.On call
-//   - ctx
-//   - req
-//   - opts
+//   - ctx context.Context
+//   - req operations.UpsertTargetWithUpstreamRequest
+//   - opts ...operations.Option
 func (_e *MockTargetsSDK_Expecter) UpsertTargetWithUpstream(ctx interface{}, req interface{}, opts ...interface{}) *MockTargetsSDK_UpsertTargetWithUpstream_Call {
 	return &MockTargetsSDK_UpsertTargetWithUpstream_Call{Call: _e.mock.On("UpsertTargetWithUpstream",
 		append([]interface{}{ctx, req}, opts...)...)}
@@ -6011,8 +7279,22 @@ func (_e *MockTargetsSDK_Expecter) UpsertTargetWithUpstream(ctx interface{}, req
 
 func (_c *MockTargetsSDK_UpsertTargetWithUpstream_Call) Run(run func(ctx context.Context, req operations.UpsertTargetWithUpstreamRequest, opts ...operations.Option)) *MockTargetsSDK_UpsertTargetWithUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertTargetWithUpstreamRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertTargetWithUpstreamRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertTargetWithUpstreamRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -6094,10 +7376,10 @@ type MockUpstreamsSDK_CreateUpstream_Call struct {
 }
 
 // CreateUpstream is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - upstream
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - upstream components.Upstream
+//   - opts ...operations.Option
 func (_e *MockUpstreamsSDK_Expecter) CreateUpstream(ctx interface{}, controlPlaneID interface{}, upstream interface{}, opts ...interface{}) *MockUpstreamsSDK_CreateUpstream_Call {
 	return &MockUpstreamsSDK_CreateUpstream_Call{Call: _e.mock.On("CreateUpstream",
 		append([]interface{}{ctx, controlPlaneID, upstream}, opts...)...)}
@@ -6105,8 +7387,27 @@ func (_e *MockUpstreamsSDK_Expecter) CreateUpstream(ctx interface{}, controlPlan
 
 func (_c *MockUpstreamsSDK_CreateUpstream_Call) Run(run func(ctx context.Context, controlPlaneID string, upstream components.Upstream, opts ...operations.Option)) *MockUpstreamsSDK_CreateUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 components.Upstream
+		if args[2] != nil {
+			arg2 = args[2].(components.Upstream)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(components.Upstream), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -6161,10 +7462,10 @@ type MockUpstreamsSDK_DeleteUpstream_Call struct {
 }
 
 // DeleteUpstream is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - upstreamID
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - upstreamID string
+//   - opts ...operations.Option
 func (_e *MockUpstreamsSDK_Expecter) DeleteUpstream(ctx interface{}, controlPlaneID interface{}, upstreamID interface{}, opts ...interface{}) *MockUpstreamsSDK_DeleteUpstream_Call {
 	return &MockUpstreamsSDK_DeleteUpstream_Call{Call: _e.mock.On("DeleteUpstream",
 		append([]interface{}{ctx, controlPlaneID, upstreamID}, opts...)...)}
@@ -6172,8 +7473,27 @@ func (_e *MockUpstreamsSDK_Expecter) DeleteUpstream(ctx interface{}, controlPlan
 
 func (_c *MockUpstreamsSDK_DeleteUpstream_Call) Run(run func(ctx context.Context, controlPlaneID string, upstreamID string, opts ...operations.Option)) *MockUpstreamsSDK_DeleteUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -6228,9 +7548,9 @@ type MockUpstreamsSDK_ListUpstream_Call struct {
 }
 
 // ListUpstream is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListUpstreamRequest
+//   - opts ...operations.Option
 func (_e *MockUpstreamsSDK_Expecter) ListUpstream(ctx interface{}, request interface{}, opts ...interface{}) *MockUpstreamsSDK_ListUpstream_Call {
 	return &MockUpstreamsSDK_ListUpstream_Call{Call: _e.mock.On("ListUpstream",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -6238,8 +7558,22 @@ func (_e *MockUpstreamsSDK_Expecter) ListUpstream(ctx interface{}, request inter
 
 func (_c *MockUpstreamsSDK_ListUpstream_Call) Run(run func(ctx context.Context, request operations.ListUpstreamRequest, opts ...operations.Option)) *MockUpstreamsSDK_ListUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListUpstreamRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListUpstreamRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListUpstreamRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -6294,9 +7628,9 @@ type MockUpstreamsSDK_UpsertUpstream_Call struct {
 }
 
 // UpsertUpstream is a helper method to define mock.On call
-//   - ctx
-//   - req
-//   - opts
+//   - ctx context.Context
+//   - req operations.UpsertUpstreamRequest
+//   - opts ...operations.Option
 func (_e *MockUpstreamsSDK_Expecter) UpsertUpstream(ctx interface{}, req interface{}, opts ...interface{}) *MockUpstreamsSDK_UpsertUpstream_Call {
 	return &MockUpstreamsSDK_UpsertUpstream_Call{Call: _e.mock.On("UpsertUpstream",
 		append([]interface{}{ctx, req}, opts...)...)}
@@ -6304,8 +7638,22 @@ func (_e *MockUpstreamsSDK_Expecter) UpsertUpstream(ctx interface{}, req interfa
 
 func (_c *MockUpstreamsSDK_UpsertUpstream_Call) Run(run func(ctx context.Context, req operations.UpsertUpstreamRequest, opts ...operations.Option)) *MockUpstreamsSDK_UpsertUpstream_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertUpstreamRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertUpstreamRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertUpstreamRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -6387,10 +7735,10 @@ type MockVaultSDK_CreateVault_Call struct {
 }
 
 // CreateVault is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - vault
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - vault components.Vault
+//   - opts ...operations.Option
 func (_e *MockVaultSDK_Expecter) CreateVault(ctx interface{}, controlPlaneID interface{}, vault interface{}, opts ...interface{}) *MockVaultSDK_CreateVault_Call {
 	return &MockVaultSDK_CreateVault_Call{Call: _e.mock.On("CreateVault",
 		append([]interface{}{ctx, controlPlaneID, vault}, opts...)...)}
@@ -6398,8 +7746,27 @@ func (_e *MockVaultSDK_Expecter) CreateVault(ctx interface{}, controlPlaneID int
 
 func (_c *MockVaultSDK_CreateVault_Call) Run(run func(ctx context.Context, controlPlaneID string, vault components.Vault, opts ...operations.Option)) *MockVaultSDK_CreateVault_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 components.Vault
+		if args[2] != nil {
+			arg2 = args[2].(components.Vault)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(components.Vault), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -6454,10 +7821,10 @@ type MockVaultSDK_DeleteVault_Call struct {
 }
 
 // DeleteVault is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - vaultID
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - vaultID string
+//   - opts ...operations.Option
 func (_e *MockVaultSDK_Expecter) DeleteVault(ctx interface{}, controlPlaneID interface{}, vaultID interface{}, opts ...interface{}) *MockVaultSDK_DeleteVault_Call {
 	return &MockVaultSDK_DeleteVault_Call{Call: _e.mock.On("DeleteVault",
 		append([]interface{}{ctx, controlPlaneID, vaultID}, opts...)...)}
@@ -6465,8 +7832,27 @@ func (_e *MockVaultSDK_Expecter) DeleteVault(ctx interface{}, controlPlaneID int
 
 func (_c *MockVaultSDK_DeleteVault_Call) Run(run func(ctx context.Context, controlPlaneID string, vaultID string, opts ...operations.Option)) *MockVaultSDK_DeleteVault_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -6521,9 +7907,9 @@ type MockVaultSDK_ListVault_Call struct {
 }
 
 // ListVault is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListVaultRequest
+//   - opts ...operations.Option
 func (_e *MockVaultSDK_Expecter) ListVault(ctx interface{}, request interface{}, opts ...interface{}) *MockVaultSDK_ListVault_Call {
 	return &MockVaultSDK_ListVault_Call{Call: _e.mock.On("ListVault",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -6531,8 +7917,22 @@ func (_e *MockVaultSDK_Expecter) ListVault(ctx interface{}, request interface{},
 
 func (_c *MockVaultSDK_ListVault_Call) Run(run func(ctx context.Context, request operations.ListVaultRequest, opts ...operations.Option)) *MockVaultSDK_ListVault_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListVaultRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListVaultRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListVaultRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -6587,9 +7987,9 @@ type MockVaultSDK_UpsertVault_Call struct {
 }
 
 // UpsertVault is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.UpsertVaultRequest
+//   - opts ...operations.Option
 func (_e *MockVaultSDK_Expecter) UpsertVault(ctx interface{}, request interface{}, opts ...interface{}) *MockVaultSDK_UpsertVault_Call {
 	return &MockVaultSDK_UpsertVault_Call{Call: _e.mock.On("UpsertVault",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -6597,8 +7997,22 @@ func (_e *MockVaultSDK_Expecter) UpsertVault(ctx interface{}, request interface{
 
 func (_c *MockVaultSDK_UpsertVault_Call) Run(run func(ctx context.Context, request operations.UpsertVaultRequest, opts ...operations.Option)) *MockVaultSDK_UpsertVault_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertVaultRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertVaultRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertVaultRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -6680,8 +8094,8 @@ type MockMeSDK_GetOrganizationsMe_Call struct {
 }
 
 // GetOrganizationsMe is a helper method to define mock.On call
-//   - ctx
-//   - opts
+//   - ctx context.Context
+//   - opts ...operations.Option
 func (_e *MockMeSDK_Expecter) GetOrganizationsMe(ctx interface{}, opts ...interface{}) *MockMeSDK_GetOrganizationsMe_Call {
 	return &MockMeSDK_GetOrganizationsMe_Call{Call: _e.mock.On("GetOrganizationsMe",
 		append([]interface{}{ctx}, opts...)...)}
@@ -6689,8 +8103,17 @@ func (_e *MockMeSDK_Expecter) GetOrganizationsMe(ctx interface{}, opts ...interf
 
 func (_c *MockMeSDK_GetOrganizationsMe_Call) Run(run func(ctx context.Context, opts ...operations.Option)) *MockMeSDK_GetOrganizationsMe_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 []operations.Option
 		variadicArgs := args[1].([]operations.Option)
-		run(args[0].(context.Context), variadicArgs...)
+		arg1 = variadicArgs
+		run(
+			arg0,
+			arg1...,
+		)
 	})
 	return _c
 }
@@ -6772,10 +8195,10 @@ type MockPluginSDK_CreatePlugin_Call struct {
 }
 
 // CreatePlugin is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - plugin
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - plugin components.Plugin
+//   - opts ...operations.Option
 func (_e *MockPluginSDK_Expecter) CreatePlugin(ctx interface{}, controlPlaneID interface{}, plugin interface{}, opts ...interface{}) *MockPluginSDK_CreatePlugin_Call {
 	return &MockPluginSDK_CreatePlugin_Call{Call: _e.mock.On("CreatePlugin",
 		append([]interface{}{ctx, controlPlaneID, plugin}, opts...)...)}
@@ -6783,8 +8206,27 @@ func (_e *MockPluginSDK_Expecter) CreatePlugin(ctx interface{}, controlPlaneID i
 
 func (_c *MockPluginSDK_CreatePlugin_Call) Run(run func(ctx context.Context, controlPlaneID string, plugin components.Plugin, opts ...operations.Option)) *MockPluginSDK_CreatePlugin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 components.Plugin
+		if args[2] != nil {
+			arg2 = args[2].(components.Plugin)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(components.Plugin), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -6839,10 +8281,10 @@ type MockPluginSDK_DeletePlugin_Call struct {
 }
 
 // DeletePlugin is a helper method to define mock.On call
-//   - ctx
-//   - controlPlaneID
-//   - pluginID
-//   - opts
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - pluginID string
+//   - opts ...operations.Option
 func (_e *MockPluginSDK_Expecter) DeletePlugin(ctx interface{}, controlPlaneID interface{}, pluginID interface{}, opts ...interface{}) *MockPluginSDK_DeletePlugin_Call {
 	return &MockPluginSDK_DeletePlugin_Call{Call: _e.mock.On("DeletePlugin",
 		append([]interface{}{ctx, controlPlaneID, pluginID}, opts...)...)}
@@ -6850,8 +8292,27 @@ func (_e *MockPluginSDK_Expecter) DeletePlugin(ctx interface{}, controlPlaneID i
 
 func (_c *MockPluginSDK_DeletePlugin_Call) Run(run func(ctx context.Context, controlPlaneID string, pluginID string, opts ...operations.Option)) *MockPluginSDK_DeletePlugin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
 		variadicArgs := args[3].([]operations.Option)
-		run(args[0].(context.Context), args[1].(string), args[2].(string), variadicArgs...)
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
 	})
 	return _c
 }
@@ -6906,9 +8367,9 @@ type MockPluginSDK_ListPlugin_Call struct {
 }
 
 // ListPlugin is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.ListPluginRequest
+//   - opts ...operations.Option
 func (_e *MockPluginSDK_Expecter) ListPlugin(ctx interface{}, request interface{}, opts ...interface{}) *MockPluginSDK_ListPlugin_Call {
 	return &MockPluginSDK_ListPlugin_Call{Call: _e.mock.On("ListPlugin",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -6916,8 +8377,22 @@ func (_e *MockPluginSDK_Expecter) ListPlugin(ctx interface{}, request interface{
 
 func (_c *MockPluginSDK_ListPlugin_Call) Run(run func(ctx context.Context, request operations.ListPluginRequest, opts ...operations.Option)) *MockPluginSDK_ListPlugin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListPluginRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListPluginRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.ListPluginRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
@@ -6972,9 +8447,9 @@ type MockPluginSDK_UpsertPlugin_Call struct {
 }
 
 // UpsertPlugin is a helper method to define mock.On call
-//   - ctx
-//   - request
-//   - opts
+//   - ctx context.Context
+//   - request operations.UpsertPluginRequest
+//   - opts ...operations.Option
 func (_e *MockPluginSDK_Expecter) UpsertPlugin(ctx interface{}, request interface{}, opts ...interface{}) *MockPluginSDK_UpsertPlugin_Call {
 	return &MockPluginSDK_UpsertPlugin_Call{Call: _e.mock.On("UpsertPlugin",
 		append([]interface{}{ctx, request}, opts...)...)}
@@ -6982,8 +8457,22 @@ func (_e *MockPluginSDK_Expecter) UpsertPlugin(ctx interface{}, request interfac
 
 func (_c *MockPluginSDK_UpsertPlugin_Call) Run(run func(ctx context.Context, request operations.UpsertPluginRequest, opts ...operations.Option)) *MockPluginSDK_UpsertPlugin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.UpsertPluginRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.UpsertPluginRequest)
+		}
+		var arg2 []operations.Option
 		variadicArgs := args[2].([]operations.Option)
-		run(args[0].(context.Context), args[1].(operations.UpsertPluginRequest), variadicArgs...)
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
 	})
 	return _c
 }
