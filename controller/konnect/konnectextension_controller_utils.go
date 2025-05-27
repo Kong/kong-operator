@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -31,6 +32,10 @@ import (
 	"github.com/kong/kong-operator/internal/utils/index"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	"github.com/kong/kubernetes-configuration/api/konnect"
 
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -206,15 +211,18 @@ func getKonnectAPIAuthRefNN(ctx context.Context, cl client.Client, ext *konnectv
 	}, nil
 }
 
-func (r *KonnectExtensionReconciler) ensureCertificateSecret(ctx context.Context, ext *konnectv1alpha2.KonnectExtension) (op.Result, *corev1.Secret, error) {
+func (r *KonnectExtensionReconciler) ensureCertificateSecret(ctx context.Context, ext *konnectv1alpha1.KonnectExtension) (op.Result, *corev1.Secret, error) {
+	hasCPRef := ext.Spec.Konnect.ControlPlane.Ref.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
+
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
 		certificatesv1.UsageDigitalSignature,
 		certificatesv1.UsageClientAuth,
 	}
 	matchingLabels := client.MatchingLabels{
-		consts.SecretProvisioningLabelKey:      consts.SecretProvisioningAutomaticLabelValue,
-		SecretKonnectDataPlaneCertificateLabel: "true",
+		consts.SecretProvisioningLabelKey:                consts.SecretProvisioningAutomaticLabelValue,
+		SecretKonnectDataPlaneCertificateLabel:           "true",
+		SecretKonnectDataPlaneCertificateReconcilerLabel: strconv.FormatBool(hasCPRef),
 	}
 	return secrets.EnsureCertificate(ctx,
 		ext,
@@ -320,7 +328,6 @@ const (
 )
 
 func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *corev1.Secret) ([]konnectv1alpha1.KonnectExtension, error) {
-
 	// Get all the secrets explicitly referenced by KonnectExtensions in the spec.
 	l := &konnectv1alpha1.KonnectExtensionList{}
 	err := cl.List(
@@ -353,7 +360,6 @@ func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *cor
 	}
 
 	return l.Items, nil
-
 }
 
 func enqueueKonnectExtensionsForSecret(cl client.Client) func(context.Context, client.Object) []reconcile.Request {
