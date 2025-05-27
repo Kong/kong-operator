@@ -56,6 +56,13 @@ func WithLabel(key, value string) ObjOption {
 	}
 }
 
+// WithName returns an ObjOption that sets the name of the object.
+func WithName(name string) ObjOption {
+	return func(obj client.Object) {
+		obj.SetName(name)
+	}
+}
+
 // WithTestIDLabel returns an ObjOption that sets the test ID label on the object.
 func WithTestIDLabel(testID string) func(obj client.Object) {
 	return func(obj client.Object) {

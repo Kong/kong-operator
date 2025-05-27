@@ -574,36 +574,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return res, err
 	}
 
-	var updateExtensionStatus bool
-	if ext.Status.Konnect == nil {
-		ext.Status.Konnect = &konnectv1alpha1.KonnectExtensionControlPlaneStatus{
-			ControlPlaneID: cp.Status.ID,
-			ClusterType: konnectClusterTypeToCRDClusterType(
-				sdkkonnectcomp.ControlPlaneClusterType(lo.FromPtrOr(cp.Spec.ClusterType, "")),
-			),
-			Endpoints: konnectv1alpha1.KonnectEndpoints{
-				ControlPlaneEndpoint: cp.Status.Endpoints.ControlPlaneEndpoint,
-				TelemetryEndpoint:    cp.Status.Endpoints.TelemetryEndpoint,
-			},
-		}
-		ext.Status.DataPlaneClientAuth = &konnectv1alpha1.DataPlaneClientAuthStatus{
-			CertificateSecretRef: &konnectv1alpha1.SecretRef{
-				Name: certificateSecret.Name,
-			},
-		}
-		updateExtensionStatus = true
-	}
-
-	if ext.Status.DataPlaneClientAuth == nil ||
-		ext.Status.DataPlaneClientAuth.CertificateSecretRef == nil ||
-		ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name != certificateSecret.Name {
-		ext.Status.DataPlaneClientAuth = &konnectv1alpha1.DataPlaneClientAuthStatus{
-			CertificateSecretRef: &konnectv1alpha1.SecretRef{
-				Name: certificateSecret.Name,
-			},
-		}
-		updateExtensionStatus = true
-	}
+	updateExtensionStatus := enforceKonnectExtensionStatus(*cp, *certificateSecret, &ext)
 	if updateExtensionStatus {
 		log.Debug(logger, "updating KonnectExtension status")
 		err := r.Client.Status().Update(ctx, &ext)

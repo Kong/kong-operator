@@ -286,6 +286,36 @@ func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, e
 	return res, certificateSecret, err
 }
 
+func enforceKonnectExtensionStatus(cp konnectv1alpha1.KonnectGatewayControlPlane, certificateSecret corev1.Secret, ext *konnectv1alpha1.KonnectExtension) bool {
+	var toUpdate bool
+	expectedKonnectStatus := &konnectv1alpha1.KonnectExtensionControlPlaneStatus{
+		ControlPlaneID: cp.Status.ID,
+		ClusterType: konnectClusterTypeToCRDClusterType(
+			sdkkonnectcomp.ControlPlaneClusterType(lo.FromPtrOr(cp.Spec.ClusterType, "")),
+		),
+		Endpoints: konnectv1alpha1.KonnectEndpoints{
+			ControlPlaneEndpoint: cp.Status.Endpoints.ControlPlaneEndpoint,
+			TelemetryEndpoint:    cp.Status.Endpoints.TelemetryEndpoint,
+		},
+	}
+	if !cmp.Equal(ext.Status.Konnect, expectedKonnectStatus) {
+		ext.Status.Konnect = expectedKonnectStatus
+		toUpdate = true
+	}
+
+	expectedDataPlaneClientAuth := &konnectv1alpha1.DataPlaneClientAuthStatus{
+		CertificateSecretRef: &konnectv1alpha1.SecretRef{
+			Name: certificateSecret.Name,
+		},
+	}
+	if !cmp.Equal(ext.Status.DataPlaneClientAuth, expectedDataPlaneClientAuth) {
+		ext.Status.DataPlaneClientAuth = expectedDataPlaneClientAuth
+		toUpdate = true
+	}
+
+	return toUpdate
+}
+
 func konnectClusterTypeToCRDClusterType(clusterType sdkkonnectcomp.ControlPlaneClusterType) konnectv1alpha1.KonnectExtensionClusterType {
 	switch clusterType {
 	// When it's not specified by the caller (left empty) in Konnect it's set to CLUSTER_TYPE_CONTROL_PLANE.
