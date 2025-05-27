@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.0.0-alpha.0](#v200-alpha0)
 - [v1.6.1](#v161)
 - [v1.6.0](#v160)
 - [v1.5.1](#v151)
@@ -28,7 +29,12 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased for Kong Operator
+## [v2.0.0-alpha.0]
+
+> Release date: 2025-06-11
+
+> KGO becomes KO, which stands for Kong Operator - Kubernetes Gateway Operator and Kubernetes Ingress Controller
+> become a single product.
 
 ### Added
 

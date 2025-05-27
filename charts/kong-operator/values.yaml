@@ -1,8 +1,6 @@
 image:
-  ## TODO: Use docker.io/kong/kong-operator when that becomes available
-  ## https://github.com/Kong/gateway-operator/issues/1598
-  repository: docker.io/kong/gateway-operator
-  tag: "1.6"
+  repository: docker.io/kong/kong-operator
+  tag: "2.0.0-alpha.0"
   # Optionally set a semantic version for version-gated features. This can normally
   # be left unset. You only need to set this if your tag is not a semver string,
   # such as when you are using a "next" tag. Set this to the effective semantic

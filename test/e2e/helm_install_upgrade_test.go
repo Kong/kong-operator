@@ -64,8 +64,9 @@ func TestHelmUpgrade(t *testing.T) {
 	}{
 		{
 			name:        "upgrade from one before latest to latest minor",
-			fromVersion: "1.4.2", // renovate: datasource=docker packageName=kong/gateway-operator-oss depName=kong/gateway-operator-oss@only-patch
-			toVersion:   "1.6.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss depName=kong/gateway-operator-oss
+			skip:        "Two versions are needed to upgrade from, but currently only one exists (https://github.com/Kong/gateway-operator/issues/1716)",
+			fromVersion: "2.0.0-alpha.0", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator@only-patch
+			toVersion:   "2.0.0-alpha.0", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -137,11 +138,11 @@ func TestHelmUpgrade(t *testing.T) {
 		{
 			name:             "upgrade from latest minor to current",
 			skip:             "ControlPlane assertions have to be adjusted to KIC as a library approach (https://github.com/Kong/gateway-operator/issues/1188)",
-			fromVersion:      "1.6.0", // renovate: datasource=docker packageName=kong/gateway-operator-oss depName=kong/gateway-operator-oss
+			fromVersion:      "2.0.0-alpha.0", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release.
 			// It's needed for the chart to properly render semver-conditional templates.
-			upgradeToEffectiveSemver: "1.6.0",
+			upgradeToEffectiveSemver: "2.0.0-alpha.0",
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -216,7 +217,7 @@ func TestHelmUpgrade(t *testing.T) {
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release.
 			// It's needed for the chart to properly render semver-conditional templates.
-			upgradeToEffectiveSemver: "1.6.0",
+			upgradeToEffectiveSemver: "2.0.0-alpha.0",
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -291,10 +292,10 @@ func TestHelmUpgrade(t *testing.T) {
 		currentTag        string
 	)
 	if imageLoad != "" {
-		t.Logf("KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD set to %q", imageLoad)
+		t.Logf("KONG_TEST_KONG_OPERATOR_IMAGE_LOAD set to %q", imageLoad)
 		currentRepository, currentTag = splitRepoVersionFromImage(t, imageLoad)
 	} else if imageOverride != "" {
-		t.Logf("KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE set to %q", imageOverride)
+		t.Logf("KONG_TEST_KONG_OPERATOR_IMAGE_OVERRIDE set to %q", imageOverride)
 		currentRepository, currentTag = splitRepoVersionFromImage(t, imageOverride)
 	}
 
@@ -304,21 +305,16 @@ func TestHelmUpgrade(t *testing.T) {
 				t.Skip(tc.skip)
 			}
 
-			// Repository is different for OSS and Enterprise images and it should be set accordingly.
-			kgoImageRepository := "docker.io/kong/gateway-operator-oss"
-			kgoImageRepositoryNightly := "docker.io/kong/nightly-gateway-operator-oss"
-			if helpers.GetDefaultDataPlaneBaseImage() == consts.DefaultDataPlaneBaseEnterpriseImage {
-				kgoImageRepository = "docker.io/kong/gateway-operator"
-				kgoImageRepositoryNightly = "docker.io/kong/nightly-gateway-operator"
-			}
+			const koImageRepositoryNightly = "docker.io/kong/nightly-kong-operator"
 			var (
-				tag              string
-				targetRepository = kgoImageRepository
+				koImageRepository = "docker.io/kong/kong-operator"
+				targetRepository  = koImageRepository
+				tag               string
 			)
 			if tc.upgradeToCurrent {
 				if currentTag == "" {
 					t.Skip(
-						"No KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE nor KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD env specified. " +
+						"No KONG_TEST_KONG_OPERATOR_IMAGE_OVERRIDE nor KONG_TEST_KONG_OPERATOR_IMAGE_LOAD env specified. " +
 							"Please specify the image to upgrade to in order to run this test.",
 					)
 				}
@@ -334,11 +330,11 @@ func TestHelmUpgrade(t *testing.T) {
 			}
 			releaseName := strings.ReplaceAll(fmt.Sprintf("kgo-%s-to-%s", tc.fromVersion, tagInReleaseName), ".", "-")
 			if strings.Contains(tc.fromVersion, "nightly") {
-				kgoImageRepository = kgoImageRepositoryNightly
+				koImageRepository = koImageRepositoryNightly
 			}
 			values := map[string]string{
 				"image.tag":                          tc.fromVersion,
-				"image.repository":                   kgoImageRepository,
+				"image.repository":                   koImageRepository,
 				"readinessProbe.initialDelaySeconds": "1",
 				"readinessProbe.periodSeconds":       "1",
 				// Disable leader election and anonymous reports for tests.

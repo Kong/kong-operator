@@ -19,7 +19,7 @@ import (
 //go:embed *
 var configYAMLs embed.FS
 
-// DumpKustomizeConfigToTempDir saves kustomize (directory ./config from KGO OSS repository)
+// DumpKustomizeConfigToTempDir saves kustomize (directory ./config from KO OSS repository)
 // YAMLs used for testing to a temp dir and returns the path to the dir to be used with kubectl.
 // Use returned cleaner function (only when no error is returned) to remove the directory.
 func DumpKustomizeConfigToTempDir() (path string, cleaner func(), err error) {

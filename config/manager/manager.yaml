@@ -32,7 +32,7 @@ spec:
       containers:
       - command:
         - /manager
-        image: docker.io/kong/gateway-operator-oss:main
+        image: docker.io/kong/kong-operator:main
         name: manager
         env:
         - name: POD_NAMESPACE

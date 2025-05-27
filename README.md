@@ -40,15 +40,15 @@ See our [Features Page](/FEATURES.md) for details on these capabilities.
 
 The operator provides 2 APIs:
 
-- YAML / manifests API which users use to apply their manifests against Kubernetes clusters.
-- Go API through types exported under [api/](https://github.com/Kong/gateway-operator/tree/main/api)
+* YAML / manifests API which users use to apply their manifests against Kubernetes clusters.
+* Go API through types exported under [api/](https://github.com/Kong/gateway-operator/tree/main/api)
   and other exported packages.
 
 This project:
 
-- Follows [Kubernetes API versioning][k8s_api_versioning] for the YAML API.
-  - This is considered part of the user contract.
-- Tries to not break users implementing against operator's Go API but does not
+* Follows [Kubernetes API versioning][k8s_api_versioning] for the YAML API.
+  * This is considered part of the user contract.
+* Tries to not break users implementing against operator's Go API but does not
   offer a non breaking guarantee.
 
 [k8s_api_versioning]: https://kubernetes.io/docs/reference/using-api/#api-versioning
@@ -63,21 +63,21 @@ detailed description of how to thoroughly use this project.
 
 ### Release images
 
-Release builds can be found on Docker Hub in [kong/gateway-operator-oss repository][dockerhub-kgo-oss].
+Release builds can be found on Docker Hub in [kong/kong-operator repository][dockerhub-ko].
 
 At the moment we're providing images for:
 
-- Linux `amd64`
-- Linux `arm64`
+* Linux `amd64`
+* Linux `arm64`
 
-[dockerhub-kgo-oss]: https://hub.docker.com/r/kong/gateway-operator-oss
+[dockerhub-ko]: https://hub.docker.com/r/kong/kong-operator
 
 ### `main` branch builds
 
 Nightly pre-release builds of the `main` branch are available from the
-[kong/nightly-gateway-operator-oss repository][dockerhub-kgo-nightly] hosted on Docker Hub.
+[kong/nightly-kong-operator repository][dockerhub-ko-nightly] hosted on Docker Hub.
 
-[dockerhub-kgo-nightly]: https://hub.docker.com/r/kong/nightly-gateway-operator-oss
+[dockerhub-ko-nightly]: https://hub.docker.com/r/kong/nightly-kong-operator
 
 ## Development
 
@@ -106,9 +106,10 @@ machine against the cluster that you have configured via your `KUBECONFIG`.
 ### Adding new CRDs
 
 Whenever you add a new CRD:
-- Ensure that it is included in project's [`PROJECT`](./PROJECT) file. This is necessary for creation of
+
+* Ensure that it is included in project's [`PROJECT`](./PROJECT) file. This is necessary for creation of
   a bundle for external hubs like [Operator Hub's community operators][community-operators].
-- Annotate the CRD and any new type it depends on with the right markers to make sure it will be included
+* Annotate the CRD and any new type it depends on with the right markers to make sure it will be included
   in the generated documentation. See [available markers][available-markers].
 
 [community-operators]: https://github.com/k8s-operatorhub/community-operators/
