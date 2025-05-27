@@ -64,6 +64,8 @@ const (
 	DataPlaneOwnedDeploymentFinalizerControllerName = "DataPlaneOwnedDeploymentFinalizer"
 	// KonnectExtensionControllerName is the name of the KonnectExtension controller.
 	KonnectExtensionControllerName = "KonnectExtension"
+	// KonnectExtensionCertificateControllerName is the name of the KonnectExtensionCertificate controller.
+	KonnectExtensionCertificateControllerName = "KonnectExtensionCertificate"
 	// AIGatewayControllerName is the name of the AIGateway controller.
 	AIGatewayControllerName = "AIGateway"
 	// KongPluginInstallationControllerName is the name of the KongPluginInstallation controller.
@@ -644,6 +646,14 @@ func SetupControllers(mgr manager.Manager, c *Config) (map[string]ControllerDef,
 					ClusterCASecretName:      c.ClusterCASecretName,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 					ClusterCAKeyConfig:       clusterCAKeyConfig,
+				},
+			},
+
+			KonnectExtensionCertificateControllerName: {
+				Enabled: (c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled) && c.KonnectControllersEnabled,
+				Controller: &konnect.KonnectExtensionCertificateReconciler{
+					LoggingMode: c.LoggingMode,
+					Client:      mgr.GetClient(),
 				},
 			},
 
