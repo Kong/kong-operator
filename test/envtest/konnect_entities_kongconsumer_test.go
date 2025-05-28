@@ -737,7 +737,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 				mock.MatchedBy(
 					func(r sdkkonnectops.CreateKeyAuthWithConsumerRequest) bool {
 						return r.ControlPlaneID == cp.GetKonnectID() &&
-							r.KeyAuthWithoutParents.Key == "api-key"
+							r.KeyAuthWithoutParents.Key != nil && *r.KeyAuthWithoutParents.Key == "api-key"
 					},
 				),
 			).

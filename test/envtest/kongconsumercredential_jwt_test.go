@@ -92,7 +92,7 @@ func TestKongConsumerCredential_JWT(t *testing.T) {
 			sdkkonnectops.CreateJwtWithConsumerRequest{
 				ControlPlaneID:              cp.GetKonnectStatus().GetKonnectID(),
 				ConsumerIDForNestedEntities: consumerID,
-				JWTWithoutParents: sdkkonnectcomp.JWTWithoutParents{
+				JWTWithoutParents: &sdkkonnectcomp.JWTWithoutParents{
 					Key:       lo.ToPtr("key"),
 					Algorithm: lo.ToPtr(sdkkonnectcomp.JWTWithoutParentsAlgorithmHs256),
 					Tags:      tags,
