@@ -3,6 +3,7 @@ package ops
 import (
 	"testing"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -102,4 +103,259 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 		"tag4",
 	}
 	require.ElementsMatch(t, expectedTags, output.Tags)
+}
+
+func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
+	plugin := &configurationv1.KongPlugin{
+		PluginName:   "basic-auth",
+		InstanceName: "my-plugin",
+		Disabled:     false,
+		Protocols:    []configurationv1.KongProtocol{"http", "https"},
+	}
+
+	pluginWithoutInstanceName := &configurationv1.KongPlugin{
+		PluginName: "basic-auth",
+		Disabled:   false,
+	}
+
+	binding := &configurationv1alpha1.KongPluginBinding{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-binding",
+			Namespace: "default",
+		},
+		Spec: configurationv1alpha1.KongPluginBindingSpec{},
+	}
+
+	tests := []struct {
+		name          string
+		binding       *configurationv1alpha1.KongPluginBinding
+		plugin        *configurationv1.KongPlugin
+		targets       []pluginTarget
+		tags          []string
+		expected      *sdkkonnectcomp.Plugin
+		expectedError bool
+	}{
+		{
+			name:    "no targets with global scope",
+			binding: binding,
+			plugin:  plugin,
+			targets: nil,
+			tags:    []string{"tag1", "tag2"},
+			expected: &sdkkonnectcomp.Plugin{
+				Name:         "basic-auth",
+				Config:       map[string]any{},
+				Enabled:      lo.ToPtr(true),
+				Tags:         []string{"tag1", "tag2"},
+				InstanceName: lo.ToPtr("my-plugin"),
+				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
+			},
+		},
+		{
+			name: "no targets with target-only scope should fail",
+			binding: &configurationv1alpha1.KongPluginBinding{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-binding",
+					Namespace: "default",
+				},
+				Spec: configurationv1alpha1.KongPluginBindingSpec{
+					Scope: configurationv1alpha1.KongPluginBindingScopeOnlyTargets,
+				},
+			},
+			plugin:        plugin,
+			targets:       nil,
+			tags:          []string{"tag1", "tag2"},
+			expectedError: true,
+		},
+		{
+			name:    "with service target",
+			binding: binding,
+			plugin:  plugin,
+			targets: []pluginTarget{
+				&configurationv1alpha1.KongService{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service-1",
+						Namespace: "default",
+					},
+					Status: configurationv1alpha1.KongServiceStatus{
+						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+								ID: "service-id-123",
+							},
+						},
+					},
+				},
+			},
+			tags: []string{"tag1", "tag2"},
+			expected: &sdkkonnectcomp.Plugin{
+				Name:         "basic-auth",
+				Config:       map[string]any{},
+				Enabled:      lo.ToPtr(true),
+				Tags:         []string{"tag1", "tag2"},
+				InstanceName: lo.ToPtr("my-plugin"),
+				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
+				Service: &sdkkonnectcomp.PluginService{
+					ID: lo.ToPtr("service-id-123"),
+				},
+			},
+		},
+		{
+			name:    "with route target",
+			binding: binding,
+			plugin:  plugin,
+			targets: []pluginTarget{
+				&configurationv1alpha1.KongRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "route-1",
+						Namespace: "default",
+					},
+					Status: configurationv1alpha1.KongRouteStatus{
+						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs{
+							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+								ID: "route-id-123",
+							},
+						},
+					},
+				},
+			},
+			tags: []string{"tag1", "tag2"},
+			expected: &sdkkonnectcomp.Plugin{
+				Name:         "basic-auth",
+				Config:       map[string]any{},
+				Enabled:      lo.ToPtr(true),
+				Tags:         []string{"tag1", "tag2"},
+				InstanceName: lo.ToPtr("my-plugin"),
+				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
+				Route: &sdkkonnectcomp.PluginRoute{
+					ID: lo.ToPtr("route-id-123"),
+				},
+			},
+		},
+		{
+			name:    "with consumer target",
+			binding: binding,
+			plugin:  plugin,
+			targets: []pluginTarget{
+				&configurationv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "consumer-1",
+						Namespace: "default",
+					},
+					Status: configurationv1.KongConsumerStatus{
+						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+								ID: "consumer-id-123",
+							},
+						},
+					},
+				},
+			},
+			tags: []string{"tag1", "tag2"},
+			expected: &sdkkonnectcomp.Plugin{
+				Name:         "basic-auth",
+				Config:       map[string]any{},
+				Enabled:      lo.ToPtr(true),
+				Tags:         []string{"tag1", "tag2"},
+				InstanceName: lo.ToPtr("my-plugin"),
+				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
+				Consumer: &sdkkonnectcomp.PluginConsumer{
+					ID: lo.ToPtr("consumer-id-123"),
+				},
+			},
+		},
+		{
+			name:    "with multiple targets",
+			binding: binding,
+			plugin:  plugin,
+			targets: []pluginTarget{
+				&configurationv1alpha1.KongService{
+					ObjectMeta: metav1.ObjectMeta{Name: "service-1"},
+					Status: configurationv1alpha1.KongServiceStatus{
+						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{ID: "service-id-123"},
+						},
+					},
+				},
+				&configurationv1.KongConsumer{
+					ObjectMeta: metav1.ObjectMeta{Name: "consumer-1"},
+					Status: configurationv1.KongConsumerStatus{
+						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{ID: "consumer-id-123"},
+						},
+					},
+				},
+			},
+			tags: []string{"tag1", "tag2"},
+			expected: &sdkkonnectcomp.Plugin{
+				Name:         "basic-auth",
+				Config:       map[string]any{},
+				Enabled:      lo.ToPtr(true),
+				Tags:         []string{"tag1", "tag2"},
+				InstanceName: lo.ToPtr("my-plugin"),
+				Protocols:    []sdkkonnectcomp.Protocols{"http", "https"},
+				Service: &sdkkonnectcomp.PluginService{
+					ID: lo.ToPtr("service-id-123"),
+				},
+				Consumer: &sdkkonnectcomp.PluginConsumer{
+					ID: lo.ToPtr("consumer-id-123"),
+				},
+			},
+		},
+		{
+			name:    "target without konnect id",
+			binding: binding,
+			plugin:  plugin,
+			targets: []pluginTarget{
+				&configurationv1alpha1.KongService{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service-1",
+						Namespace: "default",
+					},
+					Status: configurationv1alpha1.KongServiceStatus{},
+				},
+			},
+			tags:          []string{"tag1", "tag2"},
+			expectedError: true,
+		},
+		{
+			name:    "plugin without instance name",
+			binding: binding,
+			plugin:  pluginWithoutInstanceName,
+			targets: []pluginTarget{
+				&configurationv1alpha1.KongService{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service-1",
+						Namespace: "default",
+					},
+					Status: configurationv1alpha1.KongServiceStatus{
+						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+								ID: "service-id-123",
+							},
+						},
+					},
+				},
+			},
+			expected: &sdkkonnectcomp.Plugin{
+				Name:    "basic-auth",
+				Config:  map[string]any{},
+				Enabled: lo.ToPtr(true),
+				Service: &sdkkonnectcomp.PluginService{
+					ID: lo.ToPtr("service-id-123"),
+				},
+			},
+		},
+		// TODO Add test cases for plugin ordering https://github.com/Kong/gateway-operator/issues/1682
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := kongPluginWithTargetsToKongPluginInput(tc.binding, tc.plugin, tc.targets, tc.tags)
+			if tc.expectedError {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, result)
+		})
+	}
 }

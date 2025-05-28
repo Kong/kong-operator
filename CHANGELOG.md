@@ -37,6 +37,11 @@
 - Move implementation of certificate management for Konnect DPs from EE.
   [#1590](https://github.com/Kong/gateway-operator/pull/1590)
 
+### Fixed
+
+- Fixed lack of `instance_name` and `protocols` reconciliation for `KongPluginBinding` when reconciling against Konnect.
+  [#1681](https://github.com/Kong/gateway-operator/pull/1681)
+
 ## [v1.6.1]
 
 > Release date: 2025-05-22
