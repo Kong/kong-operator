@@ -94,11 +94,6 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	res, err := RemoveOwnerRefIfSet(ctx, cl, ent, cert)
-	if err != nil || !res.IsZero() {
-		return res, err
-	}
-
 	// TODO: make this more generic.
 	if sni, ok := any(ent).(*configurationv1alpha1.KongSNI); ok {
 		if sni.Status.Konnect == nil {

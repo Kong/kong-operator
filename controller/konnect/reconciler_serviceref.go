@@ -215,11 +215,6 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 		resource.SetControlPlaneID(cp.Status.ID)
 	}
 
-	res, err := RemoveOwnerRefIfSet(ctx, cl, ent, &kongSvc)
-	if err != nil || !res.IsZero() {
-		return res, err
-	}
-
 	return ctrl.Result{}, nil
 }
 

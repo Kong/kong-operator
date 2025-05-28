@@ -117,11 +117,6 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	res, err := RemoveOwnerRefIfSet(ctx, cl, ent, &keySet)
-	if err != nil || !res.IsZero() {
-		return res, err
-	}
-
 	old := ent.DeepCopyObject().(TEnt)
 
 	// TODO: make this generic.
@@ -141,7 +136,7 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 		fmt.Sprintf("Referenced KongKeySet %s programmed", nn),
 	)
 
-	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
+	_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
 	if err != nil {
 		if k8serrors.IsConflict(err) {
 			return ctrl.Result{Requeue: true}, nil

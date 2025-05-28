@@ -101,11 +101,6 @@ func handleKongConsumerRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	res, err := RemoveOwnerRefIfSet(ctx, cl, ent, &consumer)
-	if err != nil || !res.IsZero() {
-		return res, err
-	}
-
 	type EntityWithConsumerRef interface {
 		SetKonnectConsumerIDInStatus(string)
 	}
