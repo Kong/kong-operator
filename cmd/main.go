@@ -22,6 +22,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/modules/cli"
 	"github.com/kong/gateway-operator/modules/manager"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
@@ -35,6 +36,7 @@ func main() {
 	cfg := cli.Parse(os.Args[1:])
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(cfg.LoggerOpts)))
+	secrets.SetCALogger(ctrl.Log)
 
 	if err := manager.Run(cfg, scheme.Get(), manager.SetupControllers, nil, m); err != nil {
 		ctrl.Log.Error(err, "failed to run manager")

@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/cloudflare/cfssl/config"
@@ -25,7 +24,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/gateway-operator/controller/pkg/dataplane"
 	"github.com/kong/gateway-operator/controller/pkg/op"
@@ -37,6 +35,12 @@ import (
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
+
+// SetCALogger sets the logger for the CFSSL signer. Call it once at the start
+// of the program to ensure that CFSSL logs are captured by the operator's logger.
+func SetCALogger(logger logr.Logger) {
+	cflog.SetLogger(loggerShim{logger: logger})
+}
 
 // -----------------------------------------------------------------------------
 // Private Functions - Certificate management
@@ -64,14 +68,6 @@ func (l loggerShim) Crit(msg string) { l.logger.V(logging.InfoLevel.Value()).Inf
 
 // Emerg logs on emergency level.
 func (l loggerShim) Emerg(msg string) { l.logger.V(logging.InfoLevel.Value()).Info(msg) }
-
-var caLoggerInit sync.Once
-
-func setCALogger(logger logr.Logger) {
-	caLoggerInit.Do(func() {
-		cflog.SetLogger(loggerShim{logger: logger})
-	})
-}
 
 /*
 Adapted from the Kubernetes CFSSL signer:
@@ -189,8 +185,6 @@ func EnsureCertificate[
 	cl client.Client,
 	additionalMatchingLabels client.MatchingLabels,
 ) (op.Result, *corev1.Secret, error) {
-	setCALogger(ctrllog.Log)
-
 	// Get the Secrets for the DataPlane using new labels.
 	matchingLabels := k8sresources.GetManagedLabelForOwner(owner)
 	for k, v := range additionalMatchingLabels {
