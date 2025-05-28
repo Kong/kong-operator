@@ -101,9 +101,10 @@ func deleteKongCredentialAPIKey(
 
 func kongCredentialAPIKeyToKeyAuthWithoutParents(
 	cred *configurationv1alpha1.KongCredentialAPIKey,
-) sdkkonnectcomp.KeyAuthWithoutParents {
-	return sdkkonnectcomp.KeyAuthWithoutParents{
-		Key:  cred.Spec.Key,
+) *sdkkonnectcomp.KeyAuthWithoutParents {
+	return &sdkkonnectcomp.KeyAuthWithoutParents{
+		// Key is required in CRD so we don't need to check if it has been provided.
+		Key:  lo.ToPtr(cred.Spec.Key),
 		Tags: GenerateTagsForObject(cred, cred.Spec.Tags...),
 	}
 }

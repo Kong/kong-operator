@@ -101,8 +101,8 @@ func deleteKongCredentialJWT(
 
 func kongCredentialJWTToJWTWithoutParents(
 	cred *configurationv1alpha1.KongCredentialJWT,
-) sdkkonnectcomp.JWTWithoutParents {
-	ret := sdkkonnectcomp.JWTWithoutParents{
+) *sdkkonnectcomp.JWTWithoutParents {
+	ret := &sdkkonnectcomp.JWTWithoutParents{
 		Key:          cred.Spec.Key,
 		Algorithm:    (*sdkkonnectcomp.JWTWithoutParentsAlgorithm)(&cred.Spec.Algorithm),
 		RsaPublicKey: cred.Spec.RSAPublicKey,
