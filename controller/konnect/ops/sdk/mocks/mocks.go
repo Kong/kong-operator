@@ -98,7 +98,10 @@ func (_c *MockControlPlaneSDK_CreateControlPlane_Call) Run(run func(ctx context.
 			arg1 = args[1].(components.CreateControlPlaneRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -178,7 +181,10 @@ func (_c *MockControlPlaneSDK_DeleteControlPlane_Call) Run(run func(ctx context.
 			arg1 = args[1].(string)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -258,7 +264,10 @@ func (_c *MockControlPlaneSDK_ListControlPlanes_Call) Run(run func(ctx context.C
 			arg1 = args[1].(operations.ListControlPlanesRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -343,7 +352,10 @@ func (_c *MockControlPlaneSDK_UpdateControlPlane_Call) Run(run func(ctx context.
 			arg2 = args[2].(components.UpdateControlPlaneRequest)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -456,7 +468,10 @@ func (_c *MockControlPlaneGroupSDK_PutControlPlanesIDGroupMemberships_Call) Run(
 			arg2 = args[2].(*components.GroupMembership)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -564,7 +579,10 @@ func (_c *MockKongCredentialACLSDK_CreateACLWithConsumer_Call) Run(run func(ctx 
 			arg1 = args[1].(operations.CreateACLWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -644,7 +662,10 @@ func (_c *MockKongCredentialACLSDK_DeleteACLWithConsumer_Call) Run(run func(ctx 
 			arg1 = args[1].(operations.DeleteACLWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -724,7 +745,10 @@ func (_c *MockKongCredentialACLSDK_ListACL_Call) Run(run func(ctx context.Contex
 			arg1 = args[1].(operations.ListACLRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -804,7 +828,10 @@ func (_c *MockKongCredentialACLSDK_UpsertACLWithConsumer_Call) Run(run func(ctx 
 			arg1 = args[1].(operations.UpsertACLWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -911,7 +938,10 @@ func (_c *MockKongCredentialAPIKeySDK_CreateKeyAuthWithConsumer_Call) Run(run fu
 			arg1 = args[1].(operations.CreateKeyAuthWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -991,7 +1021,10 @@ func (_c *MockKongCredentialAPIKeySDK_DeleteKeyAuthWithConsumer_Call) Run(run fu
 			arg1 = args[1].(operations.DeleteKeyAuthWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -1071,7 +1104,10 @@ func (_c *MockKongCredentialAPIKeySDK_ListKeyAuth_Call) Run(run func(ctx context
 			arg1 = args[1].(operations.ListKeyAuthRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -1151,7 +1187,10 @@ func (_c *MockKongCredentialAPIKeySDK_UpsertKeyAuthWithConsumer_Call) Run(run fu
 			arg1 = args[1].(operations.UpsertKeyAuthWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -1258,7 +1297,10 @@ func (_c *MockKongCredentialBasicAuthSDK_CreateBasicAuthWithConsumer_Call) Run(r
 			arg1 = args[1].(operations.CreateBasicAuthWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -1338,7 +1380,10 @@ func (_c *MockKongCredentialBasicAuthSDK_DeleteBasicAuthWithConsumer_Call) Run(r
 			arg1 = args[1].(operations.DeleteBasicAuthWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -1418,7 +1463,10 @@ func (_c *MockKongCredentialBasicAuthSDK_ListBasicAuth_Call) Run(run func(ctx co
 			arg1 = args[1].(operations.ListBasicAuthRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -1498,7 +1546,10 @@ func (_c *MockKongCredentialBasicAuthSDK_UpsertBasicAuthWithConsumer_Call) Run(r
 			arg1 = args[1].(operations.UpsertBasicAuthWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -1605,7 +1656,10 @@ func (_c *MockKongCredentialHMACSDK_CreateHmacAuthWithConsumer_Call) Run(run fun
 			arg1 = args[1].(operations.CreateHmacAuthWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -1685,7 +1739,10 @@ func (_c *MockKongCredentialHMACSDK_DeleteHmacAuthWithConsumer_Call) Run(run fun
 			arg1 = args[1].(operations.DeleteHmacAuthWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -1765,7 +1822,10 @@ func (_c *MockKongCredentialHMACSDK_ListHmacAuth_Call) Run(run func(ctx context.
 			arg1 = args[1].(operations.ListHmacAuthRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -1845,7 +1905,10 @@ func (_c *MockKongCredentialHMACSDK_UpsertHmacAuthWithConsumer_Call) Run(run fun
 			arg1 = args[1].(operations.UpsertHmacAuthWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -1952,7 +2015,10 @@ func (_c *MockKongCredentialJWTSDK_CreateJwtWithConsumer_Call) Run(run func(ctx 
 			arg1 = args[1].(operations.CreateJwtWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -2032,7 +2098,10 @@ func (_c *MockKongCredentialJWTSDK_DeleteJwtWithConsumer_Call) Run(run func(ctx 
 			arg1 = args[1].(operations.DeleteJwtWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -2112,7 +2181,10 @@ func (_c *MockKongCredentialJWTSDK_ListJwt_Call) Run(run func(ctx context.Contex
 			arg1 = args[1].(operations.ListJwtRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -2192,7 +2264,10 @@ func (_c *MockKongCredentialJWTSDK_UpsertJwtWithConsumer_Call) Run(run func(ctx 
 			arg1 = args[1].(operations.UpsertJwtWithConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -2299,7 +2374,10 @@ func (_c *MockCloudGatewaysSDK_CreateConfiguration_Call) Run(run func(ctx contex
 			arg1 = args[1].(components.CreateConfigurationRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -2379,7 +2457,10 @@ func (_c *MockCloudGatewaysSDK_CreateNetwork_Call) Run(run func(ctx context.Cont
 			arg1 = args[1].(components.CreateNetworkRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -2464,7 +2545,10 @@ func (_c *MockCloudGatewaysSDK_CreateTransitGateway_Call) Run(run func(ctx conte
 			arg2 = args[2].(components.CreateTransitGatewayRequest)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -2545,7 +2629,10 @@ func (_c *MockCloudGatewaysSDK_DeleteNetwork_Call) Run(run func(ctx context.Cont
 			arg1 = args[1].(string)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -2630,7 +2717,10 @@ func (_c *MockCloudGatewaysSDK_DeleteTransitGateway_Call) Run(run func(ctx conte
 			arg2 = args[2].(string)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -2711,7 +2801,10 @@ func (_c *MockCloudGatewaysSDK_GetConfiguration_Call) Run(run func(ctx context.C
 			arg1 = args[1].(string)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -2791,7 +2884,10 @@ func (_c *MockCloudGatewaysSDK_GetNetwork_Call) Run(run func(ctx context.Context
 			arg1 = args[1].(string)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -2876,7 +2972,10 @@ func (_c *MockCloudGatewaysSDK_GetTransitGateway_Call) Run(run func(ctx context.
 			arg2 = args[2].(string)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -2957,7 +3056,10 @@ func (_c *MockCloudGatewaysSDK_ListConfigurations_Call) Run(run func(ctx context
 			arg1 = args[1].(operations.ListConfigurationsRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -3037,7 +3139,10 @@ func (_c *MockCloudGatewaysSDK_ListNetworks_Call) Run(run func(ctx context.Conte
 			arg1 = args[1].(operations.ListNetworksRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -3117,7 +3222,10 @@ func (_c *MockCloudGatewaysSDK_ListTransitGateways_Call) Run(run func(ctx contex
 			arg1 = args[1].(operations.ListTransitGatewaysRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -3202,7 +3310,10 @@ func (_c *MockCloudGatewaysSDK_UpdateNetwork_Call) Run(run func(ctx context.Cont
 			arg2 = args[2].(components.PatchNetworkRequest)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -3315,7 +3426,10 @@ func (_c *MockCACertificatesSDK_CreateCaCertificate_Call) Run(run func(ctx conte
 			arg2 = args[2].(components.CACertificate)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -3401,7 +3515,10 @@ func (_c *MockCACertificatesSDK_DeleteCaCertificate_Call) Run(run func(ctx conte
 			arg2 = args[2].(string)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -3482,7 +3599,10 @@ func (_c *MockCACertificatesSDK_ListCaCertificate_Call) Run(run func(ctx context
 			arg1 = args[1].(operations.ListCaCertificateRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -3562,7 +3682,10 @@ func (_c *MockCACertificatesSDK_UpsertCaCertificate_Call) Run(run func(ctx conte
 			arg1 = args[1].(operations.UpsertCaCertificateRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -3674,7 +3797,10 @@ func (_c *MockCertificatesSDK_CreateCertificate_Call) Run(run func(ctx context.C
 			arg2 = args[2].(components.Certificate)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -3760,7 +3886,10 @@ func (_c *MockCertificatesSDK_DeleteCertificate_Call) Run(run func(ctx context.C
 			arg2 = args[2].(string)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -3841,7 +3970,10 @@ func (_c *MockCertificatesSDK_ListCertificate_Call) Run(run func(ctx context.Con
 			arg1 = args[1].(operations.ListCertificateRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -3921,7 +4053,10 @@ func (_c *MockCertificatesSDK_UpsertCertificate_Call) Run(run func(ctx context.C
 			arg1 = args[1].(operations.UpsertCertificateRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -4033,7 +4168,10 @@ func (_c *MockConsumersSDK_CreateConsumer_Call) Run(run func(ctx context.Context
 			arg2 = args[2].(components.Consumer)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -4119,7 +4257,10 @@ func (_c *MockConsumersSDK_DeleteConsumer_Call) Run(run func(ctx context.Context
 			arg2 = args[2].(string)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -4200,7 +4341,10 @@ func (_c *MockConsumersSDK_ListConsumer_Call) Run(run func(ctx context.Context, 
 			arg1 = args[1].(operations.ListConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -4280,7 +4424,10 @@ func (_c *MockConsumersSDK_UpsertConsumer_Call) Run(run func(ctx context.Context
 			arg1 = args[1].(operations.UpsertConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -4387,7 +4534,10 @@ func (_c *MockConsumerGroupSDK_AddConsumerToGroup_Call) Run(run func(ctx context
 			arg1 = args[1].(operations.AddConsumerToGroupRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -4472,7 +4622,10 @@ func (_c *MockConsumerGroupSDK_CreateConsumerGroup_Call) Run(run func(ctx contex
 			arg2 = args[2].(components.ConsumerGroup)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -4558,7 +4711,10 @@ func (_c *MockConsumerGroupSDK_DeleteConsumerGroup_Call) Run(run func(ctx contex
 			arg2 = args[2].(string)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -4639,7 +4795,10 @@ func (_c *MockConsumerGroupSDK_ListConsumerGroup_Call) Run(run func(ctx context.
 			arg1 = args[1].(operations.ListConsumerGroupRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -4719,7 +4878,10 @@ func (_c *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call) Run(run func(
 			arg1 = args[1].(operations.ListConsumerGroupsForConsumerRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -4799,7 +4961,10 @@ func (_c *MockConsumerGroupSDK_RemoveConsumerFromGroup_Call) Run(run func(ctx co
 			arg1 = args[1].(operations.RemoveConsumerFromGroupRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -4879,7 +5044,10 @@ func (_c *MockConsumerGroupSDK_UpsertConsumerGroup_Call) Run(run func(ctx contex
 			arg1 = args[1].(operations.UpsertConsumerGroupRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -4991,7 +5159,10 @@ func (_c *MockDataPlaneClientCertificatesSDK_CreateDataplaneCertificate_Call) Ru
 			arg2 = args[2].(*components.DataPlaneClientCertificateRequest)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -5077,7 +5248,10 @@ func (_c *MockDataPlaneClientCertificatesSDK_DeleteDataplaneCertificate_Call) Ru
 			arg2 = args[2].(string)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -5158,7 +5332,10 @@ func (_c *MockDataPlaneClientCertificatesSDK_ListDpClientCertificates_Call) Run(
 			arg1 = args[1].(string)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -5270,7 +5447,10 @@ func (_c *MockKeysSDK_CreateKey_Call) Run(run func(ctx context.Context, controlP
 			arg2 = args[2].(components.Key)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -5356,7 +5536,10 @@ func (_c *MockKeysSDK_DeleteKey_Call) Run(run func(ctx context.Context, controlP
 			arg2 = args[2].(string)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -5437,7 +5620,10 @@ func (_c *MockKeysSDK_ListKey_Call) Run(run func(ctx context.Context, request op
 			arg1 = args[1].(operations.ListKeyRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -5517,7 +5703,10 @@ func (_c *MockKeysSDK_UpsertKey_Call) Run(run func(ctx context.Context, request 
 			arg1 = args[1].(operations.UpsertKeyRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -5629,7 +5818,10 @@ func (_c *MockKeySetsSDK_CreateKeySet_Call) Run(run func(ctx context.Context, co
 			arg2 = args[2].(components.KeySet)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -5715,7 +5907,10 @@ func (_c *MockKeySetsSDK_DeleteKeySet_Call) Run(run func(ctx context.Context, co
 			arg2 = args[2].(string)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -5796,7 +5991,10 @@ func (_c *MockKeySetsSDK_ListKeySet_Call) Run(run func(ctx context.Context, requ
 			arg1 = args[1].(operations.ListKeySetRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -5876,7 +6074,10 @@ func (_c *MockKeySetsSDK_UpsertKeySet_Call) Run(run func(ctx context.Context, re
 			arg1 = args[1].(operations.UpsertKeySetRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -5988,7 +6189,10 @@ func (_c *MockRoutesSDK_CreateRoute_Call) Run(run func(ctx context.Context, cont
 			arg2 = args[2].(components.Route)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -6074,7 +6278,10 @@ func (_c *MockRoutesSDK_DeleteRoute_Call) Run(run func(ctx context.Context, cont
 			arg2 = args[2].(string)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -6155,7 +6362,10 @@ func (_c *MockRoutesSDK_ListRoute_Call) Run(run func(ctx context.Context, reques
 			arg1 = args[1].(operations.ListRouteRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -6235,7 +6445,10 @@ func (_c *MockRoutesSDK_UpsertRoute_Call) Run(run func(ctx context.Context, req 
 			arg1 = args[1].(operations.UpsertRouteRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -6347,7 +6560,10 @@ func (_c *MockServicesSDK_CreateService_Call) Run(run func(ctx context.Context, 
 			arg2 = args[2].(components.Service)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -6433,7 +6649,10 @@ func (_c *MockServicesSDK_DeleteService_Call) Run(run func(ctx context.Context, 
 			arg2 = args[2].(string)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -6514,7 +6733,10 @@ func (_c *MockServicesSDK_ListService_Call) Run(run func(ctx context.Context, re
 			arg1 = args[1].(operations.ListServiceRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -6594,7 +6816,10 @@ func (_c *MockServicesSDK_UpsertService_Call) Run(run func(ctx context.Context, 
 			arg1 = args[1].(operations.UpsertServiceRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -6701,7 +6926,10 @@ func (_c *MockSNIsSDK_CreateSniWithCertificate_Call) Run(run func(context1 conte
 			arg1 = args[1].(operations.CreateSniWithCertificateRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -6781,7 +7009,10 @@ func (_c *MockSNIsSDK_DeleteSniWithCertificate_Call) Run(run func(ctx context.Co
 			arg1 = args[1].(operations.DeleteSniWithCertificateRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -6861,7 +7092,10 @@ func (_c *MockSNIsSDK_ListSni_Call) Run(run func(ctx context.Context, request op
 			arg1 = args[1].(operations.ListSniRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -6941,7 +7175,10 @@ func (_c *MockSNIsSDK_UpsertSniWithCertificate_Call) Run(run func(ctx context.Co
 			arg1 = args[1].(operations.UpsertSniWithCertificateRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -7048,7 +7285,10 @@ func (_c *MockTargetsSDK_CreateTargetWithUpstream_Call) Run(run func(ctx context
 			arg1 = args[1].(operations.CreateTargetWithUpstreamRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -7128,7 +7368,10 @@ func (_c *MockTargetsSDK_DeleteTargetWithUpstream_Call) Run(run func(ctx context
 			arg1 = args[1].(operations.DeleteTargetWithUpstreamRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -7208,7 +7451,10 @@ func (_c *MockTargetsSDK_ListTargetWithUpstream_Call) Run(run func(ctx context.C
 			arg1 = args[1].(operations.ListTargetWithUpstreamRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -7288,7 +7534,10 @@ func (_c *MockTargetsSDK_UpsertTargetWithUpstream_Call) Run(run func(ctx context
 			arg1 = args[1].(operations.UpsertTargetWithUpstreamRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -7400,7 +7649,10 @@ func (_c *MockUpstreamsSDK_CreateUpstream_Call) Run(run func(ctx context.Context
 			arg2 = args[2].(components.Upstream)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -7486,7 +7738,10 @@ func (_c *MockUpstreamsSDK_DeleteUpstream_Call) Run(run func(ctx context.Context
 			arg2 = args[2].(string)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -7567,7 +7822,10 @@ func (_c *MockUpstreamsSDK_ListUpstream_Call) Run(run func(ctx context.Context, 
 			arg1 = args[1].(operations.ListUpstreamRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -7647,7 +7905,10 @@ func (_c *MockUpstreamsSDK_UpsertUpstream_Call) Run(run func(ctx context.Context
 			arg1 = args[1].(operations.UpsertUpstreamRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -7759,7 +8020,10 @@ func (_c *MockVaultSDK_CreateVault_Call) Run(run func(ctx context.Context, contr
 			arg2 = args[2].(components.Vault)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -7845,7 +8109,10 @@ func (_c *MockVaultSDK_DeleteVault_Call) Run(run func(ctx context.Context, contr
 			arg2 = args[2].(string)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -7926,7 +8193,10 @@ func (_c *MockVaultSDK_ListVault_Call) Run(run func(ctx context.Context, request
 			arg1 = args[1].(operations.ListVaultRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -8006,7 +8276,10 @@ func (_c *MockVaultSDK_UpsertVault_Call) Run(run func(ctx context.Context, reque
 			arg1 = args[1].(operations.UpsertVaultRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -8108,7 +8381,10 @@ func (_c *MockMeSDK_GetOrganizationsMe_Call) Run(run func(ctx context.Context, o
 			arg0 = args[0].(context.Context)
 		}
 		var arg1 []operations.Option
-		variadicArgs := args[1].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 1 {
+			variadicArgs = args[1].([]operations.Option)
+		}
 		arg1 = variadicArgs
 		run(
 			arg0,
@@ -8219,7 +8495,10 @@ func (_c *MockPluginSDK_CreatePlugin_Call) Run(run func(ctx context.Context, con
 			arg2 = args[2].(components.Plugin)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -8305,7 +8584,10 @@ func (_c *MockPluginSDK_DeletePlugin_Call) Run(run func(ctx context.Context, con
 			arg2 = args[2].(string)
 		}
 		var arg3 []operations.Option
-		variadicArgs := args[3].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
 		arg3 = variadicArgs
 		run(
 			arg0,
@@ -8386,7 +8668,10 @@ func (_c *MockPluginSDK_ListPlugin_Call) Run(run func(ctx context.Context, reque
 			arg1 = args[1].(operations.ListPluginRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,
@@ -8466,7 +8751,10 @@ func (_c *MockPluginSDK_UpsertPlugin_Call) Run(run func(ctx context.Context, req
 			arg1 = args[1].(operations.UpsertPluginRequest)
 		}
 		var arg2 []operations.Option
-		variadicArgs := args[2].([]operations.Option)
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
 		arg2 = variadicArgs
 		run(
 			arg0,

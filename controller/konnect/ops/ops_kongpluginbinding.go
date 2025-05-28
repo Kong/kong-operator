@@ -264,6 +264,18 @@ func kongPluginWithTargetsToKongPluginInput(binding *configurationv1alpha1.KongP
 		Enabled: lo.ToPtr(!plugin.Disabled),
 		Tags:    tags,
 	}
+	if plugin.InstanceName != "" {
+		pluginInput.InstanceName = lo.ToPtr(plugin.InstanceName)
+	}
+	if len(plugin.Protocols) > 0 {
+		pluginInput.Protocols = lo.Map(
+			plugin.Protocols,
+			func(p configurationv1.KongProtocol, _ int) sdkkonnectcomp.Protocols {
+				return sdkkonnectcomp.Protocols(p)
+			},
+		)
+	}
+	// TODO: add support for ordering https://github.com/Kong/gateway-operator/issues/1682
 
 	// TODO(mlavacca): check all the entities reference the same KonnectGatewayControlPlane
 
