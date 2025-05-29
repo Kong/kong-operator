@@ -14,7 +14,7 @@ require (
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/cert-manager/cert-manager v1.17.2
 	github.com/cloudflare/cfssl v1.6.5
-	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
 	github.com/goccy/go-json v0.10.5
 	github.com/google/go-cmp v0.7.0
