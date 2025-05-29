@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/cloudflare/cfssl/config"
@@ -36,10 +37,15 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
+var caLoggerInit sync.Once
+
 // SetCALogger sets the logger for the CFSSL signer. Call it once at the start
 // of the program to ensure that CFSSL logs are captured by the operator's logger.
+// Subsequent calls to this function will have no effect.
 func SetCALogger(logger logr.Logger) {
-	cflog.SetLogger(loggerShim{logger: logger})
+	caLoggerInit.Do(func() {
+		cflog.SetLogger(loggerShim{logger: logger})
+	})
 }
 
 // -----------------------------------------------------------------------------
