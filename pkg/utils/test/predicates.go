@@ -269,16 +269,6 @@ func ControlPlaneCRBContainsCRAndSA(t *testing.T, ctx context.Context, controlpl
 	}
 }
 
-// ControlPlaneHasNReadyPods checks if a ControlPlane has at least N ready Pods.
-func ControlPlaneHasNReadyPods(t *testing.T, ctx context.Context, controlplaneName types.NamespacedName, clients K8sClients, n int32) func() bool {
-	return controlPlanePredicate(t, ctx, controlplaneName, func(controlplane *operatorv1beta1.ControlPlane) bool {
-		deployments := MustListControlPlaneDeployments(t, ctx, controlplane, clients)
-		return len(deployments) == 1 &&
-			*deployments[0].Spec.Replicas == n &&
-			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
-	}, clients.OperatorClient)
-}
-
 // ControlPlaneHasAdmissionWebhookService is a helper function for tests that returns a function
 // that can be used to check if a ControlPlane has an admission webhook Service.
 // Should be used in conjunction with require.Eventually or assert.Eventually.

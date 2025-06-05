@@ -1,6 +1,8 @@
 package test
 
 import (
+	"os"
+
 	"github.com/kong/gateway-operator/modules/manager"
 	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
 	"github.com/kong/gateway-operator/modules/manager/logging"
@@ -21,6 +23,7 @@ func WithBlueGreenController(enabled bool) ControllerConfigOption {
 // It can be adjusted by overriding arbitrary fields in the returned config or by providing config options.
 func DefaultControllerConfigForTests(opts ...ControllerConfigOption) manager.Config {
 	cfg := manager.DefaultConfig()
+	cfg.KubeconfigPath = os.Getenv("KUBECONFIG")
 	cfg.LeaderElection = false
 	cfg.LoggingMode = logging.DevelopmentMode
 	cfg.ControllerName = "konghq.com/gateway-operator-integration-tests"

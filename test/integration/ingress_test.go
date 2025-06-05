@@ -162,10 +162,7 @@ func TestIngressEssentials(t *testing.T) {
 	require.EventuallyWithT(t,
 		func(c *assert.CollectT) {
 			err := clusters.DeployIngress(GetCtx(), GetEnv().Cluster(), namespace.Name, ingress)
-			if err != nil {
-				t.Logf("failed to deploy ingress: %v", err)
-				c.Errorf("failed to deploy ingress: %v", err)
-			}
+			require.NoError(c, err, "failed to deploy ingress in namespace %s", namespace.Name)
 		},
 		testutils.DefaultIngressWait, testutils.WaitIngressTick,
 	)

@@ -11,13 +11,16 @@ import (
 	"github.com/kong/gateway-operator/pkg/vars"
 )
 
-// WithRestConfig sets the REST configuration for the manager.
-func WithRestConfig(restCfg *rest.Config) managercfg.Opt {
+// WithRestConfig sets the REST configuration for the manager, but when a kubeConfigPath is provided,
+// it defers to KIC logic to figure out the rest config.
+func WithRestConfig(restCfg *rest.Config, kubeConfigPath string) managercfg.Opt {
 	return func(c *managercfg.Config) {
-		c.APIServerHost = restCfg.Host
-		c.APIServerCertData = restCfg.CertData
-		c.APIServerKeyData = restCfg.KeyData
-		c.APIServerCAData = restCfg.CAData
+		if kubeConfigPath != "" {
+			c.KubeconfigPath = kubeConfigPath
+		} else {
+			c.KubeRestConfig = restCfg
+		}
+
 	}
 }
 

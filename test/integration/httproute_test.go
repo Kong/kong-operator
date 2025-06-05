@@ -83,11 +83,7 @@ func TestHTTPRoute(t *testing.T) {
 	require.EventuallyWithT(t,
 		func(c *assert.CollectT) {
 			result, err := GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).Create(GetCtx(), httpRoute, metav1.CreateOptions{})
-			if err != nil {
-				t.Logf("failed to deploy httproute: %v", err)
-				c.Errorf("failed to deploy httproute: %v", err)
-				return
-			}
+			require.NoError(c, err, "failed to deploy httproute %s/%s", httpRoute.Namespace, httpRoute.Name)
 			cleaner.Add(result)
 		},
 		testutils.DefaultIngressWait, testutils.WaitIngressTick,
@@ -215,11 +211,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	require.EventuallyWithT(t,
 		func(c *assert.CollectT) {
 			result, err := GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).Create(GetCtx(), httpRoute, metav1.CreateOptions{})
-			if err != nil {
-				t.Logf("failed to deploy httproute: %v", err)
-				c.Errorf("failed to deploy httproute: %v", err)
-				return
-			}
+			require.NoError(c, err, "failed to deploy httproute %s/%s", httpRoute.Namespace, httpRoute.Name)
 			cleaner.Add(result)
 		},
 		testutils.DefaultIngressWait, testutils.WaitIngressTick,
