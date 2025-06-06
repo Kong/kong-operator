@@ -11,7 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha1
+package v1alpha2
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,8 +41,6 @@ const (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is Ready to be used",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.konnect.controlPlane.ref == self.spec.konnect.controlPlane.ref", message="spec.konnect.controlPlane.ref is immutable."
-// +kubebuilder:validation:XValidation:rule="self.spec.konnect.controlPlane.ref.type == 'konnectID' ? has(self.spec.konnect.configuration) : true",message="konnect must be set when ControlPlaneRef is set to KonnectID."
-// +kubebuilder:validation:XValidation:rule="self.spec.konnect.controlPlane.ref.type == 'konnectNamespacedRef' ? !has(self.spec.konnect.configuration) : true",message="konnect must be unset when ControlPlaneRef is set to konnectNamespacedRef."
 // +apireference:kgo:include
 // +kong:channels=gateway-operator
 type KonnectExtension struct {
@@ -76,8 +74,6 @@ type KonnectExtensionSpec struct {
 	Konnect KonnectExtensionKonnectSpec `json:"konnect"`
 
 	// ClientAuth is the configuration for the client certificate authentication.
-	// In case the ControlPlaneRef is of type KonnectID, it is required to set up the connection with the
-	// Konnect Platform.
 	//
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={certificateSecret:{provisioning: Automatic}}
@@ -95,11 +91,6 @@ type KonnectExtensionKonnectSpec struct {
 	//
 	// +kubebuilder:validation:Optional
 	DataPlane *KonnectExtensionDataPlane `json:"dataPlane,omitempty"`
-
-	// Configuration holds the information needed to set up the Konnect Configuration.
-	//
-	// +kubebuilder:validation:Optional
-	Configuration *KonnectConfiguration `json:"configuration,omitempty"`
 }
 
 // KonnectExtensionControlPlane is the configuration for the Konnect Control Plane.
@@ -223,6 +214,19 @@ const (
 	// ClusterTypeK8sIngressController is the type of the Kubernetes Control Plane.
 	ClusterTypeK8sIngressController KonnectExtensionClusterType = "K8SIngressController"
 )
+
+// KonnectEndpoints defines the Konnect endpoints for the control plane.
+type KonnectEndpoints struct {
+	// TelemetryEndpoint is the endpoint for telemetry.
+	//
+	// +kubebuilder:validation:Required
+	TelemetryEndpoint string `json:"telemetry"`
+
+	// ControlPlaneEndpoint is the endpoint for the control plane.
+	//
+	// +kubebuilder:validation:Required
+	ControlPlaneEndpoint string `json:"controlPlane"`
+}
 
 // KonnectExtensionControlPlaneStatus contains the Konnect Control Plane status information.
 type KonnectExtensionControlPlaneStatus struct {

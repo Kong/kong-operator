@@ -22,11 +22,6 @@ func (obj KonnectCloudGatewayDataPlaneGroupConfigurationList) GetItems() []Konne
 	return obj.Items
 }
 
-// GetItems returns the list of KonnectExtension items.
-func (obj KonnectExtensionList) GetItems() []KonnectExtension {
-	return obj.Items
-}
-
 // GetItems returns the list of KonnectCloudGatewayTransitGateway items.
 func (obj KonnectCloudGatewayTransitGatewayList) GetItems() []KonnectCloudGatewayTransitGateway {
 	return obj.Items

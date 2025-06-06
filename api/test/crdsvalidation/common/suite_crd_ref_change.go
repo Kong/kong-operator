@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 // Scope represents the scope of the object
@@ -122,74 +121,6 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 				ExpectedErrorMessage: lo.ToPtr("spec.controlPlaneRef cannot specify namespace for namespaced resource"),
 			})
 		}
-	}
-	{
-		obj := obj.DeepCopy()
-		obj.SetControlPlaneRef(&commonv1alpha1.ControlPlaneRef{
-			Type:      configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-			KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("123456")),
-		})
-		ret = append(ret, TestCase[T]{
-			Name:                 "providing konnectID when type is konnectNamespacedRef yields an error",
-			TestObject:           obj,
-			ExpectedErrorMessage: lo.ToPtr("when type is konnectNamespacedRef, konnectNamespacedRef must be set"),
-		})
-	}
-	{
-		obj := obj.DeepCopy()
-		obj.SetControlPlaneRef(&commonv1alpha1.ControlPlaneRef{
-			Type: commonv1alpha1.ControlPlaneRefKonnectID,
-			KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-				Name: "test-konnect-control-plane",
-			},
-		})
-		ret = append(ret, TestCase[T]{
-			Name:                 "providing konnectNamespacedRef when type is konnectID yields an error",
-			TestObject:           obj,
-			ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectID must be set"),
-		})
-	}
-	{
-		obj := obj.DeepCopy()
-		obj.SetControlPlaneRef(&commonv1alpha1.ControlPlaneRef{
-			Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-			KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("123456")),
-			KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-				Name: "test-konnect-control-plane",
-			},
-		})
-		ret = append(ret, TestCase[T]{
-			Name:                 "providing konnectNamespacedRef and konnectID when type is konnectID yields an error",
-			TestObject:           obj,
-			ExpectedErrorMessage: lo.ToPtr("when type is konnectID, konnectNamespacedRef must not be set"),
-		})
-	}
-	{
-		obj := obj.DeepCopy()
-		obj.SetControlPlaneRef(&commonv1alpha1.ControlPlaneRef{
-			Type:      configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-			KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("123456")),
-			KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-				Name: "test-konnect-control-plane",
-			},
-		})
-		ret = append(ret, TestCase[T]{
-			Name:                 "providing konnectID and konnectNamespacedRef when type is konnectNamespacedRef yields an error",
-			TestObject:           obj,
-			ExpectedErrorMessage: lo.ToPtr("when type is konnectNamespacedRef, konnectID must not be set"),
-		})
-	}
-	{
-		obj := obj.DeepCopy()
-		obj.SetControlPlaneRef(&commonv1alpha1.ControlPlaneRef{
-			Type:      commonv1alpha1.ControlPlaneRefKIC,
-			KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("123456")),
-		})
-		ret = append(ret, TestCase[T]{
-			Name:                 "providing konnectID when type is kic yields an error",
-			TestObject:           obj,
-			ExpectedErrorMessage: lo.ToPtr("when type is kic, konnectID must not be set"),
-		})
 	}
 	{
 		obj := obj.DeepCopy()
@@ -361,18 +292,6 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 				ExpectedErrorMessage: lo.ToPtr("spec.controlPlaneRef: Required value"),
 			})
 		}
-	}
-	{
-		obj := obj.DeepCopy()
-		obj.SetControlPlaneRef(&commonv1alpha1.ControlPlaneRef{
-			Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-			KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("123456")),
-		})
-		ret = append(ret, TestCase[T]{
-			Name:                 "cpRef (type=konnectID) is not allowed",
-			TestObject:           obj,
-			ExpectedErrorMessage: lo.ToPtr("'konnectID' type is not supported"),
-		})
 	}
 
 	return ret

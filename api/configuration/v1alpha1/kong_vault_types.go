@@ -78,7 +78,6 @@ type KongVaultSpec struct {
 	// Tags are the tags associated to the vault for grouping and filtering.
 	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
 	// ControlPlaneRef is a reference to a Konnect ControlPlane this KongVault is associated with.
-	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
 	// +optional
 	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
 }

@@ -15,9 +15,6 @@ type ControlPlaneRef commonv1alpha1.ControlPlaneRef
 type KonnectNamespacedRef = commonv1alpha1.KonnectNamespacedRef
 
 const (
-	// ControlPlaneRefKonnectID is the type for the KonnectID ControlPlaneRef.
-	// It is used to reference a Konnect Control Plane entity by its ID on the Konnect platform.
-	ControlPlaneRefKonnectID = commonv1alpha1.ControlPlaneRefKonnectID
 	// ControlPlaneRefKonnectNamespacedRef is the type for the KonnectNamespacedRef ControlPlaneRef.
 	// It is used to reference a Konnect Control Plane entity inside the cluster
 	// using a namespaced reference.
