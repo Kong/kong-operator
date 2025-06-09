@@ -679,7 +679,7 @@ _ensure-kong-system-namespace:
 
 .PHONY: _forbids-run
 _forbids-run:
-	@echo 'telepresence is not configured yet, lack of contectivity - see https://github.com/Kong/gateway-operator/issues/1706'
+	@echo 'telepresence is not configured yet, lack of connectivity - see https://github.com/Kong/gateway-operator/issues/1706'
 	@exit 1
 
 # Run a controller from your host.
