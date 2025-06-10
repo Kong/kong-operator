@@ -673,19 +673,14 @@ endif
 _ensure-kong-system-namespace:
 	@kubectl create ns kong-system 2>/dev/null || true
 
-.PHONY: _forbids-run
-_forbids-run:
-	@echo 'telepresence is not configured yet, lack of connectivity - see https://github.com/Kong/gateway-operator/issues/1706'
-	@exit 1
-
 # Run a controller from your host.
 .PHONY: run
-run: _forbids-run manifests generate install.all _ensure-kong-system-namespace install.rbacs
+run: download.telepresence manifests generate install.all _ensure-kong-system-namespace install.rbacs
 	@$(MAKE) _run
 
 # Run a controller from your host and make it impersonate the controller-manager service account from kong-system namespace.
 .PHONY: run.with_impersonate
-run.with_impersonate: _forbids-run manifests generate install.all _ensure-kong-system-namespace install.rbacs
+run.with_impersonate: download.telepresence manifests generate install.all _ensure-kong-system-namespace install.rbacs
 	@$(MAKE) _run.with-impersonate
 
 KUBECONFIG ?= $(HOME)/.kube/config
@@ -695,7 +690,11 @@ KUBECONFIG ?= $(HOME)/.kube/config
 # etc didn't change in between the runs.
 .PHONY: _run
 _run:
-		GATEWAY_OPERATOR_KUBECONFIG=$(KUBECONFIG) \
+	@$(TELEPRESENCE) helm install
+	@$(TELEPRESENCE) connect
+	bash -c "trap \
+		'$(TELEPRESENCE) quit -s; $(TELEPRESENCE) helm uninstall; rm -rf $(TMP_KUBECONFIG) || 1' EXIT; \
+		GATEWAY_OPERATOR_KUBECONFIG=$(or $(TMP_KUBECONFIG),$(KUBECONFIG)) \
 		GATEWAY_OPERATOR_ANONYMOUS_REPORTS=false \
 		GATEWAY_OPERATOR_LOGGING_MODE=development \
 		go run ./cmd/main.go \
@@ -707,7 +706,8 @@ _run:
 		-enable-controller-controlplaneextensions \
 		-zap-time-encoding iso8601 \
 		-zap-log-level 2 \
-		-zap-devel true
+		-zap-devel true \
+	"
 
 # Run the operator locally with impersonation of controller-manager service account from kong-system namespace.
 # The operator will use a temporary kubeconfig file and impersonate the real RBACs.
@@ -722,7 +722,7 @@ _run.with-impersonate:
 	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-credentials kgo --token=$(TMP_TOKEN)
 	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-context kgo --cluster=$(CLUSTER) --user=kgo --namespace=kong-system
 	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config use-context kgo
-	bash -c "trap 'echo deleting temporary kubeconfig $(TMP); rm -rf $(TMP)' EXIT; $(MAKE) _run KUBECONFIG=$(TMP_KUBECONFIG)"
+	$(MAKE) _run TMP_KUBECONFIG=$(TMP_KUBECONFIG)
 
 SKAFFOLD_RUN_PROFILE ?= dev
 
