@@ -41,7 +41,9 @@
 
 - Fixed lack of `instance_name` and `protocols` reconciliation for `KongPluginBinding` when reconciling against Konnect.
   [#1681](https://github.com/Kong/gateway-operator/pull/1681)
-- The `KonnectExtension` status is kept updated when the `KonnectGatewayControlPlane` is rotated.
+- The `KonnectExtension` status is kept updated when the `KonnectGatewayControlPlane` is deleted and 
+  re-created. When this happens, the `KonnectGatewayControlPlane` sees its Konnect ID changed, as well
+  as the endpoints. All this data is constantly enforced into the `KonnectExtension` status.
   [#1684](https://github.com/Kong/gateway-operator/pull/1684)
 
 ## [v1.6.1]
