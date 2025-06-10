@@ -5,6 +5,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -114,6 +115,8 @@ func TestEnforceKonnectExtensionStatus(t *testing.T) {
 		}
 		updated := enforceKonnectExtensionStatus(cp, certificateSecret, ext)
 		assert.True(t, updated)
+		require.NotNil(t, ext.Status.Konnect)
+		require.NotNil(t, ext.Status.DataPlaneClientAuth)
 		assert.Equal(t, "cp-id", ext.Status.Konnect.ControlPlaneID)
 		assert.Equal(t, konnectv1alpha1.ClusterTypeControlPlane, ext.Status.Konnect.ClusterType)
 		assert.Equal(t, "cp-endpoint", ext.Status.Konnect.Endpoints.ControlPlaneEndpoint)
