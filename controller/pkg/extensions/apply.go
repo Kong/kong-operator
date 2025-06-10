@@ -12,6 +12,7 @@ import (
 	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
 	"github.com/kong/gateway-operator/controller/pkg/extensions/konnect"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
@@ -29,6 +30,7 @@ type ExtendableT interface {
 
 	*operatorv1beta1.DataPlane |
 		*operatorv1beta1.ControlPlane |
+		*gwtypes.ControlPlane |
 		*operatorv1beta1.GatewayConfiguration
 }
 

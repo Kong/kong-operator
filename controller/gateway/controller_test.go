@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
@@ -413,13 +412,6 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					}
 				}
 				if gatewaySubResource.GetName() == "test-controlplane" {
-					controlPlane := gatewaySubResource.(*operatorv1beta1.ControlPlane)
-					_ = controlplane.SetDefaults(
-						&controlPlane.Spec.ControlPlaneOptions,
-						controlplane.DefaultsArgs{
-							Namespace:                   "test-namespace",
-							DataPlaneIngressServiceName: "test-ingress-service",
-						})
 					for _, controlplaneSubResource := range tc.controlplaneSubResources {
 						k8sutils.SetOwnerForObject(controlplaneSubResource, gatewaySubResource)
 						objectsToAdd = append(objectsToAdd, controlplaneSubResource)

@@ -16,7 +16,6 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -326,12 +325,13 @@ func (r *Reconciler) setDataPlaneGatewayConfigDefaults(gatewayConfig *operatorv1
 	}
 }
 
-func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gateway,
+func (r *Reconciler) setControlPlaneGatewayConfigDefaults(
+	gateway *gwtypes.Gateway, //nolint:unparam
 	gatewayConfig *operatorv1beta1.GatewayConfiguration,
 	dataplaneName,
-	dataplaneIngressServiceName,
-	dataplaneAdminServiceName,
-	controlPlaneName string,
+	dataplaneIngressServiceName, //nolint:unparam
+	dataplaneAdminServiceName, //nolint:unparam
+	controlPlaneName string, //nolint:unparam
 ) {
 	if gatewayConfig.Spec.ControlPlaneOptions == nil {
 		gatewayConfig.Spec.ControlPlaneOptions = new(operatorv1beta1.ControlPlaneOptions)
@@ -365,14 +365,15 @@ func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gatew
 
 	// an actual ControlPlane will have ObjectMeta populated with ownership information. this includes a stand-in to
 	// satisfy the signature
-	_ = controlplane.SetDefaults(gatewayConfig.Spec.ControlPlaneOptions,
-		controlplane.DefaultsArgs{
-			Namespace:                   gateway.Namespace,
-			DataPlaneIngressServiceName: dataplaneIngressServiceName,
-			DataPlaneAdminServiceName:   dataplaneAdminServiceName,
-			OwnedByGateway:              gateway.Name,
-			ControlPlaneName:            controlPlaneName,
-			AnonymousReportsEnabled:     controlplane.DeduceAnonymousReportsEnabled(r.AnonymousReportsEnabled, gatewayConfig.Spec.ControlPlaneOptions),
-		},
-	)
+	// TODO(pmalek)
+	// _ = controlplane.SetDefaults(gatewayConfig.Spec.ControlPlaneOptions,
+	// 	controlplane.DefaultsArgs{
+	// 		Namespace:                   gateway.Namespace,
+	// 		DataPlaneIngressServiceName: dataplaneIngressServiceName,
+	// 		DataPlaneAdminServiceName:   dataplaneAdminServiceName,
+	// 		OwnedByGateway:              gateway.Name,
+	// 		ControlPlaneName:            controlPlaneName,
+	// 		AnonymousReportsEnabled:     controlplane.DeduceAnonymousReportsEnabled(r.AnonymousReportsEnabled, gatewayConfig.Spec.ControlPlaneOptions),
+	// 	},
+	// )
 }

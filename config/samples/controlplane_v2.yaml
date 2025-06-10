@@ -1,0 +1,54 @@
+apiVersion: gateway-operator.konghq.com/v2alpha1
+kind: ControlPlane
+metadata:
+  name: controlplane-v2
+spec:
+  dataplane:
+    type: ref
+    ref:
+      name: dataplane-v2
+  featureGates:
+  - name: GatewayAlpha
+    state: enabled
+  controllers:
+  - name: TCPIngress
+    state: disabled
+  - name: Konnect
+    state: enabled
+---
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: dataplane-v2
+spec:
+  deployment:
+    podTemplateSpec:
+      metadata:
+        labels:
+          dataplane-pod-label: example
+        annotations:
+          dataplane-pod-annotation: example
+      spec:
+        containers:
+        - name: proxy
+          # renovate: datasource=docker versioning=docker
+          image: kong:3.9
+          env:
+          - name: KONG_LOG_LEVEL
+            value: debug
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 1
+
+  network:
+    services:
+      ingress:
+        annotations:
+          foo: bar

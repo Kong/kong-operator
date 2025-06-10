@@ -6,10 +6,8 @@ import (
 
 	"github.com/samber/lo"
 	networkingv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -148,23 +146,6 @@ func ListHTTPRoutesForGateway(
 	}
 
 	return httpRoutes, nil
-}
-
-// GetDataPlaneForControlPlane retrieves the DataPlane object referenced by a ControlPlane
-func GetDataPlaneForControlPlane(
-	ctx context.Context,
-	c client.Client,
-	controlplane *operatorv1beta1.ControlPlane,
-) (*operatorv1beta1.DataPlane, error) {
-	if controlplane.Spec.DataPlane == nil || *controlplane.Spec.DataPlane == "" {
-		return nil, fmt.Errorf("%w, controlplane = %s/%s", operatorerrors.ErrDataPlaneNotSet, controlplane.Namespace, controlplane.Name)
-	}
-
-	dataplane := operatorv1beta1.DataPlane{}
-	if err := c.Get(ctx, types.NamespacedName{Namespace: controlplane.Namespace, Name: *controlplane.Spec.DataPlane}, &dataplane); err != nil {
-		return nil, err
-	}
-	return &dataplane, nil
 }
 
 // GetDataPlaneServiceName is a helper function that retrieves the name of the service owned by provided dataplane.

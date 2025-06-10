@@ -1,23 +1,21 @@
 package controlplane
 
 import (
-	"fmt"
-	"os"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/google/uuid"
-	"github.com/samber/lo"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/multiinstance"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/kubernetes/scheme"
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	"github.com/kong/gateway-operator/test/helpers"
@@ -25,18 +23,8 @@ import (
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v2alpha1"
 )
-
-func init() {
-	if err := gatewayv1.Install(scheme.Scheme); err != nil {
-		fmt.Println("error while adding gatewayv1 scheme")
-		os.Exit(1)
-	}
-	if err := operatorv1beta1.AddToScheme(scheme.Scheme); err != nil {
-		fmt.Println("error while adding operatorv1beta1 scheme")
-		os.Exit(1)
-	}
-}
 
 func TestReconciler_Reconcile(t *testing.T) {
 	ca := helpers.CreateCA(t)
@@ -54,7 +42,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 	testCases := []struct {
 		name                     string
 		controlplaneReq          reconcile.Request
-		controlplane             *operatorv1beta1.ControlPlane
+		controlplane             *ControlPlane
 		dataplane                *operatorv1beta1.DataPlane
 		controlplaneSubResources []controllerruntimeclient.Object
 		dataplaneSubResources    []controllerruntimeclient.Object
@@ -62,14 +50,14 @@ func TestReconciler_Reconcile(t *testing.T) {
 		testBody                 func(t *testing.T, reconciler Reconciler, controlplane reconcile.Request)
 	}{
 		{
-			name: "valid ControlPlane image",
+			name: "base",
 			controlplaneReq: reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Namespace: "test-namespace",
 					Name:      "test-controlplane",
 				},
 			},
-			controlplane: &operatorv1beta1.ControlPlane{
+			controlplane: &ControlPlane{
 				TypeMeta: metav1.TypeMeta{
 					APIVersion: "gateway-operator.konghq.com/v1beta1",
 					Kind:       "ControlPlane",
@@ -84,27 +72,20 @@ func TestReconciler_Reconcile(t *testing.T) {
 						string(ControlPlaneFinalizerCleanupValidatingWebhookConfiguration),
 					},
 				},
-				Spec: operatorv1beta1.ControlPlaneSpec{
-					ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-						Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-							PodTemplateSpec: &corev1.PodTemplateSpec{
-								Spec: corev1.PodSpec{
-									Containers: []corev1.Container{
-										{
-											Name:  consts.ControlPlaneControllerContainerName,
-											Image: "kong/kubernetes-ingress-controller:3.1.2",
-										},
-									},
-								},
+				Spec: operatorv2alpha1.ControlPlaneSpec{
+					ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
+							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetRefType,
+							Ref: &operatorv2alpha1.ControlPlaneDataPlaneTargetRef{
+								Name: "test-dataplane",
 							},
 						},
-						DataPlane: lo.ToPtr("test-dataplane"),
 						WatchNamespaces: &operatorv1beta1.WatchNamespaces{
 							Type: operatorv1beta1.WatchNamespacesTypeAll,
 						},
 					},
 				},
-				Status: operatorv1beta1.ControlPlaneStatus{
+				Status: operatorv2alpha1.ControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:   string(kcfgcontrolplane.ConditionTypeProvisioned),
@@ -241,9 +222,6 @@ func TestReconciler_Reconcile(t *testing.T) {
 				// first reconcile loop to allow the reconciler to set the controlplane defaults
 				_, err := reconciler.Reconcile(ctx, controlplaneReq)
 				require.NoError(t, err)
-
-				_, err = reconciler.Reconcile(ctx, controlplaneReq)
-				require.NoError(t, err)
 			},
 		},
 	}
@@ -273,15 +251,16 @@ func TestReconciler_Reconcile(t *testing.T) {
 
 			fakeClient := fakectrlruntimeclient.
 				NewClientBuilder().
-				WithScheme(scheme.Scheme).
+				WithScheme(scheme.Get()).
 				WithObjects(ObjectsToAdd...).
 				Build()
 
 			reconciler := Reconciler{
 				Client:                   fakeClient,
-				Scheme:                   scheme.Scheme,
+				Scheme:                   scheme.Get(),
 				ClusterCASecretName:      mtlsSecret.Name,
 				ClusterCASecretNamespace: mtlsSecret.Namespace,
+				InstancesManager:         multiinstance.NewManager(logr.Discard()),
 			}
 
 			tc.testBody(t, reconciler, tc.controlplaneReq)

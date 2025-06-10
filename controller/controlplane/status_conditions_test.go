@@ -11,23 +11,22 @@ import (
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 func TestMarkAsProvisioned(t *testing.T) {
 	t.Run("controlplane", func(t *testing.T) {
-		createControlPlane := func() *operatorv1beta1.ControlPlane {
-			return &operatorv1beta1.ControlPlane{}
+		createControlPlane := func() *ControlPlane {
+			return &ControlPlane{}
 		}
 
 		testCases := []struct {
 			name              string
-			controlplane      func() *operatorv1beta1.ControlPlane
+			controlplane      func() *ControlPlane
 			expectedCondition metav1.Condition
 		}{
 			{
 				name: "ControlPlane gets a Provisioned Condition with Status True",
-				controlplane: func() *operatorv1beta1.ControlPlane {
+				controlplane: func() *ControlPlane {
 					return createControlPlane()
 				},
 				expectedCondition: metav1.Condition{
@@ -39,7 +38,7 @@ func TestMarkAsProvisioned(t *testing.T) {
 			},
 			{
 				name: "ControlPlane gets a Provisioned Condition with Status True and correct ObservedGeneration",
-				controlplane: func() *operatorv1beta1.ControlPlane {
+				controlplane: func() *ControlPlane {
 					cp := createControlPlane()
 					cp.Generation = 3
 					return cp

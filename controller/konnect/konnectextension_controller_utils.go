@@ -21,6 +21,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -120,7 +121,7 @@ func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 	ctx context.Context,
 	ext *konnectv1alpha2.KonnectExtension,
 	dps operatorv1beta1.DataPlaneList,
-	cps operatorv1beta1.ControlPlaneList,
+	cps gwtypes.ControlPlaneList,
 ) (ctrl.Result, error) {
 	sortRefs := func(refs []commonv1alpha1.NamespacedRef) {
 		refToStr := func(ref commonv1alpha1.NamespacedRef) string {
