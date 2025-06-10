@@ -21,7 +21,6 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
-	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -29,6 +28,7 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	"github.com/kong/kubernetes-configuration/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // getGatewayKonnectControlPlane retrieves the Konnect Control Plane from K8s cluster
@@ -41,48 +41,26 @@ import (
 // - err: An error if the retrieval fails.
 func (r *KonnectExtensionReconciler) getGatewayKonnectControlPlane(
 	ctx context.Context,
-	ext konnectv1alpha1.KonnectExtension,
+	ext konnectv1alpha2.KonnectExtension,
 	dependingConditions ...metav1.Condition,
 ) (cp *konnectv1alpha1.KonnectGatewayControlPlane, res ctrl.Result, err error) {
 	// Get respective KonnectGatewayControlPlane from K8s cluster.
 	var errGetFromK8s error
-	switch ext.Spec.Konnect.ControlPlane.Ref.Type {
-	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-		// TODO: get namespace from cpRef.Namespace when allowed to reference CP from another namespace.
-		cpNN := client.ObjectKey{
-			Name:      ext.Spec.Konnect.ControlPlane.Ref.KonnectNamespacedRef.Name,
-			Namespace: ext.Namespace,
-		}
-		kgcp := &konnectv1alpha1.KonnectGatewayControlPlane{}
-		// Set the controlPlaneRefValidCond to false in case the KonnectGatewayControlPlane is not found.
-		if err := r.Get(ctx, cpNN, kgcp); err != nil {
-			if k8serrors.IsNotFound(err) {
-				errGetFromK8s = err
-			} else {
-				return nil, ctrl.Result{}, err
-			}
-		}
-		cp = kgcp
-	case commonv1alpha1.ControlPlaneRefKonnectID:
-		kgcpList := &konnectv1alpha1.KonnectGatewayControlPlaneList{}
-		if err := r.List(ctx, kgcpList, client.InNamespace(ext.Namespace), client.MatchingFields{
-			index.IndexFieldKonnectGatewayControlPlaneOnKonnectID: string(*ext.Spec.Konnect.ControlPlane.Ref.KonnectID),
-		}); err != nil {
+	// TODO: get namespace from cpRef.Namespace when allowed to reference CP from another namespace.
+	cpNN := client.ObjectKey{
+		Name:      ext.Spec.Konnect.ControlPlane.Ref.KonnectNamespacedRef.Name,
+		Namespace: ext.Namespace,
+	}
+	kgcp := &konnectv1alpha1.KonnectGatewayControlPlane{}
+	// Set the controlPlaneRefValidCond to false in case the KonnectGatewayControlPlane is not found.
+	if err := r.Get(ctx, cpNN, kgcp); err != nil {
+		if k8serrors.IsNotFound(err) {
+			errGetFromK8s = err
+		} else {
 			return nil, ctrl.Result{}, err
 		}
-		kgcps := kgcpList.Items
-		switch l := len(kgcps); l {
-		case 0:
-			errGetFromK8s = k8serrors.NewNotFound(
-				konnectv1alpha1.Resource("KonnectGatewayControlPlane"),
-				fmt.Sprintf("with KonnectID %s in namespace %s",
-					*ext.Spec.Konnect.ControlPlane.Ref.KonnectID, ext.Namespace,
-				),
-			)
-		default:
-			cp = &kgcps[0]
-		}
 	}
+	cp = kgcp
 
 	controlPlaneRefValidCond := metav1.Condition{
 		Type:    konnectv1alpha1.ControlPlaneRefValidConditionType,
@@ -140,7 +118,7 @@ func (r *KonnectExtensionReconciler) getGatewayKonnectControlPlane(
 // Only DataPlanes and ControlPlanes with the condition KonnectExtensionApplied=True are added to the status.
 func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 	ctx context.Context,
-	ext *konnectv1alpha1.KonnectExtension,
+	ext *konnectv1alpha2.KonnectExtension,
 	dps operatorv1beta1.DataPlaneList,
 	cps operatorv1beta1.ControlPlaneList,
 ) (ctrl.Result, error) {
@@ -206,19 +184,7 @@ func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 	return ctrl.Result{Requeue: true}, nil
 }
 
-func getKonnectAPIAuthRefNN(ctx context.Context, cl client.Client, ext *konnectv1alpha1.KonnectExtension) (types.NamespacedName, error) {
-	if ext.Spec.Konnect.Configuration != nil {
-		// TODO: handle cross namespace refs when supported.
-		return types.NamespacedName{
-			Namespace: ext.Namespace,
-			Name:      ext.Spec.Konnect.Configuration.APIAuthConfigurationRef.Name,
-		}, nil
-	}
-
-	// In case the KonnectConfiguration is not set, we fetch the KonnectGatewayControlPlane
-	// and get the KonnectConfiguration from `spec.konnectControlPlane.controlPlane.konnectNamespacedRef`.
-	// KonnectGatewayControlPlane reference and KonnectConfiguration
-	// are mutually exclusive in the KonnectExtension API.
+func getKonnectAPIAuthRefNN(ctx context.Context, cl client.Client, ext *konnectv1alpha2.KonnectExtension) (types.NamespacedName, error) {
 	cpRef := ext.Spec.Konnect.ControlPlane.Ref.KonnectNamespacedRef
 	kgcp := &konnectv1alpha1.KonnectGatewayControlPlane{}
 	err := cl.Get(ctx, client.ObjectKey{
@@ -235,7 +201,7 @@ func getKonnectAPIAuthRefNN(ctx context.Context, cl client.Client, ext *konnectv
 	}, nil
 }
 
-func (r *KonnectExtensionReconciler) ensureCertificateSecret(ctx context.Context, ext *konnectv1alpha1.KonnectExtension) (op.Result, *corev1.Secret, error) {
+func (r *KonnectExtensionReconciler) ensureCertificateSecret(ctx context.Context, ext *konnectv1alpha2.KonnectExtension) (op.Result, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
 		certificatesv1.UsageDigitalSignature,
@@ -259,7 +225,7 @@ func (r *KonnectExtensionReconciler) ensureCertificateSecret(ctx context.Context
 	)
 }
 
-func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, ext konnectv1alpha1.KonnectExtension, cleanup bool) (op.Result, *corev1.Secret, error) {
+func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, ext konnectv1alpha2.KonnectExtension, cleanup bool) (op.Result, *corev1.Secret, error) {
 	var (
 		certificateSecret = &corev1.Secret{}
 		err               error
@@ -274,26 +240,26 @@ func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, e
 				Name:      ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name,
 			}, certificateSecret)
 		}
-	case *ext.Spec.ClientAuth.CertificateSecret.Provisioning == konnectv1alpha1.ManualSecretProvisioning:
+	case *ext.Spec.ClientAuth.CertificateSecret.Provisioning == konnectv1alpha2.ManualSecretProvisioning:
 		// No need to check CertificateSecretRef is nil, as it is enforced at the CRD level.
 		err = r.Get(ctx, types.NamespacedName{
 			Namespace: ext.Namespace,
 			Name:      ext.Spec.ClientAuth.CertificateSecret.CertificateSecretRef.Name,
 		}, certificateSecret)
-	case *ext.Spec.ClientAuth.CertificateSecret.Provisioning == konnectv1alpha1.AutomaticSecretProvisioning:
+	case *ext.Spec.ClientAuth.CertificateSecret.Provisioning == konnectv1alpha2.AutomaticSecretProvisioning:
 		res, certificateSecret, err = r.ensureCertificateSecret(ctx, &ext)
 	}
 	return res, certificateSecret, err
 }
 
-func enforceKonnectExtensionStatus(cp konnectv1alpha1.KonnectGatewayControlPlane, certificateSecret corev1.Secret, ext *konnectv1alpha1.KonnectExtension) bool {
+func enforceKonnectExtensionStatus(cp konnectv1alpha1.KonnectGatewayControlPlane, certificateSecret corev1.Secret, ext *konnectv1alpha2.KonnectExtension) bool {
 	var toUpdate bool
-	expectedKonnectStatus := &konnectv1alpha1.KonnectExtensionControlPlaneStatus{
+	expectedKonnectStatus := &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
 		ControlPlaneID: cp.Status.ID,
 		ClusterType: konnectClusterTypeToCRDClusterType(
 			sdkkonnectcomp.ControlPlaneClusterType(lo.FromPtrOr(cp.Spec.ClusterType, "")),
 		),
-		Endpoints: konnectv1alpha1.KonnectEndpoints{
+		Endpoints: konnectv1alpha2.KonnectEndpoints{
 			ControlPlaneEndpoint: cp.Status.Endpoints.ControlPlaneEndpoint,
 			TelemetryEndpoint:    cp.Status.Endpoints.TelemetryEndpoint,
 		},
@@ -303,8 +269,8 @@ func enforceKonnectExtensionStatus(cp konnectv1alpha1.KonnectGatewayControlPlane
 		toUpdate = true
 	}
 
-	expectedDataPlaneClientAuth := &konnectv1alpha1.DataPlaneClientAuthStatus{
-		CertificateSecretRef: &konnectv1alpha1.SecretRef{
+	expectedDataPlaneClientAuth := &konnectv1alpha2.DataPlaneClientAuthStatus{
+		CertificateSecretRef: &konnectv1alpha2.SecretRef{
 			Name: certificateSecret.Name,
 		},
 	}
@@ -316,13 +282,13 @@ func enforceKonnectExtensionStatus(cp konnectv1alpha1.KonnectGatewayControlPlane
 	return toUpdate
 }
 
-func konnectClusterTypeToCRDClusterType(clusterType sdkkonnectcomp.ControlPlaneClusterType) konnectv1alpha1.KonnectExtensionClusterType {
+func konnectClusterTypeToCRDClusterType(clusterType sdkkonnectcomp.ControlPlaneClusterType) konnectv1alpha2.KonnectExtensionClusterType {
 	switch clusterType {
 	// When it's not specified by the caller (left empty) in Konnect it's set to CLUSTER_TYPE_CONTROL_PLANE.
 	case sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane, "":
-		return konnectv1alpha1.ClusterTypeControlPlane
+		return konnectv1alpha2.ClusterTypeControlPlane
 	case sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeK8SIngressController:
-		return konnectv1alpha1.ClusterTypeK8sIngressController
+		return konnectv1alpha2.ClusterTypeK8sIngressController
 	default:
 		// default never happens as the validation is at the CRD level
 		return ""

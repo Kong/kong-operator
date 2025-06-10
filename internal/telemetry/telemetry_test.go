@@ -36,6 +36,7 @@ import (
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 func prepareScheme(t *testing.T) *runtime.Scheme {
@@ -47,6 +48,7 @@ func prepareScheme(t *testing.T) *runtime.Scheme {
 	require.NoError(t, configurationv1beta1.AddToScheme(scheme))
 	require.NoError(t, configurationv1.AddToScheme(scheme))
 	require.NoError(t, konnectv1alpha1.AddToScheme(scheme))
+	require.NoError(t, konnectv1alpha2.AddToScheme(scheme))
 
 	return scheme
 }

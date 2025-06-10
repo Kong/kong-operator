@@ -14,6 +14,7 @@ import (
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // Get returns a scheme aware of all types the manager can interact with.
@@ -32,6 +33,7 @@ func Get() *runtime.Scheme {
 	utilruntime.Must(configurationv1beta1.AddToScheme(scheme))
 
 	utilruntime.Must(konnectv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(konnectv1alpha2.AddToScheme(scheme))
 
 	utilruntime.Must(certmanagerv1.AddToScheme(scheme))
 

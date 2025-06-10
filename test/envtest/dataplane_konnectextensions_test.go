@@ -32,6 +32,7 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnect2 "github.com/kong/kubernetes-configuration/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 func TestDataPlaneKonnectExtension(t *testing.T) {
@@ -118,25 +119,22 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 	konnectAPIAuthConfiguration := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 
 	t.Logf("Creating and setting expecting status for corresponding KonnectControlPlane with Konnect ID: %s", konnectControlPlaneID)
-	_ = deploy.KonnectGatewayControlPlaneWithID(t, ctx, cl, konnectAPIAuthConfiguration, deploy.WithKonnectID(konnectControlPlaneID))
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, cl, konnectAPIAuthConfiguration, deploy.WithKonnectID(konnectControlPlaneID))
 
 	t.Logf("Creating KonnectExtension")
-	konnectExtension := konnectv1alpha1.KonnectExtension{
+	konnectExtension := konnectv1alpha2.KonnectExtension{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "ke-",
 			Namespace:    ns.Name,
 		},
-		Spec: konnectv1alpha1.KonnectExtensionSpec{
-			Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
-				ControlPlane: konnectv1alpha1.KonnectExtensionControlPlane{
-					Ref: commonv1alpha1.ControlPlaneRef{
-						Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-						KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType(konnectControlPlaneID)),
-					},
-				},
-				Configuration: &konnectv1alpha1.KonnectConfiguration{
-					APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
-						Name: konnectAPIAuthConfiguration.Name,
+		Spec: konnectv1alpha2.KonnectExtensionSpec{
+			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: cp.Name,
+						},
 					},
 				},
 			},

@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 func TestBuildKonnectAddress(t *testing.T) {
@@ -43,22 +43,22 @@ func TestBuildKonnectAddress(t *testing.T) {
 func TestKICInKonnectDefaults(t *testing.T) {
 	tests := []struct {
 		name                   string
-		konnectExtensionStatus konnectv1alpha1.KonnectExtensionStatus
+		konnectExtensionStatus konnectv1alpha2.KonnectExtensionStatus
 		expected               []corev1.EnvVar
 		expectError            bool
 	}{
 		{
 			name: "K8s Ingress Controller",
-			konnectExtensionStatus: konnectv1alpha1.KonnectExtensionStatus{
-				Konnect: &konnectv1alpha1.KonnectExtensionControlPlaneStatus{
-					ClusterType: konnectv1alpha1.ClusterTypeK8sIngressController,
-					Endpoints: konnectv1alpha1.KonnectEndpoints{
+			konnectExtensionStatus: konnectv1alpha2.KonnectExtensionStatus{
+				Konnect: &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
+					ClusterType: konnectv1alpha2.ClusterTypeK8sIngressController,
+					Endpoints: konnectv1alpha2.KonnectEndpoints{
 						ControlPlaneEndpoint: "https://7b46471d3b.us.tp0.konghq.tech:443",
 					},
 					ControlPlaneID: "abcdedf",
 				},
-				DataPlaneClientAuth: &konnectv1alpha1.DataPlaneClientAuthStatus{
-					CertificateSecretRef: &konnectv1alpha1.SecretRef{
+				DataPlaneClientAuth: &konnectv1alpha2.DataPlaneClientAuthStatus{
+					CertificateSecretRef: &konnectv1alpha2.SecretRef{
 						Name: "test-secret",
 					},
 				},
@@ -111,9 +111,9 @@ func TestKICInKonnectDefaults(t *testing.T) {
 		},
 		{
 			name: "Unsupported Cluster Type",
-			konnectExtensionStatus: konnectv1alpha1.KonnectExtensionStatus{
-				Konnect: &konnectv1alpha1.KonnectExtensionControlPlaneStatus{
-					ClusterType: konnectv1alpha1.ClusterTypeControlPlane,
+			konnectExtensionStatus: konnectv1alpha2.KonnectExtensionStatus{
+				Konnect: &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
+					ClusterType: konnectv1alpha2.ClusterTypeControlPlane,
 				},
 			},
 			expected:    nil,

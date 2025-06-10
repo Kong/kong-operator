@@ -10,6 +10,7 @@ import (
 	"github.com/kong/gateway-operator/internal/utils/index"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 func enqueueKonnectExtensionsForKonnectGatewayControlPlane(cl client.Client) func(context.Context, client.Object) []reconcile.Request {
@@ -19,7 +20,7 @@ func enqueueKonnectExtensionsForKonnectGatewayControlPlane(cl client.Client) fun
 			return nil
 		}
 
-		konnectExtensionList := konnectv1alpha1.KonnectExtensionList{}
+		konnectExtensionList := konnectv1alpha2.KonnectExtensionList{}
 		if err := cl.List(
 			ctx,
 			&konnectExtensionList,
@@ -31,7 +32,7 @@ func enqueueKonnectExtensionsForKonnectGatewayControlPlane(cl client.Client) fun
 			return nil
 		}
 
-		return lo.Map(konnectExtensionList.Items, func(ext konnectv1alpha1.KonnectExtension, _ int) reconcile.Request {
+		return lo.Map(konnectExtensionList.Items, func(ext konnectv1alpha2.KonnectExtension, _ int) reconcile.Request {
 			return reconcile.Request{
 				NamespacedName: client.ObjectKeyFromObject(&ext),
 			}

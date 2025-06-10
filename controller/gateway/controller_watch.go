@@ -29,7 +29,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/vars"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // -----------------------------------------------------------------------------
@@ -123,7 +123,7 @@ func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client
 
 // listGatewaysForKonnectExtension is a watch predicate which finds all Gateways
 // that use a GatewayConfiguration that references a specific KonnectExtension.
-func (r *Reconciler) listGatewaysForKonnectExtension(ctx context.Context, ext *konnectv1alpha1.KonnectExtension) []reconcile.Request {
+func (r *Reconciler) listGatewaysForKonnectExtension(ctx context.Context, ext *konnectv1alpha2.KonnectExtension) []reconcile.Request {
 	gatewayConfigurationsRequests := index.ListObjectsReferencingKonnectExtension(r.Client, &operatorv1beta1.GatewayConfigurationList{})(ctx, ext)
 	gatewayConfigurations := lo.Map(gatewayConfigurationsRequests, func(req reconcile.Request, _ int) operatorv1beta1.GatewayConfiguration {
 		return operatorv1beta1.GatewayConfiguration{

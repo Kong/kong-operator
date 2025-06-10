@@ -7,7 +7,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // LabelObjectAsDataPlaneManaged ensures that labels are set on the
@@ -58,7 +58,7 @@ func GetManagedLabelForOwner(owner metav1.Object) client.MatchingLabels {
 		return client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		}
-	case *konnectv1alpha1.KonnectExtension:
+	case *konnectv1alpha2.KonnectExtension:
 		return client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.KonnectExtensionManagedByLabelValue,
 		}

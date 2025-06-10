@@ -39,6 +39,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // KonnectExtensionReconciler reconciles a KonnectExtension object.
@@ -71,7 +72,7 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&konnectv1alpha1.KonnectExtension{}).
+		For(&konnectv1alpha2.KonnectExtension{}).
 		Watches(
 			&operatorv1beta1.DataPlane{},
 			handler.EnqueueRequestsFromMapFunc(listExtendableReferencedExtensions[*operatorv1beta1.DataPlane]),
@@ -83,7 +84,7 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 		Watches(
 			&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 			handler.EnqueueRequestsFromMapFunc(
-				enqueueObjectsForKonnectAPIAuthConfiguration[konnectv1alpha1.KonnectExtensionList](
+				enqueueObjectsForKonnectAPIAuthConfiguration[konnectv1alpha2.KonnectExtensionList](
 					mgr.GetClient(),
 					index.IndexFieldKonnectExtensionOnAPIAuthConfiguration,
 				),
@@ -119,7 +120,7 @@ func listExtendableReferencedExtensions[t extensions.ExtendableT](_ context.Cont
 
 	for _, ext := range o.GetExtensions() {
 		if ext.Group != konnectv1alpha1.SchemeGroupVersion.Group ||
-			ext.Kind != konnectv1alpha1.KonnectExtensionKind {
+			ext.Kind != konnectv1alpha2.KonnectExtensionKind {
 			continue
 		}
 		namespace := obj.GetNamespace()
@@ -138,12 +139,12 @@ func listExtendableReferencedExtensions[t extensions.ExtendableT](_ context.Cont
 
 // Reconcile reconciles a KonnectExtension object.
 func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	var ext konnectv1alpha1.KonnectExtension
+	var ext konnectv1alpha2.KonnectExtension
 	if err := r.Get(ctx, req.NamespacedName, &ext); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	logger := log.GetLogger(ctx, konnectv1alpha1.KonnectExtensionKind, r.LoggingMode).WithValues("konnectExtension", req.NamespacedName)
+	logger := log.GetLogger(ctx, konnectv1alpha2.KonnectExtensionKind, r.LoggingMode).WithValues("konnectExtension", req.NamespacedName)
 
 	var (
 		dataPlaneList    operatorv1beta1.DataPlaneList
@@ -242,15 +243,15 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// ready condition initialized as under provisioning
 	readyCondition := metav1.Condition{
-		Type:    konnectv1alpha1.KonnectExtensionReadyConditionType,
+		Type:    konnectv1alpha2.KonnectExtensionReadyConditionType,
 		Status:  metav1.ConditionFalse,
-		Reason:  konnectv1alpha1.KonnectExtensionReadyReasonProvisioning,
+		Reason:  konnectv1alpha2.KonnectExtensionReadyReasonProvisioning,
 		Message: "provisioning in progress",
 	}
 
 	// if the konnectExtension is marked as pending, set it to provisioning
-	if cond, present := k8sutils.GetCondition(konnectv1alpha1.KonnectExtensionReadyConditionType, &ext); !present ||
-		(cond.Status == metav1.ConditionFalse && cond.Reason == konnectv1alpha1.KonnectExtensionReadyReasonPending) ||
+	if cond, present := k8sutils.GetCondition(konnectv1alpha2.KonnectExtensionReadyConditionType, &ext); !present ||
+		(cond.Status == metav1.ConditionFalse && cond.Reason == konnectv1alpha2.KonnectExtensionReadyReasonPending) ||
 		cond.ObservedGeneration != ext.GetGeneration() {
 		if res, updated, err := patch.StatusWithConditions(
 			ctx,
@@ -324,7 +325,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// NOTE: We need to create a new SDK instance for each reconciliation
 	// because the token is retrieved in runtime through KonnectAPIAuthConfiguration.
-	server, err := server.NewServer[*konnectv1alpha1.KonnectExtension](apiAuth.Spec.ServerURL)
+	server, err := server.NewServer[*konnectv1alpha2.KonnectExtension](apiAuth.Spec.ServerURL)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to parse server URL: %w", err)
 	}
@@ -588,9 +589,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	readyCondition = metav1.Condition{
-		Type:    konnectv1alpha1.KonnectExtensionReadyConditionType,
+		Type:    konnectv1alpha2.KonnectExtensionReadyConditionType,
 		Status:  metav1.ConditionTrue,
-		Reason:  konnectv1alpha1.KonnectExtensionReadyReasonReady,
+		Reason:  konnectv1alpha2.KonnectExtensionReadyReasonReady,
 		Message: "KonnectExtension is ready",
 	}
 

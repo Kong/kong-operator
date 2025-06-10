@@ -11,7 +11,7 @@ import (
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // -----------------------------------------------------------------------------
@@ -21,7 +21,7 @@ import (
 // ControlPlaneOrDataPlaneOrKonnectExtension is a type that can be either a ControlPlane, a DataPlane or a KonnectExtension.
 // It is used to infer the types that can own secret resources.
 type ControlPlaneOrDataPlaneOrKonnectExtension interface {
-	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane | *konnectv1alpha1.KonnectExtension
+	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane | *konnectv1alpha2.KonnectExtension
 }
 
 // SecretOpt is an option function for a Secret.
@@ -55,7 +55,7 @@ func getPrefixForOwner[T ControlPlaneOrDataPlaneOrKonnectExtension](owner T) str
 		return consts.ControlPlanePrefix
 	case *operatorv1beta1.DataPlane:
 		return consts.DataPlanePrefix
-	case *konnectv1alpha1.KonnectExtension:
+	case *konnectv1alpha2.KonnectExtension:
 		return consts.KonnectExtensionPrefix
 	default:
 		return ""
@@ -69,7 +69,7 @@ func addLabelForOwner[T ControlPlaneOrDataPlaneOrKonnectExtension](obj client.Ob
 		LabelObjectAsControlPlaneManaged(obj)
 	case *operatorv1beta1.DataPlane:
 		LabelObjectAsDataPlaneManaged(obj)
-	case *konnectv1alpha1.KonnectExtension:
+	case *konnectv1alpha2.KonnectExtension:
 		LabelObjectAsKonnectExtensionManaged(obj)
 	}
 }

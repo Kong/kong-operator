@@ -4,7 +4,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 const (
@@ -20,38 +20,20 @@ const (
 func OptionsForKonnectExtension() []Option {
 	return []Option{
 		{
-			Object:         &konnectv1alpha1.KonnectExtension{},
-			Field:          IndexFieldKonnectExtensionOnAPIAuthConfiguration,
-			ExtractValueFn: konnectExtensionAPIAuthConfigurationRef,
-		},
-		{
-			Object:         &konnectv1alpha1.KonnectExtension{},
+			Object:         &konnectv1alpha2.KonnectExtension{},
 			Field:          IndexFieldKonnectExtensionOnSecrets,
 			ExtractValueFn: konnectExtensionSecretRef,
 		},
 		{
-			Object:         &konnectv1alpha1.KonnectExtension{},
+			Object:         &konnectv1alpha2.KonnectExtension{},
 			Field:          IndexFieldKonnectExtensionOnKonnectGatewayControlPlane,
 			ExtractValueFn: konnectExtensionControlPlaneRef,
 		},
 	}
 }
 
-func konnectExtensionAPIAuthConfigurationRef(object client.Object) []string {
-	ext, ok := object.(*konnectv1alpha1.KonnectExtension)
-	if !ok {
-		return nil
-	}
-
-	if ext.Spec.Konnect.Configuration == nil {
-		return nil
-	}
-
-	return []string{ext.Spec.Konnect.Configuration.APIAuthConfigurationRef.Name}
-}
-
 func konnectExtensionSecretRef(obj client.Object) []string {
-	ext, ok := obj.(*konnectv1alpha1.KonnectExtension)
+	ext, ok := obj.(*konnectv1alpha2.KonnectExtension)
 	if !ok {
 		return nil
 	}
@@ -65,7 +47,7 @@ func konnectExtensionSecretRef(obj client.Object) []string {
 }
 
 func konnectExtensionControlPlaneRef(obj client.Object) []string {
-	ext, ok := obj.(*konnectv1alpha1.KonnectExtension)
+	ext, ok := obj.(*konnectv1alpha2.KonnectExtension)
 	if !ok {
 		return nil
 	}

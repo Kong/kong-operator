@@ -28,6 +28,7 @@ import (
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 func TestKonnectExtensionKonnectControlPlaneNotFound(t *testing.T) {
@@ -44,7 +45,7 @@ func TestKonnectExtensionKonnectControlPlaneNotFound(t *testing.T) {
 
 	konnectExtension := deploy.KonnectExtension(
 		t, ctx, clientNamespaced,
-		deploy.WithKonnectNamespacedRefControlPlaneRef(&konnectv1alpha1.KonnectGatewayControlPlane{
+		deploy.WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(&konnectv1alpha1.KonnectGatewayControlPlane{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "controlplane-not-found",
 				Namespace: ns.Name,
@@ -58,7 +59,7 @@ func TestKonnectExtensionKonnectControlPlaneNotFound(t *testing.T) {
 			konnectExtension,
 			helpers.CheckAllConditionsFalse,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
-			konnectv1alpha1.KonnectExtensionReadyConditionType)
+			konnectv1alpha2.KonnectExtensionReadyConditionType)
 		assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, konnectExtension.Status.Conditions)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 }
@@ -99,7 +100,7 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 
 	konnectExtension := deploy.KonnectExtension(
 		t, ctx, clientNamespaced,
-		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		deploy.WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(cp),
 	)
 
 	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", konnectExtension.Namespace, konnectExtension.Name)
@@ -109,7 +110,7 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 			helpers.CheckAllConditionsTrue,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			konnectv1alpha1.DataPlaneCertificateProvisionedConditionType,
-			konnectv1alpha1.KonnectExtensionReadyConditionType)
+			konnectv1alpha2.KonnectExtensionReadyConditionType)
 		assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, konnectExtension.Status.Conditions)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
@@ -142,7 +143,7 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 			helpers.CheckAllConditionsTrue,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			konnectv1alpha1.DataPlaneCertificateProvisionedConditionType,
-			konnectv1alpha1.KonnectExtensionReadyConditionType)
+			konnectv1alpha2.KonnectExtensionReadyConditionType)
 		assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, konnectExtension.Status.Conditions)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
@@ -277,62 +278,6 @@ type KonnectExtensionTestCaseParams struct {
 
 func KonnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCaseParams) {
 	var cert, key = certificate.MustGenerateSelfSignedCertPEMFormat()
-	t.Run("KonnectExtension with KonnectID control plane ref", func(t *testing.T) {
-		t.Run("manual secret provisioning", func(t *testing.T) {
-			t.Logf("Creating a Secret Certificate for the KonnectExtension")
-			secretCert := deploy.Secret(
-				t, ctx, params.client,
-				map[string][]byte{
-					consts.TLSCRT: cert,
-					consts.TLSKey: key,
-				},
-				deploy.WithLabel("konghq.com/konnect-dp-cert", "true"),
-			)
-			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, secretCert.DeepCopy()))
-
-			keWithKonnectIDCPRef := deploy.KonnectExtension(
-				t, ctx, params.client,
-				deploy.WithKonnectConfiguration[*konnectv1alpha1.KonnectExtension](konnectv1alpha1.KonnectConfiguration{
-					APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
-						Name: params.authConfigName,
-					},
-				}),
-				deploy.WithKonnectIDControlPlaneRef(params.konnectControlPlane),
-				setKonnectExtensionDPCertSecretRef(t, secretCert),
-			)
-			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
-
-			konnectExtensionTestBody(t, KonnectExtensionTestBodyParams{
-				konnectControlPlane: params.konnectControlPlane,
-				konnectExtension:    keWithKonnectIDCPRef,
-				secret:              secretCert,
-				client:              params.client,
-				authConfigName:      params.authConfigName,
-				namespace:           params.namespace,
-			})
-		})
-
-		t.Run("automatic secret provisioning", func(t *testing.T) {
-			keWithKonnectIDCPRef := deploy.KonnectExtension(
-				t, ctx, params.client,
-				deploy.WithKonnectConfiguration[*konnectv1alpha1.KonnectExtension](konnectv1alpha1.KonnectConfiguration{
-					APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
-						Name: params.authConfigName,
-					},
-				}),
-				deploy.WithKonnectIDControlPlaneRef(params.konnectControlPlane),
-			)
-			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
-			konnectExtensionTestBody(t, KonnectExtensionTestBodyParams{
-				konnectControlPlane: params.konnectControlPlane,
-				konnectExtension:    keWithKonnectIDCPRef,
-				secret:              nil, // automatic provisioning
-				client:              params.client,
-				authConfigName:      params.authConfigName,
-				namespace:           params.namespace,
-			})
-		})
-	})
 
 	t.Run("KonnectExtension with KonnectNamespacedRef control plane ref", func(t *testing.T) {
 		t.Run("manual secret provisioning", func(t *testing.T) {
@@ -347,16 +292,16 @@ func KonnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCasePara
 			)
 			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, secretCert.DeepCopy()))
 
-			keWithKonnectIDCPRef := deploy.KonnectExtension(
+			konnectExtension := deploy.KonnectExtension(
 				t, ctx, params.client,
-				deploy.WithKonnectNamespacedRefControlPlaneRef(params.konnectControlPlane),
+				deploy.WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(params.konnectControlPlane),
 				setKonnectExtensionDPCertSecretRef(t, secretCert),
 			)
-			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithKonnectIDCPRef.DeepCopy()))
+			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, konnectExtension.DeepCopy()))
 
 			params := KonnectExtensionTestBodyParams{
 				konnectControlPlane: params.konnectControlPlane,
-				konnectExtension:    keWithKonnectIDCPRef,
+				konnectExtension:    konnectExtension,
 				secret:              secretCert,
 				client:              params.client,
 				authConfigName:      params.authConfigName,
@@ -366,14 +311,14 @@ func KonnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCasePara
 		})
 
 		t.Run("automatic secret provisioning", func(t *testing.T) {
-			keWithNamespacedCPRef := deploy.KonnectExtension(
+			konnectExtension := deploy.KonnectExtension(
 				t, ctx, params.client,
-				deploy.WithKonnectNamespacedRefControlPlaneRef(params.konnectControlPlane),
+				deploy.WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(params.konnectControlPlane),
 			)
-			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, keWithNamespacedCPRef.DeepCopy()))
+			t.Cleanup(deleteObjectAndWaitForDeletionFn(t, konnectExtension.DeepCopy()))
 			params := KonnectExtensionTestBodyParams{
 				konnectControlPlane: params.konnectControlPlane,
-				konnectExtension:    keWithNamespacedCPRef,
+				konnectExtension:    konnectExtension,
 				secret:              nil, // automatic provisioning
 				client:              params.client,
 				authConfigName:      params.authConfigName,
@@ -387,7 +332,7 @@ func KonnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCasePara
 // KonnectExtensionTestBodyParams is a struct that holds the parameters for the test body function.
 type KonnectExtensionTestBodyParams struct {
 	KonnectExtensionTestCaseParams
-	konnectExtension    *konnectv1alpha1.KonnectExtension
+	konnectExtension    *konnectv1alpha2.KonnectExtension
 	secret              *corev1.Secret
 	authConfigName      string
 	konnectControlPlane *konnectv1alpha1.KonnectGatewayControlPlane
@@ -447,7 +392,7 @@ func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
 			helpers.CheckAllConditionsTrue,
 			konnectv1alpha1.ControlPlaneRefValidConditionType,
 			konnectv1alpha1.DataPlaneCertificateProvisionedConditionType,
-			konnectv1alpha1.KonnectExtensionReadyConditionType)
+			konnectv1alpha2.KonnectExtensionReadyConditionType)
 		assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, p.konnectExtension.Status.Conditions)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
@@ -535,12 +480,12 @@ func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
 
 func setKonnectExtensionDPCertSecretRef(t *testing.T, s *corev1.Secret) deploy.ObjOption {
 	return func(obj client.Object) {
-		ke, ok := obj.(*konnectv1alpha1.KonnectExtension)
+		ke, ok := obj.(*konnectv1alpha2.KonnectExtension)
 		require.True(t, ok)
-		ke.Spec.ClientAuth = &konnectv1alpha1.KonnectExtensionClientAuth{
-			CertificateSecret: konnectv1alpha1.CertificateSecret{
-				Provisioning: lo.ToPtr(konnectv1alpha1.ManualSecretProvisioning),
-				CertificateSecretRef: &konnectv1alpha1.SecretRef{
+		ke.Spec.ClientAuth = &konnectv1alpha2.KonnectExtensionClientAuth{
+			CertificateSecret: konnectv1alpha2.CertificateSecret{
+				Provisioning: lo.ToPtr(konnectv1alpha2.ManualSecretProvisioning),
+				CertificateSecretRef: &konnectv1alpha2.SecretRef{
 					Name: s.Name,
 				},
 			},
@@ -550,7 +495,7 @@ func setKonnectExtensionDPCertSecretRef(t *testing.T, s *corev1.Secret) deploy.O
 
 func checkKonnectExtensionConditions(
 	t *assert.CollectT,
-	ke *konnectv1alpha1.KonnectExtension,
+	ke *konnectv1alpha2.KonnectExtension,
 	checker helpers.ConditionsChecker,
 	conditions ...kcfgconsts.ConditionType,
 ) (bool, string) {
@@ -561,7 +506,7 @@ func checkKonnectExtensionConditions(
 }
 
 func checkKonnectExtensionStatus(
-	ke *konnectv1alpha1.KonnectExtension,
+	ke *konnectv1alpha2.KonnectExtension,
 	expectedKonnectCPID string,
 	expectedDPCertificateSecretName string,
 ) func(t *assert.CollectT) {

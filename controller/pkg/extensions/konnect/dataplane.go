@@ -14,13 +14,13 @@ import (
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // ApplyDataPlaneKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it
 // fetches the referenced extension and applies the necessary changes to the DataPlane spec.
 func ApplyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, dataPlane *operatorv1beta1.DataPlane) (bool, error) {
-	var konnectExtension *konnectv1alpha1.KonnectExtension
+	var konnectExtension *konnectv1alpha2.KonnectExtension
 	for _, extensionRef := range dataPlane.Spec.Extensions {
 		extension, err := getExtension(ctx, cl, dataPlane.Namespace, extensionRef)
 		if err != nil {
@@ -56,7 +56,7 @@ func ApplyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, dataP
 	d.WithVolumeMount(kongInKonnectClusterVolumeMount(), consts.DataPlaneProxyContainerName)
 
 	// KonnectID is the only supported type for now, and its presence is guaranteed by a proper CEL rule.
-	var dataplaneLabels map[string]konnectv1alpha1.DataPlaneLabelValue
+	var dataplaneLabels map[string]konnectv1alpha2.DataPlaneLabelValue
 	if konnectExtension.Spec.Konnect.DataPlane != nil {
 		dataplaneLabels = konnectExtension.Spec.Konnect.DataPlane.Labels
 	}

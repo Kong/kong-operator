@@ -22,6 +22,7 @@ import (
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 func TestApplyDataPlaneKonnectExtension(t *testing.T) {
@@ -29,24 +30,25 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 	require.NoError(t, operatorv1alpha1.AddToScheme(s))
 	require.NoError(t, operatorv1beta1.AddToScheme(s))
 	require.NoError(t, konnectv1alpha1.AddToScheme(s))
+	require.NoError(t, konnectv1alpha2.AddToScheme(s))
 
-	konnectExtensionStatus := konnectv1alpha1.KonnectExtensionStatus{
-		Konnect: &konnectv1alpha1.KonnectExtensionControlPlaneStatus{
+	konnectExtensionStatus := konnectv1alpha2.KonnectExtensionStatus{
+		Konnect: &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
 			ControlPlaneID: "konnect-id",
-			Endpoints: konnectv1alpha1.KonnectEndpoints{
+			Endpoints: konnectv1alpha2.KonnectEndpoints{
 				ControlPlaneEndpoint: "7078163243.us.cp0.konghq.com",
 				TelemetryEndpoint:    "7078163243.us.tp0.konghq.com",
 			},
-			ClusterType: konnectv1alpha1.ClusterTypeControlPlane,
+			ClusterType: konnectv1alpha2.ClusterTypeControlPlane,
 		},
-		DataPlaneClientAuth: &konnectv1alpha1.DataPlaneClientAuthStatus{
-			CertificateSecretRef: &konnectv1alpha1.SecretRef{
+		DataPlaneClientAuth: &konnectv1alpha2.DataPlaneClientAuthStatus{
+			CertificateSecretRef: &konnectv1alpha2.SecretRef{
 				Name: "cluster-cert",
 			},
 		},
 		Conditions: []metav1.Condition{
 			{
-				Type:   konnectv1alpha1.KonnectExtensionReadyConditionType,
+				Type:   konnectv1alpha2.KonnectExtensionReadyConditionType,
 				Status: metav1.ConditionTrue,
 			},
 		},
@@ -55,7 +57,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 	tests := []struct {
 		name          string
 		dataPlane     *operatorv1beta1.DataPlane
-		konnectExt    *konnectv1alpha1.KonnectExtension
+		konnectExt    *konnectv1alpha2.KonnectExtension
 		secret        *corev1.Secret
 		expectedError error
 		expectedEnvs  []corev1.EnvVar
@@ -83,7 +85,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: konnectv1alpha1.SchemeGroupVersion.Group,
-								Kind:  konnectv1alpha1.KonnectExtensionKind,
+								Kind:  konnectv1alpha2.KonnectExtensionKind,
 								NamespacedRef: commonv1alpha1.NamespacedRef{
 									Name:      "konnect-ext",
 									Namespace: lo.ToPtr("other"),
@@ -98,7 +100,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					},
 				},
 			},
-			konnectExt: &konnectv1alpha1.KonnectExtension{
+			konnectExt: &konnectv1alpha2.KonnectExtension{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "konnect-ext",
 					Namespace: "other",
@@ -119,7 +121,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: konnectv1alpha1.SchemeGroupVersion.Group,
-								Kind:  konnectv1alpha1.KonnectExtensionKind,
+								Kind:  konnectv1alpha2.KonnectExtensionKind,
 								NamespacedRef: commonv1alpha1.NamespacedRef{
 									Name: "konnect-ext",
 								},
@@ -147,7 +149,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: konnectv1alpha1.SchemeGroupVersion.Group,
-								Kind:  konnectv1alpha1.KonnectExtensionKind,
+								Kind:  konnectv1alpha2.KonnectExtensionKind,
 								NamespacedRef: commonv1alpha1.NamespacedRef{
 									Name: "konnect-ext",
 								},
@@ -161,7 +163,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					},
 				},
 			},
-			konnectExt: &konnectv1alpha1.KonnectExtension{
+			konnectExt: &konnectv1alpha2.KonnectExtension{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "konnect-ext",
 					Namespace: "default",
@@ -181,7 +183,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: konnectv1alpha1.SchemeGroupVersion.Group,
-								Kind:  konnectv1alpha1.KonnectExtensionKind,
+								Kind:  konnectv1alpha2.KonnectExtensionKind,
 								NamespacedRef: commonv1alpha1.NamespacedRef{
 									Name: "konnect-ext",
 								},
@@ -195,7 +197,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					},
 				},
 			},
-			konnectExt: &konnectv1alpha1.KonnectExtension{
+			konnectExt: &konnectv1alpha2.KonnectExtension{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "konnect-ext",
 					Namespace: "default",
@@ -215,7 +217,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: konnectv1alpha1.SchemeGroupVersion.Group,
-								Kind:  konnectv1alpha1.KonnectExtensionKind,
+								Kind:  konnectv1alpha2.KonnectExtensionKind,
 								NamespacedRef: commonv1alpha1.NamespacedRef{
 									Name: "konnect-ext",
 								},
@@ -243,7 +245,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					},
 				},
 			},
-			konnectExt: &konnectv1alpha1.KonnectExtension{
+			konnectExt: &konnectv1alpha2.KonnectExtension{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "konnect-ext",
 					Namespace: "default",
@@ -263,7 +265,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: konnectv1alpha1.SchemeGroupVersion.Group,
-								Kind:  konnectv1alpha1.KonnectExtensionKind,
+								Kind:  konnectv1alpha2.KonnectExtensionKind,
 								NamespacedRef: commonv1alpha1.NamespacedRef{
 									Name: "konnect-ext",
 								},
@@ -291,15 +293,15 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					},
 				},
 			},
-			konnectExt: &konnectv1alpha1.KonnectExtension{
+			konnectExt: &konnectv1alpha2.KonnectExtension{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "konnect-ext",
 					Namespace: "default",
 				},
-				Spec: konnectv1alpha1.KonnectExtensionSpec{
-					Konnect: konnectv1alpha1.KonnectExtensionKonnectSpec{
-						DataPlane: &konnectv1alpha1.KonnectExtensionDataPlane{
-							Labels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+				Spec: konnectv1alpha2.KonnectExtensionSpec{
+					Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+						DataPlane: &konnectv1alpha2.KonnectExtensionDataPlane{
+							Labels: map[string]konnectv1alpha2.DataPlaneLabelValue{
 								"environment": "prod",
 								"region":      "us-west",
 							},
@@ -408,10 +410,10 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 }
 
 func getKongInKonnectEnvVars(
-	konnectExt konnectv1alpha1.KonnectExtension,
+	konnectExt konnectv1alpha2.KonnectExtension,
 ) []corev1.EnvVar {
 	envSet := []corev1.EnvVar{}
-	var dataplaneLabels map[string]konnectv1alpha1.DataPlaneLabelValue
+	var dataplaneLabels map[string]konnectv1alpha2.DataPlaneLabelValue
 	if konnectExt.Spec.Konnect.DataPlane != nil {
 		dataplaneLabels = konnectExt.Spec.Konnect.DataPlane.Labels
 	}

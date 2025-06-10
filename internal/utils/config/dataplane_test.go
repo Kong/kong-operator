@@ -5,30 +5,30 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 func TestClusterDataPlaneLabelStringFromLabels(t *testing.T) {
 	testCases := []struct {
 		name   string
-		labels map[string]konnectv1alpha1.DataPlaneLabelValue
+		labels map[string]konnectv1alpha2.DataPlaneLabelValue
 		want   string
 	}{
 		{
 			name:   "empty labels",
-			labels: map[string]konnectv1alpha1.DataPlaneLabelValue{},
+			labels: map[string]konnectv1alpha2.DataPlaneLabelValue{},
 			want:   "",
 		},
 		{
 			name: "single label",
-			labels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+			labels: map[string]konnectv1alpha2.DataPlaneLabelValue{
 				"region": "us-west",
 			},
 			want: "region:us-west",
 		},
 		{
 			name: "multiple labels",
-			labels: map[string]konnectv1alpha1.DataPlaneLabelValue{
+			labels: map[string]konnectv1alpha2.DataPlaneLabelValue{
 				"region":      "us-west",
 				"environment": "prod",
 				"app":         "gateway",

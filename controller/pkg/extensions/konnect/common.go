@@ -13,10 +13,11 @@ import (
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
-func getExtension(ctx context.Context, cl client.Client, objNamespace string, extRef commonv1alpha1.ExtensionRef) (*konnectv1alpha1.KonnectExtension, error) {
-	if extRef.Group != konnectv1alpha1.SchemeGroupVersion.Group || extRef.Kind != konnectv1alpha1.KonnectExtensionKind {
+func getExtension(ctx context.Context, cl client.Client, objNamespace string, extRef commonv1alpha1.ExtensionRef) (*konnectv1alpha2.KonnectExtension, error) {
+	if extRef.Group != konnectv1alpha1.SchemeGroupVersion.Group || extRef.Kind != konnectv1alpha2.KonnectExtensionKind {
 		return nil, nil
 	}
 
@@ -24,7 +25,7 @@ func getExtension(ctx context.Context, cl client.Client, objNamespace string, ex
 		return nil, errors.Join(extensionserrors.ErrCrossNamespaceReference, fmt.Errorf("the cross-namespace reference to the extension %s/%s is not permitted", *extRef.Namespace, extRef.Name))
 	}
 
-	konnectExt := konnectv1alpha1.KonnectExtension{}
+	konnectExt := konnectv1alpha2.KonnectExtension{}
 	if err := cl.Get(ctx, client.ObjectKey{
 		Namespace: objNamespace,
 		Name:      extRef.Name,
@@ -34,7 +35,7 @@ func getExtension(ctx context.Context, cl client.Client, objNamespace string, ex
 		}
 		return nil, err
 	}
-	if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectExtensionReadyConditionType, &konnectExt) {
+	if !k8sutils.HasConditionTrue(konnectv1alpha2.KonnectExtensionReadyConditionType, &konnectExt) {
 		return nil, errors.Join(extensionserrors.ErrKonnectExtensionNotReady, fmt.Errorf("the extension %s/%s is not ready", objNamespace, extRef.Name))
 	}
 

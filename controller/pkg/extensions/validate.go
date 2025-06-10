@@ -10,6 +10,7 @@ import (
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // ValidateExtensions validates the extensions referenced by the provided DataPlane and returns
@@ -61,7 +62,7 @@ func buildMessage(messageBuilder *strings.Builder, message string) {
 }
 
 func isKonnectExtension(ext commonv1alpha1.ExtensionRef) bool {
-	return ext.Group == konnectv1alpha1.SchemeGroupVersion.Group && ext.Kind == konnectv1alpha1.KonnectExtensionKind
+	return ext.Group == konnectv1alpha1.SchemeGroupVersion.Group && ext.Kind == konnectv1alpha2.KonnectExtensionKind
 }
 
 func isDataPlaneMetricsExtension(ext commonv1alpha1.ExtensionRef) bool {

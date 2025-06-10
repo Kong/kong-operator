@@ -8,7 +8,7 @@ import (
 
 	"github.com/kong/gateway-operator/pkg/consts"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 func TestLabelObjectAsKonnectExtensionManaged(t *testing.T) {
@@ -69,7 +69,7 @@ func TestLabelObjectAsKonnectExtensionManaged(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			konnectExtension := &konnectv1alpha1.KonnectExtension{
+			konnectExtension := &konnectv1alpha2.KonnectExtension{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: tt.input,
 				},

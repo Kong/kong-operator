@@ -22,6 +22,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 const (
@@ -93,6 +94,27 @@ func WithKonnectNamespacedRefControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayC
 		}
 
 		cpRef := &commonv1alpha1.ControlPlaneRef{
+			Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+			KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+				Name: cp.GetName(),
+			},
+		}
+
+		o.SetControlPlaneRef(cpRef)
+	}
+}
+
+// WithKonnectExtensionKonnectNamespacedRefControlPlaneRef returns an ObjOption that sets
+// the ControlPlaneRef on the konnectExtension to a namespaced ref.
+func WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane) ObjOption {
+	return func(obj client.Object) {
+		o, ok := obj.(*konnectv1alpha2.KonnectExtension)
+		if !ok {
+			// As it's only used in tests, we can panic here - it will mean test code is incorrect.
+			panic(fmt.Errorf("%T is not a KonnectExtension resource", obj))
+		}
+
+		cpRef := &commonv1alpha1.KonnectExtensionControlPlaneRef{
 			Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 			KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 				Name: cp.GetName(),
@@ -1136,10 +1158,10 @@ func KonnectExtension(
 	ctx context.Context,
 	cl client.Client,
 	opts ...ObjOption,
-) *konnectv1alpha1.KonnectExtension {
+) *konnectv1alpha2.KonnectExtension {
 	t.Helper()
 
-	ke := &konnectv1alpha1.KonnectExtension{
+	ke := &konnectv1alpha2.KonnectExtension{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "konnect-extension-",
 		},
@@ -1160,15 +1182,15 @@ func KonnectExtensionReferencingKonnectGatewayControlPlane(
 	ctx context.Context,
 	cl client.Client,
 	cp *konnectv1alpha1.KonnectGatewayControlPlane,
-) *konnectv1alpha1.KonnectExtension {
+) *konnectv1alpha2.KonnectExtension {
 	return KonnectExtension(
 		t, ctx, cl,
 		func(obj client.Object) {
-			ke, ok := obj.(*konnectv1alpha1.KonnectExtension)
+			ke, ok := obj.(*konnectv1alpha2.KonnectExtension)
 			require.Truef(t, ok, "Expect object %s/%s to be a KonnectExtension, actual type %T",
 				obj.GetNamespace(), obj.GetName(), obj)
-			ke.Spec.Konnect.ControlPlane = konnectv1alpha1.KonnectExtensionControlPlane{
-				Ref: commonv1alpha1.ControlPlaneRef{
+			ke.Spec.Konnect.ControlPlane = konnectv1alpha2.KonnectExtensionControlPlane{
+				Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 					Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 					KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 						Name:      cp.Name,
@@ -1183,7 +1205,6 @@ func KonnectExtensionReferencingKonnectGatewayControlPlane(
 // ObjectSupportingKonnectConfiguration defines the interface of types supporting setting `KonnectConfiguration`.
 type ObjectSupportingKonnectConfiguration interface {
 	*konnectv1alpha1.KonnectGatewayControlPlane |
-		*konnectv1alpha1.KonnectExtension |
 		*konnectv1alpha1.KonnectCloudGatewayNetwork
 }
 
@@ -1195,8 +1216,6 @@ func WithKonnectConfiguration[T ObjectSupportingKonnectConfiguration](
 		switch o := any(obj).(type) {
 		case *konnectv1alpha1.KonnectGatewayControlPlane:
 			o.Spec.KonnectConfiguration = konnectConfiguration
-		case *konnectv1alpha1.KonnectExtension:
-			o.Spec.Konnect.Configuration = lo.ToPtr(konnectConfiguration)
 		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 			o.Spec.KonnectConfiguration = konnectConfiguration
 		}

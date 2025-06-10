@@ -47,7 +47,7 @@ import (
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	kcfggateway "github.com/kong/kubernetes-configuration/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // -----------------------------------------------------------------------------
@@ -117,7 +117,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		builder.WatchesRawSource(
 			source.Kind(
 				mgr.GetCache(),
-				&konnectv1alpha1.KonnectExtension{},
+				&konnectv1alpha2.KonnectExtension{},
 				handler.TypedEnqueueRequestsFromMapFunc(r.listGatewaysForKonnectExtension),
 			),
 		)

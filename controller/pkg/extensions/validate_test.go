@@ -11,6 +11,7 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 func TestValidateExtensions(t *testing.T) {
@@ -34,7 +35,7 @@ func TestValidateExtensions(t *testing.T) {
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: konnectv1alpha1.SchemeGroupVersion.Group,
-								Kind:  konnectv1alpha1.KonnectExtensionKind,
+								Kind:  konnectv1alpha2.KonnectExtensionKind,
 							},
 							{
 								Group: operatorv1alpha1.SchemeGroupVersion.Group,
@@ -81,11 +82,11 @@ func TestValidateExtensions(t *testing.T) {
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: konnectv1alpha1.SchemeGroupVersion.Group,
-								Kind:  konnectv1alpha1.KonnectExtensionKind,
+								Kind:  konnectv1alpha2.KonnectExtensionKind,
 							},
 							{
 								Group: konnectv1alpha1.SchemeGroupVersion.Group,
-								Kind:  konnectv1alpha1.KonnectExtensionKind,
+								Kind:  konnectv1alpha2.KonnectExtensionKind,
 							},
 						},
 					},

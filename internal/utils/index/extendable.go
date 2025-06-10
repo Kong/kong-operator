@@ -13,6 +13,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 const (
@@ -36,7 +37,7 @@ func extendableOnKonnectExtension[T extensions.ExtendableT]() client.IndexerFunc
 			for _, ext := range obj.GetExtensions() {
 				namespace := obj.GetNamespace()
 				if ext.Group != konnectv1alpha1.SchemeGroupVersion.Group ||
-					ext.Kind != konnectv1alpha1.KonnectExtensionKind {
+					ext.Kind != konnectv1alpha2.KonnectExtensionKind {
 					continue
 				}
 				if ext.Namespace != nil && *ext.Namespace != namespace {
@@ -65,14 +66,14 @@ type ExtendableObjectListT interface {
 func ListObjectsReferencingKonnectExtension[t ExtendableObjectListT](
 	c client.Client,
 	objList t,
-) handler.TypedMapFunc[*konnectv1alpha1.KonnectExtension, reconcile.Request] {
-	return func(ctx context.Context, ext *konnectv1alpha1.KonnectExtension) []reconcile.Request {
+) handler.TypedMapFunc[*konnectv1alpha2.KonnectExtension, reconcile.Request] {
+	return func(ctx context.Context, ext *konnectv1alpha2.KonnectExtension) []reconcile.Request {
 		logger := ctrllog.FromContext(ctx)
 
 		if err := c.List(ctx, objList, client.MatchingFields{
 			KonnectExtensionIndex: ext.Namespace + "/" + ext.Name,
 		}); err != nil {
-			logger.Error(err, "Failed to list in watch", "extensionKind", konnectv1alpha1.KonnectExtensionKind)
+			logger.Error(err, "Failed to list in watch", "extensionKind", konnectv1alpha2.KonnectExtensionKind)
 			return nil
 		}
 
