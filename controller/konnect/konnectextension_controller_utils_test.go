@@ -43,8 +43,8 @@ func TestEnforceKonnectExtensionStatus(t *testing.T) {
 		}
 		updated := enforceKonnectExtensionStatus(cp, certificateSecret, ext)
 		assert.True(t, updated)
-		assert.NotNil(t, ext.Status.Konnect)
-		assert.NotNil(t, ext.Status.DataPlaneClientAuth)
+		require.NotNil(t, ext.Status.Konnect)
+		require.NotNil(t, ext.Status.DataPlaneClientAuth)
 		assert.Equal(t, "cp-id", ext.Status.Konnect.ControlPlaneID)
 		assert.Equal(t, konnectv1alpha1.ClusterTypeControlPlane, ext.Status.Konnect.ClusterType)
 		assert.Equal(t, "cp-endpoint", ext.Status.Konnect.Endpoints.ControlPlaneEndpoint)
@@ -91,7 +91,7 @@ func TestEnforceKonnectExtensionStatus(t *testing.T) {
 		}
 		updated := enforceKonnectExtensionStatus(cp, certificateSecret, ext)
 		assert.True(t, updated)
-		assert.NotNil(t, ext.Status.DataPlaneClientAuth)
+		require.NotNil(t, ext.Status.DataPlaneClientAuth)
 		assert.Equal(t, "my-secret", ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name)
 	})
 
