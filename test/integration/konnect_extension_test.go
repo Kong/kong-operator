@@ -151,6 +151,8 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 		checkKonnectExtensionStatus(konnectExtension, cp.GetKonnectID(), ""),
 		testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
+	// delete the KonnectExtension first to avoid the ControlPlane gets deleted first and
+	// the KonnectExtension gets stuck in deletion.
 	deleteObjectAndWaitForDeletionFn(t, konnectExtension.DeepCopy())()
 }
 
