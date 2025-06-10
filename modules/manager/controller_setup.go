@@ -388,6 +388,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				KonnectEnabled:           c.KonnectControllersEnabled,
 				EnforceConfig:            c.EnforceConfig,
+				KubeConfigPath:           c.KubeconfigPath,
 				RestConfig:               mgr.GetConfig(),
 				InstancesManager:         cpsMgr,
 			},

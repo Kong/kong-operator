@@ -21,8 +21,6 @@ import (
 )
 
 func TestAIGatewayCreation(t *testing.T) {
-	t.Skip("Using KIC as a library in ControlPlane controller broke this test (https://github.com/Kong/gateway-operator/issues/1198)")
-
 	t.Parallel()
 
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
@@ -194,7 +192,6 @@ func TestAIGatewayCreation(t *testing.T) {
 	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 	controlplanes := testutils.MustListControlPlanesForGateway(t, GetCtx(), gateway, clients)
 	require.Len(t, controlplanes, 1)
-	controlplane := controlplanes[0]
 
 	t.Log("verifying networkpolicies are created")
 	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
@@ -203,13 +200,9 @@ func TestAIGatewayCreation(t *testing.T) {
 	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
 
 	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
-	controlplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: controlplane.Name}
 
 	t.Log("verifying that dataplane has 1 ready replica")
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneNN, clients, 1), time.Minute, time.Second)
-
-	t.Log("verifying that controlplane has 1 ready replica")
-	require.Eventually(t, testutils.ControlPlaneHasNReadyPods(t, GetCtx(), controlplaneNN, clients, 1), time.Minute, time.Second)
 
 	t.Log("verifying that the HTTPRoute is now available for these LLMs")
 	require.Eventually(t, func() bool {

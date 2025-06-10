@@ -33,8 +33,6 @@ import (
 )
 
 func TestKongPluginInstallationEssentials(t *testing.T) {
-	t.Skip("Using KIC as a library in ControlPlane controller broke this test (https://github.com/Kong/gateway-operator/issues/1189)")
-
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 	t.Log("this test accesses container registries on public internet")
 
@@ -263,9 +261,7 @@ func deployGatewayWithKPI(
 		func(c *assert.CollectT) {
 			result, err := GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace).Create(GetCtx(), httpRoute, metav1.CreateOptions{})
 			if err != nil {
-				t.Logf("failed to deploy httproute: %v", err)
-				c.Errorf("failed to deploy httproute: %v", err)
-				return
+				require.NoError(c, err, "failed to create HTTPRoute %s/%s", httpRoute.Namespace, httpRoute.Name)
 			}
 			cleaner.Add(result)
 		},

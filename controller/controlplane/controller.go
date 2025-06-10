@@ -60,6 +60,7 @@ type Reconciler struct {
 	ClusterCAKeyConfig       secrets.KeyConfig
 
 	RestConfig              *rest.Config
+	KubeConfigPath          string
 	InstancesManager        *multiinstance.Manager
 	KonnectEnabled          bool
 	EnforceConfig           bool
@@ -264,7 +265,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			//  https://github.com/Kong/gateway-operator/issues/1361
 
 			mgrCfg, err := manager.NewConfig(
-				WithRestConfig(r.RestConfig),
+				WithRestConfig(r.RestConfig, r.KubeConfigPath),
 				WithKongAdminService(types.NamespacedName{
 					Name:      dataplaneAdminServiceName,
 					Namespace: cp.Namespace,
