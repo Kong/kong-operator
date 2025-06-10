@@ -179,9 +179,9 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, o
 			},
 		},
 		Spec: corev1.ServiceSpec{
-			// TODO: Use LoadBalancer type only in tests or find a better way to access Admin API from outside the cluster.
-			// https://github.com/Kong/gateway-operator/issues/1373
-			Type: corev1.ServiceTypeLoadBalancer,
+			// Headless service, since endpoints for Kong Gateway Admin API are derived from EndpointSlices.
+			Type:      corev1.ServiceTypeClusterIP,
+			ClusterIP: corev1.ClusterIPNone,
 			Selector: map[string]string{
 				"app": dataplane.Name,
 			},
@@ -195,7 +195,7 @@ func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, o
 			},
 			// We need to set the field PublishNotReadyAddresses for a chicken-egg problem
 			// in the context of the managed gateways. In that scenario, the controlplane needs
-			// to istantiate the connection with the dataplane to become ready, and the dataplane
+			// to instantiate the connection with the dataplane to become ready, and the dataplane
 			// waits for a controlplane configuration to become ready. For this reason, we need
 			// the dataplane admin endpoints to be created even if the dataplane pod is not running,
 			// so that the controlplane can push the configuration to the dataplane and the pods

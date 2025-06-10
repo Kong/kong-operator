@@ -25,6 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	"github.com/kong/gateway-operator/modules/manager"
 
 	operatorclient "github.com/kong/kubernetes-configuration/pkg/clientset"
@@ -68,6 +69,7 @@ func SetupControllerLogger(controllerManagerOut string) (func() error, error) {
 	}
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+	secrets.SetCALogger(ctrl.Log)
 
 	closeLogFile := func() error {
 		if destFile != nil {

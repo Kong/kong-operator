@@ -498,6 +498,7 @@ PKG_LIST=./controller/...,./internal/...,./pkg/...,./modules/...
 
 .PHONY: _test.envtest
 _test.envtest: gotestsum setup-envtest use-setup-envtest
+	KUBECONFIG=$(KUBECONFIG) \
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
@@ -527,6 +528,7 @@ test.crds-validation.pretty:
 
 .PHONY: _test.integration
 _test.integration: gotestsum download.telepresence
+	KUBECONFIG=$(KUBECONFIG) \
 	TELEPRESENCE_BIN=$(TELEPRESENCE) \
 	GOFLAGS=$(GOFLAGS) \
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
@@ -569,6 +571,7 @@ PARALLEL := $(if $(PARALLEL),$(PARALLEL),$(NCPU))
 
 .PHONY: _test.conformance
 _test.conformance: gotestsum download.telepresence
+		KUBECONFIG=$(KUBECONFIG) \
 		TELEPRESENCE_BIN=$(TELEPRESENCE) \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
@@ -674,14 +677,19 @@ endif
 _ensure-kong-system-namespace:
 	@kubectl create ns kong-system 2>/dev/null || true
 
+.PHONY: _forbids-run
+_forbids-run:
+	@echo 'telepresence is not configured yet, lack of connectivity - see https://github.com/Kong/gateway-operator/issues/1706'
+	@exit 1
+
 # Run a controller from your host.
 .PHONY: run
-run: manifests generate install.all _ensure-kong-system-namespace install.rbacs
+run: _forbids-run manifests generate install.all _ensure-kong-system-namespace install.rbacs
 	@$(MAKE) _run
 
 # Run a controller from your host and make it impersonate the controller-manager service account from kong-system namespace.
 .PHONY: run.with_impersonate
-run.with_impersonate: manifests generate install.all _ensure-kong-system-namespace install.rbacs
+run.with_impersonate: _forbids-run manifests generate install.all _ensure-kong-system-namespace install.rbacs
 	@$(MAKE) _run.with-impersonate
 
 KUBECONFIG ?= $(HOME)/.kube/config
@@ -691,7 +699,7 @@ KUBECONFIG ?= $(HOME)/.kube/config
 # etc didn't change in between the runs.
 .PHONY: _run
 _run:
-	KUBECONFIG=$(KUBECONFIG) \
+		GATEWAY_OPERATOR_KUBECONFIG=$(KUBECONFIG) \
 		GATEWAY_OPERATOR_ANONYMOUS_REPORTS=false \
 		GATEWAY_OPERATOR_LOGGING_MODE=development \
 		go run ./cmd/main.go \

@@ -309,7 +309,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 func generateDataPlaneNetworkPolicy(
 	namespace string,
 	dataplane *operatorv1beta1.DataPlane,
-	controlplane *operatorv1beta1.ControlPlane,
+	_ *operatorv1beta1.ControlPlane,
 ) (*networkingv1.NetworkPolicy, error) {
 	var (
 		protocolTCP     = corev1.ProtocolTCP
@@ -354,19 +354,20 @@ func generateDataPlaneNetworkPolicy(
 		Ports: []networkingv1.NetworkPolicyPort{
 			{Protocol: &protocolTCP, Port: &adminAPISSLPort},
 		},
-		From: []networkingv1.NetworkPolicyPeer{{
-			PodSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": controlplane.Name,
-				},
-			},
-			// NamespaceDefaultLabelName feature gate must be enabled for this to work
-			NamespaceSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"kubernetes.io/metadata.name": controlplane.Namespace,
-				},
-			},
-		}},
+		//TODO: https://github.com/Kong/gateway-operator/issues/1700
+		// It should be adjusted to include KO pod, because it connects to DataPlane admin API directly.
+		// From: []networkingv1.NetworkPolicyPeer{{
+		// 	PodSelector: &metav1.LabelSelector{
+		// 		MatchLabels: map[string]string{
+		// 			"app": controlplane.Name,
+		// 		},
+		// 	},
+		// 	NamespaceSelector: &metav1.LabelSelector{
+		// 		MatchLabels: map[string]string{
+		// 			"kubernetes.io/metadata.name": controlplane.Namespace,
+		// 		},
+		// 	},
+		// }},
 	}
 
 	allowProxyIngress := networkingv1.NetworkPolicyIngressRule{

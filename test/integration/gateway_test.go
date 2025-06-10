@@ -34,8 +34,6 @@ import (
 )
 
 func TestGatewayEssentials(t *testing.T) {
-	t.Skip("Using KIC as a library in ControlPlane controller broke this test (https://github.com/Kong/gateway-operator/issues/1199)")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -93,13 +91,9 @@ func TestGatewayEssentials(t *testing.T) {
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
 	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().ControlPlanes(namespace.Name)
-	controlplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: controlplane.Name}
 
 	t.Log("verifying that dataplane has 1 ready replica")
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneNN, clients, 1), time.Minute, time.Second)
-
-	t.Log("verifying that controlplane has 1 ready replica")
-	require.Eventually(t, testutils.ControlPlaneHasNReadyPods(t, GetCtx(), controlplaneNN, clients, 1), time.Minute, time.Second)
 
 	t.Log("deleting controlplane")
 	require.NoError(t, controlplaneClient.Delete(GetCtx(), controlplane.Name, metav1.DeleteOptions{}))
@@ -159,22 +153,6 @@ func TestGatewayEssentials(t *testing.T) {
 		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 	})
 	require.Len(t, services, 1)
-	service := services[0]
-
-	t.Log("verifying controlplane deployment updated with new dataplane service")
-	require.Eventually(t, func() bool {
-		controlDeployment := testutils.MustListControlPlaneDeployments(t, GetCtx(), &controlplane, clients)[0]
-		container := k8sutils.GetPodContainerByName(&controlDeployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
-		if container == nil {
-			return false
-		}
-		for _, envvar := range container.Env {
-			if envvar.Name == "CONTROLLER_PUBLISH_SERVICE" {
-				return envvar.Value == fmt.Sprintf("%s/%s", service.Namespace, service.Name)
-			}
-		}
-		return false
-	}, time.Minute*2, time.Second)
 
 	t.Log("deleting Gateway resource")
 	require.NoError(t, GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Delete(GetCtx(), gateway.Name, metav1.DeleteOptions{}))
@@ -201,8 +179,6 @@ func TestGatewayEssentials(t *testing.T) {
 // TestGatewayMultiple checks essential Gateway behavior with multiple Gateways of the same class. Ensure DataPlanes
 // only serve routes attached to their Gateway.
 func TestGatewayMultiple(t *testing.T) {
-	t.Skip("Using KIC as a library in ControlPlane controller broke this test (https://github.com/Kong/gateway-operator/issues/1191)")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 	gatewayV1Client := GetClients().GatewayClient.GatewayV1()
@@ -269,17 +245,11 @@ func TestGatewayMultiple(t *testing.T) {
 	controlplaneTwo := controlplanesTwo[0]
 
 	dataplaneOneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplaneOne.Name}
-	controlplaneOneNN := types.NamespacedName{Namespace: namespace.Name, Name: controlplaneOne.Name}
 	dataplaneTwoNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplaneTwo.Name}
-	controlplaneTwoNN := types.NamespacedName{Namespace: namespace.Name, Name: controlplaneTwo.Name}
 
 	t.Log("verifying that dataplanes have 1 ready replica each")
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneOneNN, clients, 1), time.Minute, time.Second)
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneTwoNN, clients, 1), time.Minute, time.Second)
-
-	t.Log("verifying that controlplanes have 1 ready replica each")
-	require.Eventually(t, testutils.ControlPlaneHasNReadyPods(t, GetCtx(), controlplaneOneNN, clients, 1), time.Minute, time.Second)
-	require.Eventually(t, testutils.ControlPlaneHasNReadyPods(t, GetCtx(), controlplaneTwoNN, clients, 1), time.Minute, time.Second)
 
 	t.Log("verifying connectivity to the Gateway")
 	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayOneIPAddress), testutils.SubresourceReadinessWait, time.Second)
@@ -325,9 +295,7 @@ func TestGatewayMultiple(t *testing.T) {
 		func(c *assert.CollectT) {
 			result, err := gatewayV1Client.HTTPRoutes(namespace.Name).Create(GetCtx(), httpRouteOne, metav1.CreateOptions{})
 			if err != nil {
-				t.Logf("failed to deploy httproute: %v", err)
-				c.Errorf("failed to deploy httproute: %v", err)
-				return
+				require.NoError(c, err, "failed to create HTTPRoute %s/%s", httpRouteOne.Namespace, httpRouteOne.Name)
 			}
 			cleaner.Add(result)
 		},
@@ -340,8 +308,7 @@ func TestGatewayMultiple(t *testing.T) {
 		func(c *assert.CollectT) {
 			result, err := gatewayV1Client.HTTPRoutes(namespace.Name).Create(GetCtx(), httpRouteTwo, metav1.CreateOptions{})
 			if err != nil {
-				t.Logf("failed to deploy httproute: %v", err)
-				c.Errorf("failed to deploy httproute: %v", err)
+				require.NoError(c, err, "failed to create HTTPRoute %s/%s", httpRouteTwo.Namespace, httpRouteTwo.Name)
 				return
 			}
 			cleaner.Add(result)
@@ -473,8 +440,6 @@ func createHTTPRoute(parentRef metav1.Object, svc metav1.Object, path string) *g
 }
 
 func TestGatewayWithMultipleListeners(t *testing.T) {
-	t.Skip("Using KIC as a library in ControlPlane controller broke this test (https://github.com/Kong/gateway-operator/issues/1200)")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
@@ -525,16 +490,6 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 	t.Log("verifying that dataplane has 1 ready replica")
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneNN, clients, 1), time.Minute, time.Second)
 
-	t.Log("verifying that the ControlPlane becomes provisioned")
-	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
-	controlplanes := testutils.MustListControlPlanesForGateway(t, ctx, gateway, clients)
-	require.Len(t, controlplanes, 1)
-	controlplane := controlplanes[0]
-	controlplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: controlplane.Name}
-
-	t.Log("verifying that controlplane has 1 ready replica")
-	require.Eventually(t, testutils.ControlPlaneHasNReadyPods(t, ctx, controlplaneNN, clients, 1), time.Minute, time.Second)
-
 	t.Log("verifying networkpolicies are created")
 	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 
@@ -544,8 +499,6 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 }
 
 func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
-	t.Skip("Using KIC as a library in ControlPlane controller broke this test (https://github.com/Kong/gateway-operator/issues/1192)")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -650,15 +603,6 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 				}
 			}, time.Minute, time.Second)
 
-			t.Log("verifying the deployment managed by the controlplane is ready")
-			controlplanes := testutils.MustListControlPlanesForGateway(t, GetCtx(), gateway, clients)
-			require.Len(t, controlplanes, 1)
-			controlplaneNN := client.ObjectKeyFromObject(&controlplanes[0])
-			require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t,
-				GetCtx(),
-				controlplaneNN,
-				clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
-
 			t.Logf("verifying the deployment managed by the dataplane is ready and has %d available dataplane replicas", tc.expectedReplicasCount)
 			dataplanes := testutils.MustListDataPlanesForGateway(t, GetCtx(), gateway, clients)
 			require.Len(t, dataplanes, 1)
@@ -739,10 +683,12 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	t.Log("verifying that the DataPlane's Pod Admin API is network restricted to ControlPlane Pods")
 	var expectLimitedAdminAPI networkPolicyIngressRuleDecorator
 	expectLimitedAdminAPI.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneAdminAPIPort)
-	expectLimitedAdminAPI.withPeerMatchLabels(
-		map[string]string{"app": controlplane.Name},
-		map[string]string{"kubernetes.io/metadata.name": dataplane.Namespace},
-	)
+	//TODO: https://github.com/Kong/gateway-operator/issues/1700
+	// Re-enable/adjust once the dataplane's admin API is network restricted to KO.
+	// expectLimitedAdminAPI.withPeerMatchLabels(
+	// 	map[string]string{"app": controlplane.Name},
+	// 	map[string]string{"kubernetes.io/metadata.name": dataplane.Namespace},
+	// )
 
 	t.Log("verifying that the DataPlane's proxy ingress traffic is allowed")
 	var expectAllowProxyIngress networkPolicyIngressRuleDecorator

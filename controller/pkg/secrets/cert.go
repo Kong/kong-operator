@@ -44,7 +44,7 @@ var caLoggerInit sync.Once
 // Subsequent calls to this function will have no effect.
 func SetCALogger(logger logr.Logger) {
 	caLoggerInit.Do(func() {
-		cflog.SetLogger(loggerShim{logger: logger})
+		cflog.SetLogger(loggerShim{logger: logger.WithName("cfssl")})
 	})
 }
 
@@ -52,7 +52,7 @@ func SetCALogger(logger logr.Logger) {
 // Private Functions - Certificate management
 // -----------------------------------------------------------------------------
 
-// cfssl uses its own internal logger which will yeet unformatted messages to stderr unless overidden
+// cfssl uses its own internal logger which will yet unformatted messages to stderr unless overridden.
 type loggerShim struct {
 	logger logr.Logger
 }
