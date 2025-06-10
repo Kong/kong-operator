@@ -29,7 +29,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 cd "${SCRIPT_DIR}/.."
-GATEWAY_API_VERSION="${GATEWAY_API_VERSION:-v1.3.0}"
 CHART_NAME="${CHART_NAME:-ingress}"
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 ARCH="$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')"
@@ -87,13 +86,4 @@ ktf 1>/dev/null
 # ------------------------------------------------------------------------------
 # Create Testing Environment
 # ------------------------------------------------------------------------------
-if [[ "${CHART_NAME}" == "gateway-operator" ]]
-then
-  ktf environments create --name "${TEST_ENV_NAME}" --addon metallb --kubernetes-version "${KUBERNETES_VERSION}"
-  # Install Kong specific CRDs
-  kubectl apply -k https://github.com/Kong/kubernetes-ingress-controller/config/crd
-else
-  ktf environments create --name "${TEST_ENV_NAME}" --addon metallb --addon kuma --kubernetes-version "${KUBERNETES_VERSION}"
-fi
-
-kubectl kustomize "github.com/kubernetes-sigs/gateway-api/config/crd/experimental?ref=${GATEWAY_API_VERSION}" | kubectl apply -f -
+ktf environments create --name "${TEST_ENV_NAME}" --addon metallb --kubernetes-version "${KUBERNETES_VERSION}"

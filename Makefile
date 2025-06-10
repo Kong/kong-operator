@@ -650,16 +650,12 @@ generate.gateway-api-urls:
 		OUTPUT=$(shell pwd)/pkg/utils/test/zz_generated.gateway_api.go \
 		go generate -tags=generate_gateway_api_urls ./internal/utils/cmd/generate-gateway-api-urls
 
-.PHONY: go-mod-download-gateway-api
-go-mod-download-gateway-api:
-	@go mod download $(GATEWAY_API_PACKAGE)
-
-.PHONY: install-gateway-api-crds
-install-gateway-api-crds: go-mod-download-gateway-api kustomize
+.PHONY: install.gateway-api-crds
+install.gateway-api-crds: kustomize ensure.go.pkg.downloaded.gateway-api
 	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_KUSTOMIZE_EXPERIMENTAL_LOCAL_PATH) | kubectl apply -f -
 
-.PHONY: uninstall-gateway-api-crds
-uninstall-gateway-api-crds: go-mod-download-gateway-api kustomize
+.PHONY: uninstall.gateway-api-crds
+uninstall.gateway-api-crds: kustomize ensure.go.pkg.downloaded.gateway-api
 	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_KUSTOMIZE_EXPERIMENTAL_LOCAL_PATH) | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 # ------------------------------------------------------------------------------
@@ -759,17 +755,24 @@ debug.skaffold.continuous: _ensure-kong-system-namespace
 
 # Install CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install
-install: manifests kustomize install-gateway-api-crds
+install: manifests kustomize install.gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
 
 KUBERNETES_CONFIGURATION_CRDS_PACKAGE ?= github.com/kong/kubernetes-configuration
 KUBERNETES_CONFIGURATION_CRDS_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(KUBERNETES_CONFIGURATION_CRDS_PACKAGE))
-KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_CRDS_PACKAGE)@$(KUBERNETES_CONFIGURATION_CRDS_VERSION)/config/crd/gateway-operator
+KUBERNETES_CONFIGURATION_PACKAGE_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_CRDS_PACKAGE)@$(KUBERNETES_CONFIGURATION_CRDS_VERSION)
+KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH = $(KUBERNETES_CONFIGURATION_PACKAGE_PATH)/config/crd/gateway-operator
+KUBERNETES_CONFIGURATION_CRDS_CRDS_INGRESS_CONTROLLER_LOCAL_PATH = $(KUBERNETES_CONFIGURATION_PACKAGE_PATH)/config/crd/ingress-controller
 
 # Install kubernetes-configuration CRDs into the K8s cluster specified in ~/.kube/config.
-.PHONY: install.kubernetes-configuration-crds
-install.kubernetes-configuration-crds: kustomize
+.PHONY: install.kubernetes-configuration-crds-operator
+install.kubernetes-configuration-crds-operator: kustomize ensure.go.pkg.downloaded.kubernetes-configuration
 	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH) | kubectl apply --server-side -f -
+
+# Install kubernetes-configuration ingress controller CRDs into the K8s cluster specified in ~/.kube/config.
+.PHONY: install.kubernetes-configuration-crds-ingress-controller
+install.kubernetes-configuration-crds-ingress-controller: kustomize ensure.go.pkg.downloaded.kubernetes-configuration
+	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_CRDS_CRDS_INGRESS_CONTROLLER_LOCAL_PATH) | kubectl apply --server-side -f -
 
 # Install RBACs from config/rbac into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.rbacs
@@ -778,13 +781,13 @@ install.rbacs: kustomize
 
 # Install standard and experimental CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.all
-install.all: manifests kustomize install-gateway-api-crds install.kubernetes-configuration-crds
+install.all: manifests kustomize install.gateway-api-crds install.kubernetes-configuration-crds-operator install.kubernetes-configuration-crds-ingress-controller
 	kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
 
 # Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall
-uninstall: manifests kustomize uninstall-gateway-api-crds
+uninstall: manifests kustomize uninstall.gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: uninstall.kubernetes-configuration-crds
@@ -794,7 +797,7 @@ uninstall.kubernetes-configuration-crds: kustomize
 # Uninstall standard and experimental CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall.all
-uninstall.all: manifests kustomize uninstall-gateway-api-crds uninstall.kubernetes-configuration-crds
+uninstall.all: manifests kustomize uninstall.gateway-api-crds uninstall.kubernetes-configuration-crds
 
 # Deploy controller to the K8s cluster specified in ~/.kube/config.
 # This will wait for operator's Deployment to get Available.
