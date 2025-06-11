@@ -62,15 +62,15 @@ var (
 func TestOperatorLogs(t *testing.T) {
 	ctx := t.Context()
 	if imageLoad == "" && imageOverride == "" {
-		t.Skipf("No KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE nor KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD" +
+		t.Skipf("No KONG_TEST_KONG_OPERATOR_IMAGE_OVERRIDE nor KONG_TEST_KONG_OPERATOR_IMAGE_LOAD" +
 			" env specified. Please specify the image to use in order to run this test.")
 	}
 	var image string
 	if imageLoad != "" {
-		t.Logf("KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD set to %q, using it for this test", imageLoad)
+		t.Logf("KONG_TEST_KONG_OPERATOR_IMAGE_LOAD set to %q, using it for this test", imageLoad)
 		image = imageLoad
 	} else {
-		t.Logf("KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE set to %q, using it for this test", imageOverride)
+		t.Logf("KONG_TEST_KONG_OPERATOR_IMAGE_OVERRIDE set to %q, using it for this test", imageOverride)
 		image = imageOverride
 	}
 

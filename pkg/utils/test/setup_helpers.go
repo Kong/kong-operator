@@ -275,15 +275,15 @@ func waitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Cli
 		case <-ctx.Done():
 			return ctx.Err()
 		default:
-			fmt.Printf("INFO: checking KGO DataPlane CRD\n")
+			fmt.Printf("INFO: checking KO DataPlane CRD\n")
 			if _, err := operatorClient.GatewayOperatorV1beta1().DataPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
 				continue
 			}
-			fmt.Printf("INFO: checking KGO ControlPlane CRD\n")
+			fmt.Printf("INFO: checking KO ControlPlane CRD\n")
 			if _, err := operatorClient.GatewayOperatorV1beta1().ControlPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
 				continue
 			}
-			fmt.Printf("INFO: checking KGO AIGateway CRD\n")
+			fmt.Printf("INFO: checking KO AIGateway CRD\n")
 			if _, err := operatorClient.GatewayOperatorV1alpha1().AIGateways(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
 				continue
 			}

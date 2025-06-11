@@ -57,8 +57,8 @@ const (
 
 var (
 	existingCluster    = os.Getenv("KONG_TEST_CLUSTER")
-	imageOverride      = os.Getenv("KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE")
-	imageLoad          = os.Getenv("KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD")
+	imageOverride      = os.Getenv("KONG_TEST_KONG_OPERATOR_IMAGE_OVERRIDE")
+	imageLoad          = os.Getenv("KONG_TEST_KONG_OPERATOR_IMAGE_LOAD")
 	skipClusterCleanup = strings.ToLower(os.Getenv("KONG_TEST_CLUSTER_PERSIST")) == "true"
 )
 

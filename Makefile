@@ -20,8 +20,8 @@ endif
 SHELL = bash
 .SHELLFLAGS = -ec -o pipefail
 
-IMG ?= docker.io/kong/gateway-operator-oss
-KUSTOMIZE_IMG_NAME = docker.io/kong/gateway-operator-oss
+IMG ?= docker.io/kong/kong-operator
+KUSTOMIZE_IMG_NAME = docker.io/kong/kong-operator
 
 ifeq (Darwin,$(shell uname -s))
 LDFLAGS_COMMON ?= -extldflags=-Wl,-ld_classic
@@ -719,9 +719,9 @@ _run.with-impersonate:
 	cp $(KUBECONFIG) $(TMP_KUBECONFIG)
 	@$(eval TMP_TOKEN := $(shell kubectl create token --namespace=kong-system controller-manager))
 	@$(eval CLUSTER := $(shell kubectl config get-contexts | grep '^\*' | tr -s ' ' | cut -d ' ' -f 3))
-	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-credentials kgo --token=$(TMP_TOKEN)
-	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-context kgo --cluster=$(CLUSTER) --user=kgo --namespace=kong-system
-	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config use-context kgo
+	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-credentials ko --token=$(TMP_TOKEN)
+	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config set-context ko --cluster=$(CLUSTER) --user=kgo --namespace=kong-system
+	KUBECONFIG=$(TMP_KUBECONFIG) kubectl config use-context ko
 	$(MAKE) _run TMP_KUBECONFIG=$(TMP_KUBECONFIG)
 
 SKAFFOLD_RUN_PROFILE ?= dev

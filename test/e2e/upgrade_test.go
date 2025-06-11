@@ -34,15 +34,15 @@ type upgradeTestParams struct {
 // so anyone pushing changes can expect those changes to be tested in this test.
 func TestDeployAndUpgradeFromLatestTagToOverride(t *testing.T) {
 	if imageLoad == "" && imageOverride == "" {
-		t.Skipf("No KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE nor KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD" +
+		t.Skipf("No KONG_TEST_KONG_OPERATOR_IMAGE_OVERRIDE nor KONG_TEST_KONG_OPERATOR_IMAGE_LOAD" +
 			" env specified. Please specify the image to upgrade to in order to run this test.")
 	}
 	var image string
 	if imageLoad != "" {
-		t.Logf("KONG_TEST_GATEWAY_OPERATOR_IMAGE_LOAD set to %q, using it to upgrade", imageLoad)
+		t.Logf("KONG_TEST_KONG_OPERATOR_IMAGE_LOAD set to %q, using it to upgrade", imageLoad)
 		image = imageLoad
 	} else {
-		t.Logf("KONG_TEST_GATEWAY_OPERATOR_IMAGE_OVERRIDE set to %q, using it to upgrade", imageOverride)
+		t.Logf("KONG_TEST_KONG_OPERATOR_IMAGE_OVERRIDE set to %q, using it to upgrade", imageOverride)
 		image = imageOverride
 	}
 

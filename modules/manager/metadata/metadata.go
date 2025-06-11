@@ -34,7 +34,7 @@ type Info struct {
 	Organization string
 }
 
-// UserAgent returns the User-Agent string to use in all HTTP requests made by KGO.
+// UserAgent returns the User-Agent string to use in all HTTP requests made by KO.
 func (inf Info) UserAgent() string {
 	return fmt.Sprintf(
 		"%s/%s (%s/%s)",

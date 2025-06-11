@@ -49,11 +49,11 @@ func PrepareKustomizeDir(t *testing.T, image string) KustomizeDir {
 	t.Helper()
 
 	const (
-		gatewayOperatorDefaultImage               = "docker.io/kong/gateway-operator-oss"
+		gatewayOperatorDefaultImage               = "docker.io/kong/kong-operator"
 		gatewayOperatorDefaultTag                 = "main"
 		gatewayOperatorImageKustomizationContents = "\n" +
 			"images:\n" +
-			"- name: docker.io/kong/gateway-operator-oss\n" +
+			"- name: docker.io/kong/kong-operator\n" +
 			"  newName: %v\n" +
 			"  newTag: '%v'\n"
 	)
