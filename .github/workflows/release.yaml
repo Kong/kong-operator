@@ -14,11 +14,11 @@ on:
       release_type:
         description: Whether to make a created release a pre-release
         required: true
-        default: 'prerelease'
+        default: "prerelease"
         type: choice
         options:
-        - prerelease
-        - release
+          - prerelease
+          - release
 
 permissions:
   contents: read
@@ -30,14 +30,14 @@ jobs:
       actions: read
     uses: ./.github/workflows/__release-workflow.yaml
     secrets:
-      dockerhub-push-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
+      dockerhub-push-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO }}
       gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
       gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
       gh-pat: ${{ secrets.PAT_GITHUB }}
       konnect-pat: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
     with:
       dockerhub-push-username: ${{ vars.DOCKERHUB_PUSH_USERNAME  }}
-      image-name: ${{ vars.DOCKERHUB_IMAGE_NAME }}
+      image-name: ${{ vars.DOCKERHUB_IMAGE_NAME_KO }}
       latest: ${{ inputs.latest }}
       tag: ${{ inputs.tag }}
       base: ${{ github.ref_name }}
