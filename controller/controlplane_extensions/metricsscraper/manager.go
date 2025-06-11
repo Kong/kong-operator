@@ -368,7 +368,7 @@ func (msm *Manager) enableMetricsScraperForControlPlanesDataPlane(
 	}
 
 	if msm.Add(controlplane, pipeline) {
-		log.Debug(msm.logger, "enabled metrics scraper for ControlPlane", controlplane, "DataPlane", controlplane.Spec.DataPlane)
+		log.Debug(msm.logger, "enabled metrics scraper for ControlPlane", "controlplane", controlplane, "DataPlane", controlplane.Spec.DataPlane)
 	}
 	return nil
 }
