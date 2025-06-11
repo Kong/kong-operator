@@ -52,6 +52,13 @@
   as the endpoints. All this data is constantly enforced into the `KonnectExtension` status.
   [#1684](https://github.com/Kong/gateway-operator/pull/1684)
 
+### Breaking Changes
+
+- `KonnectExtension` has been bumped to `v1alpha2` and the Control plane reference via plain `KonnectID`
+  has been removed. `Mirror` `GatewayControlPlane` resource is now the only way to reference remote 
+  control planes in read-only.
+  [#1711](https://github.com/Kong/gateway-operator/pull/1711)
+
 ## [v1.6.1]
 
 > Release date: 2025-05-22
