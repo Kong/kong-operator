@@ -22,7 +22,7 @@ func TestKonnectExtension(t *testing.T) {
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.ControlPlaneRef{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 										Name: "test-konnect-control-plane",
@@ -51,7 +51,7 @@ func TestKonnectExtension(t *testing.T) {
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.ControlPlaneRef{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 										Name: "test-konnect-control-plane",
@@ -80,7 +80,7 @@ func TestKonnectExtension(t *testing.T) {
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.ControlPlaneRef{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 										Name: "test-konnect-control-plane",
@@ -107,7 +107,7 @@ func TestKonnectExtension(t *testing.T) {
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.ControlPlaneRef{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 										Name: "test-konnect-control-plane",
@@ -134,14 +134,14 @@ func TestKonnectExtension(t *testing.T) {
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.ControlPlaneRef{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKIC,
 								},
 							},
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("kic type not supported as controlPlaneRef."),
+				ExpectedErrorMessage: lo.ToPtr(`Unsupported value: "kic"`),
 			},
 		}.Run(t)
 	})
@@ -154,7 +154,7 @@ func TestKonnectExtension(t *testing.T) {
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.ControlPlaneRef{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 										Name: "test-konnect-control-plane",
@@ -177,7 +177,7 @@ func TestKonnectExtension(t *testing.T) {
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.ControlPlaneRef{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 										Name: "test-konnect-control-plane",
@@ -201,7 +201,7 @@ func TestKonnectExtension(t *testing.T) {
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.ControlPlaneRef{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 										Name: "test-konnect-control-plane",
@@ -225,7 +225,7 @@ func TestKonnectExtension(t *testing.T) {
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.ControlPlaneRef{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 										Name: "test-konnect-control-plane",
@@ -249,7 +249,7 @@ func TestKonnectExtension(t *testing.T) {
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.ControlPlaneRef{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 										Name: "test-konnect-control-plane",
@@ -279,7 +279,7 @@ func TestKonnectExtension(t *testing.T) {
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.ControlPlaneRef{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 										Name: "test-konnect-control-plane",
@@ -303,7 +303,7 @@ func TestKonnectExtension(t *testing.T) {
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.ControlPlaneRef{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 										Name: "test-konnect-control-plane",
@@ -327,7 +327,7 @@ func TestKonnectExtension(t *testing.T) {
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.ControlPlaneRef{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 										Name: "test-konnect-control-plane",
@@ -351,7 +351,7 @@ func TestKonnectExtension(t *testing.T) {
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.ControlPlaneRef{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 										Name: "test-konnect-control-plane",

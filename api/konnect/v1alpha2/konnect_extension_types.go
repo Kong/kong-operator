@@ -98,8 +98,7 @@ type KonnectExtensionControlPlane struct {
 	// Ref is a reference to a Konnect ControlPlane this KonnectExtension is associated with.
 	//
 	// +kubebuilder:validation:Required
-	// +kubebuilder:validation:XValidation:rule="self.type != 'kic'", message="kic type not supported as controlPlaneRef."
-	Ref commonv1alpha1.ControlPlaneRef `json:"ref"`
+	Ref commonv1alpha1.KonnectExtensionControlPlaneRef `json:"ref"`
 }
 
 // KonnectExtensionDataPlane is the configuration for the Konnect DataPlane.

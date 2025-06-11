@@ -3,6 +3,7 @@ package v1alpha1_test
 import (
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
@@ -46,6 +47,21 @@ func TestControlPlaneRefStringer(t *testing.T) {
 				},
 			},
 			expected: "<konnectNamespacedRef:bar/foo>",
+		},
+		{
+			name: "konnectID without ID - doesn't panic",
+			ref: &commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectID,
+			},
+			expected: "<konnectID:nil>",
+		},
+		{
+			name: "konnectID with ID",
+			ref: &commonv1alpha1.ControlPlaneRef{
+				Type:      commonv1alpha1.ControlPlaneRefKonnectID,
+				KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("foo")),
+			},
+			expected: "<konnectID:foo>",
 		},
 		{
 			name: "kic",

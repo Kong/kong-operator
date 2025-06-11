@@ -161,25 +161,6 @@ const (
 )
 
 const (
-	// KonnectExtensionReadyConditionType is the type of the condition that indicates
-	// whether the Konnect extension is ready to be used.
-	KonnectExtensionReadyConditionType = "Ready"
-
-	// KonnectExtensionReadyReasonReady is the reason used with the
-	// KonnectExtensionReady condition type indicating that the Konnect extension
-	// is Ready.
-	KonnectExtensionReadyReasonReady = "Ready"
-	// KonnectExtensionReadyReasonPending is the reason used with the
-	// KonnectExtensionReady condition type indicating that the Konnect extension
-	// is pending.
-	KonnectExtensionReadyReasonPending = "Pending"
-	// KonnectExtensionReadyReasonProvisioning is the reason used with the
-	// KonnectExtensionReady condition type indicating that the Konnect extension
-	// is provisioning.
-	KonnectExtensionReadyReasonProvisioning = "provisioning"
-)
-
-const (
 	// DataPlaneCertificateProvisionedConditionType is the type of the condition that indicates
 	// whether the DataPlane certificate has been properly provisioned in Konnect.
 	DataPlaneCertificateProvisionedConditionType = "DataPlaneCertificateProvisioned"
