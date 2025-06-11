@@ -65,8 +65,8 @@ func TestHelmUpgrade(t *testing.T) {
 		{
 			name:        "upgrade from one before latest to latest minor",
 			skip:        "Two versions are needed to upgrade from, but currently only one exists (https://github.com/Kong/gateway-operator/issues/1716)",
-			fromVersion: "2.0.0-alpha.0", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator@only-patch
-			toVersion:   "2.0.0-alpha.0", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
+			fromVersion: "2.0.0-alpha.1", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator@only-patch
+			toVersion:   "2.0.0-alpha.1", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -138,11 +138,11 @@ func TestHelmUpgrade(t *testing.T) {
 		{
 			name:             "upgrade from latest minor to current",
 			skip:             "ControlPlane assertions have to be adjusted to KIC as a library approach (https://github.com/Kong/gateway-operator/issues/1188)",
-			fromVersion:      "2.0.0-alpha.0", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
+			fromVersion:      "2.0.0-alpha.1", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release.
 			// It's needed for the chart to properly render semver-conditional templates.
-			upgradeToEffectiveSemver: "2.0.0-alpha.0",
+			upgradeToEffectiveSemver: "2.0.0-alpha.1",
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -217,7 +217,7 @@ func TestHelmUpgrade(t *testing.T) {
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release.
 			// It's needed for the chart to properly render semver-conditional templates.
-			upgradeToEffectiveSemver: "2.0.0-alpha.0",
+			upgradeToEffectiveSemver: "2.0.0-alpha.1",
 			objectsToDeploy: []client.Object{
 				&operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
