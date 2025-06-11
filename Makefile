@@ -356,6 +356,8 @@ manifests.crds: controller-gen manifests.versions ## Generate CustomResourceDefi
 # manifests.versions ensures that image versions are set in the manifests according to the current version.
 .PHONY: manifests.versions
 manifests.versions: kustomize yq
+	$(YQ) eval '.appVersion = "$(VERSION)"' -i charts/kong-operator/Chart.yaml
+	$(YQ) eval '.tag = "$(VERSION)"' -i charts/kong-operator/values.yaml
 	cd config/components/manager-image/ && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
 
 .PHONY: manifests.charts

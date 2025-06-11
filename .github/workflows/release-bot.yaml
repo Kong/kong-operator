@@ -1,4 +1,4 @@
-# This job is not inteneded to be run manually. Instead it assumes that proper
+# This job is not intended to be run manually. Instead it assumes that proper
 # release commit is pushed to the repository. It will then create a new release
 # on GitHub.
 name: release-bot
