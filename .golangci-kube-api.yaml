@@ -1,0 +1,30 @@
+version: "2"
+linters:
+  default: none
+  enable:
+    - kubeapilinter
+  settings:
+    custom:
+      kubeapilinter:
+        type: module
+        description: Kube API LInter lints Kube like APIs based on API conventions and best practices.
+        settings:
+          linters:
+            disable:
+              - "*"
+            enable:
+              - duplicatemarkers
+              - jsontags
+              # - maxlength
+              - nofloats
+              - nomaps
+              - nophase
+              # - optionalorrequired
+              - requiredfields
+              - statusoptional
+              - statussubresource
+          lintersConfig:
+            conditions:
+              isFirstField: Warn
+              useProtobuf: Warn
+              usePatchStrategy: Warn

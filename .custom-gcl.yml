@@ -1,0 +1,8 @@
+# These versions in this file will not get auto updated so ideally we'd add a renovate
+# config to update this file automatically.
+version: v2.1.6
+name: golangci-kube-api-linter
+destination: ./bin
+plugins:
+- module: 'sigs.k8s.io/kube-api-linter'
+  version: f86bf7bd4b19bba7a3afa6403cde702fed643ec2
