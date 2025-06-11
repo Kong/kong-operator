@@ -13,10 +13,10 @@ concurrency:
 on:
   push:
     branches:
-    - 'main'
+      - "main"
   pull_request:
     branches:
-      - '**'
+      - "**"
   workflow_dispatch: {}
 
 permissions:
@@ -41,14 +41,14 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
-      dockerhub-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN }}
+      dockerhub-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO }}
       gh-pat: ${{ secrets.PAT_GITHUB }}
       slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       slack-team-id: ${{ secrets.SLACK_TEAM_ID }}
     with:
       username: ${{ vars.DOCKERHUB_PUSH_USERNAME }}
       registry: docker.io
-      image-name: ${{ vars.DOCKERHUB_IMAGE_NAME }}
+      image-name: ${{ vars.DOCKERHUB_IMAGE_NAME_KO }}
       # If we pushed then it means we want to build and push the image.
       # Branch filter above will decide pushes to which branch will trigger this.
       push: ${{ github.event.action == 'push' }}

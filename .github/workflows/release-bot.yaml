@@ -6,8 +6,8 @@ name: release-bot
 on:
   push:
     branches:
-      - 'main'
-      - 'release/*'
+      - "main"
+      - "release/*"
 
 permissions:
   contents: read
@@ -19,7 +19,7 @@ jobs:
       release_type: ${{ steps.commit_parser.outputs.release_type }}
       release_latest: ${{ steps.commit_parser.outputs.release_latest }}
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
@@ -64,13 +64,13 @@ jobs:
         run: |
           VERSION=$(cat VERSION)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
-        
+
       - name: Parse semver string
         id: semver_parser
         uses: booxmedialtd/ws-action-parse-semver@7784200024d6b3fc01253e617ec0168daf603de3 # v1.4.7
         with:
           input_string: ${{ env.VERSION }}
-          version_extractor_regex: '(.*)$'
+          version_extractor_regex: "(.*)$"
 
       - name: check if tag already exists
         uses: mukunku/tag-exists-action@bdad1eaa119ce71b150b952c97351c75025c06a9 # v1.6.0
@@ -98,7 +98,7 @@ jobs:
           body: |
             #### Download Kong Gateway Operator ${{ needs.semver.outputs.version }}:
 
-            - [Docker Image](https://hub.docker.com/r/${{ vars.DOCKERHUB_IMAGE_NAME }}/tags?name=${{ needs.semver.outputs.version }})
+            - [Docker Image](https://hub.docker.com/r/${{ vars.DOCKERHUB_IMAGE_NAME_KO }}/tags?name=${{ needs.semver.outputs.version }})
             - [Get started](https://github.com/Kong/gateway-operator/blob/main/README.md)
 
             #### Links:
@@ -130,8 +130,8 @@ jobs:
         with:
           # NOTE: using the full ref name because
           # https://github.com/peterjgrainger/action-create-branch?tab=readme-ov-file#branch
-          branch: 'refs/heads/release/${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}.x'
-          sha: '${{ github.sha }}'
+          branch: "refs/heads/release/${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}.x"
+          sha: "${{ github.sha }}"
 
   create-cherry-pick-branch-to-main:
     permissions:
@@ -168,5 +168,5 @@ jobs:
           branch: ${{ env.CHERRYPICK_BRANCH }}
           base: main
           delete-branch: true
-          title: '[cherry-pick] ${{ needs.semver.outputs.version }} - ${{ github.sha }}'
-          body: 'Cherry picking ${{ needs.semver.outputs.version }} commit (${{ github.sha }}) onto main'
+          title: "[cherry-pick] ${{ needs.semver.outputs.version }} - ${{ github.sha }}"
+          body: "Cherry picking ${{ needs.semver.outputs.version }} commit (${{ github.sha }}) onto main"
