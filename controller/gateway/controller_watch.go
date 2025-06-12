@@ -325,6 +325,7 @@ func (r *Reconciler) setDataPlaneGatewayConfigDefaults(gatewayConfig *operatorv1
 	}
 }
 
+// TODO(pmalek): add support for GatewayConfiguration v2 https://github.com/Kong/gateway-operator/issues/1728
 func (r *Reconciler) setControlPlaneGatewayConfigDefaults(
 	gateway *gwtypes.Gateway, //nolint:unparam
 	gatewayConfig *operatorv1beta1.GatewayConfiguration,
@@ -363,9 +364,10 @@ func (r *Reconciler) setControlPlaneGatewayConfigDefaults(
 		controlPlanePodTemplateSpec.Spec.Containers = append(controlPlanePodTemplateSpec.Spec.Containers, *container)
 	}
 
+	// TODO(pmalek): add support for GatewayConfiguration v2 https://github.com/Kong/gateway-operator/issues/1728
+
 	// an actual ControlPlane will have ObjectMeta populated with ownership information. this includes a stand-in to
 	// satisfy the signature
-	// TODO(pmalek)
 	// _ = controlplane.SetDefaults(gatewayConfig.Spec.ControlPlaneOptions,
 	// 	controlplane.DefaultsArgs{
 	// 		Namespace:                   gateway.Namespace,
