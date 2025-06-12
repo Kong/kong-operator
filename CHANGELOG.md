@@ -58,6 +58,7 @@
   has been removed. `Mirror` `GatewayControlPlane` resource is now the only way to reference remote 
   control planes in read-only.
   [#1711](https://github.com/Kong/gateway-operator/pull/1711)
+  <!-- TODO: https://github.com/Kong/gateway-operator/issues/1732 -->
 
 ## [v1.6.1]
 
