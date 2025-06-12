@@ -324,12 +324,12 @@ func (r *Reconciler) setDataPlaneGatewayConfigDefaults(gatewayConfig *operatorv1
 
 // TODO(pmalek): add support for GatewayConfiguration v2 https://github.com/Kong/gateway-operator/issues/1728
 func (r *Reconciler) setControlPlaneGatewayConfigDefaults(
-	gateway *gwtypes.Gateway, //nolint:unparam
+	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1beta1.GatewayConfiguration,
 	dataplaneName,
-	dataplaneIngressServiceName, //nolint:unparam
-	dataplaneAdminServiceName, //nolint:unparam
-	controlPlaneName string, //nolint:unparam
+	dataplaneIngressServiceName,
+	dataplaneAdminServiceName,
+	controlPlaneName string,
 ) {
 	// TODO(pmalek): add support for GatewayConfiguration v2 https://github.com/Kong/gateway-operator/issues/1728
 	// if gatewayConfig.Spec.ControlPlaneOptions == nil {
