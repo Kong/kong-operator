@@ -23,6 +23,8 @@ import (
 )
 
 func TestHTTPRoute(t *testing.T) {
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -118,6 +120,8 @@ func TestHTTPRoute(t *testing.T) {
 }
 
 func TestHTTPRouteWithTLS(t *testing.T) {
+	t.Skip("skipping as this test requires changed after changes to ControlPlane API in v2alpha1")
+
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 

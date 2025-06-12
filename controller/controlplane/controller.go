@@ -198,8 +198,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	log.Trace(logger, "configuring ControlPlane resource")
 	defaultArgs := controlplane.DefaultsArgs{
-		// TODO(pmalek): implement anonymous reports
-		// AnonymousReportsEnabled:     controlplane.DeduceAnonymousReportsEnabled(r.AnonymousReportsEnabled, &cp.Spec.ControlPlaneOptions),
 		OwnedByGateway: func() string {
 			for _, owner := range cp.OwnerReferences {
 				if strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) && owner.Kind == "Gateway" {

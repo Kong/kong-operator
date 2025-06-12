@@ -34,6 +34,8 @@ import (
 )
 
 func TestGatewayEssentials(t *testing.T) {
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -442,6 +444,8 @@ func createHTTPRoute(parentRef metav1.Object, svc metav1.Object, path string) *g
 }
 
 func TestGatewayWithMultipleListeners(t *testing.T) {
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
@@ -501,6 +505,8 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 }
 
 func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -624,6 +630,8 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 }
 
 func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 

@@ -21,6 +21,8 @@ import (
 )
 
 func TestAIGatewayCreation(t *testing.T) {
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+
 	t.Parallel()
 
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())

@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 	"reflect"
-	"strconv"
 
 	"github.com/kong/gateway-operator/internal/versions"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -21,7 +20,6 @@ type DefaultsArgs struct {
 	DataPlaneIngressServiceName string
 	DataPlaneAdminServiceName   string
 	OwnedByGateway              string
-	AnonymousReportsEnabled     bool
 }
 
 // -----------------------------------------------------------------------------
@@ -79,29 +77,4 @@ func SpecDeepEqual(spec1, spec2 *operatorv1beta1.ControlPlaneOptions, envVarsToI
 	}
 
 	return true
-}
-
-// DeduceAnonymousReportsEnabled returns the value of the anonymous reports enabled
-// based on the environment variable `CONTROLLER_ANONYMOUS_REPORTS` in the control plane
-// pod template spec and operator development mode setting.
-//
-// This allows users to override the setting that is a derivative of the operator development mode
-// using the environment variable `CONTROLLER_ANONYMOUS_REPORTS` in the control plane pod template spec.
-func DeduceAnonymousReportsEnabled(anonymousReportsEnabled bool, cpOpts *operatorv1beta1.ControlPlaneOptions) bool {
-	pts := cpOpts.Deployment.PodTemplateSpec
-	if pts == nil {
-		return anonymousReportsEnabled
-	}
-
-	container := k8sutils.GetPodContainerByName(&pts.Spec, consts.ControlPlaneControllerContainerName)
-	if container == nil {
-		return anonymousReportsEnabled
-	}
-
-	env := k8sutils.EnvValueByName(container.Env, "CONTROLLER_ANONYMOUS_REPORTS")
-	if v, err := strconv.ParseBool(env); len(env) > 0 && err == nil {
-		return v
-	}
-
-	return anonymousReportsEnabled
 }

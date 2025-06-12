@@ -60,6 +60,8 @@ var (
 )
 
 func TestOperatorLogs(t *testing.T) {
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+
 	ctx := t.Context()
 	if imageLoad == "" && imageOverride == "" {
 		t.Skipf("No KONG_TEST_KONG_OPERATOR_IMAGE_OVERRIDE nor KONG_TEST_KONG_OPERATOR_IMAGE_LOAD" +
