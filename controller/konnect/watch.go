@@ -112,7 +112,7 @@ func objHasControlPlaneRef[
 		return false
 	}
 	switch cpRef.Type {
-	case commonv1alpha1.ControlPlaneRefKonnectID, commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
+	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
 		return true
 	default:
 		return false

@@ -20,7 +20,7 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // DataPlaneWatchBuilder creates a controller builder pre-configured with
@@ -58,7 +58,7 @@ func DataPlaneWatchBuilder(mgr ctrl.Manager, konnectEnabled bool) *builder.Build
 		controller.WatchesRawSource(
 			source.Kind(
 				mgr.GetCache(),
-				&konnectv1alpha1.KonnectExtension{},
+				&konnectv1alpha2.KonnectExtension{},
 				handler.TypedEnqueueRequestsFromMapFunc(index.ListObjectsReferencingKonnectExtension(mgr.GetClient(), &operatorv1beta1.DataPlaneList{})),
 			),
 		)

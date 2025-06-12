@@ -11,7 +11,7 @@ import (
 	"github.com/kong/gateway-operator/internal/utils/index"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 const (
@@ -20,10 +20,10 @@ const (
 	SecretKonnectDataPlaneCertificateLabel = "konghq.com/konnect-dp-cert" //nolint:gosec
 )
 
-func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *corev1.Secret) ([]konnectv1alpha1.KonnectExtension, error) {
+func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *corev1.Secret) ([]konnectv1alpha2.KonnectExtension, error) {
 
 	// Get all the secrets explicitly referenced by KonnectExtensions in the spec.
-	l := &konnectv1alpha1.KonnectExtensionList{}
+	l := &konnectv1alpha2.KonnectExtensionList{}
 	err := cl.List(
 		ctx, l,
 		client.InNamespace(s.Namespace),
@@ -39,9 +39,9 @@ func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *cor
 	for _, ownerRef := range s.GetOwnerReferences() {
 		if ownerRef.Controller != nil &&
 			*ownerRef.Controller &&
-			ownerRef.Kind == konnectv1alpha1.KonnectExtensionKind &&
-			ownerRef.APIVersion == konnectv1alpha1.GroupVersion.String() {
-			owner := &konnectv1alpha1.KonnectExtension{}
+			ownerRef.Kind == konnectv1alpha2.KonnectExtensionKind &&
+			ownerRef.APIVersion == konnectv1alpha2.GroupVersion.String() {
+			owner := &konnectv1alpha2.KonnectExtension{}
 			err := cl.Get(ctx, k8stypes.NamespacedName{
 				Namespace: s.Namespace,
 				Name:      ownerRef.Name,

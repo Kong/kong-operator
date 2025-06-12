@@ -2,7 +2,6 @@ package konnect
 
 import (
 	"context"
-	"fmt"
 
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -118,14 +117,6 @@ func enqueueKongUpstreamForKonnectAPIAuthConfiguration(
 						Name:      upstream.Name,
 					},
 				})
-
-			case commonv1alpha1.ControlPlaneRefKonnectID:
-				ctrllog.FromContext(ctx).Error(
-					fmt.Errorf("unimplemented ControlPlaneRef type %q", cpRef.Type),
-					"unimplemented ControlPlaneRef for KongUpstream",
-					"KongUpstream", upstream, "refType", cpRef.Type,
-				)
-				continue
 
 			default:
 				ctrllog.FromContext(ctx).V(logging.DebugLevel.Value()).Info(

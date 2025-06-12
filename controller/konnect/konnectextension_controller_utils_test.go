@@ -10,6 +10,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 func TestEnforceKonnectExtensionStatus(t *testing.T) {
@@ -36,8 +37,8 @@ func TestEnforceKonnectExtensionStatus(t *testing.T) {
 	}
 
 	t.Run("updates both Konnect and DataPlaneClientAuth when both are different", func(t *testing.T) {
-		ext := &konnectv1alpha1.KonnectExtension{
-			Status: konnectv1alpha1.KonnectExtensionStatus{
+		ext := &konnectv1alpha2.KonnectExtension{
+			Status: konnectv1alpha2.KonnectExtensionStatus{
 				Konnect:             nil,
 				DataPlaneClientAuth: nil,
 			},
@@ -47,26 +48,26 @@ func TestEnforceKonnectExtensionStatus(t *testing.T) {
 		require.NotNil(t, ext.Status.Konnect)
 		require.NotNil(t, ext.Status.DataPlaneClientAuth)
 		assert.Equal(t, "cp-id", ext.Status.Konnect.ControlPlaneID)
-		assert.Equal(t, konnectv1alpha1.ClusterTypeControlPlane, ext.Status.Konnect.ClusterType)
+		assert.Equal(t, konnectv1alpha2.ClusterTypeControlPlane, ext.Status.Konnect.ClusterType)
 		assert.Equal(t, "cp-endpoint", ext.Status.Konnect.Endpoints.ControlPlaneEndpoint)
 		assert.Equal(t, "telemetry-endpoint", ext.Status.Konnect.Endpoints.TelemetryEndpoint)
 		assert.Equal(t, "my-secret", ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name)
 	})
 
 	t.Run("does not update if already up-to-date", func(t *testing.T) {
-		konnectStatus := &konnectv1alpha1.KonnectExtensionControlPlaneStatus{
+		konnectStatus := &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
 			ControlPlaneID: "cp-id",
-			ClusterType:    konnectv1alpha1.ClusterTypeControlPlane,
-			Endpoints: konnectv1alpha1.KonnectEndpoints{
+			ClusterType:    konnectv1alpha2.ClusterTypeControlPlane,
+			Endpoints: konnectv1alpha2.KonnectEndpoints{
 				ControlPlaneEndpoint: "cp-endpoint",
 				TelemetryEndpoint:    "telemetry-endpoint",
 			},
 		}
-		dataPlaneClientAuth := &konnectv1alpha1.DataPlaneClientAuthStatus{
-			CertificateSecretRef: &konnectv1alpha1.SecretRef{Name: "my-secret"},
+		dataPlaneClientAuth := &konnectv1alpha2.DataPlaneClientAuthStatus{
+			CertificateSecretRef: &konnectv1alpha2.SecretRef{Name: "my-secret"},
 		}
-		ext := &konnectv1alpha1.KonnectExtension{
-			Status: konnectv1alpha1.KonnectExtensionStatus{
+		ext := &konnectv1alpha2.KonnectExtension{
+			Status: konnectv1alpha2.KonnectExtensionStatus{
 				Konnect:             konnectStatus,
 				DataPlaneClientAuth: dataPlaneClientAuth,
 			},
@@ -76,16 +77,16 @@ func TestEnforceKonnectExtensionStatus(t *testing.T) {
 	})
 
 	t.Run("updates only DataPlaneClientAuth if only that is different", func(t *testing.T) {
-		konnectStatus := &konnectv1alpha1.KonnectExtensionControlPlaneStatus{
+		konnectStatus := &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
 			ControlPlaneID: "cp-id",
-			ClusterType:    konnectv1alpha1.ClusterTypeControlPlane,
-			Endpoints: konnectv1alpha1.KonnectEndpoints{
+			ClusterType:    konnectv1alpha2.ClusterTypeControlPlane,
+			Endpoints: konnectv1alpha2.KonnectEndpoints{
 				ControlPlaneEndpoint: "cp-endpoint",
 				TelemetryEndpoint:    "telemetry-endpoint",
 			},
 		}
-		ext := &konnectv1alpha1.KonnectExtension{
-			Status: konnectv1alpha1.KonnectExtensionStatus{
+		ext := &konnectv1alpha2.KonnectExtension{
+			Status: konnectv1alpha2.KonnectExtensionStatus{
 				Konnect:             konnectStatus,
 				DataPlaneClientAuth: nil,
 			},
@@ -97,15 +98,15 @@ func TestEnforceKonnectExtensionStatus(t *testing.T) {
 	})
 
 	t.Run("updates only Konnect if only that is different", func(t *testing.T) {
-		dataPlaneClientAuth := &konnectv1alpha1.DataPlaneClientAuthStatus{
-			CertificateSecretRef: &konnectv1alpha1.SecretRef{Name: "my-secret"},
+		dataPlaneClientAuth := &konnectv1alpha2.DataPlaneClientAuthStatus{
+			CertificateSecretRef: &konnectv1alpha2.SecretRef{Name: "my-secret"},
 		}
-		ext := &konnectv1alpha1.KonnectExtension{
-			Status: konnectv1alpha1.KonnectExtensionStatus{
-				Konnect: &konnectv1alpha1.KonnectExtensionControlPlaneStatus{
+		ext := &konnectv1alpha2.KonnectExtension{
+			Status: konnectv1alpha2.KonnectExtensionStatus{
+				Konnect: &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
 					ControlPlaneID: "other-id",
-					ClusterType:    konnectv1alpha1.ClusterTypeK8sIngressController,
-					Endpoints: konnectv1alpha1.KonnectEndpoints{
+					ClusterType:    konnectv1alpha2.ClusterTypeK8sIngressController,
+					Endpoints: konnectv1alpha2.KonnectEndpoints{
 						ControlPlaneEndpoint: "other-endpoint",
 						TelemetryEndpoint:    "other-telemetry",
 					},
@@ -118,7 +119,7 @@ func TestEnforceKonnectExtensionStatus(t *testing.T) {
 		require.NotNil(t, ext.Status.Konnect)
 		require.NotNil(t, ext.Status.DataPlaneClientAuth)
 		assert.Equal(t, "cp-id", ext.Status.Konnect.ControlPlaneID)
-		assert.Equal(t, konnectv1alpha1.ClusterTypeControlPlane, ext.Status.Konnect.ClusterType)
+		assert.Equal(t, konnectv1alpha2.ClusterTypeControlPlane, ext.Status.Konnect.ClusterType)
 		assert.Equal(t, "cp-endpoint", ext.Status.Konnect.Endpoints.ControlPlaneEndpoint)
 		assert.Equal(t, "telemetry-endpoint", ext.Status.Konnect.Endpoints.TelemetryEndpoint)
 		assert.Equal(t, "my-secret", ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name)

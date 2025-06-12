@@ -45,7 +45,7 @@ import (
 
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // requeueAfterBoot gives the instance of ControlPlane controller in goroutine some time to start up.
@@ -78,7 +78,7 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		builder.WatchesRawSource(
 			source.Kind(
 				mgr.GetCache(),
-				&konnectv1alpha1.KonnectExtension{},
+				&konnectv1alpha2.KonnectExtension{},
 				handler.TypedEnqueueRequestsFromMapFunc(index.ListObjectsReferencingKonnectExtension(mgr.GetClient(), &operatorv1beta1.DataPlaneList{})),
 			),
 		)

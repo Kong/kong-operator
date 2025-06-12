@@ -42,6 +42,7 @@ import (
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // -----------------------------------------------------------------------------
@@ -191,8 +192,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Condition: c.KonnectControllersEnabled,
 			GVRs: []schema.GroupVersionResource{
 				{
-					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
-					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
+					Group:    konnectv1alpha2.SchemeGroupVersion.Group,
+					Version:  konnectv1alpha2.SchemeGroupVersion.Version,
 					Resource: "konnectextensions",
 				},
 				{

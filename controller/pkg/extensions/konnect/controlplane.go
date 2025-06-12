@@ -9,13 +9,13 @@ import (
 	"github.com/kong/gateway-operator/pkg/consts"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // ApplyControlPlaneKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it
 // fetches the referenced extension and applies the necessary changes to the DataPlane spec.
 func ApplyControlPlaneKonnectExtension(ctx context.Context, cl client.Client, controlPlane *operatorv1beta1.ControlPlane) (bool, error) {
-	var konnectExtension *konnectv1alpha1.KonnectExtension
+	var konnectExtension *konnectv1alpha2.KonnectExtension
 	for _, extensionRef := range controlPlane.Spec.Extensions {
 		extension, err := getExtension(ctx, cl, controlPlane.Namespace, extensionRef)
 		if err != nil {

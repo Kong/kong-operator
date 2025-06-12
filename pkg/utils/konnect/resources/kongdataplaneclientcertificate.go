@@ -10,7 +10,7 @@ import (
 // GenerateKongDataPlaneClientCertificate generates a KongDataPlaneClientCertificate object setting
 // the provided controlPlaneRef as the certificate controlPlaneRef. The cert parameter is the actual certificate
 // pushed into Konnect.
-func GenerateKongDataPlaneClientCertificate(name, namespace string, controlPlaneRef *commonv1alpha1.ControlPlaneRef, cert string, opts ...func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate)) configurationv1alpha1.KongDataPlaneClientCertificate {
+func GenerateKongDataPlaneClientCertificate(name, namespace string, controlPlaneRef *commonv1alpha1.KonnectExtensionControlPlaneRef, cert string, opts ...func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate)) configurationv1alpha1.KongDataPlaneClientCertificate {
 	dpCert := configurationv1alpha1.KongDataPlaneClientCertificate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
@@ -20,7 +20,13 @@ func GenerateKongDataPlaneClientCertificate(name, namespace string, controlPlane
 			KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 				Cert: cert,
 			},
-			ControlPlaneRef: controlPlaneRef,
+			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+					Name: controlPlaneRef.KonnectNamespacedRef.Name,
+					// no cross-namespace references supported yet
+				},
+			},
 		},
 	}
 

@@ -9,7 +9,7 @@ import (
 
 	"github.com/kong/gateway-operator/pkg/consts"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // KongDefaults are the baseline Kong proxy configuration options needed for
@@ -73,16 +73,16 @@ var kongInKonnectClusterTypeIngressController = map[string]string{
 
 // KongInKonnectDefaults returns the map of Konnect-related env vars properly configured.
 func KongInKonnectDefaults(
-	dpLabels map[string]konnectv1alpha1.DataPlaneLabelValue,
-	konnectExtensionStatus konnectv1alpha1.KonnectExtensionStatus,
+	dpLabels map[string]konnectv1alpha2.DataPlaneLabelValue,
+	konnectExtensionStatus konnectv1alpha2.KonnectExtensionStatus,
 ) map[string]string {
 	newEnvSet := make(map[string]string, len(kongInKonnectClusterTypeControlPlane))
 	var template map[string]string
 
 	switch konnectExtensionStatus.Konnect.ClusterType {
-	case konnectv1alpha1.ClusterTypeControlPlane:
+	case konnectv1alpha2.ClusterTypeControlPlane:
 		template = kongInKonnectClusterTypeControlPlane
-	case konnectv1alpha1.ClusterTypeK8sIngressController:
+	case konnectv1alpha2.ClusterTypeK8sIngressController:
 		template = kongInKonnectClusterTypeIngressController
 	default:
 		// default never happens as the validation is at the CRD level
@@ -106,9 +106,9 @@ func sanitizeEndpoint(endpoint string) string {
 	return strings.TrimPrefix(endpoint, "https://")
 }
 
-func clusterDataPlaneLabelStringFromLabels(labels map[string]konnectv1alpha1.DataPlaneLabelValue) string {
+func clusterDataPlaneLabelStringFromLabels(labels map[string]konnectv1alpha2.DataPlaneLabelValue) string {
 	labelStrings := lo.MapToSlice(
-		labels, func(k string, v konnectv1alpha1.DataPlaneLabelValue) string {
+		labels, func(k string, v konnectv1alpha2.DataPlaneLabelValue) string {
 			return fmt.Sprintf("%s:%s", k, v)
 		},
 	)

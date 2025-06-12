@@ -29,22 +29,32 @@ spec:
   token: kpat_XXXXXXXXX
   serverURL: us.api.konghq.com
 ---
-kind: KonnectExtension
+kind: KonnectGatewayControlPlane
 apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: test1
+  namespace: default
+spec:
+  name: test1
+  labels:
+    app: test1
+    key1: test1
+  konnect:
+    authRef:
+      name: konnect-api-auth-dev-1
+---
+kind: KonnectExtension
+apiVersion: konnect.konghq.com/v1alpha2
 metadata:
   name: my-konnect-config
   namespace: default
-  annotations:
-    konghq.com/override: "true"
 spec:
   konnect:
     controlPlane:
       ref:
-        type: konnectID
-        konnectID: c846c30c-77da-40e6-b0c8-66ed7e16c497
-    configuration:
-      authRef:
-        name: konnect-api-auth-dev-1
+        type: konnectNamespacedRef
+        konnectNamespacedRef:
+          name: test1
   clientAuth:
     certificateSecret:
       provisioning: Manual

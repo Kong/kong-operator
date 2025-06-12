@@ -7,7 +7,7 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 type kicInKonnectParams struct {
@@ -64,10 +64,10 @@ func kicInKonnectDefaults(params kicInKonnectParams) []corev1.EnvVar {
 }
 
 // KongInKonnectDefaults returns the slice of Konnect-related env vars properly configured.
-func KICInKonnectDefaults(konnectExtensionStatus konnectv1alpha1.KonnectExtensionStatus) ([]corev1.EnvVar, error) {
+func KICInKonnectDefaults(konnectExtensionStatus konnectv1alpha2.KonnectExtensionStatus) ([]corev1.EnvVar, error) {
 	var envVars []corev1.EnvVar
 	switch konnectExtensionStatus.Konnect.ClusterType {
-	case konnectv1alpha1.ClusterTypeK8sIngressController:
+	case konnectv1alpha2.ClusterTypeK8sIngressController:
 		envVars = kicInKonnectDefaults(
 			kicInKonnectParams{
 				konnectAddress:      buildKonnectAddress(konnectExtensionStatus.Konnect.Endpoints.ControlPlaneEndpoint),
@@ -75,7 +75,7 @@ func KICInKonnectDefaults(konnectExtensionStatus konnectv1alpha1.KonnectExtensio
 				tlsClientSecretName: konnectExtensionStatus.DataPlaneClientAuth.CertificateSecretRef.Name,
 			},
 		)
-	case konnectv1alpha1.ClusterTypeControlPlane:
+	case konnectv1alpha2.ClusterTypeControlPlane:
 		return nil, fmt.Errorf("unsupported Konnect cluster type: %s", konnectExtensionStatus.Konnect.ClusterType)
 	default:
 		// default never happens as the validation is at the CRD level
