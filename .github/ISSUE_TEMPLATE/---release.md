@@ -39,11 +39,6 @@ If the troubleshooting section does not contain the answer to the problem you en
     ${KUBERNETES_CONFIGURATION_REPO}/scripts/apidocs-gen/post-process-for-konghq.sh ${KUBERNETES_CONFIGURATION_REPO}/docs/gateway-operator-api-reference.md ${KONGHQ_DOCS_REPO}/app/_src/gateway-operator/reference/custom-resources/1.2.x.md
     ```
 
-  - NOTE: [CLI configuration options docs][cli_ref_docs] should be updated when releasing KGO EE as that's the source of truth for those.
-    The reason for this is that KGO EE configuration flags are a superset of OSS flags.
-
-- [ ] Proceed to release KGO EE as it relies on OSS releases.
-
 **Only for major and minor releases**:
 
 - [ ] After the release tag is created, bump the `fromVersion` in the `upgrade from one before latest to latest minor` [upgrade E2E test][helm_upgrade_test] to the one before the latest minor release.

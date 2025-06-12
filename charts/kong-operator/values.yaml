@@ -78,9 +78,9 @@ env: {}
 # enable_controller_dataplane_bluegreen: true
 # # aigateway controller. (experimental)
 # enable_controller_aigateway: false
-# # konglicense controller. (EE only)
+# # konglicense controller.
 # enable_controller_konglicense: true
-# # controlplane extensions controller. (EE only)
+# # controlplane extensions controller.
 # enable_controller_controlplaneextensions: true
 
 # This section is any customer specific environments variables that doesn't require CONTROLLER_ prefix.
@@ -96,7 +96,6 @@ args: []
 # Use this section to change the certs-dir emptyDir size
 certsDir:
   sizeLimit: 256Mi
-tag: 2.0.0-alpha.1
 # Override the default deployment selector labels. This is useful if you don't want
 # to use the defaults or are migrating to this chart and want to use existing labels.
 # selectorLabels: []
