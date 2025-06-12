@@ -8,8 +8,7 @@ import (
 
 	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	"github.com/kong/gateway-operator/controller/konnect/server"
-
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 )
 
 type MockSDKWrapper struct {
@@ -67,7 +66,7 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		SNIsSDK:                     NewMockSNIsSDK(t),
 		DataPlaneCertificatesSDK:    NewMockDataPlaneClientCertificatesSDK(t),
 
-		server: lo.Must(server.NewServer[*operatorv1beta1.ControlPlane](SDKServerURL)),
+		server: lo.Must(server.NewServer[*gwtypes.ControlPlane](SDKServerURL)),
 	}
 }
 

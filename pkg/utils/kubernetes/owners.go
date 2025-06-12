@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -51,7 +52,7 @@ type managingObjectT interface {
 	client.Object
 
 	*gatewayv1.Gateway |
-		*operatorv1beta1.ControlPlane |
+		*gwtypes.ControlPlane |
 		*operatorv1beta1.DataPlane
 }
 
@@ -79,7 +80,7 @@ func getKindLabel[managingObject managingObjectT](object managingObject) string 
 	switch any(object).(type) {
 	case *gatewayv1.Gateway:
 		return consts.GatewayManagedLabelValue
-	case *operatorv1beta1.ControlPlane:
+	case *gwtypes.ControlPlane:
 		return consts.ControlPlaneManagedLabelValue
 	case *operatorv1beta1.DataPlane:
 		return consts.DataPlaneManagedLabelValue

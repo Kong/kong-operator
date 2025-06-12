@@ -26,7 +26,7 @@ import (
 
 // MustListControlPlaneDeployments is a helper function for tests that
 // conveniently lists all deployments managed by a given controlplane.
-func MustListControlPlaneDeployments(t *testing.T, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, clients K8sClients) []appsv1.Deployment {
+func MustListControlPlaneDeployments(t *testing.T, ctx context.Context, controlplane *gwtypes.ControlPlane, clients K8sClients) []appsv1.Deployment {
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
 		clients.MgrClient,
@@ -42,7 +42,7 @@ func MustListControlPlaneDeployments(t *testing.T, ctx context.Context, controlp
 
 // MustListControlPlaneClusterRoles is a helper function for tests that
 // conveniently lists all clusterroles owned by a given controlplane.
-func MustListControlPlaneClusterRoles(t *testing.T, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, clients K8sClients) []rbacv1.ClusterRole {
+func MustListControlPlaneClusterRoles(t *testing.T, ctx context.Context, controlplane *gwtypes.ControlPlane, clients K8sClients) []rbacv1.ClusterRole {
 	managedByLabelSet := k8sutils.GetManagedByLabelSet(controlplane)
 	clusterRoles, err := k8sutils.ListClusterRoles(
 		ctx,
@@ -55,7 +55,7 @@ func MustListControlPlaneClusterRoles(t *testing.T, ctx context.Context, control
 
 // MustListControlPlaneRoles is a helper function for tests that
 // conveniently lists all roles owned by a given controlplane.
-func MustListControlPlaneRoles(t require.TestingT, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, cl client.Client, opts ...client.ListOption) []rbacv1.Role {
+func MustListControlPlaneRoles(t require.TestingT, ctx context.Context, controlplane *gwtypes.ControlPlane, cl client.Client, opts ...client.ListOption) []rbacv1.Role {
 	managedByLabelSet := k8sutils.GetManagedByLabelSet(controlplane)
 	roles, err := k8sutils.ListRoles(
 		ctx,
@@ -71,7 +71,7 @@ func MustListControlPlaneRoles(t require.TestingT, ctx context.Context, controlp
 
 // MustListControlPlaneClusterRoleBindings is a helper function for tests that
 // conveniently lists all clusterrolebindings owned by a given controlplane.
-func MustListControlPlaneClusterRoleBindings(t *testing.T, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, clients K8sClients) []rbacv1.ClusterRoleBinding {
+func MustListControlPlaneClusterRoleBindings(t *testing.T, ctx context.Context, controlplane *gwtypes.ControlPlane, clients K8sClients) []rbacv1.ClusterRoleBinding {
 	managedByLabelSet := k8sutils.GetManagedByLabelSet(controlplane)
 	clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
 		ctx,
@@ -84,7 +84,7 @@ func MustListControlPlaneClusterRoleBindings(t *testing.T, ctx context.Context, 
 
 // MustListControlPlaneRoleBindings is a helper function for tests that
 // conveniently lists all clusterrolebindings owned by a given controlplane.
-func MustListControlPlaneRoleBindings(t require.TestingT, ctx context.Context, controlplane *operatorv1beta1.ControlPlane, cl client.Client, opts ...client.ListOption) []rbacv1.ClusterRoleBinding {
+func MustListControlPlaneRoleBindings(t require.TestingT, ctx context.Context, controlplane *gwtypes.ControlPlane, cl client.Client, opts ...client.ListOption) []rbacv1.ClusterRoleBinding {
 	managedByLabelSet := k8sutils.GetManagedByLabelSet(controlplane)
 	clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
 		ctx,
@@ -100,7 +100,7 @@ func MustListControlPlaneRoleBindings(t require.TestingT, ctx context.Context, c
 
 // MustListControlPlanesForGateway is a helper function for tests that
 // conveniently lists all controlplanes managed by a given gateway.
-func MustListControlPlanesForGateway(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) []operatorv1beta1.ControlPlane {
+func MustListControlPlanesForGateway(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) []gwtypes.ControlPlane {
 	controlPlanes, err := gatewayutils.ListControlPlanesForGateway(ctx, clients.MgrClient, gateway)
 	require.NoError(t, err)
 	return controlPlanes

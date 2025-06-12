@@ -5,16 +5,14 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/internal/utils/config"
-	"github.com/kong/gateway-operator/pkg/consts"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // ApplyControlPlaneKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it
 // fetches the referenced extension and applies the necessary changes to the DataPlane spec.
-func ApplyControlPlaneKonnectExtension(ctx context.Context, cl client.Client, controlPlane *operatorv1beta1.ControlPlane) (bool, error) {
+func ApplyControlPlaneKonnectExtension(ctx context.Context, cl client.Client, controlPlane *gwtypes.ControlPlane) (bool, error) {
 	var konnectExtension *konnectv1alpha2.KonnectExtension
 	for _, extensionRef := range controlPlane.Spec.Extensions {
 		extension, err := getExtension(ctx, cl, controlPlane.Namespace, extensionRef)
@@ -30,11 +28,7 @@ func ApplyControlPlaneKonnectExtension(ctx context.Context, cl client.Client, co
 		return false, nil
 	}
 
-	envSet, err := config.KICInKonnectDefaults(konnectExtension.Status)
-	if err != nil {
-		return true, err
-	}
-	config.FillContainerEnvs(nil, controlPlane.Spec.Deployment.PodTemplateSpec, consts.ControlPlaneControllerContainerName, envSet)
+	// TODO: implement KonnectExtension for ControlPlane v2alpha1: https://github.com/Kong/gateway-operator/issues/1730
 
 	return true, nil
 }

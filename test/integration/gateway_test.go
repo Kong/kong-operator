@@ -92,7 +92,7 @@ func TestGatewayEssentials(t *testing.T) {
 
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
-	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().ControlPlanes(namespace.Name)
+	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV2alpha1().ControlPlanes(namespace.Name)
 
 	t.Log("verifying that dataplane has 1 ready replica")
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneNN, clients, 1), time.Minute, time.Second)
@@ -167,7 +167,7 @@ func TestGatewayEssentials(t *testing.T) {
 
 	t.Log("verifying that ControlPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
-		_, err := GetClients().OperatorClient.GatewayOperatorV1beta1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplane.Name, metav1.GetOptions{})
+		_, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplane.Name, metav1.GetOptions{})
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
@@ -388,11 +388,11 @@ func TestGatewayMultiple(t *testing.T) {
 
 	t.Log("verifying that ControlPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
-		_, err := GetClients().OperatorClient.GatewayOperatorV1beta1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplaneOne.Name, metav1.GetOptions{})
+		_, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplaneOne.Name, metav1.GetOptions{})
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 	assert.Eventually(t, func() bool {
-		_, err := GetClients().OperatorClient.GatewayOperatorV1beta1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplaneTwo.Name, metav1.GetOptions{})
+		_, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplaneTwo.Name, metav1.GetOptions{})
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 

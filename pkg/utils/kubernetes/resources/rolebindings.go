@@ -8,10 +8,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 // -----------------------------------------------------------------------------
@@ -21,7 +20,7 @@ import (
 // GenerateNewRoleBindingForControlPlane is a helper to generate a RoleBinding
 // resource to bind roles to the service account used by the controlplane deployment.
 func GenerateNewRoleBindingForControlPlane(
-	cp *operatorv1beta1.ControlPlane,
+	cp *gwtypes.ControlPlane,
 	serviceAccountName string,
 	roleNN k8stypes.NamespacedName,
 ) *rbacv1.RoleBinding {

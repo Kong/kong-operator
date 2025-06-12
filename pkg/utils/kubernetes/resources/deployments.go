@@ -2,8 +2,6 @@ package resources
 
 import (
 	"fmt"
-	"sort"
-	"strings"
 	"sync"
 
 	"github.com/samber/lo"
@@ -51,112 +49,6 @@ func ApplyDeploymentUserPatches(
 	}
 
 	return deployment, nil
-}
-
-// GenerateNewDeploymentForControlPlaneParams is a parameter struct for GenerateNewDeploymentForControlPlane function.
-type GenerateNewDeploymentForControlPlaneParams struct {
-	ControlPlane                   *operatorv1beta1.ControlPlane
-	ControlPlaneImage              string
-	ServiceAccountName             string
-	AdminMTLSCertSecretName        string
-	AdmissionWebhookCertSecretName string
-	// WatchNamespaces contains the namespaces to watch for resources.
-	// If not nil, the controller will only watch for resources in the specified namespaces.
-	// This list has been verified (and possibly filtered down) by inspecting
-	// the WatchNamespaces from the spec for ReferenceGrants in these namespaces.
-	// If a namespace did not have a ReferenceGrant, it will not be in this list.
-	WatchNamespaces []string
-}
-
-// GenerateNewDeploymentForControlPlane generates a new Deployment for the ControlPlane
-func GenerateNewDeploymentForControlPlane(params GenerateNewDeploymentForControlPlaneParams) (*appsv1.Deployment, error) {
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    params.ControlPlane.Namespace,
-			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-%s-", consts.ControlPlanePrefix, params.ControlPlane.Name)),
-			Labels: map[string]string{
-				"app": params.ControlPlane.Name,
-			},
-		},
-		Spec: appsv1.DeploymentSpec{
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"app": params.ControlPlane.Name,
-				},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					CreationTimestamp: metav1.Time{},
-					Labels: map[string]string{
-						"app": params.ControlPlane.Name,
-					},
-				},
-				Spec: corev1.PodSpec{
-					SecurityContext:               &corev1.PodSecurityContext{},
-					RestartPolicy:                 corev1.RestartPolicyAlways,
-					TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
-					ServiceAccountName:            params.ServiceAccountName,
-					DeprecatedServiceAccount:      params.ServiceAccountName,
-					DNSPolicy:                     corev1.DNSClusterFirst,
-					SchedulerName:                 corev1.DefaultSchedulerName,
-					Volumes: []corev1.Volume{
-						ClusterCertificateVolume(params.AdminMTLSCertSecretName),
-					},
-					Containers: []corev1.Container{
-						GenerateControlPlaneContainer(GenerateContainerForControlPlaneParams{
-							Image:                          params.ControlPlaneImage,
-							AdmissionWebhookCertSecretName: lo.ToPtr(params.AdmissionWebhookCertSecretName),
-						}),
-					},
-				},
-			},
-		},
-	}
-	// Only add the admission webhook volume if the secret name is provided.
-	if params.AdmissionWebhookCertSecretName != "" {
-		deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes,
-			controlPlaneAdmissionWebhookCertificateVolume(params.AdmissionWebhookCertSecretName),
-		)
-	}
-	SetDefaultsPodTemplateSpec(&deployment.Spec.Template)
-	LabelObjectAsControlPlaneManaged(deployment)
-
-	if params.ControlPlane.Spec.Deployment.PodTemplateSpec != nil {
-		patchedPodTemplateSpec, err := StrategicMergePatchPodTemplateSpec(&deployment.Spec.Template, params.ControlPlane.Spec.Deployment.PodTemplateSpec)
-		if err != nil {
-			return nil, err
-		}
-		deployment.Spec.Template = *patchedPodTemplateSpec
-	}
-	setWatchNamespace(&deployment.Spec.Template.Spec.Containers[0], params.WatchNamespaces)
-
-	k8sutils.SetOwnerForObject(deployment, params.ControlPlane)
-
-	// Set defaults for the deployment so that we don't get a diff when we compare
-	// it with what's in the cluster.
-	pkgapisappsv1.SetDefaults_Deployment(deployment)
-
-	if err := AnnotateObjWithHash(deployment, params.ControlPlane.Spec); err != nil {
-		return nil, err
-	}
-
-	return deployment, nil
-}
-
-func setWatchNamespace(
-	c *corev1.Container,
-	watchNamespaces []string,
-) {
-	if len(watchNamespaces) == 0 {
-		return
-	}
-
-	const watchNamespaceEnvVarName = "CONTROLLER_WATCH_NAMESPACE"
-	sort.Strings(watchNamespaces)
-	c.Env = append(c.Env, corev1.EnvVar{
-		Name:  watchNamespaceEnvVarName,
-		Value: strings.Join(watchNamespaces, ","),
-	})
 }
 
 // GenerateContainerForControlPlaneParams is a parameter struct for GenerateControlPlaneContainer function.
@@ -555,25 +447,4 @@ func (d *Deployment) WithEnvVar(v corev1.EnvVar, container string) *Deployment {
 		}
 	}
 	return d
-}
-
-func controlPlaneAdmissionWebhookCertificateVolume(certSecretName string) corev1.Volume {
-	volume := corev1.Volume{}
-	volume.Secret = &corev1.SecretVolumeSource{}
-	SetDefaultsVolume(&volume)
-	volume.Name = consts.ControlPlaneAdmissionWebhookVolumeName
-	volume.Secret = &corev1.SecretVolumeSource{
-		SecretName: certSecretName,
-		Items: []corev1.KeyToPath{
-			{
-				Key:  "tls.crt",
-				Path: "tls.crt",
-			},
-			{
-				Key:  "tls.key",
-				Path: "tls.key",
-			},
-		},
-	}
-	return volume
 }

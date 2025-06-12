@@ -79,8 +79,8 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 			handler.EnqueueRequestsFromMapFunc(listExtendableReferencedExtensions[*operatorv1beta1.DataPlane]),
 		).
 		Watches(
-			&operatorv1beta1.ControlPlane{},
-			handler.EnqueueRequestsFromMapFunc(listExtendableReferencedExtensions[*operatorv1beta1.ControlPlane]),
+			&gwtypes.ControlPlane{},
+			handler.EnqueueRequestsFromMapFunc(listExtendableReferencedExtensions[*gwtypes.ControlPlane]),
 		).
 		Watches(
 			&konnectv1alpha1.KonnectAPIAuthConfiguration{},

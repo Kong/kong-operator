@@ -6,20 +6,19 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
-
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 func TestGetManagedByLabelSet(t *testing.T) {
 	testCases := []struct {
 		name     string
-		object   *operatorv1beta1.ControlPlane
+		object   *gwtypes.ControlPlane
 		expected map[string]string
 	}{
 		{
 			name: "Complete set of labels for a ControlPlane object",
-			object: &operatorv1beta1.ControlPlane{
+			object: &gwtypes.ControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "test-namespace",

@@ -21,20 +21,14 @@ import (
 )
 
 func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
-	makeControlPlaneDeployment := func() (*appsv1.Deployment, error) {
-		cp := &operatorv1beta1.ControlPlane{
+	makeDataPlaneDeployment := func() (*appsv1.Deployment, error) {
+		dp := &operatorv1beta1.DataPlane{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "test-namespace",
-				Name:      "cp-1",
+				Name:      "dp-1",
 			},
 		}
-		d, err := GenerateNewDeploymentForControlPlane(GenerateNewDeploymentForControlPlaneParams{
-			ControlPlane:                   cp,
-			ControlPlaneImage:              consts.DefaultControlPlaneImage,
-			ServiceAccountName:             "kong-sa",
-			AdminMTLSCertSecretName:        "kong-cert-secret",
-			AdmissionWebhookCertSecretName: "kong-admission-cert-secret",
-		})
+		d, err := GenerateNewDeploymentForDataPlane(dp, consts.DefaultDataPlaneImage)
 		if err != nil {
 			return nil, err
 		}
@@ -55,7 +49,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			}...,
 		)
 
-		return d, nil
+		return d.Unwrap(), nil
 	}
 
 	testcases := []struct {
@@ -67,7 +61,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 			Name:  "empty patch doesn't change anything",
 			Patch: &corev1.PodTemplateSpec{},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				return d.Spec.Template
 			},
@@ -83,7 +77,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				d.Spec.Template.Labels["label1"] = "value1"
 				d.Spec.Template.Labels["label2"] = "value2"
@@ -96,14 +90,14 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name:  consts.ControlPlaneControllerContainerName,
+							Name:  consts.DataPlaneProxyContainerName,
 							Image: "alpine",
 						},
 					},
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Containers[0].Image = "alpine"
 				d.Spec.Template.Spec.Containers[0].ImagePullPolicy = corev1.PullAlways
@@ -116,17 +110,12 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name: consts.ControlPlaneControllerContainerName,
+							Name: consts.DataPlaneProxyContainerName,
 							Env: []corev1.EnvVar{
 								{
 									// Prepend
-									Name:  "CONTROLLER_KONG_ADMIN_SVC_PORT_NAMES",
-									Value: "not-your-usual-admin-port-name",
-								},
-								{
-									// Prepend
-									Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
-									Value: "not-your-usual-controller-name",
+									Name:  "KONG_ENV",
+									Value: "random-value",
 								},
 							},
 						},
@@ -134,16 +123,12 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 					{
-						Name:  "CONTROLLER_KONG_ADMIN_SVC_PORT_NAMES",
-						Value: "not-your-usual-admin-port-name",
-					},
-					{
-						Name:  "CONTROLLER_GATEWAY_API_CONTROLLER_NAME",
-						Value: "not-your-usual-controller-name",
+						Name:  "KONG_ENV",
+						Value: "random-value",
 					},
 					{
 						Name:  "ENV1",
@@ -167,7 +152,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name: consts.ControlPlaneControllerContainerName,
+							Name: consts.DataPlaneProxyContainerName,
 							Env: []corev1.EnvVar{
 								{
 									Name:  "ENV1",
@@ -179,7 +164,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 					{
@@ -204,7 +189,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name: consts.ControlPlaneControllerContainerName,
+							Name: consts.DataPlaneProxyContainerName,
 							Env: []corev1.EnvVar{
 								{
 									Name:  "ENV1",
@@ -220,7 +205,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 					{
@@ -249,7 +234,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name: consts.ControlPlaneControllerContainerName,
+							Name: consts.DataPlaneProxyContainerName,
 							Env: []corev1.EnvVar{
 								{
 									Name:  "CUSTOM_ENV",
@@ -265,7 +250,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 					{
@@ -294,16 +279,6 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Volumes: []corev1.Volume{
 						{
-							// NOTE: we need to provide the existing entry in the slice
-							// to prevent merging the provided new entry with existing entries.
-							Name: consts.ClusterCertificateVolume,
-						},
-						{
-							// NOTE: we need to provide the existing entry in the slice
-							// to prevent merging the provided new entry with existing entries.
-							Name: consts.ControlPlaneAdmissionWebhookVolumeName,
-						},
-						{
 							Name: "volume1",
 							VolumeSource: corev1.VolumeSource{
 								EmptyDir: &corev1.EmptyDirVolumeSource{
@@ -314,20 +289,8 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					},
 					Containers: []corev1.Container{
 						{
-							Name: "controller",
+							Name: consts.DataPlaneProxyContainerName,
 							VolumeMounts: []corev1.VolumeMount{
-								{
-									// NOTE: we need to provide the existing entry in the slice
-									// to prevent merging the provided new entry with existing entries.
-									Name:      consts.ClusterCertificateVolume,
-									MountPath: consts.ClusterCertificateVolumeMountPath,
-								},
-								{
-									// NOTE: we need to provide the existing entry in the slice
-									// to prevent merging the provided new entry with existing entries.
-									Name:      consts.ControlPlaneAdmissionWebhookVolumeName,
-									MountPath: consts.ControlPlaneAdmissionWebhookVolumeMountPath,
-								},
 								{
 									Name:      "volume1",
 									MountPath: "/volume1",
@@ -338,7 +301,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Volumes = append(d.Spec.Template.Spec.Volumes,
 					corev1.Volume{
@@ -367,7 +330,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						{
 							// NOTE: we need to provide the existing entry in the slice
 							// to prevent merging the provided new entry with existing entries.
-							Name: "controller",
+							Name: consts.DataPlaneProxyContainerName,
 						},
 						{
 							Name:  "sidecar",
@@ -386,7 +349,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				sidecarContainer := corev1.Container{
 					Name:  "sidecar",
@@ -414,7 +377,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						{
 							// NOTE: we need to provide the existing entry in the slice
 							// to prevent merging the provided new entry with existing entries.
-							Name: "controller",
+							Name: consts.DataPlaneProxyContainerName,
 						},
 						{
 							Name:  "sidecar",
@@ -438,16 +401,6 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					},
 					Volumes: []corev1.Volume{
 						{
-							// NOTE: we need to provide the existing entry in the slice
-							// to prevent merging the provided new entry with existing entries.
-							Name: consts.ClusterCertificateVolume,
-						},
-						{
-							// NOTE: we need to provide the existing entry in the slice
-							// to prevent merging the provided new entry with existing entries.
-							Name: consts.ControlPlaneAdmissionWebhookVolumeName,
-						},
-						{
 							Name: "new_volume",
 							VolumeSource: corev1.VolumeSource{
 								HostPath: &corev1.HostPathVolumeSource{
@@ -459,7 +412,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				sidecarContainer := corev1.Container{
 					Name:  "sidecar",
@@ -528,7 +481,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Affinity = &corev1.Affinity{
 					PodAntiAffinity: &corev1.PodAntiAffinity{
@@ -569,20 +522,8 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						{
 							// NOTE: we need to provide the existing entry in the slice
 							// to prevent merging the provided new entry with existing entries.
-							Name: "controller",
+							Name: consts.DataPlaneProxyContainerName,
 							VolumeMounts: []corev1.VolumeMount{
-								{
-									// NOTE: we need to provide the existing entry in the slice
-									// to prevent merging the provided new entry with existing entries.
-									Name:      consts.ClusterCertificateVolume,
-									MountPath: consts.ClusterCertificateVolumeMountPath,
-								},
-								{
-									// NOTE: we need to provide the existing entry in the slice
-									// to prevent merging the provided new entry with existing entries.
-									Name:      consts.ControlPlaneAdmissionWebhookVolumeName,
-									MountPath: consts.ControlPlaneAdmissionWebhookVolumeMountPath,
-								},
 								{
 									Name:      "new_volume",
 									MountPath: "/new_volume",
@@ -591,16 +532,6 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						},
 					},
 					Volumes: []corev1.Volume{
-						{
-							// NOTE: we need to provide the existing entry in the slice
-							// to prevent merging the provided new entry with existing entries.
-							Name: consts.ClusterCertificateVolume,
-						},
-						{
-							// NOTE: we need to provide the existing entry in the slice
-							// to prevent merging the provided new entry with existing entries.
-							Name: consts.ControlPlaneAdmissionWebhookVolumeName,
-						},
 						{
 							Name: "new_volume",
 							VolumeSource: corev1.VolumeSource{
@@ -613,7 +544,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				volume := corev1.Volume{
 					Name: "new_volume",
@@ -640,20 +571,8 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name: consts.ControlPlaneControllerContainerName,
+							Name: consts.DataPlaneProxyContainerName,
 							VolumeMounts: []corev1.VolumeMount{
-								{
-									// NOTE: we need to provide the existing entry in the slice
-									// to prevent merging the provided new entry with existing entries.
-									Name:      consts.ClusterCertificateVolume,
-									MountPath: consts.ClusterCertificateVolumeMountPath,
-								},
-								{
-									// NOTE: we need to provide the existing entry in the slice
-									// to prevent merging the provided new entry with existing entries.
-									Name:      consts.ControlPlaneAdmissionWebhookVolumeName,
-									MountPath: consts.ControlPlaneAdmissionWebhookVolumeMountPath,
-								},
 								{
 									Name:      "hostpath-volumemount",
 									MountPath: "/var/log/hostpath",
@@ -662,16 +581,6 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 						},
 					},
 					Volumes: []corev1.Volume{
-						{
-							// NOTE: we need to provide the existing entry in the slice
-							// to prevent merging the provided new entry with existing entries.
-							Name: consts.ClusterCertificateVolume,
-						},
-						{
-							// NOTE: we need to provide the existing entry in the slice
-							// to prevent merging the provided new entry with existing entries.
-							Name: consts.ControlPlaneAdmissionWebhookVolumeName,
-						},
 						{
 							Name: "hostpath-volume",
 							VolumeSource: corev1.VolumeSource{
@@ -684,51 +593,9 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Volumes = []corev1.Volume{
-					{
-						Name: "cluster-certificate",
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: "kong-cert-secret",
-								Items: []corev1.KeyToPath{
-									{
-										Key:  "tls.crt",
-										Path: "tls.crt",
-									},
-									{
-										Key:  "tls.key",
-										Path: "tls.key",
-									},
-									{
-										Key:  "ca.crt",
-										Path: "ca.crt",
-									},
-								},
-								DefaultMode: lo.ToPtr(corev1.SecretVolumeSourceDefaultMode),
-							},
-						},
-					},
-					{
-						Name: consts.ControlPlaneAdmissionWebhookVolumeName,
-						VolumeSource: corev1.VolumeSource{
-							Secret: &corev1.SecretVolumeSource{
-								SecretName: "kong-admission-cert-secret",
-								Items: []corev1.KeyToPath{
-									{
-										Key:  "tls.crt",
-										Path: "tls.crt",
-									},
-									{
-										Key:  "tls.key",
-										Path: "tls.key",
-									},
-								},
-								DefaultMode: lo.ToPtr(corev1.SecretVolumeSourceDefaultMode),
-							},
-						},
-					},
 					{
 						Name: "hostpath-volume",
 						VolumeSource: corev1.VolumeSource{
@@ -756,7 +623,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name: consts.ControlPlaneControllerContainerName,
+							Name: consts.DataPlaneProxyContainerName,
 							Env: []corev1.EnvVar{
 								{
 									Name: "LIMIT",
@@ -772,7 +639,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 					{
@@ -812,7 +679,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{
 						{
-							Name: consts.ControlPlaneControllerContainerName,
+							Name: consts.DataPlaneProxyContainerName,
 							Env: []corev1.EnvVar{
 								{
 									Name:  "ENV1",
@@ -841,7 +708,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
-				d, err := makeControlPlaneDeployment()
+				d, err := makeDataPlaneDeployment()
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Containers[0].Env = []corev1.EnvVar{
 					{
@@ -874,7 +741,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.Name, func(t *testing.T) {
-			d, err := makeControlPlaneDeployment()
+			d, err := makeDataPlaneDeployment()
 			require.NoError(t, err)
 			result, err := StrategicMergePatchPodTemplateSpec(&d.Spec.Template, tc.Patch)
 			require.NoError(t, err)

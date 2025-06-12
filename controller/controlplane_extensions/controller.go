@@ -24,12 +24,14 @@ import (
 
 	"github.com/kong/gateway-operator/controller/pkg/extensions"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	osslogging "github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/consts"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v2alpha1"
 )
 
 const (
@@ -56,7 +58,7 @@ const (
 // about the need to add or remove a scraper for a DataPlane associated with
 // the provided ControlPlane.
 type ScrapeUpdateNotifier interface {
-	NotifyAdd(ctx context.Context, cp *operatorv1beta1.ControlPlane)
+	NotifyAdd(ctx context.Context, cp *gwtypes.ControlPlane)
 	NotifyRemove(ctx context.Context, cp types.NamespacedName)
 }
 
@@ -76,7 +78,7 @@ type Reconciler struct {
 func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		// Watch for changes to owned ControlPlane that had DataPlane.
-		For(&operatorv1beta1.ControlPlane{},
+		For(&operatorv2alpha1.ControlPlane{},
 			builder.WithPredicates(
 				ControlPlaneDataPlanePluginsSpecChangedPredicate{},
 			),
@@ -132,7 +134,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger := log.GetLogger(ctx, "controlplane_extensions", r.LoggingMode)
 
 	log.Trace(logger, "reconciling ControlPlane extensions", "req", req)
-	controlplane := new(operatorv1beta1.ControlPlane)
+	controlplane := new(gwtypes.ControlPlane)
 
 	if err := r.Get(ctx, req.NamespacedName, controlplane); err != nil {
 		if k8serrors.IsNotFound(err) {
@@ -169,7 +171,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 // and that the plugin config is up to date.
 // It also ensures that the plugin is disabled for services that are not in the
 // ServiceSelector.MatchNames.
-func (r *Reconciler) ensureDataPlaneMetricsExtensions(ctx context.Context, controlplane *operatorv1beta1.ControlPlane) error {
+func (r *Reconciler) ensureDataPlaneMetricsExtensions(ctx context.Context, controlplane *gwtypes.ControlPlane) error {
 	logger := log.GetLogger(ctx, "controlplane_dataplanemetrics_extension", r.LoggingMode)
 	extensions, err := extensions.GetAllDataPlaneMetricExtensionsForControlPlane(ctx, r.Client, controlplane)
 	// In case there is an error, we don't want to return early because we still want to perform the cleanup.
@@ -273,7 +275,7 @@ func (r *Reconciler) ensureDataPlaneMetricsExtensions(ctx context.Context, contr
 
 func listServicesThatHavePluginsManagedByControlPlane(
 	ctx context.Context,
-	controlplane *operatorv1beta1.ControlPlane,
+	controlplane *gwtypes.ControlPlane,
 	cl client.Client,
 ) ([]corev1.Service, error) {
 	cpNameLabelReq, err := labels.NewRequirement(
@@ -323,7 +325,7 @@ func ensureStringNotInCommaSeparatedString(v, commaSeparated string) string {
 // ensurePrometheusPlugin ensures that the Prometheus plugin exists for the given
 // Service and that it's up to date.
 func (r *Reconciler) ensurePrometheusPlugin(
-	ctx context.Context, svc *corev1.Service, controlplane *operatorv1beta1.ControlPlane, ext *operatorv1alpha1.DataPlaneMetricsExtension,
+	ctx context.Context, svc *corev1.Service, controlplane *gwtypes.ControlPlane, ext *operatorv1alpha1.DataPlaneMetricsExtension,
 ) (*configurationv1.KongPlugin, error) {
 	generatedPlugin, err := prometheusPluginForSvc(svc, controlplane, ext)
 	if err != nil {

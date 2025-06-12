@@ -10,6 +10,8 @@ import (
 	"k8s.io/client-go/dynamic"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
+
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
@@ -53,7 +55,7 @@ func NewDataPlaneCountProvider(dyn dynamic.Interface, restMapper meta.RESTMapper
 // NewControlPlaneCountProvider creates a provider for number of dataplanes in the cluster.
 func NewControlPlaneCountProvider(dyn dynamic.Interface, restMapper meta.RESTMapper) (provider.Provider, error) {
 	return provider.NewK8sObjectCountProviderWithRESTMapper(
-		ControlPlaneK8sResourceName, ControlPlaneCountKind, dyn, operatorv1beta1.ControlPlaneGVR(), restMapper,
+		ControlPlaneK8sResourceName, ControlPlaneCountKind, dyn, gwtypes.ControlPlaneGVR(), restMapper,
 	)
 }
 
@@ -81,11 +83,11 @@ func NewStandaloneDataPlaneCountProvider(cl client.Client) (provider.Provider, e
 
 func NewStandaloneControlPlaneCountProvider(cl client.Client) (provider.Provider, error) {
 	return provider.NewFunctorProvider(StandaloneControlPlaneCountProviderName, func(ctx context.Context) (types.ProviderReport, error) {
-		controlPlanes := operatorv1beta1.ControlPlaneList{}
+		controlPlanes := gwtypes.ControlPlaneList{}
 		if err := cl.List(ctx, &controlPlanes); err != nil {
 			return types.ProviderReport{}, err
 		}
-		count := lo.CountBy(controlPlanes.Items, func(cp operatorv1beta1.ControlPlane) bool {
+		count := lo.CountBy(controlPlanes.Items, func(cp gwtypes.ControlPlane) bool {
 			return len(cp.GetOwnerReferences()) == 0
 		})
 		return types.ProviderReport{
@@ -118,28 +120,6 @@ func NewDataPlaneRequestedReplicasCountProvider(cl client.Client) (provider.Prov
 		}
 		return types.ProviderReport{
 			"k8s_dataplanes_requested_replicas_count": count,
-		}, nil
-	})
-}
-
-func NewControlPlaneRequestedReplicasCountProvider(cl client.Client) (provider.Provider, error) {
-	return provider.NewFunctorProvider("", func(ctx context.Context) (types.ProviderReport, error) {
-		controlPlanes := operatorv1beta1.ControlPlaneList{}
-		if err := cl.List(ctx, &controlPlanes); err != nil {
-			return types.ProviderReport{}, err
-		}
-		count := 0
-		for _, dp := range controlPlanes.Items {
-			if dp.Spec.Deployment.Replicas != nil {
-				count += int(*dp.Spec.Deployment.Replicas)
-				continue
-			}
-			// No replicas defined, count it as 1 replica.
-			count++
-
-		}
-		return types.ProviderReport{
-			"k8s_controlplanes_requested_replicas_count": count,
 		}, nil
 	})
 }

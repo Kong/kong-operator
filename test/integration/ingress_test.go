@@ -109,7 +109,7 @@ func TestIngressEssentials(t *testing.T) {
 	require.NotNil(t, dataplane)
 
 	t.Log("verifying that the ControlPlane becomes provisioned")
-	var controlPlane *operatorv1beta1.ControlPlane
+	var controlPlane *gwtypes.ControlPlane
 	require.Eventually(t, func() bool {
 		controlplanes, err := gatewayutils.ListControlPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
 		if err != nil {

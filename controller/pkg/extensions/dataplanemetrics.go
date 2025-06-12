@@ -9,14 +9,15 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
+
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 // GetAllDataPlaneMetricsExtensionRefsForControlPlane gets all DataPlaneMetricsExtension
 // refs set in the ControlPlane's spec.
-func GetAllDataPlaneMetricsExtensionRefsForControlPlane(controlplane *operatorv1beta1.ControlPlane) []commonv1alpha1.ExtensionRef {
+func GetAllDataPlaneMetricsExtensionRefsForControlPlane(controlplane *gwtypes.ControlPlane) []commonv1alpha1.ExtensionRef {
 	return lo.Filter(controlplane.Spec.Extensions,
 		func(ef commonv1alpha1.ExtensionRef, _ int) bool {
 			return ef.Kind == operatorv1alpha1.DataPlaneMetricsExtensionKind &&
@@ -28,7 +29,7 @@ func GetAllDataPlaneMetricsExtensionRefsForControlPlane(controlplane *operatorv1
 // GetAllDataPlaneMetricExtensionsForControlPlane returns all DataPlaneMetricsExtensions
 // that are referenced in the ControlPlane's spec.extensions.
 func GetAllDataPlaneMetricExtensionsForControlPlane(
-	ctx context.Context, cl client.Client, controlplane *operatorv1beta1.ControlPlane,
+	ctx context.Context, cl client.Client, controlplane *gwtypes.ControlPlane,
 ) ([]operatorv1alpha1.DataPlaneMetricsExtension, error) {
 	extensionsRefs := GetAllDataPlaneMetricsExtensionRefsForControlPlane(controlplane)
 

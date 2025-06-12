@@ -17,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
 	"github.com/kong/gateway-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -129,7 +130,7 @@ func createManager(
 	{
 		checker := k8sutils.CRDChecker{Client: cl}
 
-		cpExists, err := checker.CRDExists(operatorv1beta1.ControlPlaneGVR())
+		cpExists, err := checker.CRDExists(gwtypes.ControlPlaneGVR())
 		if err != nil {
 			log.Info("failed to check if controlplane CRD exists", "error", err)
 		}
@@ -203,16 +204,6 @@ func createManager(
 			p, err := NewDataPlaneRequestedReplicasCountProvider(cl)
 			if err != nil {
 				log.Info("failed to create dataplane requested replicas count provider", "error", err)
-			} else {
-				w.AddProvider(p)
-			}
-		}
-
-		if cpExists {
-			// Add controlplane requested replicas count provider to monitor number of requested replicas for controlplanes.
-			p, err := NewControlPlaneRequestedReplicasCountProvider(cl)
-			if err != nil {
-				log.Info("failed to create controlplane requested replicas count provider", "error", err)
 			} else {
 				w.AddProvider(p)
 			}

@@ -74,30 +74,33 @@ func (r *Reconciler) createDataPlane(ctx context.Context,
 
 func (r *Reconciler) createControlPlane(
 	ctx context.Context,
-	gatewayClass *gatewayv1.GatewayClass,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1beta1.GatewayConfiguration,
 	dataplaneName string,
 ) error {
-	controlplane := &operatorv1beta1.ControlPlane{
+	controlplane := &gwtypes.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    gateway.Namespace,
 			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)),
 		},
-		Spec: operatorv1beta1.ControlPlaneSpec{
-			GatewayClass: (*gatewayv1.ObjectName)(&gatewayClass.Name),
+		Spec: gwtypes.ControlPlaneSpec{
+			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+				DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+					Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+					Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+						Name: dataplaneName,
+					},
+				},
+			},
 		},
 	}
-	if gatewayConfig.Spec.ControlPlaneOptions != nil {
-		controlplane.Spec.ControlPlaneOptions = *gatewayConfig.Spec.ControlPlaneOptions
-	}
-	if controlplane.Spec.DataPlane == nil {
-		controlplane.Spec.DataPlane = &dataplaneName
-	}
+	// TODO: https://github.com/Kong/gateway-operator/issues/1728
+	// if gatewayConfig.Spec.ControlPlaneOptions != nil {
+	//   controlplane.Spec.ControlPlaneOptions = *gatewayConfig.Spec.ControlPlaneOptions
+	// }
 
 	controlplane.Spec.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, controlplane.Spec.Extensions)
 
-	setControlPlaneOptionsDefaults(&controlplane.Spec.ControlPlaneOptions)
 	k8sutils.SetOwnerForObject(controlplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(controlplane)
 	return r.Create(ctx, controlplane)
@@ -264,7 +267,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
 	dataplane *operatorv1beta1.DataPlane,
-	controlplane *operatorv1beta1.ControlPlane,
+	controlplane *gwtypes.ControlPlane,
 ) (createdOrUpdate bool, err error) {
 	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway)
 	if err != nil {
@@ -309,7 +312,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 func generateDataPlaneNetworkPolicy(
 	namespace string,
 	dataplane *operatorv1beta1.DataPlane,
-	_ *operatorv1beta1.ControlPlane,
+	_ *gwtypes.ControlPlane,
 ) (*networkingv1.NetworkPolicy, error) {
 	var (
 		protocolTCP     = corev1.ProtocolTCP
@@ -354,7 +357,7 @@ func generateDataPlaneNetworkPolicy(
 		Ports: []networkingv1.NetworkPolicyPort{
 			{Protocol: &protocolTCP, Port: &adminAPISSLPort},
 		},
-		//TODO: https://github.com/Kong/gateway-operator/issues/1700
+		// TODO: https://github.com/Kong/gateway-operator/issues/1700
 		// It should be adjusted to include KO pod, because it connects to DataPlane admin API directly.
 		// From: []networkingv1.NetworkPolicyPeer{{
 		// 	PodSelector: &metav1.LabelSelector{

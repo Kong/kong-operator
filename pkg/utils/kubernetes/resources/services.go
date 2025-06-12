@@ -12,6 +12,7 @@ import (
 	pkgapiscorev1 "k8s.io/kubernetes/pkg/apis/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -246,7 +247,7 @@ func dataPlaneAdminServiceGenerateName(dataplane *operatorv1beta1.DataPlane) str
 
 // GenerateNewAdmissionWebhookServiceForControlPlane is a helper to generate the admission webhook service for a control
 // plane.
-func GenerateNewAdmissionWebhookServiceForControlPlane(cp *operatorv1beta1.ControlPlane) (*corev1.Service, error) {
+func GenerateNewAdmissionWebhookServiceForControlPlane(cp *gwtypes.ControlPlane) (*corev1.Service, error) {
 	svc := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    cp.Namespace,

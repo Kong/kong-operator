@@ -58,12 +58,12 @@ func ListControlPlanesForGateway(
 	ctx context.Context,
 	c client.Client,
 	gateway *gwtypes.Gateway,
-) ([]operatorv1beta1.ControlPlane, error) {
+) ([]gwtypes.ControlPlane, error) {
 	if gateway.Namespace == "" {
 		return nil, fmt.Errorf("can't list dataplanes for gateway: gateway resource was missing namespace")
 	}
 
-	controlplaneList := &operatorv1beta1.ControlPlaneList{}
+	controlplaneList := &gwtypes.ControlPlaneList{}
 
 	err := c.List(
 		ctx,
@@ -77,7 +77,7 @@ func ListControlPlanesForGateway(
 		return nil, err
 	}
 
-	controlplanes := make([]operatorv1beta1.ControlPlane, 0)
+	controlplanes := make([]gwtypes.ControlPlane, 0)
 	for _, controlplane := range controlplaneList.Items {
 		if k8sutils.IsOwnedByRefUID(&controlplane, gateway.UID) {
 			controlplanes = append(controlplanes, controlplane)
