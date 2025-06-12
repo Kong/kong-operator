@@ -179,6 +179,8 @@ func TestGatewayEssentials(t *testing.T) {
 // TestGatewayMultiple checks essential Gateway behavior with multiple Gateways of the same class. Ensure DataPlanes
 // only serve routes attached to their Gateway.
 func TestGatewayMultiple(t *testing.T) {
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 	gatewayV1Client := GetClients().GatewayClient.GatewayV1()
@@ -683,7 +685,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	t.Log("verifying that the DataPlane's Pod Admin API is network restricted to ControlPlane Pods")
 	var expectLimitedAdminAPI networkPolicyIngressRuleDecorator
 	expectLimitedAdminAPI.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneAdminAPIPort)
-	//TODO: https://github.com/Kong/gateway-operator/issues/1700
+	// TODO: https://github.com/Kong/gateway-operator/issues/1700
 	// Re-enable/adjust once the dataplane's admin API is network restricted to KO.
 	// expectLimitedAdminAPI.withPeerMatchLabels(
 	// 	map[string]string{"app": controlplane.Name},

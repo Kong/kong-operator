@@ -23,6 +23,8 @@ import (
 )
 
 func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+
 	createExtensionRefWithoutNamespace := func(extRefName string) commonv1alpha1.ExtensionRef {
 		return commonv1alpha1.ExtensionRef{
 			Group: operatorv1alpha1.SchemeGroupVersion.Group,

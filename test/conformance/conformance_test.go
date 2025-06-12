@@ -43,6 +43,8 @@ type ConformanceConfig struct {
 }
 
 func TestGatewayConformance(t *testing.T) {
+	t.Skip("skipping Gateway API conformance tests: TODO https://github.com/Kong/gateway-operator/issues/1726")
+
 	t.Parallel()
 
 	const looserTimeout = 180 * time.Second

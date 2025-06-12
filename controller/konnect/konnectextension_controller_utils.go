@@ -260,11 +260,15 @@ func enforceKonnectExtensionStatus(cp konnectv1alpha1.KonnectGatewayControlPlane
 		ClusterType: konnectClusterTypeToCRDClusterType(
 			sdkkonnectcomp.ControlPlaneClusterType(lo.FromPtrOr(cp.Spec.ClusterType, "")),
 		),
-		Endpoints: konnectv1alpha2.KonnectEndpoints{
+	}
+
+	if cp.Status.Endpoints != nil {
+		expectedKonnectStatus.Endpoints = konnectv1alpha2.KonnectEndpoints{
 			ControlPlaneEndpoint: cp.Status.Endpoints.ControlPlaneEndpoint,
 			TelemetryEndpoint:    cp.Status.Endpoints.TelemetryEndpoint,
-		},
+		}
 	}
+
 	if !cmp.Equal(ext.Status.Konnect, expectedKonnectStatus) {
 		ext.Status.Konnect = expectedKonnectStatus
 		toUpdate = true
