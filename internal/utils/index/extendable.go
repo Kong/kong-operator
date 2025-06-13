@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/gateway-operator/controller/pkg/extensions"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
@@ -56,7 +57,7 @@ type ExtendableObjectListT interface {
 	client.ObjectList
 
 	*operatorv1beta1.DataPlaneList |
-		*operatorv1beta1.ControlPlaneList |
+		*gwtypes.ControlPlaneList |
 		*operatorv1beta1.GatewayConfigurationList
 }
 
@@ -83,8 +84,8 @@ func ListObjectsReferencingKonnectExtension[t ExtendableObjectListT](
 			items = lo.Map(o.Items, func(dp operatorv1beta1.DataPlane, _ int) client.Object {
 				return &dp
 			})
-		case *operatorv1beta1.ControlPlaneList:
-			items = lo.Map(o.Items, func(cp operatorv1beta1.ControlPlane, _ int) client.Object {
+		case *gwtypes.ControlPlaneList:
+			items = lo.Map(o.Items, func(cp gwtypes.ControlPlane, _ int) client.Object {
 				return &cp
 			})
 		case *operatorv1beta1.GatewayConfigurationList:

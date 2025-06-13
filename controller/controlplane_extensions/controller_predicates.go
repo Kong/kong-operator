@@ -6,9 +6,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
+
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 // ControlPlaneDataPlanePluginsSpecChangedPredicate is a predicate that checks if the
@@ -31,7 +32,7 @@ func (ControlPlaneDataPlanePluginsSpecChangedPredicate) Update(e event.UpdateEve
 	if e.ObjectOld == nil {
 		return false
 	}
-	cpOld, ok := e.ObjectOld.(*operatorv1beta1.ControlPlane)
+	cpOld, ok := e.ObjectOld.(*gwtypes.ControlPlane)
 	if !ok {
 		return false
 	}
@@ -39,7 +40,7 @@ func (ControlPlaneDataPlanePluginsSpecChangedPredicate) Update(e event.UpdateEve
 	if e.ObjectNew == nil {
 		return false
 	}
-	cpNew, ok := e.ObjectNew.(*operatorv1beta1.ControlPlane)
+	cpNew, ok := e.ObjectNew.(*gwtypes.ControlPlane)
 	if !ok {
 		return false
 	}
@@ -72,7 +73,7 @@ func (ControlPlaneDataPlanePluginsSpecChangedPredicate) Delete(e event.DeleteEve
 }
 
 func dataplaneMetricsExtensionIsAttachedToControlPlane(obj client.Object) bool {
-	controlplane, ok := obj.(*operatorv1beta1.ControlPlane)
+	controlplane, ok := obj.(*gwtypes.ControlPlane)
 	if !ok {
 		return false
 	}

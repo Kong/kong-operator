@@ -70,7 +70,7 @@ type Reconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
-	builder := ctrl.NewControllerManagedBy(mgr).For(&operatorv1beta1.ControlPlane{})
+	builder := ctrl.NewControllerManagedBy(mgr).For(&ControlPlane{})
 
 	if r.KonnectEnabled {
 		// Watch for changes in KonnectExtension objects that are referenced by ControlPlane objects.
@@ -92,7 +92,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	logger := log.GetLogger(ctx, "controlplane", r.LoggingMode)
 
 	log.Trace(logger, "reconciling ControlPlane resource")
-	cp := new(operatorv1beta1.ControlPlane)
+	cp := new(ControlPlane)
 	if err := r.Get(ctx, req.NamespacedName, cp); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -175,7 +175,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "retrieving connected dataplane")
-	dataplane, err := gatewayutils.GetDataPlaneForControlPlane(ctx, r.Client, cp)
+	dataplane, err := GetDataPlaneForControlPlane(ctx, r.Client, cp)
 	var dataplaneIngressServiceName, dataplaneAdminServiceName string
 	if err != nil {
 		if !errors.Is(err, operatorerrors.ErrDataPlaneNotSet) {
@@ -198,39 +198,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	log.Trace(logger, "configuring ControlPlane resource")
 	defaultArgs := controlplane.DefaultsArgs{
-		Namespace:                   cp.Namespace,
-		ControlPlaneName:            cp.Name,
-		DataPlaneIngressServiceName: dataplaneIngressServiceName,
-		DataPlaneAdminServiceName:   dataplaneAdminServiceName,
-		AnonymousReportsEnabled:     controlplane.DeduceAnonymousReportsEnabled(r.AnonymousReportsEnabled, &cp.Spec.ControlPlaneOptions),
-	}
-	for _, owner := range cp.OwnerReferences {
-		if strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) && owner.Kind == "Gateway" {
-			defaultArgs.OwnedByGateway = owner.Name
-			continue
-		}
-	}
-	changed := controlplane.SetDefaults(
-		&cp.Spec.ControlPlaneOptions,
-		defaultArgs)
-	if changed {
-		log.Debug(logger, "updating ControlPlane resource after defaults are set since resource has changed")
-		err := r.Update(ctx, cp)
-		if err != nil {
-			if k8serrors.IsConflict(err) {
-				log.Debug(logger, "conflict found when updating ControlPlane resource, retrying")
-				return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
+		OwnedByGateway: func() string {
+			for _, owner := range cp.OwnerReferences {
+				if strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) && owner.Kind == "Gateway" {
+					return owner.Name
+				}
 			}
-			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane: %w", err)
-		}
-		return ctrl.Result{}, nil // no need to requeue, the update will trigger.
+			return ""
+		}(),
 	}
 
 	// TODO(czeslavo): Make sure we reschedule the instance if the spec has changed.
 	// https://github.com/Kong/gateway-operator/issues/1374
 
 	log.Trace(logger, "validating ControlPlane's DataPlane status")
-	dataplaneIsSet := r.ensureDataPlaneStatus(cp, dataplane)
+	dataplaneIsSet, err := r.ensureDataPlaneStatus(cp, dataplane)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to ensure DataPlane status: %w", err)
+	}
 	if dataplaneIsSet {
 		log.Trace(logger, "DataPlane is set, deployment for ControlPlane will be provisioned")
 	} else {
@@ -292,6 +277,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 					Namespace: cp.Namespace,
 					Name:      dataplaneIngressServiceName,
 				}),
+				// TODO: anonymous reports.
 				WithMetricsServerOff(),
 			)
 			if err != nil {
@@ -344,8 +330,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 }
 
 // patchStatus Patches the resource status only when there are changes in the Conditions
-func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, updated *operatorv1beta1.ControlPlane) (ctrl.Result, error) {
-	current := &operatorv1beta1.ControlPlane{}
+func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, updated *ControlPlane) (ctrl.Result, error) {
+	current := &ControlPlane{}
 
 	err := r.Get(ctx, client.ObjectKeyFromObject(updated), current)
 	if client.IgnoreNotFound(err) != nil {

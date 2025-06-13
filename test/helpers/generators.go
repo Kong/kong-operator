@@ -76,40 +76,9 @@ func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfiguration
 			Name:      uuid.NewString(),
 		},
 		Spec: operatorv1beta1.GatewayConfigurationSpec{
-			ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
-				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-					PodTemplateSpec: &corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name:  consts.ControlPlaneControllerContainerName,
-									Image: consts.DefaultControlPlaneImage,
-									ReadinessProbe: &corev1.Probe{
-										FailureThreshold:    3,
-										InitialDelaySeconds: 0,
-										PeriodSeconds:       1,
-										SuccessThreshold:    1,
-										TimeoutSeconds:      1,
-										ProbeHandler: corev1.ProbeHandler{
-											HTTPGet: &corev1.HTTPGetAction{
-												Path:   "/readyz",
-												Port:   intstr.FromInt(10254),
-												Scheme: corev1.URISchemeHTTP,
-											},
-										},
-									},
-									Env: []corev1.EnvVar{
-										{
-											Name:  "CONTROLLER_LOG_LEVEL",
-											Value: "trace",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+			// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
+			// https://github.com/Kong/gateway-operator/issues/1728
+
 			DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{

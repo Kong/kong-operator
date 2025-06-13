@@ -24,6 +24,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -261,13 +262,13 @@ const (
 )
 
 type scrapeUpdateNotification struct {
-	ControlPlane   *operatorv1beta1.ControlPlane
+	ControlPlane   *gwtypes.ControlPlane
 	ControlPlaneNN types.NamespacedName
 	Action         scrapeUpdateAction
 }
 
 // NotifyAdd notifies the manager that a new ControlPlane has been added.
-func (msm *Manager) NotifyAdd(ctx context.Context, cp *operatorv1beta1.ControlPlane) {
+func (msm *Manager) NotifyAdd(ctx context.Context, cp *gwtypes.ControlPlane) {
 	select {
 	case <-ctx.Done():
 	case msm.pipelinesNotificationsCh <- scrapeUpdateNotification{ControlPlane: cp, Action: add}:
@@ -289,8 +290,10 @@ func (msm *Manager) NotifyRemove(ctx context.Context, cp types.NamespacedName) {
 // User is responsible for ensuring that the scraper is configured for DataPlane
 // that is associated with the given ControlPlane.
 // It returns true if the scraper was added.
-func (msm *Manager) Add(cp *operatorv1beta1.ControlPlane, pipeline MetricsScrapePipeline) bool {
-	if cp == nil || cp.Spec.DataPlane == nil {
+func (msm *Manager) Add(cp *gwtypes.ControlPlane, pipeline MetricsScrapePipeline) bool {
+	// TODO(pmalek): implement DataPlane external URL type
+	// ref: https://github.com/Kong/gateway-operator/issues/1366
+	if cp == nil || cp.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetRefType || cp.Spec.DataPlane.Ref == nil {
 		return false
 	}
 
@@ -337,15 +340,17 @@ func (msm *Manager) RemoveForControlPlaneNN(cpNN types.NamespacedName) {
 
 func (msm *Manager) enableMetricsScraperForControlPlanesDataPlane(
 	ctx context.Context,
-	controlplane *operatorv1beta1.ControlPlane,
+	controlplane *gwtypes.ControlPlane,
 ) error {
-	if controlplane.Spec.DataPlane == nil {
-		return fmt.Errorf("DataPlane is not set in ControlPlane %s", controlplane.Name)
+	// TODO(pmalek): implement DataPlane external URL type
+	// ref: https://github.com/Kong/gateway-operator/issues/1366
+	if controlplane == nil || controlplane.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetRefType || controlplane.Spec.DataPlane.Ref == nil {
+		return fmt.Errorf("ControlPlane %s does not have a valid, supported DataPlane target", controlplane.Name)
 	}
 
 	var (
 		dpNN = types.NamespacedName{
-			Name:      *controlplane.Spec.DataPlane,
+			Name:      controlplane.Spec.DataPlane.Ref.Name,
 			Namespace: controlplane.Namespace,
 		}
 		dp operatorv1beta1.DataPlane
@@ -368,7 +373,7 @@ func (msm *Manager) enableMetricsScraperForControlPlanesDataPlane(
 	}
 
 	if msm.Add(controlplane, pipeline) {
-		log.Debug(msm.logger, "enabled metrics scraper for ControlPlane", controlplane, "DataPlane", controlplane.Spec.DataPlane)
+		log.Debug(msm.logger, "enabled metrics scraper for ControlPlane", "controlplane", controlplane, "DataPlane", controlplane.Spec.DataPlane)
 	}
 	return nil
 }

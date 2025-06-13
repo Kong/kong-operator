@@ -1,8 +1,6 @@
 package gateway
 
 import (
-	"fmt"
-	"os"
 	"testing"
 
 	"github.com/google/uuid"
@@ -13,14 +11,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes/scheme"
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
+	"github.com/kong/gateway-operator/modules/manager/scheme"
 	"github.com/kong/gateway-operator/pkg/consts"
 	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
@@ -32,17 +29,6 @@ import (
 	kcfggateway "github.com/kong/kubernetes-configuration/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
-
-func init() {
-	if err := gatewayv1.Install(scheme.Scheme); err != nil {
-		fmt.Println("error while adding gatewayv1 scheme")
-		os.Exit(1)
-	}
-	if err := operatorv1beta1.AddToScheme(scheme.Scheme); err != nil {
-		fmt.Println("error while adding operatorv1beta1 scheme")
-		os.Exit(1)
-	}
-}
 
 func TestGatewayReconciler_Reconcile(t *testing.T) {
 	testCases := []struct {
@@ -192,18 +178,23 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 						},
 					},
 				},
-				&operatorv1beta1.ControlPlane{
+				&gwtypes.ControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-controlplane",
 						Namespace: "test-namespace",
 						UID:       types.UID(uuid.NewString()),
 					},
-					Spec: operatorv1beta1.ControlPlaneSpec{
-						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-							DataPlane: lo.ToPtr("test-dataplane"),
+					Spec: gwtypes.ControlPlaneSpec{
+						ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+								Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+									Name: "test-dataplane",
+								},
+							},
 						},
 					},
-					Status: operatorv1beta1.ControlPlaneStatus{
+					Status: gwtypes.ControlPlaneStatus{
 						Conditions: []metav1.Condition{
 							k8sutils.NewCondition(kcfgdataplane.ReadyType, metav1.ConditionTrue, kcfgdataplane.ResourceReadyReason, ""),
 						},
@@ -413,13 +404,6 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					}
 				}
 				if gatewaySubResource.GetName() == "test-controlplane" {
-					controlPlane := gatewaySubResource.(*operatorv1beta1.ControlPlane)
-					_ = controlplane.SetDefaults(
-						&controlPlane.Spec.ControlPlaneOptions,
-						controlplane.DefaultsArgs{
-							Namespace:                   "test-namespace",
-							DataPlaneIngressServiceName: "test-ingress-service",
-						})
 					for _, controlplaneSubResource := range tc.controlplaneSubResources {
 						k8sutils.SetOwnerForObject(controlplaneSubResource, gatewaySubResource)
 						objectsToAdd = append(objectsToAdd, controlplaneSubResource)
@@ -430,7 +414,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 
 			fakeClient := fakectrlruntimeclient.
 				NewClientBuilder().
-				WithScheme(scheme.Scheme).
+				WithScheme(scheme.Get()).
 				WithObjects(objectsToAdd...).
 				WithStatusSubresource(objectsToAdd...).
 				Build()
@@ -440,120 +424,6 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 			}
 
 			tc.testBody(t, reconciler, tc.gatewayReq)
-		})
-	}
-}
-
-func Test_setControlPlaneOptionsDefaults(t *testing.T) {
-	testcases := []struct {
-		name     string
-		input    operatorv1beta1.ControlPlaneOptions
-		expected operatorv1beta1.ControlPlaneOptions
-	}{
-		{
-			name:  "no providing any options",
-			input: operatorv1beta1.ControlPlaneOptions{},
-			expected: operatorv1beta1.ControlPlaneOptions{
-				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-					Replicas: lo.ToPtr(int32(1)),
-					PodTemplateSpec: &corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name:  consts.ControlPlaneControllerContainerName,
-									Image: consts.DefaultControlPlaneImage,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "providing only replicas",
-			input: operatorv1beta1.ControlPlaneOptions{
-				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-					Replicas: lo.ToPtr(int32(10)),
-				},
-			},
-			expected: operatorv1beta1.ControlPlaneOptions{
-				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-					Replicas: lo.ToPtr(int32(10)),
-					PodTemplateSpec: &corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name:  consts.ControlPlaneControllerContainerName,
-									Image: consts.DefaultControlPlaneImage,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "providing only replicas that are equal to default",
-			input: operatorv1beta1.ControlPlaneOptions{
-				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-					Replicas: lo.ToPtr(int32(1)),
-				},
-			},
-			expected: operatorv1beta1.ControlPlaneOptions{
-				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-					Replicas: lo.ToPtr(int32(1)),
-					PodTemplateSpec: &corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name:  consts.ControlPlaneControllerContainerName,
-									Image: consts.DefaultControlPlaneImage,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "providing more options",
-			input: operatorv1beta1.ControlPlaneOptions{
-				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-					Replicas: lo.ToPtr(int32(10)),
-					PodTemplateSpec: &corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name:  consts.ControlPlaneControllerContainerName,
-									Image: "image:v1.0",
-								},
-							},
-						},
-					},
-				},
-			},
-			expected: operatorv1beta1.ControlPlaneOptions{
-				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-					Replicas: lo.ToPtr(int32(10)),
-					PodTemplateSpec: &corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name:  consts.ControlPlaneControllerContainerName,
-									Image: "image:v1.0",
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	for _, tc := range testcases {
-		t.Run(tc.name, func(t *testing.T) {
-			setControlPlaneOptionsDefaults(&tc.input)
-			require.Equal(t, tc.expected, tc.input)
 		})
 	}
 }
@@ -904,7 +774,7 @@ func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
 
 	fakeClient := fakectrlruntimeclient.
 		NewClientBuilder().
-		WithScheme(scheme.Scheme).
+		WithScheme(scheme.Get()).
 		WithObjects(gateway, gatewayClass).
 		Build()
 

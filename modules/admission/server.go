@@ -13,6 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
+
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -107,7 +109,7 @@ func (h *RequestHandler) handleValidation(_ context.Context, req *admissionv1.Ad
 
 	switch req.Resource {
 	case controlPlaneGVResource:
-		controlPlane := operatorv1beta1.ControlPlane{}
+		controlPlane := gwtypes.ControlPlane{}
 		if req.Operation == admissionv1.Create || req.Operation == admissionv1.Update {
 			_, _, err := deserializer.Decode(req.Object.Raw, nil, &controlPlane)
 			if err != nil {

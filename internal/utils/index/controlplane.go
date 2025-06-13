@@ -3,7 +3,9 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
+
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v2alpha1"
 )
 
 const (
@@ -15,7 +17,7 @@ const (
 func OptionsForControlPlane(konnectControllersEnabled bool) []Option {
 	opts := []Option{
 		{
-			Object:         &operatorv1beta1.ControlPlane{},
+			Object:         &gwtypes.ControlPlane{},
 			Field:          DataPlaneNameIndex,
 			ExtractValueFn: dataPlaneNameOnControlPlane,
 		},
@@ -23,10 +25,9 @@ func OptionsForControlPlane(konnectControllersEnabled bool) []Option {
 
 	if konnectControllersEnabled {
 		opts = append(opts, Option{
-
-			Object:         &operatorv1beta1.ControlPlane{},
+			Object:         &gwtypes.ControlPlane{},
 			Field:          KonnectExtensionIndex,
-			ExtractValueFn: extendableOnKonnectExtension[*operatorv1beta1.ControlPlane](),
+			ExtractValueFn: extendableOnKonnectExtension[*gwtypes.ControlPlane](),
 		})
 	}
 
@@ -36,12 +37,18 @@ func OptionsForControlPlane(konnectControllersEnabled bool) []Option {
 // dataPlaneNameOnControlPlane indexes the ControlPlane .spec.dataplaneName field
 // on the "dataplane" key.
 func dataPlaneNameOnControlPlane(o client.Object) []string {
-	controlPlane, ok := o.(*operatorv1beta1.ControlPlane)
+	controlPlane, ok := o.(*gwtypes.ControlPlane)
 	if !ok {
 		return []string{}
 	}
-	if controlPlane.Spec.DataPlane != nil {
-		return []string{*controlPlane.Spec.DataPlane}
+	dp := controlPlane.Spec.DataPlane
+	switch dp.Type {
+	case operatorv2alpha1.ControlPlaneDataPlaneTargetRefType:
+		// Note: .Name is a pointer, enforced to be non nil at the CRD level.
+		return []string{controlPlane.Spec.DataPlane.Ref.Name}
+	// TODO(pmalek): implement DataPlane external URL type
+	// ref: https://github.com/Kong/gateway-operator/issues/1366
+	default:
+		return []string{}
 	}
-	return []string{}
 }

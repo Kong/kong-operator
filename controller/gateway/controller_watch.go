@@ -16,16 +16,12 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 	"github.com/kong/gateway-operator/internal/utils/index"
-	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/gateway-operator/pkg/vars"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -326,53 +322,17 @@ func (r *Reconciler) setDataPlaneGatewayConfigDefaults(gatewayConfig *operatorv1
 	}
 }
 
-func (r *Reconciler) setControlPlaneGatewayConfigDefaults(gateway *gwtypes.Gateway,
+// TODO(pmalek): add support for GatewayConfiguration v2 https://github.com/Kong/gateway-operator/issues/1728
+func (r *Reconciler) setControlPlaneGatewayConfigDefaults(
+	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1beta1.GatewayConfiguration,
 	dataplaneName,
 	dataplaneIngressServiceName,
 	dataplaneAdminServiceName,
 	controlPlaneName string,
 ) {
-	if gatewayConfig.Spec.ControlPlaneOptions == nil {
-		gatewayConfig.Spec.ControlPlaneOptions = new(operatorv1beta1.ControlPlaneOptions)
-	}
-	if gatewayConfig.Spec.ControlPlaneOptions.DataPlane == nil ||
-		*gatewayConfig.Spec.ControlPlaneOptions.DataPlane == "" {
-		gatewayConfig.Spec.ControlPlaneOptions.DataPlane = &dataplaneName
-	}
-
-	if gatewayConfig.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec == nil {
-		gatewayConfig.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
-	}
-
-	controlPlanePodTemplateSpec := gatewayConfig.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec
-	container := k8sutils.GetPodContainerByName(&controlPlanePodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-	if container == nil {
-		// We currently do not require an image to be specified for ControlPlanes
-		// hence we need to check if it has been provided.
-		// If it wasn't then add it by appending the generated ControlPlane to
-		// GatewayConfiguration spec.
-		// This change will not be saved in the API server (i.e. user applied resource
-		// will not be changed) - which is the desired behavior - since the caller
-		// only uses the changed GatewayConfiguration to generate ControlPlane resource.
-		container = lo.ToPtr(k8sresources.GenerateControlPlaneContainer(
-			k8sresources.GenerateContainerForControlPlaneParams{
-				Image: consts.DefaultControlPlaneImage,
-			},
-		))
-		controlPlanePodTemplateSpec.Spec.Containers = append(controlPlanePodTemplateSpec.Spec.Containers, *container)
-	}
-
-	// an actual ControlPlane will have ObjectMeta populated with ownership information. this includes a stand-in to
-	// satisfy the signature
-	_ = controlplane.SetDefaults(gatewayConfig.Spec.ControlPlaneOptions,
-		controlplane.DefaultsArgs{
-			Namespace:                   gateway.Namespace,
-			DataPlaneIngressServiceName: dataplaneIngressServiceName,
-			DataPlaneAdminServiceName:   dataplaneAdminServiceName,
-			OwnedByGateway:              gateway.Name,
-			ControlPlaneName:            controlPlaneName,
-			AnonymousReportsEnabled:     controlplane.DeduceAnonymousReportsEnabled(r.AnonymousReportsEnabled, gatewayConfig.Spec.ControlPlaneOptions),
-		},
-	)
+	// TODO(pmalek): add support for GatewayConfiguration v2 https://github.com/Kong/gateway-operator/issues/1728
+	// if gatewayConfig.Spec.ControlPlaneOptions == nil {
+	// Set defaults
+	// }
 }

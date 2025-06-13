@@ -19,12 +19,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 type pair struct {
-	controlplane *operatorv1beta1.ControlPlane
+	controlplane *gwtypes.ControlPlane
 	pipeline     MetricsScrapePipeline
 }
 
@@ -47,14 +48,19 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 			name: "one ControlPlane with one scraper",
 			pairs: []pair{
 				{
-					controlplane: &operatorv1beta1.ControlPlane{
+					controlplane: &gwtypes.ControlPlane{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "cp1",
 							Namespace: "ns1",
 						},
-						Spec: operatorv1beta1.ControlPlaneSpec{
-							ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-								DataPlane: lo.ToPtr("dp1"),
+						Spec: gwtypes.ControlPlaneSpec{
+							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+										Name: "dp1",
+									},
+								},
 							},
 						},
 					},
@@ -89,14 +95,19 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 			name: "one ControlPlane with one scraper which then gets overridden by another scraper for a different DataPlane",
 			pairs: []pair{
 				{
-					controlplane: &operatorv1beta1.ControlPlane{
+					controlplane: &gwtypes.ControlPlane{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "cp1",
 							Namespace: "ns1",
 						},
-						Spec: operatorv1beta1.ControlPlaneSpec{
-							ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-								DataPlane: lo.ToPtr("dp1"),
+						Spec: gwtypes.ControlPlaneSpec{
+							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+										Name: "dp1",
+									},
+								},
 							},
 						},
 					},
@@ -117,14 +128,19 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 					},
 				},
 				{
-					controlplane: &operatorv1beta1.ControlPlane{
+					controlplane: &gwtypes.ControlPlane{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "cp1",
 							Namespace: "ns1",
 						},
-						Spec: operatorv1beta1.ControlPlaneSpec{
-							ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-								DataPlane: lo.ToPtr("dp1"),
+						Spec: gwtypes.ControlPlaneSpec{
+							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+										Name: "dp1",
+									},
+								},
 							},
 						},
 					},
@@ -159,14 +175,19 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 			name: "2 ControlPlanes with 2 scrapers",
 			pairs: []pair{
 				{
-					controlplane: &operatorv1beta1.ControlPlane{
+					controlplane: &gwtypes.ControlPlane{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "cp1",
 							Namespace: "ns1",
 						},
-						Spec: operatorv1beta1.ControlPlaneSpec{
-							ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-								DataPlane: lo.ToPtr("dp1"),
+						Spec: gwtypes.ControlPlaneSpec{
+							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+										Name: "dp1",
+									},
+								},
 							},
 						},
 					},
@@ -187,14 +208,19 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 					},
 				},
 				{
-					controlplane: &operatorv1beta1.ControlPlane{
+					controlplane: &gwtypes.ControlPlane{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "cp2",
 							Namespace: "ns1",
 						},
-						Spec: operatorv1beta1.ControlPlaneSpec{
-							ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-								DataPlane: lo.ToPtr("dp2"),
+						Spec: gwtypes.ControlPlaneSpec{
+							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+										Name: "dp2",
+									},
+								},
 							},
 						},
 					},
@@ -268,14 +294,19 @@ func TestMetricsScrapeManager_RemoveForControlPlaneNN(t *testing.T) {
 			name: "add 2 ControlPlanes and then remove 1",
 			addPairs: []pair{
 				{
-					controlplane: &operatorv1beta1.ControlPlane{
+					controlplane: &gwtypes.ControlPlane{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "cp1",
 							Namespace: "ns1",
 						},
-						Spec: operatorv1beta1.ControlPlaneSpec{
-							ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-								DataPlane: lo.ToPtr("dp1"),
+						Spec: gwtypes.ControlPlaneSpec{
+							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+										Name: "dp1",
+									},
+								},
 							},
 						},
 					},
@@ -296,14 +327,19 @@ func TestMetricsScrapeManager_RemoveForControlPlaneNN(t *testing.T) {
 					},
 				},
 				{
-					controlplane: &operatorv1beta1.ControlPlane{
+					controlplane: &gwtypes.ControlPlane{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "cp2",
 							Namespace: "ns1",
 						},
-						Spec: operatorv1beta1.ControlPlaneSpec{
-							ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-								DataPlane: lo.ToPtr("dp2"),
+						Spec: gwtypes.ControlPlaneSpec{
+							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+										Name: "dp2",
+									},
+								},
 							},
 						},
 					},
@@ -442,14 +478,19 @@ func TestMetricsScrapeManager_Start(t *testing.T) {
 			name: "add 2 ControlPlanes",
 			addPairs: []pair{
 				{
-					controlplane: &operatorv1beta1.ControlPlane{
+					controlplane: &gwtypes.ControlPlane{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "cp1",
 							Namespace: "ns1",
 						},
-						Spec: operatorv1beta1.ControlPlaneSpec{
-							ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-								DataPlane: lo.ToPtr("dp1"),
+						Spec: gwtypes.ControlPlaneSpec{
+							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+										Name: "dp1",
+									},
+								},
 							},
 						},
 					},
@@ -462,14 +503,19 @@ func TestMetricsScrapeManager_Start(t *testing.T) {
 					},
 				},
 				{
-					controlplane: &operatorv1beta1.ControlPlane{
+					controlplane: &gwtypes.ControlPlane{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      "cp2",
 							Namespace: "ns1",
 						},
-						Spec: operatorv1beta1.ControlPlaneSpec{
-							ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-								DataPlane: lo.ToPtr("dp2"),
+						Spec: gwtypes.ControlPlaneSpec{
+							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+										Name: "dp2",
+									},
+								},
 							},
 						},
 					},

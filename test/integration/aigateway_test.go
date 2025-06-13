@@ -21,6 +21,8 @@ import (
 )
 
 func TestAIGatewayCreation(t *testing.T) {
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+
 	t.Parallel()
 
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
@@ -61,22 +63,9 @@ func TestAIGatewayCreation(t *testing.T) {
 					},
 				},
 			},
-			ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
-				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-					PodTemplateSpec: &corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{{
-								Name:  consts.ControlPlaneControllerContainerName,
-								Image: consts.DefaultControlPlaneImage,
-								Env: []corev1.EnvVar{{
-									Name:  "CONTROLLER_LOG_LEVEL",
-									Value: "debug",
-								}},
-							}},
-						},
-					},
-				},
-			},
+
+			// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
+			// https://github.com/Kong/gateway-operator/issues/1728
 		},
 	}
 	gatewayConfiguration, err := GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfiguration, metav1.CreateOptions{})

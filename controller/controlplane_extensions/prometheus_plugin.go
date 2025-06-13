@@ -9,14 +9,14 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
-func prometheusPluginForSvc(svc *corev1.Service, cp *operatorv1beta1.ControlPlane, ext *operatorv1alpha1.DataPlaneMetricsExtension) (*configurationv1.KongPlugin, error) {
+func prometheusPluginForSvc(svc *corev1.Service, cp *gwtypes.ControlPlane, ext *operatorv1alpha1.DataPlaneMetricsExtension) (*configurationv1.KongPlugin, error) {
 	var b []byte
 	if ext != nil {
 		var err error

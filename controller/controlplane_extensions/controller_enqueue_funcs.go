@@ -12,6 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
@@ -59,7 +60,7 @@ func enqueueControlPlaneOwningKongPluginFunc(
 			Name:      name,
 		}
 
-		cp := operatorv1beta1.ControlPlane{}
+		cp := gwtypes.ControlPlane{}
 		if err := cl.Get(ctx, nn, &cp); err != nil {
 			return nil
 		}
@@ -134,7 +135,7 @@ func enqueueControlPlaneForServicesThatHavePluginsConfigured(
 			return nil
 		}
 
-		var controlplanes operatorv1beta1.ControlPlaneList
+		var controlplanes gwtypes.ControlPlaneList
 		if err := cl.List(ctx, &controlplanes); err != nil {
 			return nil
 		}
@@ -197,7 +198,7 @@ func enqueueControlPlaneForDataPlaneMetricsExtension(
 			return nil
 		}
 
-		var controlplanes operatorv1beta1.ControlPlaneList
+		var controlplanes gwtypes.ControlPlaneList
 		if err := cl.List(ctx, &controlplanes); err != nil {
 			return nil
 		}
@@ -262,7 +263,7 @@ func enqueueControlPlaneForDataPlane(
 			}
 		}
 
-		var controlplanes operatorv1beta1.ControlPlaneList
+		var controlplanes gwtypes.ControlPlaneList
 		if err := cl.List(ctx, &controlplanes, &client.ListOptions{
 			Namespace: dp.Namespace,
 		}); err != nil {
@@ -282,7 +283,8 @@ func enqueueControlPlaneForDataPlane(
 				}
 			}
 
-			if controlplane.Spec.DataPlane == nil || *controlplane.Spec.DataPlane != dp.Name {
+			if controlplane.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetRefType ||
+				controlplane.Spec.DataPlane.Ref == nil {
 				continue
 			}
 

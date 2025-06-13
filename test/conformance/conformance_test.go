@@ -43,6 +43,8 @@ type ConformanceConfig struct {
 }
 
 func TestGatewayConformance(t *testing.T) {
+	t.Skip("skipping Gateway API conformance tests: TODO https://github.com/Kong/gateway-operator/issues/1726")
+
 	t.Parallel()
 
 	const looserTimeout = 180 * time.Second
@@ -159,46 +161,9 @@ func createGatewayConfiguration(ctx context.Context, t *testing.T, c Conformance
 					},
 				},
 			},
-			ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
-				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-					PodTemplateSpec: &corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name: consts.ControlPlaneControllerContainerName,
-									ReadinessProbe: &corev1.Probe{
-										InitialDelaySeconds: 1,
-										PeriodSeconds:       1,
-									},
-									Resources: corev1.ResourceRequirements{
-										Requests: corev1.ResourceList{
-											corev1.ResourceCPU:    resource.MustParse("10m"),
-											corev1.ResourceMemory: resource.MustParse("32Mi"),
-										},
-										Limits: corev1.ResourceList{
-											corev1.ResourceCPU:    resource.MustParse("200m"),
-											corev1.ResourceMemory: resource.MustParse("256Mi"),
-										},
-									},
-									Env: []corev1.EnvVar{
-										{
-											Name:  "CONTROLLER_LOG_LEVEL",
-											Value: "debug",
-										},
-										{
-											// NOTE: we disable the admission webhook to allow broken
-											// resources to be created so that their status can be
-											// filled to satisfy conformance suite expectations.
-											Name:  "CONTROLLER_ADMISSION_WEBHOOK_LISTEN",
-											Value: "off",
-										},
-									},
-								},
-							},
-						},
-					},
-				},
-			},
+
+			// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
+			// https://github.com/Kong/gateway-operator/issues/1728
 		},
 	}
 

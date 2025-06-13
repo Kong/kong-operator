@@ -7,6 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
@@ -21,7 +22,9 @@ import (
 // ControlPlaneOrDataPlaneOrKonnectExtension is a type that can be either a ControlPlane, a DataPlane or a KonnectExtension.
 // It is used to infer the types that can own secret resources.
 type ControlPlaneOrDataPlaneOrKonnectExtension interface {
-	*operatorv1beta1.ControlPlane | *operatorv1beta1.DataPlane | *konnectv1alpha2.KonnectExtension
+	*gwtypes.ControlPlane |
+		*operatorv1beta1.DataPlane |
+		*konnectv1alpha2.KonnectExtension
 }
 
 // SecretOpt is an option function for a Secret.
@@ -51,7 +54,7 @@ func WithAnnotation[T client.Object](k, v string) func(d T) {
 
 func getPrefixForOwner[T ControlPlaneOrDataPlaneOrKonnectExtension](owner T) string {
 	switch any(owner).(type) {
-	case *operatorv1beta1.ControlPlane:
+	case *gwtypes.ControlPlane:
 		return consts.ControlPlanePrefix
 	case *operatorv1beta1.DataPlane:
 		return consts.DataPlanePrefix
@@ -65,7 +68,7 @@ func getPrefixForOwner[T ControlPlaneOrDataPlaneOrKonnectExtension](owner T) str
 // addLabelForOwner labels the provided object as managed by the provided owner.
 func addLabelForOwner[T ControlPlaneOrDataPlaneOrKonnectExtension](obj client.Object, owner T) {
 	switch any(owner).(type) {
-	case *operatorv1beta1.ControlPlane:
+	case *gwtypes.ControlPlane:
 		LabelObjectAsControlPlaneManaged(obj)
 	case *operatorv1beta1.DataPlane:
 		LabelObjectAsDataPlaneManaged(obj)

@@ -472,23 +472,8 @@ func baseGatewayConfigurationSpec() operatorv1beta1.GatewayConfigurationSpec {
 			},
 		},
 
-		ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
-			Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-				PodTemplateSpec: &corev1.PodTemplateSpec{
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							{
-								Name: consts.ControlPlaneControllerContainerName,
-								ReadinessProbe: &corev1.Probe{
-									InitialDelaySeconds: 1,
-									PeriodSeconds:       1,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
+		// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
+		// https://github.com/Kong/gateway-operator/issues/1728
 	}
 }
 

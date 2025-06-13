@@ -4,6 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -50,7 +51,7 @@ func setLabel(obj metav1.Object, key string, value string) { //nolint:unparam
 // GetManagedLabelForOwner returns the managed-by labels for the provided owner.
 func GetManagedLabelForOwner(owner metav1.Object) client.MatchingLabels {
 	switch owner.(type) {
-	case *operatorv1beta1.ControlPlane:
+	case *gwtypes.ControlPlane:
 		return client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
 		}

@@ -48,6 +48,8 @@ linters:
           msg: Please use camel case 'DataPlane' instead of 'Dataplane'
         - pattern: ^.*Controlplane.*$
           msg: Please use camel case 'ControlPlane' instead of 'Controlplane'
+        - pattern: ^.*operatorv1beta1.ControlPlane.*$
+          msg: Please use v2alpha1 ControlPlane (through github.com/kong/gateway-operator/internal/types)
     gomodguard:
       blocked:
         modules:

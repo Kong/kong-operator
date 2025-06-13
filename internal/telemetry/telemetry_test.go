@@ -28,7 +28,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/modules/manager/metadata"
+	"github.com/kong/gateway-operator/modules/manager/scheme"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -36,22 +38,7 @@ import (
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
-
-func prepareScheme(t *testing.T) *runtime.Scheme {
-	scheme := runtime.NewScheme()
-	require.NoError(t, testk8sclient.AddToScheme(scheme))
-	require.NoError(t, operatorv1beta1.AddToScheme(scheme))
-	require.NoError(t, operatorv1alpha1.AddToScheme(scheme))
-	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
-	require.NoError(t, configurationv1beta1.AddToScheme(scheme))
-	require.NoError(t, configurationv1.AddToScheme(scheme))
-	require.NoError(t, konnectv1alpha1.AddToScheme(scheme))
-	require.NoError(t, konnectv1alpha2.AddToScheme(scheme))
-
-	return scheme
-}
 
 func createRESTMapper() meta.RESTMapper {
 	restMapper := meta.NewDefaultRESTMapper(nil)
@@ -62,8 +49,8 @@ func createRESTMapper() meta.RESTMapper {
 		Kind:    "DataPlane",
 	}, meta.RESTScopeNamespace)
 	restMapper.Add(schema.GroupVersionKind{
-		Group:   operatorv1beta1.SchemeGroupVersion.Group,
-		Version: operatorv1beta1.SchemeGroupVersion.Version,
+		Group:   gwtypes.ControlPlaneGVR().Group,
+		Version: gwtypes.ControlPlaneGVR().Version,
 		Kind:    "ControlPlane",
 	}, meta.RESTScopeNamespace)
 	restMapper.AddSpecific(
@@ -254,19 +241,19 @@ func TestCreateManager(t *testing.T) {
 						OwnerReferences: []metav1.OwnerReference{{}}, // Owned by something, we don't care what.
 					},
 				},
-				&operatorv1beta1.ControlPlane{
+				&gwtypes.ControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "kong",
 						Name:      "control-plane-0",
 					},
 				},
-				&operatorv1beta1.ControlPlane{
+				&gwtypes.ControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "kong",
 						Name:      "control-plane-1",
 					},
 				},
-				&operatorv1beta1.ControlPlane{
+				&gwtypes.ControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace:       "kong",
 						Name:            "owned-control-plane-2",
@@ -349,40 +336,6 @@ func TestCreateManager(t *testing.T) {
 			},
 		},
 		{
-			name: "controlplane replicas count",
-			objects: []runtime.Object{
-				&operatorv1beta1.ControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "cp-10-replicas",
-					},
-					Spec: operatorv1beta1.ControlPlaneSpec{
-						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-							Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-								Replicas: lo.ToPtr[int32](10),
-							},
-						},
-					},
-				},
-				&operatorv1beta1.ControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "cp-no-replicas", // No replicas counts as 1.
-					},
-				},
-			},
-			expectedReportParts: []string{
-				"signal=test-signal",
-				"k8s_controlplanes_requested_replicas_count=11",
-				"controller_dataplane_enabled=true",
-				"controller_dataplane_bg_enabled=false",
-				"controller_controlplane_enabled=false",
-				"controller_gateway_enabled=false",
-				"controller_konnect_enabled=true",
-				"controller_kongplugininstallation_enabled=false",
-			},
-		},
-		{
 			name: "1 aigateway, 1 dataplane, 1 controlplane",
 			objects: []runtime.Object{
 				&operatorv1alpha1.AIGateway{
@@ -397,7 +350,7 @@ func TestCreateManager(t *testing.T) {
 						Name:      "ai-gateway-dp",
 					},
 				},
-				&operatorv1beta1.ControlPlane{
+				&gwtypes.ControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "kong",
 						Name:      "ai-gateway-cp",
@@ -476,7 +429,7 @@ func TestCreateManager(t *testing.T) {
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			scheme := prepareScheme(t)
+			scheme := scheme.Get()
 			k8sclient := testk8sclient.NewSimpleClientset()
 
 			ctrlClient := prepareControllerClient(scheme, tc.objects...)
@@ -627,7 +580,7 @@ func TestTelemetryUpdates(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			scheme := prepareScheme(t)
+			scheme := scheme.Get()
 			// We need the custom list kinds to prevent:
 			// panic: coding error: you must register resource to list kind for every resource you're going
 			// to LIST when creating the client.

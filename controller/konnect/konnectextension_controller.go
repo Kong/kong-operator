@@ -30,6 +30,7 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 	"github.com/kong/gateway-operator/pkg/consts"
@@ -78,8 +79,8 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 			handler.EnqueueRequestsFromMapFunc(listExtendableReferencedExtensions[*operatorv1beta1.DataPlane]),
 		).
 		Watches(
-			&operatorv1beta1.ControlPlane{},
-			handler.EnqueueRequestsFromMapFunc(listExtendableReferencedExtensions[*operatorv1beta1.ControlPlane]),
+			&gwtypes.ControlPlane{},
+			handler.EnqueueRequestsFromMapFunc(listExtendableReferencedExtensions[*gwtypes.ControlPlane]),
 		).
 		Watches(
 			&konnectv1alpha1.KonnectAPIAuthConfiguration{},
@@ -148,7 +149,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	var (
 		dataPlaneList    operatorv1beta1.DataPlaneList
-		controlPlaneList operatorv1beta1.ControlPlaneList
+		controlPlaneList gwtypes.ControlPlaneList
 	)
 	ctx = ctrllog.IntoContext(ctx, logger)
 	log.Debug(logger, "reconciling")

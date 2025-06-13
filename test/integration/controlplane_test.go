@@ -20,10 +20,10 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/gateway-operator/controller/pkg/builder"
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	"github.com/kong/gateway-operator/pkg/consts"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
@@ -44,33 +44,19 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
-	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().ControlPlanes(namespace.Name)
+	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV2alpha1().ControlPlanes(namespace.Name)
 
 	controlplaneName := types.NamespacedName{
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	controlplane := &operatorv1beta1.ControlPlane{
+	controlplane := &gwtypes.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: controlplaneName.Namespace,
 			Name:      controlplaneName.Name,
 		},
-		Spec: operatorv1beta1.ControlPlaneSpec{
-			ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-					PodTemplateSpec: &corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name:  consts.ControlPlaneControllerContainerName,
-									Image: consts.DefaultControlPlaneImage,
-								},
-							},
-						},
-					},
-				},
-				DataPlane: nil,
-			},
+		Spec: gwtypes.ControlPlaneSpec{
+			ControlPlaneOptions: gwtypes.ControlPlaneOptions{},
 		},
 	}
 
@@ -133,8 +119,13 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 
 	t.Log("attaching dataplane to controlplane")
 	require.Eventually(t,
-		testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
-			cp.Spec.DataPlane = &dataplane.Name
+		testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *gwtypes.ControlPlane) {
+			cp.Spec.DataPlane = gwtypes.ControlPlaneDataPlaneTarget{
+				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+				Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+					Name: dataplane.Name,
+				},
+			}
 		}),
 		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 	)
@@ -144,17 +135,6 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 
 	t.Log("verifying controlplane deployment has active replicas")
 	require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t, GetCtx(), controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
-
-	t.Log("removing dataplane from controlplane")
-	require.Eventually(t,
-		testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
-			cp.Spec.DataPlane = nil
-		}),
-		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
-	)
-
-	t.Log("verifying controlplane deployment has no active replicas")
-	require.Eventually(t, testutils.Not(testutils.ControlPlaneHasActiveDeployment(t, GetCtx(), controlplaneName, clients)), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 }
 
 func TestControlPlaneEssentials(t *testing.T) {
@@ -164,7 +144,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
-	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().ControlPlanes(namespace.Name)
+	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV2alpha1().ControlPlanes(namespace.Name)
 
 	// Control plane needs a dataplane to exist to properly function.
 	dataplaneName := types.NamespacedName{
@@ -207,45 +187,19 @@ func TestControlPlaneEssentials(t *testing.T) {
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	controlplane := &operatorv1beta1.ControlPlane{
+	controlplane := &gwtypes.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: controlplaneName.Namespace,
 			Name:      controlplaneName.Name,
 		},
-		Spec: operatorv1beta1.ControlPlaneSpec{
-			ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-					PodTemplateSpec: &corev1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: map[string]string{
-								"label-a": "value-a",
-								"label-x": "value-x",
-							},
-						},
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Env: []corev1.EnvVar{
-										{
-											Name:  "TEST_ENV",
-											Value: "test",
-										},
-									},
-									Name:  consts.ControlPlaneControllerContainerName,
-									Image: consts.DefaultControlPlaneImage,
-									// Speed up the test.
-									ReadinessProbe: func() *corev1.Probe {
-										p := k8sresources.GenerateControlPlaneProbe("/readyz", intstr.FromInt(10254))
-										p.InitialDelaySeconds = 1
-										p.PeriodSeconds = 1
-										return p
-									}(),
-								},
-							},
-						},
+		Spec: gwtypes.ControlPlaneSpec{
+			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+				DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+					Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+					Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+						Name: dataplane.Name,
 					},
 				},
-				DataPlane: &dataplane.Name,
 			},
 		},
 	}
@@ -443,26 +397,19 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	nsA := createNamespace(t, cl, cleaner, "test-namespace-a")
 	nsB := createNamespace(t, cl, cleaner, "test-namespace-b")
 
-	cp := &operatorv1beta1.ControlPlane{
+	cp := &gwtypes.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    namespace.Name,
 			GenerateName: "cp-watchnamespaces-",
 		},
-		Spec: operatorv1beta1.ControlPlaneSpec{
-			ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-					PodTemplateSpec: &corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name:  consts.ControlPlaneControllerContainerName,
-									Image: consts.DefaultControlPlaneImage,
-								},
-							},
-						},
+		Spec: gwtypes.ControlPlaneSpec{
+			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+				DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+					Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+					Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+						Name: dp.Name,
 					},
 				},
-				DataPlane: lo.ToPtr(dp.Name),
 				WatchNamespaces: &operatorv1beta1.WatchNamespaces{
 					Type: operatorv1beta1.WatchNamespacesTypeList,
 					List: []string{
@@ -481,12 +428,12 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	t.Log("verifying controlplane has a status condition indicating missing WatchNamespaceGrants")
 	require.Eventually(t,
 		testutils.ObjectPredicates(t, clients.MgrClient,
-			testutils.MatchCondition[*operatorv1beta1.ControlPlane](t).
+			testutils.MatchCondition[*gwtypes.ControlPlane](t).
 				Type(string(kcfgcontrolplane.ConditionTypeWatchNamespaceGrantValid)).
 				Status(metav1.ConditionFalse).
 				Reason(string(kcfgcontrolplane.ConditionReasonWatchNamespaceGrantInvalid)).
 				Predicate(),
-			testutils.MatchCondition[*operatorv1beta1.ControlPlane](t).
+			testutils.MatchCondition[*gwtypes.ControlPlane](t).
 				Type(string(kcfgdataplane.ReadyType)).
 				Status(metav1.ConditionFalse).
 				Predicate(),
@@ -503,12 +450,12 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	t.Log("verifying controlplane has a status condition indicating no missing WatchNamespaceGrants and it's Ready")
 	require.Eventually(t,
 		testutils.ObjectPredicates(t, clients.MgrClient,
-			testutils.MatchCondition[*operatorv1beta1.ControlPlane](t).
+			testutils.MatchCondition[*gwtypes.ControlPlane](t).
 				Type(string(kcfgcontrolplane.ConditionTypeWatchNamespaceGrantValid)).
 				Status(metav1.ConditionTrue).
 				Reason(string(kcfgcontrolplane.ConditionReasonWatchNamespaceGrantValid)).
 				Predicate(),
-			testutils.MatchCondition[*operatorv1beta1.ControlPlane](t).
+			testutils.MatchCondition[*gwtypes.ControlPlane](t).
 				Type(string(kcfgdataplane.ReadyType)).
 				Status(metav1.ConditionTrue).
 				Predicate(),
@@ -538,12 +485,12 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	t.Log("verifying that after removing a WatchNamespaceGrant for a watched namesace controlplane has a status condition indicating invalid/missing WatchNamespaceGrants")
 	require.Eventually(t,
 		testutils.ObjectPredicates(t, clients.MgrClient,
-			testutils.MatchCondition[*operatorv1beta1.ControlPlane](t).
+			testutils.MatchCondition[*gwtypes.ControlPlane](t).
 				Type(string(kcfgcontrolplane.ConditionTypeWatchNamespaceGrantValid)).
 				Status(metav1.ConditionFalse).
 				Reason(string(kcfgcontrolplane.ConditionReasonWatchNamespaceGrantInvalid)).
 				Predicate(),
-			testutils.MatchCondition[*operatorv1beta1.ControlPlane](t).
+			testutils.MatchCondition[*gwtypes.ControlPlane](t).
 				Type(string(kcfgdataplane.ReadyType)).
 				Status(metav1.ConditionFalse).
 				Predicate(),
@@ -552,7 +499,7 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	)
 }
 
-func watchNamespaceGrantForNamespace(t *testing.T, cl client.Client, cp *operatorv1beta1.ControlPlane, ns string) *operatorv1alpha1.WatchNamespaceGrant {
+func watchNamespaceGrantForNamespace(t *testing.T, cl client.Client, cp *gwtypes.ControlPlane, ns string) *operatorv1alpha1.WatchNamespaceGrant {
 	wng := &operatorv1alpha1.WatchNamespaceGrant{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: ns + "-refgrant-",
@@ -671,7 +618,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
-	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().ControlPlanes(namespace.Name)
+	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV2alpha1().ControlPlanes(namespace.Name)
 
 	dataplaneName := types.NamespacedName{
 		Namespace: namespace.Name,
@@ -710,35 +657,19 @@ func TestControlPlaneUpdate(t *testing.T) {
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	controlplane := &operatorv1beta1.ControlPlane{
+	controlplane := &gwtypes.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: controlplaneName.Namespace,
 			Name:      controlplaneName.Name,
 		},
-		Spec: operatorv1beta1.ControlPlaneSpec{
-			ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
-				Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
-					PodTemplateSpec: &corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Env: []corev1.EnvVar{
-										{
-											Name: "TEST_ENV", Value: "before_update",
-										},
-									},
-									Name:  consts.ControlPlaneControllerContainerName,
-									Image: consts.DefaultControlPlaneImage,
-									ReadinessProbe: &corev1.Probe{
-										InitialDelaySeconds: 1,
-										PeriodSeconds:       1,
-									},
-								},
-							},
-						},
+		Spec: gwtypes.ControlPlaneSpec{
+			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+				DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+					Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+					Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+						Name: dataplane.Name,
 					},
 				},
-				DataPlane: &dataplane.Name,
 			},
 		},
 	}
@@ -765,93 +696,4 @@ func TestControlPlaneUpdate(t *testing.T) {
 	require.Eventually(t, testutils.ControlPlaneIsProvisioned(t, GetCtx(), controlplaneName, clients),
 		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 	)
-
-	t.Log("verifying controlplane deployment has active replicas")
-	require.Eventually(t, testutils.ControlPlaneHasActiveDeployment(t, GetCtx(), controlplaneName, clients),
-		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
-	)
-
-	// check environment variables of deployments and pods.
-	deployments := testutils.MustListControlPlaneDeployments(t, GetCtx(), controlplane, clients)
-	require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
-	deployment := &deployments[0]
-
-	t.Logf("verifying environment variable TEST_ENV in deployment before update")
-	container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
-	require.NotNil(t, container)
-	testEnv := GetEnvValueByName(container.Env, "TEST_ENV")
-	require.Equal(t, "before_update", testEnv)
-
-	t.Logf("updating controlplane resource with new ControlPlane environment variable value")
-
-	require.Eventually(t,
-		testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
-			cp.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Env = []corev1.EnvVar{
-				{
-					Name: "TEST_ENV", Value: "after_update",
-				},
-			}
-		}),
-		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
-	)
-
-	t.Logf("verifying environment variable TEST_ENV in deployment after update")
-	require.Eventually(t, func() bool {
-		deployments := testutils.MustListControlPlaneDeployments(t, GetCtx(), controlplane, clients)
-		require.Len(t, deployments, 1, "There must be only one ControlPlane deployment")
-		deployment := &deployments[0]
-
-		container := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
-		require.NotNil(t, container)
-		testEnv := GetEnvValueByName(container.Env, "TEST_ENV")
-		t.Logf("Tenvironment variable TEST_ENV is now %s in deployment", testEnv)
-		return testEnv == "after_update"
-	},
-		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
-	)
-
-	t.Run("controlplane is not Ready when the underlying deployment changes state to not Ready", func(t *testing.T) {
-		require.Eventually(t,
-			testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
-				cp.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Image = "kong/kubernetes-ingress-controller:99999.0.0"
-			}),
-			time.Minute, time.Second,
-		)
-
-		t.Logf("verifying that controlplane is indeed not Ready when the underlying deployment is not Ready")
-		require.Eventually(t,
-			testutils.ControlPlaneIsNotReady(t, GetCtx(), controlplaneName, clients),
-			testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
-		)
-	})
-
-	t.Run("controlplane gets Ready when the underlying deployment changes state to Ready", func(t *testing.T) {
-		require.Eventually(t,
-			testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
-				cp.Spec.Deployment.PodTemplateSpec.Spec.Containers[0].Image = consts.DefaultControlPlaneImage
-			}),
-			time.Minute, time.Second,
-		)
-
-		require.Eventually(t,
-			testutils.ControlPlaneIsReady(t, GetCtx(), controlplaneName, clients),
-			testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
-		)
-	})
-
-	t.Run("controlplane correctly reconciles when is updated with a ReadinessProbe using a port name", func(t *testing.T) {
-		require.Eventually(t,
-			testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients, func(cp *operatorv1beta1.ControlPlane) {
-				container := k8sutils.GetPodContainerByName(&cp.Spec.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-				require.NotNil(t, container)
-				container.ReadinessProbe = k8sresources.GenerateControlPlaneProbe("/readyz", intstr.FromInt(10254))
-			}),
-			time.Minute, time.Second,
-		)
-
-		require.Eventually(t,
-			testutils.ControlPlaneIsReady(t, GetCtx(), controlplaneName, clients),
-			testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
-		)
-	})
 }

@@ -8,13 +8,12 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	gwtypes "github.com/kong/gateway-operator/internal/types"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 func TestGenerateNewRoleForControlPlane(t *testing.T) {
-	cp := &operatorv1beta1.ControlPlane{
+	cp := &gwtypes.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "test-controlplane",
 			UID:  "12345",

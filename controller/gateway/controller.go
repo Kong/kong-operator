@@ -78,7 +78,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		// watch for changes in dataplanes created by the gateway controller
 		Owns(&operatorv1beta1.DataPlane{}).
 		// watch for changes in controlplanes created by the gateway controller
-		Owns(&operatorv1beta1.ControlPlane{}).
+		Owns(&gwtypes.ControlPlane{}).
 		// watch for changes in networkpolicies created by the gateway controller
 		Owns(&networkingv1.NetworkPolicy{}).
 		// watch for updates to GatewayConfigurations, if any configuration targets a
@@ -351,7 +351,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
 	// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false.
-	controlplane := r.provisionControlPlane(ctx, logger, gwc.GatewayClass, &gateway, gatewayConfig, dataplane, ingressServices[0], adminServices[0])
+	controlplane := r.provisionControlPlane(ctx, logger, &gateway, gatewayConfig, dataplane, ingressServices[0], adminServices[0])
 	// Set the ControlPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no ControlPlaneReady condition in the gateway
 	// * the new status is false and the previous status was true
@@ -539,13 +539,12 @@ func (r *Reconciler) provisionDataPlane(
 func (r *Reconciler) provisionControlPlane(
 	ctx context.Context,
 	logger logr.Logger,
-	gatewayClass *gatewayv1.GatewayClass,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *operatorv1beta1.GatewayConfiguration,
 	dataplane *operatorv1beta1.DataPlane,
 	ingressService corev1.Service,
 	adminService corev1.Service,
-) *operatorv1beta1.ControlPlane {
+) *gwtypes.ControlPlane {
 	logger = logger.WithName("controlplaneProvisioning")
 
 	log.Trace(logger, "looking for associated controlplanes")
@@ -559,13 +558,13 @@ func (r *Reconciler) provisionControlPlane(
 		return nil
 	}
 
-	var controlPlane *operatorv1beta1.ControlPlane
+	var controlPlane *gwtypes.ControlPlane
 
 	count := len(controlplanes)
 	switch {
 	case count == 0:
 		r.setControlPlaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name, "")
-		err := r.createControlPlane(ctx, gatewayClass, gateway, gatewayConfig, dataplane.Name)
+		err := r.createControlPlane(ctx, gateway, gatewayConfig, dataplane.Name)
 		if err != nil {
 			log.Debug(logger, fmt.Sprintf("controlplane creation failed - error: %v", err))
 			k8sutils.SetCondition(
@@ -596,12 +595,11 @@ func (r *Reconciler) provisionControlPlane(
 	log.Trace(logger, "ensuring controlplane config is up to date")
 	// compare deployment option of controlplane with controlplane deployment option of gatewayconfiguration.
 	// if not configured in gatewayconfiguration, compare deployment option of controlplane with an empty one.
-	expectedControlPlaneOptions := &operatorv1beta1.ControlPlaneOptions{}
-	if gatewayConfig.Spec.ControlPlaneOptions != nil {
-		expectedControlPlaneOptions = gatewayConfig.Spec.ControlPlaneOptions
-	}
-	// Don't require setting defaults for ControlPlane when using Gateway CRD.
-	setControlPlaneOptionsDefaults(expectedControlPlaneOptions)
+	expectedControlPlaneOptions := &gwtypes.ControlPlaneOptions{}
+	// TODO: https://github.com/Kong/gateway-operator/issues/1728
+	// if gatewayConfig.Spec.ControlPlaneOptions != nil {
+	//   expectedControlPlaneOptions = gatewayConfig.Spec.ControlPlaneOptions
+	// }
 
 	expectedControlPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, expectedControlPlaneOptions.Extensions)
 
@@ -636,36 +634,6 @@ func (r *Reconciler) provisionControlPlane(
 		gatewayConditionsAndListenersAware(gateway),
 	)
 	return controlPlane
-}
-
-// setControlPlaneOptionsDefaults sets the default ControlPlane options not overriding
-// what's been provided only filling in those fields that were unset or empty.
-func setControlPlaneOptionsDefaults(opts *operatorv1beta1.ControlPlaneOptions) {
-	if opts.Deployment.PodTemplateSpec == nil {
-		opts.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
-	}
-
-	container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.ControlPlaneControllerContainerName)
-	if container != nil {
-		if container.Image == "" {
-			container.Image = consts.DefaultControlPlaneImage
-		}
-	} else {
-		// Because we currently require image to be specified for ControlPlanes
-		// we need to add it here. After #20 gets resolved this won't be needed
-		// anymore.
-		// Related:
-		// - https://github.com/Kong/gateway-operator/issues/20
-		// - https://github.com/Kong/gateway-operator/issues/754
-		opts.Deployment.PodTemplateSpec.Spec.Containers = append(opts.Deployment.PodTemplateSpec.Spec.Containers, corev1.Container{
-			Name:  consts.ControlPlaneControllerContainerName,
-			Image: consts.DefaultControlPlaneImage,
-		})
-	}
-
-	if opts.Deployment.Replicas == nil {
-		opts.Deployment.Replicas = lo.ToPtr(int32(1))
-	}
 }
 
 // setDataPlaneOptionsDefaults sets the default DataPlane options not overriding

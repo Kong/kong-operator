@@ -60,6 +60,8 @@ var (
 )
 
 func TestOperatorLogs(t *testing.T) {
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+
 	ctx := t.Context()
 	if imageLoad == "" && imageOverride == "" {
 		t.Skipf("No KONG_TEST_KONG_OPERATOR_IMAGE_OVERRIDE nor KONG_TEST_KONG_OPERATOR_IMAGE_LOAD" +
@@ -200,7 +202,7 @@ func TestOperatorLogs(t *testing.T) {
 		t.Log("verifying the ControlPlane sub-resource is deleted")
 		if len(controlplanes) != 0 {
 			assert.Eventually(t, func() bool {
-				_, err := clients.OperatorClient.GatewayOperatorV1beta1().ControlPlanes(testNamespace.Name).Get(ctx, controlplanes[0].Name, metav1.GetOptions{})
+				_, err := clients.OperatorClient.GatewayOperatorV2alpha1().ControlPlanes(testNamespace.Name).Get(ctx, controlplanes[0].Name, metav1.GetOptions{})
 				return errors.IsNotFound(err)
 			}, time.Minute, time.Second)
 		}

@@ -65,6 +65,8 @@ func TestKonnectExtensionKonnectControlPlaneNotFound(t *testing.T) {
 }
 
 func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
+	t.Skip("TODO: adapt to ControlPlane v2alpha1 https://github.com/Kong/gateway-operator/issues/1730")
+
 	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	// Let's generate a unique test ID that we can refer to in Konnect entities.
@@ -158,6 +160,8 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 }
 
 func TestKonnectExtension(t *testing.T) {
+	t.Skip("TODO: adapt to ControlPlane v2alpha1 https://github.com/Kong/gateway-operator/issues/1730")
+
 	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	// Let's generate a unique test ID that we can refer to in Konnect entities.
@@ -277,7 +281,7 @@ type KonnectExtensionTestCaseParams struct {
 }
 
 func KonnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCaseParams) {
-	var cert, key = certificate.MustGenerateSelfSignedCertPEMFormat()
+	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat()
 
 	t.Run("KonnectExtension with KonnectNamespacedRef control plane ref", func(t *testing.T) {
 		t.Run("manual secret provisioning", func(t *testing.T) {
