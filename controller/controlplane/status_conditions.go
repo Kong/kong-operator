@@ -18,7 +18,7 @@ func markAsProvisioned[T *ControlPlane](resource T) {
 				kcfgcontrolplane.ConditionTypeProvisioned,
 				metav1.ConditionTrue,
 				kcfgcontrolplane.ConditionReasonPodsReady,
-				"pods for all Deployments are ready",
+				"ControlPlane has been provisioned",
 				cp.Generation,
 			),
 			cp,
