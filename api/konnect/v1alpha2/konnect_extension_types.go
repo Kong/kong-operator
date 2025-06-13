@@ -105,7 +105,7 @@ type KonnectExtensionControlPlane struct {
 type KonnectExtensionDataPlane struct {
 	// Labels is a set of labels that will be applied to the Konnect DataPlane.
 	//
-	// +optional
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:validation:MaxItems=5
 	// +kubebuilder:validation:XValidation:rule="self.all(key, key.matches('^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'))",message="keys must match the pattern '^[a-zA-Z0-9]([a-zA-Z0-9._-]*[a-zA-Z0-9])?$'."
 	// +kubebuilder:validation:XValidation:rule="self.all(key, !(key.startsWith('kong') || key.startsWith('konnect') || key.startsWith('insomnia') || key.startsWith('mesh') || key.startsWith('kic') || key.startsWith('_')))",message="keys must not start with 'kong', 'konnect', 'insomnia', 'mesh', 'kic', or '_'."
@@ -175,6 +175,7 @@ type KonnectExtensionStatus struct {
 	// a DataPlane through its extensions spec.
 	//
 	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:Optional
 	DataPlaneRefs []commonv1alpha1.NamespacedRef `json:"dataPlaneRefs,omitempty"`
 
 	// ControlPlaneRefs is the array  of ControlPlane references this is associated with.
@@ -182,6 +183,7 @@ type KonnectExtensionStatus struct {
 	// a ControlPlane through its extensions spec.
 	//
 	// +kubebuilder:validation:MaxItems=16
+	// +kubebuilder:validation:Optional
 	ControlPlaneRefs []commonv1alpha1.NamespacedRef `json:"controlPlaneRefs,omitempty"`
 
 	// DataPlaneClientAuth contains the configuration for the client certificate authentication for the DataPlane.
@@ -197,10 +199,10 @@ type KonnectExtensionStatus struct {
 	// Conditions describe the current conditions of the KonnectExtensionStatus.
 	// Known condition types are:
 	//
-	// +optional
 	// +listType=map
 	// +listMapKey=type
 	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:validation:Optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 

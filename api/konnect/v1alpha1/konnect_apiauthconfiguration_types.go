@@ -82,9 +82,13 @@ type KonnectAPIAuthConfigurationSpec struct {
 // +apireference:kgo:include
 type KonnectAPIAuthConfigurationStatus struct {
 	// OrganizationID is the unique identifier of the organization in Konnect.
+	//
+	// +optional
 	OrganizationID string `json:"organizationID,omitempty"`
 
 	// ServerURL is configured server URL.
+	//
+	// +optional
 	ServerURL string `json:"serverURL,omitempty"`
 
 	// Conditions describe the status of the Konnect configuration.
@@ -93,6 +97,7 @@ type KonnectAPIAuthConfigurationStatus struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Valid", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 

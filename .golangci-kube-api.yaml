@@ -13,8 +13,10 @@ linters:
             disable:
               - "*"
             enable:
+              # Konnect related fields have underscores in their names, which
+              # is not recommended and yields errors with jsontags linter.
+              # - jsontags
               - duplicatemarkers
-              - jsontags
               # - maxlength
               - nofloats
               - nomaps

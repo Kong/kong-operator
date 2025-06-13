@@ -91,6 +91,8 @@ type KonnectCloudGatewayNetworkStatus struct {
 	KonnectEntityStatus `json:",inline"`
 
 	// State is the current state of the network. Can be e.g. initializing, ready, terminating.
+	//
+	// +kubebuilder:validation:Optional
 	State string `json:"state,omitempty"`
 
 	// Conditions describe the current conditions of the KonnectCloudGatewayNetwork.
@@ -103,6 +105,7 @@ type KonnectCloudGatewayNetworkStatus struct {
 	// +listMapKey=type
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	// +kubebuilder:validation:Optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 

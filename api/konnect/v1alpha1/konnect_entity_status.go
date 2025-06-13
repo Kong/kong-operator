@@ -5,12 +5,18 @@ package v1alpha1
 type KonnectEntityStatus struct {
 	// ID is the unique identifier of the Konnect entity as assigned by Konnect API.
 	// If it's unset (empty string), it means the Konnect entity hasn't been created yet.
+	//
+	// +kubebuilder:validation:Optional
 	ID string `json:"id,omitempty"`
 
 	// ServerURL is the URL of the Konnect server in which the entity exists.
+	//
+	// +kubebuilder:validation:Optional
 	ServerURL string `json:"serverURL,omitempty"`
 
 	// OrgID is ID of Konnect Org that this entity has been created in.
+	//
+	// +kubebuilder:validation:Optional
 	OrgID string `json:"organizationID,omitempty"`
 }
 
@@ -59,6 +65,8 @@ type KonnectEntityStatusWithControlPlaneRef struct {
 	KonnectEntityStatus `json:",inline"`
 
 	// ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with.
+	//
+	// +kubebuilder:validation:Optional
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
 }
 
