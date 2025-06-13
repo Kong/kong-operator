@@ -13,9 +13,7 @@ linters:
             disable:
               - "*"
             enable:
-              # Konnect related fields have underscores in their names, which
-              # is not recommended and yields errors with jsontags linter.
-              # - jsontags
+              - jsontags
               - duplicatemarkers
               # - maxlength
               - nofloats
@@ -30,3 +28,9 @@ linters:
               isFirstField: Warn
               useProtobuf: Warn
               usePatchStrategy: Warn
+            nomaps:
+              policy: AllowStringToStringMaps
+            # We allow underscores as that's what many Konnect related fields use.
+            jsonTags:
+              jsonTagRegex: "^[a-z][a-z0-9_]*(?:[A-Z][a-z0-9_]*)*$"
+
