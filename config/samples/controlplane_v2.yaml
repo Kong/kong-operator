@@ -46,7 +46,6 @@ spec:
           readinessProbe:
             initialDelaySeconds: 1
             periodSeconds: 1
-
   network:
     services:
       ingress:
