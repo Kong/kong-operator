@@ -44,8 +44,6 @@ const (
 // Additionally, it will also make the operator expose DataPlane's metrics
 // enriched with metadata required for in-cluster Kubernetes autoscaling.
 //
-// NOTE: This is an enterprise feature. In order to use it you need to use
-// the EE version of Kong Gateway Operator with a valid license.
 // +apireference:kgo:include
 // +kong:channels=gateway-operator
 type DataPlaneMetricsExtension struct {
