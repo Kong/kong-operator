@@ -56,7 +56,7 @@ type KongCredentialJWT struct {
 type KongCredentialJWTSpec struct {
 	// ConsumerRef is a reference to a Consumer this KongCredentialJWT is associated with.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	ConsumerRef corev1.LocalObjectReference `json:"consumerRef"`
 
 	KongCredentialJWTAPISpec `json:",inline"`

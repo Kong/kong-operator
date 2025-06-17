@@ -28,13 +28,13 @@ type IngressRule struct {
 	// If a Host is specified, the protocol must be TLS over TCP.
 	// A plain-text TCP request cannot be routed based on Host. It can only
 	// be routed based on Port.
-	// +kubebuilder:validation:Optional
+	// +optional
 	Host string `json:"host,omitempty"`
 
 	// Port is the port on which to accept TCP or TLS over TCP sessions and
 	// route. It is a required field. If a Host is not specified, the requested
 	// are routed based only on Port.
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Format=int32
@@ -42,7 +42,7 @@ type IngressRule struct {
 
 	// Backend defines the referenced service endpoint to which the traffic
 	// will be forwarded to.
-	// +kubebuilder:validation:Required
+	// +required
 	Backend IngressBackend `json:"backend"`
 }
 
@@ -50,12 +50,12 @@ type IngressRule struct {
 // +apireference:kic:include
 type IngressBackend struct {
 	// Specifies the name of the referenced service.
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:MinLength=1
 	ServiceName string `json:"serviceName"`
 
 	// Specifies the port of the referenced service.
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:validation:Format=int32

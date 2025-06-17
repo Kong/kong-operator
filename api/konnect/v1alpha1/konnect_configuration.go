@@ -7,7 +7,7 @@ type KonnectConfiguration struct {
 	// APIAuthConfigurationRef is the reference to the API Auth Configuration
 	// that should be used for this Konnect Configuration.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	APIAuthConfigurationRef KonnectAPIAuthConfigurationRef `json:"authRef"`
 
 	// NOTE: Place for extending the KonnectConfiguration object.

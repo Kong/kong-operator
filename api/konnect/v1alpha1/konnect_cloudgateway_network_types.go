@@ -38,6 +38,8 @@ type KonnectCloudGatewayNetwork struct {
 	Spec KonnectCloudGatewayNetworkSpec `json:"spec"`
 
 	// Status defines the observed state of KonnectCloudGatewayNetwork.
+	//
+	// +optional
 	Status KonnectCloudGatewayNetworkStatus `json:"status,omitempty"`
 }
 
@@ -51,37 +53,37 @@ type KonnectCloudGatewayNetworkSpec struct {
 
 	// Specifies the name of the network on Konnect.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Name string `json:"name"`
 
 	// Specifies the provider Account ID.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	CloudGatewayProviderAccountID string `json:"cloud_gateway_provider_account_id"`
 
 	// Region ID for cloud provider region.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Region string `json:"region"`
 
 	// List of availability zones that the network is attached to.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=5
 	AvailabilityZones []string `json:"availability_zones"`
 
 	// CIDR block configuration for the network.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	CidrBlock string `json:"cidr_block"`
 
 	// Initial state for creating a network.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	State *sdkkonnectcomp.NetworkCreateState `json:"state"`
 
-	// +kubebuilder:validation:Required
+	// +required
 	KonnectConfiguration KonnectConfiguration `json:"konnect"`
 }
 
@@ -92,7 +94,7 @@ type KonnectCloudGatewayNetworkStatus struct {
 
 	// State is the current state of the network. Can be e.g. initializing, ready, terminating.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	State string `json:"state,omitempty"`
 
 	// Conditions describe the current conditions of the KonnectCloudGatewayNetwork.
@@ -105,7 +107,7 @@ type KonnectCloudGatewayNetworkStatus struct {
 	// +listMapKey=type
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
-	// +kubebuilder:validation:Optional
+	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 

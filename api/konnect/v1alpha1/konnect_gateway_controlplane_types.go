@@ -36,6 +36,8 @@ type KonnectGatewayControlPlane struct {
 	Spec KonnectGatewayControlPlaneSpec `json:"spec,omitempty"`
 
 	// Status defines the observed state of KonnectGatewayControlPlane.
+	//
+	// +optional
 	Status KonnectGatewayControlPlaneStatus `json:"status,omitempty"`
 }
 
@@ -61,20 +63,25 @@ type KonnectGatewayControlPlaneSpec struct {
 	// Mirror is the Konnect Mirror configuration.
 	// It is only applicable for ControlPlanes that are created as Mirrors.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	Mirror *MirrorSpec `json:"mirror,omitempty"`
 
 	// Source represents the source type of the Konnect entity.
 	//
 	// +kubebuilder:validation:Enum=Origin;Mirror
-	// +kubebuilder:validation:Optional
+	// +optional
 	// +kubebuilder:default=Origin
 	Source *commonv1alpha1.EntitySource `json:"source,omitempty"`
 
 	// Members is a list of references to the KonnectGatewayControlPlaneMembers that are part of this control plane group.
 	// Only applicable for ControlPlanes that are created as groups.
+	//
+	// +optional
 	Members []corev1.LocalObjectReference `json:"members,omitempty"`
 
+	// KonnectConfiguration contains the Konnect configuration for the control plane.
+	//
+	// +optional
 	KonnectConfiguration KonnectConfiguration `json:"konnect,omitempty"`
 }
 
@@ -83,7 +90,7 @@ type MirrorSpec struct {
 	// Konnect contains the KonnectID of the KonnectGatewayControlPlane that
 	// is mirrored.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Konnect MirrorKonnect `json:"konnect"`
 }
 
@@ -92,28 +99,35 @@ type MirrorKonnect struct {
 	// ID is the ID of the Konnect entity. It can be set only in case
 	// the ControlPlane type is Mirror.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	ID commonv1alpha1.KonnectIDType `json:"id"`
 }
 
 // CreateControlPlaneRequest - The request schema for the create control plane request.
 type CreateControlPlaneRequest struct {
 	// The name of the control plane.
+	// +optional
 	Name *string `json:"name,omitempty"`
 	// The description of the control plane in Konnect.
+	// +optional
 	Description *string `json:"description,omitempty"`
 	// The ClusterType value of the cluster associated with the Control Plane.
+	// +optional
 	ClusterType *sdkkonnectcomp.CreateControlPlaneRequestClusterType `json:"cluster_type,omitempty"`
 	// The auth type value of the cluster associated with the Runtime Group.
+	// +optional
 	AuthType *sdkkonnectcomp.AuthType `json:"auth_type,omitempty"`
 	// Whether this control-plane can be used for cloud-gateways.
+	// +optional
 	CloudGateway *bool `json:"cloud_gateway,omitempty"`
 	// Array of proxy URLs associated with reaching the data-planes connected to a control-plane.
+	// +optional
 	ProxyUrls []sdkkonnectcomp.ProxyURL `json:"proxy_urls,omitempty"`
 	// Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.
 	//
 	// Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_".
 	//
+	// +optional
 	Labels map[string]string `json:"labels,omitempty"`
 }
 
@@ -126,7 +140,7 @@ type KonnectGatewayControlPlaneStatus struct {
 	// They are required by the DataPlane to be properly configured in
 	// Konnect and connect to the control plane.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	Endpoints *KonnectEndpoints `json:"konnectEndpoints,omitempty"`
 
 	// Conditions describe the current conditions of the KonnectGatewayControlPlane.
@@ -139,7 +153,7 @@ type KonnectGatewayControlPlaneStatus struct {
 	// +listMapKey=type
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
-	// +kubebuilder:validation:Optional
+	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
@@ -147,12 +161,12 @@ type KonnectGatewayControlPlaneStatus struct {
 type KonnectEndpoints struct {
 	// TelemetryEndpoint is the endpoint for telemetry.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	TelemetryEndpoint string `json:"telemetry"`
 
 	// ControlPlaneEndpoint is the endpoint for the control plane.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	ControlPlaneEndpoint string `json:"controlPlane"`
 }
 

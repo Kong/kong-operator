@@ -38,7 +38,7 @@ type KongCACertificate struct {
 type KongCACertificateSpec struct {
 	// ControlPlaneRef references the Konnect Control Plane that this KongCACertificate should be created in.
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
-	// +kubebuilder:validation:Required
+	// +required
 	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
 	KongCACertificateAPISpec `json:",inline"`
@@ -48,7 +48,7 @@ type KongCACertificateSpec struct {
 // +apireference:kgo:include
 type KongCACertificateAPISpec struct {
 	// Cert is the PEM-encoded CA certificate.
-	// +kubebuilder:validation:Required
+	// +required
 	Cert string `json:"cert,omitempty"`
 
 	// Tags is an optional set of tags applied to the certificate.

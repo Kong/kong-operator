@@ -19,7 +19,7 @@ linters:
               - nofloats
               - nomaps
               - nophase
-              # - optionalorrequired
+              - optionalorrequired
               - requiredfields
               - statusoptional
               - statussubresource
@@ -33,4 +33,16 @@ linters:
             # We allow underscores as that's what many Konnect related fields use.
             jsonTags:
               jsonTagRegex: "^[a-z][a-z0-9_]*(?:[A-Z][a-z0-9_]*)*$"
-
+            optionalOrRequired:
+              preferredOptionalMarker: optional
+              preferredRequiredMarker: required
+  exclusions:
+    rules:
+      - linters:
+          - kubeapilinter
+        path: .*
+        text: "(optionalorrequired: embedded field  must be marked as optional or required)"
+      - linters:
+          - kubeapilinter
+        path: .*
+        text: "(optionalorrequired: field Spec must be marked as optional or required)"

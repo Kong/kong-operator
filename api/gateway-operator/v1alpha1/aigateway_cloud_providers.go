@@ -41,7 +41,7 @@ const (
 type AICloudProvider struct {
 	// Name is the unique name of an LLM provider.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:Enum=openai;azure;cohere;mistral
 	Name AICloudProviderName `json:"name"`
 }
@@ -52,7 +52,7 @@ type AICloudProvider struct {
 type AICloudProviderAPITokenRef struct {
 	// Name is the name of the reference object.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Name string `json:"name"`
 
 	// Namespace is the namespace of the reference object.
@@ -60,7 +60,7 @@ type AICloudProviderAPITokenRef struct {
 	// If not specified, it will be assumed to be the same namespace as the
 	// object which references it.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	Namespace *string `json:"namespace,omitempty"`
 
 	// Kind is the API object kind
@@ -70,6 +70,6 @@ type AICloudProviderAPITokenRef struct {
 	// value is the secret API token. The key can be named anything, as long as
 	// there's only one entry, but by convention it should be "apiToken".
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	Kind *string `json:"kind,omitempty"`
 }

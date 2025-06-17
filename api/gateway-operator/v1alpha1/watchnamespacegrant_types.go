@@ -43,18 +43,18 @@ type WatchNamespaceGrantFrom struct {
 	// Group is the group of the referent.
 	//
 	// +kubebuilder:validation:Enum=gateway-operator.konghq.com
-	// +kubebuilder:validation:Required
+	// +required
 	Group string `json:"group"`
 
 	// Kind is the kind of the referent.
 	//
 	// +kubebuilder:validation:Enum=ControlPlane
-	// +kubebuilder:validation:Required
+	// +required
 	Kind string `json:"kind"`
 
 	// Namespace is the namespace of the referent.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Namespace string `json:"namespace"`
 }
 

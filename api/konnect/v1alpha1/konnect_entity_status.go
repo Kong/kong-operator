@@ -6,17 +6,17 @@ type KonnectEntityStatus struct {
 	// ID is the unique identifier of the Konnect entity as assigned by Konnect API.
 	// If it's unset (empty string), it means the Konnect entity hasn't been created yet.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	ID string `json:"id,omitempty"`
 
 	// ServerURL is the URL of the Konnect server in which the entity exists.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	ServerURL string `json:"serverURL,omitempty"`
 
 	// OrgID is ID of Konnect Org that this entity has been created in.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	OrgID string `json:"organizationID,omitempty"`
 }
 
@@ -66,7 +66,7 @@ type KonnectEntityStatusWithControlPlaneRef struct {
 
 	// ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
 }
 
@@ -86,9 +86,13 @@ type KonnectEntityStatusWithControlPlaneAndConsumerRefs struct {
 	KonnectEntityStatus `json:",inline"`
 
 	// ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with.
+	//
+	// +optional
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
 
 	// ConsumerID is the Konnect ID of the Consumer this entity is associated with.
+	//
+	// +optional
 	ConsumerID string `json:"consumerID,omitempty"`
 }
 
@@ -118,9 +122,13 @@ type KonnectEntityStatusWithControlPlaneAndServiceRefs struct {
 	KonnectEntityStatus `json:",inline"`
 
 	// ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with.
+	//
+	// +optional
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
 
 	// ServiceID is the Konnect ID of the Service this entity is associated with.
+	//
+	// +optional
 	ServiceID string `json:"serviceID,omitempty"`
 }
 
@@ -140,9 +148,13 @@ type KonnectEntityStatusWithControlPlaneAndUpstreamRefs struct {
 	KonnectEntityStatus `json:",inline"`
 
 	// ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with.
+	//
+	// +optional
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
 
 	// UpstreamID is the Konnect ID of the Upstream this entity is associated with.
+	//
+	// +optional
 	UpstreamID string `json:"upstreamID,omitempty"`
 }
 
@@ -152,9 +164,13 @@ type KonnectEntityStatusWithControlPlaneAndKeySetRef struct {
 	KonnectEntityStatus `json:",inline"`
 
 	// ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with.
+	//
+	// +optional
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
 
 	// KeySetID is the Konnect ID of the KeySet this entity is associated with.
+	//
+	// +optional
 	KeySetID string `json:"keySetID,omitempty"`
 }
 
@@ -184,9 +200,13 @@ type KonnectEntityStatusWithControlPlaneAndCertificateRefs struct {
 	KonnectEntityStatus `json:",inline"`
 
 	// ControlPlaneID is the Konnect ID of the ControlPlane this entity is associated with.
+	//
+	// +optional
 	ControlPlaneID string `json:"controlPlaneID,omitempty"`
 
 	// CertificateID is the Konnect ID of the Certificate this entity is associated with.
+	//
+	// +optional
 	CertificateID string `json:"certificateID,omitempty"`
 }
 
@@ -195,6 +215,6 @@ type KonnectEntityStatusWithNetworkRef struct {
 	KonnectEntityStatus `json:",inline"`
 	// NetworkID is the Konnect ID of the Konnect cloud gateway network this entity is associated with.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	NetworkID string `json:"networkID,omitempty"`
 }

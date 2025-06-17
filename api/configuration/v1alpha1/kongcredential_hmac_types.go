@@ -55,7 +55,7 @@ type KongCredentialHMAC struct {
 type KongCredentialHMACSpec struct {
 	// ConsumerRef is a reference to a Consumer this KongCredentialHMAC is associated with.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	ConsumerRef corev1.LocalObjectReference `json:"consumerRef"`
 
 	KongCredentialHMACAPISpec `json:",inline"`

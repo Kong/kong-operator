@@ -61,7 +61,7 @@ type KongPluginInstallationList struct {
 type KongPluginInstallationSpec struct {
 	// The image is an OCI image URL for a packaged custom Kong plugin.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Image string `json:"image"`
 
 	// ImagePullSecretRef is a reference to a Kubernetes Secret containing credentials necessary to pull the OCI image

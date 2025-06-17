@@ -6,7 +6,7 @@ package v1alpha1
 type NameRef struct {
 	// Name is the name of the entity.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 }

@@ -38,6 +38,8 @@ type KonnectCloudGatewayTransitGateway struct {
 	Spec KonnectCloudGatewayTransitGatewaySpec `json:"spec"`
 
 	// Status defines the observed state of KonnectCloudGatewayTransitGateway.
+	//
+	// +optional
 	Status KonnectCloudGatewayTransitGatewayStatus `json:"status,omitempty"`
 }
 
@@ -47,7 +49,7 @@ type KonnectCloudGatewayTransitGateway struct {
 type KonnectCloudGatewayTransitGatewaySpec struct {
 	// NetworkRef is the schema for the NetworkRef type.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	NetworkRef commonv1alpha1.ObjectRef `json:"networkRef"`
 	// KonnectTransitGatewayAPISpec is the configuration of the transit gateway on Konnect side.
 	KonnectTransitGatewayAPISpec `json:",inline"`
@@ -74,19 +76,19 @@ const (
 type KonnectTransitGatewayAPISpec struct {
 	// Type is the type of the Konnect transit gateway.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:Enum=AWSTransitGateway;AzureTransitGateway
 	Type TransitGatewayType `json:"type"`
 
 	// AWSTransitGateway is the configuration of an AWS transit gateway.
 	// Used when type is "AWS Transit Gateway".
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	AWSTransitGateway *AWSTransitGateway `json:"awsTransitGateway,omitempty"`
 	// AzureTransitGateway is the configuration of an Azure transit gateway.
 	// Used when type is "Azure Transit Gateway".
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	AzureTransitGateway *AzureTransitGateway `json:"azureTransitGateway,omitempty"`
 }
 
@@ -96,21 +98,21 @@ type AWSTransitGateway struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=120
-	// +kubebuilder:validation:Required
+	// +required
 	Name string `json:"name"`
 	// List of mappings from remote DNS server IP address sets to proxied internal domains, for a transit gateway
 	// attachment.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	DNSConfig []TransitGatewayDNSConfig `json:"dns_config,omitempty"`
 	// CIDR blocks for constructing a route table for the transit gateway, when attaching to the owning
 	// network.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	CIDRBlocks []string `json:"cidr_blocks"`
 	// configuration to attach to AWS transit gateway on the AWS side.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	AttachmentConfig AwsTransitGatewayAttachmentConfig `json:"attachment_config"`
 }
 
@@ -120,16 +122,16 @@ type AzureTransitGateway struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=120
-	// +kubebuilder:validation:Required
+	// +required
 	Name string `json:"name"`
 	// List of mappings from remote DNS server IP address sets to proxied internal domains, for a transit gateway
 	// attachment.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	DNSConfig []TransitGatewayDNSConfig `json:"dns_config,omitempty"`
 	// configuration to attach to Azure VNET peering gateway.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	AttachmentConfig AzureVNETPeeringAttachmentConfig `json:"attachment_config"`
 }
 
@@ -137,12 +139,12 @@ type AzureTransitGateway struct {
 type TransitGatewayDNSConfig struct {
 	// RemoteDNSServerIPAddresses is the list of remote DNS server IP Addresses to connect to for resolving internal DNS via a transit gateway.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	RemoteDNSServerIPAddresses []string `json:"remote_dns_server_ip_addresses,omitempty"`
 	// DomainProxyList is the list of internal domain names to proxy for DNS resolution from the listed remote DNS server IP addresses,
 	// for a transit gateway.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	DomainProxyList []string `json:"domain_proxy_list,omitempty"`
 }
 
@@ -150,11 +152,11 @@ type TransitGatewayDNSConfig struct {
 type AwsTransitGatewayAttachmentConfig struct {
 	// TransitGatewayID is the AWS transit gateway ID to create attachment to.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	TransitGatewayID string `json:"transit_gateway_id"`
 	// RAMShareArn is the resource share ARN to verify request to create transit gateway attachment.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	RAMShareArn string `json:"ram_share_arn"`
 }
 
@@ -162,19 +164,19 @@ type AwsTransitGatewayAttachmentConfig struct {
 type AzureVNETPeeringAttachmentConfig struct {
 	// TenantID is the tenant ID for the Azure VNET Peering attachment.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	TenantID string `json:"tenant_id"`
 	// SubscriptionID is the subscription ID for the Azure VNET Peering attachment.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	SubscriptionID string `json:"subscription_id"`
 	// ResourceGroupName is the resource group name for the Azure VNET Peering attachment.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	ResourceGroupName string `json:"resource_group_name"`
 	// VnetName is the VNET Name for the Azure VNET Peering attachment.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	VnetName string `json:"vnet_name"`
 }
 
@@ -184,7 +186,7 @@ type KonnectCloudGatewayTransitGatewayStatus struct {
 
 	// State is the state of the transit gateway on Konnect side.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	State sdkkonnectcomp.TransitGatewayState `json:"state,omitempty"`
 
 	// Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.
@@ -197,7 +199,7 @@ type KonnectCloudGatewayTransitGatewayStatus struct {
 	// +listMapKey=type
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
-	// +kubebuilder:validation:Optional
+	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 

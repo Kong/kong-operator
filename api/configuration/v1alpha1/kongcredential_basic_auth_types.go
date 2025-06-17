@@ -55,7 +55,7 @@ type KongCredentialBasicAuth struct {
 type KongCredentialBasicAuthSpec struct {
 	// ConsumerRef is a reference to a Consumer this CredentialBasicAuth is associated with.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	ConsumerRef corev1.LocalObjectReference `json:"consumerRef"`
 
 	KongCredentialBasicAuthAPISpec `json:",inline"`
@@ -66,7 +66,7 @@ type KongCredentialBasicAuthSpec struct {
 type KongCredentialBasicAuthAPISpec struct {
 	// Password is the password for the BasicAuth credential.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Password string `json:"password"`
 
 	// Tags is a list of tags for the BasicAuth credential.
@@ -74,7 +74,7 @@ type KongCredentialBasicAuthAPISpec struct {
 
 	// Username is the username for the BasicAuth credential.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Username string `json:"username"`
 }
 

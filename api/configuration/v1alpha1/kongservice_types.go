@@ -58,7 +58,7 @@ type KongService struct {
 type KongServiceSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this KongService is associated with.
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
-	// +kubebuilder:validation:Required
+	// +required
 	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
 	KongServiceAPISpec `json:",inline"`
@@ -86,7 +86,7 @@ type KongServiceAPISpec struct {
 	// Whether the Service is active. If set to `false`, the proxy behavior will be as if any routes attached to it do not exist (404). Default: `true`.
 	Enabled *bool `json:"enabled,omitempty"`
 	// The host of the upstream server. Note that the host value is case sensitive.
-	// +kubebuilder:validation:Required
+	// +required
 	Host string `json:"host"`
 	// The Service name.
 	Name *string `json:"name,omitempty"`

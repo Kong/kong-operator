@@ -70,7 +70,7 @@ type DataPlaneMetricsExtensionSpec struct {
 	// ServiceSelector holds the service selector specifying the services
 	// for which metrics should be collected.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	ServiceSelector ServiceSelector `json:"serviceSelector"`
 
 	// Config holds the configuration for the DataPlane metrics.
@@ -135,7 +135,7 @@ type ServiceSelector struct {
 	//
 	// +listType=map
 	// +listMapKey=name
-	// +kubebuilder:validation:Required
+	// +required
 	MatchNames []ServiceSelectorEntry `json:"matchNames,omitempty"`
 }
 
@@ -144,6 +144,6 @@ type ServiceSelector struct {
 type ServiceSelectorEntry struct {
 	// Name is the name of the service to match.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Name string `json:"name"`
 }

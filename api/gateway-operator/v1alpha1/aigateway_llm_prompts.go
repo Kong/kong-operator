@@ -16,7 +16,7 @@ package v1alpha1
 type LLMPrompt struct {
 	// Content is the prompt text sent for inference.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Content string `json:"content"`
 
 	// Role indicates the role of the prompt. This is used to identify the
@@ -25,7 +25,7 @@ type LLMPrompt struct {
 	//
 	// If not specified, "user" will be used as the default.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	// +kubebuilder:validation:Enum=user;system
 	// +kubebuilder:default=user
 	Role *LLMPromptRole `json:"role"`
@@ -47,7 +47,7 @@ type LLMPromptParams struct {
 	// very high temperatures, the outputs may become nonsensical or highly
 	// unpredictable.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	Temperature *string `json:"temperature"`
 
 	// Max Tokens specifies the maximum length of the model's output in terms
@@ -56,7 +56,7 @@ type LLMPromptParams struct {
 	// manageable scope. A token can be a word or part of a word, depending on
 	// the model's tokenizer.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	MaxTokens *int `json:"maxTokens"`
 
 	// TopK sampling is a technique where the model's prediction is limited to
@@ -68,7 +68,7 @@ type LLMPromptParams struct {
 	// larger K allows for more diversity but with an increased risk of
 	// incoherence.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	TopK *int `json:"topK"`
 
 	// TopP (also known as nucleus sampling) is an alternative to top K
@@ -81,7 +81,7 @@ type LLMPromptParams struct {
 	// whereas a lower P value makes the model's outputs more focused and
 	// coherent.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	TopP *string `json:"topP"`
 }
 

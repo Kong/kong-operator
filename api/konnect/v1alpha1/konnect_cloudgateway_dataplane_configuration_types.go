@@ -34,6 +34,8 @@ type KonnectCloudGatewayDataPlaneGroupConfiguration struct {
 	Spec KonnectCloudGatewayDataPlaneGroupConfigurationSpec `json:"spec"`
 
 	// Status defines the observed state of KonnectCloudGatewayDataPlaneGroupConfiguration.
+	//
+	// +optional
 	Status KonnectCloudGatewayDataPlaneGroupConfigurationStatus `json:"status,omitempty"`
 }
 
@@ -43,18 +45,18 @@ type KonnectCloudGatewayDataPlaneGroupConfiguration struct {
 type KonnectCloudGatewayDataPlaneGroupConfigurationSpec struct {
 	// Version specifies the desired Kong Gateway version.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Version string `json:"version"`
 
 	// DataplaneGroups is a list of desired data-plane groups that describe where
 	// to deploy instances, along with how many instances.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	DataplaneGroups []KonnectConfigurationDataPlaneGroup `json:"dataplane_groups"`
 
 	// APIAccess is the desired type of API access for data-plane groups.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	// +kubebuilder:default=private+public
 	// +kubebuilder:validation:Enum=private;public;private+public
 	APIAccess *sdkkonnectcomp.APIAccess `json:"api_access"`
@@ -62,7 +64,7 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane which DataPlanes from this
 	// configuration will connect to.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	ControlPlaneRef commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 }
 
@@ -82,12 +84,12 @@ const (
 type KonnectConfigurationDataPlaneGroup struct {
 	// Name of cloud provider.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Provider sdkkonnectcomp.ProviderName `json:"provider"`
 
 	// Region for cloud provider region.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Region string `json:"region"`
 
 	// NetworkRef is the reference to the network that this data-plane group will be deployed on.
@@ -96,17 +98,17 @@ type KonnectConfigurationDataPlaneGroup struct {
 	// This will be enforced in the future but currently (due to limitation in CEL validation
 	// in Kubernetes 1.31 and older) it is not.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	NetworkRef commonv1alpha1.ObjectRef `json:"networkRef"`
 
 	// Autoscale configuration for the data-plane group.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Autoscale ConfigurationDataPlaneGroupAutoscale `json:"autoscale"`
 
 	// Array of environment variables to set for a data-plane group.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	Environment []ConfigurationDataPlaneGroupEnvironmentField `json:"environment,omitempty"`
 }
 
@@ -116,14 +118,14 @@ type ConfigurationDataPlaneGroupEnvironmentField struct {
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:Pattern="^KONG_."
 	Name string `json:"name"`
 	// Value assigned to the environment variable field for the data-plane group.
 	//
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=63
-	// +kubebuilder:validation:Required
+	// +required
 	Value string `json:"value"`
 }
 
@@ -146,17 +148,17 @@ const (
 type ConfigurationDataPlaneGroupAutoscale struct {
 	// Static specifies the static configuration for the data-plane group.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	Static *ConfigurationDataPlaneGroupAutoscaleStatic `json:"static,omitempty"`
 
 	// Autopilot specifies the autoscale configuration for the data-plane group.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	Autopilot *ConfigurationDataPlaneGroupAutoscaleAutopilot `json:"autopilot,omitempty"`
 
 	// Type of autoscaling to use.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:Enum=static;autopilot
 	Type ConfigurationDataPlaneGroupAutoscaleType `json:"type"`
 }
@@ -165,10 +167,12 @@ type ConfigurationDataPlaneGroupAutoscale struct {
 type ConfigurationDataPlaneGroupAutoscaleAutopilot struct {
 	// Base number of requests per second that the deployment target should support.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	BaseRps int64 `json:"base_rps"`
 
 	// Max number of requests per second that the deployment target should support. If not set, this defaults to 10x base_rps.
+	//
+	// +optional
 	MaxRps *int64 `json:"max_rps,omitempty"`
 }
 
@@ -180,12 +184,12 @@ type ConfigurationDataPlaneGroupAutoscaleStatic struct {
 	// For all the allowed values, please refer to the Konnect API documentation
 	// at https://docs.konghq.com/konnect/api/cloud-gateways/latest/#/Data-Plane%20Group%20Configurations/create-configuration.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	InstanceType sdkkonnectcomp.InstanceTypeName `json:"instance_type"`
 
 	// Number of data-planes the deployment target will contain.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	RequestedInstances int64 `json:"requested_instances"`
 }
 
@@ -196,7 +200,7 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationStatus struct {
 
 	// DataPlaneGroups is a list of deployed data-plane groups.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	DataPlaneGroups []KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup `json:"dataplane_groups,omitempty"`
 
 	// Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.
@@ -209,7 +213,7 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationStatus struct {
 	// +listMapKey=type
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
-	// +kubebuilder:validation:Optional
+	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
@@ -217,37 +221,37 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationStatus struct {
 type KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup struct {
 	// ID is the ID of the deployed data-plane group.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	ID string `json:"id"`
 
 	// CloudGatewayNetworkID is the ID of the cloud gateway network.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	CloudGatewayNetworkID string `json:"cloud_gateway_network_id"`
 
 	// Name of cloud provider.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Provider sdkkonnectcomp.ProviderName `json:"provider"`
 
 	// Region ID for cloud provider region.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Region string `json:"region"`
 
 	// PrivateIPAddresses is a list of private IP addresses of the internal load balancer that proxies traffic to this data-plane group.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	PrivateIPAddresses []string `json:"private_ip_addresses,omitempty"`
 
 	// EgressIPAddresses is a list of egress IP addresses for the network that this data-plane group runs on.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	EgressIPAddresses []string `json:"egress_ip_addresses,omitempty"`
 
 	// State is the current state of the data plane group. Can be e.g. initializing, ready, terminating.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	State string `json:"state"`
 }
 

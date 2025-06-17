@@ -55,7 +55,7 @@ type KongCredentialAPIKey struct {
 type KongCredentialAPIKeySpec struct {
 	// ConsumerRef is a reference to a Consumer this KongCredentialAPIKey is associated with.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	ConsumerRef corev1.LocalObjectReference `json:"consumerRef"`
 
 	KongCredentialAPIKeyAPISpec `json:",inline"`
@@ -66,7 +66,7 @@ type KongCredentialAPIKeySpec struct {
 type KongCredentialAPIKeyAPISpec struct {
 	// Key is the key for the API Key credential.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Key string `json:"key"`
 
 	// Tags is a list of tags for the API Key credential.

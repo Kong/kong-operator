@@ -99,7 +99,7 @@ type KongPluginBindingSpec struct {
 
 	// ControlPlaneRef is a reference to a ControlPlane this KongPluginBinding is associated with.
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
-	// +kubebuilder:validation:Required
+	// +required
 	ControlPlaneRef commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitzero"`
 
 	// Scope defines the scope of the plugin binding.
@@ -145,7 +145,7 @@ type PluginRef struct {
 	// https://github.com/Kong/kubernetes-configuration/issues/9
 
 	// Name is the name of the KongPlugin or KongClusterPlugin resource.
-	// +kubebuilder:validation:Required
+	// +required
 	Name string `json:"name"`
 
 	// Kind can be KongPlugin or KongClusterPlugin. If not set, it is assumed to be KongPlugin.
@@ -158,7 +158,7 @@ type PluginRef struct {
 // +apireference:kgo:include
 type TargetRef struct {
 	// Name is the name of the entity.
-	// +kubebuilder:validation:Required
+	// +required
 	Name string `json:"name"`
 }
 
@@ -166,7 +166,7 @@ type TargetRef struct {
 // +apireference:kgo:include
 type TargetRefWithGroupKind struct {
 	// Name is the name of the entity.
-	// +kubebuilder:validation:Required
+	// +required
 	Name string `json:"name"`
 
 	// +kubebuilder:validation:Enum=Service;Ingress;HTTPRoute;GRPCRoute;KongService;KongRoute

@@ -55,7 +55,7 @@ type KongCredentialACL struct {
 type KongCredentialACLSpec struct {
 	// ConsumerRef is a reference to a Consumer this KongCredentialACL is associated with.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	ConsumerRef corev1.LocalObjectReference `json:"consumerRef"`
 
 	KongCredentialACLAPISpec `json:",inline"`
@@ -66,7 +66,7 @@ type KongCredentialACLSpec struct {
 type KongCredentialACLAPISpec struct {
 	// Group is the name for the ACL credential.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Group string `json:"group"`
 
 	// Tags is a list of tags for the ACL credential.

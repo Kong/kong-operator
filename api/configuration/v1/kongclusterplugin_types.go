@@ -17,9 +17,10 @@ limitations under the License.
 package v1
 
 import (
-	"github.com/kong/go-kong/kong"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/kong/go-kong/kong"
 )
 
 // +genclient
@@ -75,7 +76,7 @@ type KongClusterPlugin struct {
 	ConfigPatches []NamespacedConfigPatch `json:"configPatches,omitempty"`
 
 	// PluginName is the name of the plugin to which to apply the config.
-	// +kubebuilder:validation:Required
+	// +required
 	PluginName string `json:"plugin"`
 
 	// RunOn configures the plugin to run on the first or the second or both

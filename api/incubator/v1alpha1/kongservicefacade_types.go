@@ -51,7 +51,7 @@ type KongServiceFacadeList struct {
 type KongServiceFacadeSpec struct {
 	// Backend is a reference to a Kubernetes Service that is used as a backend
 	// for this Kong Service Facade.
-	// +kubebuilder:validation:Required
+	// +required
 	Backend KongServiceFacadeBackend `json:"backendRef"`
 }
 
@@ -60,11 +60,11 @@ type KongServiceFacadeSpec struct {
 // +apireference:kic:include
 type KongServiceFacadeBackend struct {
 	// Name is the name of the referenced Kubernetes Service.
-	// +kubebuilder:validation:Required
+	// +required
 	Name string `json:"name"`
 
 	// Port is the port of the referenced Kubernetes Service.
-	// +kubebuilder:validation:Required
+	// +required
 	Port int32 `json:"port"`
 }
 

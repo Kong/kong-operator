@@ -106,7 +106,7 @@ type BlueGreenStrategy struct {
 	// Resources controls what happens to operator managed resources during or
 	// after a rollout.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	// +kubebuilder:default={"plan":{"deployment":"ScaleDownOnPromotionScaleUpOnRollout"}}
 	Resources RolloutResources `json:"resources,omitempty"`
 }
@@ -159,7 +159,7 @@ const (
 type RolloutResources struct {
 	// Plan defines the resource plan for managing resources during and after a rollout.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	// +kubebuilder:default={"deployment":"ScaleDownOnPromotionScaleUpOnRollout"}
 	Plan RolloutResourcePlan `json:"plan,omitempty"`
 }

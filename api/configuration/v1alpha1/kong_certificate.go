@@ -38,7 +38,7 @@ type KongCertificate struct {
 type KongCertificateSpec struct {
 	// ControlPlaneRef references the Konnect Control Plane that this KongCertificate should be created in.
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
-	// +kubebuilder:validation:Required
+	// +required
 	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
 	KongCertificateAPISpec `json:",inline"`
@@ -48,7 +48,7 @@ type KongCertificateSpec struct {
 // +apireference:kgo:include
 type KongCertificateAPISpec struct {
 	// Cert is the PEM-encoded certificate.
-	// +kubebuilder:validation:Required
+	// +required
 	Cert string `json:"cert,omitempty"`
 	// CertAlt is the PEM-encoded certificate.
 	// This should only be set if you have both RSA and ECDSA types of
@@ -56,7 +56,7 @@ type KongCertificateAPISpec struct {
 	// when client advertises support for it.
 	CertAlt string `json:"cert_alt,omitempty"`
 	// Key is the PEM-encoded private key.
-	// +kubebuilder:validation:Required
+	// +required
 	Key string `json:"key,omitempty"`
 	// KeyAlt is the PEM-encoded private key.
 	// This should only be set if you have both RSA and ECDSA types of

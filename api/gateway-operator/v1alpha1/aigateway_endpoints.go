@@ -34,7 +34,7 @@ type AIGatewayEndpoint struct {
 	//
 	// +listType=map
 	// +listMapKey=type
-	// +kubebuilder:validation:Optional
+	// +optional
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Provisioning", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
@@ -65,11 +65,11 @@ const (
 type AIGatewayConsumerRef struct {
 	// Name is the name of the reference object.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Name string `json:"name"`
 
 	// Namespace is the namespace of the reference object.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Namespace string `json:"namespace"`
 }

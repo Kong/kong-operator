@@ -21,7 +21,7 @@ package v1alpha1
 // +apireference:kgo:include
 type ExtensionRef struct {
 	// Group is the group of the extension resource.
-	// +kubebuilder:validation:Optional
+	// +optional
 	// +kubebuilder:default=gateway-operator.konghq.com
 	Group string `json:"group"`
 

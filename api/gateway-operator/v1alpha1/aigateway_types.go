@@ -88,7 +88,7 @@ type AIGatewaySpec struct {
 	// GatewayClassName is the name of the GatewayClass which is responsible for
 	// the AIGateway.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	GatewayClassName string `json:"gatewayClassName"`
 
 	// LargeLanguageModels is a list of Large Language Models (LLMs) to be
@@ -97,7 +97,7 @@ type AIGatewaySpec struct {
 	// This is a required field because we only support LLMs at the moment. In
 	// future iterations we may support other model types.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:XValidation:message="At least one class of LLMs has been configured",rule="(self.cloudHosted.size() != 0)"
 	LargeLanguageModels *LargeLanguageModels `json:"largeLanguageModels,omitempty"`
 
@@ -132,7 +132,7 @@ type AIGatewaySpec struct {
 	// optional as we do things like enable configuring credentials at the model
 	// level.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	CloudProviderCredentials *AICloudProviderAPITokenRef `json:"cloudProviderCredentials,omitempty"`
 }
 
@@ -151,7 +151,7 @@ type LargeLanguageModels struct {
 	// LLM be specified, however in future iterations we may add other hosting
 	// options such as self-hosted LLMs as separate fields.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=64
 	CloudHosted []CloudHostedLargeLanguageModel `json:"cloudHosted"`
@@ -168,7 +168,7 @@ type CloudHostedLargeLanguageModel struct {
 	// this model via "https://${endpoint}/devteam-gpt-access" and supply it
 	// with your consumer credentials to authenticate requests.
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	Identifier string `json:"identifier"`
 
 	// Model is the model name of the LLM (e.g. gpt-3.5-turbo, phi-2, e.t.c.).
@@ -176,7 +176,7 @@ type CloudHostedLargeLanguageModel struct {
 	// If not specified, whatever the cloud provider specifies as the default
 	// model will be used.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	Model *string `json:"model"`
 
 	// PromptType is the type of prompt to be used for inference requests to
@@ -193,7 +193,7 @@ type CloudHostedLargeLanguageModel struct {
 	//
 	// If not specified, "completions" will be used as the default.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	// +kubebuilder:validation:Enum=chat;completions
 	// +kubebuilder:default=completions
 	PromptType *LLMPromptType `json:"promptType"`
@@ -203,7 +203,7 @@ type CloudHostedLargeLanguageModel struct {
 	// instance by providing a "system" role prompt that instructs the LLM to
 	// take on a certain persona.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	// +kubebuilder:validation:MaxItems=64
 	DefaultPrompts []LLMPrompt `json:"defaultPrompts"`
 
@@ -214,13 +214,13 @@ type CloudHostedLargeLanguageModel struct {
 	// at the individual prompt level. This is an expected feature from later
 	// releases of our AI plugins.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	DefaultPromptParams *LLMPromptParams `json:"defaultPromptParams"`
 
 	// AICloudProvider defines the cloud provider that will fulfill the LLM
 	// requests for this CloudHostedLargeLanguageModel
 	//
-	// +kubebuilder:validation:Required
+	// +required
 	AICloudProvider AICloudProvider `json:"aiCloudProvider"`
 }
 
@@ -234,7 +234,7 @@ type AIGatewayStatus struct {
 	// Endpoints are collections of the URL, credentials and metadata needed in
 	// order to access models served by the AIGateway for inference.
 	//
-	// +kubebuilder:validation:Optional
+	// +optional
 	// +kubebuilder:validation:MaxItems=64
 	Endpoints []AIGatewayEndpoint `json:"endpoints,omitempty"`
 
@@ -248,7 +248,7 @@ type AIGatewayStatus struct {
 	//
 	// +listType=map
 	// +listMapKey=type
-	// +kubebuilder:validation:Optional
+	// +optional
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Accepted", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	Conditions []metav1.Condition `json:"conditions,omitempty"`

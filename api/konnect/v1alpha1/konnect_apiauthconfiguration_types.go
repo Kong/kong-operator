@@ -33,6 +33,8 @@ type KonnectAPIAuthConfiguration struct {
 	Spec KonnectAPIAuthConfigurationSpec `json:"spec,omitempty"`
 
 	// Status is the status of the KonnectAPIAuthConfiguration resource.
+	//
+	// +optional
 	Status KonnectAPIAuthConfigurationStatus `json:"status,omitempty"`
 }
 
@@ -55,22 +57,26 @@ const (
 // +kubebuilder:validation:XValidation:rule="!(has(self.token) && has(self.secretRef))", message="spec.token and spec.secretRef cannot be set at the same time"
 // +apireference:kgo:include
 type KonnectAPIAuthConfigurationSpec struct {
-	// +kubebuilder:validation:Required
+	// +required
 	// +kubebuilder:validation:Enum=token;secretRef
 	Type KonnectAPIAuthType `json:"type"`
 
 	// Token is the Konnect token used to authenticate with the Konnect API.
+	//
 	// +optional
 	Token string `json:"token,omitempty"`
 
 	// SecretRef is a reference to a Kubernetes Secret containing the Konnect token.
 	// This secret is required to have the konghq.com/credential label set to "konnect".
+	//
 	// +optional
 	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
 
 	// ServerURL is the URL of the Konnect server.
 	// It can be either a full URL with an HTTPs scheme or just a hostname.
 	// Please refer to https://docs.konghq.com/konnect/network/ for the list of supported hostnames.
+	//
+	// +required
 	// +kubebuilder:validation:XValidation:rule="size(self) > 0", message="Server URL is required"
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="Server URL is immutable"
 	// +kubebuilder:validation:XValidation:rule="isURL(self) ? url(self).getScheme() == 'https' : true", message="Server URL must use HTTPs if specifying scheme"
@@ -105,7 +111,7 @@ type KonnectAPIAuthConfigurationStatus struct {
 // +apireference:kgo:include
 type KonnectAPIAuthConfigurationRef struct {
 	// Name is the name of the KonnectAPIAuthConfiguration resource.
-	// +kubebuilder:validation:Required
+	// +required
 	Name string `json:"name"`
 
 	// Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
