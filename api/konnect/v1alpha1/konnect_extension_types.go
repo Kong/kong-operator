@@ -11,7 +11,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package v1alpha2
+package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -34,7 +34,8 @@ const (
 // deployment(s) spec gets customized to include the konnect-related configuration.
 //
 // +genclient
-// +kubebuilder:storageversion
+// +kubebuilder:deprecatedversion:warning="This API has been deprecated in favor of v1alpha2 konnectextensions.konnect.konghq.com and it will be removed in future version."
+// +kubebuilder:unservedversion
 // +kubebuilder:resource:scope=Namespaced
 // +kubebuilder:resource:categories=kong
 // +kubebuilder:object:root=true
@@ -42,6 +43,8 @@ const (
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is Ready to be used",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.konnect.controlPlane.ref == self.spec.konnect.controlPlane.ref", message="spec.konnect.controlPlane.ref is immutable."
+// +kubebuilder:validation:XValidation:rule="self.spec.konnect.controlPlane.ref.type == 'konnectID' ? has(self.spec.konnect.configuration) : true",message="konnect must be set when ControlPlaneRef is set to KonnectID."
+// +kubebuilder:validation:XValidation:rule="self.spec.konnect.controlPlane.ref.type == 'konnectNamespacedRef' ? !has(self.spec.konnect.configuration) : true",message="konnect must be unset when ControlPlaneRef is set to konnectNamespacedRef."
 // +apireference:kgo:include
 // +kong:channels=gateway-operator
 type KonnectExtension struct {
@@ -76,6 +79,8 @@ type KonnectExtensionSpec struct {
 	Konnect KonnectExtensionKonnectSpec `json:"konnect"`
 
 	// ClientAuth is the configuration for the client certificate authentication.
+	// In case the ControlPlaneRef is of type KonnectID, it is required to set up the connection with the
+	// Konnect Platform.
 	//
 	// +optional
 	// +kubebuilder:default={certificateSecret:{provisioning: Automatic}}
@@ -93,6 +98,11 @@ type KonnectExtensionKonnectSpec struct {
 	//
 	// +optional
 	DataPlane *KonnectExtensionDataPlane `json:"dataPlane,omitempty"`
+
+	// Configuration holds the information needed to set up the Konnect Configuration.
+	//
+	// +optional
+	Configuration *KonnectConfiguration `json:"configuration,omitempty"`
 }
 
 // KonnectExtensionControlPlane is the configuration for the Konnect Control Plane.
@@ -100,7 +110,8 @@ type KonnectExtensionControlPlane struct {
 	// Ref is a reference to a Konnect ControlPlane this KonnectExtension is associated with.
 	//
 	// +required
-	Ref commonv1alpha1.KonnectExtensionControlPlaneRef `json:"ref"`
+	// +kubebuilder:validation:XValidation:rule="self.type != 'kic'", message="kic type not supported as controlPlaneRef."
+	Ref commonv1alpha1.ControlPlaneRef `json:"ref"`
 }
 
 // KonnectExtensionDataPlane is the configuration for the Konnect DataPlane.
@@ -176,16 +187,16 @@ type KonnectExtensionStatus struct {
 	// A new reference is set by the operator when this extension is associated with
 	// a DataPlane through its extensions spec.
 	//
-	// +kubebuilder:validation:MaxItems=16
 	// +optional
+	// +kubebuilder:validation:MaxItems=16
 	DataPlaneRefs []commonv1alpha1.NamespacedRef `json:"dataPlaneRefs,omitempty"`
 
 	// ControlPlaneRefs is the array  of ControlPlane references this is associated with.
 	// A new reference is set by the operator when this extension is associated with
 	// a ControlPlane through its extensions spec.
 	//
-	// +kubebuilder:validation:MaxItems=16
 	// +optional
+	// +kubebuilder:validation:MaxItems=16
 	ControlPlaneRefs []commonv1alpha1.NamespacedRef `json:"controlPlaneRefs,omitempty"`
 
 	// DataPlaneClientAuth contains the configuration for the client certificate authentication for the DataPlane.
@@ -201,10 +212,10 @@ type KonnectExtensionStatus struct {
 	// Conditions describe the current conditions of the KonnectExtensionStatus.
 	// Known condition types are:
 	//
+	// +optional
 	// +listType=map
 	// +listMapKey=type
 	// +kubebuilder:validation:MaxItems=8
-	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
@@ -217,19 +228,6 @@ const (
 	// ClusterTypeK8sIngressController is the type of the Kubernetes Control Plane.
 	ClusterTypeK8sIngressController KonnectExtensionClusterType = "K8SIngressController"
 )
-
-// KonnectEndpoints defines the Konnect endpoints for the control plane.
-type KonnectEndpoints struct {
-	// TelemetryEndpoint is the endpoint for telemetry.
-	//
-	// +required
-	TelemetryEndpoint string `json:"telemetry"`
-
-	// ControlPlaneEndpoint is the endpoint for the control plane.
-	//
-	// +required
-	ControlPlaneEndpoint string `json:"controlPlane"`
-}
 
 // KonnectExtensionControlPlaneStatus contains the Konnect Control Plane status information.
 type KonnectExtensionControlPlaneStatus struct {
