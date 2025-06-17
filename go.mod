@@ -22,7 +22,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.20.5
 	github.com/google/uuid v1.6.0
-	github.com/gruntwork-io/terratest v0.49.0
+	github.com/gruntwork-io/terratest v0.50.0
 	github.com/kong/go-kong v0.66.1
 	github.com/kong/kubernetes-configuration v1.4.1-0.20250611132549-6f2728101bc0
 	github.com/kong/kubernetes-ingress-controller/v3 v3.4.7-0.20250613104358-ede693343a04
