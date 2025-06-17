@@ -25,6 +25,10 @@ func init() {
 	SchemeBuilder.Register(&UDPIngress{}, &UDPIngressList{})
 }
 
+// TODO(Jintao): Add docs link to Deprecated description once we have a
+// documentation page for the migration.
+// https://github.com/Kong/kubernetes-ingress-controller/issues/7496
+
 // UDPIngressList contains a list of UDPIngress.
 //
 // +kubebuilder:object:root=true
@@ -36,6 +40,7 @@ type UDPIngressList struct {
 }
 
 // UDPIngress is the Schema for the udpingresses API.
+// Deprecated: Use Gateway API instead.
 //
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -44,6 +49,7 @@ type UDPIngressList struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Address",type=string,JSONPath=`.status.loadBalancer.ingress[*].ip`,description="Address of the load balancer"
+// +kubebuilder:deprecatedversion:warning="configuration.konghq.com/v1beta1 UDPIngress is deprecated"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +apireference:kic:include
 // +kong:channels=ingress-controller
