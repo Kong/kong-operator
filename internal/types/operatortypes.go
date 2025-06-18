@@ -30,11 +30,30 @@ type (
 
 	// ControlPlaneStatus is an alias for the v2alpha1 ControlPlaneStatus type.
 	ControlPlaneStatus = operatorv2alpha1.ControlPlaneStatus
+
+	// ControlPlaneFeatureGate is an alias for the v2alpha1 ControlPlaneFeatureGate type.
+	ControlPlaneFeatureGate = operatorv2alpha1.ControlPlaneFeatureGate
+
+	// ControlPlaneController is an alias for the v2alpha1 ControlPlaneController type.
+	ControlPlaneController = operatorv2alpha1.ControlPlaneController
+
+	// ControllerState is an alias for the v2alpha1 ControllerState type.
+	ControllerState = operatorv2alpha1.ControllerState
 )
 
 const (
 	// ControlPlaneDataPlaneTargetRefType is an alias for the v2alpha1 ControlPlaneDataPlaneTargetRefType type.
 	ControlPlaneDataPlaneTargetRefType = operatorv2alpha1.ControlPlaneDataPlaneTargetRefType
+
+	// FeatureGateStateEnabled is an alias for the v2alpha1 FeatureGateStateEnabled type.
+	FeatureGateStateEnabled = operatorv2alpha1.FeatureGateStateEnabled
+	// FeatureGateStateDisabled is an alias for the v2alpha1 FeatureGateStateDisabled type.
+	FeatureGateStateDisabled = operatorv2alpha1.FeatureGateStateDisabled
+
+	// ControlPlaneControllerStateEnabled is an alias for the v2alpha1 ControlPlaneControllerStateEnabled type.
+	ControlPlaneControllerStateEnabled = operatorv2alpha1.ControllerStateEnabled
+	// ControlPlaneControllerStateDisabled is an alias for the v2alpha1 ControlPlaneControllerStateDisabled type.
+	ControlPlaneControllerStateDisabled = operatorv2alpha1.ControllerStateDisabled
 )
 
 func ControlPlaneGVR() schema.GroupVersionResource {
