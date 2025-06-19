@@ -249,8 +249,7 @@ func Run(
 		return fmt.Errorf("unable to set up health check: %w", err)
 	}
 
-	// Enable anonymous reporting when configured but not for development builds
-	// to reduce the noise.
+	// Enable anonymous reporting when configured.
 	if cfg.AnonymousReports {
 		stopAnonymousReports, err := setupAnonymousReports(ctx, restCfg, setupLog, metadata, cfg)
 		if err != nil {
