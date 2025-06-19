@@ -9,7 +9,7 @@ replace github.com/kong/gateway-operator => ../../
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/hashicorp/go-retryablehttp v0.7.7
+	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/kong/gateway-operator v0.0.0-00010101000000-000000000000
 	github.com/kong/semver/v4 v4.0.1
 	github.com/samber/lo v1.51.0
