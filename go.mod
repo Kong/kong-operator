@@ -26,7 +26,7 @@ require (
 	github.com/kong/go-kong v0.66.1
 	github.com/kong/kubernetes-configuration v1.4.1-0.20250611132549-6f2728101bc0
 	github.com/kong/kubernetes-ingress-controller/v3 v3.4.7-0.20250613104358-ede693343a04
-	github.com/kong/kubernetes-telemetry v0.1.9
+	github.com/kong/kubernetes-telemetry v0.1.10
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
