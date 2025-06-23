@@ -110,10 +110,6 @@ func WithFeatureGates(logger logr.Logger, featureGates []gwtypes.ControlPlaneFea
 				continue
 			}
 
-			v := false
-			if feature.State == gwtypes.FeatureGateStateEnabled {
-				v = true
-			}
 			// This should never happen as it should be enforced at the CRD level
 			// but we handle it gracefully here and log an error.
 			if _, ok := fgs[feature.Name]; ok {
@@ -122,7 +118,7 @@ func WithFeatureGates(logger logr.Logger, featureGates []gwtypes.ControlPlaneFea
 				)
 				continue
 			}
-			fgs[feature.Name] = v
+			fgs[feature.Name] = (feature.State == gwtypes.FeatureGateStateEnabled)
 		}
 
 		for k, v := range defaults {
