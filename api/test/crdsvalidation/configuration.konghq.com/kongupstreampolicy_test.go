@@ -17,6 +17,21 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("sticky-sessions"),
+						HashOn: &configurationv1beta1.KongUpstreamHash{
+							Input: lo.ToPtr(configurationv1beta1.HashInput("none")),
+						},
+						StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
+							Cookie: "session-cookie",
+						},
+					},
+				},
+			},
+			{
+				Name: "consistent-hashing with hashOn.input=none should not fail",
+				TestObject: &configurationv1beta1.KongUpstreamPolicy{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
 							Input: lo.ToPtr(configurationv1beta1.HashInput("none")),
@@ -44,7 +59,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
 							Header: lo.ToPtr("X-Custom-Header"),
 						},
@@ -60,7 +75,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
 							Input: lo.ToPtr(configurationv1beta1.HashInput("ip")),
 						},
@@ -76,7 +91,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
 							Input:  lo.ToPtr(configurationv1beta1.HashInput("none")),
 							Header: lo.ToPtr("X-Custom-Header"),
@@ -93,7 +108,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
 							Input:  lo.ToPtr(configurationv1beta1.HashInput("none")),
 							Cookie: lo.ToPtr("hash-cookie"),
@@ -110,7 +125,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
 							Input:      lo.ToPtr(configurationv1beta1.HashInput("none")),
 							CookiePath: lo.ToPtr("/path"),
@@ -127,7 +142,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
 							Input:      lo.ToPtr(configurationv1beta1.HashInput("none")),
 							URICapture: lo.ToPtr("capture"),
@@ -144,7 +159,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
 							Input:    lo.ToPtr(configurationv1beta1.HashInput("none")),
 							QueryArg: lo.ToPtr("arg"),
@@ -161,7 +176,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
 							Input: lo.ToPtr(configurationv1beta1.HashInput("none")),
 						},
@@ -185,12 +200,63 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("consistent-hashing"),
+						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
 							Input: lo.ToPtr(configurationv1beta1.HashInput("ip")),
 						},
 					},
 				},
+			},
+			{
+				Name: "valid configuration with sticky-sessions algorithm and hashOn",
+				TestObject: &configurationv1beta1.KongUpstreamPolicy{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: configurationv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("sticky-sessions"),
+						HashOn: &configurationv1beta1.KongUpstreamHash{
+							Input: lo.ToPtr(configurationv1beta1.HashInput("none")),
+						},
+					},
+				},
+			},
+			{
+				Name: "invalid configuration with round-robin algorithm and hashOn should fail",
+				TestObject: &configurationv1beta1.KongUpstreamPolicy{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: configurationv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("round-robin"),
+						HashOn: &configurationv1beta1.KongUpstreamHash{
+							Input: lo.ToPtr(configurationv1beta1.HashInput("ip")),
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set."),
+			},
+			{
+				Name: "invalid configuration with least-connections algorithm and hashOn should fail",
+				TestObject: &configurationv1beta1.KongUpstreamPolicy{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: configurationv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("least-connections"),
+						HashOn: &configurationv1beta1.KongUpstreamHash{
+							Input: lo.ToPtr(configurationv1beta1.HashInput("ip")),
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set."),
+			},
+			{
+				Name: "invalid configuration with latency algorithm and hashOn should fail",
+				TestObject: &configurationv1beta1.KongUpstreamPolicy{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: configurationv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("latency"),
+						HashOn: &configurationv1beta1.KongUpstreamHash{
+							Input: lo.ToPtr(configurationv1beta1.HashInput("ip")),
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set."),
 			},
 		}.Run(t)
 	})

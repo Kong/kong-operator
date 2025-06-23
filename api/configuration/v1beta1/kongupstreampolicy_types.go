@@ -44,7 +44,7 @@ func init() {
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) ? [has(self.spec.hashOn.input), has(self.spec.hashOn.cookie), has(self.spec.hashOn.header), has(self.spec.hashOn.uriCapture), has(self.spec.hashOn.queryArg)].filter(fieldSet, fieldSet == true).size() <= 1 : true", message="Only one of spec.hashOn.(input|cookie|header|uriCapture|queryArg) can be set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) && has(self.spec.hashOn.cookie) ? has(self.spec.hashOn.cookiePath) : true", message="When spec.hashOn.cookie is set, spec.hashOn.cookiePath is required."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) && has(self.spec.hashOn.cookiePath) ? has(self.spec.hashOn.cookie) : true", message="When spec.hashOn.cookiePath is set, spec.hashOn.cookie is required."
-// +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) ? has(self.spec.algorithm) && self.spec.algorithm == \"consistent-hashing\" : true", message="spec.algorithm must be set to \"consistent-hashing\" when spec.hashOn is set."
+// +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) ? has(self.spec.algorithm) && (self.spec.algorithm == \"consistent-hashing\" || self.spec.algorithm == \"sticky-sessions\") : true", message="spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOnFallback) ? [has(self.spec.hashOnFallback.input), has(self.spec.hashOnFallback.header), has(self.spec.hashOnFallback.uriCapture), has(self.spec.hashOnFallback.queryArg)].filter(fieldSet, fieldSet == true).size() <= 1 : true", message="Only one of spec.hashOnFallback.(input|header|uriCapture|queryArg) can be set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOnFallback) ? has(self.spec.algorithm) && self.spec.algorithm == \"consistent-hashing\" : true", message="spec.algorithm must be set to \"consistent-hashing\" when spec.hashOnFallback is set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOnFallback) ? !has(self.spec.hashOnFallback.cookie) : true", message="spec.hashOnFallback.cookie must not be set."
@@ -80,7 +80,7 @@ type KongUpstreamPolicyList struct {
 // +apireference:kic:include
 type KongUpstreamPolicySpec struct {
 	// Algorithm is the load balancing algorithm to use.
-	// Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency", "sticky-sessions.
+	// Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency", "sticky-sessions"
 	// +kubebuilder:validation:Enum=round-robin;consistent-hashing;least-connections;latency;sticky-sessions
 	Algorithm *string `json:"algorithm,omitempty"`
 
