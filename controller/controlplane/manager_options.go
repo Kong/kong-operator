@@ -146,7 +146,7 @@ func WithControllers(logger logr.Logger, controllers []gwtypes.ControlPlaneContr
 		if b == nil {
 			return
 		}
-		*b = state == gwtypes.ControlPlaneControllerStateEnabled
+		*b = (state == gwtypes.ControlPlaneControllerStateEnabled)
 	}
 	return func(c *managercfg.Config) {
 		for _, controller := range controllers {
