@@ -33,7 +33,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/client_model v0.6.2
-	github.com/prometheus/common v0.64.0
+	github.com/prometheus/common v0.65.0
 	github.com/samber/lo v1.51.0
 	github.com/samber/mo v1.14.0
 	github.com/sourcegraph/conc v0.3.0
