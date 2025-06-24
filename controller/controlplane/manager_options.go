@@ -147,12 +147,16 @@ func WithControllers(logger logr.Logger, controllers []gwtypes.ControlPlaneContr
 	return func(c *managercfg.Config) {
 		for _, controller := range controllers {
 			switch controller.Name {
+			// Ingress related controllers.
+
 			case "INGRESS_NETWORKINGV1":
 				setOpt(&c.IngressNetV1Enabled, controller.State)
 			case "INGRESS_CLASS_NETWORKINGV1":
 				setOpt(&c.IngressClassNetV1Enabled, controller.State)
 			case "INGRESS_CLASS_PARAMETERS":
 				setOpt(&c.IngressClassParametersEnabled, controller.State)
+
+			// Kong related controllers.
 
 			case "KONG_UDPINGRESS":
 				setOpt(&c.UDPIngressEnabled, controller.State)
@@ -181,6 +185,8 @@ func WithControllers(logger logr.Logger, controllers []gwtypes.ControlPlaneContr
 				setOpt(&c.KongCustomEntityEnabled, controller.State)
 			case "SERVICE":
 				setOpt(&c.ServiceEnabled, controller.State)
+
+			// Gateway API related controllers.
 
 			case "GWAPI_GATEWAY":
 				setOpt(&c.GatewayAPIGatewayController, controller.State)
