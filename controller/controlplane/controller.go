@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/multiinstance"
+	"github.com/samber/lo"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -33,7 +34,6 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/gateway-operator/controller"
-	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
@@ -197,16 +197,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "configuring ControlPlane resource")
-	defaultArgs := controlplane.DefaultsArgs{
-		OwnedByGateway: func() string {
-			for _, owner := range cp.OwnerReferences {
-				if strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) && owner.Kind == "Gateway" {
-					return owner.Name
-				}
-			}
-			return ""
-		}(),
-	}
 
 	// TODO(czeslavo): Make sure we reschedule the instance if the spec has changed.
 	// https://github.com/Kong/gateway-operator/issues/1374
@@ -246,40 +236,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				return ctrl.Result{}, fmt.Errorf("failed to generate client certificate: %w", err)
 			}
 
-			// TODO: Configure the manager with Konnect options if KonnectExtension is attached to the ControlPlane.
-			//  https://github.com/Kong/gateway-operator/issues/1361
-
-			mgrCfg, err := manager.NewConfig(
-				WithRestConfig(r.RestConfig, r.KubeConfigPath),
-				WithKongAdminService(types.NamespacedName{
-					Name:      dataplaneAdminServiceName,
-					Namespace: cp.Namespace,
-				}),
-				WithKongAdminServicePortName(consts.DataPlaneAdminServicePortName),
-				WithKongAdminInitializationRetryDelay(5*time.Second),
-				// We only want to retry once as the constructor can be called multiple times.
-				// Retries will be handled on the reconciler level.
-				WithKongAdminInitializationRetries(1),
-				WithGatewayToReconcile(types.NamespacedName{
-					Namespace: cp.Namespace,
-					Name:      defaultArgs.OwnedByGateway,
-				}),
-				WithGatewayAPIControllerName(),
-				WithKongAdminAPIConfig(managercfg.AdminAPIClientConfig{
-					CACert: string(caSecret.Data["tls.crt"]),
-					TLSClient: managercfg.TLSClientConfig{
-						Cert: string(clientCert),
-						Key:  string(clientKey),
-					},
-				}),
-				WithDisabledLeaderElection(),
-				WithPublishService(types.NamespacedName{
-					Namespace: cp.Namespace,
-					Name:      dataplaneIngressServiceName,
-				}),
-				// TODO: anonymous reports.
-				WithMetricsServerOff(),
+			cfgOpts := r.constructControlPlaneManagerConfigOptions(
+				logger, cp, caSecret, clientCert, clientKey, dataplaneAdminServiceName, dataplaneIngressServiceName,
 			)
+
+			mgrCfg, err := manager.NewConfig(cfgOpts...)
 			if err != nil {
 				return ctrl.Result{}, fmt.Errorf("failed to create manager config: %w", err)
 			}
@@ -423,4 +384,64 @@ func (r *Reconciler) generateClientCert(
 	}
 
 	return cert, pem.EncodeToMemory(privPem), nil
+}
+
+func (r *Reconciler) constructControlPlaneManagerConfigOptions(
+	logger logr.Logger,
+	cp *ControlPlane,
+	caSecret corev1.Secret,
+	clientCert []byte,
+	clientKey []byte,
+	dataplaneAdminServiceName string,
+	dataplaneIngressServiceName string,
+) []managercfg.Opt {
+	// TODO: https://github.com/Kong/gateway-operator/issues/1361
+	// Configure the manager with Konnect options if KonnectExtension is attached to the ControlPlane.
+
+	cfgOpts := []managercfg.Opt{
+		WithRestConfig(r.RestConfig, r.KubeConfigPath),
+		WithKongAdminService(types.NamespacedName{
+			Name:      dataplaneAdminServiceName,
+			Namespace: cp.Namespace,
+		}),
+		WithKongAdminServicePortName(consts.DataPlaneAdminServicePortName),
+		WithKongAdminInitializationRetryDelay(5 * time.Second),
+		// We only want to retry once as the constructor can be called multiple times.
+		// Retries will be handled on the reconciler level.
+		WithKongAdminInitializationRetries(1),
+		WithGatewayAPIControllerName(),
+		WithKongAdminAPIConfig(managercfg.AdminAPIClientConfig{
+			CACert: string(caSecret.Data["tls.crt"]),
+			TLSClient: managercfg.TLSClientConfig{
+				Cert: string(clientCert),
+				Key:  string(clientKey),
+			},
+		}),
+		WithDisabledLeaderElection(),
+		WithPublishService(types.NamespacedName{
+			Namespace: cp.Namespace,
+			Name:      dataplaneIngressServiceName,
+		}),
+		WithFeatureGates(logger, cp.Spec.FeatureGates),
+		WithControllers(logger, cp.Spec.Controllers),
+
+		// TODO: https://github.com/Kong/gateway-operator/issues/1749 metrics.
+		WithMetricsServerOff(),
+		// TODO: https://github.com/Kong/gateway-operator/issues/1359 anonymous reports.
+	}
+
+	// If the ControlPlane is owned by a Gateway, we set the Gateway to be the only one to reconcile.
+	if owner, ok := lo.Find(cp.GetOwnerReferences(), func(owner metav1.OwnerReference) bool {
+		return strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) &&
+			owner.Kind == "Gateway"
+	}); ok {
+		cfgOpts = append(cfgOpts,
+			WithGatewayToReconcile(types.NamespacedName{
+				Namespace: cp.Namespace,
+				Name:      owner.Name,
+			}),
+		)
+	}
+
+	return cfgOpts
 }
