@@ -2,24 +2,16 @@ package controlplane
 
 import (
 	"context"
-	"crypto/rand"
-	"crypto/x509"
-	"crypto/x509/pkix"
-	"encoding/pem"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/cloudflare/cfssl/config"
-	"github.com/cloudflare/cfssl/signer"
-	"github.com/cloudflare/cfssl/signer/local"
 	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/multiinstance"
 	"github.com/samber/lo"
-	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -35,6 +27,7 @@ import (
 
 	"github.com/kong/gateway-operator/controller"
 	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
 	operatorerrors "github.com/kong/gateway-operator/internal/errors"
 	"github.com/kong/gateway-operator/internal/utils/index"
@@ -70,7 +63,10 @@ type Reconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
-	builder := ctrl.NewControllerManagedBy(mgr).For(&ControlPlane{})
+	builder := ctrl.NewControllerManagedBy(mgr).
+		For(&ControlPlane{}).
+		// Watch for changes in Secret objects that are owned by ControlPlane objects.
+		Owns(&corev1.Secret{})
 
 	if r.KonnectEnabled {
 		// Watch for changes in KonnectExtension objects that are referenced by ControlPlane objects.
@@ -97,7 +93,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	mgrID, err := manager.NewID(cp.Name)
+	mgrID, err := manager.NewID(string(cp.GetUID()))
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to create manager ID: %w", err)
 	}
@@ -146,10 +142,15 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		log.Trace(logger, "setting finalizers")
 		if err := r.Update(ctx, cp); err != nil {
 			if k8serrors.IsConflict(err) {
-				log.Debug(logger, "conflict found when updating ControlPlane, retrying")
+				log.Debug(logger, "conflict found when updating ControlPlane finalizer, retrying",
+					"finalizer", string(ControlPlaneFinalizerCPInstanceTeardown),
+				)
 				return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
 			}
-			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane's finalizers : %w", err)
+			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane's finalizer %s: %w",
+				string(ControlPlaneFinalizerCPInstanceTeardown),
+				err,
+			)
 		}
 		// Requeue to ensure that we do not miss next reconciliation request in case
 		// AddFinalizer calls returned true but the update resulted in a noop.
@@ -198,9 +199,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	log.Trace(logger, "configuring ControlPlane resource")
 
-	// TODO(czeslavo): Make sure we reschedule the instance if the spec has changed.
-	// https://github.com/Kong/gateway-operator/issues/1374
-
 	log.Trace(logger, "validating ControlPlane's DataPlane status")
 	dataplaneIsSet, err := r.ensureDataPlaneStatus(cp, dataplane)
 	if err != nil {
@@ -215,44 +213,40 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// TODO: Make sure there are no error logs from the manager constructor when DP instances are not ready.
 	// https://github.com/Kong/gateway-operator/issues/1375
 
+	var caSecret corev1.Secret
+	if err := r.Get(ctx, types.NamespacedName{
+		Namespace: r.ClusterCASecretNamespace,
+		Name:      r.ClusterCASecretName,
+	}, &caSecret); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get CA secret: %w", err)
+	}
+
+	log.Trace(logger, "ensuring mTLS certificate secret exists")
+	res, mtlsSecret, err := r.ensureAdminMTLSCertificateSecret(ctx, cp)
+	if err != nil || res != op.Noop {
+		return ctrl.Result{}, err
+	}
+
 	log.Trace(logger, "checking readiness of ControlPlane instance")
 	if err := r.InstancesManager.IsInstanceReady(mgrID); err != nil {
 		log.Trace(logger, "control plane instance not ready yet", "error", err)
 
 		if errors.As(err, &multiinstance.InstanceNotFoundError{}) {
+
 			log.Debug(logger, "control plane instance not found, creating new instance")
-
-			var caSecret corev1.Secret
-			if err := r.Get(ctx, types.NamespacedName{
-				Namespace: r.ClusterCASecretNamespace,
-				Name:      r.ClusterCASecretName,
-			}, &caSecret); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to get CA secret: %w", err)
-			}
-
-			log.Trace(logger, "creating mTLS certificate")
-			clientCert, clientKey, err := r.generateClientCert(client.ObjectKeyFromObject(cp), caSecret)
-			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to generate client certificate: %w", err)
-			}
-
-			cfgOpts := r.constructControlPlaneManagerConfigOptions(
-				logger, cp, caSecret, clientCert, clientKey, dataplaneAdminServiceName, dataplaneIngressServiceName,
+			cfgOpts, err := r.constructControlPlaneManagerConfigOptions(
+				logger, cp, &caSecret, mtlsSecret, dataplaneAdminServiceName, dataplaneIngressServiceName,
 			)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
 
 			mgrCfg, err := manager.NewConfig(cfgOpts...)
 			if err != nil {
 				return ctrl.Result{}, fmt.Errorf("failed to create manager config: %w", err)
 			}
-
-			log.Debug(logger, "creating new instance", "manager_id", mgrID, "manager_config", mgrCfg)
-			mgr, err := manager.NewManager(ctx, mgrID, logger, mgrCfg)
-			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to create manager: %w", err)
-			}
-
-			if err := r.InstancesManager.ScheduleInstance(mgr); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to schedule instance: %w", err)
+			if err := r.scheduleInstance(ctx, logger, mgrID, mgrCfg); err != nil {
+				return ctrl.Result{}, err
 			}
 		}
 
@@ -271,6 +265,40 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		return ctrl.Result{RequeueAfter: requeueAfterBoot}, nil
+	}
+
+	log.Trace(logger, "checking if ControlPlane instance config matches the spec")
+	if hashRunning, err := r.InstancesManager.GetInstanceConfigHash(mgrID); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get instance config: %w", err)
+	} else {
+		// Calculate the hash of config from the ControlPlane spec.
+		cfgOpts, err := r.constructControlPlaneManagerConfigOptions(
+			logger, cp, &caSecret, mtlsSecret, dataplaneAdminServiceName, dataplaneIngressServiceName,
+		)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		mgrCfg, err := manager.NewConfig(cfgOpts...)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to create manager config: %w", err)
+		}
+		hashFromSpec, errSpec := managercfg.Hash(mgrCfg)
+		if errSpec != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to hash ControlPlane config options: %w", errSpec)
+		}
+
+		// Compare the 2 hashes to determine if the running instance's config matches the spec.
+		if hashRunning != hashFromSpec {
+			if err := r.InstancesManager.StopInstance(mgrID); err != nil {
+				return ctrl.Result{}, err
+			}
+
+			if err := r.scheduleInstance(ctx, logger, mgrID, mgrCfg); err != nil {
+				return ctrl.Result{}, fmt.Errorf("failed to schedule instance: %w", err)
+			}
+			return ctrl.Result{RequeueAfter: requeueAfterBoot}, nil
+		}
 	}
 
 	markAsProvisioned(cp)
@@ -314,89 +342,25 @@ func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, update
 	return ctrl.Result{}, nil
 }
 
-func (r *Reconciler) generateClientCert(
-	cp types.NamespacedName,
-	caSecret corev1.Secret,
-) ([]byte, []byte, error) {
-	priv, privPem, signatureAlgorithm, err := secrets.CreatePrivateKey(r.ClusterCAKeyConfig)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create private key: %w", err)
-	}
-
-	subject := fmt.Sprintf("%s.%s", cp.Name, cp.Namespace)
-	template := x509.CertificateRequest{
-		Subject: pkix.Name{
-			CommonName:   subject,
-			Organization: []string{"Kong, Inc."},
-			Country:      []string{"US"},
-		},
-		SignatureAlgorithm: signatureAlgorithm,
-		DNSNames:           []string{subject},
-	}
-
-	caCertBlock, _ := pem.Decode(caSecret.Data["tls.crt"])
-	if caCertBlock == nil {
-		return nil, nil, errors.New("failed to decode CA certificate")
-	}
-	caCert, err := x509.ParseCertificate(caCertBlock.Bytes)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse CA certificate from Secret %s: %w", client.ObjectKeyFromObject(&caSecret), err)
-	}
-	caKeyBlock, _ := pem.Decode(caSecret.Data["tls.key"])
-	if caKeyBlock == nil {
-		return nil, nil, errors.New("failed to decode CA key")
-	}
-
-	caSigner, signatureAlgorithm, err := secrets.ParsePrivateKey(caKeyBlock)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse CA key from Secret %s: %w", client.ObjectKeyFromObject(&caSecret), err)
-	}
-
-	der, err := x509.CreateCertificateRequest(rand.Reader, &template, priv)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create certificate request with Secret %s: %w", client.ObjectKeyFromObject(&caSecret), err)
-	}
-
-	policy := &config.Signing{
-		Default: &config.SigningProfile{
-			Usage: []string{
-				string(certificatesv1.UsageKeyEncipherment),
-				string(certificatesv1.UsageDigitalSignature),
-				string(certificatesv1.UsageClientAuth),
-			},
-			// TODO: https://github.com/Kong/gateway-operator/issues/1666
-			Expiry: 365 * 24 * time.Hour,
-		},
-	}
-	cfs, err := local.NewSigner(caSigner, caCert, signatureAlgorithm, policy)
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create signer: %w", err)
-	}
-
-	cert, err := cfs.Sign(signer.SignRequest{
-		Request: string(pem.EncodeToMemory(&pem.Block{
-			Type:  "CERTIFICATE REQUEST",
-			Bytes: der,
-		})),
-	})
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to sign certificate: %w", err)
-	}
-
-	return cert, pem.EncodeToMemory(privPem), nil
-}
-
 func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	logger logr.Logger,
 	cp *ControlPlane,
-	caSecret corev1.Secret,
-	clientCert []byte,
-	clientKey []byte,
+	caSecret *corev1.Secret,
+	mtlsSecret *corev1.Secret,
 	dataplaneAdminServiceName string,
 	dataplaneIngressServiceName string,
-) []managercfg.Opt {
+) ([]managercfg.Opt, error) {
 	// TODO: https://github.com/Kong/gateway-operator/issues/1361
 	// Configure the manager with Konnect options if KonnectExtension is attached to the ControlPlane.
+
+	clientCert, ok := mtlsSecret.Data["tls.crt"]
+	if !ok {
+		return nil, fmt.Errorf("failed to get client certificate from mTLS secret %s", client.ObjectKeyFromObject(mtlsSecret))
+	}
+	clientKey, ok := mtlsSecret.Data["tls.key"]
+	if !ok {
+		return nil, fmt.Errorf("failed to get client key from mTLS secret %s", client.ObjectKeyFromObject(mtlsSecret))
+	}
 
 	cfgOpts := []managercfg.Opt{
 		WithRestConfig(r.RestConfig, r.KubeConfigPath),
@@ -443,5 +407,23 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		)
 	}
 
-	return cfgOpts
+	return cfgOpts, nil
+}
+
+func (r *Reconciler) scheduleInstance(
+	ctx context.Context,
+	logger logr.Logger,
+	mgrID manager.ID,
+	cfg managercfg.Config,
+) error {
+	log.Debug(logger, "creating new instance", "manager_id", mgrID, "manager_config", cfg)
+	mgr, err := manager.NewManager(ctx, mgrID, logger, cfg)
+	if err != nil {
+		return fmt.Errorf("failed to create manager: %w", err)
+	}
+
+	if err := r.InstancesManager.ScheduleInstance(mgr); err != nil {
+		return fmt.Errorf("failed to schedule instance: %w", err)
+	}
+	return nil
 }
