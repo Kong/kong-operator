@@ -65,15 +65,17 @@ type ControlPlaneList struct {
 //
 // +apireference:kgo:include
 type ControlPlaneSpec struct {
-	ControlPlaneOptions `json:",inline"`
+	// DataPlane designates the target data plane to configure.
+	//
+	// It can be:
+	// - a name of a DataPlane resource that is managed by the operator,
+	// - a DataPlane that is managed by the owner of the ControlPlane (e.g. a Gateway resource)
+	// - a URL to an externally managed DataPlane (e.g. installed independently with Helm),
+	//
+	// +required
+	DataPlane ControlPlaneDataPlaneTarget `json:"dataplane"`
 
-	// IngressClass enables support for the older Ingress resource and indicates
-	// which Ingress resources this ControlPlane should be responsible for.
-	//
-	// If omitted, Ingress resources will not be supported by the ControlPlane.
-	//
-	// +optional
-	IngressClass *string `json:"ingressClass,omitempty"`
+	ControlPlaneOptions `json:",inline"`
 }
 
 // ControlPlaneOptions indicates the specific information needed to
@@ -82,14 +84,13 @@ type ControlPlaneSpec struct {
 // +apireference:kgo:include
 // +kubebuilder:validation:XValidation:message="Extension not allowed for ControlPlane",rule="has(self.extensions) ? self.extensions.all(e, (e.group == 'konnect.konghq.com' && e.kind == 'KonnectExtension') || (e.group == 'gateway-operator.konghq.com' && e.kind == 'DataPlaneMetricsExtension')) : true"
 type ControlPlaneOptions struct {
-	// DataPlane designates the target data plane to configure.
+	// IngressClass enables support for the Ingress resources and indicates
+	// which Ingress resources this ControlPlane should be responsible for.
 	//
-	// It can be either a URL to an externally managed DataPlane (e.g. installed
-	// independently with Helm) or a name of a DataPlane resource that is
-	// managed by the operator.
+	// If omitted, Ingress resources will not be supported by the ControlPlane.
 	//
-	// +required
-	DataPlane ControlPlaneDataPlaneTarget `json:"dataplane"`
+	// +optional
+	IngressClass *string `json:"ingressClass,omitempty"`
 
 	// Extensions provide additional or replacement features for the ControlPlane
 	// resources to influence or enhance functionality.

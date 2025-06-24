@@ -18,10 +18,6 @@ func TestControlPlaneV2(t *testing.T) {
 		},
 	}
 
-	validControlPlaneOptions := operatorv2alpha1.ControlPlaneOptions{
-		DataPlane: validDataPlaneTarget,
-	}
-
 	t.Run("extensions", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
 			{
@@ -29,7 +25,8 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
-						ControlPlaneOptions: validControlPlaneOptions,
+						DataPlane:           validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
 					},
 				},
 			},
@@ -38,8 +35,8 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: validDataPlaneTarget,
 							Extensions: []commonv1alpha1.ExtensionRef{
 								{
 									Group: "konnect.konghq.com",
@@ -58,8 +55,8 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: validDataPlaneTarget,
 							Extensions: []commonv1alpha1.ExtensionRef{
 								{
 									Group: "konnect.konghq.com",
@@ -85,8 +82,8 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: validDataPlaneTarget,
 							Extensions: []commonv1alpha1.ExtensionRef{
 								{
 									Group: "invalid.konghq.com",
@@ -121,11 +118,10 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-								Type: operatorv2alpha1.ControlPlaneDataPlaneTargetRefType,
-							},
+						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
+							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetRefType,
 						},
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("Ref has to be provided when type is set to ref"),
@@ -135,17 +131,16 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-								Type: operatorv2alpha1.ControlPlaneDataPlaneTargetRefType,
-								Ref: &operatorv2alpha1.ControlPlaneDataPlaneTargetRef{
-									Name: "dataplane-1",
-								},
-								External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
-									URL: "https://dataplane.example.com:8444/admin",
-								},
+						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
+							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetRefType,
+							Ref: &operatorv2alpha1.ControlPlaneDataPlaneTargetRef{
+								Name: "dataplane-1",
+							},
+							External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
+								URL: "https://dataplane.example.com:8444/admin",
 							},
 						},
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.dataplane: Invalid value: \"object\": External cannot be provided when type is set to ref"),
@@ -155,11 +150,10 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-								Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
-							},
+						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
+							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
 						},
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("External has to be provided when type is set to external"),
@@ -169,17 +163,16 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-								Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
-								Ref: &operatorv2alpha1.ControlPlaneDataPlaneTargetRef{
-									Name: "dataplane-1",
-								},
-								External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
-									URL: "https://dataplane.example.com:8444/admin",
-								},
+						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
+							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
+							Ref: &operatorv2alpha1.ControlPlaneDataPlaneTargetRef{
+								Name: "dataplane-1",
+							},
+							External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
+								URL: "https://dataplane.example.com:8444/admin",
 							},
 						},
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("Invalid value: \"object\": Ref cannot be provided when type is set to external"),
@@ -189,14 +182,13 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-								Type: operatorv2alpha1.ControlPlaneDataPlaneTargetRefType,
-								Ref: &operatorv2alpha1.ControlPlaneDataPlaneTargetRef{
-									Name: "dataplane-1",
-								},
+						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
+							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetRefType,
+							Ref: &operatorv2alpha1.ControlPlaneDataPlaneTargetRef{
+								Name: "dataplane-1",
 							},
 						},
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
 					},
 				},
 			},
@@ -205,14 +197,13 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-								Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
-								External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
-									URL: "https://dataplane.example.com:8444/admin",
-								},
+						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
+							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
+							External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
+								URL: "https://dataplane.example.com:8444/admin",
 							},
 						},
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
 					},
 				},
 			},
@@ -221,14 +212,13 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-								Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
-								External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
-									URL: "http://dataplane.example.com/admin",
-								},
+						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
+							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
+							External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
+								URL: "http://dataplane.example.com/admin",
 							},
 						},
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
 					},
 				},
 			},
@@ -237,14 +227,13 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-								Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
-								External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
-									URL: "not-a-valid-url",
-								},
+						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
+							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
+							External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
+								URL: "not-a-valid-url",
 							},
 						},
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("URL has to be a valid URL"),
@@ -259,7 +248,8 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
-						ControlPlaneOptions: validControlPlaneOptions,
+						DataPlane:           validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
 					},
 				},
 			},
@@ -268,8 +258,8 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: validDataPlaneTarget,
 							FeatureGates: []operatorv2alpha1.ControlPlaneFeatureGate{
 								{
 									Name:  "KongCustomEntity",
@@ -285,8 +275,8 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: validDataPlaneTarget,
 							FeatureGates: []operatorv2alpha1.ControlPlaneFeatureGate{
 								{
 									Name:  "KongCustomEntity",
@@ -302,8 +292,8 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: validDataPlaneTarget,
 							FeatureGates: []operatorv2alpha1.ControlPlaneFeatureGate{
 								{
 									Name:  "KongCustomEntity",
@@ -314,7 +304,7 @@ func TestControlPlaneV2(t *testing.T) {
 					},
 				},
 				Update: func(cp *operatorv2alpha1.ControlPlane) {
-					cp.Spec.ControlPlaneOptions = validControlPlaneOptions
+					cp.Spec.ControlPlaneOptions = operatorv2alpha1.ControlPlaneOptions{}
 				},
 			},
 			{
@@ -322,8 +312,8 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: validDataPlaneTarget,
 							FeatureGates: []operatorv2alpha1.ControlPlaneFeatureGate{
 								{
 									Name: "KongCustomEntity",
@@ -344,7 +334,8 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
-						ControlPlaneOptions: validControlPlaneOptions,
+						DataPlane:           validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
 					},
 				},
 			},
@@ -353,8 +344,8 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: validDataPlaneTarget,
 							Controllers: []operatorv2alpha1.ControlPlaneController{
 								{
 									Name:  "GatewayAPI",
@@ -370,8 +361,8 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: validDataPlaneTarget,
 							Controllers: []operatorv2alpha1.ControlPlaneController{
 								{
 									Name:  "GatewayAPI",
@@ -387,8 +378,8 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: validDataPlaneTarget,
 							Controllers: []operatorv2alpha1.ControlPlaneController{
 								{
 									Name:  "GatewayAPI",
@@ -399,7 +390,7 @@ func TestControlPlaneV2(t *testing.T) {
 					},
 				},
 				Update: func(cp *operatorv2alpha1.ControlPlane) {
-					cp.Spec.ControlPlaneOptions = validControlPlaneOptions
+					cp.Spec.ControlPlaneOptions = operatorv2alpha1.ControlPlaneOptions{}
 				},
 			},
 			{
@@ -407,8 +398,8 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							DataPlane: validDataPlaneTarget,
 							Controllers: []operatorv2alpha1.ControlPlaneController{
 								{
 									Name: "GatewayAPI",
