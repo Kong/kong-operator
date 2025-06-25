@@ -28,7 +28,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				},
 			},
 			{
-				Name: "consistent-hashing with hashOn.input=none should not fail",
+				Name: "consistent-hashing with stickySessions should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
@@ -41,7 +41,9 @@ func TestKongUpstreamPolicy(t *testing.T) {
 						},
 					},
 				},
+				ExpectedErrorMessage: lo.ToPtr("spec.algorithm must be set to 'sticky-sessions' when spec.stickySessions is set."),
 			},
+
 			{
 				Name: "sticky sessions without hashOn should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{

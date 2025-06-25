@@ -54,6 +54,7 @@ func init() {
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) && has(self.spec.hashOn.cookie) ? !has(self.spec.hashOnFallback) : true", message="spec.hashOnFallback must not be set when spec.hashOn.cookie is set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.stickySessions) ? (has(self.spec.hashOn) && has(self.spec.hashOn.input) && self.spec.hashOn.input == 'none' && !has(self.spec.hashOn.cookie) && !has(self.spec.hashOn.cookiePath) && !has(self.spec.hashOn.header) && !has(self.spec.hashOn.uriCapture) && !has(self.spec.hashOn.queryArg)) : true", message="When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.stickySessions) ? has(self.spec.stickySessions.cookie) : true", message="spec.stickySessions.cookie is required when spec.stickySessions is set."
+// +kubebuilder:validation:XValidation:rule="has(self.spec.stickySessions) ? (has(self.spec.algorithm) && self.spec.algorithm == \"sticky-sessions\") : true", message="spec.algorithm must be set to 'sticky-sessions' when spec.stickySessions is set."
 // +apireference:kic:include
 // +kong:channels=ingress-controller
 type KongUpstreamPolicy struct {
