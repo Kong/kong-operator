@@ -35,15 +35,14 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
-						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Extensions: []commonv1alpha1.ExtensionRef{
-								{
-									Group: "konnect.konghq.com",
-									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: "my-konnect-extension",
-									},
+						DataPlane:           validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
+						Extensions: []commonv1alpha1.ExtensionRef{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectExtension",
+								NamespacedRef: commonv1alpha1.NamespacedRef{
+									Name: "my-konnect-extension",
 								},
 							},
 						},
@@ -55,22 +54,21 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
-						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Extensions: []commonv1alpha1.ExtensionRef{
-								{
-									Group: "konnect.konghq.com",
-									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: "my-konnect-extension",
-									},
+						DataPlane:           validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
+						Extensions: []commonv1alpha1.ExtensionRef{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectExtension",
+								NamespacedRef: commonv1alpha1.NamespacedRef{
+									Name: "my-konnect-extension",
 								},
-								{
-									Group: "gateway-operator.konghq.com",
-									Kind:  "DataPlaneMetricsExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: "my-metrics-extension",
-									},
+							},
+							{
+								Group: "gateway-operator.konghq.com",
+								Kind:  "DataPlaneMetricsExtension",
+								NamespacedRef: commonv1alpha1.NamespacedRef{
+									Name: "my-metrics-extension",
 								},
 							},
 						},
@@ -82,15 +80,14 @@ func TestControlPlaneV2(t *testing.T) {
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.ControlPlaneSpec{
-						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Extensions: []commonv1alpha1.ExtensionRef{
-								{
-									Group: "invalid.konghq.com",
-									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: "my-konnect-extension",
-									},
+						DataPlane:           validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
+						Extensions: []commonv1alpha1.ExtensionRef{
+							{
+								Group: "invalid.konghq.com",
+								Kind:  "KonnectExtension",
+								NamespacedRef: commonv1alpha1.NamespacedRef{
+									Name: "my-konnect-extension",
 								},
 							},
 						},

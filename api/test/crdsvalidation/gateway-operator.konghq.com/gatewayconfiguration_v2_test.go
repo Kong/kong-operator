@@ -17,7 +17,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 	t.Run("extensions", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv2alpha1.GatewayConfiguration]{
 			{
-				Name: "no extensions",
+				Name: "it is valid to specify no extensions",
 				TestObject: &operatorv2alpha1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec:       operatorv2alpha1.GatewayConfigurationSpec{},
@@ -41,6 +41,79 @@ func TestGatewayConfigurationV2(t *testing.T) {
 				},
 			},
 			{
+				Name: "valid DataPlaneMetricsExtension at the gatewayConfiguration level",
+				TestObject: &operatorv2alpha1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2alpha1.GatewayConfigurationSpec{
+						Extensions: []commonv1alpha1.ExtensionRef{
+							{
+								Group: "gateway-operator.konghq.com",
+								Kind:  "DataPlaneMetricsExtension",
+								NamespacedRef: commonv1alpha1.NamespacedRef{
+									Name: "my-dataplane-metrics-extension",
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "valid DataPlaneMetricsExtension and KonnectExtension at the gatewayConfiguration level",
+				TestObject: &operatorv2alpha1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2alpha1.GatewayConfigurationSpec{
+						Extensions: []commonv1alpha1.ExtensionRef{
+							{
+								Group: "gateway-operator.konghq.com",
+								Kind:  "DataPlaneMetricsExtension",
+								NamespacedRef: commonv1alpha1.NamespacedRef{
+									Name: "my-dataplane-metrics-extension",
+								},
+							},
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectExtension",
+								NamespacedRef: commonv1alpha1.NamespacedRef{
+									Name: "my-konnect-extension",
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "invalid 3 extensions (max 2 are allowed) at the gatewayConfiguration level",
+				TestObject: &operatorv2alpha1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2alpha1.GatewayConfigurationSpec{
+						Extensions: []commonv1alpha1.ExtensionRef{
+							{
+								Group: "gateway-operator.konghq.com",
+								Kind:  "DataPlaneMetricsExtension",
+								NamespacedRef: commonv1alpha1.NamespacedRef{
+									Name: "my-dataplane-metrics-extension",
+								},
+							},
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectExtension",
+								NamespacedRef: commonv1alpha1.NamespacedRef{
+									Name: "my-konnect-extension",
+								},
+							},
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectExtension",
+								NamespacedRef: commonv1alpha1.NamespacedRef{
+									Name: "my-konnect-extension-2",
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.extensions: Too many: 3: must have at most 2 items"),
+			},
+			{
 				Name: "invalid konnectExtension",
 				TestObject: &operatorv2alpha1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
@@ -58,33 +131,13 @@ func TestGatewayConfigurationV2(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("Extension not allowed for GatewayConfiguration"),
 			},
-			{
-				Name: "konnectExtension at the DataPlane level",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.GatewayConfigurationSpec{
-						DataPlaneOptions: &operatorv2alpha1.GatewayConfigDataPlaneOptions{
-							Extensions: []commonv1alpha1.ExtensionRef{
-								{
-									Group: "konnect.konghq.com",
-									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: "my-konnect-extension",
-									},
-								},
-							},
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("KonnectExtension must be set at the Gateway level"),
-			},
 		}.Run(t)
 	})
 
 	t.Run("DataPlaneOptions", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv2alpha1.GatewayConfiguration]{
 			{
-				Name: "no DataPlaneOptions",
+				Name: "it is valid to specify no DataPlaneOptions",
 				TestObject: &operatorv2alpha1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.GatewayConfigurationSpec{
@@ -145,7 +198,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 	t.Run("ControlPlaneOptions", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv2alpha1.GatewayConfiguration]{
 			{
-				Name: "no ControlPlaneOptions",
+				Name: "it is valid to specify no ControlPlaneOptions",
 				TestObject: &operatorv2alpha1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2alpha1.GatewayConfigurationSpec{

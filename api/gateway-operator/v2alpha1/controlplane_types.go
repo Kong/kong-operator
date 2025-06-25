@@ -76,13 +76,20 @@ type ControlPlaneSpec struct {
 	DataPlane ControlPlaneDataPlaneTarget `json:"dataplane"`
 
 	ControlPlaneOptions `json:",inline"`
+
+	// Extensions provide additional or replacement features for the ControlPlane
+	// resources to influence or enhance functionality.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=2
+	// +kubebuilder:validation:XValidation:message="Extension not allowed for ControlPlane",rule="self.all(e, (e.group == 'konnect.konghq.com' && e.kind == 'KonnectExtension') || (e.group == 'gateway-operator.konghq.com' && e.kind == 'DataPlaneMetricsExtension'))"
+	Extensions []commonv1alpha1.ExtensionRef `json:"extensions,omitempty"`
 }
 
 // ControlPlaneOptions indicates the specific information needed to
 // deploy and connect a ControlPlane to a DataPlane object.
 //
 // +apireference:kgo:include
-// +kubebuilder:validation:XValidation:message="Extension not allowed for ControlPlane",rule="has(self.extensions) ? self.extensions.all(e, (e.group == 'konnect.konghq.com' && e.kind == 'KonnectExtension') || (e.group == 'gateway-operator.konghq.com' && e.kind == 'DataPlaneMetricsExtension')) : true"
 type ControlPlaneOptions struct {
 	// IngressClass enables support for the Ingress resources and indicates
 	// which Ingress resources this ControlPlane should be responsible for.
@@ -91,13 +98,6 @@ type ControlPlaneOptions struct {
 	//
 	// +optional
 	IngressClass *string `json:"ingressClass,omitempty"`
-
-	// Extensions provide additional or replacement features for the ControlPlane
-	// resources to influence or enhance functionality.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxItems=2
-	Extensions []commonv1alpha1.ExtensionRef `json:"extensions,omitempty"`
 
 	// WatchNamespaces indicates the namespaces to watch for resources.
 	//
