@@ -10,11 +10,19 @@ spec:
   featureGates:
   - name: GatewayAlpha
     state: enabled
-  controllers:
-  - name: TCPIngress
+  - name: CombinedServicesFromDifferentHTTPRoutes
     state: disabled
-  - name: Konnect
+  controllers:
+  - name: INGRESS_NETWORKINGV1
     state: enabled
+  - name: INGRESS_CLASS_NETWORKINGV1
+    state: enabled
+  - name: KONG_TCPINGRESS
+    state: disabled
+  - name: GWAPI_GATEWAY
+    state: disabled
+  - name: GWAPI_HTTPROUTE
+    state: disabled
 ---
 apiVersion: gateway-operator.konghq.com/v1beta1
 kind: DataPlane

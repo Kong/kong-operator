@@ -108,7 +108,7 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	log.Trace(logger, "marking aigateway as accepted")
 	oldAIGateway := aigateway.DeepCopy()
 	k8sutils.SetCondition(newAIGatewayAcceptedCondition(&aigateway), &aigateway)
-	if k8sutils.NeedsUpdate(oldAIGateway, &aigateway) {
+	if k8sutils.ConditionsNeedsUpdate(oldAIGateway, &aigateway) {
 		if err := r.Client.Status().Patch(ctx, &aigateway, client.MergeFrom(oldAIGateway)); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to patch status for aigateway: %w", err)
 		}
