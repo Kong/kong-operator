@@ -316,16 +316,15 @@ func (r *Reconciler) listGatewaysAttachedByHTTPRoute(ctx context.Context, obj cl
 // GatewayReconciler - Config Defaults
 // -----------------------------------------------------------------------------
 
-func (r *Reconciler) setDataPlaneGatewayConfigDefaults(gatewayConfig *operatorv1beta1.GatewayConfiguration) {
+func (r *Reconciler) setDataPlaneGatewayConfigDefaults(gatewayConfig *GatewayConfiguration) {
 	if gatewayConfig.Spec.DataPlaneOptions == nil {
-		gatewayConfig.Spec.DataPlaneOptions = new(operatorv1beta1.GatewayConfigDataPlaneOptions)
+		gatewayConfig.Spec.DataPlaneOptions = new(GatewayConfigDataPlaneOptions)
 	}
 }
 
-// TODO(pmalek): add support for GatewayConfiguration v2 https://github.com/Kong/gateway-operator/issues/1728
 func (r *Reconciler) setControlPlaneGatewayConfigDefaults(
 	gateway *gwtypes.Gateway,
-	gatewayConfig *operatorv1beta1.GatewayConfiguration,
+	gatewayConfig *GatewayConfiguration,
 	dataplaneName,
 	dataplaneIngressServiceName,
 	dataplaneAdminServiceName,

@@ -193,12 +193,10 @@ func TestControlPlaneEssentials(t *testing.T) {
 			Name:      controlplaneName.Name,
 		},
 		Spec: gwtypes.ControlPlaneSpec{
-			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-				DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-					Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-					Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-						Name: dataplane.Name,
-					},
+			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+				Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+					Name: dataplane.Name,
 				},
 			},
 		},
@@ -403,13 +401,13 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 			GenerateName: "cp-watchnamespaces-",
 		},
 		Spec: gwtypes.ControlPlaneSpec{
-			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-				DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-					Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-					Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-						Name: dp.Name,
-					},
+			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+				Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+					Name: dp.Name,
 				},
+			},
+			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 				WatchNamespaces: &operatorv1beta1.WatchNamespaces{
 					Type: operatorv1beta1.WatchNamespacesTypeList,
 					List: []string{
@@ -663,12 +661,10 @@ func TestControlPlaneUpdate(t *testing.T) {
 			Name:      controlplaneName.Name,
 		},
 		Spec: gwtypes.ControlPlaneSpec{
-			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-				DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-					Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-					Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-						Name: dataplane.Name,
-					},
+			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+				Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+					Name: dataplane.Name,
 				},
 			},
 		},

@@ -428,7 +428,7 @@ func (r *Reconciler) provisionDataPlane(
 	ctx context.Context,
 	logger logr.Logger,
 	gateway *gwtypes.Gateway,
-	gatewayConfig *operatorv1beta1.GatewayConfiguration,
+	gatewayConfig *GatewayConfiguration,
 ) (*operatorv1beta1.DataPlane, error) {
 	logger = logger.WithName("dataplaneProvisioning")
 
@@ -540,7 +540,7 @@ func (r *Reconciler) provisionControlPlane(
 	ctx context.Context,
 	logger logr.Logger,
 	gateway *gwtypes.Gateway,
-	gatewayConfig *operatorv1beta1.GatewayConfiguration,
+	gatewayConfig *GatewayConfiguration,
 	dataplane *operatorv1beta1.DataPlane,
 	ingressService corev1.Service,
 	adminService corev1.Service,
@@ -601,7 +601,8 @@ func (r *Reconciler) provisionControlPlane(
 	//   expectedControlPlaneOptions = gatewayConfig.Spec.ControlPlaneOptions
 	// }
 
-	expectedControlPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, expectedControlPlaneOptions.Extensions)
+	// TODO: https://github.com/Kong/gateway-operator/issues/1361
+	// expectedControlPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, expectedControlPlaneOptions.Extensions)
 
 	if !controlplanecontroller.SpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, expectedControlPlaneOptions) {
 		log.Trace(logger, "controlplane config is out of date")

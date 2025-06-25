@@ -54,12 +54,10 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 							Namespace: "ns1",
 						},
 						Spec: gwtypes.ControlPlaneSpec{
-							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-										Name: "dp1",
-									},
+							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+								Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+									Name: "dp1",
 								},
 							},
 						},
@@ -101,12 +99,10 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 							Namespace: "ns1",
 						},
 						Spec: gwtypes.ControlPlaneSpec{
-							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-										Name: "dp1",
-									},
+							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+								Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+									Name: "dp1",
 								},
 							},
 						},
@@ -134,12 +130,10 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 							Namespace: "ns1",
 						},
 						Spec: gwtypes.ControlPlaneSpec{
-							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-										Name: "dp1",
-									},
+							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+								Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+									Name: "dp1",
 								},
 							},
 						},
@@ -181,12 +175,10 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 							Namespace: "ns1",
 						},
 						Spec: gwtypes.ControlPlaneSpec{
-							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-										Name: "dp1",
-									},
+							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+								Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+									Name: "dp1",
 								},
 							},
 						},
@@ -214,12 +206,10 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 							Namespace: "ns1",
 						},
 						Spec: gwtypes.ControlPlaneSpec{
-							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-										Name: "dp2",
-									},
+							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+								Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+									Name: "dp2",
 								},
 							},
 						},
@@ -300,12 +290,10 @@ func TestMetricsScrapeManager_RemoveForControlPlaneNN(t *testing.T) {
 							Namespace: "ns1",
 						},
 						Spec: gwtypes.ControlPlaneSpec{
-							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-										Name: "dp1",
-									},
+							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+								Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+									Name: "dp1",
 								},
 							},
 						},
@@ -333,12 +321,10 @@ func TestMetricsScrapeManager_RemoveForControlPlaneNN(t *testing.T) {
 							Namespace: "ns1",
 						},
 						Spec: gwtypes.ControlPlaneSpec{
-							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-										Name: "dp2",
-									},
+							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+								Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+									Name: "dp2",
 								},
 							},
 						},
@@ -484,12 +470,10 @@ func TestMetricsScrapeManager_Start(t *testing.T) {
 							Namespace: "ns1",
 						},
 						Spec: gwtypes.ControlPlaneSpec{
-							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-										Name: "dp1",
-									},
+							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+								Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+									Name: "dp1",
 								},
 							},
 						},
@@ -509,12 +493,10 @@ func TestMetricsScrapeManager_Start(t *testing.T) {
 							Namespace: "ns1",
 						},
 						Spec: gwtypes.ControlPlaneSpec{
-							ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-								DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-									Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-									Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-										Name: "dp2",
-									},
+							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+								Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+									Name: "dp2",
 								},
 							},
 						},

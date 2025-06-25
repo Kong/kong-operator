@@ -8,7 +8,6 @@ import (
 	"github.com/kong/gateway-operator/controller/pkg/controlplane"
 	gwtypes "github.com/kong/gateway-operator/internal/types"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
@@ -20,42 +19,6 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 		envVarsToIgnore []string
 		equal           bool
 	}{
-		{
-			name:  "not matching Extensions",
-			spec1: &gwtypes.ControlPlaneOptions{},
-			spec2: &gwtypes.ControlPlaneOptions{
-				Extensions: []commonv1alpha1.ExtensionRef{
-					{
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: "test",
-						},
-					},
-				},
-			},
-			equal: false,
-		},
-		{
-			name: "matching Extensions",
-			spec1: &gwtypes.ControlPlaneOptions{
-				Extensions: []commonv1alpha1.ExtensionRef{
-					{
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: "test",
-						},
-					},
-				},
-			},
-			spec2: &gwtypes.ControlPlaneOptions{
-				Extensions: []commonv1alpha1.ExtensionRef{
-					{
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: "test",
-						},
-					},
-				},
-			},
-			equal: true,
-		},
 		{
 			name: "different watch namespaces yield unequal specs",
 			spec1: &gwtypes.ControlPlaneOptions{

@@ -24,7 +24,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.50.0
 	github.com/kong/go-kong v0.66.2-0.20250624172857-72863432614c
-	github.com/kong/kubernetes-configuration v1.4.1-0.20250623142530-403ef6b96f0b
+	github.com/kong/kubernetes-configuration v1.4.1-0.20250625110007-842ead2a5ced
 	github.com/kong/kubernetes-ingress-controller/v3 v3.4.7-0.20250625104300-5da6f0a43a2d
 	github.com/kong/kubernetes-telemetry v0.1.10
 	github.com/kong/kubernetes-testing-framework v0.47.2
