@@ -338,20 +338,25 @@ check.rbacs: kic-role-generator
 CONTROLLER_GEN_CRD_OPTIONS ?= "+crd:generateEmbeddedObjectMeta=true"
 CONTROLLER_GEN_PATHS_RAW := ./pkg/utils/kubernetes/resources/clusterroles/ ./pkg/utils/kubernetes/reduce/ ./controller/...
 CONTROLLER_GEN_PATHS := $(patsubst %,%;,$(strip $(CONTROLLER_GEN_PATHS_RAW)))
-CONFIG_CRD_PATH = config/crd
-CONFIG_CRD_BASE_PATH = $(CONFIG_CRD_PATH)/bases
+CONFIG_DIR = $(PROJECT_DIR)/config
+CONFIG_CRD_DIR = $(CONFIG_DIR)/crd
+CONFIG_CRD_BASE_PATH = $(CONFIG_CRD_DIR)/bases
+CONFIG_RBAC_ROLE_DIR = $(CONFIG_DIR)/rbac/role
 
 KUBERNETES_CONFIGURATION_PACKAGE ?= github.com/kong/kubernetes-configuration
 KUBERNETES_CONFIGURATION_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(KUBERNETES_CONFIGURATION_PACKAGE))
 KUBERNETES_CONFIGURATION_PACKAGE_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_PACKAGE)@$(KUBERNETES_CONFIGURATION_VERSION)
 
 .PHONY: manifests
-manifests: controller-gen manifests.versions manifests.crds ## Generate ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" rbac:roleName=manager-role output:rbac:dir=config/rbac/role
+manifests: manifests.versions manifests.crds manifests.role ## Generate ClusterRole and CustomResourceDefinition objects.
 
 .PHONY: manifests.crds
-manifests.crds: controller-gen manifests.versions ## Generate CustomResourceDefinition objects.
+manifests.crds: controller-gen ## Generate CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" $(CONTROLLER_GEN_CRD_OPTIONS) +output:crd:artifacts:config=$(CONFIG_CRD_BASE_PATH)
+
+.PHONY: manifests.role
+manifests.role: controller-gen
+	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" rbac:roleName=manager-role output:rbac:dir=$(CONFIG_RBAC_ROLE_DIR)
 
 # manifests.versions ensures that image versions are set in the manifests according to the current version.
 .PHONY: manifests.versions
@@ -367,6 +372,7 @@ manifests.charts:
 	@$(MAKE) manifests.charts.kong-operator.crds.gwapi-standard
 	@$(MAKE) manifests.charts.kong-operator.crds.gwapi-experimental
 	@$(MAKE) manifests.charts.kong-operator.chart.yaml
+	@$(MAKE) manifests.charts.kong-operator.role
 
 KONG_OPERATOR_CHART_DIR = $(PROJECT_DIR)/charts/kong-operator
 
@@ -377,6 +383,13 @@ ensure.go.pkg.downloaded.kubernetes-configuration:
 .PHONY: ensure.go.pkg.downloaded.gateway-api
 ensure.go.pkg.downloaded.gateway-api:
 	@go mod download $(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)
+
+# NOTE: Target below makes sure that the generated role is always up-to-date
+# between the manifests (generated via kubebuilder markers) and the chart.
+.PHONY: manifests.charts.kong-operator.role
+manifests.charts.kong-operator.role: manifests.role
+	cp $(CONFIG_RBAC_ROLE_DIR)/role.yaml $(KONG_OPERATOR_CHART_DIR)/templates/cluster-role.yaml
+	$(YQ) eval '.metadata.name = "{{ template \"kong.fullname\" . }}-manager-role"' -i $(KONG_OPERATOR_CHART_DIR)/templates/cluster-role.yaml
 
 .PHONY: manifests.charts.kong-operator.crds.operator
 manifests.charts.kong-operator.crds.operator: kustomize ensure.go.pkg.downloaded.kubernetes-configuration

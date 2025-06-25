@@ -67,8 +67,6 @@ func TestReconciler_Reconcile(t *testing.T) {
 					Namespace: "test-namespace",
 					UID:       types.UID(uuid.NewString()),
 					Finalizers: []string{
-						string(ControlPlaneFinalizerCleanupClusterRole),
-						string(ControlPlaneFinalizerCleanupClusterRoleBinding),
 						string(ControlPlaneFinalizerCleanupValidatingWebhookConfiguration),
 					},
 				},
