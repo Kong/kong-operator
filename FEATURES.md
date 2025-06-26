@@ -1,6 +1,6 @@
 # Features
 
-The Kong Operator (O) enables provisioning and lifecycle management
+The Kong Operator (KO) enables provisioning and lifecycle management
 of [Kong Gateways][gw] on [Kubernetes][k8s] and also includes automation
 for various related components and configuration management to deploy
 the Kong Gateway in various [deployment topologies][tops].
