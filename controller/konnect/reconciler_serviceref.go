@@ -12,10 +12,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/gateway-operator/controller/konnect/constraints"
-	"github.com/kong/gateway-operator/controller/pkg/controlplane"
-	"github.com/kong/gateway-operator/controller/pkg/patch"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/controller/konnect/constraints"
+	"github.com/kong/kong-operator/controller/pkg/controlplane"
+	"github.com/kong/kong-operator/controller/pkg/patch"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"

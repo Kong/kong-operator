@@ -62,7 +62,7 @@ if [[ "${#}" != 1 ]]; then
   echo "    * the version json is read from stdin"
   echo
   echo "Example:"
-  echo "echo '{\"release\":\"v10.0.2\",\"repo\":\"https://github.com/Kong/gateway-operator.git\",\"commit\":\"033624266c256a486effa169558c7ec834254c95\"}' | verify-version.sh Kong/gateway-operator"
+  echo "echo '{\"release\":\"v10.0.2\",\"repo\":\"https://github.com/kong/kong-operator.git\",\"commit\":\"033624266c256a486effa169558c7ec834254c95\"}' | verify-version.sh kong/kong-operator"
   exit 1
 fi
 

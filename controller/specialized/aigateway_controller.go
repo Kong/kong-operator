@@ -14,13 +14,13 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/controller/pkg/watch"
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
-	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	"github.com/kong/gateway-operator/pkg/vars"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/controller/pkg/watch"
+	operatorerrors "github.com/kong/kong-operator/internal/errors"
+	"github.com/kong/kong-operator/internal/utils/gatewayclass"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/pkg/vars"
 
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 )
@@ -56,7 +56,7 @@ func (r *AIGatewayReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 		).
 		// TODO watch on Gateways, KongPlugins, e.t.c.
 		//
-		// See: https://github.com/Kong/gateway-operator/issues/137
+		// See: https://github.com/kong/kong-operator/issues/137
 		Complete(r)
 }
 
@@ -136,7 +136,7 @@ func (r *AIGatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 	// TODO: manage status updates
 	//
-	// See: https://github.com/Kong/gateway-operator/issues/137
+	// See: https://github.com/kong/kong-operator/issues/137
 
 	log.Info(logger, "reconciliation complete for aigateway resource")
 	return ctrl.Result{}, nil

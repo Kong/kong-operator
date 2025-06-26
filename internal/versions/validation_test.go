@@ -6,7 +6,7 @@ import (
 	"github.com/kong/semver/v4"
 	"github.com/stretchr/testify/require"
 
-	kgoerrors "github.com/kong/gateway-operator/internal/errors"
+	kgoerrors "github.com/kong/kong-operator/internal/errors"
 )
 
 func Test_versionFromImage(t *testing.T) {

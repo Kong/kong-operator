@@ -20,7 +20,7 @@ import (
 //     in which the addresses in the service were defined.
 //
 // If this ends up being the desired logic and aligns with what
-// has been agreed in https://github.com/Kong/gateway-operator/issues/281
+// has been agreed in https://github.com/kong/kong-operator/issues/281
 // then no action has to be taken. Otherwise this might need to be changed.
 func AddressesFromService(service *corev1.Service) ([]operatorv1beta1.Address, error) {
 	addresses := make([]operatorv1beta1.Address,
@@ -29,7 +29,7 @@ func AddressesFromService(service *corev1.Service) ([]operatorv1beta1.Address, e
 	)
 
 	for _, ingress := range service.Status.LoadBalancer.Ingress {
-		// TODO https://github.com/Kong/gateway-operator-archive/issues/482 is now resolved.
+		// TODO https://github.com/kong/kong-operator-archive/issues/482 is now resolved.
 		// We should take ingress.Ports into account and format the addresses accordingly.
 
 		if ingress.IP != "" {

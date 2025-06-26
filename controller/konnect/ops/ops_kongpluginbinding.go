@@ -10,8 +10,8 @@ import (
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/konnect/constraints"
-	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/controller/konnect/constraints"
+	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -275,7 +275,7 @@ func kongPluginWithTargetsToKongPluginInput(binding *configurationv1alpha1.KongP
 			},
 		)
 	}
-	// TODO: add support for ordering https://github.com/Kong/gateway-operator/issues/1682
+	// TODO: add support for ordering https://github.com/kong/kong-operator/issues/1682
 
 	// TODO(mlavacca): check all the entities reference the same KonnectGatewayControlPlane
 

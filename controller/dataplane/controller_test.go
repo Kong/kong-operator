@@ -22,10 +22,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/controller/pkg/secrets"
-	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	"github.com/kong/gateway-operator/test/helpers"
+	"github.com/kong/kong-operator/controller/pkg/secrets"
+	"github.com/kong/kong-operator/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/test/helpers"
 
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
@@ -54,7 +54,7 @@ func init() {
 // test writers will be able to rely on the reconciler running against an apiserver
 // and just asserting on the actual desired effect.
 //
-// Ref: https://github.com/Kong/gateway-operator/issues/172
+// Ref: https://github.com/kong/kong-operator/issues/172
 func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 	ca := helpers.CreateCA(t)
 	mtlsSecret := &corev1.Secret{
@@ -536,7 +536,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 					// such that LoadBalancer IPs, then LoadBalancer hostnames are added
 					// and then ClusterIPs follow.
 					// If this ends up being the desired logic and aligns with what
-					// has been agreed in https://github.com/Kong/gateway-operator/issues/281
+					// has been agreed in https://github.com/kong/kong-operator/issues/281
 					// then no action has to be taken. Otherwise this might need to be changed.
 					{
 						Type:       lo.ToPtr(operatorv1beta1.IPAddressType),
@@ -872,7 +872,7 @@ func TestDataPlaneReconciler_Reconcile(t *testing.T) {
 
 				// Below code checks if the dataplane gets properly updated status conditions when
 				// the dataplane spec changes with a field that has non zero defaults.
-				// See: https://github.com/Kong/gateway-operator/issues/904
+				// See: https://github.com/kong/kong-operator/issues/904
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)
 				require.NoError(t, err)
 				_, err = reconciler.Reconcile(ctx, dataplaneReq)

@@ -3,7 +3,7 @@ package controlplane
 import (
 	"testing"
 
-	gwtypes "github.com/kong/gateway-operator/internal/types"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 
 	operatorv2alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v2alpha1"
 )

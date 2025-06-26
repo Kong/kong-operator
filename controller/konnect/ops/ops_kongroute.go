@@ -9,7 +9,7 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 
-	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )

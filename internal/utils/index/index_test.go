@@ -8,8 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/gateway-operator/controller/konnect/constraints"
-	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/controller/konnect/constraints"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"

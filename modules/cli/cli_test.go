@@ -8,11 +8,11 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/kong/gateway-operator/modules/manager"
-	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	"github.com/kong/gateway-operator/modules/manager/metadata"
-	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/kong-operator/modules/manager"
+	mgrconfig "github.com/kong/kong-operator/modules/manager/config"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/modules/manager/metadata"
+	"github.com/kong/kong-operator/pkg/consts"
 )
 
 func TestParse(t *testing.T) {

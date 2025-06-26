@@ -9,7 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -196,7 +196,7 @@ func TestGetCombinations(t *testing.T) {
 					Consumer: "c1",
 					Service:  "s1",
 				},
-				// NOTE: https://github.com/Kong/gateway-operator/issues/660
+				// NOTE: https://github.com/kong/kong-operator/issues/660
 				// is related to the following combination not being present.
 				// Currently we do not generate combination for Service only
 				// when Service **and** Consumers have the annotation present.
@@ -239,7 +239,7 @@ func TestGetCombinations(t *testing.T) {
 					Consumer: "c2",
 					Service:  "s1",
 				},
-				// NOTE: https://github.com/Kong/gateway-operator/issues/660
+				// NOTE: https://github.com/kong/kong-operator/issues/660
 				// is related to the following combination not being present.
 				// Currently we do not generate combination for Service only
 				// when Service **and** Consumers have the annotation present.
@@ -282,7 +282,7 @@ func TestGetCombinations(t *testing.T) {
 					ConsumerGroup: "cg2",
 					Service:       "s1",
 				},
-				// NOTE: https://github.com/Kong/gateway-operator/issues/660
+				// NOTE: https://github.com/kong/kong-operator/issues/660
 				// is related to the following combination not being present.
 				// Currently we do not generate combination for Service only
 				// when Service **and** ConsumerGroups have the annotation present.
@@ -348,7 +348,7 @@ func TestGetCombinations(t *testing.T) {
 					ConsumerGroup: "cg2",
 					Service:       "s1",
 				},
-				// NOTE: https://github.com/Kong/gateway-operator/issues/660
+				// NOTE: https://github.com/kong/kong-operator/issues/660
 				// is related to the following combination not being present.
 				// Currently we do not generate combination for Service and Route
 				// on their own.

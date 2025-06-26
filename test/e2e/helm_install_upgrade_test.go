@@ -19,13 +19,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
-	"github.com/kong/gateway-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	testutils "github.com/kong/gateway-operator/pkg/utils/test"
-	"github.com/kong/gateway-operator/pkg/vars"
-	"github.com/kong/gateway-operator/test/helpers"
-	"github.com/kong/gateway-operator/test/helpers/eventually"
+	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/pkg/utils/gateway"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	testutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/pkg/vars"
+	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/test/helpers/eventually"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
@@ -33,7 +33,7 @@ import (
 func TestHelmUpgrade(t *testing.T) {
 	const (
 		// Rel: https://github.com/Kong/charts/tree/main/charts/gateway-operator
-		chart = "kong/gateway-operator"
+		chart = "kong/kong-operator"
 
 		waitTime = 3 * time.Minute
 	)
@@ -64,7 +64,7 @@ func TestHelmUpgrade(t *testing.T) {
 	}{
 		{
 			name:        "upgrade from one before latest to latest minor",
-			skip:        "Two versions are needed to upgrade from, but currently only one exists (https://github.com/Kong/gateway-operator/issues/1716)",
+			skip:        "Two versions are needed to upgrade from, but currently only one exists (https://github.com/kong/kong-operator/issues/1716)",
 			fromVersion: "2.0.0-alpha.1", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator@only-patch
 			toVersion:   "2.0.0-alpha.1", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
 			objectsToDeploy: []client.Object{
@@ -137,7 +137,7 @@ func TestHelmUpgrade(t *testing.T) {
 		},
 		{
 			name:             "upgrade from latest minor to current",
-			skip:             "ControlPlane assertions have to be adjusted to KIC as a library approach (https://github.com/Kong/gateway-operator/issues/1188)",
+			skip:             "ControlPlane assertions have to be adjusted to KIC as a library approach (https://github.com/kong/kong-operator/issues/1188)",
 			fromVersion:      "2.0.0-alpha.1", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release.
@@ -212,7 +212,7 @@ func TestHelmUpgrade(t *testing.T) {
 		},
 		{
 			name:             "upgrade from nightly to current",
-			skip:             "ControlPlane assertions have to be adjusted to KIC as a library approach (https://github.com/Kong/gateway-operator/issues/1188)",
+			skip:             "ControlPlane assertions have to be adjusted to KIC as a library approach (https://github.com/kong/kong-operator/issues/1188)",
 			fromVersion:      "nightly",
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release.
@@ -473,7 +473,7 @@ func baseGatewayConfigurationSpec() operatorv1beta1.GatewayConfigurationSpec {
 		},
 
 		// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
-		// https://github.com/Kong/gateway-operator/issues/1728
+		// https://github.com/kong/kong-operator/issues/1728
 	}
 }
 

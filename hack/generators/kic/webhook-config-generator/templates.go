@@ -33,7 +33,7 @@ func GenerateValidatingWebhookConfigurationForKIC_{{ .SanitizedVersionConstraint
 				ClientConfig: clientConfig,
 				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
 				// Deployments (ControlPlane and DataPlane) are not available.
-				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				// See https://github.com/kong/kong-operator/issues/1564 for more details.
 				FailurePolicy: lo.ToPtr(admregv1.Ignore),
 				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("{{ .MatchPolicy }}")),
 				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("{{ .SideEffects }}")),
@@ -93,8 +93,8 @@ import (
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	pkgapisadmregv1 "k8s.io/kubernetes/pkg/apis/admissionregistration/v1"
 
-	webhook "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources/validatingwebhookconfig"
-	"github.com/kong/gateway-operator/internal/versions"
+	webhook "github.com/kong/kong-operator/pkg/utils/kubernetes/resources/validatingwebhookconfig"
+	"github.com/kong/kong-operator/internal/versions"
 )
 
 // GenerateValidatingWebhookConfigurationForControlPlane generates a ValidatingWebhookConfiguration for a control plane
@@ -146,9 +146,9 @@ func GenerateValidatingWebhookConfigurationForControlPlane(webhookName string, i
 		pkgapisadmregv1.SetObjectDefaults_ValidatingWebhookConfiguration(cfg)
 		LabelObjectAsControlPlaneManaged(cfg)
 		return cfg, nil
-	}	
+	}
 	{{ end}}
 
-	return nil, ErrControlPlaneVersionNotSupported 
+	return nil, ErrControlPlaneVersionNotSupported
 }
 `

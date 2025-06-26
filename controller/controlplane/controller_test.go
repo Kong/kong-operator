@@ -15,10 +15,10 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/gateway-operator/modules/manager/scheme"
-	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	"github.com/kong/gateway-operator/test/helpers"
+	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/test/helpers"
 
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"

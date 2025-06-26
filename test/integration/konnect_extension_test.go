@@ -16,13 +16,13 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/pkg/builder"
-	"github.com/kong/gateway-operator/pkg/consts"
-	testutils "github.com/kong/gateway-operator/pkg/utils/test"
-	"github.com/kong/gateway-operator/test"
-	"github.com/kong/gateway-operator/test/helpers"
-	"github.com/kong/gateway-operator/test/helpers/certificate"
-	"github.com/kong/gateway-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/controller/pkg/builder"
+	"github.com/kong/kong-operator/pkg/consts"
+	testutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/test"
+	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/test/helpers/certificate"
+	"github.com/kong/kong-operator/test/helpers/deploy"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
@@ -65,7 +65,7 @@ func TestKonnectExtensionKonnectControlPlaneNotFound(t *testing.T) {
 }
 
 func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
-	t.Skip("TODO: adapt to ControlPlane v2alpha1 https://github.com/Kong/gateway-operator/issues/1730")
+	t.Skip("TODO: adapt to ControlPlane v2alpha1 https://github.com/kong/kong-operator/issues/1730")
 
 	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -160,7 +160,7 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 }
 
 func TestKonnectExtension(t *testing.T) {
-	t.Skip("TODO: adapt to ControlPlane v2alpha1 https://github.com/Kong/gateway-operator/issues/1730")
+	t.Skip("TODO: adapt to ControlPlane v2alpha1 https://github.com/kong/kong-operator/issues/1730")
 
 	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 

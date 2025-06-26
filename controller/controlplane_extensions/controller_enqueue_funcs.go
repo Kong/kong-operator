@@ -12,8 +12,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/pkg/consts"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/pkg/consts"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"

@@ -9,11 +9,11 @@ import (
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/konnect"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	"github.com/kong/gateway-operator/modules/manager/scheme"
-	"github.com/kong/gateway-operator/pkg/consts"
-	"github.com/kong/gateway-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/controller/konnect"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/test/helpers/deploy"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"

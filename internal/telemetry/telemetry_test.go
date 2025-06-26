@@ -28,9 +28,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/modules/manager/metadata"
-	"github.com/kong/gateway-operator/modules/manager/scheme"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/modules/manager/metadata"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"

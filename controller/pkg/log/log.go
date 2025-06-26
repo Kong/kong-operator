@@ -7,7 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/gateway-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/modules/manager/logging"
 )
 
 // Info logs a message at the info level.

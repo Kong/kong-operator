@@ -8,10 +8,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/internal/utils/config"
-	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/internal/utils/config"
+	"github.com/kong/kong-operator/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"

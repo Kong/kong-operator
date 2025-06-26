@@ -3,7 +3,7 @@ package ops
 import (
 	"fmt"
 
-	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/kong-operator/controller/konnect/constraints"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 )

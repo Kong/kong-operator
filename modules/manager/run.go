@@ -40,12 +40,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/metrics/filters"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/kong/gateway-operator/controller/pkg/secrets"
-	"github.com/kong/gateway-operator/internal/telemetry"
-	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	"github.com/kong/gateway-operator/modules/manager/metadata"
-	"github.com/kong/gateway-operator/pkg/vars"
+	"github.com/kong/kong-operator/controller/pkg/secrets"
+	"github.com/kong/kong-operator/internal/telemetry"
+	mgrconfig "github.com/kong/kong-operator/modules/manager/config"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/modules/manager/metadata"
+	"github.com/kong/kong-operator/pkg/vars"
 )
 
 // Config represents the configuration for the manager.
@@ -318,7 +318,7 @@ func (m *caManager) Start(ctx context.Context) error {
 }
 
 func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
-	// TODO https://github.com/Kong/gateway-operator/issues/199 this also needs to check if the CA is expired and
+	// TODO https://github.com/kong/kong-operator/issues/199 this also needs to check if the CA is expired and
 	// managed, and needs to reissue it (and all issued certificates) if so
 	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()

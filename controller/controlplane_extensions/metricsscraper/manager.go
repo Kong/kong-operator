@@ -22,10 +22,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/controller/pkg/secrets"
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/controller/pkg/secrets"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/pkg/consts"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
@@ -292,7 +292,7 @@ func (msm *Manager) NotifyRemove(ctx context.Context, cp types.NamespacedName) {
 // It returns true if the scraper was added.
 func (msm *Manager) Add(cp *gwtypes.ControlPlane, pipeline MetricsScrapePipeline) bool {
 	// TODO(pmalek): implement DataPlane external URL type
-	// ref: https://github.com/Kong/gateway-operator/issues/1366
+	// ref: https://github.com/kong/kong-operator/issues/1366
 	if cp == nil || cp.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetRefType || cp.Spec.DataPlane.Ref == nil {
 		return false
 	}
@@ -343,7 +343,7 @@ func (msm *Manager) enableMetricsScraperForControlPlanesDataPlane(
 	controlplane *gwtypes.ControlPlane,
 ) error {
 	// TODO(pmalek): implement DataPlane external URL type
-	// ref: https://github.com/Kong/gateway-operator/issues/1366
+	// ref: https://github.com/kong/kong-operator/issues/1366
 	if controlplane == nil || controlplane.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetRefType || controlplane.Spec.DataPlane.Ref == nil {
 		return fmt.Errorf("ControlPlane %s does not have a valid, supported DataPlane target", controlplane.Name)
 	}

@@ -1,4 +1,4 @@
-module github.com/kong/gateway-operator
+module github.com/kong/kong-operator
 
 go 1.24.3
 
@@ -6,7 +6,7 @@ toolchain go1.24.4
 
 // 1.2.2 was released on main branch with a breaking change that was not
 // intended to be released in 1.2.x:
-// https://github.com/Kong/gateway-operator/commit/3876430e09e61edce58bd8464989e33236bd1872
+// https://github.com/kong/kong-operator/commit/3876430e09e61edce58bd8464989e33236bd1872
 // This retraction is to prevent it from being used and from breaking builds of dependent projects.
 retract v1.2.2
 
@@ -54,8 +54,6 @@ require (
 	sigs.k8s.io/kustomize/api v0.19.0
 	sigs.k8s.io/kustomize/kyaml v0.19.0
 )
-
-require github.com/cnf/structhash v0.0.0-20250313080605-df4c6cc74a9a // indirect
 
 require (
 	cel.dev/expr v0.23.0 // indirect
@@ -114,6 +112,7 @@ require (
 	github.com/boombuler/barcode v1.0.1-0.20190219062509-6c824513bacc // indirect
 	github.com/cenkalti/backoff/v4 v4.3.0 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
+	github.com/cnf/structhash v0.0.0-20250313080605-df4c6cc74a9a // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
@@ -289,7 +288,7 @@ require (
 // The replace directives for `k8s.io/*` are required for making it possible to
 // use `k8s.io/kubernetes` as a library.
 // They can be updated with `./hack/update-k8sio-gomod-replace.sh` script.
-// This is a workaround for https://github.com/Kong/gateway-operator/issues/1384.
+// This is a workaround for https://github.com/kong/kong-operator/issues/1384.
 replace (
 	k8s.io/api => k8s.io/api v0.33.2
 	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.33.2

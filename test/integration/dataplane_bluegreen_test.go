@@ -18,11 +18,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	testutils "github.com/kong/gateway-operator/pkg/utils/test"
-	"github.com/kong/gateway-operator/test/helpers"
-	"github.com/kong/gateway-operator/test/helpers/eventually"
+	"github.com/kong/kong-operator/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	testutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/test/helpers/eventually"
 
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"

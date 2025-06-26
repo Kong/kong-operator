@@ -11,7 +11,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -344,7 +344,7 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 				},
 			},
 		},
-		// TODO Add test cases for plugin ordering https://github.com/Kong/gateway-operator/issues/1682
+		// TODO Add test cases for plugin ordering https://github.com/kong/kong-operator/issues/1682
 	}
 
 	for _, tc := range tests {

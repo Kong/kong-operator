@@ -21,8 +21,8 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	testutils "github.com/kong/gateway-operator/pkg/utils/test"
-	"github.com/kong/gateway-operator/test/helpers"
+	testutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/test/helpers"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -33,7 +33,7 @@ import (
 )
 
 func TestKongPluginInstallationEssentials(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
 
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 	t.Log("this test accesses container registries on public internet")

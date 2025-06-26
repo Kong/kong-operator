@@ -49,7 +49,7 @@ linters:
         - pattern: ^.*Controlplane.*$
           msg: Please use camel case 'ControlPlane' instead of 'Controlplane'
         - pattern: ^.*operatorv1beta1.ControlPlane.*$
-          msg: Please use v2alpha1 ControlPlane (through github.com/kong/gateway-operator/internal/types)
+          msg: Please use v2alpha1 ControlPlane (through github.com/kong/kong-operator/internal/types)
     gomodguard:
       blocked:
         modules:
@@ -99,15 +99,15 @@ linters:
           alias: sdkkonnectops
         - pkg: github.com/Kong/sdk-konnect-go/models/sdkerrors
           alias: sdkkonnecterrs
-        - pkg: github.com/kong/gateway-operator/controller/konnect/ops/sdk
+        - pkg: github.com/kong/kong-operator/controller/konnect/ops/sdk
           alias: sdkops
-        - pkg: github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks
+        - pkg: github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks
           alias: sdkmocks
-        - pkg: github.com/kong/gateway-operator/internal/types
+        - pkg: github.com/kong/kong-operator/internal/types
           alias: gwtypes
-        - pkg: github.com/kong/gateway-operator/pkg/utils/kubernetes
+        - pkg: github.com/kong/kong-operator/pkg/utils/kubernetes
           alias: k8sutils
-        - pkg: github.com/kong/gateway-operator/pkg/utils/kubernetes/resources
+        - pkg: github.com/kong/kong-operator/pkg/utils/kubernetes/resources
           alias: k8sresources
       no-unaliased: true
     revive:
@@ -191,7 +191,7 @@ formatters:
         - standard
         - default
         - prefix(github.com/kong/kubernetes-configuration)
-        - prefix(github.com/kong/gateway-operator)
+        - prefix(github.com/kong/kong-operator)
   exclusions:
     generated: lax
     paths:

@@ -5,7 +5,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gwtypes "github.com/kong/gateway-operator/internal/types"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
@@ -28,7 +28,7 @@ func ApplyControlPlaneKonnectExtension(ctx context.Context, cl client.Client, co
 		return false, nil
 	}
 
-	// TODO: implement KonnectExtension for ControlPlane v2alpha1: https://github.com/Kong/gateway-operator/issues/1730
+	// TODO: implement KonnectExtension for ControlPlane v2alpha1: https://github.com/kong/kong-operator/issues/1730
 
 	return true, nil
 }

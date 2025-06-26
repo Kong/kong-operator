@@ -16,13 +16,13 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
-	"github.com/kong/gateway-operator/internal/utils/index"
-	"github.com/kong/gateway-operator/pkg/vars"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
+	operatorerrors "github.com/kong/kong-operator/internal/errors"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/internal/utils/gatewayclass"
+	"github.com/kong/kong-operator/internal/utils/index"
+	"github.com/kong/kong-operator/pkg/vars"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
@@ -330,7 +330,7 @@ func (r *Reconciler) setControlPlaneGatewayConfigDefaults(
 	dataplaneAdminServiceName,
 	controlPlaneName string,
 ) {
-	// TODO(pmalek): add support for GatewayConfiguration v2 https://github.com/Kong/gateway-operator/issues/1728
+	// TODO(pmalek): add support for GatewayConfiguration v2 https://github.com/kong/kong-operator/issues/1728
 	// if gatewayConfig.Spec.ControlPlaneOptions == nil {
 	// Set defaults
 	// }

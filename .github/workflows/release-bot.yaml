@@ -96,14 +96,14 @@ jobs:
       - uses: ncipollo/release-action@440c8c1cb0ed28b9f43e4d1d670870f059653174 # v1.16.0
         with:
           body: |
-            #### Download Kong Gateway Operator ${{ needs.semver.outputs.version }}:
+            #### Download Kong Operator ${{ needs.semver.outputs.version }}:
 
             - [Docker Image](https://hub.docker.com/r/${{ vars.DOCKERHUB_IMAGE_NAME_KO }}/tags?name=${{ needs.semver.outputs.version }})
-            - [Get started](https://github.com/Kong/gateway-operator/blob/main/README.md)
+            - [Get started](https://github.com/kong/kong-operator/blob/main/README.md)
 
             #### Links:
 
-            - [Changelog](https://github.com/Kong/gateway-operator/blob/main/CHANGELOG.md#v${{ needs.semver.outputs.major }}${{ needs.semver.outputs.minor }}${{ needs.semver.outputs.patch }}${{ needs.semver.outputs.prerelease }})
+            - [Changelog](https://github.com/kong/kong-operator/blob/main/CHANGELOG.md#v${{ needs.semver.outputs.major }}${{ needs.semver.outputs.minor }}${{ needs.semver.outputs.patch }}${{ needs.semver.outputs.prerelease }})
 
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: v${{ needs.semver.outputs.version }}

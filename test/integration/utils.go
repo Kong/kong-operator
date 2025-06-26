@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/gateway-operator/test/helpers"
+	"github.com/kong/kong-operator/test/helpers"
 )
 
 // Expect404WithNoRouteFunc is used to check whether a given URL responds

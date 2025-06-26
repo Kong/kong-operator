@@ -7,7 +7,7 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
 const (

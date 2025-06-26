@@ -22,11 +22,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/kong/gateway-operator/controller/pkg/extensions"
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	osslogging "github.com/kong/gateway-operator/modules/manager/logging"
-	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/kong-operator/controller/pkg/extensions"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	osslogging "github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/pkg/consts"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"

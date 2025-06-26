@@ -16,8 +16,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/kong/gateway-operator/internal/utils/index"
-	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/kong-operator/internal/utils/index"
+	"github.com/kong/kong-operator/pkg/consts"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"

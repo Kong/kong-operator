@@ -24,24 +24,24 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	controlplanecontroller "github.com/kong/gateway-operator/controller/pkg/controlplane"
-	"github.com/kong/gateway-operator/controller/pkg/extensions"
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/controller/pkg/op"
-	"github.com/kong/gateway-operator/controller/pkg/patch"
-	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
-	"github.com/kong/gateway-operator/controller/pkg/watch"
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	"github.com/kong/gateway-operator/pkg/consts"
-	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	"github.com/kong/gateway-operator/pkg/utils/kubernetes/compare"
-	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
-	"github.com/kong/gateway-operator/pkg/vars"
+	controlplanecontroller "github.com/kong/kong-operator/controller/pkg/controlplane"
+	"github.com/kong/kong-operator/controller/pkg/extensions"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/controller/pkg/op"
+	"github.com/kong/kong-operator/controller/pkg/patch"
+	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
+	"github.com/kong/kong-operator/controller/pkg/watch"
+	operatorerrors "github.com/kong/kong-operator/internal/errors"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/internal/utils/gatewayclass"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/pkg/consts"
+	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/pkg/utils/kubernetes/compare"
+	k8sreduce "github.com/kong/kong-operator/pkg/utils/kubernetes/reduce"
+	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/pkg/vars"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
@@ -217,7 +217,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 	// If the Gateway is not accepted, do not move on in the reconciliation logic.
 	if acceptedCondition.Status == metav1.ConditionFalse {
-		// TODO: clean up Dataplane and Controlplane https://github.com/Kong/gateway-operator/issues/126
+		// TODO: clean up Dataplane and Controlplane https://github.com/kong/kong-operator/issues/126
 		return ctrl.Result{}, nil
 	}
 
@@ -596,12 +596,12 @@ func (r *Reconciler) provisionControlPlane(
 	// compare deployment option of controlplane with controlplane deployment option of gatewayconfiguration.
 	// if not configured in gatewayconfiguration, compare deployment option of controlplane with an empty one.
 	expectedControlPlaneOptions := &gwtypes.ControlPlaneOptions{}
-	// TODO: https://github.com/Kong/gateway-operator/issues/1728
+	// TODO: https://github.com/kong/kong-operator/issues/1728
 	// if gatewayConfig.Spec.ControlPlaneOptions != nil {
 	//   expectedControlPlaneOptions = gatewayConfig.Spec.ControlPlaneOptions
 	// }
 
-	// TODO: https://github.com/Kong/gateway-operator/issues/1361
+	// TODO: https://github.com/kong/kong-operator/issues/1361
 	// expectedControlPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, expectedControlPlaneOptions.Extensions)
 
 	if !controlplanecontroller.SpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, expectedControlPlaneOptions) {
@@ -665,8 +665,8 @@ func setDataPlaneOptionsDefaults(opts *operatorv1beta1.DataPlaneOptions, default
 		// we need to add it here. After #20 gets resolved this won't be needed
 		// anymore.
 		// Related:
-		// - https://github.com/Kong/gateway-operator/issues/20
-		// - https://github.com/Kong/gateway-operator/issues/754
+		// - https://github.com/kong/kong-operator/issues/20
+		// - https://github.com/kong/kong-operator/issues/754
 		opts.Deployment.PodTemplateSpec.Spec.Containers = append(opts.Deployment.PodTemplateSpec.Spec.Containers, corev1.Container{
 			Name:           consts.DataPlaneProxyContainerName,
 			Image:          defaultImage,

@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 )
 
 func TestGenerateValidatingWebhookConfigurationForControlPlane(t *testing.T) {

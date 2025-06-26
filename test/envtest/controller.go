@@ -15,8 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	kgomanager "github.com/kong/gateway-operator/modules/manager"
-	testutils "github.com/kong/gateway-operator/pkg/utils/test"
+	kgomanager "github.com/kong/kong-operator/modules/manager"
+	testutils "github.com/kong/kong-operator/pkg/utils/test"
 )
 
 // Reconciler represents a reconciler.

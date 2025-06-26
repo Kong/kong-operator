@@ -7,8 +7,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/gateway-operator/modules/manager/scheme"
-	"github.com/kong/gateway-operator/test/envtest"
+	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/test/envtest"
 
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"

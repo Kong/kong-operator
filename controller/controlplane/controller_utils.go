@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	operatorerrors "github.com/kong/kong-operator/internal/errors"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	operatorv2alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v2alpha1"
@@ -36,7 +36,7 @@ func GetDataPlaneForControlPlane(
 		return &dp, nil
 
 	// TODO(pmalek): implement DataPlane external URL type
-	// ref: https://github.com/Kong/gateway-operator/issues/1366
+	// ref: https://github.com/kong/kong-operator/issues/1366
 
 	default:
 		return nil, fmt.Errorf("unsupported ControlPlane's DataPlane type: %s", cp.Spec.DataPlane.Type)

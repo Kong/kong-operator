@@ -3,7 +3,7 @@ package envtest
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"

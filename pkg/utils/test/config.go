@@ -3,9 +3,9 @@ package test
 import (
 	"os"
 
-	"github.com/kong/gateway-operator/modules/manager"
-	mgrconfig "github.com/kong/gateway-operator/modules/manager/config"
-	"github.com/kong/gateway-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/modules/manager"
+	mgrconfig "github.com/kong/kong-operator/modules/manager/config"
+	"github.com/kong/kong-operator/modules/manager/logging"
 )
 
 // ControllerConfigOption is a function type that modifies a manager.Config.

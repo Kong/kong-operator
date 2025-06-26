@@ -18,8 +18,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/gateway-operator/controller/pkg/secrets"
-	gwtypes "github.com/kong/gateway-operator/internal/types"
+	"github.com/kong/kong-operator/controller/pkg/secrets"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )

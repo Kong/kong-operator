@@ -18,8 +18,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	testutils "github.com/kong/gateway-operator/pkg/utils/test"
-	"github.com/kong/gateway-operator/test/helpers"
+	testutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/test/helpers"
 )
 
 const (
@@ -60,7 +60,7 @@ var (
 )
 
 func TestOperatorLogs(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
 
 	ctx := t.Context()
 	if imageLoad == "" && imageOverride == "" {
@@ -81,7 +81,7 @@ func TestOperatorLogs(t *testing.T) {
 	e := CreateEnvironment(t, ctx, WithOperatorImage(image), WithInstallViaKustomize())
 	clients, testNamespace, cleaner := e.Clients, e.Namespace, e.Cleaner
 
-	t.Log("finding the Pod for the Gateway Operator")
+	t.Log("finding the Pod for the Kong Operator")
 	podList := &corev1.PodList{}
 	err := clients.MgrClient.List(ctx, podList, client.MatchingLabels{
 		"control-plane": "controller-manager",
@@ -92,7 +92,7 @@ func TestOperatorLogs(t *testing.T) {
 	}, time.Minute, time.Second)
 	operatorPod := podList.Items[0]
 
-	t.Log("opening a log stream with the gateway operator pod")
+	t.Log("opening a log stream with the Kong Operator pod")
 	readCloser, err := clients.K8sClient.CoreV1().Pods(operatorPod.Namespace).GetLogs(operatorPod.Name, &corev1.PodLogOptions{
 		Container:                    "manager",
 		Follow:                       true,

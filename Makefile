@@ -2,7 +2,7 @@
 # Configuration - Repository
 # ------------------------------------------------------------------------------
 
-REPO ?= github.com/kong/gateway-operator
+REPO ?= github.com/kong/kong-operator
 REPO_URL ?= https://$(REPO)
 REPO_NAME ?= $(shell echo $(REPO) | cut -d / -f 3)
 REPO_INFO ?= $(shell git config --get remote.origin.url)
@@ -317,6 +317,7 @@ generate.k8sio-gomod-replace:
 .PHONY: generate.kic-webhook-config
 generate.kic-webhook-config: kustomize kic-webhook-config-generator
 	KUSTOMIZE=$(KUSTOMIZE) $(KIC_WEBHOOKCONFIG_GENERATOR)
+	go fmt ./pkg/utils/kubernetes/resources/...
 
 .PHONY: generate.cli-arguments-docs
 generate.cli-arguments-docs:

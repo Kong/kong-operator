@@ -12,9 +12,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/pkg/consts"
-	"github.com/kong/gateway-operator/pkg/vars"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/pkg/vars"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
@@ -77,7 +77,7 @@ func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfiguration
 		},
 		Spec: operatorv1beta1.GatewayConfigurationSpec{
 			// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
-			// https://github.com/Kong/gateway-operator/issues/1728
+			// https://github.com/kong/kong-operator/issues/1728
 
 			DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{

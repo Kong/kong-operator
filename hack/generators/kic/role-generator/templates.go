@@ -58,7 +58,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------
@@ -109,8 +109,8 @@ import (
 	semverv4 "github.com/kong/semver/v4"
 	rbacv1 "k8s.io/api/rbac/v1"
 
-	"github.com/kong/gateway-operator/internal/versions"
-	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources/clusterroles"
+	"github.com/kong/kong-operator/internal/versions"
+	"github.com/kong/kong-operator/pkg/utils/kubernetes/resources/clusterroles"
 )
 
 // -----------------------------------------------------------------------------

@@ -11,7 +11,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
+	operatorerrors "github.com/kong/kong-operator/internal/errors"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )

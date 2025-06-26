@@ -13,11 +13,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/controller"
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/controller"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/internal/utils/gatewayclass"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------

@@ -12,9 +12,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/gateway-operator/controller/pkg/controlplane"
-	"github.com/kong/gateway-operator/internal/utils/index"
-	"github.com/kong/gateway-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/controller/pkg/controlplane"
+	"github.com/kong/kong-operator/internal/utils/index"
+	"github.com/kong/kong-operator/modules/manager/logging"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"

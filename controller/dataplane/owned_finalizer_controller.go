@@ -18,10 +18,10 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
@@ -62,7 +62,7 @@ type DeepCopier[T DataPlaneOwnedResource, PT ClientObjectPointer[T]] interface {
 // It removes the finalizer from the object only when the parent DataPlane is deleted to prevent accidental
 // deletion of the DataPlane owned resources.
 // This is a stop gap solution until we implement proper self-healing for the DataPlane resources, see:
-// https://github.com/Kong/gateway-operator/issues/1028
+// https://github.com/kong/kong-operator/issues/1028
 type DataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT DataPlaneOwnedResourcePointer[T, PT]] struct {
 	Client      client.Client
 	LoggingMode logging.Mode

@@ -17,11 +17,11 @@ import (
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	certutils "github.com/kong/gateway-operator/controller/dataplane/utils/certificates"
-	"github.com/kong/gateway-operator/modules/manager/scheme"
-	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	certutils "github.com/kong/kong-operator/controller/dataplane/utils/certificates"
+	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )

@@ -15,15 +15,15 @@ func Test_extractImageNameAndTag(t *testing.T) {
 		wantErr  bool
 	}{
 		{
-			name:     "gcr.io/kong/gateway-operator:v1.0",
-			fullName: "gcr.io/kong/gateway-operator:v1.0",
-			wantName: "gcr.io/kong/gateway-operator",
+			name:     "gcr.io/kong/kong-operator:v1.0",
+			fullName: "gcr.io/kong/kong-operator:v1.0",
+			wantName: "gcr.io/kong/kong-operator",
 			wantTag:  "v1.0",
 		},
 		{
-			name:     "localhost:5000/kong/gateway-operator:v1.0",
-			fullName: "localhost:5000/kong/gateway-operator:v1.0",
-			wantName: "localhost:5000/kong/gateway-operator",
+			name:     "localhost:5000/kong/kong-operator:v1.0",
+			fullName: "localhost:5000/kong/kong-operator:v1.0",
+			wantName: "localhost:5000/kong/kong-operator",
 			wantTag:  "v1.0",
 		},
 	}

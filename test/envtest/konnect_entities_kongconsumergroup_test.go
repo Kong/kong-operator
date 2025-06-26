@@ -17,13 +17,13 @@ import (
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/konnect"
-	"github.com/kong/gateway-operator/controller/konnect/ops"
-	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	"github.com/kong/gateway-operator/modules/manager/scheme"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	"github.com/kong/gateway-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/controller/konnect"
+	"github.com/kong/kong-operator/controller/konnect/ops"
+	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/modules/manager/scheme"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -191,7 +191,7 @@ func TestKongConsumerGroup(t *testing.T) {
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
-		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/1469")
+		t.Skip("konnectID control plane reference not supported yet: https://github.com/kong/kong-operator/issues/1469")
 		const (
 			cgID   = "cg-with-konnectid-cp-ref-id"
 			cgName = "cg-with-konnectid-cp-ref"

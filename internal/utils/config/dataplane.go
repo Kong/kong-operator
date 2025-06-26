@@ -7,7 +7,7 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/kong-operator/pkg/consts"
 
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )

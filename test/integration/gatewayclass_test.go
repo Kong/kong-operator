@@ -9,11 +9,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
-	testutils "github.com/kong/gateway-operator/pkg/utils/test"
-	"github.com/kong/gateway-operator/pkg/vars"
-	"github.com/kong/gateway-operator/test/helpers"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
+	testutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/pkg/vars"
+	"github.com/kong/kong-operator/test/helpers"
 )
 
 func TestGatewayClassUpdates(t *testing.T) {

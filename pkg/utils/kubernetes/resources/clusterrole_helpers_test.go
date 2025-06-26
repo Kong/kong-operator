@@ -6,9 +6,9 @@ import (
 	"github.com/stretchr/testify/require"
 	rbacv1 "k8s.io/api/rbac/v1"
 
-	kgoerrors "github.com/kong/gateway-operator/internal/errors"
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
-	"github.com/kong/gateway-operator/pkg/utils/kubernetes/resources/clusterroles"
+	kgoerrors "github.com/kong/kong-operator/internal/errors"
+	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/pkg/utils/kubernetes/resources/clusterroles"
 )
 
 func TestClusterroleHelpers(t *testing.T) {

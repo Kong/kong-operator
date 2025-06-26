@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/tonglil/buflogr"
 
-	gwtypes "github.com/kong/gateway-operator/internal/types"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
 func TestWithControllers(t *testing.T) {

@@ -16,11 +16,11 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/konnect/constraints"
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/modules/manager/metadata"
-	"github.com/kong/gateway-operator/modules/manager/scheme"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/controller/konnect/constraints"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/modules/manager/metadata"
+	"github.com/kong/kong-operator/modules/manager/scheme"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"

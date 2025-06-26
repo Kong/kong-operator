@@ -10,7 +10,7 @@ plugins:
   manifests.sdk.operatorframework.io/v2: {}
   scorecard.sdk.operatorframework.io/v2: {}
 projectName: kong-gateway-operator
-repo: github.com/kong/gateway-operator
+repo: github.com/kong/kong-operator
 resources:
 - api:
     crdVersion: v1

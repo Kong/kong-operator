@@ -4,7 +4,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"

@@ -13,8 +13,8 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/konnect/constraints"
-	"github.com/kong/gateway-operator/pkg/clientops"
+	"github.com/kong/kong-operator/controller/konnect/constraints"
+	"github.com/kong/kong-operator/pkg/clientops"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"

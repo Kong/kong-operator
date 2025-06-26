@@ -13,11 +13,11 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/konnect"
-	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	"github.com/kong/gateway-operator/modules/manager/scheme"
-	"github.com/kong/gateway-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/controller/konnect"
+	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/test/helpers/deploy"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )

@@ -6,7 +6,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 
-	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/kong-operator/controller/konnect/constraints"
 )
 
 // NewObjectCountProvider creates a provider for number of objects in the cluster.

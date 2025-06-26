@@ -1,6 +1,6 @@
 package consts
 
-import "github.com/kong/gateway-operator/internal/versions"
+import "github.com/kong/kong-operator/internal/versions"
 
 // -----------------------------------------------------------------------------
 // Consts - DataPlane Generic Parameters
@@ -62,5 +62,5 @@ const (
 	ControlPlaneAdmissionWebhookVolumeMountPath = "/admission-webhook"
 )
 
-// TODO: https://github.com/Kong/gateway-operator/issues/141
+// TODO: https://github.com/kong/kong-operator/issues/141
 // Extract as constants all the Env var Keys used to configure the ControlPlane.

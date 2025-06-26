@@ -12,7 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	ktypes "sigs.k8s.io/kustomize/api/types"
 
-	"github.com/kong/gateway-operator/test"
+	"github.com/kong/kong-operator/test"
 )
 
 type upgradeTestParams struct {
@@ -30,7 +30,7 @@ type upgradeTestParams struct {
 // without this change.
 //
 // CI already has this override provided in
-// https://github.com/Kong/gateway-operator/blob/0f3b726c33/.github/workflows/tests.yaml#L180-L190
+// https://github.com/kong/kong-operator/blob/0f3b726c33/.github/workflows/tests.yaml#L180-L190
 // so anyone pushing changes can expect those changes to be tested in this test.
 func TestDeployAndUpgradeFromLatestTagToOverride(t *testing.T) {
 	if imageLoad == "" && imageOverride == "" {

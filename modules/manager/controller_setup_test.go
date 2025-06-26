@@ -9,8 +9,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/kong/gateway-operator/modules/manager"
-	testutils "github.com/kong/gateway-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/modules/manager"
+	testutils "github.com/kong/kong-operator/pkg/utils/test"
 )
 
 func TestSetupControllers(t *testing.T) {

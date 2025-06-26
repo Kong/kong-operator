@@ -25,16 +25,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/controller"
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/controller/pkg/op"
-	"github.com/kong/gateway-operator/controller/pkg/secrets"
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
-	"github.com/kong/gateway-operator/internal/utils/index"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	"github.com/kong/gateway-operator/pkg/consts"
-	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/controller"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/controller/pkg/op"
+	"github.com/kong/kong-operator/controller/pkg/secrets"
+	operatorerrors "github.com/kong/kong-operator/internal/errors"
+	"github.com/kong/kong-operator/internal/utils/index"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/pkg/consts"
+	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -211,7 +211,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// TODO: Make sure there are no error logs from the manager constructor when DP instances are not ready.
-	// https://github.com/Kong/gateway-operator/issues/1375
+	// https://github.com/kong/kong-operator/issues/1375
 
 	var caSecret corev1.Secret
 	if err := r.Get(ctx, types.NamespacedName{
@@ -350,7 +350,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	dataplaneAdminServiceName string,
 	dataplaneIngressServiceName string,
 ) ([]managercfg.Opt, error) {
-	// TODO: https://github.com/Kong/gateway-operator/issues/1361
+	// TODO: https://github.com/kong/kong-operator/issues/1361
 	// Configure the manager with Konnect options if KonnectExtension is attached to the ControlPlane.
 
 	clientCert, ok := mtlsSecret.Data["tls.crt"]
@@ -389,9 +389,9 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		WithFeatureGates(logger, cp.Spec.FeatureGates),
 		WithControllers(logger, cp.Spec.Controllers),
 
-		// TODO: https://github.com/Kong/gateway-operator/issues/1749 metrics.
+		// TODO: https://github.com/kong/kong-operator/issues/1749 metrics.
 		WithMetricsServerOff(),
-		// TODO: https://github.com/Kong/gateway-operator/issues/1359 anonymous reports.
+		// TODO: https://github.com/kong/kong-operator/issues/1359 anonymous reports.
 	}
 
 	// If the ControlPlane is owned by a Gateway, we set the Gateway to be the only one to reconcile.

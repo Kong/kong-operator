@@ -15,8 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/gateway-operator/controller/konnect/constraints"
-	"github.com/kong/gateway-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/controller/konnect/constraints"
+	"github.com/kong/kong-operator/controller/pkg/log"
 )
 
 // ErrNilResponse is an error indicating that a Konnect operation returned an empty response.

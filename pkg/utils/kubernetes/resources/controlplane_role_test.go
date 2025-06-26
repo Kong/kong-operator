@@ -8,8 +8,8 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
 func TestGenerateNewRoleForControlPlane(t *testing.T) {

@@ -21,21 +21,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/gateway-operator/controller/konnect/ops"
-	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
-	"github.com/kong/gateway-operator/controller/konnect/server"
-	"github.com/kong/gateway-operator/controller/pkg/extensions"
-	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/controller/pkg/op"
-	"github.com/kong/gateway-operator/controller/pkg/patch"
-	"github.com/kong/gateway-operator/controller/pkg/secrets"
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/internal/utils/index"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	"github.com/kong/gateway-operator/pkg/consts"
-	konnectresource "github.com/kong/gateway-operator/pkg/utils/konnect/resources"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/controller/konnect/ops"
+	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/controller/konnect/server"
+	"github.com/kong/kong-operator/controller/pkg/extensions"
+	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/controller/pkg/op"
+	"github.com/kong/kong-operator/controller/pkg/patch"
+	"github.com/kong/kong-operator/controller/pkg/secrets"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/internal/utils/index"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/pkg/consts"
+	konnectresource "github.com/kong/kong-operator/pkg/utils/konnect/resources"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -59,7 +59,7 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 	ls := metav1.LabelSelector{
 		// A secret must have `konghq.com/konnect-dp-cert` label to be watched by the controller.
 		// This constraint is added to prevent from watching all secrets which may cause high resource consumption.
-		// TODO: https://github.com/Kong/gateway-operator/issues/1255 set label constraints of `Secret`s on manager level if possible.
+		// TODO: https://github.com/kong/kong-operator/issues/1255 set label constraints of `Secret`s on manager level if possible.
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			{
 				Key:      SecretKonnectDataPlaneCertificateLabel,

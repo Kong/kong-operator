@@ -11,8 +11,8 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/util/yaml"
 
-	"github.com/kong/gateway-operator/hack/generators/kic"
-	kicversions "github.com/kong/gateway-operator/internal/versions"
+	"github.com/kong/kong-operator/hack/generators/kic"
+	kicversions "github.com/kong/kong-operator/internal/versions"
 )
 
 var clusterRoleRelativePaths = []string{

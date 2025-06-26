@@ -25,8 +25,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/kong/gateway-operator/controller/pkg/secrets"
-	"github.com/kong/gateway-operator/modules/manager"
+	"github.com/kong/kong-operator/controller/pkg/secrets"
+	"github.com/kong/kong-operator/modules/manager"
 
 	operatorclient "github.com/kong/kubernetes-configuration/pkg/clientset"
 )
