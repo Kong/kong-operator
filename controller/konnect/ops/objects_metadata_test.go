@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/gateway-operator/controller/konnect/ops"
+	"github.com/kong/kong-operator/controller/konnect/ops"
 )
 
 // testObjectKind is a test object type that implements the client.Object interface.

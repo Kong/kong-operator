@@ -8,7 +8,7 @@ import (
 
 	"github.com/kong/semver/v4"
 
-	kgoerrors "github.com/kong/gateway-operator/internal/errors"
+	kgoerrors "github.com/kong/kong-operator/internal/errors"
 )
 
 // ----------------------------------------------------------------------------

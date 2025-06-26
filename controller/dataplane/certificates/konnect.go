@@ -13,14 +13,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	certutils "github.com/kong/gateway-operator/controller/dataplane/utils/certificates"
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	ossop "github.com/kong/gateway-operator/controller/pkg/op"
-	osspatch "github.com/kong/gateway-operator/controller/pkg/patch"
-	ossconsts "github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	ossk8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	certutils "github.com/kong/kong-operator/controller/dataplane/utils/certificates"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	ossop "github.com/kong/kong-operator/controller/pkg/op"
+	osspatch "github.com/kong/kong-operator/controller/pkg/patch"
+	ossconsts "github.com/kong/kong-operator/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	ossk8sreduce "github.com/kong/kong-operator/pkg/utils/kubernetes/reduce"
+	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )

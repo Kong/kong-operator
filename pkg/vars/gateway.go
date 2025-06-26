@@ -12,7 +12,7 @@ import (
 var (
 	// _controllerName is a unique identifier which indicates this operator's name.
 	// This value may be overwritten by ENV vars or via the manager.
-	_controllerName     = DefaultControllerName // TODO: multi-tenancy: https://github.com/Kong/gateway-operator-archive/issues/35
+	_controllerName     = DefaultControllerName // TODO: multi-tenancy: https://github.com/kong/kong-operator-archive/issues/35
 	_controllerNameLock sync.RWMutex
 )
 

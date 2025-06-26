@@ -18,10 +18,10 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/controller/pkg/op"
-	"github.com/kong/gateway-operator/internal/versions"
-	"github.com/kong/gateway-operator/pkg/consts"
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/controller/pkg/op"
+	"github.com/kong/kong-operator/internal/versions"
+	"github.com/kong/kong-operator/pkg/consts"
+	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"

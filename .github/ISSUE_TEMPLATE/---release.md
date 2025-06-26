@@ -1,6 +1,6 @@
 ---
 name: "🚀 Release"
-about: 'Tracking a new release of the Kong Kubernetes Gateway Operator'
+about: 'Tracking a new release of the Kong Operator'
 title: ''
 labels: 'area/release'
 assignees: ''
@@ -9,7 +9,7 @@ assignees: ''
 
 ## Steps
 
-This release pipeline is under continous improvement. If you encounter any problem, please refer to the [troubleshooting](#troubleshooting) section of this document.
+This release pipeline is under continuous improvement. If you encounter any problem, please refer to the [troubleshooting](#troubleshooting) section of this document.
 If the troubleshooting section does not contain the answer to the problem you encountered, please create an issue to improve either the pipeline (if the problem is a bug), or this document (if the problem is caused by human error).
 
 - [ ] Check the existing [releases][releases] and determine the next version number.
@@ -48,7 +48,7 @@ If the troubleshooting section does not contain the answer to the problem you en
 
 [docs_repo]: https://github.com/Kong/docs.konghq.com/
 [cli_ref_docs]: https://docs.konghq.com/gateway-operator/latest/reference/cli-arguments/
-[helm_upgrade_test]: https://github.com/Kong/gateway-operator/blob/9f33d27ab875b91e50d7e750b45a293c1395da2d/test/e2e/test_upgrade.go
+[helm_upgrade_test]: https://github.com/kong/kong-operator/blob/9f33d27ab875b91e50d7e750b45a293c1395da2d/test/e2e/test_upgrade.go
 [release-bot-workflow]: ../workflows/release-bot.yaml
 [helm-chart-upgrade]: https://github.com/Kong/charts/blob/main/charts/gateway-operator/UPGRADE.md
 
@@ -93,8 +93,8 @@ Steps:
 1. Update the repository with the correct changes.
 1. Start a new release workflow run.
 
-[releases]: https://github.com/Kong/gateway-operator/releases
-[release-action]: https://github.com/Kong/gateway-operator/actions/workflows/release.yaml
-[consts-pkg]: https://github.com/Kong/gateway-operator/blob/main/pkg/consts/consts.go
-[versions-pkg]: https://github.com/Kong/gateway-operator/blob/main/internal/versions/
-[kgo-prs]: https://github.com/Kong/gateway-operator/pulls
+[releases]: https://github.com/kong/kong-operator/releases
+[release-action]: https://github.com/kong/kong-operator/actions/workflows/release.yaml
+[consts-pkg]: https://github.com/kong/kong-operator/blob/main/pkg/consts/consts.go
+[versions-pkg]: https://github.com/kong/kong-operator/blob/main/internal/versions/
+[kgo-prs]: https://github.com/kong/kong-operator/pulls

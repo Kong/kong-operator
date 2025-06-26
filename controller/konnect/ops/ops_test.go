@@ -15,10 +15,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/gateway-operator/controller/konnect/constraints"
-	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
-	"github.com/kong/gateway-operator/internal/metrics"
-	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/controller/konnect/constraints"
+	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
+	"github.com/kong/kong-operator/internal/metrics"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"

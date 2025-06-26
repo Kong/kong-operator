@@ -12,9 +12,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/controller"
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
+	"github.com/kong/kong-operator/controller"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 )
 
 // ----------------------------------------------------------------------------

@@ -24,11 +24,11 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/pkg/consts"
-	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/pkg/consts"
+	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"

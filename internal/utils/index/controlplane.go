@@ -3,7 +3,7 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gwtypes "github.com/kong/gateway-operator/internal/types"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 
 	operatorv2alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v2alpha1"
 )
@@ -47,7 +47,7 @@ func dataPlaneNameOnControlPlane(o client.Object) []string {
 		// Note: .Name is a pointer, enforced to be non nil at the CRD level.
 		return []string{controlPlane.Spec.DataPlane.Ref.Name}
 	// TODO(pmalek): implement DataPlane external URL type
-	// ref: https://github.com/Kong/gateway-operator/issues/1366
+	// ref: https://github.com/kong/kong-operator/issues/1366
 	default:
 		return []string{}
 	}

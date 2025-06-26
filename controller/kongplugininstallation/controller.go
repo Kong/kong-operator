@@ -23,12 +23,12 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/gateway-operator/controller/kongplugininstallation/image"
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/controller/kongplugininstallation/image"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 )

@@ -22,16 +22,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/controller/pkg/extensions"
-	"github.com/kong/gateway-operator/controller/pkg/secrets"
-	"github.com/kong/gateway-operator/controller/pkg/secrets/ref"
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/pkg/consts"
-	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/controller/pkg/extensions"
+	"github.com/kong/kong-operator/controller/pkg/secrets"
+	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
+	operatorerrors "github.com/kong/kong-operator/internal/errors"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/pkg/consts"
+	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	k8sreduce "github.com/kong/kong-operator/pkg/utils/kubernetes/reduce"
+	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
@@ -380,7 +380,7 @@ func generateDataPlaneNetworkPolicy(
 		Ports: []networkingv1.NetworkPolicyPort{
 			{Protocol: &protocolTCP, Port: &adminAPISSLPort},
 		},
-		// TODO: https://github.com/Kong/gateway-operator/issues/1700
+		// TODO: https://github.com/kong/kong-operator/issues/1700
 		// It should be adjusted to include KO pod, because it connects to DataPlane admin API directly.
 		// From: []networkingv1.NetworkPolicyPeer{{
 		// 	PodSelector: &metav1.LabelSelector{

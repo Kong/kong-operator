@@ -1,6 +1,6 @@
 package deploy
 
-import "github.com/kong/gateway-operator/test/helpers/certificate"
+import "github.com/kong/kong-operator/test/helpers/certificate"
 
 var testValidCertPEM, testValidCertKeyPEM = certificate.MustGenerateSelfSignedCertPEMFormat()
 

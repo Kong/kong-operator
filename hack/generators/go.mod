@@ -1,16 +1,16 @@
-module github.com/kong/gateway-operator/hack/generators
+module github.com/kong/kong-operator/hack/generators
 
 go 1.24.3
 
 toolchain go1.24.4
 
-replace github.com/kong/gateway-operator => ../../
+replace github.com/kong/kong-operator => ../../
 
 require (
 	github.com/Masterminds/semver v1.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/hashicorp/go-retryablehttp v0.7.8
-	github.com/kong/gateway-operator v0.0.0-00010101000000-000000000000
+	github.com/kong/kong-operator v0.0.0-00010101000000-000000000000
 	github.com/kong/semver/v4 v4.0.1
 	github.com/samber/lo v1.51.0
 	k8s.io/api v0.33.2

@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
 
-	"github.com/kong/gateway-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/pkg/utils/test"
 )
 
 var decUnstructured = yaml.NewDecodingSerializer(unstructured.UnstructuredJSONScheme)

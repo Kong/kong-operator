@@ -12,11 +12,11 @@ import (
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/konnect"
-	"github.com/kong/gateway-operator/controller/konnect/constraints"
-	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	"github.com/kong/gateway-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/controller/konnect"
+	"github.com/kong/kong-operator/controller/konnect/constraints"
+	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )

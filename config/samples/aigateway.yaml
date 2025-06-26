@@ -9,7 +9,7 @@
 # on behalf of the AIGateway to determine the address by which the Kong
 # Gateway can be reached. In later iterations we'll have endpoints provided via
 # the AIGateway resource status.
-# See: https://github.com/Kong/gateway-operator/issues/137
+# See: https://github.com/kong/kong-operator/issues/137
 #
 # Once you have the endpoint, the path to your backends are based on the
 # identifiers provided in the AIGateway below, and then you should be able to
@@ -72,7 +72,7 @@ spec:
 # at the individual Gateway level so that these can be created automatically
 # and owned by the AIGateway resource.
 #
-# See: https://github.com/Kong/gateway-operator/issues/1368
+# See: https://github.com/kong/kong-operator/issues/1368
 apiVersion: gateway-operator.konghq.com/v1beta1
 kind: GatewayConfiguration
 metadata:

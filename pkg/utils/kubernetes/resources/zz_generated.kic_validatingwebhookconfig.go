@@ -10,8 +10,8 @@ import (
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	pkgapisadmregv1 "k8s.io/kubernetes/pkg/apis/admissionregistration/v1"
 
-	webhook "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources/validatingwebhookconfig"
-	"github.com/kong/gateway-operator/internal/versions"
+	"github.com/kong/kong-operator/internal/versions"
+	webhook "github.com/kong/kong-operator/pkg/utils/kubernetes/resources/validatingwebhookconfig"
 )
 
 // GenerateValidatingWebhookConfigurationForControlPlane generates a ValidatingWebhookConfiguration for a control plane
@@ -53,7 +53,7 @@ func GenerateValidatingWebhookConfigurationForControlPlane(webhookName string, i
 	}
 
 	var constraint *semver.Constraints
-	
+
 	constraint, err = semver.NewConstraint(">=3.1, <3.2")
 	if err != nil {
 		return nil, err
@@ -63,8 +63,8 @@ func GenerateValidatingWebhookConfigurationForControlPlane(webhookName string, i
 		pkgapisadmregv1.SetObjectDefaults_ValidatingWebhookConfiguration(cfg)
 		LabelObjectAsControlPlaneManaged(cfg)
 		return cfg, nil
-	}	
-	
+	}
+
 	constraint, err = semver.NewConstraint(">=3.2, <3.3")
 	if err != nil {
 		return nil, err
@@ -74,8 +74,8 @@ func GenerateValidatingWebhookConfigurationForControlPlane(webhookName string, i
 		pkgapisadmregv1.SetObjectDefaults_ValidatingWebhookConfiguration(cfg)
 		LabelObjectAsControlPlaneManaged(cfg)
 		return cfg, nil
-	}	
-	
+	}
+
 	constraint, err = semver.NewConstraint(">=3.3, <3.4")
 	if err != nil {
 		return nil, err
@@ -85,8 +85,8 @@ func GenerateValidatingWebhookConfigurationForControlPlane(webhookName string, i
 		pkgapisadmregv1.SetObjectDefaults_ValidatingWebhookConfiguration(cfg)
 		LabelObjectAsControlPlaneManaged(cfg)
 		return cfg, nil
-	}	
-	
+	}
+
 	constraint, err = semver.NewConstraint(">=3.4")
 	if err != nil {
 		return nil, err
@@ -96,8 +96,7 @@ func GenerateValidatingWebhookConfigurationForControlPlane(webhookName string, i
 		pkgapisadmregv1.SetObjectDefaults_ValidatingWebhookConfiguration(cfg)
 		LabelObjectAsControlPlaneManaged(cfg)
 		return cfg, nil
-	}	
-	
+	}
 
-	return nil, ErrControlPlaneVersionNotSupported 
+	return nil, ErrControlPlaneVersionNotSupported
 }

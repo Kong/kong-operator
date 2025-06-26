@@ -1,10 +1,9 @@
 # Features
 
-The Kong Gateway Operator (KGO) enables provisioning and lifecycle management
+The Kong Operator (O) enables provisioning and lifecycle management
 of [Kong Gateways][gw] on [Kubernetes][k8s] and also includes automation
-for various related components (such as optional control-planes like the
-[Kong Kubernetes Ingress Controller (KIC)][kic]) and configuration management
-to deploy the Kong Gateway in various [deployment topologies][tops].
+for various related components and configuration management to deploy
+the Kong Gateway in various [deployment topologies][tops].
 
 The subsections that follow are a list of the current [capabilities][caps] for
 this operator which are actively developed & maintained.
@@ -92,19 +91,19 @@ by OpenAI (e.g. ChatGPT).
 > Then see our `config/samples/aigateway.yaml` example to get started.
 
 [hybr]:https://docs.konghq.com/gateway/latest/production/deployment-topologies/hybrid-mode/
-[keps]:https://github.com/Kong/gateway-operator/tree/main/keps
+[keps]:https://github.com/kong/kong-operator/tree/main/keps
 [k8s]:https://kubernetes.io
 [caps]:https://sdk.operatorframework.io/docs/overview/operator-capabilities/
-[mst]:https://github.com/kong/gateway-operator/milestone
-[iss]:https://github.com/kong/gateway-operator/issues
-[sp]:https://pkg.go.dev/github.com/kong/gateway-operator@main/api/v1beta1#GatewayConfigurationSpec
+[mst]:https://github.com/kong/kong-operator/milestone
+[iss]:https://github.com/kong/kong-operator/issues
+[sp]:https://pkg.go.dev/github.com/kong/kong-operator@main/api/v1beta1#GatewayConfigurationSpec
 [gwapi]:https://gateway-api.sigs.k8s.io
 [gw]:https://github.com/kong/kong
-[gwcfg]:https://pkg.go.dev/github.com/kong/gateway-operator@main/api/v1beta1#GatewayConfiguration
+[gwcfg]:https://pkg.go.dev/github.com/kong/kong-operator@main/api/v1beta1#GatewayConfiguration
 [tops]:https://docs.konghq.com/gateway/latest/production/deployment-topologies/
-[dapi]:https://pkg.go.dev/github.com/kong/gateway-operator@main/api/v1beta1#DataPlane
+[dapi]:https://pkg.go.dev/github.com/kong/kong-operator@main/api/v1beta1#DataPlane
 [kic]:https://github.com/kong/kubernetes-ingress-controller
-[capi]:https://pkg.go.dev/github.com/kong/gateway-operator@main/api/v1alpha1#ControlPlane
+[capi]:https://pkg.go.dev/github.com/kong/kong-operator@main/api/v1alpha1#ControlPlane
 [dbl]:https://docs.konghq.com/gateway/latest/production/deployment-topologies/db-less-and-declarative-config/
 [trd]:https://docs.konghq.com/gateway/latest/production/deployment-topologies/traditional/
 [hybrd]:https://docs.konghq.com/gateway/latest/production/deployment-topologies/hybrid-mode/setup/#install-and-start-data-planes

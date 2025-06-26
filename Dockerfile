@@ -57,8 +57,8 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
 FROM gcr.io/distroless/static:nonroot@sha256:627d6c5a23ad24e6bdff827f16c7b60e0289029b0c79e9f7ccd54ae3279fb45f AS distroless
 
 ARG TAG
-ARG NAME="Kong Gateway Operator"
-ARG DESCRIPTION="Kong Gateway Operator drives deployment via the Gateway resource. You can deploy a Gateway resource to the cluster which will result in the underlying control-plane (the Kong Kubernetes Ingress Controller) and the data-plane (the Kong Gateway)."
+ARG NAME="Kong Operator"
+ARG DESCRIPTION="Kong Operator the ultimate Kubernetes Operator for Kong"
 
 LABEL name="${NAME}" \
     description="${DESCRIPTION}" \
@@ -66,7 +66,7 @@ LABEL name="${NAME}" \
     vendor="Kong" \
     version="${TAG}" \
     release="1" \
-    url="https://github.com/Kong/gateway-operator" \
+    url="https://github.com/kong/kong-operator" \
     summary="A Kubernetes Operator for the Kong Gateway."
 
 WORKDIR /

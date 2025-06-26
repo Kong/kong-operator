@@ -1,12 +1,12 @@
-# [Kong Gateway Operator](https://docs.konghq.com/gateway-operator/latest/)
+# [Kong Operator](https://docs.konghq.com/gateway-operator/latest/)
 
-<img src="./logo/logo.png" alt="KGO logo" title="Kong Gateway Operator" height="150" width="150" />
+<img src="./logo/logo.png" alt="KGO logo" title="Kong Operator" height="150" width="150" />
 
-Kong Gateway Operator is a [Kubernetes Operator][operator-concept] that can manage
+Kong Operator is a [Kubernetes Operator][operator-concept] that can manage
 your Kong Ingress Controller, Kong Gateway Data Planes, or both together when running
 on Kubernetes.
 
-With Kong Gateway Operator, users can:
+With Kong Operator, users can:
 
 * Deploy and configure Kong Gateway services.
 * Customise deployments using `PodTemplateSpec` to:
@@ -41,7 +41,7 @@ See our [Features Page](/FEATURES.md) for details on these capabilities.
 The operator provides 2 APIs:
 
 * YAML / manifests API which users use to apply their manifests against Kubernetes clusters.
-* Go API through types exported under [api/](https://github.com/Kong/gateway-operator/tree/main/api)
+* Go API through types exported under [api/](https://github.com/kong/kong-operator/tree/main/api)
   and other exported packages.
 
 This project:
@@ -141,8 +141,8 @@ and [Zoom][zoom] links.
 [kic]:https://github.com/kong/kubernetes-ingress-controller
 [gwapi]:https://github.com/kubernetes-sigs/gateway-api
 [go-dev-site]: https://go.dev/
-[disc]:https://github.com/kong/gateway-operator/discussions
-[issues]:https://github.com/Kong/gateway-operator/issues
+[disc]:https://github.com/kong/kong-operator/discussions
+[issues]:https://github.com/kong/kong-operator/issues
 [slack]:https://kubernetes.slack.com/messages/kong
 [kong-meet]:https://konghq.com/online-meetups/
 [zoom]:https://zoom.us

@@ -15,12 +15,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/gateway-operator/controller/konnect/constraints"
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/internal/utils/index"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	"github.com/kong/gateway-operator/pkg/clientops"
-	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/kong-operator/controller/konnect/constraints"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/internal/utils/index"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/pkg/clientops"
+	"github.com/kong/kong-operator/pkg/consts"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"

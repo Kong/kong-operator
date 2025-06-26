@@ -29,7 +29,7 @@ func NewRegion(region string) (Region, error) {
 
 	// The rest of the regions follow a pattern. We do not validate against specific regions as the list is not exhaustive
 	// and may change in the future. This is to avoid having to update the code every time a new region is added.
-	// https://github.com/Kong/gateway-operator/issues/1412 can be considered to make sure that we allow configuring only
+	// https://github.com/kong/kong-operator/issues/1412 can be considered to make sure that we allow configuring only
 	// the regions that are supported by Konnect.
 	if !regionRegex.MatchString(region) {
 		return "", fmt.Errorf("invalid region %q", region)

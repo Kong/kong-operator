@@ -3,7 +3,7 @@ package helpers
 import (
 	"sync"
 
-	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/kong-operator/pkg/consts"
 )
 
 var (

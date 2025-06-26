@@ -13,7 +13,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
+	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"

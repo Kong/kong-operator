@@ -11,10 +11,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/konnect/constraints"
-	"github.com/kong/gateway-operator/controller/konnect/ops"
-	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
-	"github.com/kong/gateway-operator/controller/pkg/patch"
+	"github.com/kong/kong-operator/controller/konnect/constraints"
+	"github.com/kong/kong-operator/controller/konnect/ops"
+	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/controller/pkg/patch"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"

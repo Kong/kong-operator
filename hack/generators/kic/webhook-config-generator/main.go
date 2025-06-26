@@ -14,8 +14,8 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/hack/generators/kic"
-	kicversions "github.com/kong/gateway-operator/internal/versions"
+	"github.com/kong/kong-operator/hack/generators/kic"
+	kicversions "github.com/kong/kong-operator/internal/versions"
 )
 
 const (

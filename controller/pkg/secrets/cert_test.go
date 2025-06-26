@@ -28,9 +28,9 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	ctrlruntimelog "sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/controller/pkg/op"
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/controller/pkg/op"
+	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
@@ -402,7 +402,7 @@ func generateCACert(nn types.NamespacedName) (*corev1.Secret, error) {
 
 	template := x509.Certificate{
 		Subject: pkix.Name{
-			CommonName:   "Kong Gateway Operator CA",
+			CommonName:   "Kong Operator CA",
 			Organization: []string{"Kong, Inc."},
 			Country:      []string{"US"},
 		},

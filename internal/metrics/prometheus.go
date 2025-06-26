@@ -99,7 +99,7 @@ var (
 // GlobalCtrlRuntimeMetricsRecorder is a metrics recorder that uses a global Prometheus registry
 // provided by the controller-runtime. Any instance of it will record metrics to the same registry.
 //
-// We want to expose Gateway operator's custom metrics on the same endpoint as controller-runtime's built-in
+// We want to expose Kong Operator's custom metrics on the same endpoint as controller-runtime's built-in
 // ones. Because of that, we have to use its global registry as CR doesn't allow injecting a custom one.
 // Upstream issue regarding this: https://github.com/kubernetes-sigs/controller-runtime/issues/210.
 type GlobalCtrlRuntimeMetricsRecorder struct{}
@@ -173,7 +173,7 @@ func init() {
 // MockRecorder records operations for testing purposes.
 //
 // TODO: move all the mocks to a place inside `/test`:
-// https://github.com/Kong/gateway-operator/issues/955
+// https://github.com/kong/kong-operator/issues/955
 type MockRecorder struct{}
 
 var _ Recorder = &MockRecorder{}

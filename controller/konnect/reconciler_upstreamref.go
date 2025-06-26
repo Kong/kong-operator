@@ -11,10 +11,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/konnect/constraints"
-	"github.com/kong/gateway-operator/controller/pkg/controlplane"
-	"github.com/kong/gateway-operator/controller/pkg/patch"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/controller/konnect/constraints"
+	"github.com/kong/kong-operator/controller/pkg/controlplane"
+	"github.com/kong/kong-operator/controller/pkg/patch"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -116,7 +116,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	cpRef, ok := controlplane.GetControlPlaneRef(kongUpstream).Get()
 	// TODO: ignore the entity if referenced KongUpstream does not have a Konnect control plane reference
 	// because this situation is likely to mean that they are not controlled by us:
-	// https://github.com/Kong/gateway-operator/issues/629
+	// https://github.com/kong/kong-operator/issues/629
 	if !ok {
 		return ctrl.Result{}, fmt.Errorf(
 			"%T references a KongUpstream %s which does not have a ControlPlane ref",

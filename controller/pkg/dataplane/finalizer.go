@@ -7,7 +7,7 @@ import (
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/kong-operator/pkg/consts"
 )
 
 // OwnedObjectPreDeleteHook is a pre-delete hook for DataPlane-owned objects that ensures that before the

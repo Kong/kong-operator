@@ -20,7 +20,7 @@ func HasSameVolumeSource(baseVolumeSource, comparedVolumeSource *corev1.VolumeSo
 
 	// if they are both non-nil, compare the actual content.
 	// TODO: compare ALL supported volume sources in k8s API:
-	// https://github.com/Kong/gateway-operator/issues/183
+	// https://github.com/kong/kong-operator/issues/183
 
 	// compare for secret volumes.
 	if baseVolumeSource.Secret != nil {

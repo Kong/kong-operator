@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/pkg/controlplane"
+	"github.com/kong/kong-operator/controller/pkg/controlplane"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -161,7 +161,7 @@ type Rel struct {
 // NOTE: This is heavily based on the implementation in the Kong Ingress Controller:
 // https://github.com/Kong/kubernetes-ingress-controller/blob/ee797b4e84bd176526af32ab6db54f16ee9c245b/internal/util/relations_test.go
 //
-// TODO: https://github.com/Kong/gateway-operator/pull/659
+// TODO: https://github.com/kong/kong-operator/pull/659
 // The combinations created here should be reconsidered.
 // Specifically the Service + Route combination which currently creates 2 separate relations targeting
 // Service and Route independently.

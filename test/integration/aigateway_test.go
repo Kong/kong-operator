@@ -11,17 +11,17 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
-	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
-	testutils "github.com/kong/gateway-operator/pkg/utils/test"
-	"github.com/kong/gateway-operator/test/helpers"
+	"github.com/kong/kong-operator/pkg/consts"
+	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
+	testutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/test/helpers"
 
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 func TestAIGatewayCreation(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
 
 	t.Parallel()
 
@@ -65,7 +65,7 @@ func TestAIGatewayCreation(t *testing.T) {
 			},
 
 			// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
-			// https://github.com/Kong/gateway-operator/issues/1728
+			// https://github.com/kong/kong-operator/issues/1728
 		},
 	}
 	gatewayConfiguration, err := GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfiguration, metav1.CreateOptions{})
@@ -95,7 +95,7 @@ func TestAIGatewayCreation(t *testing.T) {
 		Data: map[string][]byte{
 			// TODO get real credentials from a vault...
 			//
-			// See: https://github.com/Kong/gateway-operator-archive/issues/137
+			// See: https://github.com/kong/kong-operator-archive/issues/137
 			"openai": []byte("openai-key"),
 			"cohere": []byte("cohere-key"),
 		},
@@ -206,12 +206,12 @@ func TestAIGatewayCreation(t *testing.T) {
 	// test hit the real cloud provider, we test manually for now after
 	// at least verifying that all the resources are in place.
 	//
-	// See:  https://github.com/Kong/gateway-operator/issues/137
+	// See:  https://github.com/kong/kong-operator/issues/137
 }
 
 // This is temporary while we work on statuses for AIGateways.
 //
-// See: https://github.com/Kong/gateway-operator/issues/137
+// See: https://github.com/kong/kong-operator/issues/137
 func eventuallyDetermineGatewayForAIGateway(
 	t *testing.T,
 	aigateway *operatorv1alpha1.AIGateway,

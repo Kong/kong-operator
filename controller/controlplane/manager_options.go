@@ -10,9 +10,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/pkg/vars"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/pkg/vars"
 )
 
 // WithRestConfig sets the REST configuration for the manager, but when a kubeConfigPath is provided,

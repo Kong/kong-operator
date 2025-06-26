@@ -14,9 +14,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
@@ -147,7 +147,7 @@ func handleConsumerGroupAssignments(
 // the difference between the desired ConsumerGroups and the actual ConsumerGroups in Konnect and adds or removes the
 // Consumer from the ConsumerGroups accordingly. It returns an error if any of the Konnect operations fail.
 //
-// TODO: https://github.com/Kong/gateway-operator/issues/634
+// TODO: https://github.com/kong/kong-operator/issues/634
 // Please note this implementation relies on imperative operations to list, add and remove Consumers from ConsumerGroups.
 // This is because the Konnect API does not provide a way to atomically assign a Consumer to multiple ConsumerGroups
 // declaratively. It's to be changed once such an API is made available (KOKO-1952).

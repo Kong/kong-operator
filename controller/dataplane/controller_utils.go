@@ -13,10 +13,10 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/internal/versions"
-	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/internal/versions"
+	"github.com/kong/kong-operator/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -28,7 +28,7 @@ import (
 
 func generateDataPlaneImage(dataplane *operatorv1beta1.DataPlane, defaultImage string, validators ...versions.VersionValidationOption) (string, error) {
 	if dataplane.Spec.Deployment.PodTemplateSpec == nil {
-		return defaultImage, nil // TODO: https://github.com/Kong/gateway-operator-archive/issues/20
+		return defaultImage, nil // TODO: https://github.com/kong/kong-operator-archive/issues/20
 	}
 
 	container := k8sutils.GetPodContainerByName(&dataplane.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
@@ -47,11 +47,11 @@ func generateDataPlaneImage(dataplane *operatorv1beta1.DataPlane, defaultImage s
 
 	if relatedKongImage := os.Getenv("RELATED_IMAGE_KONG"); relatedKongImage != "" {
 		// RELATED_IMAGE_KONG is set by the operator-sdk when building the operator bundle.
-		// https://github.com/Kong/gateway-operator-archive/issues/261
+		// https://github.com/kong/kong-operator-archive/issues/261
 		return relatedKongImage, nil
 	}
 
-	return defaultImage, nil // TODO: https://github.com/Kong/gateway-operator-archive/issues/20
+	return defaultImage, nil // TODO: https://github.com/kong/kong-operator-archive/issues/20
 }
 
 // -----------------------------------------------------------------------------

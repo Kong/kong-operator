@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	pkgapiscorev1 "k8s.io/kubernetes/pkg/apis/core/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
+	"github.com/kong/kong-operator/pkg/consts"
 )
 
 // StrategicMergePatchPodTemplateSpec adds patches to base using a strategic merge patch and
@@ -103,7 +103,7 @@ func SetDefaultsVolume(v *corev1.Volume) {
 	// This is the only default volume that we include for both ControlPlanes
 	// and DataPlanes so we're good for now.
 	//
-	// TODO: https://github.com/Kong/gateway-operator/issues/150
+	// TODO: https://github.com/kong/kong-operator/issues/150
 	if v.Name != consts.ClusterCertificateVolume && v.Name != consts.ControlPlaneAdmissionWebhookVolumeName {
 		pkgapiscorev1.SetDefaults_Volume(v)
 		if v.HostPath != nil {

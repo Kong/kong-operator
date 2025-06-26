@@ -8,8 +8,8 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorerrors "github.com/kong/gateway-operator/internal/errors"
-	"github.com/kong/gateway-operator/pkg/vars"
+	operatorerrors "github.com/kong/kong-operator/internal/errors"
+	"github.com/kong/kong-operator/pkg/vars"
 )
 
 // -----------------------------------------------------------------------------

@@ -22,14 +22,14 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/pkg/builder"
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
-	testutils "github.com/kong/gateway-operator/pkg/utils/test"
-	"github.com/kong/gateway-operator/test/helpers"
-	"github.com/kong/gateway-operator/test/helpers/eventually"
+	"github.com/kong/kong-operator/controller/pkg/builder"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
+	testutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/test/helpers/eventually"
 
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
@@ -38,7 +38,7 @@ import (
 )
 
 func TestControlPlaneWhenNoDataPlane(t *testing.T) {
-	t.Skip("Using KIC as a library in ControlPlane controller broke this test (https://github.com/Kong/gateway-operator/issues/1197)")
+	t.Skip("Using KIC as a library in ControlPlane controller broke this test (https://github.com/kong/kong-operator/issues/1197)")
 
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
@@ -138,7 +138,7 @@ func TestControlPlaneWhenNoDataPlane(t *testing.T) {
 }
 
 func TestControlPlaneEssentials(t *testing.T) {
-	t.Skip("Using KIC as a library in ControlPlane controller broke this test (https://github.com/Kong/gateway-operator/issues/1190)")
+	t.Skip("Using KIC as a library in ControlPlane controller broke this test (https://github.com/kong/kong-operator/issues/1190)")
 
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
@@ -355,7 +355,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 }
 
 func TestControlPlaneWatchNamespaces(t *testing.T) {
-	t.Skip("Using KIC as a library in ControlPlane controller broke this test  (https://github.com/Kong/gateway-operator/issues/1659)")
+	t.Skip("Using KIC as a library in ControlPlane controller broke this test  (https://github.com/kong/kong-operator/issues/1659)")
 
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
@@ -610,7 +610,7 @@ func eventuallyVerifyControlPlaneWebhookIsFunctional(t *testing.T, ctx context.C
 }
 
 func TestControlPlaneUpdate(t *testing.T) {
-	t.Skip("Using KIC as a library in ControlPlane controller broke this test (https://github.com/Kong/gateway-operator/issues/1196)")
+	t.Skip("Using KIC as a library in ControlPlane controller broke this test (https://github.com/kong/kong-operator/issues/1196)")
 
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())

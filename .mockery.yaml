@@ -6,6 +6,6 @@ template: testify
 filename: mocks.go
 force-file-write: true
 packages:
-  github.com/kong/gateway-operator/controller/konnect/ops/sdk:
+  github.com/kong/kong-operator/controller/konnect/ops/sdk:
     config:
       include-interface-regex: .*SDK$

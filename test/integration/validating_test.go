@@ -11,8 +11,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
-	"github.com/kong/gateway-operator/test/helpers"
+	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/test/helpers"
 
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"

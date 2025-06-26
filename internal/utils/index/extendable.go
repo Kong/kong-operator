@@ -9,8 +9,8 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/gateway-operator/controller/pkg/extensions"
-	gwtypes "github.com/kong/gateway-operator/internal/types"
+	"github.com/kong/kong-operator/controller/pkg/extensions"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"

@@ -13,18 +13,18 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/dataplane/certificates"
-	dataplanepkg "github.com/kong/gateway-operator/controller/pkg/dataplane"
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/controller/pkg/op"
-	"github.com/kong/gateway-operator/controller/pkg/patch"
-	"github.com/kong/gateway-operator/controller/pkg/utils"
-	"github.com/kong/gateway-operator/internal/utils/config"
-	"github.com/kong/gateway-operator/internal/versions"
-	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	k8sreduce "github.com/kong/gateway-operator/pkg/utils/kubernetes/reduce"
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/controller/dataplane/certificates"
+	dataplanepkg "github.com/kong/kong-operator/controller/pkg/dataplane"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/controller/pkg/op"
+	"github.com/kong/kong-operator/controller/pkg/patch"
+	"github.com/kong/kong-operator/controller/pkg/utils"
+	"github.com/kong/kong-operator/internal/utils/config"
+	"github.com/kong/kong-operator/internal/versions"
+	"github.com/kong/kong-operator/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	k8sreduce "github.com/kong/kong-operator/pkg/utils/kubernetes/reduce"
+	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
@@ -113,7 +113,7 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 		return nil, op.Noop, fmt.Errorf("failed to mount konnect cert: %w", err)
 	}
 
-	// TODO https://github.com/Kong/gateway-operator/issues/128
+	// TODO https://github.com/kong/kong-operator/issues/128
 	// This is a a workaround to avoid patches clobbering the wrong EnvVar. We want to find an improved patch mechanism
 	// that doesn't clobber EnvVars (and other array fields) it shouldn't.
 	existingEnvVars := desiredDeployment.Spec.Template.Spec.Containers[0].Env

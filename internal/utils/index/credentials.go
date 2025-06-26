@@ -3,7 +3,7 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/konnect/constraints"
+	"github.com/kong/kong-operator/controller/konnect/constraints"
 )
 
 func kongCredentialReferencesSecret[

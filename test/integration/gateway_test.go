@@ -22,19 +22,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
-	"github.com/kong/gateway-operator/pkg/gatewayapi"
-	gatewayutils "github.com/kong/gateway-operator/pkg/utils/gateway"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	testutils "github.com/kong/gateway-operator/pkg/utils/test"
-	"github.com/kong/gateway-operator/test/helpers"
-	"github.com/kong/gateway-operator/test/helpers/envs"
+	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/pkg/gatewayapi"
+	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	testutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/test/helpers/envs"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 func TestGatewayEssentials(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
 
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
@@ -181,7 +181,7 @@ func TestGatewayEssentials(t *testing.T) {
 // TestGatewayMultiple checks essential Gateway behavior with multiple Gateways of the same class. Ensure DataPlanes
 // only serve routes attached to their Gateway.
 func TestGatewayMultiple(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
 
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
@@ -444,7 +444,7 @@ func createHTTPRoute(parentRef metav1.Object, svc metav1.Object, path string) *g
 }
 
 func TestGatewayWithMultipleListeners(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
 
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
@@ -505,7 +505,7 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 }
 
 func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
 
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
@@ -630,7 +630,7 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 }
 
 func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
 
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
@@ -693,7 +693,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	t.Log("verifying that the DataPlane's Pod Admin API is network restricted to ControlPlane Pods")
 	var expectLimitedAdminAPI networkPolicyIngressRuleDecorator
 	expectLimitedAdminAPI.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneAdminAPIPort)
-	// TODO: https://github.com/Kong/gateway-operator/issues/1700
+	// TODO: https://github.com/kong/kong-operator/issues/1700
 	// Re-enable/adjust once the dataplane's admin API is network restricted to KO.
 	// expectLimitedAdminAPI.withPeerMatchLabels(
 	// 	map[string]string{"app": controlplane.Name},
@@ -734,8 +734,8 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowMetricsIngress.Rule)
 
 	t.Run("verifying DataPlane's NetworkPolicies get updated after customizing kong proxy listen port through GatewayConfiguration", func(t *testing.T) {
-		// TODO: https://github.com/Kong/gateway-operator/issues/184
-		t.Skip("re-enable once https://github.com/Kong/gateway-operator/issues/184 is fixed")
+		// TODO: https://github.com/kong/kong-operator/issues/184
+		t.Skip("re-enable once https://github.com/kong/kong-operator/issues/184 is fixed")
 
 		gwcClient := GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name)
 

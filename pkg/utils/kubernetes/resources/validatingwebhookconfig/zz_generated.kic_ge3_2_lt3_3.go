@@ -16,13 +16,13 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_2_lt3_3(name string, clien
 		},
 		Webhooks: []admregv1.ValidatingWebhook{
 			{
-				Name: "secrets.credentials.validation.ingress-controller.konghq.com",
+				Name:         "secrets.credentials.validation.ingress-controller.konghq.com",
 				ClientConfig: clientConfig,
 				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
 				// Deployments (ControlPlane and DataPlane) are not available.
-				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				// See https://github.com/kong/kong-operator/issues/1564 for more details.
 				FailurePolicy: lo.ToPtr(admregv1.Ignore),
-				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
+				MatchPolicy:   lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
 				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("None")),
 				AdmissionReviewVersions: []string{
 					"v1",
@@ -48,13 +48,13 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_2_lt3_3(name string, clien
 				},
 			},
 			{
-				Name: "secrets.plugins.validation.ingress-controller.konghq.com",
+				Name:         "secrets.plugins.validation.ingress-controller.konghq.com",
 				ClientConfig: clientConfig,
 				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
 				// Deployments (ControlPlane and DataPlane) are not available.
-				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				// See https://github.com/kong/kong-operator/issues/1564 for more details.
 				FailurePolicy: lo.ToPtr(admregv1.Ignore),
-				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
+				MatchPolicy:   lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
 				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("None")),
 				AdmissionReviewVersions: []string{
 					"v1",
@@ -80,13 +80,13 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_2_lt3_3(name string, clien
 				},
 			},
 			{
-				Name: "httproutes.validation.ingress-controller.konghq.com",
+				Name:         "httproutes.validation.ingress-controller.konghq.com",
 				ClientConfig: clientConfig,
 				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
 				// Deployments (ControlPlane and DataPlane) are not available.
-				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				// See https://github.com/kong/kong-operator/issues/1564 for more details.
 				FailurePolicy: lo.ToPtr(admregv1.Ignore),
-				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
+				MatchPolicy:   lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
 				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("None")),
 				AdmissionReviewVersions: []string{
 					"v1",
@@ -113,13 +113,13 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_2_lt3_3(name string, clien
 				},
 			},
 			{
-				Name: "ingresses.validation.ingress-controller.konghq.com",
+				Name:         "ingresses.validation.ingress-controller.konghq.com",
 				ClientConfig: clientConfig,
 				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
 				// Deployments (ControlPlane and DataPlane) are not available.
-				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				// See https://github.com/kong/kong-operator/issues/1564 for more details.
 				FailurePolicy: lo.ToPtr(admregv1.Ignore),
-				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
+				MatchPolicy:   lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
 				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("None")),
 				AdmissionReviewVersions: []string{
 					"v1",
@@ -145,13 +145,13 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_2_lt3_3(name string, clien
 				},
 			},
 			{
-				Name: "kongclusterplugins.validation.ingress-controller.konghq.com",
+				Name:         "kongclusterplugins.validation.ingress-controller.konghq.com",
 				ClientConfig: clientConfig,
 				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
 				// Deployments (ControlPlane and DataPlane) are not available.
-				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				// See https://github.com/kong/kong-operator/issues/1564 for more details.
 				FailurePolicy: lo.ToPtr(admregv1.Ignore),
-				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
+				MatchPolicy:   lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
 				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("None")),
 				AdmissionReviewVersions: []string{
 					"v1",
@@ -177,13 +177,13 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_2_lt3_3(name string, clien
 				},
 			},
 			{
-				Name: "kongconsumergroups.validation.ingress-controller.konghq.com",
+				Name:         "kongconsumergroups.validation.ingress-controller.konghq.com",
 				ClientConfig: clientConfig,
 				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
 				// Deployments (ControlPlane and DataPlane) are not available.
-				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				// See https://github.com/kong/kong-operator/issues/1564 for more details.
 				FailurePolicy: lo.ToPtr(admregv1.Ignore),
-				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
+				MatchPolicy:   lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
 				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("None")),
 				AdmissionReviewVersions: []string{
 					"v1",
@@ -209,13 +209,13 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_2_lt3_3(name string, clien
 				},
 			},
 			{
-				Name: "kongconsumers.validation.ingress-controller.konghq.com",
+				Name:         "kongconsumers.validation.ingress-controller.konghq.com",
 				ClientConfig: clientConfig,
 				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
 				// Deployments (ControlPlane and DataPlane) are not available.
-				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				// See https://github.com/kong/kong-operator/issues/1564 for more details.
 				FailurePolicy: lo.ToPtr(admregv1.Ignore),
-				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
+				MatchPolicy:   lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
 				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("None")),
 				AdmissionReviewVersions: []string{
 					"v1",
@@ -241,13 +241,13 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_2_lt3_3(name string, clien
 				},
 			},
 			{
-				Name: "kongcustomentities.validation.ingress-controller.konghq.com",
+				Name:         "kongcustomentities.validation.ingress-controller.konghq.com",
 				ClientConfig: clientConfig,
 				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
 				// Deployments (ControlPlane and DataPlane) are not available.
-				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				// See https://github.com/kong/kong-operator/issues/1564 for more details.
 				FailurePolicy: lo.ToPtr(admregv1.Ignore),
-				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
+				MatchPolicy:   lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
 				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("None")),
 				AdmissionReviewVersions: []string{
 					"v1",
@@ -273,13 +273,13 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_2_lt3_3(name string, clien
 				},
 			},
 			{
-				Name: "kongingresses.validation.ingress-controller.konghq.com",
+				Name:         "kongingresses.validation.ingress-controller.konghq.com",
 				ClientConfig: clientConfig,
 				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
 				// Deployments (ControlPlane and DataPlane) are not available.
-				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				// See https://github.com/kong/kong-operator/issues/1564 for more details.
 				FailurePolicy: lo.ToPtr(admregv1.Ignore),
-				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
+				MatchPolicy:   lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
 				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("None")),
 				AdmissionReviewVersions: []string{
 					"v1",
@@ -305,13 +305,13 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_2_lt3_3(name string, clien
 				},
 			},
 			{
-				Name: "kongplugins.validation.ingress-controller.konghq.com",
+				Name:         "kongplugins.validation.ingress-controller.konghq.com",
 				ClientConfig: clientConfig,
 				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
 				// Deployments (ControlPlane and DataPlane) are not available.
-				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				// See https://github.com/kong/kong-operator/issues/1564 for more details.
 				FailurePolicy: lo.ToPtr(admregv1.Ignore),
-				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
+				MatchPolicy:   lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
 				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("None")),
 				AdmissionReviewVersions: []string{
 					"v1",
@@ -337,13 +337,13 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_2_lt3_3(name string, clien
 				},
 			},
 			{
-				Name: "kongvaults.validation.ingress-controller.konghq.com",
+				Name:         "kongvaults.validation.ingress-controller.konghq.com",
 				ClientConfig: clientConfig,
 				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
 				// Deployments (ControlPlane and DataPlane) are not available.
-				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				// See https://github.com/kong/kong-operator/issues/1564 for more details.
 				FailurePolicy: lo.ToPtr(admregv1.Ignore),
-				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
+				MatchPolicy:   lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
 				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("None")),
 				AdmissionReviewVersions: []string{
 					"v1",
@@ -369,13 +369,13 @@ func GenerateValidatingWebhookConfigurationForKIC_ge3_2_lt3_3(name string, clien
 				},
 			},
 			{
-				Name: "services.validation.ingress-controller.konghq.com",
+				Name:         "services.validation.ingress-controller.konghq.com",
 				ClientConfig: clientConfig,
 				// We're using 'Ignore' failure policy to avoid issues with modifying resources when webhook-backing
 				// Deployments (ControlPlane and DataPlane) are not available.
-				// See https://github.com/Kong/gateway-operator/issues/1564 for more details.
+				// See https://github.com/kong/kong-operator/issues/1564 for more details.
 				FailurePolicy: lo.ToPtr(admregv1.Ignore),
-				MatchPolicy: lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
+				MatchPolicy:   lo.ToPtr(admregv1.MatchPolicyType("Equivalent")),
 				SideEffects:   lo.ToPtr(admregv1.SideEffectClass("None")),
 				AdmissionReviewVersions: []string{
 					"v1",

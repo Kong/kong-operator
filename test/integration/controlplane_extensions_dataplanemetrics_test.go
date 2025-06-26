@@ -11,10 +11,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/gateway-operator/pkg/consts"
-	osstestutils "github.com/kong/gateway-operator/pkg/utils/test"
-	"github.com/kong/gateway-operator/pkg/vars"
-	osshelpers "github.com/kong/gateway-operator/test/helpers"
+	"github.com/kong/kong-operator/pkg/consts"
+	osstestutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/pkg/vars"
+	osshelpers "github.com/kong/kong-operator/test/helpers"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
@@ -23,7 +23,7 @@ import (
 )
 
 func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/Kong/gateway-operator/issues/1608")
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
 
 	createExtensionRefWithoutNamespace := func(extRefName string) commonv1alpha1.ExtensionRef {
 		return commonv1alpha1.ExtensionRef{
@@ -116,7 +116,7 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 			},
 
 			// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
-			// https://github.com/Kong/gateway-operator/issues/1728
+			// https://github.com/kong/kong-operator/issues/1728
 		},
 	}
 	gatewayConfig, err = operatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})

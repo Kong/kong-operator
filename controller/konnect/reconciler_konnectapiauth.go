@@ -17,12 +17,12 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
-	"github.com/kong/gateway-operator/controller/konnect/server"
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/controller/pkg/patch"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/controller/konnect/server"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/controller/pkg/patch"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )

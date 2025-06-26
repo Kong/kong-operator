@@ -9,7 +9,7 @@ const (
 	//
 	// NOTE: This needs to be a full semver version (i.e. it needs to include
 	// the minor and the patch version). The reason for this is that it's used in the
-	// tests, e.g. https://github.com/Kong/gateway-operator/blob/02bd1e11243/test/e2e/environment_test.go#L201-L206
+	// tests, e.g. https://github.com/kong/kong-operator/blob/02bd1e11243/test/e2e/environment_test.go#L201-L206
 	// and those tests create KIC's URLs for things like roles or CRDs.
 	// Since KIC only defines the full tags in its repo (as expected) we cannot use
 	// a partial version here, as it would not match KIC's tag.

@@ -8,8 +8,8 @@ ARG GOPATH
 ARG GOCACHE
 
 ARG TAG
-ARG NAME="Kong Gateway Operator"
-ARG DESCRIPTION="Kong Gateway Operator debug image"
+ARG NAME="Kong Operator"
+ARG DESCRIPTION="Kong Operator debug image"
 ARG TARGETPLATFORM
 ARG TARGETOS
 ARG TARGETARCH
@@ -22,7 +22,7 @@ LABEL name="${NAME}" \
     vendor="Kong" \
     version="${TAG}" \
     release="1" \
-    url="https://github.com/Kong/gateway-operator" \
+    url="https://github.com/kong/kong-operator" \
     summary="A Kubernetes Operator for the Kong Gateway."
 
 RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \

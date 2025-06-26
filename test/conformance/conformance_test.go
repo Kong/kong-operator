@@ -20,12 +20,12 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	gwtypes "github.com/kong/gateway-operator/internal/types"
-	"github.com/kong/gateway-operator/modules/manager/metadata"
-	"github.com/kong/gateway-operator/pkg/consts"
-	gatewayapipkg "github.com/kong/gateway-operator/pkg/gatewayapi"
-	testutils "github.com/kong/gateway-operator/pkg/utils/test"
-	"github.com/kong/gateway-operator/pkg/vars"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/modules/manager/metadata"
+	"github.com/kong/kong-operator/pkg/consts"
+	gatewayapipkg "github.com/kong/kong-operator/pkg/gatewayapi"
+	testutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/pkg/vars"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
@@ -43,7 +43,7 @@ type ConformanceConfig struct {
 }
 
 func TestGatewayConformance(t *testing.T) {
-	t.Skip("skipping Gateway API conformance tests: TODO https://github.com/Kong/gateway-operator/issues/1726")
+	t.Skip("skipping Gateway API conformance tests: TODO https://github.com/kong/kong-operator/issues/1726")
 
 	t.Parallel()
 
@@ -163,7 +163,7 @@ func createGatewayConfiguration(ctx context.Context, t *testing.T, c Conformance
 			},
 
 			// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
-			// https://github.com/Kong/gateway-operator/issues/1728
+			// https://github.com/kong/kong-operator/issues/1728
 		},
 	}
 

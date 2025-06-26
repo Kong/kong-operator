@@ -16,11 +16,11 @@ import (
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/gateway-operator/controller/konnect"
-	sdkmocks "github.com/kong/gateway-operator/controller/konnect/ops/sdk/mocks"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	"github.com/kong/gateway-operator/modules/manager/scheme"
-	"github.com/kong/gateway-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/controller/konnect"
+	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/test/helpers/deploy"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
@@ -265,7 +265,7 @@ func TestKongKey(t *testing.T) {
 	})
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
-		t.Skip("konnectID control plane reference not supported yet: https://github.com/Kong/gateway-operator/issues/1469")
+		t.Skip("konnectID control plane reference not supported yet: https://github.com/kong/kong-operator/issues/1469")
 		t.Log("Setting up SDK expectations on KongKey creation")
 		sdk.KeysSDK.EXPECT().CreateKey(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
 			mock.MatchedBy(func(input sdkkonnectcomp.Key) bool {

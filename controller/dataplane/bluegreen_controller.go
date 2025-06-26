@@ -19,17 +19,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/gateway-operator/controller/pkg/address"
-	"github.com/kong/gateway-operator/controller/pkg/dataplane"
-	"github.com/kong/gateway-operator/controller/pkg/extensions"
-	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
-	"github.com/kong/gateway-operator/controller/pkg/log"
-	"github.com/kong/gateway-operator/controller/pkg/op"
-	"github.com/kong/gateway-operator/controller/pkg/secrets"
-	"github.com/kong/gateway-operator/modules/manager/logging"
-	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
-	k8sresources "github.com/kong/gateway-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/controller/pkg/address"
+	"github.com/kong/kong-operator/controller/pkg/dataplane"
+	"github.com/kong/kong-operator/controller/pkg/extensions"
+	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/controller/pkg/op"
+	"github.com/kong/kong-operator/controller/pkg/secrets"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
@@ -224,7 +224,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	// TODO: Perform promotion condition checks to verify we can proceed
-	// Ref: https://github.com/Kong/gateway-operator/issues/170
+	// Ref: https://github.com/kong/kong-operator/issues/170
 
 	if proceedWithPromotion, err := canProceedWithPromotion(dataplane); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed checking if DataPlane %s/%s can be promoted: %w", dataplane.Namespace, dataplane.Name, err)
@@ -508,7 +508,7 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 			})
 		}
 		// TODO: implement DeleteOnPromotionRecreateOnRollout
-		// Ref: https://github.com/Kong/gateway-operator/issues/163
+		// Ref: https://github.com/kong/kong-operator/issues/163
 	}
 	deploymentLabels := client.MatchingLabels{
 		consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValuePreview,

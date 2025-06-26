@@ -9,7 +9,7 @@ import (
 	"github.com/Kong/sdk-konnect-go/retry"
 	"github.com/samber/lo"
 
-	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
+	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
@@ -29,7 +29,7 @@ func createKonnectTransitGateway(
 	}
 
 	// We need to set the empty retry config to prevent using the default retry which causes failures and blocks the reconciliation:
-	// https://github.com/Kong/gateway-operator/issues/1521
+	// https://github.com/kong/kong-operator/issues/1521
 	resp, err := sdk.CreateTransitGateway(
 		ctx, networkID, transitGatewaySpecToTransitGatewayInput(tg.Spec.KonnectTransitGatewayAPISpec),
 		sdkkonnectops.WithRetries(retry.Config{}),
@@ -91,7 +91,7 @@ func deleteKonnectTransitGateway(
 	}
 
 	// We need to set the empty retry config to prevent using the default retry which causes failures and blocks the reconciliation:
-	// https://github.com/Kong/gateway-operator/issues/1521
+	// https://github.com/kong/kong-operator/issues/1521
 	resp, err := sdk.DeleteTransitGateway(ctx, networkID, tg.GetKonnectID(), sdkkonnectops.WithRetries(retry.Config{}))
 
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, tg); errWrap != nil {

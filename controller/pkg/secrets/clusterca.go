@@ -30,7 +30,7 @@ func CreateClusterCACertificate(ctx context.Context, cl client.Client, secretNN 
 
 	template := x509.Certificate{
 		Subject: pkix.Name{
-			CommonName:   "Kong Gateway Operator CA",
+			CommonName:   "Kong Operator CA",
 			Organization: []string{"Kong, Inc."},
 			Country:      []string{"US"},
 		},
