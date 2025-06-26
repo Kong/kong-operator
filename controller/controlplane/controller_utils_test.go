@@ -13,11 +13,10 @@ import (
 
 func TestControlPlaneSpecDeepEqual(t *testing.T) {
 	testCases := []struct {
-		name            string
-		spec1           *gwtypes.ControlPlaneOptions
-		spec2           *gwtypes.ControlPlaneOptions
-		envVarsToIgnore []string
-		equal           bool
+		name  string
+		spec1 *gwtypes.ControlPlaneOptions
+		spec2 *gwtypes.ControlPlaneOptions
+		equal bool
 	}{
 		{
 			name: "different watch namespaces yield unequal specs",
@@ -55,7 +54,7 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			require.Equal(t, tc.equal, controlplane.SpecDeepEqual(tc.spec1, tc.spec2, tc.envVarsToIgnore...))
+			require.Equal(t, tc.equal, controlplane.SpecDeepEqual(tc.spec1, tc.spec2))
 		})
 	}
 }

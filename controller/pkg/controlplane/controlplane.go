@@ -20,6 +20,6 @@ type DefaultsArgs struct {
 // -----------------------------------------------------------------------------
 
 // SpecDeepEqual returns true if the two ControlPlaneOptions are equal.
-func SpecDeepEqual(spec1, spec2 *gwtypes.ControlPlaneOptions, envVarsToIgnore ...string) bool {
+func SpecDeepEqual(spec1, spec2 *gwtypes.ControlPlaneOptions) bool {
 	return reflect.DeepEqual(spec1, spec2)
 }
