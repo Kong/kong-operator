@@ -16,6 +16,7 @@ linters:
               - jsontags
               - duplicatemarkers
               # - maxlength
+              - integers
               - nofloats
               - nomaps
               - nophase
@@ -23,6 +24,7 @@ linters:
               - requiredfields
               - statusoptional
               - statussubresource
+              - uniquemarkers
           lintersConfig:
             conditions:
               isFirstField: Warn

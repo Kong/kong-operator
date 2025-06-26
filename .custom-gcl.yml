@@ -6,4 +6,4 @@ plugins:
 - module: 'sigs.k8s.io/kube-api-linter'
   # This version will not get auto updated so ideally we'd add a renovate
   # config to update this file automatically.
-  version: bce00ef0e9a6cb1c3a2362c95a0ab9362919d7b8
+  version: e719da12d8403e66335882c7ad704f8e95927ce0
