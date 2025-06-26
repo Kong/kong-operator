@@ -69,7 +69,7 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - uses: jdx/mise-action@13abe502c30c1559a5c37dff303831bab82c9402 # v2.2.3
+    - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
       with:
         install: false
 
@@ -93,7 +93,7 @@ jobs:
       uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
       with:
         go-version-file: go.mod
-    - uses: jdx/mise-action@13abe502c30c1559a5c37dff303831bab82c9402 # v2.2.3
+    - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
       with:
         install: false
     - run: make govulncheck
@@ -111,7 +111,7 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - uses: jdx/mise-action@13abe502c30c1559a5c37dff303831bab82c9402 # v2.2.3
+    - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
       with:
         install: false
 
@@ -141,7 +141,7 @@ jobs:
     - name: Create k8s KinD Cluster
       uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
 
-    - uses: jdx/mise-action@13abe502c30c1559a5c37dff303831bab82c9402 # v2.2.3
+    - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
       with:
         install: false
 
@@ -181,7 +181,7 @@ jobs:
       with:
         cluster_name: ${{ env.CLUSTER_NAME }}
 
-    - uses: jdx/mise-action@13abe502c30c1559a5c37dff303831bab82c9402 # v2.2.3
+    - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
       with:
         install: false
 
@@ -233,7 +233,7 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - uses: jdx/mise-action@13abe502c30c1559a5c37dff303831bab82c9402 # v2.2.3
+    - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
       with:
         install: false
 
@@ -267,7 +267,7 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - uses: jdx/mise-action@13abe502c30c1559a5c37dff303831bab82c9402 # v2.2.3
+    - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
       with:
         install: false
 
@@ -287,7 +287,7 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - uses: jdx/mise-action@13abe502c30c1559a5c37dff303831bab82c9402 # v2.2.3
+    - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
       with:
         install: false
 
@@ -331,7 +331,7 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - uses: jdx/mise-action@13abe502c30c1559a5c37dff303831bab82c9402 # v2.2.3
+    - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
       with:
         install: false
 
@@ -376,7 +376,7 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - uses: jdx/mise-action@13abe502c30c1559a5c37dff303831bab82c9402 # v2.2.3
+    - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
       with:
         install: false
 
@@ -425,7 +425,7 @@ jobs:
       with:
         go-version-file: go.mod
 
-    - uses: jdx/mise-action@13abe502c30c1559a5c37dff303831bab82c9402 # v2.2.3
+    - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
       with:
         install: false
 
@@ -478,7 +478,7 @@ jobs:
         TAG: e2e-${{ github.sha }}
       run: make docker.build
 
-    - uses: jdx/mise-action@13abe502c30c1559a5c37dff303831bab82c9402 # v2.2.3
+    - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
       with:
         install: false
 
