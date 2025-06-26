@@ -71,13 +71,13 @@ func TestReconciler_Reconcile(t *testing.T) {
 					},
 				},
 				Spec: operatorv2alpha1.ControlPlaneSpec{
-					ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetRefType,
-							Ref: &operatorv2alpha1.ControlPlaneDataPlaneTargetRef{
-								Name: "test-dataplane",
-							},
+					DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
+						Type: operatorv2alpha1.ControlPlaneDataPlaneTargetRefType,
+						Ref: &operatorv2alpha1.ControlPlaneDataPlaneTargetRef{
+							Name: "test-dataplane",
 						},
+					},
+					ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
 						WatchNamespaces: &operatorv1beta1.WatchNamespaces{
 							Type: operatorv1beta1.WatchNamespacesTypeAll,
 						},

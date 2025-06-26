@@ -185,12 +185,10 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 						UID:       types.UID(uuid.NewString()),
 					},
 					Spec: gwtypes.ControlPlaneSpec{
-						ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-								Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-									Name: "test-dataplane",
-								},
+						DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+							Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+							Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+								Name: "test-dataplane",
 							},
 						},
 					},

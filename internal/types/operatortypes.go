@@ -41,6 +41,13 @@ type (
 	ControllerState = operatorv2alpha1.ControllerState
 )
 
+type (
+	// GatewayConfiguration is an alias for the v2alpha1 GatewayConfiguration type.
+	GatewayConfiguration = operatorv2alpha1.GatewayConfiguration
+	// GatewayConfigDataPlaneOptions is an alias for the v2alpha1 GatewayConfigDataPlaneOptions type.
+	GatewayConfigDataPlaneOptions = operatorv2alpha1.GatewayConfigDataPlaneOptions
+)
+
 const (
 	// ControlPlaneDataPlaneTargetRefType is an alias for the v2alpha1 ControlPlaneDataPlaneTargetRefType type.
 	ControlPlaneDataPlaneTargetRefType = operatorv2alpha1.ControlPlaneDataPlaneTargetRefType

@@ -24,6 +24,7 @@ import (
 	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
 	kcfggateway "github.com/kong/kubernetes-configuration/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v2alpha1"
 )
 
 func TestParseKongProxyListenEnv(t *testing.T) {
@@ -1163,19 +1164,19 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 	testCases := []struct {
 		name                  string
 		gatewayConfigNS       string
-		opts                  operatorv1beta1.GatewayConfigDataPlaneOptions
+		opts                  GatewayConfigDataPlaneOptions
 		expectedDataPlaneOpts *operatorv1beta1.DataPlaneOptions
 	}{
 		{
 			name:                  "empty options",
 			gatewayConfigNS:       "default",
-			opts:                  operatorv1beta1.GatewayConfigDataPlaneOptions{},
+			opts:                  GatewayConfigDataPlaneOptions{},
 			expectedDataPlaneOpts: &operatorv1beta1.DataPlaneOptions{},
 		},
 		{
 			name:            "deployment options",
 			gatewayConfigNS: "default",
-			opts: operatorv1beta1.GatewayConfigDataPlaneOptions{
+			opts: GatewayConfigDataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -1209,8 +1210,8 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 		{
 			name:            "plugins to install (same namespace)",
 			gatewayConfigNS: "default",
-			opts: operatorv1beta1.GatewayConfigDataPlaneOptions{
-				PluginsToInstall: []operatorv1beta1.NamespacedName{
+			opts: GatewayConfigDataPlaneOptions{
+				PluginsToInstall: []operatorv2alpha1.NamespacedName{
 					{
 						Name: "plugin1",
 					},
@@ -1236,8 +1237,8 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 		{
 			name:            "plugins to install (different namespace)",
 			gatewayConfigNS: "default",
-			opts: operatorv1beta1.GatewayConfigDataPlaneOptions{
-				PluginsToInstall: []operatorv1beta1.NamespacedName{
+			opts: GatewayConfigDataPlaneOptions{
+				PluginsToInstall: []operatorv2alpha1.NamespacedName{
 					{
 						Name: "plugin1",
 					},
@@ -1263,11 +1264,11 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 		{
 			name:            "network services options with ingress",
 			gatewayConfigNS: "default",
-			opts: operatorv1beta1.GatewayConfigDataPlaneOptions{
-				Network: operatorv1beta1.GatewayConfigDataPlaneNetworkOptions{
-					Services: &operatorv1beta1.GatewayConfigDataPlaneServices{
-						Ingress: &operatorv1beta1.GatewayConfigServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
+			opts: GatewayConfigDataPlaneOptions{
+				Network: operatorv2alpha1.GatewayConfigDataPlaneNetworkOptions{
+					Services: &operatorv2alpha1.GatewayConfigDataPlaneServices{
+						Ingress: &operatorv2alpha1.GatewayConfigServiceOptions{
+							ServiceOptions: operatorv2alpha1.ServiceOptions{
 								Name: lo.ToPtr("custom-ingress"),
 								Annotations: map[string]string{
 									"service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
@@ -1295,10 +1296,10 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 		{
 			name:            "PodDisruptionBudget",
 			gatewayConfigNS: "default",
-			opts: operatorv1beta1.GatewayConfigDataPlaneOptions{
-				Resources: &operatorv1beta1.GatewayConfigDataPlaneResources{
-					PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
-						Spec: operatorv1beta1.PodDisruptionBudgetSpec{
+			opts: GatewayConfigDataPlaneOptions{
+				Resources: &operatorv2alpha1.GatewayConfigDataPlaneResources{
+					PodDisruptionBudget: &operatorv2alpha1.PodDisruptionBudget{
+						Spec: operatorv2alpha1.PodDisruptionBudgetSpec{
 							MinAvailable: lo.ToPtr(intstr.FromInt(1)),
 						},
 					},

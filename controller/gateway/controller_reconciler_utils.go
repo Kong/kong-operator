@@ -37,6 +37,7 @@ import (
 	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
 	kcfggateway "github.com/kong/kubernetes-configuration/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v2alpha1"
 )
 
 // -----------------------------------------------------------------------------
@@ -45,7 +46,7 @@ import (
 
 func (r *Reconciler) createDataPlane(ctx context.Context,
 	gateway *gwtypes.Gateway,
-	gatewayConfig *operatorv1beta1.GatewayConfiguration,
+	gatewayConfig *GatewayConfiguration,
 ) (*operatorv1beta1.DataPlane, error) {
 	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
@@ -75,7 +76,7 @@ func (r *Reconciler) createDataPlane(ctx context.Context,
 func (r *Reconciler) createControlPlane(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
-	gatewayConfig *operatorv1beta1.GatewayConfiguration,
+	gatewayConfig *GatewayConfiguration,
 	dataplaneName string,
 ) error {
 	controlplane := &gwtypes.ControlPlane{
@@ -84,20 +85,17 @@ func (r *Reconciler) createControlPlane(
 			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)),
 		},
 		Spec: gwtypes.ControlPlaneSpec{
-			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-				DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-					Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-					Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-						Name: dataplaneName,
-					},
+			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+				Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+					Name: dataplaneName,
 				},
 			},
 		},
 	}
-	// TODO: https://github.com/Kong/gateway-operator/issues/1728
-	// if gatewayConfig.Spec.ControlPlaneOptions != nil {
-	//   controlplane.Spec.ControlPlaneOptions = *gatewayConfig.Spec.ControlPlaneOptions
-	// }
+	if gatewayConfig.Spec.ControlPlaneOptions != nil {
+		controlplane.Spec.ControlPlaneOptions = gatewayConfig.Spec.ControlPlaneOptions.ControlPlaneOptions
+	}
 
 	controlplane.Spec.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, controlplane.Spec.Extensions)
 
@@ -139,27 +137,39 @@ func (r *Reconciler) getGatewayAddresses(
 
 func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 	gatewayConfigNamespace string,
-	opts operatorv1beta1.GatewayConfigDataPlaneOptions,
+	opts GatewayConfigDataPlaneOptions,
 ) *operatorv1beta1.DataPlaneOptions {
 	dataPlaneOptions := &operatorv1beta1.DataPlaneOptions{
 		Deployment: opts.Deployment,
-		Extensions: opts.Extensions,
 	}
 
 	if len(opts.PluginsToInstall) > 0 {
 		dataPlaneOptions.PluginsToInstall = lo.Map(opts.PluginsToInstall,
-			func(pluginReference operatorv1beta1.NamespacedName, _ int) operatorv1beta1.NamespacedName {
-				// When Namespace is not provided, the GatewayConfiguration's namespace is assumed.
-				if pluginReference.Namespace == "" {
-					pluginReference.Namespace = gatewayConfigNamespace
+			func(pluginReference operatorv2alpha1.NamespacedName, _ int) operatorv1beta1.NamespacedName {
+				nn := operatorv1beta1.NamespacedName{
+					Name:      pluginReference.Name,
+					Namespace: pluginReference.Namespace,
 				}
-				return pluginReference
+
+				// When Namespace is not provided, the GatewayConfiguration's namespace is assumed.
+				if nn.Namespace == "" {
+					nn.Namespace = gatewayConfigNamespace
+				}
+				return nn
 			},
 		)
 	}
 
 	if opts.Resources != nil {
-		dataPlaneOptions.Resources.PodDisruptionBudget = opts.Resources.PodDisruptionBudget
+		if opts.Resources.PodDisruptionBudget != nil {
+			dataPlaneOptions.Resources.PodDisruptionBudget = &operatorv1beta1.PodDisruptionBudget{
+				Spec: operatorv1beta1.PodDisruptionBudgetSpec{
+					MinAvailable:               opts.Resources.PodDisruptionBudget.Spec.MinAvailable,
+					MaxUnavailable:             opts.Resources.PodDisruptionBudget.Spec.MaxUnavailable,
+					UnhealthyPodEvictionPolicy: opts.Resources.PodDisruptionBudget.Spec.UnhealthyPodEvictionPolicy,
+				},
+			}
+		}
 	}
 
 	if opts.Network.Services != nil && opts.Network.Services.Ingress != nil {
@@ -214,11 +224,14 @@ func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAdd
 	return addresses, nil
 }
 
-func (r *Reconciler) getOrCreateGatewayConfiguration(ctx context.Context, gatewayClass *gatewayv1.GatewayClass) (*operatorv1beta1.GatewayConfiguration, error) {
+func (r *Reconciler) getOrCreateGatewayConfiguration(
+	ctx context.Context,
+	gatewayClass *gatewayv1.GatewayClass,
+) (*GatewayConfiguration, error) {
 	gatewayConfig, err := r.getGatewayConfigForGatewayClass(ctx, gatewayClass)
 	if err != nil {
 		if errors.Is(err, operatorerrors.ErrObjectMissingParametersRef) {
-			return new(operatorv1beta1.GatewayConfiguration), nil
+			return new(GatewayConfiguration), nil
 		}
 		return nil, err
 	}
@@ -226,7 +239,10 @@ func (r *Reconciler) getOrCreateGatewayConfiguration(ctx context.Context, gatewa
 	return gatewayConfig, nil
 }
 
-func (r *Reconciler) getGatewayConfigForGatewayClass(ctx context.Context, gatewayClass *gatewayv1.GatewayClass) (*operatorv1beta1.GatewayConfiguration, error) {
+func (r *Reconciler) getGatewayConfigForGatewayClass(
+	ctx context.Context,
+	gatewayClass *gatewayv1.GatewayClass,
+) (*GatewayConfiguration, error) {
 	if gatewayClass.Spec.ParametersRef == nil {
 		return nil, fmt.Errorf("%w, gatewayClass = %s", operatorerrors.ErrObjectMissingParametersRef, gatewayClass.Name)
 	}
@@ -256,11 +272,18 @@ func (r *Reconciler) getGatewayConfigForGatewayClass(ctx context.Context, gatewa
 		return nil, fmt.Errorf("GatewayClass %s has invalid ParametersRef: both namespace and name must be provided", gatewayClass.Name)
 	}
 
-	gatewayConfig := new(operatorv1beta1.GatewayConfiguration)
-	return gatewayConfig, r.Get(ctx, client.ObjectKey{
-		Namespace: string(*gatewayClass.Spec.ParametersRef.Namespace),
-		Name:      gatewayClass.Spec.ParametersRef.Name,
-	}, gatewayConfig)
+	var (
+		gatewayConfig GatewayConfiguration
+		nn            = types.NamespacedName{
+			Namespace: string(*gatewayClass.Spec.ParametersRef.Namespace),
+			Name:      gatewayClass.Spec.ParametersRef.Name,
+		}
+	)
+
+	if err := r.Get(ctx, nn, &gatewayConfig); err != nil {
+		return nil, err
+	}
+	return &gatewayConfig, nil
 }
 
 func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
