@@ -23,7 +23,7 @@ require (
 	github.com/google/go-containerregistry v0.20.6
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.50.0
-	github.com/kong/go-kong v0.66.2-0.20250624172857-72863432614c
+	github.com/kong/go-kong v0.67.0
 	github.com/kong/kubernetes-configuration v1.4.1-0.20250625110007-842ead2a5ced
 	github.com/kong/kubernetes-ingress-controller/v3 v3.4.7-0.20250625104300-5da6f0a43a2d
 	github.com/kong/kubernetes-telemetry v0.1.10
@@ -53,6 +53,11 @@ require (
 	sigs.k8s.io/gateway-api v1.3.0
 	sigs.k8s.io/kustomize/api v0.19.0
 	sigs.k8s.io/kustomize/kyaml v0.19.0
+)
+
+require (
+	go.yaml.in/yaml/v2 v2.4.2 // indirect
+	go.yaml.in/yaml/v3 v3.0.3 // indirect
 )
 
 require (
@@ -282,7 +287,7 @@ require (
 	sigs.k8s.io/kind v0.24.0 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
+	sigs.k8s.io/yaml v1.5.0 // indirect
 )
 
 // The replace directives for `k8s.io/*` are required for making it possible to
