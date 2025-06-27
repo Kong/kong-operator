@@ -53,7 +53,7 @@ func createConsumer(
 	id := *resp.Consumer.ID
 	consumer.SetKonnectID(id)
 
-	if err = handleConsumerGroupAssignments(ctx, consumer, cl, cgSDK, cpID); err != nil {
+	if err = handleConsumerGroupAssignments(ctx, consumer, cl, sdk, cgSDK, cpID); err != nil {
 		return KonnectEntityCreatedButRelationsFailedError{
 			KonnectID: id,
 			Reason:    kcfgkonnect.FailedToAttachConsumerToConsumerGroupReason,
@@ -92,7 +92,7 @@ func updateConsumer(
 		return errWrap
 	}
 
-	if err = handleConsumerGroupAssignments(ctx, consumer, cl, cgSDK, cpID); err != nil {
+	if err = handleConsumerGroupAssignments(ctx, consumer, cl, sdk, cgSDK, cpID); err != nil {
 		return KonnectEntityCreatedButRelationsFailedError{
 			KonnectID: id,
 			Reason:    kcfgkonnect.FailedToAttachConsumerToConsumerGroupReason,
@@ -113,6 +113,7 @@ func handleConsumerGroupAssignments(
 	ctx context.Context,
 	consumer *configurationv1.KongConsumer,
 	cl client.Client,
+	sdk sdkops.ConsumersSDK,
 	cgSDK sdkops.ConsumerGroupSDK,
 	cpID string,
 ) error {
@@ -133,7 +134,7 @@ func handleConsumerGroupAssignments(
 
 	// Reconcile the ConsumerGroups assigned to the KongConsumer in Konnect (list the actual ConsumerGroups, calculate the
 	// difference, and add/remove the Consumer from the ConsumerGroups accordingly).
-	if err := reconcileConsumerGroupsWithKonnect(ctx, desiredConsumerGroupsIDs, cgSDK, cpID, consumer); err != nil {
+	if err := reconcileConsumerGroupsWithKonnect(ctx, desiredConsumerGroupsIDs, sdk, cgSDK, cpID, consumer); err != nil {
 		return KonnectEntityCreatedButRelationsFailedError{
 			KonnectID: consumer.GetKonnectID(),
 			Reason:    konnectv1alpha1.KonnectEntityProgrammedReasonFailedToReconcileConsumerGroupsWithKonnect,
@@ -154,6 +155,7 @@ func handleConsumerGroupAssignments(
 func reconcileConsumerGroupsWithKonnect(
 	ctx context.Context,
 	desiredConsumerGroupsIDs []string,
+	sdk sdkops.ConsumersSDK,
 	cgSDK sdkops.ConsumerGroupSDK,
 	cpID string,
 	consumer *configurationv1.KongConsumer,
@@ -161,7 +163,7 @@ func reconcileConsumerGroupsWithKonnect(
 	logger := ctrllog.FromContext(ctx).WithValues("kongconsumer", client.ObjectKeyFromObject(consumer).String())
 
 	// List the ConsumerGroups that the Consumer is assigned to in Konnect.
-	cgsResp, err := cgSDK.ListConsumerGroupsForConsumer(ctx, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
+	cgsResp, err := sdk.ListConsumerGroupsForConsumer(ctx, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 		ControlPlaneID: cpID,
 		ConsumerID:     consumer.GetKonnectStatus().GetKonnectID(),
 	})

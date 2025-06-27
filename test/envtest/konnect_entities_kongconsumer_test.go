@@ -94,7 +94,7 @@ func TestKongConsumer(t *testing.T) {
 			Maybe()
 
 		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		sdk.ConsumerGroupSDK.EXPECT().
+		sdk.ConsumersSDK.EXPECT().
 			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 				ConsumerID:     consumerID,
 				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
@@ -202,7 +202,7 @@ func TestKongConsumer(t *testing.T) {
 		}, nil)
 
 		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		emptyListCall := sdk.ConsumerGroupSDK.EXPECT().
+		emptyListCall := sdk.ConsumersSDK.EXPECT().
 			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 				ConsumerID:     consumerID,
 				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
@@ -268,7 +268,7 @@ func TestKongConsumer(t *testing.T) {
 			Return(&sdkkonnectops.UpsertConsumerResponse{}, nil)
 
 		emptyListCall.Unset() // Unset the previous expectation to allow the new one to be set.
-		sdk.ConsumerGroupSDK.EXPECT().
+		sdk.ConsumersSDK.EXPECT().
 			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 				ConsumerID:     consumerID,
 				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
@@ -371,7 +371,7 @@ func TestKongConsumer(t *testing.T) {
 			Maybe()
 
 		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		sdk.ConsumerGroupSDK.EXPECT().
+		sdk.ConsumersSDK.EXPECT().
 			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 				ConsumerID:     consumerID,
 				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
@@ -430,7 +430,7 @@ func TestKongConsumer(t *testing.T) {
 			)
 
 		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		sdk.ConsumerGroupSDK.EXPECT().
+		sdk.ConsumersSDK.EXPECT().
 			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 				ConsumerID:     id,
 				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
@@ -492,7 +492,7 @@ func TestKongConsumer(t *testing.T) {
 			)
 
 		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		sdk.ConsumerGroupSDK.EXPECT().
+		sdk.ConsumersSDK.EXPECT().
 			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 				ConsumerID:     id,
 				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
@@ -541,7 +541,7 @@ func TestKongConsumer(t *testing.T) {
 			},
 		)
 		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		sdk.ConsumerGroupSDK.EXPECT().
+		sdk.ConsumersSDK.EXPECT().
 			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 				ConsumerID:     id,
 				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
@@ -627,7 +627,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			Maybe()
 
 		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		sdk.ConsumerGroupSDK.EXPECT().
+		sdk.ConsumersSDK.EXPECT().
 			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 				ConsumerID:     consumerID,
 				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
@@ -717,7 +717,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			Maybe()
 
 		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		sdk.ConsumerGroupSDK.EXPECT().
+		sdk.ConsumersSDK.EXPECT().
 			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 				ConsumerID:     consumerID,
 				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
@@ -805,7 +805,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			Maybe()
 
 		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		sdk.ConsumerGroupSDK.EXPECT().
+		sdk.ConsumersSDK.EXPECT().
 			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 				ConsumerID:     consumerID,
 				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
@@ -896,7 +896,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			Maybe()
 
 		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		sdk.ConsumerGroupSDK.EXPECT().
+		sdk.ConsumersSDK.EXPECT().
 			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 				ConsumerID:     consumerID,
 				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
@@ -987,7 +987,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			Maybe()
 
 		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		sdk.ConsumerGroupSDK.EXPECT().
+		sdk.ConsumersSDK.EXPECT().
 			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
 				ConsumerID:     consumerID,
 				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),

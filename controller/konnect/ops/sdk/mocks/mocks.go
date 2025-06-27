@@ -4365,6 +4365,89 @@ func (_c *MockConsumersSDK_ListConsumer_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// ListConsumerGroupsForConsumer provides a mock function for the type MockConsumersSDK
+func (_mock *MockConsumersSDK) ListConsumerGroupsForConsumer(ctx context.Context, request operations.ListConsumerGroupsForConsumerRequest, opts ...operations.Option) (*operations.ListConsumerGroupsForConsumerResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, request, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, request)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for ListConsumerGroupsForConsumer")
+	}
+
+	var r0 *operations.ListConsumerGroupsForConsumerResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConsumerGroupsForConsumerRequest, ...operations.Option) (*operations.ListConsumerGroupsForConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConsumerGroupsForConsumerRequest, ...operations.Option) *operations.ListConsumerGroupsForConsumerResponse); ok {
+		r0 = returnFunc(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.ListConsumerGroupsForConsumerResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, operations.ListConsumerGroupsForConsumerRequest, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockConsumersSDK_ListConsumerGroupsForConsumer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListConsumerGroupsForConsumer'
+type MockConsumersSDK_ListConsumerGroupsForConsumer_Call struct {
+	*mock.Call
+}
+
+// ListConsumerGroupsForConsumer is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request operations.ListConsumerGroupsForConsumerRequest
+//   - opts ...operations.Option
+func (_e *MockConsumersSDK_Expecter) ListConsumerGroupsForConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockConsumersSDK_ListConsumerGroupsForConsumer_Call {
+	return &MockConsumersSDK_ListConsumerGroupsForConsumer_Call{Call: _e.mock.On("ListConsumerGroupsForConsumer",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockConsumersSDK_ListConsumerGroupsForConsumer_Call) Run(run func(ctx context.Context, request operations.ListConsumerGroupsForConsumerRequest, opts ...operations.Option)) *MockConsumersSDK_ListConsumerGroupsForConsumer_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.ListConsumerGroupsForConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.ListConsumerGroupsForConsumerRequest)
+		}
+		var arg2 []operations.Option
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockConsumersSDK_ListConsumerGroupsForConsumer_Call) Return(listConsumerGroupsForConsumerResponse *operations.ListConsumerGroupsForConsumerResponse, err error) *MockConsumersSDK_ListConsumerGroupsForConsumer_Call {
+	_c.Call.Return(listConsumerGroupsForConsumerResponse, err)
+	return _c
+}
+
+func (_c *MockConsumersSDK_ListConsumerGroupsForConsumer_Call) RunAndReturn(run func(ctx context.Context, request operations.ListConsumerGroupsForConsumerRequest, opts ...operations.Option) (*operations.ListConsumerGroupsForConsumerResponse, error)) *MockConsumersSDK_ListConsumerGroupsForConsumer_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // UpsertConsumer provides a mock function for the type MockConsumersSDK
 func (_mock *MockConsumersSDK) UpsertConsumer(ctx context.Context, upsertConsumerRequest operations.UpsertConsumerRequest, opts ...operations.Option) (*operations.UpsertConsumerResponse, error) {
 	var tmpRet mock.Arguments
@@ -4815,89 +4898,6 @@ func (_c *MockConsumerGroupSDK_ListConsumerGroup_Call) Return(listConsumerGroupR
 }
 
 func (_c *MockConsumerGroupSDK_ListConsumerGroup_Call) RunAndReturn(run func(ctx context.Context, request operations.ListConsumerGroupRequest, opts ...operations.Option) (*operations.ListConsumerGroupResponse, error)) *MockConsumerGroupSDK_ListConsumerGroup_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// ListConsumerGroupsForConsumer provides a mock function for the type MockConsumerGroupSDK
-func (_mock *MockConsumerGroupSDK) ListConsumerGroupsForConsumer(ctx context.Context, request operations.ListConsumerGroupsForConsumerRequest, opts ...operations.Option) (*operations.ListConsumerGroupsForConsumerResponse, error) {
-	var tmpRet mock.Arguments
-	if len(opts) > 0 {
-		tmpRet = _mock.Called(ctx, request, opts)
-	} else {
-		tmpRet = _mock.Called(ctx, request)
-	}
-	ret := tmpRet
-
-	if len(ret) == 0 {
-		panic("no return value specified for ListConsumerGroupsForConsumer")
-	}
-
-	var r0 *operations.ListConsumerGroupsForConsumerResponse
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConsumerGroupsForConsumerRequest, ...operations.Option) (*operations.ListConsumerGroupsForConsumerResponse, error)); ok {
-		return returnFunc(ctx, request, opts...)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.ListConsumerGroupsForConsumerRequest, ...operations.Option) *operations.ListConsumerGroupsForConsumerResponse); ok {
-		r0 = returnFunc(ctx, request, opts...)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*operations.ListConsumerGroupsForConsumerResponse)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, operations.ListConsumerGroupsForConsumerRequest, ...operations.Option) error); ok {
-		r1 = returnFunc(ctx, request, opts...)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'ListConsumerGroupsForConsumer'
-type MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call struct {
-	*mock.Call
-}
-
-// ListConsumerGroupsForConsumer is a helper method to define mock.On call
-//   - ctx context.Context
-//   - request operations.ListConsumerGroupsForConsumerRequest
-//   - opts ...operations.Option
-func (_e *MockConsumerGroupSDK_Expecter) ListConsumerGroupsForConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call {
-	return &MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call{Call: _e.mock.On("ListConsumerGroupsForConsumer",
-		append([]interface{}{ctx, request}, opts...)...)}
-}
-
-func (_c *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call) Run(run func(ctx context.Context, request operations.ListConsumerGroupsForConsumerRequest, opts ...operations.Option)) *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 operations.ListConsumerGroupsForConsumerRequest
-		if args[1] != nil {
-			arg1 = args[1].(operations.ListConsumerGroupsForConsumerRequest)
-		}
-		var arg2 []operations.Option
-		var variadicArgs []operations.Option
-		if len(args) > 2 {
-			variadicArgs = args[2].([]operations.Option)
-		}
-		arg2 = variadicArgs
-		run(
-			arg0,
-			arg1,
-			arg2...,
-		)
-	})
-	return _c
-}
-
-func (_c *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call) Return(listConsumerGroupsForConsumerResponse *operations.ListConsumerGroupsForConsumerResponse, err error) *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call {
-	_c.Call.Return(listConsumerGroupsForConsumerResponse, err)
-	return _c
-}
-
-func (_c *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call) RunAndReturn(run func(ctx context.Context, request operations.ListConsumerGroupsForConsumerRequest, opts ...operations.Option) (*operations.ListConsumerGroupsForConsumerResponse, error)) *MockConsumerGroupSDK_ListConsumerGroupsForConsumer_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -5755,7 +5755,7 @@ func (_m *MockKeySetsSDK) EXPECT() *MockKeySetsSDK_Expecter {
 }
 
 // CreateKeySet provides a mock function for the type MockKeySetsSDK
-func (_mock *MockKeySetsSDK) CreateKeySet(ctx context.Context, controlPlaneID string, keySet components.KeySet, opts ...operations.Option) (*operations.CreateKeySetResponse, error) {
+func (_mock *MockKeySetsSDK) CreateKeySet(ctx context.Context, controlPlaneID string, keySet *components.KeySet, opts ...operations.Option) (*operations.CreateKeySetResponse, error) {
 	var tmpRet mock.Arguments
 	if len(opts) > 0 {
 		tmpRet = _mock.Called(ctx, controlPlaneID, keySet, opts)
@@ -5770,17 +5770,17 @@ func (_mock *MockKeySetsSDK) CreateKeySet(ctx context.Context, controlPlaneID st
 
 	var r0 *operations.CreateKeySetResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.KeySet, ...operations.Option) (*operations.CreateKeySetResponse, error)); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *components.KeySet, ...operations.Option) (*operations.CreateKeySetResponse, error)); ok {
 		return returnFunc(ctx, controlPlaneID, keySet, opts...)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, components.KeySet, ...operations.Option) *operations.CreateKeySetResponse); ok {
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, *components.KeySet, ...operations.Option) *operations.CreateKeySetResponse); ok {
 		r0 = returnFunc(ctx, controlPlaneID, keySet, opts...)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*operations.CreateKeySetResponse)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, components.KeySet, ...operations.Option) error); ok {
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, *components.KeySet, ...operations.Option) error); ok {
 		r1 = returnFunc(ctx, controlPlaneID, keySet, opts...)
 	} else {
 		r1 = ret.Error(1)
@@ -5796,14 +5796,14 @@ type MockKeySetsSDK_CreateKeySet_Call struct {
 // CreateKeySet is a helper method to define mock.On call
 //   - ctx context.Context
 //   - controlPlaneID string
-//   - keySet components.KeySet
+//   - keySet *components.KeySet
 //   - opts ...operations.Option
 func (_e *MockKeySetsSDK_Expecter) CreateKeySet(ctx interface{}, controlPlaneID interface{}, keySet interface{}, opts ...interface{}) *MockKeySetsSDK_CreateKeySet_Call {
 	return &MockKeySetsSDK_CreateKeySet_Call{Call: _e.mock.On("CreateKeySet",
 		append([]interface{}{ctx, controlPlaneID, keySet}, opts...)...)}
 }
 
-func (_c *MockKeySetsSDK_CreateKeySet_Call) Run(run func(ctx context.Context, controlPlaneID string, keySet components.KeySet, opts ...operations.Option)) *MockKeySetsSDK_CreateKeySet_Call {
+func (_c *MockKeySetsSDK_CreateKeySet_Call) Run(run func(ctx context.Context, controlPlaneID string, keySet *components.KeySet, opts ...operations.Option)) *MockKeySetsSDK_CreateKeySet_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
@@ -5813,9 +5813,9 @@ func (_c *MockKeySetsSDK_CreateKeySet_Call) Run(run func(ctx context.Context, co
 		if args[1] != nil {
 			arg1 = args[1].(string)
 		}
-		var arg2 components.KeySet
+		var arg2 *components.KeySet
 		if args[2] != nil {
-			arg2 = args[2].(components.KeySet)
+			arg2 = args[2].(*components.KeySet)
 		}
 		var arg3 []operations.Option
 		var variadicArgs []operations.Option
@@ -5838,7 +5838,7 @@ func (_c *MockKeySetsSDK_CreateKeySet_Call) Return(createKeySetResponse *operati
 	return _c
 }
 
-func (_c *MockKeySetsSDK_CreateKeySet_Call) RunAndReturn(run func(ctx context.Context, controlPlaneID string, keySet components.KeySet, opts ...operations.Option) (*operations.CreateKeySetResponse, error)) *MockKeySetsSDK_CreateKeySet_Call {
+func (_c *MockKeySetsSDK_CreateKeySet_Call) RunAndReturn(run func(ctx context.Context, controlPlaneID string, keySet *components.KeySet, opts ...operations.Option) (*operations.CreateKeySetResponse, error)) *MockKeySetsSDK_CreateKeySet_Call {
 	_c.Call.Return(run)
 	return _c
 }

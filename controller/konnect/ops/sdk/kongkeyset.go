@@ -9,7 +9,7 @@ import (
 
 // KeySetsSDK is the interface for the KeySetsSDK.
 type KeySetsSDK interface {
-	CreateKeySet(ctx context.Context, controlPlaneID string, keySet sdkkonnectcomp.KeySet, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateKeySetResponse, error)
+	CreateKeySet(ctx context.Context, controlPlaneID string, keySet *sdkkonnectcomp.KeySet, opts ...sdkkonnectops.Option) (*sdkkonnectops.CreateKeySetResponse, error)
 	UpsertKeySet(ctx context.Context, request sdkkonnectops.UpsertKeySetRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.UpsertKeySetResponse, error)
 	DeleteKeySet(ctx context.Context, controlPlaneID string, keySetID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.DeleteKeySetResponse, error)
 	ListKeySet(ctx context.Context, request sdkkonnectops.ListKeySetRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListKeySetResponse, error)
