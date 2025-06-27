@@ -353,6 +353,11 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		return nil, fmt.Errorf("failed to get client key from mTLS secret %s", client.ObjectKeyFromObject(mtlsSecret))
 	}
 
+	payloadCustomizer, err := defaultPayloadCustomizer(nil)
+	if err != nil {
+		return nil, err
+	}
+
 	cfgOpts := []managercfg.Opt{
 		WithRestConfig(r.RestConfig, r.KubeConfigPath),
 		WithKongAdminService(types.NamespacedName{
@@ -382,7 +387,8 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 
 		// TODO: https://github.com/kong/kong-operator/issues/1749 metrics.
 		WithMetricsServerOff(),
-		// TODO: https://github.com/kong/kong-operator/issues/1359 anonymous reports.
+		WithAnonymousReports(r.AnonymousReportsEnabled),
+		WithAnonymousReportsFixedPayloadCustomizer(payloadCustomizer),
 	}
 
 	// If the ControlPlane is owned by a Gateway, we set the Gateway to be the only one to reconcile.

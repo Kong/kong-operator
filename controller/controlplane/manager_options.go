@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	telemetryTypes "github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry/types"
 	"github.com/samber/mo"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
@@ -393,4 +394,18 @@ func managerConfigToStatusFeatureGates(
 	}
 
 	return featureGates
+}
+
+// WithAnonymousReports sets whether anonymous usage reports are enabled for the manager.
+func WithAnonymousReports(enabled bool) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.AnonymousReports = enabled
+	}
+}
+
+// WithAnonymousReportsFixedPayloadCustomizer sets a custom payload customizer for anonymous reports.
+func WithAnonymousReportsFixedPayloadCustomizer(customizer telemetryTypes.PayloadCustomizer) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.AnonymousReportsFixedPayloadCustomizer = customizer
+	}
 }
