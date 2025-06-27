@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/tonglil/buflogr"
 
+	"github.com/kong/kong-operator/internal/telemetry"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
@@ -753,4 +754,43 @@ func TestManagerConfigToStatusFeatureGates(t *testing.T) {
 			assert.ElementsMatch(t, tt.expected, result)
 		})
 	}
+}
+
+func TestWithAnonymousReports(t *testing.T) {
+	testCases := []struct {
+		name     string
+		enabled  bool
+		expected bool
+	}{
+		{"anonymous reports enabled", true, true},
+		{"anonymous reports disabled", false, false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &managercfg.Config{}
+			opt := WithAnonymousReports(tc.enabled)
+			opt(cfg)
+			assert.Equal(t, tc.expected, cfg.AnonymousReports)
+		})
+	}
+}
+
+func TestWithAnonymousReportsFixedPayloadCustomizer(t *testing.T) {
+	called := false
+	mockCustomizer := func(payload telemetry.Payload) telemetry.Payload {
+		called = true
+		payload["test"] = "value"
+		return payload
+	}
+
+	cfg := &managercfg.Config{}
+	opt := WithAnonymousReportsFixedPayloadCustomizer(mockCustomizer)
+	opt(cfg)
+
+	assert.NotNil(t, cfg.AnonymousReportsFixedPayloadCustomizer)
+	testPayload := telemetry.Payload{}
+	result := cfg.AnonymousReportsFixedPayloadCustomizer(testPayload)
+	assert.True(t, called)
+	assert.Equal(t, "value", result["test"])
 }
