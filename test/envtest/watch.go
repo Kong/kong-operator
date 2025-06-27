@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	clientWatchTimeout = 30 * time.Second
+	clientWatchTimeout = 45 * time.Second
 )
 
 // watch is a wrapper around watch.Interface.
