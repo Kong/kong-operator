@@ -15,7 +15,7 @@ gotestsum: "1.12.3"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
 crd-ref-docs: "0.1.0"
 # renovate: datasource=github-releases depName=vektra/mockery
-mockery: "3.4.0"
+mockery: "3.5.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
 setup-envtest: "0.21.0"
 # renovate: datasource=github-releases depName=rhysd/actionlint
