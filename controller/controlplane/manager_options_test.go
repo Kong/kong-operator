@@ -762,8 +762,16 @@ func TestWithAnonymousReports(t *testing.T) {
 		enabled  bool
 		expected bool
 	}{
-		{"anonymous reports enabled", true, true},
-		{"anonymous reports disabled", false, false},
+		{
+			name:     "anonymous reports enabled",
+			enabled:  true,
+			expected: true,
+		},
+		{
+			name:     "anonymous reports disabled",
+			enabled:  false,
+			expected: false,
+		},
 	}
 
 	for _, tc := range testCases {

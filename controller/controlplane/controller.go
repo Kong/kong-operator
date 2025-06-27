@@ -353,7 +353,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		return nil, fmt.Errorf("failed to get client key from mTLS secret %s", client.ObjectKeyFromObject(mtlsSecret))
 	}
 
-	payloadCustomizer, err := defaultPayloadCustomizer(nil)
+	payloadCustomizer, err := defaultPayloadCustomizer()
 	if err != nil {
 		return nil, err
 	}
