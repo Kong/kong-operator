@@ -92,8 +92,8 @@ func deleteKeySet(
 	return nil
 }
 
-func kongKeySetToKeySetInput(keySet *configurationv1alpha1.KongKeySet) sdkkonnectcomp.KeySet {
-	return sdkkonnectcomp.KeySet{
+func kongKeySetToKeySetInput(keySet *configurationv1alpha1.KongKeySet) *sdkkonnectcomp.KeySet {
+	return &sdkkonnectcomp.KeySet{
 		Name: lo.ToPtr(keySet.Spec.Name),
 		Tags: GenerateTagsForObject(keySet, keySet.Spec.Tags...),
 	}

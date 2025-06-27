@@ -263,7 +263,9 @@ func configurationDataPlaneGroupAutoscaleTypeToSDKAutoscale(
 	case konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic:
 		return sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscale{
 			Type: sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleTypeConfigurationDataPlaneGroupAutoscaleStatic,
-			ConfigurationDataPlaneGroupAutoscaleStatic: &sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleStatic{
+			// ConfigurationDataPlaneGroupAutoscaleStatic is deprecated.
+			// TODO: https://github.com/Kong/kong-operator/issues/1779
+			ConfigurationDataPlaneGroupAutoscaleStatic: &sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleStatic{ //nolint:staticcheck
 				Kind:               sdkkonnectcomp.KindStatic,
 				InstanceType:       autoscale.Static.InstanceType,
 				RequestedInstances: autoscale.Static.RequestedInstances,

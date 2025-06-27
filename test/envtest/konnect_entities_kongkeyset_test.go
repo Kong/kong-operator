@@ -64,7 +64,7 @@ func TestKongKeySet(t *testing.T) {
 	t.Run("create, patch, delete", func(t *testing.T) {
 		t.Log("Setting up SDK expectations on KongKeySet creation")
 		sdk.KeySetsSDK.EXPECT().CreateKeySet(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input sdkkonnectcomp.KeySet) bool {
+			mock.MatchedBy(func(input *sdkkonnectcomp.KeySet) bool {
 				return input.Name != nil && *input.Name == keySetName
 			}),
 		).Return(&sdkkonnectops.CreateKeySetResponse{
@@ -142,7 +142,7 @@ func TestKongKeySet(t *testing.T) {
 		sdk.KeySetsSDK.EXPECT().CreateKeySet(
 			mock.Anything,
 			cpID,
-			mock.MatchedBy(func(input sdkkonnectcomp.KeySet) bool {
+			mock.MatchedBy(func(input *sdkkonnectcomp.KeySet) bool {
 				return *input.Name == keySetName
 			}),
 		).Return(&sdkkonnectops.CreateKeySetResponse{}, &sdkkonnecterrs.ConflictError{})
@@ -179,7 +179,7 @@ func TestKongKeySet(t *testing.T) {
 		t.Skip("konnectID control plane reference not supported yet: https://github.com/kong/kong-operator/issues/1469")
 		t.Log("Setting up SDK expectations on KongKeySet creation")
 		sdk.KeySetsSDK.EXPECT().CreateKeySet(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input sdkkonnectcomp.KeySet) bool {
+			mock.MatchedBy(func(input *sdkkonnectcomp.KeySet) bool {
 				return input.Name != nil && *input.Name == keySetName
 			}),
 		).Return(&sdkkonnectops.CreateKeySetResponse{
@@ -227,7 +227,7 @@ func TestKongKeySet(t *testing.T) {
 			CreateKeySet(
 				mock.Anything,
 				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.KeySet) bool {
+				mock.MatchedBy(func(req *sdkkonnectcomp.KeySet) bool {
 					return slices.Contains(req.Tags, "test-1")
 				}),
 			).

@@ -542,7 +542,6 @@ func logOpComplete[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ctx context.Context, start time.Time, op Op, e TEnt, err error) {
-
 	// if the entity is a Mirror, don't log the konnect operation,
 	// as no operation occurred.
 	if isMirrorableEntity(e) {
