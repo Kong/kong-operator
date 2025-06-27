@@ -5,11 +5,18 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+
+	"github.com/kong/kong-operator/test"
 )
 
 // SetupTelepresence installs the telepresence traffic manager in the cluster and connects to it.
 // It returns a cleanup function that should be called when the test is done.
 func SetupTelepresence(ctx context.Context) (func(), error) {
+	if test.IsTelepresenceDisabled() {
+		fmt.Println("INFO: telepresence is disabled, skipping setup")
+		return func() {}, nil
+	}
+
 	fmt.Println("INFO: installing telepresence traffic manager in the cluster")
 	const telepresenceBin = "TELEPRESENCE_BIN"
 	telepresenceExecutable := os.Getenv(telepresenceBin)
