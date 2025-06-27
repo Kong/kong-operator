@@ -11,16 +11,16 @@ spec:
   - name: GatewayAlpha
     state: enabled
   - name: CombinedServicesFromDifferentHTTPRoutes
-    state: disabled
+    state: enabled
   controllers:
-  - name: INGRESS_NETWORKINGV1
-    state: enabled
-  - name: INGRESS_CLASS_NETWORKINGV1
-    state: enabled
+  - name: KONG_UDPINGRESS
+    state: disabled
   - name: KONG_TCPINGRESS
     state: disabled
-  - name: GWAPI_GATEWAY
+  - name: KONG_INGRESS
     state: disabled
+  - name: GWAPI_GATEWAY
+    state: enabled
   - name: GWAPI_HTTPROUTE
     state: disabled
 ---
