@@ -131,6 +131,68 @@ func WithFeatureGates(logger logr.Logger, featureGates []gwtypes.ControlPlaneFea
 	}
 }
 
+const (
+	// ControllerNameIngress identifies the controller for managing Kubernetes
+	// Ingress resources using the networking/v1 API version.
+	ControllerNameIngress = "INGRESS_NETWORKINGV1"
+	// ControllerNameIngressClass identifies the controller for managing
+	// Kubernetes IngressClass resources using the networking/v1 API version.
+	ControllerNameIngressClass = "INGRESS_CLASS_NETWORKINGV1"
+	// ControllerNameIngressClassParameters identifies the controller for
+	// managing IngressClass parameters.
+	ControllerNameIngressClassParameters = "INGRESS_CLASS_PARAMETERS"
+
+	// ControllerNameKongUDPIngress identifies the controller for managing Kong
+	// UDP ingress resources.
+	ControllerNameKongUDPIngress = "KONG_UDPINGRESS"
+	// ControllerNameKongTCPIngress identifies the controller for managing Kong
+	// TCP ingress resources.
+	ControllerNameKongTCPIngress = "KONG_TCPINGRESS"
+	// ControllerNameKongIngress identifies the controller for managing
+	// Kong-specific ingress resources.
+	ControllerNameKongIngress = "KONG_INGRESS"
+	// ControllerNameKongClusterPlugin identifies the controller for managing
+	// Kong cluster-scoped plugin resources.
+	ControllerNameKongClusterPlugin = "KONG_CLUSTERPLUGIN"
+	// ControllerNameKongPlugin identifies the controller for managing Kong
+	// plugin resources.
+	ControllerNameKongPlugin = "KONG_PLUGIN"
+	// ControllerNameKongConsumer identifies the controller for managing Kong
+	// consumer resources.
+	ControllerNameKongConsumer = "KONG_CONSUMER"
+	// ControllerNameKongUpstreamPolicy identifies the controller for managing
+	// Kong upstream policy resources.
+	ControllerNameKongUpstreamPolicy = "KONG_UPSTREAM_POLICY"
+	// ControllerNameKongServiceFacade identifies the controller for managing
+	// Kong service facade resources.
+	ControllerNameKongServiceFacade = "KONG_SERVICE_FACADE"
+	// ControllerNameKongVault identifies the controller for managing Kong vault
+	// resources.
+	ControllerNameKongVault = "KONG_VAULT"
+	// ControllerNameKongLicense identifies the controller for managing Kong
+	// license resources.
+	ControllerNameKongLicense = "KONG_LICENSE"
+	// ControllerNameKongCustomEntity identifies the controller for managing
+	// Kong custom entity resources.
+	ControllerNameKongCustomEntity = "KONG_CUSTOM_ENTITY"
+	// ControllerNameService identifies the controller for managing Kubernetes
+	// Service resources.
+	ControllerNameService = "SERVICE"
+
+	// ControllerNameGatewayAPIGateway identifies the controller for managing
+	// Gateway API Gateway resources.
+	ControllerNameGatewayAPIGateway = "GWAPI_GATEWAY"
+	// ControllerNameGatewayAPIHTTPRoute identifies the controller for managing
+	// Gateway API HTTPRoute resources.
+	ControllerNameGatewayAPIHTTPRoute = "GWAPI_HTTPROUTE"
+	// ControllerNameGatewayAPIGRPCRoute identifies the controller for managing
+	// Gateway API GRPCRoute resources.
+	ControllerNameGatewayAPIGRPCRoute = "GWAPI_GRPCROUTE"
+	// ControllerNameGatewayAPIReferenceGrant identifies the controller for managing
+	// Gateway API ReferenceGrant resources.
+	ControllerNameGatewayAPIReferenceGrant = "GWAPI_REFERENCE_GRANT"
+)
+
 // WithControllers sets the controllers for the manager.
 func WithControllers(logger logr.Logger, controllers []gwtypes.ControlPlaneController) managercfg.Opt {
 	logDeprecated := func(logger logr.Logger, enabled bool, controllerName string) {
@@ -149,52 +211,52 @@ func WithControllers(logger logr.Logger, controllers []gwtypes.ControlPlaneContr
 			switch controller.Name {
 			// Ingress related controllers.
 
-			case "INGRESS_NETWORKINGV1":
+			case ControllerNameIngress:
 				setOpt(&c.IngressNetV1Enabled, controller.State)
-			case "INGRESS_CLASS_NETWORKINGV1":
+			case ControllerNameIngressClass:
 				setOpt(&c.IngressClassNetV1Enabled, controller.State)
-			case "INGRESS_CLASS_PARAMETERS":
+			case ControllerNameIngressClassParameters:
 				setOpt(&c.IngressClassParametersEnabled, controller.State)
 
 			// Kong related controllers.
 
-			case "KONG_UDPINGRESS":
+			case ControllerNameKongUDPIngress:
 				setOpt(&c.UDPIngressEnabled, controller.State)
 				logDeprecated(logger, c.UDPIngressEnabled, controller.Name)
-			case "KONG_TCPINGRESS":
+			case ControllerNameKongTCPIngress:
 				setOpt(&c.TCPIngressEnabled, controller.State)
 				logDeprecated(logger, c.TCPIngressEnabled, controller.Name)
-			case "KONG_INGRESS":
+			case ControllerNameKongIngress:
 				setOpt(&c.KongIngressEnabled, controller.State)
 				logDeprecated(logger, c.KongIngressEnabled, controller.Name)
-			case "KONG_CLUSTERPLUGIN":
+			case ControllerNameKongClusterPlugin:
 				setOpt(&c.KongClusterPluginEnabled, controller.State)
-			case "KONG_PLUGIN":
+			case ControllerNameKongPlugin:
 				setOpt(&c.KongPluginEnabled, controller.State)
-			case "KONG_CONSUMER":
+			case ControllerNameKongConsumer:
 				setOpt(&c.KongConsumerEnabled, controller.State)
-			case "KONG_UPSTREAM_POLICY":
+			case ControllerNameKongUpstreamPolicy:
 				setOpt(&c.KongUpstreamPolicyEnabled, controller.State)
-			case "KONG_SERVICE_FACADE":
+			case ControllerNameKongServiceFacade:
 				setOpt(&c.KongServiceFacadeEnabled, controller.State)
-			case "KONG_VAULT":
+			case ControllerNameKongVault:
 				setOpt(&c.KongVaultEnabled, controller.State)
-			case "KONG_LICENSE":
+			case ControllerNameKongLicense:
 				setOpt(&c.KongLicenseEnabled, controller.State)
-			case "KONG_CUSTOM_ENTITY":
+			case ControllerNameKongCustomEntity:
 				setOpt(&c.KongCustomEntityEnabled, controller.State)
-			case "SERVICE":
+			case ControllerNameService:
 				setOpt(&c.ServiceEnabled, controller.State)
 
 			// Gateway API related controllers.
 
-			case "GWAPI_GATEWAY":
+			case ControllerNameGatewayAPIGateway:
 				setOpt(&c.GatewayAPIGatewayController, controller.State)
-			case "GWAPI_HTTPROUTE":
+			case ControllerNameGatewayAPIHTTPRoute:
 				setOpt(&c.GatewayAPIHTTPRouteController, controller.State)
-			case "GWAPI_GRPCROUTE":
+			case ControllerNameGatewayAPIGRPCRoute:
 				setOpt(&c.GatewayAPIGRPCRouteController, controller.State)
-			case "GWAPI_REFERENCE_GRANT":
+			case ControllerNameGatewayAPIReferenceGrant:
 				setOpt(&c.GatewayAPIReferenceGrantController, controller.State)
 
 			default:
@@ -203,4 +265,132 @@ func WithControllers(logger logr.Logger, controllers []gwtypes.ControlPlaneContr
 			}
 		}
 	}
+}
+
+func managerConfigToStatusControllers(
+	cfg managercfg.Config,
+) []gwtypes.ControlPlaneController {
+	boolToControllerState := func(enabled bool) gwtypes.ControllerState {
+		if enabled {
+			return gwtypes.ControlPlaneControllerStateEnabled
+		}
+		return gwtypes.ControlPlaneControllerStateDisabled
+	}
+	controllers := make([]gwtypes.ControlPlaneController, 0, 19)
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameIngress,
+		State: boolToControllerState(cfg.IngressNetV1Enabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameIngressClass,
+		State: boolToControllerState(cfg.IngressClassNetV1Enabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameIngressClassParameters,
+		State: boolToControllerState(cfg.IngressClassParametersEnabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameKongUDPIngress,
+		State: boolToControllerState(cfg.UDPIngressEnabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameKongTCPIngress,
+		State: boolToControllerState(cfg.TCPIngressEnabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameKongIngress,
+		State: boolToControllerState(cfg.KongIngressEnabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameKongClusterPlugin,
+		State: boolToControllerState(cfg.KongClusterPluginEnabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameKongPlugin,
+		State: boolToControllerState(cfg.KongPluginEnabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameKongConsumer,
+		State: boolToControllerState(cfg.KongConsumerEnabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameKongUpstreamPolicy,
+		State: boolToControllerState(cfg.KongUpstreamPolicyEnabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameKongServiceFacade,
+		State: boolToControllerState(cfg.KongServiceFacadeEnabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameKongVault,
+		State: boolToControllerState(cfg.KongVaultEnabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameKongLicense,
+		State: boolToControllerState(cfg.KongLicenseEnabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameKongCustomEntity,
+		State: boolToControllerState(cfg.KongCustomEntityEnabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameService,
+		State: boolToControllerState(cfg.ServiceEnabled),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameGatewayAPIGateway,
+		State: boolToControllerState(cfg.GatewayAPIGatewayController),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameGatewayAPIHTTPRoute,
+		State: boolToControllerState(cfg.GatewayAPIHTTPRouteController),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameGatewayAPIGRPCRoute,
+		State: boolToControllerState(cfg.GatewayAPIGRPCRouteController),
+	})
+
+	controllers = append(controllers, gwtypes.ControlPlaneController{
+		Name:  ControllerNameGatewayAPIReferenceGrant,
+		State: boolToControllerState(cfg.GatewayAPIReferenceGrantController),
+	})
+
+	return controllers
+}
+
+func managerConfigToStatusFeatureGates(
+	cfg managercfg.Config,
+) []gwtypes.ControlPlaneFeatureGate {
+	featureGates := make([]gwtypes.ControlPlaneFeatureGate, 0, len(cfg.FeatureGates))
+
+	for name, enabled := range cfg.FeatureGates {
+		state := gwtypes.FeatureGateStateDisabled
+		if enabled {
+			state = gwtypes.FeatureGateStateEnabled
+		}
+		featureGates = append(featureGates, gwtypes.ControlPlaneFeatureGate{
+			Name:  name,
+			State: state,
+		})
+	}
+
+	return featureGates
 }

@@ -639,8 +639,8 @@ func TestNeedsUpdate(t *testing.T) {
 			updated := &TestResource{
 				Conditions: tt.updated,
 			}
-			assert.Equal(t, tt.expected, NeedsUpdate(current, updated))
-			assert.Equal(t, tt.expected, NeedsUpdate(updated, current))
+			assert.Equal(t, tt.expected, ConditionsNeedsUpdate(current, updated))
+			assert.Equal(t, tt.expected, ConditionsNeedsUpdate(updated, current))
 		})
 	}
 }

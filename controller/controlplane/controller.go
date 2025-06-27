@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"time"
 
@@ -248,23 +249,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			if err := r.scheduleInstance(ctx, logger, mgrID, mgrCfg); err != nil {
 				return ctrl.Result{}, err
 			}
+			r.ensureControlPlaneStatus(cp, mgrCfg)
 		}
-
-		k8sutils.SetCondition(
-			k8sutils.NewCondition(kcfgdataplane.ReadyType, metav1.ConditionFalse, kcfgdataplane.WaitingToBecomeReadyReason, kcfgdataplane.WaitingToBecomeReadyMessage),
-			cp,
-		)
-		res, err := r.patchStatus(ctx, logger, cp)
-		if err != nil {
-			log.Debug(logger, "unable to patch ControlPlane status", "error", err)
-			return ctrl.Result{}, err
-		}
-		if !res.IsZero() {
-			log.Debug(logger, "unable to patch ControlPlane status")
-			return res, nil
-		}
-
-		return ctrl.Result{RequeueAfter: requeueAfterBoot}, nil
+		return r.initStatusToWaitingToBecomeReady(ctx, logger, cp)
 	}
 
 	log.Trace(logger, "checking if ControlPlane instance config matches the spec")
@@ -297,7 +284,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			if err := r.scheduleInstance(ctx, logger, mgrID, mgrCfg); err != nil {
 				return ctrl.Result{}, fmt.Errorf("failed to schedule instance: %w", err)
 			}
-			return ctrl.Result{RequeueAfter: requeueAfterBoot}, nil
+			r.ensureControlPlaneStatus(cp, mgrCfg)
+
+			return r.initStatusToWaitingToBecomeReady(ctx, logger, cp)
 		}
 	}
 
@@ -327,18 +316,20 @@ func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, update
 		return ctrl.Result{}, err
 	}
 
-	if k8sutils.NeedsUpdate(current, updated) {
-		log.Debug(logger, "patching ControlPlane status", "status", updated.Status)
-		if err := r.Client.Status().Patch(ctx, updated, client.MergeFrom(current)); err != nil {
-			if k8serrors.IsConflict(err) {
-				log.Debug(logger, "conflict found when updating ControlPlane, retrying")
-				return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
-			}
-			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane's status : %w", err)
-		}
+	if !k8sutils.ConditionsNeedsUpdate(current, updated) &&
+		reflect.DeepEqual(updated.Status.Controllers, current.Status.Controllers) &&
+		reflect.DeepEqual(updated.Status.FeatureGates, current.Status.FeatureGates) {
 		return ctrl.Result{}, nil
 	}
 
+	log.Debug(logger, "patching ControlPlane status", "status", updated.Status)
+	if err := r.Client.Status().Patch(ctx, updated, client.MergeFrom(current)); err != nil {
+		if k8serrors.IsConflict(err) {
+			log.Debug(logger, "conflict found when updating ControlPlane, retrying")
+			return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane's status : %w", err)
+	}
 	return ctrl.Result{}, nil
 }
 
@@ -426,4 +417,38 @@ func (r *Reconciler) scheduleInstance(
 		return fmt.Errorf("failed to schedule instance: %w", err)
 	}
 	return nil
+}
+
+func (r *Reconciler) ensureControlPlaneStatus(
+	cp *ControlPlane,
+	mgrCfg managercfg.Config,
+) {
+	cp.Status.Controllers = managerConfigToStatusControllers(mgrCfg)
+	cp.Status.FeatureGates = managerConfigToStatusFeatureGates(mgrCfg)
+}
+
+func (r *Reconciler) initStatusToWaitingToBecomeReady(
+	ctx context.Context,
+	logger logr.Logger,
+	cp *ControlPlane,
+) (ctrl.Result, error) {
+	k8sutils.SetCondition(
+		k8sutils.NewCondition(
+			kcfgdataplane.ReadyType,
+			metav1.ConditionFalse,
+			kcfgdataplane.WaitingToBecomeReadyReason,
+			kcfgdataplane.WaitingToBecomeReadyMessage,
+		),
+		cp,
+	)
+	res, err := r.patchStatus(ctx, logger, cp)
+	if err != nil {
+		log.Debug(logger, "unable to patch ControlPlane status", "error", err)
+		return ctrl.Result{}, err
+	}
+	if !res.IsZero() {
+		log.Debug(logger, "unable to patch ControlPlane status")
+		return res, nil
+	}
+	return ctrl.Result{RequeueAfter: requeueAfterBoot}, nil
 }

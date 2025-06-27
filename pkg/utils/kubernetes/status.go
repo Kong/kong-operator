@@ -262,14 +262,19 @@ func NewConditionWithGeneration(cType kcfgconsts.ConditionType, status metav1.Co
 	return c
 }
 
-// NeedsUpdate retrieves the persisted state and compares all the conditions
-// to decide whether the status must be updated or not
-func NeedsUpdate(current, updated ConditionsAware) bool {
-	if len(current.GetConditions()) != len(updated.GetConditions()) {
+// ConditionsNeedsUpdate retrieves the persisted state and compares all the conditions
+// to decide whether the status must be updated or not.
+func ConditionsNeedsUpdate(current, updated ConditionsAware) bool {
+	var (
+		currentConditions = current.GetConditions()
+		updatedConditions = updated.GetConditions()
+	)
+
+	if len(currentConditions) != len(updatedConditions) {
 		return true
 	}
 
-	for _, c := range current.GetConditions() {
+	for _, c := range currentConditions {
 		u, exists := GetCondition(kcfgconsts.ConditionType(c.Type), updated)
 		if !exists {
 			return true
