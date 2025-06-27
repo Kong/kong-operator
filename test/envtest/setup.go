@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/flowcontrol"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
@@ -77,6 +78,7 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.
 	config.CertData = cfg.CertData
 	config.CAData = cfg.CAData
 	config.KeyData = cfg.KeyData
+	config.RateLimiter = flowcontrol.NewTokenBucketRateLimiter(1_000, 10_000)
 
 	discoveryClient, err := discovery.NewDiscoveryClientForConfig(config)
 	require.NoError(t, err)
