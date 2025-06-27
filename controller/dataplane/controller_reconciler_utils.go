@@ -379,7 +379,7 @@ func patchDataPlaneStatus(ctx context.Context, cl client.Client, logger logr.Log
 		return false, err
 	}
 
-	if k8sutils.NeedsUpdate(current, updated) ||
+	if k8sutils.ConditionsNeedsUpdate(current, updated) ||
 		addressesChanged(current, updated) ||
 		readinessChanged(current, updated) ||
 		current.Status.Service != updated.Status.Service ||

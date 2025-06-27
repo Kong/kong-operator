@@ -338,3 +338,419 @@ func TestWithFeatureGates(t *testing.T) {
 		})
 	}
 }
+
+func TestManagerConfigToStatusControllers(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   managercfg.Config
+		expected []gwtypes.ControlPlaneController
+	}{
+		{
+			name: "all controllers disabled",
+			config: managercfg.Config{
+				IngressNetV1Enabled:                false,
+				IngressClassNetV1Enabled:           false,
+				IngressClassParametersEnabled:      false,
+				UDPIngressEnabled:                  false,
+				TCPIngressEnabled:                  false,
+				KongIngressEnabled:                 false,
+				KongClusterPluginEnabled:           false,
+				KongPluginEnabled:                  false,
+				KongConsumerEnabled:                false,
+				KongUpstreamPolicyEnabled:          false,
+				KongServiceFacadeEnabled:           false,
+				KongVaultEnabled:                   false,
+				KongLicenseEnabled:                 false,
+				KongCustomEntityEnabled:            false,
+				ServiceEnabled:                     false,
+				GatewayAPIGatewayController:        false,
+				GatewayAPIHTTPRouteController:      false,
+				GatewayAPIGRPCRouteController:      false,
+				GatewayAPIReferenceGrantController: false,
+			},
+			expected: []gwtypes.ControlPlaneController{
+				{
+					Name:  ControllerNameIngress,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameIngressClass,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameIngressClassParameters,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongUDPIngress,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongTCPIngress,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongIngress,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongClusterPlugin,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongPlugin,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongConsumer,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongUpstreamPolicy,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongServiceFacade,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongVault,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongLicense,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongCustomEntity,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameService,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPIGateway,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPIHTTPRoute,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPIGRPCRoute,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPIReferenceGrant,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+			},
+		},
+		{
+			name: "ingress controllers enabled",
+			config: managercfg.Config{
+				IngressNetV1Enabled:           true,
+				IngressClassNetV1Enabled:      true,
+				IngressClassParametersEnabled: true,
+			},
+			expected: []gwtypes.ControlPlaneController{
+				{
+					Name:  ControllerNameIngress,
+					State: gwtypes.ControlPlaneControllerStateEnabled,
+				},
+				{
+					Name:  ControllerNameIngressClass,
+					State: gwtypes.ControlPlaneControllerStateEnabled,
+				},
+				{
+					Name:  ControllerNameIngressClassParameters,
+					State: gwtypes.ControlPlaneControllerStateEnabled,
+				},
+				{
+					Name:  ControllerNameKongUDPIngress,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongTCPIngress,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongIngress,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongClusterPlugin,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongPlugin,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongConsumer,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongUpstreamPolicy,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongServiceFacade,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongVault,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongLicense,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongCustomEntity,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameService,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPIGateway,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPIHTTPRoute,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPIGRPCRoute,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPIReferenceGrant,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+			},
+		},
+		{
+			name: "single controller enabled",
+			config: managercfg.Config{
+				KongVaultEnabled: true,
+			},
+			expected: []gwtypes.ControlPlaneController{
+				{
+					Name:  ControllerNameIngress,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameIngressClass,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameIngressClassParameters,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongUDPIngress,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongTCPIngress,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongIngress,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongClusterPlugin,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongPlugin,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongConsumer,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongUpstreamPolicy,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongServiceFacade,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongVault,
+					State: gwtypes.ControlPlaneControllerStateEnabled,
+				},
+				{
+					Name:  ControllerNameKongLicense,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameKongCustomEntity,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameService,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPIGateway,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPIHTTPRoute,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPIGRPCRoute,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+				{
+					Name:  ControllerNameGatewayAPIReferenceGrant,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := managerConfigToStatusControllers(tt.config)
+			assert.ElementsMatch(t, tt.expected, result)
+		})
+	}
+}
+
+func TestManagerConfigToStatusFeatureGates(t *testing.T) {
+	tests := []struct {
+		name     string
+		config   managercfg.Config
+		expected []gwtypes.ControlPlaneFeatureGate
+	}{
+		{
+			name: "empty feature gates",
+			config: managercfg.Config{
+				FeatureGates: managercfg.FeatureGates{},
+			},
+			expected: []gwtypes.ControlPlaneFeatureGate{},
+		},
+		{
+			name: "single feature gate enabled",
+			config: managercfg.Config{
+				FeatureGates: managercfg.FeatureGates{
+					"FillIDs": true,
+				},
+			},
+			expected: []gwtypes.ControlPlaneFeatureGate{
+				{
+					Name:  "FillIDs",
+					State: gwtypes.FeatureGateStateEnabled,
+				},
+			},
+		},
+		{
+			name: "single feature gate disabled",
+			config: managercfg.Config{
+				FeatureGates: managercfg.FeatureGates{
+					"FillIDs": false,
+				},
+			},
+			expected: []gwtypes.ControlPlaneFeatureGate{
+				{
+					Name:  "FillIDs",
+					State: gwtypes.FeatureGateStateDisabled,
+				},
+			},
+		},
+		{
+			name: "multiple feature gates mixed states",
+			config: managercfg.Config{
+				FeatureGates: managercfg.FeatureGates{
+					"FillIDs":               true,
+					"RewriteURIs":           false,
+					"FallbackConfiguration": true,
+					"KongServiceFacade":     false,
+				},
+			},
+			expected: []gwtypes.ControlPlaneFeatureGate{
+				{
+					Name:  "FillIDs",
+					State: gwtypes.FeatureGateStateEnabled,
+				},
+				{
+					Name:  "RewriteURIs",
+					State: gwtypes.FeatureGateStateDisabled,
+				},
+				{
+					Name:  "FallbackConfiguration",
+					State: gwtypes.FeatureGateStateEnabled,
+				},
+				{
+					Name:  "KongServiceFacade",
+					State: gwtypes.FeatureGateStateDisabled,
+				},
+			},
+		},
+		{
+			name: "all feature gates enabled",
+			config: managercfg.Config{
+				FeatureGates: managercfg.FeatureGates{
+					"FillIDs":               true,
+					"RewriteURIs":           true,
+					"FallbackConfiguration": true,
+				},
+			},
+			expected: []gwtypes.ControlPlaneFeatureGate{
+				{
+					Name:  "FillIDs",
+					State: gwtypes.FeatureGateStateEnabled,
+				},
+				{
+					Name:  "RewriteURIs",
+					State: gwtypes.FeatureGateStateEnabled,
+				},
+				{
+					Name:  "FallbackConfiguration",
+					State: gwtypes.FeatureGateStateEnabled,
+				},
+			},
+		},
+		{
+			name: "all feature gates disabled",
+			config: managercfg.Config{
+				FeatureGates: managercfg.FeatureGates{
+					"FillIDs":               false,
+					"RewriteURIs":           false,
+					"FallbackConfiguration": false,
+				},
+			},
+			expected: []gwtypes.ControlPlaneFeatureGate{
+				{
+					Name:  "FillIDs",
+					State: gwtypes.FeatureGateStateDisabled,
+				},
+				{
+					Name:  "RewriteURIs",
+					State: gwtypes.FeatureGateStateDisabled,
+				},
+				{
+					Name:  "FallbackConfiguration",
+					State: gwtypes.FeatureGateStateDisabled,
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := managerConfigToStatusFeatureGates(tt.config)
+			assert.ElementsMatch(t, tt.expected, result)
+		})
+	}
+}

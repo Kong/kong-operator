@@ -22,7 +22,7 @@ spec:
   - name: GWAPI_GATEWAY
     state: enabled
   - name: GWAPI_HTTPROUTE
-    state: enabled
+    state: disabled
 ---
 apiVersion: gateway-operator.konghq.com/v1beta1
 kind: DataPlane
