@@ -185,7 +185,7 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 
 	t.Cleanup(func() {
 		if opt.InstallViaKustomize {
-			cleanupEnvironment(t, context.Background(), env, kustomizeDir.Tests()) //nolint:usetesting
+			cleanupEnvironment(t, context.Background(), env, kustomizeDir.Tests())
 		}
 	})
 
