@@ -43,7 +43,7 @@ func addToCleanup(
 
 	t.Cleanup(func() {
 		// Don't use test's context as that might be cancelled already.
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second) //nolint:usetesting
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
 		require.NoError(t, cl.Delete(ctx, obj))
 	})

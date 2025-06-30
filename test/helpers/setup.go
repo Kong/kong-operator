@@ -29,7 +29,7 @@ func SetupTestEnv(t *testing.T, ctx context.Context, env environments.Environmen
 		t.Helper()
 
 		t.Log("performing test cleanup")
-		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5) //nolint:usetesting
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
 		defer cancel()
 		assert.NoError(t, cleaner.Cleanup(ctx))
 	})
@@ -42,7 +42,7 @@ func SetupTestEnv(t *testing.T, ctx context.Context, env environments.Environmen
 
 	t.Cleanup(func() {
 		if t.Failed() {
-			output, err := env.Cluster().DumpDiagnostics(context.Background(), t.Name()) //nolint:usetesting
+			output, err := env.Cluster().DumpDiagnostics(context.Background(), t.Name())
 			require.NoError(t, err)
 			t.Logf("%s failed, dumped diagnostics to %s", t.Name(), output)
 		}
