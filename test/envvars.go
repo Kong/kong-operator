@@ -64,3 +64,14 @@ func KonnectServerURL() string {
 func IsWebhookEnabled() bool {
 	return strings.ToLower(os.Getenv("WEBHOOK_ENABLED")) == "true"
 }
+
+// IsTelepresenceDisabled returns true if the telepresence is disabled in the test environment.
+func IsTelepresenceDisabled() bool {
+	ret := strings.ToLower(os.Getenv("KONG_TEST_TELEPRESENCE_DISABLED")) == "true"
+	if ret {
+		fmt.Println("INFO: Telepresence is disabled")
+	} else {
+		fmt.Println("INFO: Telepresence is enabled")
+	}
+	return ret
+}
