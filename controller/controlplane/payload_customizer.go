@@ -49,7 +49,7 @@ func defaultPayloadCustomizer(opts ...payloadCustomizerOption) (types.PayloadCus
 	}
 
 	if hostname, err = cfg.hostnameRetriever(); err != nil {
-		return nil, fmt.Errorf("failed to get defaultPayloadCustomizer: %w", err)
+		return nil, fmt.Errorf("failed to get hostname: %w", err)
 	}
 
 	payloadCustomizer := func(payload types.Payload) types.Payload {

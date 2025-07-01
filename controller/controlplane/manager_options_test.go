@@ -6,6 +6,7 @@ import (
 
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/tonglil/buflogr"
 
 	"github.com/kong/kong-operator/internal/telemetry"
