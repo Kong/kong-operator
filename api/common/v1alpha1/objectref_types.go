@@ -32,6 +32,8 @@ type ObjectRef struct {
 	//
 	// - konnectID
 	// - namespacedRef
+	//
+	// +required
 	Type ObjectRefType `json:"type"`
 
 	// KonnectID is the schema for the KonnectID type.
@@ -53,6 +55,7 @@ type ObjectRef struct {
 type NamespacedRef struct {
 	// Name is the name of the referred resource.
 	//
+	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name"`

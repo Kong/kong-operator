@@ -34,6 +34,7 @@ type ControlPlaneRef struct {
 	//
 	// The default is kic, which implies that the Control Plane is KIC.
 	//
+	// +optional
 	// +kubebuilder:validation:Enum=konnectID;konnectNamespacedRef;kic
 	// +kubebuilder:default:=kic
 	Type string `json:"type,omitempty"`
@@ -60,8 +61,7 @@ type KonnectExtensionControlPlaneRef struct {
 	// Type indicates the type of the control plane being referenced. Allowed values:
 	// - konnectNamespacedRef
 	//
-	// The default is kic, which implies that the Control Plane is KIC.
-	//
+	// +optional
 	// +kubebuilder:validation:Enum=konnectNamespacedRef
 	// +kubebuilder:default:=konnectNamespacedRef
 	Type string `json:"type,omitempty"`

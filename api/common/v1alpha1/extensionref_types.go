@@ -21,11 +21,14 @@ package v1alpha1
 // +apireference:kgo:include
 type ExtensionRef struct {
 	// Group is the group of the extension resource.
+	//
 	// +optional
 	// +kubebuilder:default=gateway-operator.konghq.com
 	Group string `json:"group"`
 
 	// Kind is kind of the extension resource.
+	//
+	// +required
 	Kind string `json:"kind"`
 
 	// NamespacedRef is a reference to the extension resource.
