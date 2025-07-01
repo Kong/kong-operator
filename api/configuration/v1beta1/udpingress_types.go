@@ -25,10 +25,6 @@ func init() {
 	SchemeBuilder.Register(&UDPIngress{}, &UDPIngressList{})
 }
 
-// TODO(Jintao): Add docs link to Deprecated description once we have a
-// documentation page for the migration.
-// https://github.com/Kong/kubernetes-ingress-controller/issues/7496
-
 // UDPIngressList contains a list of UDPIngress.
 //
 // +kubebuilder:object:root=true
@@ -40,7 +36,7 @@ type UDPIngressList struct {
 }
 
 // UDPIngress is the Schema for the udpingresses API.
-// Deprecated: Use Gateway API instead.
+// Deprecated: Use Gateway API instead. See https://developer.konghq.com/kubernetes-ingress-controller/migrate/ingress-to-gateway/
 //
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

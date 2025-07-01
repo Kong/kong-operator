@@ -21,10 +21,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// TODO(Jintao): Add docs link to Deprecated description once we have a
-// documentation page for the migration.
-// https://github.com/Kong/kubernetes-ingress-controller/issues/7496
-
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
@@ -37,7 +33,7 @@ import (
 // +kubebuilder:deprecatedversion:warning="configuration.konghq.com/v1 KongIngress is deprecated"
 
 // KongIngress is the Schema for the kongingresses API.
-// Deprecated: Use Gateway API instead.
+// Deprecated: Use Gateway API instead. See https://developer.konghq.com/kubernetes-ingress-controller/migrate/kongingress/
 // +apireference:kic:include
 // +kong:channels=ingress-controller
 type KongIngress struct {
