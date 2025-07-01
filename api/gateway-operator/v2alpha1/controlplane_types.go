@@ -70,7 +70,6 @@ type ControlPlaneSpec struct {
 	// It can be:
 	// - a name of a DataPlane resource that is managed by the operator,
 	// - a DataPlane that is managed by the owner of the ControlPlane (e.g. a Gateway resource)
-	// - a URL to an externally managed DataPlane (e.g. installed independently with Helm),
 	//
 	// +required
 	DataPlane ControlPlaneDataPlaneTarget `json:"dataplane"`
@@ -130,24 +129,14 @@ type ControlPlaneOptions struct {
 // ControlPlaneDataPlaneTarget defines the target for the DataPlane that the ControlPlane
 // is responsible for configuring.
 //
-// +kubebuilder:validation:XValidation:message="External has to be provided when type is set to external",rule="self.type != 'external' || has(self.external)"
-// +kubebuilder:validation:XValidation:message="External cannot be provided when type is set to managedByOwner",rule="self.type != 'managedByOwner' || !has(self.external)"
-// +kubebuilder:validation:XValidation:message="External cannot be provided when type is set to ref",rule="self.type != 'ref' || !has(self.external)"
 // +kubebuilder:validation:XValidation:message="Ref has to be provided when type is set to ref",rule="self.type != 'ref' || has(self.ref)"
 // +kubebuilder:validation:XValidation:message="Ref cannot be provided when type is set to managedByOwner",rule="self.type != 'managedByOwner' || !has(self.ref)"
-// +kubebuilder:validation:XValidation:message="Ref cannot be provided when type is set to external",rule="self.type != 'external' || !has(self.ref)"
 type ControlPlaneDataPlaneTarget struct {
 	// Type indicates the type of the DataPlane target.
 	//
 	// +required
-	// +kubebuilder:validation:Enum=external;ref;managedByOwner
+	// +kubebuilder:validation:Enum=ref;managedByOwner
 	Type ControlPlaneDataPlaneTargetType `json:"type"`
-
-	// External is the External of the DataPlane target. This is used for configuring
-	// externally managed DataPlanes like those installed independently with Helm.
-	//
-	// +optional
-	External *ControlPlaneDataPlaneTargetExternal `json:"external,omitempty"`
 
 	// Ref is the name of the DataPlane to configure.
 	//
@@ -160,11 +149,6 @@ type ControlPlaneDataPlaneTarget struct {
 type ControlPlaneDataPlaneTargetType string
 
 const (
-	// ControlPlaneDataPlaneTargetExternalType indicates that the DataPlane target is external.
-	// This is used for configuring externally managed DataPlanes like those
-	// installed independently with Helm.
-	ControlPlaneDataPlaneTargetExternalType ControlPlaneDataPlaneTargetType = "external"
-
 	// ControlPlaneDataPlaneTargetRefType indicates that the DataPlane target is a ref
 	// of a DataPlane resource managed by the operator.
 	// This is used for configuring DataPlanes that are managed by the operator.
@@ -176,19 +160,6 @@ const (
 	// and the ControlPlane is responsible for configuring it.
 	ControlPlaneDataPlaneTargetManagedByType ControlPlaneDataPlaneTargetType = "managedByOwner"
 )
-
-// ControlPlaneDataPlaneTargetExternal defines the configuration for an external DataPlane
-// that the ControlPlane is responsible for configuring.
-type ControlPlaneDataPlaneTargetExternal struct {
-	// URL is the URL of the external DataPlane to configure.
-	//
-	// +required
-	// +kubebuilder:validation:XValidation:message="URL has to be a valid URL",rule="isURL(self)"
-	URL string `json:"url"`
-
-	// TODO: add additional fields for authenticating with the external DataPlane.
-	// ref: https://github.com/Kong/gateway-operator/issues/1366
-}
 
 // ControlPlaneDataPlaneTargetRef defines the reference to a DataPlane resource
 // that the ControlPlane is responsible for configuring.

@@ -124,57 +124,6 @@ func TestControlPlaneV2(t *testing.T) {
 				ExpectedErrorMessage: lo.ToPtr("Ref has to be provided when type is set to ref"),
 			},
 			{
-				Name: "when dataplane.type is set to ref, external must not be specified",
-				TestObject: &operatorv2alpha1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
-						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetRefType,
-							Ref: &operatorv2alpha1.ControlPlaneDataPlaneTargetRef{
-								Name: "dataplane-1",
-							},
-							External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
-								URL: "https://dataplane.example.com:8444/admin",
-							},
-						},
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("spec.dataplane: Invalid value: \"object\": External cannot be provided when type is set to ref"),
-			},
-			{
-				Name: "when dataplane.type is set to external, external.url must be specified",
-				TestObject: &operatorv2alpha1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
-						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
-						},
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("External has to be provided when type is set to external"),
-			},
-			{
-				Name: "when dataplane.type is set to external, ref cannot be specified",
-				TestObject: &operatorv2alpha1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
-						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
-							Ref: &operatorv2alpha1.ControlPlaneDataPlaneTargetRef{
-								Name: "dataplane-1",
-							},
-							External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
-								URL: "https://dataplane.example.com:8444/admin",
-							},
-						},
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("Invalid value: \"object\": Ref cannot be provided when type is set to external"),
-			},
-			{
 				Name: "specifying dataplane ref name when type is ref passes",
 				TestObject: &operatorv2alpha1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
@@ -188,52 +137,6 @@ func TestControlPlaneV2(t *testing.T) {
 						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
 					},
 				},
-			},
-			{
-				Name: "specifying dataplane url when type is external passes: https",
-				TestObject: &operatorv2alpha1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
-						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
-							External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
-								URL: "https://dataplane.example.com:8444/admin",
-							},
-						},
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
-					},
-				},
-			},
-			{
-				Name: "specifying dataplane url when type is external passes: http, no port",
-				TestObject: &operatorv2alpha1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
-						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
-							External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
-								URL: "http://dataplane.example.com/admin",
-							},
-						},
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
-					},
-				},
-			},
-			{
-				Name: "dataplane url must be a valid URL, otherwise it fails",
-				TestObject: &operatorv2alpha1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
-						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetExternalType,
-							External: &operatorv2alpha1.ControlPlaneDataPlaneTargetExternal{
-								URL: "not-a-valid-url",
-							},
-						},
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("URL has to be a valid URL"),
 			},
 		}.Run(t)
 	})
