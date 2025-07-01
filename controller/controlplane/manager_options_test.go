@@ -796,7 +796,7 @@ func TestWithAnonymousReportsFixedPayloadCustomizer(t *testing.T) {
 	opt := WithAnonymousReportsFixedPayloadCustomizer(mockCustomizer)
 	opt(cfg)
 
-	assert.NotNil(t, cfg.AnonymousReportsFixedPayloadCustomizer)
+	require.NotNil(t, cfg.AnonymousReportsFixedPayloadCustomizer)
 	testPayload := telemetry.Payload{}
 	result := cfg.AnonymousReportsFixedPayloadCustomizer(testPayload)
 	assert.True(t, called)
