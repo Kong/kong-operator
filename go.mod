@@ -11,7 +11,7 @@ toolchain go1.24.4
 retract v1.2.2
 
 require (
-	github.com/Kong/sdk-konnect-go v0.4.0
+	github.com/Kong/sdk-konnect-go v0.6.0
 	github.com/Masterminds/semver v1.5.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/cert-manager/cert-manager v1.18.1
