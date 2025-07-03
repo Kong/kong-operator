@@ -29,6 +29,14 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixed
+
+- Ignore the `ForbiddenError` in `sdk-konnect-go` returned from running CRUD
+  operations against Konnect APIs.
+  [#1811](https://github.com/Kong/kong-operator/pull/1811)
+
 ## [v2.0.0-alpha.1]
 
 > Release date: 2025-06-11
