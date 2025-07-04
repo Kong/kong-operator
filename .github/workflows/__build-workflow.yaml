@@ -99,6 +99,10 @@ jobs:
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
 
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - uses: mukunku/tag-exists-action@bdad1eaa119ce71b150b952c97351c75025c06a9 # v1.6.0
         id: check-tag
         if: ${{ inputs.tag != '' }}
@@ -151,6 +155,10 @@ jobs:
       version: ${{ steps.meta.outputs.version }}
 
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
@@ -308,6 +316,10 @@ jobs:
       - build
 
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
