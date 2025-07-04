@@ -24,8 +24,8 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.50.0
 	github.com/kong/go-kong v0.67.0
-	github.com/kong/kubernetes-configuration v1.4.1-0.20250625110007-842ead2a5ced
-	github.com/kong/kubernetes-ingress-controller/v3 v3.4.7-0.20250627095511-b87927aa5644
+	github.com/kong/kubernetes-configuration v1.5.2
+	github.com/kong/kubernetes-ingress-controller/v3 v3.5.0
 	github.com/kong/kubernetes-telemetry v0.1.10
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
@@ -124,7 +124,7 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/distribution/reference v0.6.0 // indirect
-	github.com/docker/docker v28.2.2+incompatible // indirect
+	github.com/docker/docker v28.3.0+incompatible // indirect
 	github.com/docker/go-connections v0.5.0 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/dominikbraun/graph v0.23.0 // indirect
