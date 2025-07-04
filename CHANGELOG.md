@@ -34,7 +34,8 @@
 ### Fixed
 
 - Ignore the `ForbiddenError` in `sdk-konnect-go` returned from running CRUD
-  operations against Konnect APIs.
+  operations against Konnect APIs. This prevents endless reconciliation when an
+  operation is not allowed (due to e.g. exhausted quota).
   [#1811](https://github.com/Kong/kong-operator/pull/1811)
 
 ## [v2.0.0-alpha.1]
