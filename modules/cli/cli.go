@@ -49,6 +49,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.StringVar(&deferCfg.ClusterCASecretNamespace, "cluster-ca-secret-namespace", "", "Name of the namespace for Secret containing the cluster CA certificate.")
 	flagSet.Var(&cfg.ClusterCAKeyType, "cluster-ca-key-type", "Type of the key used for the cluster CA certificate (possible values: ecdsa, rsa). Default: ecdsa.")
 	flagSet.IntVar(&cfg.ClusterCAKeySize, "cluster-ca-key-size", mgrconfig.DefaultClusterCAKeySize, "Size (in bits) of the key used for the cluster CA certificate. Only used for RSA keys.")
+	flagSet.DurationVar(&cfg.CacheSyncTimeout, "cache-sync-timeout", 0, "The time limit set to wait for syncing controllers' caches. Defaults to 0 to fall back to default from controller-runtime.")
 
 	// controllers for standard APIs and features
 	flagSet.BoolVar(&cfg.GatewayControllerEnabled, "enable-controller-gateway", true, "Enable the Gateway controller.")

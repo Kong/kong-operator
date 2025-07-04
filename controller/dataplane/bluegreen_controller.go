@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -17,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/kong-operator/controller/pkg/address"
@@ -65,6 +67,7 @@ type BlueGreenReconciler struct {
 
 	KonnectEnabled bool
 
+	CacheSyncTimeout       time.Duration
 	EnforceConfig          bool
 	ValidateDataPlaneImage bool
 	LoggingMode            logging.Mode
@@ -78,6 +81,9 @@ func (r *BlueGreenReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 	}
 	delegate.eventRecorder = mgr.GetEventRecorderFor("dataplane")
 	return DataPlaneWatchBuilder(mgr, r.KonnectEnabled).
+		WithOptions(controller.Options{
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
 		Complete(r)
 }
 

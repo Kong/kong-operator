@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
@@ -15,6 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -38,13 +40,17 @@ const kindKongPluginInstallation = gatewayv1.Kind("KongPluginInstallation")
 // Reconciler reconciles a KongPluginInstallation object.
 type Reconciler struct {
 	client.Client
-	Scheme      *runtime.Scheme
-	LoggingMode logging.Mode
+	CacheSyncTimeout time.Duration
+	Scheme           *runtime.Scheme
+	LoggingMode      logging.Mode
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		WithOptions(controller.Options{
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
 		For(&operatorv1alpha1.KongPluginInstallation{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Owns(&corev1.ConfigMap{}, builder.WithPredicates(

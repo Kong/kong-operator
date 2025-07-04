@@ -13,10 +13,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -57,7 +57,7 @@ import (
 // Reconciler reconciles a Gateway object.
 type Reconciler struct {
 	client.Client
-	Scheme                  *runtime.Scheme
+	CacheSyncTimeout        time.Duration
 	DefaultDataPlaneImage   string
 	KonnectEnabled          bool
 	AnonymousReportsEnabled bool
@@ -71,6 +71,9 @@ const provisionDataPlaneFailRetryAfter = 5 * time.Second
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
+		WithOptions(controller.Options{
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
 		// watch Gateway objects, filtering out any Gateways which are not configured with
 		// a supported GatewayClass controller name.
 		For(&gwtypes.Gateway{},

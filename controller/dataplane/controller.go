@@ -3,15 +3,16 @@ package dataplane
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	appsv1 "k8s.io/api/apps/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
@@ -34,8 +35,8 @@ import (
 // Reconciler reconciles a DataPlane object
 type Reconciler struct {
 	client.Client
-	Scheme                   *runtime.Scheme
 	eventRecorder            record.EventRecorder
+	CacheSyncTimeout         time.Duration
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
@@ -51,6 +52,9 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	r.eventRecorder = mgr.GetEventRecorderFor("dataplane")
 
 	return DataPlaneWatchBuilder(mgr, r.KonnectEnabled).
+		WithOptions(controller.Options{
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
 		Complete(r)
 }
 

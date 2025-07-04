@@ -14,6 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -66,6 +67,7 @@ type DeepCopier[T DataPlaneOwnedResource, PT ClientObjectPointer[T]] interface {
 type DataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT DataPlaneOwnedResourcePointer[T, PT]] struct {
 	Client      client.Client
 	LoggingMode logging.Mode
+	Opts        controller.Options
 }
 
 // NewDataPlaneOwnedResourceFinalizerReconciler returns a new DataPlaneOwnedResourceFinalizerReconciler for a type passed
@@ -80,15 +82,19 @@ type DataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT Data
 func NewDataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT DataPlaneOwnedResourcePointer[T, PT]](
 	client client.Client,
 	loggingMode logging.Mode,
+	opts controller.Options,
 ) *DataPlaneOwnedResourceFinalizerReconciler[T, PT] {
 	return &DataPlaneOwnedResourceFinalizerReconciler[T, PT]{
 		Client:      client,
 		LoggingMode: loggingMode,
+		Opts:        opts,
 	}
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *DataPlaneOwnedResourceFinalizerReconciler[T, PT]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+func (r *DataPlaneOwnedResourceFinalizerReconciler[T, PT]) SetupWithManager(
+	ctx context.Context, mgr ctrl.Manager,
+) error {
 	objectIsBeingDeleted := func(obj client.Object) bool {
 		return obj.GetDeletionTimestamp() != nil
 	}
@@ -101,7 +107,9 @@ func (r *DataPlaneOwnedResourceFinalizerReconciler[T, PT]) SetupWithManager(ctx 
 	}
 
 	ownedObj := PT(new(T))
+
 	return ctrl.NewControllerManagedBy(mgr).
+		WithOptions(r.Opts).
 		For(ownedObj, builder.WithPredicates(
 			predicate.NewPredicateFuncs(objectIsBeingDeleted),
 			predicate.NewPredicateFuncs(objectIsOwnedByDataPlane),

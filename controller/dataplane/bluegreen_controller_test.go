@@ -358,7 +358,6 @@ func TestDataPlaneBlueGreenReconciler_Reconcile(t *testing.T) {
 					Type: x509.ECDSA,
 				},
 				DataPlaneController: &Reconciler{
-					Scheme:                   scheme.Scheme,
 					Client:                   fakeClient,
 					ClusterCASecretName:      mtlsSecret.Name,
 					ClusterCASecretNamespace: mtlsSecret.Namespace,

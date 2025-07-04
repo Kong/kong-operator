@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kong-operator/controller"
+	ctrlconsts "github.com/kong/kong-operator/controller/consts"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 )
@@ -162,7 +162,7 @@ func handleGatewayFinalizerPatchOrUpdateError(err error, logger logr.Logger) (ct
 	if k8serrors.IsNotFound(err) || k8serrors.IsConflict(err) {
 		return ctrl.Result{
 			Requeue:      true,
-			RequeueAfter: controller.RequeueWithoutBackoff,
+			RequeueAfter: ctrlconsts.RequeueWithoutBackoff,
 		}, nil
 	}
 
@@ -174,7 +174,7 @@ func handleGatewayFinalizerPatchOrUpdateError(err error, logger logr.Logger) (ct
 		log.Debug(logger, "failed to delete a finalizer on Gateway, requeueing request", "cause", cause)
 		return ctrl.Result{
 			Requeue:      true,
-			RequeueAfter: controller.RequeueWithoutBackoff,
+			RequeueAfter: ctrlconsts.RequeueWithoutBackoff,
 		}, nil
 	}
 

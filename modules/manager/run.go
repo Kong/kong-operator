@@ -65,6 +65,7 @@ type Config struct {
 	ControllerNamespace      string
 	APIServerPath            string
 	KubeconfigPath           string
+	CacheSyncTimeout         time.Duration
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
 	ClusterCAKeyType         mgrconfig.KeyType
