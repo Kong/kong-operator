@@ -129,7 +129,7 @@ func ParseSDKErrorBody(body string) (sdkErrorBody, error) {
 	return sdkErr, nil
 }
 
-// ErrorIsSDKError403 returns true if the provided error is a 403 Forbidden error.
+// ErrorIsForbiddenError returns true if the provided error is a 403 Forbidden error.
 // This can happen when the requested operation is not permitted.
 // Example SDKError body (SDKError message is a separate field from body message):
 //
@@ -145,7 +145,11 @@ func ParseSDKErrorBody(body string) (sdkErrorBody, error) {
 //			}
 //		]
 //	}
-func ErrorIsSDKError403(err error) bool {
+func ErrorIsForbiddenError(err error) bool {
+	var errForbidden *sdkkonnecterrs.ForbiddenError
+	if errors.As(err, &errForbidden) {
+		return true
+	}
 	var errSDK *sdkkonnecterrs.SDKError
 	if !errors.As(err, &errSDK) {
 		return false
@@ -340,7 +344,7 @@ func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 	// manifest. The entity's status is already updated with the error.
 	if ErrorIsSDKBadRequestError(err) ||
 		ErrorIsSDKError400(err) ||
-		ErrorIsSDKError403(err) ||
+		ErrorIsForbiddenError(err) ||
 		ErrorIsConflictError(err) {
 		log.Debug(logger, "ignoring unrecoverable API error, consult object's status for details", "err", err)
 		return nil
