@@ -64,7 +64,6 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 	}
 	dpReconciler := &dataplane.Reconciler{
 		Client:                   cl,
-		Scheme:                   scheme.Get(),
 		ClusterCASecretName:      clusterCASecretName,
 		ClusterCASecretNamespace: ns.Name,
 		ClusterCAKeyConfig:       clusterCAKeyConfig,

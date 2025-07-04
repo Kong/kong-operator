@@ -255,7 +255,6 @@ func TestReconciler_Reconcile(t *testing.T) {
 
 			reconciler := Reconciler{
 				Client:                   fakeClient,
-				Scheme:                   scheme.Get(),
 				ClusterCASecretName:      mtlsSecret.Name,
 				ClusterCASecretNamespace: mtlsSecret.Namespace,
 				InstancesManager:         multiinstance.NewManager(logr.Discard()),

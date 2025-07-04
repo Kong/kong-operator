@@ -54,6 +54,9 @@
 - `ControlPlane` status fields `controllers` and `featureGates` are filled in with
   actual configured values based on the defaults and the `spec` fields.
   [#1771](https://github.com/kong/kong-operator/pull/1771)
+- Added the following CLI flags to control operator's behavior:
+  - `--cache-sync-timeout` to control controller-runtime's time limit set to wait for syncing caches.
+    [#1818](https://github.com/kong/kong-operator/pull/1818)
 
 ### Fixed
 

@@ -17,6 +17,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -70,6 +71,7 @@ type ScrapeUpdateNotifier interface {
 // ControlPlane have the correct annotation set.
 type Reconciler struct {
 	client.Client
+	CacheSyncTimeout                time.Duration
 	LoggingMode                     osslogging.Mode
 	DataPlaneScraperManagerNotifier ScrapeUpdateNotifier
 }
@@ -77,6 +79,9 @@ type Reconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		WithOptions(controller.Options{
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
 		// Watch for changes to owned ControlPlane that had DataPlane.
 		For(&operatorv2alpha1.ControlPlane{},
 			builder.WithPredicates(

@@ -41,10 +41,11 @@ const (
 // It uses the generic type constraints to constrain the supported types.
 type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]] struct {
 	sdkFactory              sdkops.SDKFactory
-	LoggingMode             logging.Mode
+	CacheSyncTimeout        time.Duration
 	Client                  client.Client
-	SyncPeriod              time.Duration
+	LoggingMode             logging.Mode
 	MaxConcurrentReconciles uint
+	SyncPeriod              time.Duration
 
 	MetricRecorder metrics.Recorder
 }
@@ -118,6 +119,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(ctx context.Context,
 				Named(entityTypeName).
 				WithOptions(
 				controller.Options{
+					CacheSyncTimeout:        r.CacheSyncTimeout,
 					MaxConcurrentReconciles: int(r.MaxConcurrentReconciles), //nolint:gosec
 				},
 			)
