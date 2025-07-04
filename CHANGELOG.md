@@ -28,6 +28,15 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixed
+
+- Ignore the `ForbiddenError` in `sdk-konnect-go` returned from running CRUD
+  operations against Konnect APIs. This prevents endless reconciliation when an
+  operation is not allowed (due to e.g. exhausted quota).
+  [#1811](https://github.com/Kong/kong-operator/pull/1811)
+
 ## [v1.6.1]
 
 > Release date: 2025-05-22

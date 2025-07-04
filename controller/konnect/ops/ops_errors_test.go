@@ -9,12 +9,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestErrorIsSDKError403(t *testing.T) {
+func TestErrorIsForbiddenError(t *testing.T) {
 	tests := []struct {
 		name string
 		err  error
 		want bool
 	}{
+		{
+			name: "error is ForbiddenError",
+			err: &sdkkonnecterrs.ForbiddenError{
+				Status:   403,
+				Title:    "Quota Exceeded",
+				Instance: "kong:trace:0000000000000000000",
+				Detail:   "Maximum number of Active Networks exceeded. Max allowed: 0",
+			},
+			want: true,
+		},
 		{
 			name: "error is SDKError with 403 status code",
 			err: &sdkkonnecterrs.SDKError{
@@ -62,7 +72,7 @@ func TestErrorIsSDKError403(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := ErrorIsSDKError403(tt.err)
+			got := ErrorIsForbiddenError(tt.err)
 			require.Equal(t, tt.want, got)
 		})
 	}
