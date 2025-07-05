@@ -47,11 +47,9 @@ func init() {
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) ? has(self.spec.algorithm) && (self.spec.algorithm == \"consistent-hashing\" || self.spec.algorithm == \"sticky-sessions\") : true", message="spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOnFallback) ? [has(self.spec.hashOnFallback.input), has(self.spec.hashOnFallback.header), has(self.spec.hashOnFallback.uriCapture), has(self.spec.hashOnFallback.queryArg)].filter(fieldSet, fieldSet == true).size() <= 1 : true", message="Only one of spec.hashOnFallback.(input|header|uriCapture|queryArg) can be set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.hashOnFallback) ? has(self.spec.algorithm) && self.spec.algorithm == \"consistent-hashing\" : true", message="spec.algorithm must be set to \"consistent-hashing\" when spec.hashOnFallback is set."
-// +kubebuilder:validation:XValidation:rule="has(self.spec.hashOnFallback) ? !has(self.spec.hashOnFallback.cookie) : true", message="spec.hashOnFallback.cookie must not be set."
-// +kubebuilder:validation:XValidation:rule="has(self.spec.hashOnFallback) ? !has(self.spec.hashOnFallback.cookiePath) : true", message="spec.hashOnFallback.cookiePath must not be set."
+// +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) && has(self.spec.hashOn.cookie) ? !has(self.spec.hashOnFallback) : true", message="spec.hashOnFallback must not be set when spec.hashOn.cookie is set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.healthchecks) && has(self.spec.healthchecks.passive) && has(self.spec.healthchecks.passive.healthy) ? !has(self.spec.healthchecks.passive.healthy.interval) : true", message="spec.healthchecks.passive.healthy.interval must not be set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.healthchecks) && has(self.spec.healthchecks.passive) && has(self.spec.healthchecks.passive.unhealthy) ? !has(self.spec.healthchecks.passive.unhealthy.interval) : true", message="spec.healthchecks.passive.unhealthy.interval must not be set."
-// +kubebuilder:validation:XValidation:rule="has(self.spec.hashOn) && has(self.spec.hashOn.cookie) ? !has(self.spec.hashOnFallback) : true", message="spec.hashOnFallback must not be set when spec.hashOn.cookie is set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.stickySessions) ? (has(self.spec.hashOn) && has(self.spec.hashOn.input) && self.spec.hashOn.input == 'none' && !has(self.spec.hashOn.cookie) && !has(self.spec.hashOn.cookiePath) && !has(self.spec.hashOn.header) && !has(self.spec.hashOn.uriCapture) && !has(self.spec.hashOn.queryArg)) : true", message="When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.stickySessions) ? has(self.spec.stickySessions.cookie) : true", message="spec.stickySessions.cookie is required when spec.stickySessions is set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.stickySessions) ? (has(self.spec.algorithm) && self.spec.algorithm == \"sticky-sessions\") : true", message="spec.algorithm must be set to 'sticky-sessions' when spec.stickySessions is set."
@@ -113,32 +111,46 @@ type KongUpstreamPolicySpec struct {
 
 // HashInput is the input for consistent-hashing load balancing algorithm.
 // Use "none" to disable hashing, it is required for sticky sessions.
+//
 // +kubebuilder:validation:Enum=ip;consumer;path;none
 // +apireference:kic:include
 type HashInput string
 
 // KongUpstreamHash defines how to calculate hash for consistent-hashing load balancing algorithm.
 // Only one of the fields must be set.
+//
 // +apireference:kic:include
 type KongUpstreamHash struct {
 	// Input allows using one of the predefined inputs (ip, consumer, path, none).
 	// Set this to `none` if you want to use sticky sessions.
-	// For other parametrized inputs, use one of the fields below.
+	// For other parameterized inputs, use one of the fields below.
+	//
+	// +optional
 	Input *HashInput `json:"input,omitempty"`
 
 	// Header is the name of the header to use as hash input.
+	//
+	// +optional
 	Header *string `json:"header,omitempty"`
 
 	// Cookie is the name of the cookie to use as hash input.
+	//
+	// +optional
 	Cookie *string `json:"cookie,omitempty"`
 
 	// CookiePath is cookie path to set in the response headers.
+	//
+	// +optional
 	CookiePath *string `json:"cookiePath,omitempty"`
 
 	// QueryArg is the name of the query argument to use as hash input.
+	//
+	// +optional
 	QueryArg *string `json:"queryArg,omitempty"`
 
 	// URICapture is the name of the URI capture group to use as hash input.
+	//
+	// +optional
 	URICapture *string `json:"uriCapture,omitempty"`
 }
 
