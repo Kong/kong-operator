@@ -1,6 +1,6 @@
 module github.com/kong/gateway-operator
 
-go 1.24.2
+go 1.24.4
 
 // 1.2.2 was released on main branch with a breaking change that was not
 // intended to be released in 1.2.x:
