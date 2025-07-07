@@ -17,10 +17,9 @@ limitations under the License.
 package v1
 
 import (
+	"github.com/kong/go-kong/kong"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
-	"github.com/kong/go-kong/kong"
 )
 
 // KongPlugin is the Schema for the kongplugins API.

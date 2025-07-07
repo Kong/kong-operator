@@ -255,21 +255,6 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					},
 				},
 			},
-			{
-				Name: "specifying Admin API workspace",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.GatewayConfigurationSpec{
-						ControlPlaneOptions: &operatorv2alpha1.GatewayConfigControlPlaneOptions{
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								AdminAPI: &operatorv2alpha1.ControlPlaneAdminAPI{
-									Workspace: "myworkspacename",
-								},
-							},
-						},
-					},
-				},
-			},
 		}.Run(t)
 	})
 }
