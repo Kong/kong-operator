@@ -3,12 +3,14 @@ package controlplane
 import (
 	"bytes"
 	"testing"
+	"time"
 
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tonglil/buflogr"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/internal/telemetry"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -834,6 +836,94 @@ func TestWithIngressClass(t *testing.T) {
 			opt := WithIngressClass(tc.ingressClass)
 			opt(cfg)
 			assert.Equal(t, tc.expected, cfg.IngressClassName)
+		})
+	}
+}
+
+func TestWithGatewayDiscoveryReadinessCheckInterval(t *testing.T) {
+	testCases := []struct {
+		name     string
+		interval *metav1.Duration
+		expected time.Duration
+	}{
+		{
+			name:     "with nil interval uses default",
+			interval: nil,
+			expected: managercfg.DefaultDataPlanesReadinessReconciliationInterval,
+		},
+		{
+			name: "with custom interval",
+			interval: &metav1.Duration{
+				Duration: 30 * time.Second,
+			},
+			expected: 30 * time.Second,
+		},
+		{
+			name: "with zero interval",
+			interval: &metav1.Duration{
+				Duration: 0,
+			},
+			expected: 0,
+		},
+		{
+			name: "with large interval",
+			interval: &metav1.Duration{
+				Duration: 10 * time.Minute,
+			},
+			expected: 10 * time.Minute,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &managercfg.Config{}
+			opt := WithGatewayDiscoveryReadinessCheckInterval(tc.interval)
+			opt(cfg)
+			assert.Equal(t, tc.expected, cfg.GatewayDiscoveryReadinessCheckInterval)
+		})
+	}
+}
+
+func TestWithGatewayDiscoveryReadinessCheckTimeout(t *testing.T) {
+	testCases := []struct {
+		name     string
+		timeout  *metav1.Duration
+		expected time.Duration
+	}{
+		{
+			name:     "with nil timeout uses default",
+			timeout:  nil,
+			expected: managercfg.DefaultDataPlanesReadinessCheckTimeout,
+		},
+		{
+			name: "with custom timeout",
+			timeout: &metav1.Duration{
+				Duration: 45 * time.Second,
+			},
+			expected: 45 * time.Second,
+		},
+		{
+			name: "with zero timeout",
+			timeout: &metav1.Duration{
+				Duration: 0,
+			},
+			expected: 0,
+		},
+		{
+			name: "with large timeout",
+			timeout: &metav1.Duration{
+				Duration: 5 * time.Minute,
+			},
+			expected: 5 * time.Minute,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &managercfg.Config{}
+			opt := WithGatewayDiscoveryReadinessCheckTimeout(tc.timeout)
+			opt(cfg)
+			assert.Equal(t, tc.expected, cfg.GatewayDiscoveryReadinessCheckTimeout)
 		})
 	}
 }

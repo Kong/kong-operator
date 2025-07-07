@@ -8,6 +8,7 @@ import (
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	telemetryTypes "github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry/types"
 	"github.com/samber/mo"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
@@ -418,5 +419,29 @@ func WithIngressClass(ingressClass *string) managercfg.Opt {
 			return
 		}
 		c.IngressClassName = *ingressClass
+	}
+}
+
+// WithGatewayDiscoveryReadinessCheckInterval sets the interval for checking
+// the readiness of Gateway Discovery.
+func WithGatewayDiscoveryReadinessCheckInterval(interval *metav1.Duration) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		if interval == nil {
+			c.GatewayDiscoveryReadinessCheckInterval = managercfg.DefaultDataPlanesReadinessReconciliationInterval
+			return
+		}
+		c.GatewayDiscoveryReadinessCheckInterval = interval.Duration
+	}
+}
+
+// WithGatewayDiscoveryReadinessCheckTimeout sets the timeout for checking
+// the readiness of Gateway Discovery.
+func WithGatewayDiscoveryReadinessCheckTimeout(timeout *metav1.Duration) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		if timeout == nil {
+			c.GatewayDiscoveryReadinessCheckTimeout = managercfg.DefaultDataPlanesReadinessCheckTimeout
+			return
+		}
+		c.GatewayDiscoveryReadinessCheckTimeout = timeout.Duration
 	}
 }
