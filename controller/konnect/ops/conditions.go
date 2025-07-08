@@ -6,6 +6,7 @@ import (
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
@@ -119,7 +120,7 @@ const (
 
 // SetControlPlaneGroupMembersReferenceResolvedCondition sets MembersReferenceResolved condition of control plane to True.
 func SetControlPlaneGroupMembersReferenceResolvedCondition(
-	cpGroup *konnectv1alpha1.KonnectGatewayControlPlane,
+	cpGroup *konnectv1alpha2.KonnectGatewayControlPlane,
 ) {
 	_setControlPlaneGroupMembersReferenceResolvedCondition(
 		cpGroup,
@@ -131,7 +132,7 @@ func SetControlPlaneGroupMembersReferenceResolvedCondition(
 
 // SetControlPlaneGroupMembersReferenceResolvedConditionFalse sets MembersReferenceResolved condition of control plane to False.
 func SetControlPlaneGroupMembersReferenceResolvedConditionFalse(
-	cpGroup *konnectv1alpha1.KonnectGatewayControlPlane,
+	cpGroup *konnectv1alpha2.KonnectGatewayControlPlane,
 	reason kcfgconsts.ConditionReason,
 	msg string,
 ) {
@@ -144,12 +145,12 @@ func SetControlPlaneGroupMembersReferenceResolvedConditionFalse(
 }
 
 func _setControlPlaneGroupMembersReferenceResolvedCondition(
-	cpGroup *konnectv1alpha1.KonnectGatewayControlPlane,
+	cpGroup *konnectv1alpha2.KonnectGatewayControlPlane,
 	status metav1.ConditionStatus,
 	reason kcfgconsts.ConditionReason,
 	msg string,
 ) {
-	if cpGroup.Spec.ClusterType == nil || *cpGroup.Spec.ClusterType != sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup {
+	if cpGroup.GetKonnectClusterType() == nil || *cpGroup.GetKonnectClusterType() != sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup {
 		return
 	}
 	k8sutils.SetCondition(

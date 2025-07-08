@@ -8,6 +8,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 // SupportedCredentialType is a generic type constraint that all Kong credential
@@ -34,7 +35,7 @@ type KongCredential[T SupportedCredentialType] interface {
 // SupportedKonnectEntityType is an interface that all Konnect entity types
 // must implement.
 type SupportedKonnectEntityType interface {
-	konnectv1alpha1.KonnectGatewayControlPlane |
+	konnectv1alpha2.KonnectGatewayControlPlane |
 		konnectv1alpha1.KonnectCloudGatewayNetwork |
 		konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration |
 		konnectv1alpha1.KonnectCloudGatewayTransitGateway |

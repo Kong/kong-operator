@@ -82,7 +82,7 @@ func WithTestIDLabel(testID string) func(obj client.Object) {
 // NOTE: This only works with namespaced resources. Using it with cluster-scoped
 // resources requires additional handling ( to only set the namespace when the resource
 // is cluster-scoped).
-func WithKonnectNamespacedRefControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane) ObjOption {
+func WithKonnectNamespacedRefControlPlaneRef(cp *konnectv1alpha2.KonnectGatewayControlPlane) ObjOption {
 	return func(obj client.Object) {
 		o, ok := obj.(interface {
 			GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef
@@ -106,7 +106,7 @@ func WithKonnectNamespacedRefControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayC
 
 // WithKonnectExtensionKonnectNamespacedRefControlPlaneRef returns an ObjOption that sets
 // the ControlPlaneRef on the konnectExtension to a namespaced ref.
-func WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane) ObjOption {
+func WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(cp *konnectv1alpha2.KonnectGatewayControlPlane) ObjOption {
 	return func(obj client.Object) {
 		o, ok := obj.(*konnectv1alpha2.KonnectExtension)
 		if !ok {
@@ -150,7 +150,7 @@ func WithNamespacedKongServiceRef(svc *configurationv1alpha1.KongService) ObjOpt
 }
 
 // WithKonnectIDControlPlaneRef returns an ObjOption that sets the ControlPlaneRef on the object to a KonnectID.
-func WithKonnectIDControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane) ObjOption {
+func WithKonnectIDControlPlaneRef(cp *konnectv1alpha2.KonnectGatewayControlPlane) ObjOption {
 	return func(obj client.Object) {
 		o, ok := obj.(interface {
 			GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef
@@ -173,18 +173,18 @@ func WithKonnectIDControlPlaneRef(cp *konnectv1alpha1.KonnectGatewayControlPlane
 // WithMirrorSource returns an ObjOption that sets the Source as Mirror and Mirror fields on the object.
 func WithMirrorSource(konnectID string) ObjOption {
 	return func(obj client.Object) {
-		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+		cp, ok := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 		if !ok {
 			// As it's only used in tests, we can panic here - it will mean test code is incorrect.
 			panic(fmt.Errorf("%T does not implement GetServiceRef/SetServiceRef method", obj))
 		}
 		cp.Spec.Source = lo.ToPtr(commonv1alpha1.EntitySourceMirror)
-		cp.Spec.Mirror = &konnectv1alpha1.MirrorSpec{
-			Konnect: konnectv1alpha1.MirrorKonnect{
+		cp.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
+			Konnect: konnectv1alpha2.MirrorKonnect{
 				ID: commonv1alpha1.KonnectIDType(konnectID),
 			},
 		}
-		cp.Spec.CreateControlPlaneRequest = konnectv1alpha1.CreateControlPlaneRequest{}
+		cp.Spec.CreateControlPlaneRequest = nil
 	}
 }
 
@@ -265,22 +265,22 @@ func KonnectGatewayControlPlane(
 	cl client.Client,
 	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
 	opts ...ObjOption,
-) *konnectv1alpha1.KonnectGatewayControlPlane {
+) *konnectv1alpha2.KonnectGatewayControlPlane {
 	t.Helper()
 
 	name := "cp-" + uuid.NewString()[:8]
-	cp := &konnectv1alpha1.KonnectGatewayControlPlane{
+	cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
+		Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 			KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
 					Name: apiAuth.Name,
 				},
 			},
-			CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
-				Name: &name,
+			CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
+				Name: name,
 			},
 		},
 	}
@@ -296,11 +296,11 @@ func KonnectGatewayControlPlane(
 // KonnectGatewayControlPlaneType returns an ObjOption that sets the cluster type on the CP.
 func KonnectGatewayControlPlaneType(typ sdkkonnectcomp.CreateControlPlaneRequestClusterType) ObjOption {
 	return func(obj client.Object) {
-		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+		cp, ok := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 		if !ok {
 			panic(fmt.Errorf("%T does not implement KonnectGatewayControlPlane", obj))
 		}
-		cp.Spec.ClusterType = &typ
+		cp.SetKonnectClusterType(lo.ToPtr(typ))
 	}
 }
 
@@ -308,11 +308,11 @@ func KonnectGatewayControlPlaneType(typ sdkkonnectcomp.CreateControlPlaneRequest
 // that enabled cloud gateways on the CP.
 func KonnectGatewayControlPlaneTypeWithCloudGatewaysEnabled() ObjOption {
 	return func(obj client.Object) {
-		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+		cp, ok := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 		if !ok {
 			panic(fmt.Errorf("%T does not implement KonnectGatewayControlPlane", obj))
 		}
-		cp.Spec.CloudGateway = lo.ToPtr(true)
+		cp.SetKonnectCloudGateway(lo.ToPtr(true))
 	}
 }
 
@@ -326,7 +326,7 @@ func KonnectGatewayControlPlaneWithID(
 	cl client.Client,
 	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
 	opts ...ObjOption,
-) *konnectv1alpha1.KonnectGatewayControlPlane {
+) *konnectv1alpha2.KonnectGatewayControlPlane {
 	t.Helper()
 
 	cp := KonnectGatewayControlPlane(t, ctx, cl, apiAuth, opts...)
@@ -340,7 +340,7 @@ func KonnectGatewayControlPlaneWithID(
 		},
 	}
 	cp.Status.ID = uuid.NewString()[:8]
-	cp.Status.Endpoints = &konnectv1alpha1.KonnectEndpoints{
+	cp.Status.Endpoints = &konnectv1alpha2.KonnectEndpoints{
 		ControlPlaneEndpoint: "cp.endpoint",
 		TelemetryEndpoint:    "tp.endpoint",
 	}
@@ -738,7 +738,7 @@ func KongCACertificateAttachedToCP(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 	opts ...ObjOption,
 ) *configurationv1alpha1.KongCACertificate {
 	t.Helper()
@@ -773,7 +773,7 @@ func KongCertificateAttachedToCP(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 	opts ...ObjOption,
 ) *configurationv1alpha1.KongCertificate {
 	t.Helper()
@@ -946,7 +946,7 @@ func KongVaultAttachedToCP(
 	backend string,
 	prefix string,
 	rawConfig []byte,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 	opts ...ObjOption,
 ) *configurationv1alpha1.KongVault {
 	t.Helper()
@@ -1181,7 +1181,7 @@ func KonnectExtensionReferencingKonnectGatewayControlPlane(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 ) *konnectv1alpha2.KonnectExtension {
 	return KonnectExtension(
 		t, ctx, cl,
@@ -1204,7 +1204,7 @@ func KonnectExtensionReferencingKonnectGatewayControlPlane(
 
 // ObjectSupportingKonnectConfiguration defines the interface of types supporting setting `KonnectConfiguration`.
 type ObjectSupportingKonnectConfiguration interface {
-	*konnectv1alpha1.KonnectGatewayControlPlane |
+	*konnectv1alpha2.KonnectGatewayControlPlane |
 		*konnectv1alpha1.KonnectCloudGatewayNetwork
 }
 
@@ -1214,7 +1214,7 @@ func WithKonnectConfiguration[T ObjectSupportingKonnectConfiguration](
 ) ObjOption {
 	return func(obj client.Object) {
 		switch o := any(obj).(type) {
-		case *konnectv1alpha1.KonnectGatewayControlPlane:
+		case *konnectv1alpha2.KonnectGatewayControlPlane:
 			o.Spec.KonnectConfiguration = konnectConfiguration
 		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 			o.Spec.KonnectConfiguration = konnectConfiguration

@@ -14,26 +14,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
-
-// convertCreateControlPlaneRequestToSDK converts the konnectv1alpha1.CreateControlPlaneRequest
-// to sdkkonnectcomp.CreateControlPlaneRequest (they're basically the same).
-func convertCreateControlPlaneRequestToSDK(
-	req konnectv1alpha1.CreateControlPlaneRequest,
-) sdkkonnectcomp.CreateControlPlaneRequest {
-	return sdkkonnectcomp.CreateControlPlaneRequest{
-		Name:         lo.FromPtr(req.Name),
-		Description:  req.Description,
-		AuthType:     req.AuthType,
-		ProxyUrls:    req.ProxyUrls,
-		Labels:       req.Labels,
-		ClusterType:  req.ClusterType,
-		CloudGateway: req.CloudGateway,
-	}
-}
 
 // ensureControlPlane ensures that the Konnect ControlPlane exists in Konnect. It is created
 // if it does not exist and the source is Origin. If the source is Mirror, it checks
@@ -43,7 +27,7 @@ func ensureControlPlane(
 	sdk sdkops.ControlPlaneSDK,
 	sdkGroups sdkops.ControlPlaneGroupSDK,
 	cl client.Client,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 ) error {
 	switch *cp.Spec.Source {
 	case commonv1alpha1.EntitySourceOrigin:
@@ -74,12 +58,12 @@ func createControlPlane(
 	sdk sdkops.ControlPlaneSDK,
 	sdkGroups sdkops.ControlPlaneGroupSDK,
 	cl client.Client,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 ) error {
 	req := cp.Spec.CreateControlPlaneRequest
 	req.Labels = WithKubernetesMetadataLabels(cp, req.Labels)
 
-	resp, err := sdk.CreateControlPlane(ctx, convertCreateControlPlaneRequestToSDK(req))
+	resp, err := sdk.CreateControlPlane(ctx, *req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, cp); errWrap != nil {
 		return errWrap
 	}
@@ -98,7 +82,7 @@ func createControlPlane(
 		return KonnectEntityCreatedButRelationsFailedError{
 			KonnectID: id,
 			Err:       err,
-			Reason:    konnectv1alpha1.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
+			Reason:    konnectv1alpha2.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
 		}
 	}
 
@@ -110,7 +94,7 @@ func createControlPlane(
 func deleteControlPlane(
 	ctx context.Context,
 	sdk sdkops.ControlPlaneSDK,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 ) error {
 	// if the source type is Mirror, don't touch the Konnect entity.
 	if isMirrorEntity(cp) {
@@ -135,7 +119,7 @@ func updateControlPlane(
 	sdk sdkops.ControlPlaneSDK,
 	sdkGroups sdkops.ControlPlaneGroupSDK,
 	cl client.Client,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 ) error {
 	// if the source type is Mirror, don't touch the Konnect entity.
 	if isMirrorEntity(cp) {
@@ -143,11 +127,11 @@ func updateControlPlane(
 	}
 	id := cp.GetKonnectStatus().GetKonnectID()
 	req := sdkkonnectcomp.UpdateControlPlaneRequest{
-		Name:        sdkkonnectgo.String(*cp.Spec.Name),
-		Description: cp.Spec.Description,
-		AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.Spec.AuthType),
-		ProxyUrls:   cp.Spec.ProxyUrls,
-		Labels:      WithKubernetesMetadataLabels(cp, cp.Spec.Labels),
+		Name:        sdkkonnectgo.String(cp.GetKonnectName()),
+		Description: cp.GetKonnectDescription(),
+		AuthType:    (*sdkkonnectcomp.UpdateControlPlaneRequestAuthType)(cp.GetKonnectAuthType()),
+		ProxyUrls:   cp.GetKonnectProxyURLs(),
+		Labels:      WithKubernetesMetadataLabels(cp, cp.GetKonnectLabels()),
 	}
 
 	resp, err := sdk.UpdateControlPlane(ctx, id, req)
@@ -168,7 +152,7 @@ func updateControlPlane(
 		return KonnectEntityCreatedButRelationsFailedError{
 			KonnectID: id,
 			Err:       err,
-			Reason:    konnectv1alpha1.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
+			Reason:    konnectv1alpha2.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
 		}
 	}
 
@@ -178,7 +162,7 @@ func updateControlPlane(
 func setGroupMembers(
 	ctx context.Context,
 	cl client.Client,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 	id string,
 	sdkGroups sdkops.ControlPlaneGroupSDK,
 ) error {
@@ -186,15 +170,15 @@ func setGroupMembers(
 	if isMirrorEntity(cp) {
 		return nil
 	}
-	if cp.Spec.ClusterType == nil ||
-		*cp.Spec.ClusterType != sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup {
+	if cp.GetKonnectClusterType() == nil ||
+		*cp.GetKonnectClusterType() != sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup {
 		return nil
 	}
 
 	members, err := iter.MapErr(cp.Spec.Members,
 		func(member *corev1.LocalObjectReference) (sdkkonnectcomp.Members, error) {
 			var (
-				memberCP konnectv1alpha1.KonnectGatewayControlPlane
+				memberCP konnectv1alpha2.KonnectGatewayControlPlane
 				nn       = client.ObjectKey{
 					Namespace: cp.Namespace,
 					Name:      member.Name,
@@ -262,7 +246,7 @@ func getControlPlaneForUID(
 	sdk sdkops.ControlPlaneSDK,
 	sdkGroups sdkops.ControlPlaneGroupSDK,
 	cl client.Client,
-	cp *konnectv1alpha1.KonnectGatewayControlPlane,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 ) (string, error) {
 	reqList := sdkkonnectops.ListControlPlanesRequest{
 		// NOTE: only filter on object's UID.
@@ -291,7 +275,7 @@ func getControlPlaneForUID(
 		return id, KonnectEntityCreatedButRelationsFailedError{
 			KonnectID: id,
 			Err:       err,
-			Reason:    konnectv1alpha1.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
+			Reason:    konnectv1alpha2.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
 		}
 	}
 

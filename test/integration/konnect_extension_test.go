@@ -45,7 +45,7 @@ func TestKonnectExtensionKonnectControlPlaneNotFound(t *testing.T) {
 
 	konnectExtension := deploy.KonnectExtension(
 		t, ctx, clientNamespaced,
-		deploy.WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(&konnectv1alpha1.KonnectGatewayControlPlane{
+		deploy.WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(&konnectv1alpha2.KonnectGatewayControlPlane{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "controlplane-not-found",
 				Namespace: ns.Name,
@@ -243,7 +243,7 @@ func TestKonnectExtension(t *testing.T) {
 
 			require.Eventually(t,
 				testutils.ObjectPredicates(t, clients.MgrClient,
-					testutils.MatchCondition[*konnectv1alpha1.KonnectGatewayControlPlane](t).
+					testutils.MatchCondition[*konnectv1alpha2.KonnectGatewayControlPlane](t).
 						Type(string(konnectv1alpha1.ControlPlaneMirroredConditionType)).
 						Status(metav1.ConditionTrue).
 						Reason(string(konnectv1alpha1.ControlPlaneMirroredReasonMirrored)).
@@ -273,7 +273,7 @@ func TestKonnectExtension(t *testing.T) {
 }
 
 type KonnectExtensionTestCaseParams struct {
-	konnectControlPlane *konnectv1alpha1.KonnectGatewayControlPlane
+	konnectControlPlane *konnectv1alpha2.KonnectGatewayControlPlane
 	service             *corev1.Service
 	namespace           string
 	client              client.Client
@@ -339,7 +339,7 @@ type KonnectExtensionTestBodyParams struct {
 	konnectExtension    *konnectv1alpha2.KonnectExtension
 	secret              *corev1.Secret
 	authConfigName      string
-	konnectControlPlane *konnectv1alpha1.KonnectGatewayControlPlane
+	konnectControlPlane *konnectv1alpha2.KonnectGatewayControlPlane
 	namespace           string
 	client              client.Client
 }

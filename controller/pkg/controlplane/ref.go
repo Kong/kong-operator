@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 )
@@ -22,7 +22,7 @@ func GetCPForRef(
 	cl client.Client,
 	cpRef commonv1alpha1.ControlPlaneRef,
 	namespace string,
-) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
+) (*konnectv1alpha2.KonnectGatewayControlPlane, error) {
 	switch cpRef.Type {
 	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
 		return getCPForNamespacedRef(ctx, cl, cpRef, namespace)
@@ -53,7 +53,7 @@ func getCPForNamespacedRef(
 	cl client.Client,
 	ref commonv1alpha1.ControlPlaneRef,
 	namespace string,
-) (*konnectv1alpha1.KonnectGatewayControlPlane, error) {
+) (*konnectv1alpha2.KonnectGatewayControlPlane, error) {
 	// TODO(pmalek): handle cross namespace refs
 	if namespace != "" && ref.KonnectNamespacedRef.Namespace != "" && ref.KonnectNamespacedRef.Namespace != namespace {
 		return nil, fmt.Errorf("%s ControlPlaneRef from different namespace than %s", ref.KonnectNamespacedRef.Namespace, namespace)
@@ -69,7 +69,7 @@ func getCPForNamespacedRef(
 		nn.Namespace = ref.KonnectNamespacedRef.Namespace
 	}
 
-	var cp konnectv1alpha1.KonnectGatewayControlPlane
+	var cp konnectv1alpha2.KonnectGatewayControlPlane
 	if err := cl.Get(ctx, nn, &cp); err != nil {
 		if k8serrors.IsNotFound(err) {
 			return nil, ReferencedControlPlaneDoesNotExistError{

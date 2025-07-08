@@ -17,6 +17,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
@@ -106,7 +107,7 @@ func TestKonnectEntities(t *testing.T) {
 
 		require.Eventually(t,
 			testutils.ObjectPredicates(t, clients.MgrClient,
-				testutils.MatchCondition[*konnectv1alpha1.KonnectGatewayControlPlane](t).
+				testutils.MatchCondition[*konnectv1alpha2.KonnectGatewayControlPlane](t).
 					Type(string(konnectv1alpha1.ControlPlaneMirroredConditionType)).
 					Status(metav1.ConditionTrue).
 					Reason(string(konnectv1alpha1.ControlPlaneMirroredReasonMirrored)).
@@ -125,7 +126,7 @@ func TestKonnectEntities(t *testing.T) {
 }
 
 type konnectEntitiesTestCaseParams struct {
-	cp     *konnectv1alpha1.KonnectGatewayControlPlane
+	cp     *konnectv1alpha2.KonnectGatewayControlPlane
 	client client.Client
 	ns     string
 	testID string

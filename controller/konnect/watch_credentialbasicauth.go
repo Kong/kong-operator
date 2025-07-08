@@ -15,6 +15,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
 	"github.com/kong/kong-operator/internal/utils/index"
@@ -64,7 +65,7 @@ func kongCredentialBasicAuthReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.KonnectGatewayControlPlane{},
+				&konnectv1alpha2.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
 					kongCredentialBasicAuthForKonnectGatewayControlPlane(cl),
 				),
@@ -139,7 +140,7 @@ func kongCredentialBasicAuthForKonnectGatewayControlPlane(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+		cp, ok := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 		if !ok {
 			return nil
 		}
