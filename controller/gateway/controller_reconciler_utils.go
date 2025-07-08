@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"net/http"
 	"strconv"
@@ -290,7 +291,6 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
 	dataplane *operatorv1beta1.DataPlane,
-	controlplane *gwtypes.ControlPlane,
 ) (createdOrUpdate bool, err error) {
 	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway)
 	if err != nil {
@@ -305,7 +305,8 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 		return false, errors.New("number of networkPolicies reduced")
 	}
 
-	generatedPolicy, err := generateDataPlaneNetworkPolicy(gateway.Namespace, dataplane, controlplane)
+	// generate the network policy that allow the KO pod to access dataplane pods.
+	generatedPolicy, err := generateDataPlaneNetworkPolicy(r.Namespace, dataplane, r.PodLabels)
 	if err != nil {
 		return false, fmt.Errorf("failed generating network policy for DataPlane %s: %w", dataplane.Name, err)
 	}
@@ -335,7 +336,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 func generateDataPlaneNetworkPolicy(
 	namespace string,
 	dataplane *operatorv1beta1.DataPlane,
-	_ *gwtypes.ControlPlane,
+	podLabels map[string]string,
 ) (*networkingv1.NetworkPolicy, error) {
 	var (
 		protocolTCP     = corev1.ProtocolTCP
@@ -376,24 +377,24 @@ func generateDataPlaneNetworkPolicy(
 		}
 	}
 
+	podLabelsCopy := maps.Clone(podLabels)
 	limitAdminAPIIngress := networkingv1.NetworkPolicyIngressRule{
 		Ports: []networkingv1.NetworkPolicyPort{
 			{Protocol: &protocolTCP, Port: &adminAPISSLPort},
 		},
 		// TODO: https://github.com/kong/kong-operator/issues/1700
 		// It should be adjusted to include KO pod, because it connects to DataPlane admin API directly.
-		// From: []networkingv1.NetworkPolicyPeer{{
-		// 	PodSelector: &metav1.LabelSelector{
-		// 		MatchLabels: map[string]string{
-		// 			"app": controlplane.Name,
-		// 		},
-		// 	},
-		// 	NamespaceSelector: &metav1.LabelSelector{
-		// 		MatchLabels: map[string]string{
-		// 			"kubernetes.io/metadata.name": controlplane.Namespace,
-		// 		},
-		// 	},
-		// }},
+		From: []networkingv1.NetworkPolicyPeer{{
+			NamespaceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"kubernetes.io/metadata.name": namespace,
+				},
+			},
+			// set the pod selector to match the labels of the KO pod to deny pods other than the KO pod in the KO namespace.
+			PodSelector: &metav1.LabelSelector{
+				MatchLabels: podLabelsCopy,
+			},
+		}},
 	}
 
 	allowProxyIngress := networkingv1.NetworkPolicyIngressRule{

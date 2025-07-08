@@ -354,6 +354,10 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	if err := mgr.Add(scrapersMgr); err != nil {
 		return nil, fmt.Errorf("failed to add scrapers manager to controller-runtime manager: %w", err)
 	}
+	podLabels, err := k8sutils.GetSelfPodLabels()
+	if err != nil {
+		return nil, err
+	}
 
 	ctrlOpts := controller.Options{
 		CacheSyncTimeout: c.CacheSyncTimeout,
@@ -376,6 +380,9 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Controller: &gateway.Reconciler{
 				CacheSyncTimeout:        c.CacheSyncTimeout,
 				Client:                  mgr.GetClient(),
+				Scheme:                  mgr.GetScheme(),
+				Namespace:               c.ControllerNamespace,
+				PodLabels:               podLabels,
 				DefaultDataPlaneImage:   consts.DefaultDataPlaneImage,
 				KonnectEnabled:          c.KonnectControllersEnabled,
 				AnonymousReportsEnabled: c.AnonymousReports,
