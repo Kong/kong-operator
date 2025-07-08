@@ -6,6 +6,8 @@ controller-tools: "0.18.0"
 kustomize: "5.7.0"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 golangci-lint: "2.2.1"
+# TODO: Renovate comment is missing. This needs to be added at some point.
+modernize: "v0.19.1"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 skaffold: "2.16.1"
 # renovate: datasource=github-releases depName=go-delve/delve
@@ -34,6 +36,7 @@ shellcheck: "0.10.0"
 #  WARN: Attempting to use non-git url for git operations (repository=local)
 #        "url": "vuln"
 #
+# TODO: Make this work.
 # renovate: datasource=git-tags depName=vuln registryUrl=https://go.googlesource.com
 govulncheck: "1.1.4"
 # renovate: datasource=github-releases depName=jlandowner/helm-chartsnap

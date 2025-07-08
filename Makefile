@@ -113,6 +113,13 @@ golangci-lint: mise yq ## Download golangci-lint locally if necessary.
 	@$(MISE) plugin install --yes -q golangci-lint
 	@$(MISE) install -q golangci-lint@$(GOLANGCI_LINT_VERSION)
 
+MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
+MODERNIZE = $(PROJECT_DIR)/bin/modernize
+.PHONY: modernize
+modernize:
+	GOBIN=$(PROJECT_DIR)/bin go install -v \
+		golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@$(MODERNIZE_VERSION)
+
 GOTESTSUM_VERSION = $(shell $(YQ) -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum
 .PHONY: gotestsum
@@ -239,8 +246,12 @@ govulncheck: download.govulncheck
 
 GOLANGCI_LINT_CONFIG ?= $(PROJECT_DIR)/.golangci.yaml
 .PHONY: lint
-lint: golangci-lint
+lint: golangci-lint lint.modernize
 	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) $(GOLANGCI_LINT_FLAGS)
+
+.PHONY: lint.modernize
+lint.modernize: modernize
+	$(MODERNIZE) ./...
 
 .PHONY: lint.charts
 lint.charts: download.kube-linter

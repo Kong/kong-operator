@@ -56,16 +56,6 @@ type managingObjectT interface {
 		*operatorv1beta1.DataPlane
 }
 
-// SetOwnerForObjectThroughLabels sets the owner of the provided object through a label.
-func SetOwnerForObjectThroughLabels[managingObject managingObjectT](obj client.Object, owner managingObject) {
-	labels := obj.GetLabels()
-	managedByLabelSet := GetManagedByLabelSet(owner)
-	for k, v := range managedByLabelSet {
-		labels[k] = v
-	}
-	obj.SetLabels(labels)
-}
-
 // GetManagedByLabelSet returns a map of labels with the provided object's metadata.
 // These can be applied to other objects that are owned by the object provided as an argument.
 func GetManagedByLabelSet[managingObject managingObjectT](object managingObject) map[string]string {

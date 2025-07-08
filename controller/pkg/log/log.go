@@ -11,29 +11,29 @@ import (
 )
 
 // Info logs a message at the info level.
-func Info(logger logr.Logger, msg string, keysAndValues ...interface{}) {
+func Info(logger logr.Logger, msg string, keysAndValues ...any) {
 	_log(logger, logging.InfoLevel, msg, keysAndValues...)
 }
 
 // Debug logs a message at the debug level.
-func Debug(logger logr.Logger, msg string, keysAndValues ...interface{}) {
+func Debug(logger logr.Logger, msg string, keysAndValues ...any) {
 	_log(logger, logging.DebugLevel, msg, keysAndValues...)
 }
 
 // Trace logs a message at the trace level.
-func Trace(logger logr.Logger, msg string, keysAndValues ...interface{}) {
+func Trace(logger logr.Logger, msg string, keysAndValues ...any) {
 	_log(logger, logging.TraceLevel, msg, keysAndValues...)
 }
 
 // Error logs a message at the error level.
-func Error(logger logr.Logger, err error, msg string, keysAndValues ...interface{}) {
+func Error(logger logr.Logger, err error, msg string, keysAndValues ...any) {
 	if !oddKeyValues(logger, msg, keysAndValues...) {
 		return
 	}
 	logger.Error(err, msg, keysAndValues...)
 }
 
-func _log(logger logr.Logger, level logging.Level, msg string, keysAndValues ...interface{}) {
+func _log(logger logr.Logger, level logging.Level, msg string, keysAndValues ...any) {
 	if !oddKeyValues(logger, msg, keysAndValues...) {
 		return
 	}
@@ -41,7 +41,7 @@ func _log(logger logr.Logger, level logging.Level, msg string, keysAndValues ...
 		Info(msg, keysAndValues...)
 }
 
-func oddKeyValues(logger logr.Logger, msg string, keysAndValues ...interface{}) bool {
+func oddKeyValues(logger logr.Logger, msg string, keysAndValues ...any) bool {
 	if len(keysAndValues)%2 != 0 {
 		err := fmt.Errorf("log message has odd number of arguments")
 		logger.Error(err, msg)

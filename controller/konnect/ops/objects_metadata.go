@@ -2,6 +2,7 @@ package ops
 
 import (
 	"fmt"
+	"maps"
 	"slices"
 	"sort"
 
@@ -116,9 +117,7 @@ func WithKubernetesMetadataLabels(obj ObjectWithMetadata, userSetLabels map[stri
 	if k8sNamespace := obj.GetNamespace(); k8sNamespace != "" {
 		labels[KubernetesNamespaceLabelKey] = k8sNamespace
 	}
-	for k, v := range userSetLabels {
-		labels[k] = v
-	}
+	maps.Copy(labels, userSetLabels)
 
 	// The maximum length of a label value in Konnect is 63 characters. We truncate the values to ensure they are
 	// within the limit.

@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"slices"
+
 	"github.com/google/go-cmp/cmp"
 )
 
@@ -46,10 +48,5 @@ func IgnoreAnnotationKeysComparer(keys ...string) cmp.Option {
 }
 
 func containsString(slice []string, s string) bool {
-	for _, item := range slice {
-		if item == s {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(slice, s)
 }

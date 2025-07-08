@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"path/filepath"
 	"time"
 
@@ -224,9 +225,7 @@ func listOrReduceDataPlaneDeployments(
 	additionalDeploymentLabels client.MatchingLabels,
 ) (reduced bool, deployment *appsv1.Deployment, err error) {
 	matchingLabels := k8sresources.GetManagedLabelForOwner(dataplane)
-	for k, v := range additionalDeploymentLabels {
-		matchingLabels[k] = v
-	}
+	maps.Copy(matchingLabels, additionalDeploymentLabels)
 
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,

@@ -526,7 +526,7 @@ func loggerForEntity[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ctx context.Context, e TEnt, op Op) logr.Logger {
-	keysAndValues := []interface{}{
+	keysAndValues := []any{
 		"op", op,
 	}
 

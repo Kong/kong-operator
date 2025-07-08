@@ -119,7 +119,7 @@ func GenerateCMCertificateForOwner(
 	}
 
 	kind := strings.ToLower(owner.GetObjectKind().GroupVersionKind().Kind)
-	cn := sha256.Sum256([]byte(fmt.Sprintf("%s.%s", owner.GetName(), owner.GetNamespace())))
+	cn := sha256.Sum256(fmt.Appendf([]byte{}, "%s.%s", owner.GetName(), owner.GetNamespace()))
 	cert := &certmanagerv1.Certificate{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-%s-", kind, owner.GetName())),

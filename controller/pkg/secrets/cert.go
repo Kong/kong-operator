@@ -9,6 +9,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"maps"
 	"net/url"
 	"strings"
 	"sync"
@@ -193,9 +194,7 @@ func EnsureCertificate[
 ) (op.Result, *corev1.Secret, error) {
 	// Get the Secrets for the DataPlane using new labels.
 	matchingLabels := k8sresources.GetManagedLabelForOwner(owner)
-	for k, v := range additionalMatchingLabels {
-		matchingLabels[k] = v
-	}
+	maps.Copy(matchingLabels, additionalMatchingLabels)
 
 	secrets, err := k8sutils.ListSecretsForOwner(ctx, cl, owner.GetUID(), matchingLabels)
 	if err != nil {
@@ -261,9 +260,7 @@ func matchingLabelsToSecretOpt(ml client.MatchingLabels) k8sresources.SecretOpt 
 		if a.Labels == nil {
 			a.Labels = make(map[string]string)
 		}
-		for k, v := range ml {
-			a.Labels[k] = v
-		}
+		maps.Copy(a.Labels, ml)
 	}
 }
 

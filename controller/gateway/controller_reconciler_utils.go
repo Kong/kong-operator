@@ -1041,7 +1041,7 @@ type kongListenConfig struct {
 func parseKongListenEnv(str string) (kongListenConfig, error) {
 	kongListenConfig := kongListenConfig{}
 
-	for _, s := range strings.Split(str, ",") {
+	for s := range strings.SplitSeq(str, ",") {
 		s = strings.TrimPrefix(s, " ")
 		i := strings.IndexRune(s, ' ')
 		var hostPort string
