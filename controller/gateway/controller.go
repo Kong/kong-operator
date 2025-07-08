@@ -13,6 +13,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -58,6 +59,9 @@ import (
 type Reconciler struct {
 	client.Client
 	CacheSyncTimeout        time.Duration
+	Scheme                  *runtime.Scheme
+	Namespace               string
+	PodLabels               map[string]string
 	DefaultDataPlaneImage   string
 	KonnectEnabled          bool
 	AnonymousReportsEnabled bool
@@ -391,7 +395,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// DataPlane NetworkPolicies
 	log.Trace(logger, "ensuring DataPlane's NetworkPolicy exists")
-	createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, dataplane, controlplane)
+	createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, dataplane)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
