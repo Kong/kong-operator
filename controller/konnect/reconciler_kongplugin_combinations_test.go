@@ -13,7 +13,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/modules/manager/scheme"
 )
@@ -474,8 +474,8 @@ func TestGetCombinations(t *testing.T) {
 }
 
 func TestGroupByControlPlane(t *testing.T) {
-	cpWithName := func(name string) *konnectv1alpha1.KonnectGatewayControlPlane {
-		return &konnectv1alpha1.KonnectGatewayControlPlane{
+	cpWithName := func(name string) *konnectv1alpha2.KonnectGatewayControlPlane {
+		return &konnectv1alpha2.KonnectGatewayControlPlane{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "default",
 				Name:      name,

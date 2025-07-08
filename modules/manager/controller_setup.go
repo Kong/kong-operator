@@ -572,7 +572,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		// Add controllers responsible for creating, updating and deleting Konnect entities
 		controllers = append(
 			controllers,
-			newKonnectEntityController[konnectv1alpha1.KonnectGatewayControlPlane](controllerFactory),
+			newKonnectEntityController[konnectv1alpha2.KonnectGatewayControlPlane](controllerFactory),
 			newKonnectEntityController[konnectv1alpha1.KonnectCloudGatewayNetwork](controllerFactory),
 			newKonnectEntityController[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration](controllerFactory),
 			newKonnectEntityController[konnectv1alpha1.KonnectCloudGatewayTransitGateway](controllerFactory),

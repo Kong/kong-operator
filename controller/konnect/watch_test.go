@@ -14,6 +14,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/internal/utils/index"
@@ -21,7 +22,7 @@ import (
 )
 
 func TestWatchOptions(t *testing.T) {
-	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha1.KonnectGatewayControlPlane{})
+	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha2.KonnectGatewayControlPlane{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongService{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1.KongConsumer{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongRoute{})
@@ -88,7 +89,7 @@ func TestObjectListToReconcileRequests(t *testing.T) {
 }
 
 func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
-	cp := &konnectv1alpha1.KonnectGatewayControlPlane{
+	cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: konnectv1alpha1.GroupVersion.String(),
 			Kind:       "KonnectGatewayControlPlane",

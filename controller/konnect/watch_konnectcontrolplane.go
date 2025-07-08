@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/internal/utils/index"
 )
@@ -28,13 +29,13 @@ func KonnectGatewayControlPlaneReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&konnectv1alpha1.KonnectGatewayControlPlane{})
+			return b.For(&konnectv1alpha2.KonnectGatewayControlPlane{})
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForKonnectAPIAuthConfiguration[konnectv1alpha1.KonnectGatewayControlPlaneList](
+					enqueueObjectsForKonnectAPIAuthConfiguration[konnectv1alpha2.KonnectGatewayControlPlaneList](
 						cl,
 						index.IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration,
 					),
@@ -43,7 +44,7 @@ func KonnectGatewayControlPlaneReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.KonnectGatewayControlPlane{},
+				&konnectv1alpha2.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueKonnectGatewayControlPlaneGroupForMembers(cl),
 				),
@@ -56,11 +57,11 @@ func enqueueKonnectGatewayControlPlaneGroupForMembers(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+		cp, ok := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 		if !ok {
 			return nil
 		}
-		var l konnectv1alpha1.KonnectGatewayControlPlaneList
+		var l konnectv1alpha2.KonnectGatewayControlPlaneList
 		if err := cl.List(ctx, &l,
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(cp.GetNamespace()),

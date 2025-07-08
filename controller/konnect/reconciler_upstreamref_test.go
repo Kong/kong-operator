@@ -16,6 +16,7 @@ import (
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 )
@@ -167,13 +168,13 @@ var testKongUpstreamControlPlaneRefNotProgrammed = &configurationv1alpha1.KongUp
 	},
 }
 
-var testControlPlaneOK = &konnectv1alpha1.KonnectGatewayControlPlane{
+var testControlPlaneOK = &konnectv1alpha2.KonnectGatewayControlPlane{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "cp-ok",
 		Namespace: "default",
 	},
-	Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{},
-	Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
+	Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{},
+	Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 		KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
 			ID: "123456789",
 		},
@@ -186,13 +187,13 @@ var testControlPlaneOK = &konnectv1alpha1.KonnectGatewayControlPlane{
 	},
 }
 
-var testControlPlaneNotProgrammed = &konnectv1alpha1.KonnectGatewayControlPlane{
+var testControlPlaneNotProgrammed = &konnectv1alpha2.KonnectGatewayControlPlane{
 	ObjectMeta: metav1.ObjectMeta{
 		Name:      "cp-not-programmed",
 		Namespace: "default",
 	},
-	Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{},
-	Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
+	Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{},
+	Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 		Conditions: []metav1.Condition{
 			{
 				Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -399,6 +400,7 @@ func testHandleUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 			scheme := runtime.NewScheme()
 			require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 			require.NoError(t, konnectv1alpha1.AddToScheme(scheme))
+			require.NoError(t, konnectv1alpha2.AddToScheme(scheme))
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).
 				WithObjects(tc.ent).WithObjects(tc.objects...).
 				// WithStatusSubresource is required for updating status of handled entity.

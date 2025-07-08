@@ -19,6 +19,7 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	kcfgkonnect "github.com/kong/kubernetes-configuration/v2/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
@@ -61,7 +62,7 @@ func Create[
 	)
 
 	switch ent := any(e).(type) {
-	case *konnectv1alpha1.KonnectGatewayControlPlane:
+	case *konnectv1alpha2.KonnectGatewayControlPlane:
 		err = ensureControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = createKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
@@ -124,7 +125,7 @@ func Create[
 		// We'll get its Konnect ID by listing all entities of its type filtered by the Kubernetes object UID.
 		var id string
 		switch ent := any(e).(type) {
-		case *konnectv1alpha1.KonnectGatewayControlPlane:
+		case *konnectv1alpha2.KonnectGatewayControlPlane:
 			id, errGet = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 			// NOTE: since Cloud Gateways resource do not support labels/tags,
@@ -263,7 +264,7 @@ func Delete[
 		statusCode int
 	)
 	switch ent := any(ent).(type) {
-	case *konnectv1alpha1.KonnectGatewayControlPlane:
+	case *konnectv1alpha2.KonnectGatewayControlPlane:
 		err = deleteControlPlane(ctx, sdk.GetControlPlaneSDK(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = deleteKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
@@ -414,7 +415,7 @@ func Update[
 		start      = time.Now()
 	)
 	switch ent := any(e).(type) {
-	case *konnectv1alpha1.KonnectGatewayControlPlane:
+	case *konnectv1alpha2.KonnectGatewayControlPlane:
 		// if the ControlPlane is of type origin, enforce the spec on Konnect.
 		if *ent.Spec.Source == commonv1alpha1.EntitySourceOrigin {
 			err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
@@ -716,7 +717,7 @@ func isMirrorableEntity[
 	TEnt constraints.EntityType[T],
 ](ent TEnt) bool {
 	switch any(ent).(type) {
-	case *konnectv1alpha1.KonnectGatewayControlPlane:
+	case *konnectv1alpha2.KonnectGatewayControlPlane:
 		return true
 	default:
 		return false
@@ -730,7 +731,7 @@ func isMirrorEntity[
 	TEnt constraints.EntityType[T],
 ](ent TEnt) bool {
 	switch cp := any(ent).(type) {
-	case *konnectv1alpha1.KonnectGatewayControlPlane:
+	case *konnectv1alpha2.KonnectGatewayControlPlane:
 		return cp.Spec.Source != nil && *cp.Spec.Source == commonv1alpha1.EntitySourceMirror
 	default:
 		return false
