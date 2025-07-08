@@ -387,6 +387,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		}),
 		WithFeatureGates(logger, cp.Spec.FeatureGates),
 		WithControllers(logger, cp.Spec.Controllers),
+		WithIngressClass(cp.Spec.IngressClass),
 
 		// TODO: https://github.com/kong/kong-operator/issues/1749 metrics.
 		WithMetricsServerOff(),

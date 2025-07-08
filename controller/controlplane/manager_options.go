@@ -409,3 +409,14 @@ func WithAnonymousReportsFixedPayloadCustomizer(customizer telemetryTypes.Payloa
 		c.AnonymousReportsFixedPayloadCustomizer = customizer
 	}
 }
+
+// WithIngressClass sets the ingress class for the manager.
+func WithIngressClass(ingressClass *string) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		if ingressClass == nil || *ingressClass == "" {
+			// If ingressClass is nil or empty, we don't set it.
+			return
+		}
+		c.IngressClassName = *ingressClass
+	}
+}
