@@ -3,6 +3,7 @@ package specialized
 import (
 	"encoding/json"
 	"fmt"
+	"maps"
 	"strings"
 	"sync"
 
@@ -55,12 +56,7 @@ func getAuthHeaderForInference(provider operatorv1alpha1.AICloudProvider) (map[s
 		return nil, fmt.Errorf("%s is not a valid provider (valid providers: %+v)", provider, aiCloudProviderAuthHeaders)
 	}
 
-	headerInfoCopy := make(map[string]string, len(headerInfo))
-	for k, v := range headerInfo {
-		headerInfoCopy[k] = v
-	}
-
-	return headerInfoCopy, nil
+	return maps.Clone(headerInfo), nil
 }
 
 // ----------------------------------------------------------------------------

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os"
 
 	"github.com/go-logr/logr"
@@ -67,9 +68,7 @@ func addAnnotationsForDataPlaneIngressService(obj client.Object, dataplane opera
 	if annotations == nil {
 		annotations = make(map[string]string)
 	}
-	for k, v := range specAnnotations {
-		annotations[k] = v
-	}
+	maps.Copy(annotations, specAnnotations)
 	encodedSpecAnnotations, err := json.Marshal(specAnnotations)
 	if err == nil {
 		annotations[consts.AnnotationLastAppliedAnnotations] = string(encodedSpecAnnotations)

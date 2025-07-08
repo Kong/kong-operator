@@ -42,7 +42,7 @@ func SetCondition(condition metav1.Condition, resource ConditionsAware) {
 	newConditions := make([]metav1.Condition, 0, len(conditions))
 
 	var conditionFound bool
-	for i := 0; i < len(conditions); i++ {
+	for i := range conditions {
 		if conditions[i].Type != condition.Type {
 			newConditions = append(newConditions, conditions[i])
 		} else {

@@ -3,6 +3,7 @@ package integration
 import (
 	"context"
 	"fmt"
+	"maps"
 	"testing"
 	"time"
 
@@ -508,9 +509,7 @@ func patchDataPlaneAnnotations(t *testing.T, dataplane *operatorv1beta1.DataPlan
 	if dataplane.Annotations == nil {
 		dataplane.Annotations = annotations
 	} else {
-		for k, v := range annotations {
-			dataplane.Annotations[k] = v
-		}
+		maps.Copy(dataplane.Annotations, annotations)
 	}
 	require.NoError(t, cl.Patch(GetCtx(), dataplane, client.MergeFrom(oldDataPlane)))
 }

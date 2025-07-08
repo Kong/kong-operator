@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
@@ -176,9 +177,7 @@ func matchingLabelsToServiceOpt(ml client.MatchingLabels) k8sresources.ServiceOp
 		if s.Labels == nil {
 			s.Labels = make(map[string]string)
 		}
-		for k, v := range ml {
-			s.Labels[k] = v
-		}
+		maps.Copy(s.Labels, ml)
 	}
 }
 
@@ -187,9 +186,7 @@ func matchingLabelsToDeploymentOpt(ml client.MatchingLabels) k8sresources.Deploy
 		if a.Labels == nil {
 			a.Labels = make(map[string]string)
 		}
-		for k, v := range ml {
-			a.Labels[k] = v
-		}
+		maps.Copy(a.Labels, ml)
 	}
 }
 
@@ -203,9 +200,7 @@ func ensureAdminServiceForDataPlane(
 	// Get the Services for the DataPlane by label.
 	matchingLabels := k8sresources.GetManagedLabelForOwner(dataPlane)
 	matchingLabels[consts.DataPlaneServiceTypeLabel] = string(consts.DataPlaneAdminServiceLabelValue)
-	for k, v := range additionalServiceLabels {
-		matchingLabels[k] = v
-	}
+	maps.Copy(matchingLabels, additionalServiceLabels)
 
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
@@ -282,9 +277,7 @@ func ensureIngressServiceForDataPlane(
 	// Get the Services for the DataPlane by label.
 	matchingLabels := k8sresources.GetManagedLabelForOwner(dataPlane)
 	matchingLabels[consts.DataPlaneServiceTypeLabel] = string(consts.DataPlaneIngressServiceLabelValue)
-	for k, v := range additionalServiceLabels {
-		matchingLabels[k] = v
-	}
+	maps.Copy(matchingLabels, additionalServiceLabels)
 
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,

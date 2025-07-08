@@ -230,8 +230,7 @@ func getSelectorOverrides(overrideAnnotation string) (map[string]string, error) 
 	}
 
 	selector := make(map[string]string)
-	overrides := strings.Split(overrideAnnotation, ",")
-	for _, o := range overrides {
+	for o := range strings.SplitSeq(overrideAnnotation, ",") {
 		annotationParts := strings.Split(o, "=")
 		if len(annotationParts) != 2 || annotationParts[0] == "" || annotationParts[1] == "" {
 			return nil, errors.New("selector override malformed - expected format: key1=value,key2=value2")

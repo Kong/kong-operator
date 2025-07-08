@@ -456,7 +456,7 @@ func Test_parsePrivateKey(t *testing.T) {
 		name             string
 		keyType          x509.PublicKeyAlgorithm
 		expectedAlg      x509.SignatureAlgorithm
-		expectedKeyType  interface{}
+		expectedKeyType  any
 		expectedErrorMsg string
 	}{
 		{

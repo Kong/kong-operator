@@ -539,10 +539,10 @@ func TestTelemetryUpdates(t *testing.T) {
 				_, err := dyn.Resource(operatorv1beta1.DataPlaneGVR()).
 					Namespace("kong").
 					Create(ctx, &unstructured.Unstructured{
-						Object: map[string]interface{}{
+						Object: map[string]any{
 							"apiVersion": "gateway-operator.konghq.com/v1beta1",
 							"kind":       "DataPlane",
-							"metadata": map[string]interface{}{
+							"metadata": map[string]any{
 								"name":      "cloud-gateway-0",
 								"namespace": "kong",
 							},
@@ -552,10 +552,10 @@ func TestTelemetryUpdates(t *testing.T) {
 				_, err = dyn.Resource(operatorv1beta1.DataPlaneGVR()).
 					Namespace("kong").
 					Create(ctx, &unstructured.Unstructured{
-						Object: map[string]interface{}{
+						Object: map[string]any{
 							"apiVersion": "gateway-operator.konghq.com/v1beta1",
 							"kind":       "DataPlane",
-							"metadata": map[string]interface{}{
+							"metadata": map[string]any{
 								"name":      "cloud-gateway-1",
 								"namespace": "kong",
 							},
