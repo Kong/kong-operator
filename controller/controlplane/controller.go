@@ -395,6 +395,13 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		WithAnonymousReportsFixedPayloadCustomizer(payloadCustomizer),
 	}
 
+	if cp.Spec.GatewayDiscovery != nil {
+		cfgOpts = append(cfgOpts,
+			WithGatewayDiscoveryReadinessCheckInterval(cp.Spec.GatewayDiscovery.ReadinessCheckInterval),
+			WithGatewayDiscoveryReadinessCheckTimeout(cp.Spec.GatewayDiscovery.ReadinessCheckTimeout),
+		)
+	}
+
 	// If the ControlPlane is owned by a Gateway, we set the Gateway to be the only one to reconcile.
 	if owner, ok := lo.Find(cp.GetOwnerReferences(), func(owner metav1.OwnerReference) bool {
 		return strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) &&
