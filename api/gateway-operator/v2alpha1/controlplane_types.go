@@ -119,6 +119,11 @@ type ControlPlaneOptions struct {
 	// +listMapKey=name
 	// +kubebuilder:validation:MaxItems=32
 	Controllers []ControlPlaneController `json:"controllers,omitempty"`
+
+	// GatewayDiscovery defines the configuration for the Gateway Discovery feature.
+	//
+	// +optional
+	GatewayDiscovery *ControlPlaneGatewayDiscovery `json:"gatewayDiscovery,omitempty"`
 }
 
 // ControlPlaneDataPlaneTarget defines the target for the DataPlane that the ControlPlane
@@ -163,6 +168,23 @@ type ControlPlaneDataPlaneTargetRef struct {
 	//
 	// +required
 	Name string `json:"name"`
+}
+
+// ControlPlaneGatewayDiscovery defines the configuration for the Gateway Discovery
+// feature of the ControlPlane.
+type ControlPlaneGatewayDiscovery struct {
+	// ReadinessCheckInterval defines the interval at which the ControlPlane
+	// checks the readiness of the DataPlanes it is responsible for.
+	// If not specified, the default interval as defined by the operator will be used.
+	//
+	// +optional
+	ReadinessCheckInterval *metav1.Duration `json:"readinessCheckInterval,omitempty"`
+
+	// ReadinessCheckTimeout defines the timeout for the DataPlane readiness check.
+	// If not specified, the default interval as defined by the operator will be used.
+	//
+	// +optional
+	ReadinessCheckTimeout *metav1.Duration `json:"readinessCheckTimeout,omitempty"`
 }
 
 // ControllerState defines the state of a feature gate.
