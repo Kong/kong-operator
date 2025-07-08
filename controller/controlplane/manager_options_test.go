@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tonglil/buflogr"
@@ -802,4 +803,37 @@ func TestWithAnonymousReportsFixedPayloadCustomizer(t *testing.T) {
 	result := cfg.AnonymousReportsFixedPayloadCustomizer(testPayload)
 	assert.True(t, called)
 	assert.Equal(t, "value", result["test"])
+}
+
+func TestWithIngressClass(t *testing.T) {
+	testCases := []struct {
+		name         string
+		ingressClass *string
+		expected     string
+	}{
+		{
+			name:         "ingress class set to non-empty string",
+			ingressClass: lo.ToPtr("kong"),
+			expected:     "kong",
+		},
+		{
+			name:         "ingress class set to empty string",
+			ingressClass: lo.ToPtr(""),
+			expected:     "", // Should remain empty/default
+		},
+		{
+			name:         "ingress class is nil",
+			ingressClass: nil,
+			expected:     "", // Should remain empty/default
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &managercfg.Config{}
+			opt := WithIngressClass(tc.ingressClass)
+			opt(cfg)
+			assert.Equal(t, tc.expected, cfg.IngressClassName)
+		})
+	}
 }
