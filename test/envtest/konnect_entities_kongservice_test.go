@@ -24,7 +24,7 @@ import (
 	"github.com/kong/kong-operator/test/helpers/eventually"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 func TestKongService(t *testing.T) {
@@ -404,7 +404,7 @@ func TestKongService(t *testing.T) {
 
 		cp = deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth,
 			func(obj client.Object) {
-				cpNew := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+				cpNew := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 				cpNew.Name = cp.Name
 			},
 		)

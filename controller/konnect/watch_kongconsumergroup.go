@@ -11,6 +11,7 @@ import (
 
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
 )
 
 // TODO(pmalek): this can be extracted and used in reconciler.go
@@ -46,7 +47,7 @@ func KongConsumerGroupReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.KonnectGatewayControlPlane{},
+				&konnectv1alpha2.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectForKonnectGatewayControlPlane[configurationv1beta1.KongConsumerGroupList](
 						cl, index.IndexFieldKongConsumerGroupOnKonnectGatewayControlPlane,

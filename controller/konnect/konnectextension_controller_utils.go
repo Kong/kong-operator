@@ -44,7 +44,7 @@ func (r *KonnectExtensionReconciler) getGatewayKonnectControlPlane(
 	ctx context.Context,
 	ext konnectv1alpha2.KonnectExtension,
 	dependingConditions ...metav1.Condition,
-) (cp *konnectv1alpha1.KonnectGatewayControlPlane, res ctrl.Result, err error) {
+) (cp *konnectv1alpha2.KonnectGatewayControlPlane, res ctrl.Result, err error) {
 	// Get respective KonnectGatewayControlPlane from K8s cluster.
 	var errGetFromK8s error
 	// TODO: get namespace from cpRef.Namespace when allowed to reference CP from another namespace.
@@ -52,7 +52,7 @@ func (r *KonnectExtensionReconciler) getGatewayKonnectControlPlane(
 		Name:      ext.Spec.Konnect.ControlPlane.Ref.KonnectNamespacedRef.Name,
 		Namespace: ext.Namespace,
 	}
-	kgcp := &konnectv1alpha1.KonnectGatewayControlPlane{}
+	kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{}
 	// Set the controlPlaneRefValidCond to false in case the KonnectGatewayControlPlane is not found.
 	if err := r.Get(ctx, cpNN, kgcp); err != nil {
 		if k8serrors.IsNotFound(err) {
@@ -187,7 +187,7 @@ func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 
 func getKonnectAPIAuthRefNN(ctx context.Context, cl client.Client, ext *konnectv1alpha2.KonnectExtension) (types.NamespacedName, error) {
 	cpRef := ext.Spec.Konnect.ControlPlane.Ref.KonnectNamespacedRef
-	kgcp := &konnectv1alpha1.KonnectGatewayControlPlane{}
+	kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{}
 	err := cl.Get(ctx, client.ObjectKey{
 		// TODO: handle cross namespace refs to KonnectGatewayControlPlane when referencing CP from another namespace is supported.
 		Namespace: ext.Namespace,
@@ -253,12 +253,12 @@ func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, e
 	return res, certificateSecret, err
 }
 
-func enforceKonnectExtensionStatus(cp konnectv1alpha1.KonnectGatewayControlPlane, certificateSecret corev1.Secret, ext *konnectv1alpha2.KonnectExtension) bool {
+func enforceKonnectExtensionStatus(cp konnectv1alpha2.KonnectGatewayControlPlane, certificateSecret corev1.Secret, ext *konnectv1alpha2.KonnectExtension) bool {
 	var toUpdate bool
 	expectedKonnectStatus := &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
 		ControlPlaneID: cp.Status.ID,
 		ClusterType: konnectClusterTypeToCRDClusterType(
-			sdkkonnectcomp.ControlPlaneClusterType(lo.FromPtrOr(cp.Spec.ClusterType, "")),
+			sdkkonnectcomp.ControlPlaneClusterType(lo.FromPtrOr(cp.GetKonnectClusterType(), "")),
 		),
 	}
 
