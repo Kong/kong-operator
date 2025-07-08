@@ -16,17 +16,17 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kong-operator/controller"
+	ctrlconsts "github.com/kong/kong-operator/controller/consts"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
@@ -48,7 +48,7 @@ const requeueAfterBoot = time.Second
 // Reconciler reconciles a ControlPlane object
 type Reconciler struct {
 	client.Client
-	Scheme                   *runtime.Scheme
+	CacheSyncTimeout         time.Duration
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
@@ -65,6 +65,9 @@ type Reconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
+		WithOptions(controller.Options{
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
 		For(&ControlPlane{}).
 		// Watch for changes in Secret objects that are owned by ControlPlane objects.
 		Owns(&corev1.Secret{})
@@ -127,7 +130,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			if err := r.Update(ctx, cp); err != nil {
 				if k8serrors.IsConflict(err) {
 					log.Debug(logger, "conflict found when updating ControlPlane, retrying")
-					return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
+					return ctrl.Result{Requeue: true, RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 				}
 				return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane: %w", err)
 			}
@@ -146,7 +149,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				log.Debug(logger, "conflict found when updating ControlPlane finalizer, retrying",
 					"finalizer", string(ControlPlaneFinalizerCPInstanceTeardown),
 				)
-				return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
+				return ctrl.Result{Requeue: true, RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 			}
 			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane's finalizer %s: %w",
 				string(ControlPlaneFinalizerCPInstanceTeardown),
@@ -155,7 +158,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 		// Requeue to ensure that we do not miss next reconciliation request in case
 		// AddFinalizer calls returned true but the update resulted in a noop.
-		return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
+		return ctrl.Result{Requeue: true, RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 
 	k8sutils.InitReady(cp)
@@ -326,7 +329,7 @@ func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, update
 	if err := r.Client.Status().Patch(ctx, updated, client.MergeFrom(current)); err != nil {
 		if k8serrors.IsConflict(err) {
 			log.Debug(logger, "conflict found when updating ControlPlane, retrying")
-			return ctrl.Result{Requeue: true, RequeueAfter: controller.RequeueWithoutBackoff}, nil
+			return ctrl.Result{Requeue: true, RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane's status : %w", err)
 	}

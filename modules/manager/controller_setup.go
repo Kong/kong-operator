@@ -14,6 +14,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -354,13 +355,17 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		return nil, fmt.Errorf("failed to add scrapers manager to controller-runtime manager: %w", err)
 	}
 
+	ctrlOpts := controller.Options{
+		CacheSyncTimeout: c.CacheSyncTimeout,
+	}
+
 	controllers := []ControllerDef{
 		// GatewayClass controller
 		{
 			Enabled: c.GatewayControllerEnabled,
 			Controller: &gatewayclass.Reconciler{
+				CacheSyncTimeout:              c.CacheSyncTimeout,
 				Client:                        mgr.GetClient(),
-				Scheme:                        mgr.GetScheme(),
 				LoggingMode:                   c.LoggingMode,
 				GatewayAPIExperimentalEnabled: c.GatewayAPIExperimentalEnabled,
 			},
@@ -369,8 +374,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.GatewayControllerEnabled,
 			Controller: &gateway.Reconciler{
+				CacheSyncTimeout:        c.CacheSyncTimeout,
 				Client:                  mgr.GetClient(),
-				Scheme:                  mgr.GetScheme(),
 				DefaultDataPlaneImage:   consts.DefaultDataPlaneImage,
 				KonnectEnabled:          c.KonnectControllersEnabled,
 				AnonymousReportsEnabled: c.AnonymousReports,
@@ -381,10 +386,10 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.GatewayControllerEnabled || c.ControlPlaneControllerEnabled,
 			Controller: &controlplane.Reconciler{
+				CacheSyncTimeout:         c.CacheSyncTimeout,
 				AnonymousReportsEnabled:  c.AnonymousReports,
 				LoggingMode:              c.LoggingMode,
 				Client:                   mgr.GetClient(),
-				Scheme:                   mgr.GetScheme(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				ClusterCAKeyConfig:       clusterCAKeyConfig,
@@ -399,8 +404,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: (c.DataPlaneControllerEnabled || c.GatewayControllerEnabled) && !c.DataPlaneBlueGreenControllerEnabled,
 			Controller: &dataplane.Reconciler{
+				CacheSyncTimeout:         c.CacheSyncTimeout,
 				Client:                   mgr.GetClient(),
-				Scheme:                   mgr.GetScheme(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				ClusterCAKeyConfig:       clusterCAKeyConfig,
@@ -415,13 +420,14 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.DataPlaneBlueGreenControllerEnabled,
 			Controller: &dataplane.BlueGreenReconciler{
+				CacheSyncTimeout:         c.CacheSyncTimeout,
 				Client:                   mgr.GetClient(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				DataPlaneController: &dataplane.Reconciler{
+					CacheSyncTimeout:         c.CacheSyncTimeout,
 					Client:                   mgr.GetClient(),
-					Scheme:                   mgr.GetScheme(),
 					ClusterCASecretName:      c.ClusterCASecretName,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 					ClusterCAKeyConfig:       clusterCAKeyConfig,
@@ -444,6 +450,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Controller: dataplane.NewDataPlaneOwnedResourceFinalizerReconciler[corev1.Service](
 				mgr.GetClient(),
 				c.LoggingMode,
+				ctrlOpts,
 			),
 		},
 		// DataPlaneOwnedSecretFinalizer controller
@@ -452,6 +459,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Controller: dataplane.NewDataPlaneOwnedResourceFinalizerReconciler[corev1.Secret](
 				mgr.GetClient(),
 				c.LoggingMode,
+				ctrlOpts,
 			),
 		},
 		// DataPlaneOwnedDeploymentFinalizer controller
@@ -460,30 +468,33 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Controller: dataplane.NewDataPlaneOwnedResourceFinalizerReconciler[appsv1.Deployment](
 				mgr.GetClient(),
 				c.LoggingMode,
+				ctrlOpts,
 			),
 		},
 		// AIGateway Controller
 		{
 			Enabled: c.AIGatewayControllerEnabled,
 			Controller: &specialized.AIGatewayReconciler{
-				Client:      mgr.GetClient(),
-				Scheme:      mgr.GetScheme(),
-				LoggingMode: c.LoggingMode,
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				Client:           mgr.GetClient(),
+				LoggingMode:      c.LoggingMode,
 			},
 		},
 		// KongPluginInstallation controller
 		{
 			Enabled: c.KongPluginInstallationControllerEnabled,
 			Controller: &kongplugininstallation.Reconciler{
-				Client:      mgr.GetClient(),
-				Scheme:      mgr.GetScheme(),
-				LoggingMode: c.LoggingMode,
+				CacheSyncTimeout: c.CacheSyncTimeout,
+				Client:           mgr.GetClient(),
+				Scheme:           mgr.GetScheme(),
+				LoggingMode:      c.LoggingMode,
 			},
 		},
 		// ControlPlaneExtensions controller
 		{
 			Enabled: c.ControlPlaneExtensionsControllerEnabled,
 			Controller: &controlplane_extensions.Reconciler{
+				CacheSyncTimeout:                c.CacheSyncTimeout,
 				Client:                          mgr.GetClient(),
 				LoggingMode:                     c.LoggingMode,
 				DataPlaneScraperManagerNotifier: scrapersMgr,

@@ -3,17 +3,18 @@ package gatewayclass
 import (
 	"context"
 	"fmt"
+	"time"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kong-operator/controller"
+	ctrlconsts "github.com/kong/kong-operator/controller/consts"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/internal/utils/gatewayclass"
 	"github.com/kong/kong-operator/modules/manager/logging"
@@ -27,14 +28,17 @@ import (
 // Reconciler reconciles a Gateway object
 type Reconciler struct {
 	client.Client
-	Scheme                        *runtime.Scheme
-	LoggingMode                   logging.Mode
+	CacheSyncTimeout              time.Duration
 	GatewayAPIExperimentalEnabled bool
+	LoggingMode                   logging.Mode
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
+		WithOptions(controller.Options{
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		}).
 		For(&gatewayv1.GatewayClass{},
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatches))).
 		Complete(r)
@@ -83,7 +87,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			log.Debug(logger, "conflict found when updating GatewayClass, retrying")
 			return ctrl.Result{
 				Requeue:      true,
-				RequeueAfter: controller.RequeueWithoutBackoff,
+				RequeueAfter: ctrlconsts.RequeueWithoutBackoff,
 			}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed patching GatewayClass: %w", err)
