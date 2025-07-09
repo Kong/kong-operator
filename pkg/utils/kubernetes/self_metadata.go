@@ -11,7 +11,7 @@ import (
 
 const (
 	podNamespaceEnvName         = "POD_NAMESPACE"
-	podLabelsEnvName            = "POD_LABELS"
+	podLabelsFile               = "/etc/podinfo/labels"
 	serviceAccountNamespaceFile = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 )
 
@@ -30,12 +30,12 @@ func GetSelfNamespace() (string, error) {
 
 // GetSelfPodLabels gets all the labels of the KO pod.
 func GetSelfPodLabels() (map[string]string, error) {
-	labels := os.Getenv(podLabelsEnvName)
-	if labels == "" {
-		return nil, fmt.Errorf("Cannot find pod labels from env %s", podLabelsEnvName)
+	buf, err := os.ReadFile(podLabelsFile)
+	if err != nil {
+		return nil, fmt.Errorf("Cannot find pod labels from file %s: %v", podLabelsFile, err)
 	}
 
-	labelList := strings.Split(labels, "\n")
+	labelList := strings.Split(string(buf), "\n")
 	ret := make(map[string]string, len(labelList))
 	for _, label := range labelList {
 		labelKV := strings.SplitN(label, "=", 2)

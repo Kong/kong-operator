@@ -62,10 +62,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: POD_LABELS
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.labels
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
         livenessProbe:
           {{- toYaml .Values.livenessProbe | nindent 10 }}
