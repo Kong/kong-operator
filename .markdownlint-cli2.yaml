@@ -1,0 +1,37 @@
+# Config schema:
+# https://github.com/DavidAnson/markdownlint-cli2/blob/main/test/markdownlint-cli2-yaml-example/.markdownlint-cli2.yaml
+
+config:
+
+  # All available checks options:
+  # https://github.com/DavidAnson/markdownlint/blob/v0.32.1/schema/.markdownlint.yaml
+
+  MD013:
+    line_length: 310
+
+  # MD024/no-duplicate-heading : Multiple headings with the same content :
+  # https://github.com/DavidAnson/markdownlint/blob/v0.32.1/doc/md024.md
+  MD024:
+    # Only check sibling headings
+    siblings_only: true
+
+  # MD028/no-blanks-blockquote : Blank line inside blockquote :
+  # https://github.com/DavidAnson/markdownlint/blob/v0.32.1/doc/md028.md
+  MD028: false
+
+  # MD033/no-inline-html : Inline HTML :
+  # https://github.com/DavidAnson/markdownlint/blob/v0.32.1/doc/md033.md
+  MD033:
+    # Allowed elements
+    allowed_elements:
+    - img
+
+  # MD034/no-bare-urls : Bare URL used :
+  # https://github.com/DavidAnson/markdownlint/blob/v0.32.1/doc/md034.md
+  MD034: false
+
+  # MD036/no-emphasis-as-heading : Emphasis used instead of a heading :
+  # https://github.com/DavidAnson/markdownlint/blob/v0.32.1/doc/md036.md
+  MD036:
+    # Punctuation characters
+    punctuation: ".,;:!?。，；：！？*"

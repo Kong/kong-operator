@@ -86,7 +86,9 @@ by OpenAI (e.g. ChatGPT).
 > enabled by default. The CRD must be deployed manually (it is not provided as
 > part of our `kustomize` bundle):
 >
->   kubectl apply -f config/crd/bases/gateway-operator.konghq.com_aigateways.yaml
+> ```bash
+> kubectl apply -f config/crd/bases/gateway-operator.konghq.com_aigateways.yaml
+> ```
 >
 > Then see our `config/samples/aigateway.yaml` example to get started.
 
