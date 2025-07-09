@@ -195,6 +195,13 @@ download.telepresence: mise yq ## Download telepresence locally if necessary.
 	@$(MISE) plugin install --yes -q telepresence
 	@$(MISE) install -q telepresence@$(TELEPRESENCE_VERSION)
 
+MARKDOWNLINT_VERSION = $(shell $(YQ) -r '.markdownlint-cli2' < $(TOOLS_VERSIONS_FILE))
+MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/markdownlint-cli2/$(MARKDOWNLINT_VERSION)/bin/markdownlint-cli2
+.PHONY: download.markdownlint-cli2
+download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
+	@$(MISE) plugin install --yes -q markdownlint-cli2
+	@$(MISE) install -q markdownlint-cli2@$(MARKDOWNLINT_VERSION)
+
 .PHONY: use-setup-envtest
 use-setup-envtest:
 	$(SETUP_ENVTEST) use
@@ -263,6 +270,15 @@ lint.actions: download.actionlint download.shellcheck
 	SHELLCHECK_OPTS='--exclude=SC2086,SC2155,SC2046' \
 	$(ACTIONLINT) -shellcheck $(SHELLCHECK) \
 		./.github/workflows/*
+
+.PHONY: lint.markdownlint
+lint.markdownlint: download.markdownlint-cli2
+	$(MARKDOWNLINT) \
+		CHANGELOG.md \
+		README.md \
+		FEATURES.md \
+		charts/kong-operator/README.md \
+		charts/kong-operator/CHANGELOG.md
 
 .PHONY: verify
 verify: verify.manifests verify.generators

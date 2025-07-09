@@ -45,3 +45,5 @@ chartsnap: "0.5.0"
 kube-linter: "0.7.4"
 # renovate: datasource=github-releases depName=telepresenceio/telepresence
 telepresence: "2.23.3"
+# renovate: datasource=github-tags depName=DavidAnson/markdownlint-cli2
+markdownlint-cli2: "0.18.1"
