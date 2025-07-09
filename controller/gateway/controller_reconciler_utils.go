@@ -377,24 +377,27 @@ func generateDataPlaneNetworkPolicy(
 		}
 	}
 
-	podLabelsCopy := maps.Clone(podLabels)
+	// Construct the policy to allow the KO pod to access DataPlane admin APIs.
+	policyPeerForControllerPod := networkingv1.NetworkPolicyPeer{
+		NamespaceSelector: &metav1.LabelSelector{
+			MatchLabels: map[string]string{
+				"kubernetes.io/metadata.name": namespace,
+			},
+		},
+	}
+	if len(podLabels) > 0 {
+		podLabelsCopy := maps.Clone(podLabels)
+		policyPeerForControllerPod.PodSelector = &metav1.LabelSelector{
+			MatchLabels: podLabelsCopy,
+		}
+	}
 	limitAdminAPIIngress := networkingv1.NetworkPolicyIngressRule{
 		Ports: []networkingv1.NetworkPolicyPort{
 			{Protocol: &protocolTCP, Port: &adminAPISSLPort},
 		},
-		// TODO: https://github.com/kong/kong-operator/issues/1700
-		// It should be adjusted to include KO pod, because it connects to DataPlane admin API directly.
-		From: []networkingv1.NetworkPolicyPeer{{
-			NamespaceSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{
-					"kubernetes.io/metadata.name": namespace,
-				},
-			},
-			// set the pod selector to match the labels of the KO pod to deny pods other than the KO pod in the KO namespace.
-			PodSelector: &metav1.LabelSelector{
-				MatchLabels: podLabelsCopy,
-			},
-		}},
+		From: []networkingv1.NetworkPolicyPeer{
+			policyPeerForControllerPod,
+		},
 	}
 
 	allowProxyIngress := networkingv1.NetworkPolicyIngressRule{

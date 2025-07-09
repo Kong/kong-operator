@@ -32,7 +32,7 @@ func GetSelfNamespace() (string, error) {
 func GetSelfPodLabels() (map[string]string, error) {
 	buf, err := os.ReadFile(podLabelsFile)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot find pod labels from file %s: %v", podLabelsFile, err)
+		return nil, fmt.Errorf("Cannot find pod labels from file %s: %w", podLabelsFile, err)
 	}
 
 	labelList := strings.Split(string(buf), "\n")
