@@ -356,7 +356,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	}
 	podLabels, err := k8sutils.GetSelfPodLabels()
 	if err != nil {
-		return nil, err
+		// TODO: output some log here?
+		podLabels = map[string]string{}
 	}
 
 	ctrlOpts := controller.Options{
