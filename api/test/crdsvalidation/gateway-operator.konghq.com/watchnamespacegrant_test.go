@@ -5,9 +5,9 @@ import (
 
 	"github.com/samber/lo"
 
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	"github.com/kong/kubernetes-configuration/test/crdsvalidation/common"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 )
 
 func TestWatchNamespaceGrant(t *testing.T) {

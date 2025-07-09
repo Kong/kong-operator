@@ -5,8 +5,8 @@ import (
 
 	"github.com/samber/lo"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-	"github.com/kong/kubernetes-configuration/test/crdsvalidation/common"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 )
 
 func TestKongUpstreamPolicy(t *testing.T) {

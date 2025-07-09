@@ -1,6 +1,6 @@
 package controlplane
 
-import "github.com/kong/kubernetes-configuration/api/common/consts"
+import "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 
 // -----------------------------------------------------------------------------
 // ControlPlane - Status Condition Types

@@ -7,9 +7,9 @@ import (
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/test/crdsvalidation/common"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 )
 
 func TestKongKeySet(t *testing.T) {

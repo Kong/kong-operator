@@ -6,8 +6,8 @@ import (
 	"github.com/samber/lo"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/test/crdsvalidation/common"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 )
 
 func TestKongCustomEntity(t *testing.T) {

@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 )
 
 func init() {

@@ -21,7 +21,7 @@ limitations under the License.
 package v1beta1
 
 import (
-	"github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+	"github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	"k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"

@@ -6,18 +6,18 @@ import (
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
-	"github.com/kong/kubernetes-configuration/test/crdsvalidation/common"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 )
 
 func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
-	var konnectTransitGatewayTypeMeta = metav1.TypeMeta{
+	konnectTransitGatewayTypeMeta := metav1.TypeMeta{
 		APIVersion: konnectv1alpha1.GroupVersion.String(),
 		Kind:       "KonnectCloudGatewayTransitGateway",
 	}
 
-	var testAWSTransitGatewayConfig = &konnectv1alpha1.AWSTransitGateway{
+	testAWSTransitGatewayConfig := &konnectv1alpha1.AWSTransitGateway{
 		Name: "aws-transit-gateway",
 		CIDRBlocks: []string{
 			"10.11.12.0/24",
@@ -28,7 +28,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		},
 	}
 
-	var testAzureTransitGatewayConfig = &konnectv1alpha1.AzureTransitGateway{
+	testAzureTransitGatewayConfig := &konnectv1alpha1.AzureTransitGateway{
 		Name: "azure-transit-gateway",
 		AttachmentConfig: konnectv1alpha1.AzureVNETPeeringAttachmentConfig{
 			TenantID:          "azure-tenant",
@@ -38,14 +38,14 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		},
 	}
 
-	var namespacedNetworkRef = commonv1alpha1.ObjectRef{
+	namespacedNetworkRef := commonv1alpha1.ObjectRef{
 		Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 		NamespacedRef: &commonv1alpha1.NamespacedRef{
 			Name: "konnect-network",
 		},
 	}
 
-	var programmedCondition = metav1.Condition{
+	programmedCondition := metav1.Condition{
 		Type:               "Programmed",
 		Status:             metav1.ConditionTrue,
 		Reason:             "Valid",

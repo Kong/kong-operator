@@ -21,8 +21,8 @@ limitations under the License.
 package v2alpha1
 
 import (
-	"github.com/kong/kubernetes-configuration/api/common/v1alpha1"
-	"github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	"github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
+	"github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"

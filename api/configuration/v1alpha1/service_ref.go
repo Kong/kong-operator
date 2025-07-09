@@ -1,6 +1,6 @@
 package v1alpha1
 
-import commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+import commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 
 const (
 	// ServiceRefNamespacedRef is a namespaced reference to a KongService.
