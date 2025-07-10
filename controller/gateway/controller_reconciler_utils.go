@@ -415,7 +415,7 @@ func generateDataPlaneNetworkPolicy(
 
 	return &networkingv1.NetworkPolicy{
 		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace,
+			Namespace:    dataplane.Namespace,
 			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-limit-admin-api-", dataplane.Name)),
 		},
 		Spec: networkingv1.NetworkPolicySpec{

@@ -3,6 +3,7 @@ package kubernetes
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -43,7 +44,12 @@ func GetSelfPodLabels() (map[string]string, error) {
 			// TODO: return error here?
 			continue
 		}
-		key, value := labelKV[0], labelKV[1]
+		key := labelKV[0]
+		// The value in labels are escaped, e.g: "ko" => "\"ko\"". So we need to unquote it.
+		value, err := strconv.Unquote(labelKV[1])
+		if err != nil {
+			continue
+		}
 		ret[key] = value
 	}
 	return ret, nil
