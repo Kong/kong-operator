@@ -116,7 +116,7 @@ golangci-lint: mise yq ## Download golangci-lint locally if necessary.
 MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
 MODERNIZE = $(PROJECT_DIR)/bin/modernize
 .PHONY: modernize
-modernize:
+modernize: yq
 	GOBIN=$(PROJECT_DIR)/bin go install -v \
 		golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@$(MODERNIZE_VERSION)
 
