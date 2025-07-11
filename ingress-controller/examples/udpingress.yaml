@@ -1,0 +1,68 @@
+# Usage:
+#
+# In order to use this example make sure you're running the controller manager with the
+# following flags set:
+#
+#   --enable-controller-udpingress=true
+#   --ingress-class=kong
+#
+# Before hand you will also need to configure the controller with a UDP listener and expose
+# that (via a LoadBalancer service ideally for testing). The proxy container will need the
+# `KONG_STREAM_LISTEN` environment variable set in the containers env:
+#
+#   - name: KONG_STREAM_LISTEN
+#     value: 0.0.0.0:9999 udp reuseport
+#
+# And then create a service configured best according to your environment to expose this port
+# on the proxy container or use a shortcut like `kubectl expose <options>`.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: example-udpingress-udpecho
+  labels:
+    app: example-udpingress-udpecho
+spec:
+  selector:
+    matchLabels:
+      app: example-udpingress-udpecho
+  template:
+    metadata:
+      labels:
+        app: example-udpingress-udpecho
+    spec:
+      containers:
+      - name: example-udpingress-udpecho
+        image: kong/go-echo:0.3.0
+        ports:
+        - containerPort: 1026
+        env:
+        - name: POD_NAME
+          value: udpingress-example-manifest
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: example-udpingress-udpecho
+spec:
+  ports:
+  - port: 8888
+    protocol: UDP
+    targetPort: 1026
+  selector:
+    app: example-udpingress-udpecho
+  type: ClusterIP
+---
+apiVersion: configuration.konghq.com/v1beta1
+kind: UDPIngress
+metadata:
+  name: example-udpingress
+  annotations:
+    kubernetes.io/ingress.class: "kong"
+spec:
+  rules:
+  - backend:
+      serviceName: example-udpingress-udpecho
+      servicePort: 8888
+    port: 9999
+---

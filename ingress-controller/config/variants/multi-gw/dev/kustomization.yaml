@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: kong
+
+resources:
+- ../base/
+
+components:
+- ../../../components/manager_dev_webhook
+- ../../../components/manager_dev_patch

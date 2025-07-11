@@ -1,0 +1,56 @@
+# Build a manager binary with debug symbols and download Delve
+FROM --platform=$BUILDPLATFORM golang:1.24.5@sha256:a9219eb99cd2951b042985dbec09d508b3ddc20c4da52a3a55b275b3779e4a05 AS builder
+
+ARG GOPATH
+ARG GOCACHE
+
+ARG TARGETPLATFORM
+ARG TARGETOS
+ARG TARGETARCH
+
+RUN printf "Building for TARGETPLATFORM=${TARGETPLATFORM}" \
+    && printf ", TARGETARCH=${TARGETARCH}" \
+    && printf ", TARGETOS=${TARGETOS}" \
+    && printf ", TARGETVARIANT=${TARGETVARIANT} \n" \
+    && printf "With 'uname -s': $(uname -s) and 'uname -m': $(uname -m)"
+
+WORKDIR /workspace
+
+# Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
+# layers when using COPY instructions for go.mod and go.sum.
+# https://docs.docker.com/build/guide/mounts/
+RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+    --mount=type=cache,target=$GOCACHE \
+    --mount=type=bind,source=go.sum,target=go.sum \
+    --mount=type=bind,source=go.mod,target=go.mod \
+    go mod download -x
+
+COPY pkg/ pkg/
+COPY internal/ internal/
+COPY Makefile .
+
+# Build
+ARG TAG
+ARG COMMIT
+ARG REPO_INFO
+
+# Use cache mounts to cache Go dependencies and bind mounts to avoid unnecessary
+# layers when using COPY instructions for go.mod and go.sum.
+# https://docs.docker.com/build/guide/mounts/
+RUN --mount=type=cache,target=$GOPATH/pkg/mod \
+    --mount=type=cache,target=$GOCACHE \
+    --mount=type=bind,source=go.sum,target=go.sum \
+    --mount=type=bind,source=go.mod,target=go.mod \
+    CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on make _build.debug
+
+### Debug
+# Create an image that runs a debug build with Delve installed
+FROM --platform=$BUILDPLATFORM golang:1.24.5@sha256:a9219eb99cd2951b042985dbec09d508b3ddc20c4da52a3a55b275b3779e4a05 AS debug
+# renovate: datasource=github-releases depName=go-delve/delve
+RUN go install github.com/go-delve/delve/cmd/dlv@v1.25.0
+# We want all source so Delve file location operations work
+COPY --from=builder /workspace/bin/manager-debug /
+USER 65532:65532
+
+ENTRYPOINT ["/go/bin/dlv"]
+CMD ["exec", "--continue", "--accept-multiclient",  "--headless", "--api-version=2", "--listen=:2345", "--log", "/manager-debug"]

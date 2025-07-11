@@ -1,0 +1,80 @@
+name: Create release docs PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'The version to release (e.g. v1.2.3)'
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  create_docs_pr:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Parse semver string
+        id: semver_parser
+        uses: booxmedialtd/ws-action-parse-semver@7784200024d6b3fc01253e617ec0168daf603de3 # v1.4.7
+        with:
+          input_string: ${{ github.event.inputs.tag }}
+          version_extractor_regex: 'v(.*)$'
+
+      - name: Checkout KIC repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Checkout docs repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          repository: kong/developer.konghq.com
+          path: developer.konghq.com
+          fetch-depth: 0
+
+      - name: Update reference docs
+        run: |
+          cp ./docs/api-reference.md developer.konghq.com/app/kubernetes-ingress-controller/reference/custom-resources.md
+          cp ./docs/cli-arguments.md developer.konghq.com/app/kubernetes-ingress-controller/reference/configuration-options.md         
+
+      - name: Detect changes
+        id: detect-changes
+        run: |
+          if [[ $(cd developer.konghq.com && git status --porcelain) ]]; then
+            echo "Changes detected in docs repo"
+            echo "HAS_CHANGES=true" >> $GITHUB_OUTPUT
+          else
+            echo "No changes detected in docs repo"
+          fi
+
+      - name: GPG sign the commits
+        uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec
+        with:
+          workdir: developer.konghq.com
+          gpg_private_key: ${{ secrets.K8S_TEAM_BOT_GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.K8S_TEAM_BOT_GPG_PASSPHRASE }}
+          git_user_signingkey: true
+          git_commit_gpgsign: true
+
+      - name: Create a PR in docs repo
+        uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e
+        if: steps.detect-changes.outputs.HAS_CHANGES
+        with:
+          token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
+          title: Update docs for KIC ${{ steps.semver_parser.outputs.fullversion }}
+          commit-message: Synchronize auto-generated KIC API reference
+          committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
+          author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
+          signoff: true
+          path: developer.konghq.com
+          base: main
+          branch: kic-docs-sync
+          delete-branch: true
+          draft: true
+          labels: |
+            team-k8s
+            review:autodoc
+          body: Prepares documentation for KIC ${{ steps.semver_parser.outputs.fullversion }} release.

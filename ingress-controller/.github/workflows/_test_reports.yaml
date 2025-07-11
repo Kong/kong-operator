@@ -1,0 +1,72 @@
+# Uploads test reports to Codecov and BuildPulse.
+# The contract for Codecov is that all test reports are uploaded to the same "coverage" artifact location.
+# The contract for BuildPulse is that all test reports are uploaded to the same "tests-report" artifact location.
+
+name: test reports
+
+on:
+  workflow_call:
+    inputs:
+      coverage:
+        description: Whether to upload coverage to Codecov.
+        type: boolean
+        default: true
+      buildpulse:
+        description: Whether to upload test reports to BuildPulse.
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  coverage:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    runs-on: ubuntu-latest
+    if: ${{ inputs.coverage && !cancelled() }}
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: collect test coverage artifacts
+        id: download-coverage
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: coverage-*
+          path: coverage
+          merge-multiple: true
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@18283e04ce6e62d37312384ff67231eb8fd56d24 # v5.4.3
+        with:
+          name: combined-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+          directory: ${{ steps.download-coverage.outputs.download-path }}
+          fail_ci_if_error: true
+          verbose: true
+
+  buildpulse-report:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    if: ${{ inputs.buildpulse && !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: download tests report
+        id: download-coverage
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: tests-report-*
+          path: report
+          merge-multiple: true
+
+      - name: Upload test results to BuildPulse for flaky test detection
+        if: ${{ !cancelled() }}
+        uses: buildpulse/buildpulse-action@d4d8e00c645a2e3db0419a43664bbcf868080234 # v0.12.0
+        with:
+          account: 962416
+          repository: 127765544
+          path: report/*.xml
+          key: ${{ secrets.BUILDPULSE_ACCESS_KEY_ID }}
+          secret: ${{ secrets.BUILDPULSE_SECRET_ACCESS_KEY }}
