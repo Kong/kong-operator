@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 )
 
 func TestMergeExtensions(t *testing.T) {
@@ -18,42 +18,48 @@ func TestMergeExtensions(t *testing.T) {
 		{
 			name: "no overlap",
 			defaultExtensions: []commonv1alpha1.ExtensionRef{
-				{Group: "group1",
-					Kind: "kind1",
+				{
+					Group: "group1",
+					Kind:  "kind1",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name1",
 					},
 				},
-				{Group: "group2",
-					Kind: "kind2",
+				{
+					Group: "group2",
+					Kind:  "kind2",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name2",
 					},
 				},
 			},
 			extensions: []commonv1alpha1.ExtensionRef{
-				{Group: "group3",
-					Kind: "kind3",
+				{
+					Group: "group3",
+					Kind:  "kind3",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name3",
 					},
 				},
 			},
 			expected: []commonv1alpha1.ExtensionRef{
-				{Group: "group1",
-					Kind: "kind1",
+				{
+					Group: "group1",
+					Kind:  "kind1",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name1",
 					},
 				},
-				{Group: "group2",
-					Kind: "kind2",
+				{
+					Group: "group2",
+					Kind:  "kind2",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name2",
 					},
 				},
-				{Group: "group3",
-					Kind: "kind3",
+				{
+					Group: "group3",
+					Kind:  "kind3",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name3",
 					},
@@ -63,48 +69,55 @@ func TestMergeExtensions(t *testing.T) {
 		{
 			name: "with overlap",
 			defaultExtensions: []commonv1alpha1.ExtensionRef{
-				{Group: "group1",
-					Kind: "kind1",
+				{
+					Group: "group1",
+					Kind:  "kind1",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name1",
 					},
 				},
-				{Group: "group2",
-					Kind: "kind2",
+				{
+					Group: "group2",
+					Kind:  "kind2",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name2",
 					},
 				},
 			},
 			extensions: []commonv1alpha1.ExtensionRef{
-				{Group: "group3",
-					Kind: "kind3",
+				{
+					Group: "group3",
+					Kind:  "kind3",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name3",
 					},
 				},
-				{Group: "group2",
-					Kind: "kind2",
+				{
+					Group: "group2",
+					Kind:  "kind2",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "nameB",
 					},
 				},
 			},
 			expected: []commonv1alpha1.ExtensionRef{
-				{Group: "group1",
-					Kind: "kind1",
+				{
+					Group: "group1",
+					Kind:  "kind1",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name1",
 					},
 				},
-				{Group: "group3",
-					Kind: "kind3",
+				{
+					Group: "group3",
+					Kind:  "kind3",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name3",
 					},
 				},
-				{Group: "group2",
-					Kind: "kind2",
+				{
+					Group: "group2",
+					Kind:  "kind2",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "nameB",
 					},
@@ -114,14 +127,16 @@ func TestMergeExtensions(t *testing.T) {
 		{
 			name: "only default extensions",
 			defaultExtensions: []commonv1alpha1.ExtensionRef{
-				{Group: "group1",
-					Kind: "kind1",
+				{
+					Group: "group1",
+					Kind:  "kind1",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name1",
 					},
 				},
-				{Group: "group2",
-					Kind: "kind2",
+				{
+					Group: "group2",
+					Kind:  "kind2",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name2",
 					},
@@ -129,14 +144,16 @@ func TestMergeExtensions(t *testing.T) {
 			},
 			extensions: []commonv1alpha1.ExtensionRef{},
 			expected: []commonv1alpha1.ExtensionRef{
-				{Group: "group1",
-					Kind: "kind1",
+				{
+					Group: "group1",
+					Kind:  "kind1",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name1",
 					},
 				},
-				{Group: "group2",
-					Kind: "kind2",
+				{
+					Group: "group2",
+					Kind:  "kind2",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name2",
 					},
@@ -147,28 +164,32 @@ func TestMergeExtensions(t *testing.T) {
 			name:              "only user extensions",
 			defaultExtensions: []commonv1alpha1.ExtensionRef{},
 			extensions: []commonv1alpha1.ExtensionRef{
-				{Group: "group1",
-					Kind: "kind1",
+				{
+					Group: "group1",
+					Kind:  "kind1",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name1",
 					},
 				},
-				{Group: "group2",
-					Kind: "kind2",
+				{
+					Group: "group2",
+					Kind:  "kind2",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name2",
 					},
 				},
 			},
 			expected: []commonv1alpha1.ExtensionRef{
-				{Group: "group1",
-					Kind: "kind1",
+				{
+					Group: "group1",
+					Kind:  "kind1",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name1",
 					},
 				},
-				{Group: "group2",
-					Kind: "kind2",
+				{
+					Group: "group2",
+					Kind:  "kind2",
 					NamespacedRef: commonv1alpha1.NamespacedRef{
 						Name: "name2",
 					},

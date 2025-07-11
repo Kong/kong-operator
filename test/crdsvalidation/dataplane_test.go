@@ -10,9 +10,9 @@ import (
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/test/envtest"
 
-	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	"github.com/kong/kubernetes-configuration/test/crdsvalidation/common"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 )
 
 func TestDataPlane(t *testing.T) {

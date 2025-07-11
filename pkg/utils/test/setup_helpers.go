@@ -28,12 +28,12 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/modules/manager"
 
-	operatorclient "github.com/kong/kubernetes-configuration/pkg/clientset"
+	operatorclient "github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 )
 
 const (
 	// KubernetesConfigurationModuleName is the name of the module where we import and install Kong configuration CRDs from.
-	KubernetesConfigurationModuleName = "github.com/kong/kubernetes-configuration"
+	KubernetesConfigurationModuleName = "github.com/kong/kubernetes-configuration/v2"
 )
 
 func noOpClose() error {

@@ -3,7 +3,7 @@ package compare
 import (
 	"reflect"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 )
 
 // NetworkOptionsDeepEqual checks if NetworkOptions are equal.

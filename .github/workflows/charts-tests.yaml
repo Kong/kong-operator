@@ -63,11 +63,11 @@ jobs:
         with:
           install: false
 
-      - name: Make sure sigs.k8s.io/gateway-api is downloaded
-        run: go mod download -x sigs.k8s.io/gateway-api
-
       - name: Run manifests.charts
         run: make manifests.charts
+
+      - name: Check generated files for diff
+        run: make verify.diff
 
   lint:
     timeout-minutes: 10

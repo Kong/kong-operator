@@ -10,7 +10,7 @@ import (
 
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 )
 
 // createKey creates a KongKey in Konnect.

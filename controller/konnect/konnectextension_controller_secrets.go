@@ -11,7 +11,7 @@ import (
 	"github.com/kong/kong-operator/internal/utils/index"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 const (
@@ -21,7 +21,6 @@ const (
 )
 
 func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *corev1.Secret) ([]konnectv1alpha2.KonnectExtension, error) {
-
 	// Get all the secrets explicitly referenced by KonnectExtensions in the spec.
 	l := &konnectv1alpha2.KonnectExtensionList{}
 	err := cl.List(
@@ -54,7 +53,6 @@ func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *cor
 	}
 
 	return l.Items, nil
-
 }
 
 func enqueueKonnectExtensionsForSecret(cl client.Client) func(context.Context, client.Object) []reconcile.Request {

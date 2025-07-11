@@ -15,9 +15,9 @@ import (
 
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
+	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 )
 
 // ----------------------------------------------------------------------------

@@ -37,9 +37,9 @@ import (
 	"github.com/kong/kong-operator/test"
 	"github.com/kong/kong-operator/test/helpers"
 
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	configurationclient "github.com/kong/kubernetes-configuration/pkg/clientset"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	configurationclient "github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 )
 
 // -----------------------------------------------------------------------------

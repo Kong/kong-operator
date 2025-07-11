@@ -17,8 +17,8 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 )
 
 // handleKongKeySetRef handles the KeySetRef for the given entity.

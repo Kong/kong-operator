@@ -16,8 +16,8 @@ import (
 	gatewayapipkg "github.com/kong/kong-operator/pkg/gatewayapi"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 )
 
 // getAcceptedCondition returns the accepted condition for the GatewayClass, with

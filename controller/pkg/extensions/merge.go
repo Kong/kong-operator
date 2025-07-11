@@ -3,7 +3,7 @@ package extensions
 import (
 	"github.com/samber/lo"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 )
 
 // MergeExtensions merges the default extensions with the extensions provided by the user.

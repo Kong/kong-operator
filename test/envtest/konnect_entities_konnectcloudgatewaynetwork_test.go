@@ -20,7 +20,7 @@ import (
 	"github.com/kong/kong-operator/test/helpers/deploy"
 	"github.com/kong/kong-operator/test/helpers/eventually"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 )
 
 func TestKonnectCloudGatewayNetwork(t *testing.T) {
@@ -104,9 +104,7 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayNetworkList](t, ctx, cl, client.InNamespace(ns.Name))
 		t.Log("Setting up SDK expectations on creation")
 
-		var (
-			networkName = "cloud-gateway-network-test-" + uuid.NewString()[:8]
-		)
+		networkName := "cloud-gateway-network-test-" + uuid.NewString()[:8]
 
 		t.Log("Setting up SDK expectations on creation")
 		sdk.CloudGatewaysSDK.EXPECT().CreateNetwork(
@@ -140,6 +138,5 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 
 		t.Log("Waiting for the expected calls called in SDK")
 		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
-
 	})
 }

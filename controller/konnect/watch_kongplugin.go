@@ -13,10 +13,10 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/modules/manager/logging"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 )
 
 // mapPluginsFromAnnotation enqueue requests for KongPlugins based on

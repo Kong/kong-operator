@@ -10,7 +10,7 @@ import (
 
 	"github.com/kong/kong-operator/modules/manager/scheme"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 )
 
 func TestWatch(t *testing.T) {

@@ -13,8 +13,8 @@ import (
 	"github.com/kong/kong-operator/test/envtest"
 	"github.com/kong/kong-operator/test/helpers/kustomize"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	"github.com/kong/kubernetes-configuration/test/crdsvalidation/common"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 )
 
 const (

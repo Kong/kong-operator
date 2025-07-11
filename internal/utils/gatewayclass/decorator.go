@@ -7,7 +7,7 @@ import (
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/pkg/vars"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
+	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 )
 
 // -----------------------------------------------------------------------------

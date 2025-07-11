@@ -16,7 +16,7 @@ import (
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
 	"github.com/kong/kong-operator/internal/utils/gatewayclass"
 
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------

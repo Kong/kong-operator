@@ -28,8 +28,8 @@ import (
 	"github.com/kong/kong-operator/pkg/clientops"
 	k8sreduce "github.com/kong/kong-operator/pkg/utils/kubernetes/reduce"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 )
 
 const (

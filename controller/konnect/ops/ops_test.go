@@ -20,9 +20,9 @@ import (
 	"github.com/kong/kong-operator/internal/metrics"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
-	kcfgkonnect "github.com/kong/kubernetes-configuration/api/konnect"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
+	kcfgkonnect "github.com/kong/kubernetes-configuration/v2/api/konnect"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 )
 
 type createTestCase[

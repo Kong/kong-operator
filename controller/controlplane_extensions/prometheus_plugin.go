@@ -12,8 +12,8 @@ import (
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 )
 
 func prometheusPluginForSvc(svc *corev1.Service, cp *gwtypes.ControlPlane, ext *operatorv1alpha1.DataPlaneMetricsExtension) (*configurationv1.KongPlugin, error) {

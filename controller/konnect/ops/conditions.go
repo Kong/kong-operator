@@ -6,8 +6,8 @@ import (
 
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 )
 
 type entityType interface {
