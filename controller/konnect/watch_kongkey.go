@@ -14,7 +14,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 // KongKeyReconciliationWatchOptions returns the watch options for the KongKey.

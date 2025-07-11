@@ -18,7 +18,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 // TestKonnectEntityReconcilers tests Konnect entity reconcilers. The test cases are run against a real Kubernetes API

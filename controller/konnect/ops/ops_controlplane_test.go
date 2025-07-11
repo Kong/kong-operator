@@ -26,7 +26,7 @@ import (
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 func TestCreateControlPlane(t *testing.T) {

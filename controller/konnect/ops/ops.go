@@ -25,7 +25,7 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	kcfgkonnect "github.com/kong/kubernetes-configuration/v2/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 // Op is the type for the operation type of a Konnect entity.

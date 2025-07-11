@@ -13,7 +13,7 @@ import (
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 // GetCPForRef returns the KonnectGatewayControlPlane for the given ControlPlaneRef.
