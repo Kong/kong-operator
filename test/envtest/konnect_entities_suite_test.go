@@ -18,7 +18,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 // TestKonnectEntityReconcilers tests Konnect entity reconcilers. The test cases are run against a real Kubernetes API
@@ -26,7 +26,7 @@ import (
 func TestKonnectEntityReconcilers(t *testing.T) {
 	cfg, _ := Setup(t, t.Context(), scheme.Get())
 
-	testNewKonnectEntityReconciler(t, cfg, konnectv1alpha1.KonnectGatewayControlPlane{}, konnectGatewayControlPlaneTestCases)
+	testNewKonnectEntityReconciler(t, cfg, konnectv1alpha2.KonnectGatewayControlPlane{}, konnectGatewayControlPlaneTestCases)
 }
 
 type konnectEntityReconcilerTestCase struct {
