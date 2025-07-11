@@ -6,6 +6,7 @@
 | ---- | ---- | ----------- | ------- |
 | `--anonymous-reports` | `bool` | Send anonymized usage data to help improve Kong. | `true` |
 | `--apiserver-host` | `string` | The Kubernetes API server URL. If not set, the operator will use cluster config discovery. | `""` |
+| `--cache-sync-period` | `string` | Determine the minimum frequency at which watched resources are reconciled. By default falls back to controller-runtime's default. | `0s` |
 | `--cache-sync-timeout` | `string` | The time limit set to wait for syncing controllers' caches. Defaults to 0 to fall back to default from controller-runtime. | `0s` |
 | `--cluster-ca-key-size` | `string` | Size (in bits) of the key used for the cluster CA certificate. Only used for RSA keys. | `4096` |
 | `--cluster-ca-key-type` | `string` | Type of the key used for the cluster CA certificate (possible values: ecdsa, rsa). Default: ecdsa. | `ecdsa` |

@@ -31,6 +31,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -65,6 +66,7 @@ type Config struct {
 	ControllerNamespace      string
 	APIServerPath            string
 	KubeconfigPath           string
+	CacheSyncPeriod          time.Duration
 	CacheSyncTimeout         time.Duration
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
@@ -166,6 +168,12 @@ func Run(
 		UserName: cfg.ServiceAccountToImpersonate,
 	}
 
+	cacheOptions := cache.Options{}
+	if cfg.CacheSyncPeriod > 0 {
+		setupLog.Info("cache sync period set", "period", cfg.CacheSyncPeriod)
+		cacheOptions.SyncPeriod = &cfg.CacheSyncPeriod
+	}
+
 	mgr, err := ctrl.NewManager(
 		restCfg,
 		ctrl.Options{
@@ -194,6 +202,7 @@ func Run(
 			LeaderElection:          cfg.LeaderElection,
 			LeaderElectionNamespace: cfg.LeaderElectionNamespace,
 			LeaderElectionID:        "a7feedc84.konghq.com",
+			Cache:                   cacheOptions,
 		},
 	)
 	if err != nil {

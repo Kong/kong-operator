@@ -52,6 +52,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.IntVar(&cfg.ClusterCAKeySize, "cluster-ca-key-size", mgrconfig.DefaultClusterCAKeySize, "Size (in bits) of the key used for the cluster CA certificate. Only used for RSA keys.")
 	flagSet.DurationVar(&cfg.CacheSyncTimeout, "cache-sync-timeout", 0, "The time limit set to wait for syncing controllers' caches. Defaults to 0 to fall back to default from controller-runtime.")
 	flagSet.StringVar(&cfg.ClusterDomain, "cluster-domain", ingressmgrconfig.DefaultClusterDomain, "The cluster domain. This is used e.g. in generating addresses for upstream services.")
+	flagSet.DurationVar(&cfg.CacheSyncPeriod, "cache-sync-period", 0, "Determine the minimum frequency at which watched resources are reconciled. By default falls back to controller-runtime's default.")
 
 	// controllers for standard APIs and features
 	flagSet.BoolVar(&cfg.GatewayControllerEnabled, "enable-controller-gateway", true, "Enable the Gateway controller.")
