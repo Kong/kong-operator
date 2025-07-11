@@ -41,7 +41,7 @@ require (
 	github.com/tidwall/pretty v1.2.1
 	github.com/tonglil/buflogr v1.1.1
 	go.uber.org/zap v1.27.0
-	golang.org/x/mod v0.25.0
+	golang.org/x/mod v0.26.0
 	google.golang.org/protobuf v1.36.6
 	k8s.io/api v0.33.2
 	k8s.io/apiextensions-apiserver v0.33.2
