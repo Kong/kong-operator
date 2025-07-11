@@ -120,7 +120,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(ctx context.Context,
 				WithOptions(
 				controller.Options{
 					CacheSyncTimeout:        r.CacheSyncTimeout,
-					MaxConcurrentReconciles: int(r.MaxConcurrentReconciles), //nolint:gosec
+					MaxConcurrentReconciles: int(r.MaxConcurrentReconciles),
 				},
 			)
 	)

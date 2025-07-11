@@ -46,6 +46,7 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
     --mount=type=bind,source=go.mod,target=go.mod \
     go mod download -x
 
+COPY ingress-controller/ ingress-controller/
 COPY cmd/main.go cmd/main.go
 COPY modules/ modules/
 COPY controller/ controller/
