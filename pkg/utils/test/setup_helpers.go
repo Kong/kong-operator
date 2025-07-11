@@ -256,8 +256,8 @@ func InstallKubernetesConfigurationCRDs(ctx context.Context, cluster clusters.Cl
 	for _, crdDirName := range kubernetesConfigurationCRDsDirs {
 		// Install CRDs from the module found in `$GOPATH`.
 		kongCRDPath := filepath.Join(
-			build.Default.GOPATH, "pkg", "mod", "github.com", "kong",
-			"kubernetes-configuration@"+kongCRDVersion, "config", "crd", crdDirName,
+			ConstructModulePath(KubernetesConfigurationModuleName, kongCRDVersion),
+			"config", "crd", crdDirName,
 		)
 		fmt.Printf("INFO: deploying kubernetes-configuration CRDs: %s\n", kongCRDPath)
 		if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongCRDPath, kubectlFlags...); err != nil {
@@ -291,4 +291,13 @@ func waitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Cli
 		}
 	}
 	return nil
+}
+
+// ConstructModulePath constructs the module path for the given module name and version.
+// It accounts for v1+ modules which are stored in separate directories in the GOPATH.
+func ConstructModulePath(moduleName, version string) string {
+	modulePath := filepath.Join(build.Default.GOPATH, "pkg", "mod")
+	modulePath = filepath.Join(append([]string{modulePath}, strings.Split(moduleName, "/")...)...)
+	modulePath += "@" + version
+	return modulePath
 }
