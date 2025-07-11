@@ -4,4 +4,4 @@ kind: Component
 images:
 - name: docker.io/kong/gateway-operator-oss
   newName: docker.io/kong/gateway-operator-oss
-  newTag: 1.6.1
+  newTag: 1.6.2
