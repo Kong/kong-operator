@@ -13,9 +13,9 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 )
 
 func TestGetIngressClassParameters(t *testing.T) {
@@ -147,7 +147,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 			s := store.New(cacheStores, ingressClass.Name, zapr.NewLogger(zap.NewNop()))
 			icpSpec, err := getIngressClassParametersOrDefault(s)
 			assert.Truef(t, reflect.DeepEqual(*tc.parameterSpec, icpSpec),
-				fmt.Sprintf("should get same ingress parameter spec: expected %+v, actual %+v", tc.parameterSpec, icpSpec),
+				"should get same ingress parameter spec: expected %+v, actual %+v", tc.parameterSpec, icpSpec,
 			)
 
 			if tc.err != nil {

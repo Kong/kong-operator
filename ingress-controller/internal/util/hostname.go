@@ -3,7 +3,7 @@ package util
 import (
 	"strings"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 )
 
 // HostnamesIntersect checks if the hostnameA and hostnameB have an intersection.

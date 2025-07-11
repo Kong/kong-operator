@@ -11,7 +11,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kong-operator/ingress-controller/internal/util"
 )
 
 // rawResourceError is a Kong configuration error associated with a Kubernetes resource with Kubernetes metadata stored

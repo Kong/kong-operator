@@ -4,7 +4,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
+	"github.com/kong/kong-operator/ingress-controller/test/mocks"
 )
 
 // StartAdminAPIServerMock starts a mock Kong Admin API server.

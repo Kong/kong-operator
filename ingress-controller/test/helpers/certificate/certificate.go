@@ -13,7 +13,7 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kong-operator/ingress-controller/test/consts"
 )
 
 type certificateOptions struct {

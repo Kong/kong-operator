@@ -7,7 +7,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/deckgen"
 )
 
 func TestIsContentEmpty(t *testing.T) {

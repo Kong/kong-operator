@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
+	"github.com/kong/kong-operator/ingress-controller/internal/cmd/rootcmd/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
 )
 
 func TestConfigValidatedVars(t *testing.T) {

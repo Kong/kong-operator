@@ -10,9 +10,9 @@ import (
 	"github.com/kong/go-kong/kong/custom"
 	"github.com/samber/mo"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/diagnostics"
+	"github.com/kong/kong-operator/ingress-controller/internal/metrics"
 )
 
 // CustomEntitiesByType stores all custom entities by types.

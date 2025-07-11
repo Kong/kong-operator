@@ -12,13 +12,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/test/kongintegration/containers"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 // TestKongUpstreamPolicyTranslation ensures that the Upstream Policy CRD is translated to the Kong Upstream

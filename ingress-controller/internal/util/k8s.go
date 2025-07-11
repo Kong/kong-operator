@@ -30,8 +30,8 @@ import (
 	clientset "k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 )
 
 // ParseNameNS parses a string searching a namespace and name.

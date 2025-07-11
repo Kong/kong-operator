@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kong-operator/ingress-controller/internal/util"
 )
 
 func TestIntersection(t *testing.T) {

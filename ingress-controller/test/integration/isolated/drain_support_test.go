@@ -8,7 +8,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kong-operator/ingress-controller/internal/util"
 )
 
 func TestDrainSupportEndpointProcessing(t *testing.T) {

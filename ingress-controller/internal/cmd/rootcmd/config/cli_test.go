@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd/config"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/cmd/rootcmd/config"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 func TestCLIArgumentAndFeatureGatesParser(t *testing.T) {

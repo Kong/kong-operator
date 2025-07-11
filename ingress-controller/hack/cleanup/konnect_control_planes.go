@@ -7,14 +7,13 @@ import (
 	"io"
 	"time"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 
-	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
-	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/sdk"
-	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	"github.com/kong/kong-operator/ingress-controller/internal/konnect/sdk"
+	"github.com/kong/kong-operator/ingress-controller/test"
 )
 
 const (

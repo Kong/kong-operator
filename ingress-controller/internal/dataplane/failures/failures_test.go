@@ -100,7 +100,7 @@ func TestResourceFailuresCollector(t *testing.T) {
 		lastLog := logs.All()[logs.Len()-1]
 		require.NotNil(t, lastLog)
 		require.Equal(t, zap.ErrorLevel, lastLog.Level)
-		require.Len(t, collector.PopResourceFailures(), 0, "no failures expected - causing objects missing")
+		require.Empty(t, collector.PopResourceFailures(), "no failures expected - causing objects missing")
 	})
 }
 

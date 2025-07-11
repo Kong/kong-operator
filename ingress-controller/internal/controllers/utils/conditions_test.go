@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers/utils"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
 func TestEnsureProgrammedCondition(t *testing.T) {

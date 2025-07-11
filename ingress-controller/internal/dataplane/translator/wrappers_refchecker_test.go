@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 )
 
 func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {

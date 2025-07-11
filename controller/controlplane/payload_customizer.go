@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry/types"
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
+
+	"github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
 )
 
 // hostnameRetriever is a function type that retrieves the hostname as a string.

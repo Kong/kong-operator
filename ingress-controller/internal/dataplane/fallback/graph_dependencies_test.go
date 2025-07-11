@@ -8,9 +8,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/fallback"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers"
 )
 
 // resolveDependenciesTestCase is a test case for the ResolveDependencies function.

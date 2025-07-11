@@ -17,7 +17,7 @@ import (
 	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 )
 
 // CacheStores stores cache.Store for all Kinds of k8s objects that

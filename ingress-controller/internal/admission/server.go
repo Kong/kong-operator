@@ -14,8 +14,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 var (

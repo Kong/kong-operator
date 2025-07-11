@@ -7,7 +7,7 @@ import (
 
 	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -16,7 +16,7 @@ import (
 
 	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
 )
 
 func TestCacheStores(t *testing.T) {

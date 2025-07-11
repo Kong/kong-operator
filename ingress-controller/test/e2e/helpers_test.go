@@ -43,11 +43,11 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/test"
-	conststest "github.com/kong/kubernetes-ingress-controller/v3/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/test"
+	conststest "github.com/kong/kong-operator/ingress-controller/test/consts"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
 )
 
 const (

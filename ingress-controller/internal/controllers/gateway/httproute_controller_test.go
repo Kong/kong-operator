@@ -6,7 +6,7 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 )
 
 func TestEnsureNoStaleParentStatus(t *testing.T) {

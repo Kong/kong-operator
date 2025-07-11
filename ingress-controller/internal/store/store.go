@@ -40,15 +40,15 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	ctrlutils "github.com/kong/kong-operator/ingress-controller/internal/controllers/utils"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 const (

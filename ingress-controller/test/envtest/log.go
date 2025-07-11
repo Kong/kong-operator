@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 	ctrl "sigs.k8s.io/controller-runtime"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
 )
 
 type LogsObserver interface {

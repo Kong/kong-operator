@@ -1083,11 +1083,11 @@ func TestExtractTLSVerify(t *testing.T) {
 
 	v, ok := ExtractTLSVerify(map[string]string{AnnotationPrefix + TLSVerifyKey: "true"})
 	assert.True(t, ok)
-	assert.Equal(t, true, v)
+	assert.True(t, v)
 
 	v, ok = ExtractTLSVerify(map[string]string{AnnotationPrefix + TLSVerifyKey: "false"})
 	assert.True(t, ok)
-	assert.Equal(t, false, v)
+	assert.False(t, v)
 }
 
 func TestExtractTLSVerifyDepth(t *testing.T) {

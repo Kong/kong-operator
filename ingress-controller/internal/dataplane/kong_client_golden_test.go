@@ -23,16 +23,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
+	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
+	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/configfetcher"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/fallback"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator"
+	"github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/test/mocks"
 )
 
 var (

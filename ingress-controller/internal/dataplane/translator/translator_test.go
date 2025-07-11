@@ -24,20 +24,20 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
+
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/scheme"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 )
 
 func TestGlobalPlugin(t *testing.T) {
@@ -69,7 +69,7 @@ func TestGlobalPlugin(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(1, len(state.Plugins),
+		assert.Len(state.Plugins, 1,
 			"expected one plugin to be rendered")
 
 		sort.SliceStable(state.Plugins, func(i, j int) bool {
@@ -260,7 +260,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			require.NoError(t, err)
 			state := result.KongState
 			require.NotNil(t, state)
-			assert.Equal(3, len(state.Plugins),
+			assert.Len(state.Plugins, 3,
 				"expected three plugins to be rendered")
 
 			sort.SliceStable(state.Plugins, func(i, j int) bool {
@@ -367,7 +367,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			require.NoError(t, err)
 			state := result.KongState
 			require.NotNil(t, state)
-			assert.Equal(0, len(state.Plugins),
+			assert.Empty(state.Plugins,
 				"expected no plugins to be rendered")
 		})
 
@@ -470,7 +470,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			require.Empty(t, result.TranslationFailures)
 			state := result.KongState
 			require.NotNil(t, state)
-			assert.Equal(0, len(state.Plugins),
+			assert.Empty(state.Plugins,
 				"expected no plugins to be rendered")
 		})
 
@@ -531,7 +531,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 		for _, testcase := range badReferences {
 			config, err := kongstate.SecretToConfiguration(store, *testcase, "default")
 			assert.Empty(config)
-			assert.NotEmpty(err)
+			assert.Error(err)
 		}
 	})
 	t.Run("plugins with unparsable configuration are not constructed",
@@ -623,7 +623,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			require.Empty(t, result.TranslationFailures)
 			state := result.KongState
 			require.NotNil(t, state)
-			assert.Equal(0, len(state.Plugins),
+			assert.Empty(state.Plugins,
 				"expected no plugins to be rendered")
 		})
 }
@@ -945,12 +945,12 @@ func TestServiceClientCertificate(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(t, 1, len(state.Certificates),
+		assert.Len(t, state.Certificates, 1,
 			"expected one certificates to be rendered")
 		assert.Equal(t, "7428fb98-180b-4702-a91f-61351a33c6e4",
 			*state.Certificates[0].ID)
 
-		assert.Equal(t, 2, len(state.Services))
+		assert.Len(t, state.Services, 2)
 		assert.Equal(t, "7428fb98-180b-4702-a91f-61351a33c6e4",
 			*state.Services[0].ClientCertificate.ID)
 		assert.Equal(t, "7428fb98-180b-4702-a91f-61351a33c6e4",
@@ -1022,10 +1022,10 @@ func TestServiceClientCertificate(t *testing.T) {
 		require.Len(t, result.TranslationFailures, 1)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(t, 0, len(state.Certificates),
+		assert.Empty(t, state.Certificates,
 			"expected no certificates to be rendered")
 
-		assert.Equal(t, 1, len(state.Services))
+		assert.Len(t, state.Services, 1)
 		assert.Nil(t, state.Services[0].ClientCertificate)
 	})
 	t.Run("valid cert+secret but incompatible protocol", func(t *testing.T) {
@@ -1115,7 +1115,7 @@ func TestServiceClientCertificate(t *testing.T) {
 
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(t, 1, len(state.Services))
+		assert.Len(t, state.Services, 1)
 		assert.Nil(t, state.Services[0].ClientCertificate)
 	})
 }
@@ -2200,7 +2200,7 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		state := result.KongState
 		require.NotNil(t, state)
 
-		assert.Equal(0, len(state.Services),
+		assert.Empty(state.Services,
 			"expected zero service to be rendered")
 	})
 }
@@ -2548,7 +2548,7 @@ func TestDefaultBackend(t *testing.T) {
 		service := state.Services[0]
 		assert.Equal(t, "default.default-svc.80", *service.Name)
 		assert.Equal(t, "default-svc.default.80.svc", *service.Host)
-		assert.Equal(t, 1, len(service.Routes),
+		assert.Len(t, service.Routes, 1,
 			"expected one routes to be rendered")
 		route := service.Routes[0]
 		assert.Equal(t, "default.ing-with-default-backend", *route.Name)
@@ -2626,10 +2626,10 @@ func TestDefaultBackend(t *testing.T) {
 		require.Len(t, result.TranslationFailures, 1)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(t, 0, len(state.Certificates),
+		assert.Empty(t, state.Certificates,
 			"expected no certificates to be rendered")
 
-		assert.Equal(t, 1, len(state.Services))
+		assert.Len(t, state.Services, 1)
 		assert.Nil(t, state.Services[0].ClientCertificate)
 	})
 
@@ -2749,7 +2749,7 @@ func TestTranslatorSecret(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(0, len(state.Certificates),
+		assert.Empty(state.Certificates,
 			"expected no certificates to be rendered with empty secret")
 	})
 
@@ -2963,7 +2963,7 @@ func TestTranslatorSecret(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(1, len(state.Certificates),
+		assert.Len(state.Certificates, 1,
 			"certificates are de-duplicated")
 
 		sort.SliceStable(state.Certificates[0].SNIs, func(i, j int) bool {
@@ -3520,13 +3520,13 @@ func TestPluginAnnotations(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(1, len(state.Plugins),
+		assert.Len(state.Plugins, 1,
 			"expected no plugins to be rendered with missing plugin")
 		pl := state.Plugins[0].Plugin
 		pl.Route = nil
 		// Translator tests do not check tags, these are tested independently
 		pl.Tags = nil
-		assert.Equal(pl, kong.Plugin{
+		assert.Equal(kong.Plugin{
 			Name:      kong.String("key-auth"),
 			Protocols: kong.StringSlice("grpc"),
 			Config: kong.Configuration{
@@ -3539,7 +3539,7 @@ func TestPluginAnnotations(t *testing.T) {
 				},
 			},
 			ID: kong.String("62ba0da2-4e21-5964-87ff-41853771c125"),
-		})
+		}, pl)
 	})
 	t.Run("KongPlugin takes precedence over KongPlugin", func(t *testing.T) {
 		services := []*corev1.Service{
@@ -3625,7 +3625,7 @@ func TestPluginAnnotations(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(1, len(state.Plugins),
+		assert.Len(state.Plugins, 1,
 			"expected no plugins to be rendered with missing plugin")
 		assert.Equal("key-auth", *state.Plugins[0].Name)
 		assert.Equal("grpc", *state.Plugins[0].Protocols[0])
@@ -3700,7 +3700,7 @@ func TestPluginAnnotations(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(1, len(state.Plugins),
+		assert.Len(state.Plugins, 1,
 			"expected no plugins to be rendered with missing plugin")
 		assert.Equal("basic-auth", *state.Plugins[0].Name)
 		assert.Equal("grpc", *state.Plugins[0].Protocols[0])
@@ -3752,7 +3752,7 @@ func TestPluginAnnotations(t *testing.T) {
 		require.Empty(t, result.TranslationFailures)
 		state := result.KongState
 		require.NotNil(t, state)
-		assert.Equal(0, len(state.Plugins),
+		assert.Empty(state.Plugins,
 			"expected no plugins to be rendered with missing plugin")
 	})
 }

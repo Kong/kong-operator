@@ -10,11 +10,11 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/utils"
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
+	"github.com/kong/kong-operator/ingress-controller/internal/license"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
 )
 
 type LastValidConfigFetcher interface {

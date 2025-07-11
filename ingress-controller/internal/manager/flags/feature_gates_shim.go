@@ -5,7 +5,7 @@ import (
 	"github.com/spf13/pflag"
 	"k8s.io/component-base/cli/flag"
 
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 // NewMapStringBoolForFeatureGatesWithDefaults takes a pointer to a FeatureGates (map[string]bool) and returns the

@@ -14,9 +14,9 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
 )
 
 func TestValidateIngress(t *testing.T) {

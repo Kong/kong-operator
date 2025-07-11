@@ -8,8 +8,8 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 const (

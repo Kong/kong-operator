@@ -8,10 +8,10 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/health"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/health"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 // Run sets up a default stderr logger and starts the controller manager.

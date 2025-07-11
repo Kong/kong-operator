@@ -17,10 +17,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -235,14 +235,14 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			if err := existsMatchingListenerInStatus(route, listener, gateway.Status.Listeners); err != nil {
 				listenerLogger.V(logging.DebugLevel).Info("Listener does not support this route", "reason", err.Error())
 				continue
-			} else { //nolint:revive
+			} else {
 				allowedBySupportedKinds = true
 			}
 
 			if err := listenerProgrammedInStatus(listener.Name, gateway.Status.Listeners); err != nil {
 				listenerLogger.V(logging.DebugLevel).Info("Listener is not ready", "reason", err.Error())
 				continue
-			} else { //nolint:revive
+			} else {
 				listenerReady = true
 			}
 

@@ -12,12 +12,12 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/fallback"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 )
 
 const (

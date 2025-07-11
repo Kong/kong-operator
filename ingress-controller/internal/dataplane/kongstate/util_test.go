@@ -9,11 +9,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
 func TestGetKongIngressForServices(t *testing.T) {
@@ -285,7 +285,7 @@ func TestGetKongIngressFromObjectMeta(t *testing.T) {
 
 			if tt.expectedError == nil {
 				require.NoError(t, err)
-				require.EqualValues(t, tt.expectedKongIngress, kongIngress)
+				require.Equal(t, tt.expectedKongIngress, kongIngress)
 			} else {
 				require.Error(t, err)
 			}

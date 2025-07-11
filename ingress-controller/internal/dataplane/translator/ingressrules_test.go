@@ -17,13 +17,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 )
 
 type testSNIs struct {
@@ -1207,8 +1207,8 @@ func TestResolveKubernetesServiceForBackend_DoesNotModifyCache(t *testing.T) {
 	resolvedService, err := resolveKubernetesServiceForBackend(fakeStore, backend, translatedObjectsCollector)
 	require.NoError(t, err)
 	require.Equal(t, svcCopy, svc, "service stored in cache should not be modified")
-	require.Equal(t, resolvedService.Annotations, map[string]string{
+	require.Equal(t, map[string]string{
 		"service": "from-service",
 		"facade":  "from-facade",
-	}, "annotations should be merged in the returned service")
+	}, resolvedService.Annotations, "annotations should be merged in the returned service")
 }

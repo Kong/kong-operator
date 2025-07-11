@@ -9,11 +9,11 @@ import (
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/kongconfig"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
+	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/manager/kongconfig"
+	"github.com/kong/kong-operator/ingress-controller/internal/versions"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 // GetKongRootConfig gets version and root configurations of Kong from / endpoint of the provided Admin API URL.

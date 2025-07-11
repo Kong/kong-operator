@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/pflag"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/cmd/rootcmd/config"
 )
 
 // mustWrite writes to a strings.Builder and panics if there's an error.

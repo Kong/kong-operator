@@ -10,7 +10,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry/types"
+	"github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
 )
 
 // Hash computes a hash of the given config.

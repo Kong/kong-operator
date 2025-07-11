@@ -8,16 +8,16 @@ import (
 	"github.com/spf13/pflag"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/flags"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/admission"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
+	"github.com/kong/kong-operator/ingress-controller/internal/konnect"
+	"github.com/kong/kong-operator/ingress-controller/internal/license"
+	"github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
+	"github.com/kong/kong-operator/ingress-controller/internal/manager/flags"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 type OptionalNamespacedName = mo.Option[k8stypes.NamespacedName]
