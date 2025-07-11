@@ -31,7 +31,7 @@
 
 ## [v1.6.2]
 
-> Releasw date: 2025-07-11
+> Release date: 2025-07-11
 
 ### Fixed
 
