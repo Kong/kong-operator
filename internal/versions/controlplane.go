@@ -13,7 +13,7 @@ const (
 	// and those tests create KIC's URLs for things like roles or CRDs.
 	// Since KIC only defines the full tags in its repo (as expected) we cannot use
 	// a partial version here, as it would not match KIC's tag.
-	DefaultControlPlaneVersion = "3.4.8" // renovate: datasource=docker depName=kong/kubernetes-ingress-controller
+	DefaultControlPlaneVersion = "3.5.0" // renovate: datasource=docker depName=kong/kubernetes-ingress-controller
 )
 
 // minimumControlPlaneVersion indicates the bare minimum version of the
