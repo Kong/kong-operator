@@ -10,7 +10,7 @@ import (
 
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 )
 
 func createConsumerGroup(

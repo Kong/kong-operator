@@ -11,8 +11,8 @@ import (
 
 	"github.com/kong/kong-operator/modules/manager/scheme"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 )
 
 func TestValidateSecretForKongCredentialBasicAuth(t *testing.T) {
@@ -532,7 +532,6 @@ func TestEnsureExistingCredential(t *testing.T) {
 			assert    func(t *testing.T, cred *configurationv1alpha1.KongCredentialACL)
 			wantError bool
 		}{
-
 			{
 				name: "credential needs update",
 				cred: &configurationv1alpha1.KongCredentialACL{

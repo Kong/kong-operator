@@ -11,8 +11,8 @@ import (
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/controller/konnect/server"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 )
 
 // createKonnectDataPlaneGroupConfiguration creates the Konnect DataPlane configuration as specified in provided spec.

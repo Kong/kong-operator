@@ -20,7 +20,7 @@ import (
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 )
 
 func TestEnsureIngressServiceForDataPlane(t *testing.T) {

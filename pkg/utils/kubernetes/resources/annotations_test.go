@@ -10,7 +10,7 @@ import (
 
 	"github.com/kong/kong-operator/pkg/consts"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 )
 
 func TestSpecHash(t *testing.T) {

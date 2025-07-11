@@ -26,9 +26,9 @@ import (
 	"github.com/kong/kong-operator/pkg/consts"
 	"github.com/kong/kong-operator/test/helpers/deploy"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 )
 
 func TestKongPluginBindingManaged(t *testing.T) {

@@ -23,9 +23,9 @@ import (
 	"github.com/kong/kong-operator/internal/metrics"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 )
 
 func TestCreateControlPlane(t *testing.T) {

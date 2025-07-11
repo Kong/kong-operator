@@ -21,10 +21,10 @@ import (
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
-	kcfggateway "github.com/kong/kubernetes-configuration/api/gateway-operator/gateway"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v2alpha1"
+	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
+	kcfggateway "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/gateway"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 )
 
 func TestParseKongProxyListenEnv(t *testing.T) {

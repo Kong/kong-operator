@@ -16,9 +16,9 @@ import (
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/controller/pkg/patch"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 )
 
 // handleTypeSpecific handles type-specific logic for Konnect entities.

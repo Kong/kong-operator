@@ -11,7 +11,7 @@ import (
 
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 )
 
 // createKonnectTransitGateway creates a transit gateway on the Konnect side.
@@ -129,7 +129,6 @@ func getKonnectTransitGatewayMatchingSpecName(
 			},
 		},
 	})
-
 	if err != nil {
 		return "", fmt.Errorf("failed listing %s: %w", tg.GetTypeName(), err)
 	}
@@ -139,7 +138,6 @@ func getKonnectTransitGatewayMatchingSpecName(
 	}
 
 	return getMatchingEntryFromListResponseData(listTransitGatewayResponseDataToEntityWithIDSlice(resp.ListTransitGatewaysResponse.Data), tg)
-
 }
 
 var trasitGatewayTypeToSDKTransitGatewayType = map[konnectv1alpha1.TransitGatewayType]sdkkonnectcomp.CreateTransitGatewayRequestType{

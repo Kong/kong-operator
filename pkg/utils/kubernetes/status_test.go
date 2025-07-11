@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
-	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
+	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 )
 
 type TestResource struct {

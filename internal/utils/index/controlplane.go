@@ -5,7 +5,7 @@ import (
 
 	gwtypes "github.com/kong/kong-operator/internal/types"
 
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v2alpha1"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 )
 
 const (

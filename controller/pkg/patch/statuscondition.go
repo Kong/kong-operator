@@ -11,7 +11,7 @@ import (
 
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
+	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 )
 
 // SetStatusWithConditionIfDifferent sets the status of the provided object with the
@@ -88,7 +88,6 @@ func StatusWithConditions[T interface {
 	}
 
 	return ctrl.Result{}, false, nil
-
 }
 
 // StatusWithCondition patches the status of the provided object with the

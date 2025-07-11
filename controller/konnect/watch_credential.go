@@ -11,8 +11,8 @@ import (
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 )
 
 // kongCredentialRefersToKonnectGatewayControlPlane returns a predicate function that

@@ -30,10 +30,10 @@ import (
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 
-	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
-	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
-	"github.com/kong/kubernetes-configuration/pkg/clientset"
+	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 )
 
 // controlPlanePredicate is a helper function for tests that returns a function

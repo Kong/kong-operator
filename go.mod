@@ -24,7 +24,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.50.0
 	github.com/kong/go-kong v0.67.0
-	github.com/kong/kubernetes-configuration v1.4.1-0.20250708093327-e695c0e8302e
+	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.1
 	github.com/kong/kubernetes-ingress-controller/v3 v3.4.7-0.20250627095511-b87927aa5644
 	github.com/kong/kubernetes-telemetry v0.1.10
 	github.com/kong/kubernetes-testing-framework v0.47.2
@@ -57,6 +57,7 @@ require (
 
 require (
 	github.com/carapace-sh/carapace-shlex v1.0.1 // indirect
+	github.com/kong/kubernetes-configuration v1.4.1-0.20250708093327-e695c0e8302e // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.3 // indirect
 )

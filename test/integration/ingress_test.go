@@ -29,9 +29,9 @@ import (
 	"github.com/kong/kong-operator/pkg/vars"
 	"github.com/kong/kong-operator/test/helpers"
 
-	kcfgcontrolplane "github.com/kong/kubernetes-configuration/api/gateway-operator/controlplane"
-	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 )
 
 const (

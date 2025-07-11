@@ -5,7 +5,7 @@ import (
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/api/common/consts"
+	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 )
 
 // FailedKonnectOpError is an error type that is returned when an operation against

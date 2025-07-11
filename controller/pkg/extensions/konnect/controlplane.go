@@ -7,7 +7,7 @@ import (
 
 	gwtypes "github.com/kong/kong-operator/internal/types"
 
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha2"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 // ApplyControlPlaneKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it

@@ -18,7 +18,7 @@ import (
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test/helpers"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 )
 
 // runKubectlScaleDataPlane runs the kubectl scale command to test the scale subresource for the DataPlane CRD.
@@ -179,5 +179,4 @@ func TestDataPlaneScaleSubresource(t *testing.T) {
 
 	t.Log("verifying dataplane scales to 4 replicas")
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneName, clients, 4), testutils.GatewayReadyTimeLimit, testutils.ObjectUpdateTick)
-
 }

@@ -14,8 +14,8 @@ import (
 	"github.com/kong/kong-operator/pkg/consts"
 	"github.com/kong/kong-operator/test/helpers"
 
-	kcfgdataplane "github.com/kong/kubernetes-configuration/api/gateway-operator/dataplane"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 )
 
 func TestDataPlaneValidation(t *testing.T) {
