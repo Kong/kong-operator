@@ -8,11 +8,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 func TestFromTCPIngressV1beta1(t *testing.T) {
@@ -137,13 +137,13 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.NoError(err)
 
 		translatedInfo := mustNewTranslator(t, store).ingressRulesFromTCPIngressV1beta1()
-		assert.Equal(1, len(translatedInfo.ServiceNameToServices))
+		assert.Len(translatedInfo.ServiceNameToServices, 1)
 		svc := translatedInfo.ServiceNameToServices["default.foo-svc.80"]
 		assert.Equal("foo-svc.default.80.svc", *svc.Host)
 		assert.Equal(80, *svc.Port)
 		assert.Equal("tcp", *svc.Protocol)
 
-		assert.Equal(1, len(svc.Routes))
+		assert.Len(svc.Routes, 1)
 		route := svc.Routes[0]
 		assert.Equal(kong.Route{
 			Name:      kong.String("default.foo.0"),
@@ -168,13 +168,13 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.NoError(err)
 
 		translatedInfo := mustNewTranslator(t, store).ingressRulesFromTCPIngressV1beta1()
-		assert.Equal(1, len(translatedInfo.ServiceNameToServices))
+		assert.Len(translatedInfo.ServiceNameToServices, 1)
 		svc := translatedInfo.ServiceNameToServices["default.foo-svc.80"]
 		assert.Equal("foo-svc.default.80.svc", *svc.Host)
 		assert.Equal(80, *svc.Port)
 		assert.Equal("tcp", *svc.Protocol)
 
-		assert.Equal(1, len(svc.Routes))
+		assert.Len(svc.Routes, 1)
 		route := svc.Routes[0]
 		assert.Equal(kong.Route{
 			Name:      kong.String("default.foo.0"),
@@ -200,7 +200,7 @@ func TestFromTCPIngressV1beta1(t *testing.T) {
 		assert.NoError(err)
 
 		translatedInfo := mustNewTranslator(t, store).ingressRulesFromTCPIngressV1beta1()
-		assert.Equal(2, len(translatedInfo.SecretNameToSNIs.Hosts("default/sooper-secret")))
-		assert.Equal(2, len(translatedInfo.SecretNameToSNIs.Hosts("default/sooper-secret2")))
+		assert.Len(translatedInfo.SecretNameToSNIs.Hosts("default/sooper-secret"), 2)
+		assert.Len(translatedInfo.SecretNameToSNIs.Hosts("default/sooper-secret2"), 2)
 	})
 }

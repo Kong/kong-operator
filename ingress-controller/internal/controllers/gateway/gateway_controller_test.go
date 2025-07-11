@@ -9,9 +9,9 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/util"
 )
 
 func TestReadyConditionExistsForObservedGeneration(t *testing.T) {
@@ -157,7 +157,7 @@ func TestSetGatewayCondtion(t *testing.T) {
 				}
 			}
 			assert.Equal(t, 1, conditionNum)
-			assert.EqualValues(t, tc.condition, observedCondition)
+			assert.Equal(t, tc.condition, observedCondition)
 		})
 	}
 }
@@ -278,8 +278,8 @@ func TestReconcileGatewaysIfClassMatches(t *testing.T) {
 	t.Log("verifying reconciliation counts")
 	assert.Len(t, reconcileGatewaysIfClassMatches(gatewayClass, append(matching, nonmatching...)), len(matching))
 	assert.Len(t, reconcileGatewaysIfClassMatches(gatewayClass, matching), len(matching))
-	assert.Len(t, reconcileGatewaysIfClassMatches(gatewayClass, nonmatching), 0)
-	assert.Len(t, reconcileGatewaysIfClassMatches(gatewayClass, nil), 0)
+	assert.Empty(t, reconcileGatewaysIfClassMatches(gatewayClass, nonmatching))
+	assert.Empty(t, reconcileGatewaysIfClassMatches(gatewayClass, nil))
 
 	t.Log("verifying reconciliation results")
 	expected := []reconcile.Request{

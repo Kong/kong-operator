@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 )
 
 func TestSetGatewayClassCondtion(t *testing.T) {
@@ -107,7 +107,7 @@ func TestSetGatewayClassCondtion(t *testing.T) {
 				}
 			}
 			assert.Equal(t, 1, conditionNum)
-			assert.EqualValues(t, tc.condition, observedCondition)
+			assert.Equal(t, tc.condition, observedCondition)
 		})
 	}
 }

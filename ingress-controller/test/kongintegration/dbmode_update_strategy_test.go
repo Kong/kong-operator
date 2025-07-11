@@ -17,11 +17,11 @@ import (
 	"go.uber.org/zap"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
+	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/test/kongintegration/containers"
 )
 
 func TestUpdateStrategyDBMode(t *testing.T) {
@@ -106,7 +106,7 @@ func TestUpdateStrategyDBMode(t *testing.T) {
 		if !assert.Truef(t, found, "expected resource error for test-service, got: %+v", updateError.ResourceFailures()) {
 			return
 		}
-		if !assert.Equal(t, resourceErr.Message(), expectedMessage) {
+		if !assert.Equal(t, expectedMessage, resourceErr.Message()) {
 			return
 		}
 	}, timeout, period)

@@ -27,12 +27,12 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/test"
-	testconsts "github.com/kong/kubernetes-ingress-controller/v3/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
+	"github.com/kong/kong-operator/ingress-controller/test"
+	testconsts "github.com/kong/kong-operator/ingress-controller/test/consts"
+	"github.com/kong/kong-operator/ingress-controller/test/integration/consts"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/testlabels"
 )
 
 var (

@@ -44,12 +44,12 @@ import (
 	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
-	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
-	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
+	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
+	ctrlutils "github.com/kong/kong-operator/ingress-controller/internal/controllers/utils"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
 )
 
 // -----------------------------------------------------------------------------

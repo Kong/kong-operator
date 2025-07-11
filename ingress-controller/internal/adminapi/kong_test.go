@@ -13,11 +13,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
+	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/versions"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
+	"github.com/kong/kong-operator/ingress-controller/test/mocks"
 )
 
 func TestAdminAPIClientWithTLSOpts(t *testing.T) {
@@ -288,5 +288,5 @@ func validate(
 
 	data, err := io.ReadAll(response.Body)
 	require.NoError(t, err, "failed to read response body")
-	require.Equal(t, strings.TrimSpace(string(data)), successMessage, "unexpected content of response body")
+	require.Equal(t, successMessage, strings.TrimSpace(string(data)), "unexpected content of response body")
 }

@@ -29,24 +29,24 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/clients"
+	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/configfetcher"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/deckgen"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/fallback"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator"
+	"github.com/kong/kong-operator/ingress-controller/internal/diagnostics"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/ingress-controller/internal/versions"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/mocks"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
-	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/configfetcher"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
 func TestUniqueObjects(t *testing.T) {
@@ -743,7 +743,7 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 
 		gwContent, ok := updateStrategyResolver.LastUpdatedContentForURL(testGatewayClient.BaseRootURL())
 		require.True(t, ok)
-		assert.Equal(t, gwContent.Content, &file.Content{
+		assert.Equal(t, &file.Content{
 			FormatVersion: versions.DeckFileFormatVersion,
 			Upstreams: []file.FUpstream{
 				{
@@ -752,7 +752,7 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 					},
 				},
 			},
-		}, "gateway content should have appended stub upstream")
+		}, gwContent.Content, "gateway content should have appended stub upstream")
 
 		require.Len(t, konnectKongStateUpdater.Calls(), 1)
 		konnectKongStateUpdaterCall := konnectKongStateUpdater.Calls()[0]

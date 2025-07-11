@@ -17,13 +17,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
+	"github.com/kong/kong-operator/ingress-controller/internal/labels"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
 
 var (

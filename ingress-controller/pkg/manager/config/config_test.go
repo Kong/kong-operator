@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry/types"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
 )
 
 func TestConfigResolve(t *testing.T) {

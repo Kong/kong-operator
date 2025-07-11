@@ -14,11 +14,11 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/mo"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/tracing"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/useragent"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
-	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/konnect/tracing"
+	"github.com/kong/kong-operator/ingress-controller/internal/konnect/useragent"
+	"github.com/kong/kong-operator/ingress-controller/internal/license"
+	tlsutil "github.com/kong/kong-operator/ingress-controller/internal/util/tls"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 // Client interacts with the Konnect license API.

@@ -24,12 +24,12 @@ import (
 
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v3/test"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
+	"github.com/kong/kong-operator/ingress-controller/internal/diagnostics"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
+	"github.com/kong/kong-operator/ingress-controller/test"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers"
 )
 
 func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {

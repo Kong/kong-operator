@@ -10,10 +10,10 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
+	"github.com/kong/kong-operator/ingress-controller/internal/clients"
+	"github.com/kong/kong-operator/ingress-controller/internal/konnect/nodes"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/clock"
 )
 
 const (

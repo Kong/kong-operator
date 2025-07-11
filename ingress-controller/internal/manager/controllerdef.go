@@ -12,15 +12,15 @@ import (
 	gatewayv1alpha3 "sigs.k8s.io/gateway-api/apis/v1alpha3"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/configuration"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/crds"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
-	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers/configuration"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers/crds"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
+	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers/utils"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 // -----------------------------------------------------------------------------

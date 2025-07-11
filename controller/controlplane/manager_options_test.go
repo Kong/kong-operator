@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/tonglil/buflogr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/internal/telemetry"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )

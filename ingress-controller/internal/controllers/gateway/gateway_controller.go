@@ -29,13 +29,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
-	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
-	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
+	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
+	ctrlutils "github.com/kong/kong-operator/ingress-controller/internal/controllers/utils"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
 )
 
 // -----------------------------------------------------------------------------
@@ -43,7 +43,7 @@ import (
 // -----------------------------------------------------------------------------
 
 // GatewayReconciler reconciles a Gateway object.
-type GatewayReconciler struct { //nolint:revive
+type GatewayReconciler struct {
 	client.Client
 
 	Log             logr.Logger

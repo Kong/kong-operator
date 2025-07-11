@@ -14,10 +14,10 @@ import (
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
+	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/clients"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/test/mocks"
 )
 
 type readinessCheckCall struct {
@@ -199,7 +199,7 @@ func TestAdminAPIClientsManager_Clients(t *testing.T) {
 	)
 	require.NoError(t, err)
 	require.Len(t, m.GatewayClients(), 1, "expecting one initial client")
-	require.Equal(t, m.GatewayClientsCount(), 1, "expecting one initial client")
+	require.Equal(t, 1, m.GatewayClientsCount(), "expecting one initial client")
 	require.Len(t, m.GatewayClientsToConfigure(), 1, "Expecting one initial client")
 }
 
@@ -228,7 +228,7 @@ func TestAdminAPIClientsManager_Clients_DBMode(t *testing.T) {
 		return c.BaseRootURL() == configureClients[0].BaseRootURL()
 	}), "Client's address %s should be in initial clients")
 
-	require.Equal(t, m.GatewayClientsCount(), 2, "Expecting 2 initial clients")
+	require.Equal(t, 2, m.GatewayClientsCount(), "Expecting 2 initial clients")
 }
 
 func TestAdminAPIClientsManager_SubscribeToGatewayClientsChanges(t *testing.T) {

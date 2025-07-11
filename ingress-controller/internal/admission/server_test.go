@@ -18,11 +18,11 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 
 var decoder = codecs.UniversalDeserializer()
@@ -101,7 +101,7 @@ func TestServeHTTPBasic(t *testing.T) {
 	handler := http.HandlerFunc(server.ServeHTTP)
 
 	req, err := http.NewRequest("POST", "", nil)
-	assert.Nil(err)
+	assert.NoError(err)
 	handler.ServeHTTP(res, req)
 	assert.Equal(400, res.Code)
 	assert.Equal("Admission review object is missing\n",
@@ -373,7 +373,7 @@ func TestValidationWebhook(t *testing.T) {
 
 				// act
 				req, err := http.NewRequest("POST", "", bytes.NewBuffer([]byte(tt.reqBody)))
-				assert.Nil(err)
+				assert.NoError(err)
 				handler.ServeHTTP(res, req)
 
 				// assert
@@ -381,10 +381,10 @@ func TestValidationWebhook(t *testing.T) {
 				if tt.wantRespCode == http.StatusOK {
 					var review admissionv1.AdmissionReview
 					_, _, err = decoder.Decode(res.Body.Bytes(), nil, &review)
-					assert.Nil(err)
-					assert.EqualValues(&tt.wantSuccessResponse, review.Response)
+					assert.NoError(err)
+					assert.Equal(&tt.wantSuccessResponse, review.Response)
 				} else {
-					assert.Equal(res.Body.String(), tt.wantFailureMessage)
+					assert.Equal(tt.wantFailureMessage, res.Body.String())
 				}
 			})
 		}

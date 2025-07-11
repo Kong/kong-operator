@@ -6,15 +6,14 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/Kong/sdk-konnect-go/retry"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/sdk"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
+	"github.com/kong/kong-operator/ingress-controller/internal/konnect/sdk"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
 )
 
 // CreateClientCertificate creates a TLS client certificate and POSTs it to Konnect Control Plane configuration API

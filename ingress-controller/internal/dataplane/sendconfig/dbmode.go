@@ -18,10 +18,10 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/mo"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/deckerrors"
+	"github.com/kong/kong-operator/ingress-controller/internal/diagnostics"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/internal/metrics"
 )
 
 // UpdateStrategyDBMode implements the UpdateStrategy interface. It updates Kong's data-plane

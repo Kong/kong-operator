@@ -3,8 +3,8 @@ package manager
 import (
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator"
 )
 
 // GatewayClientsProvider is an interface that provides clients for the currently discovered Gateway instances.

@@ -18,9 +18,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/internal/util"
 )
 
 // -----------------------------------------------------------------------------
@@ -54,7 +54,7 @@ func GetControllerName() gatewayapi.GatewayController {
 // -----------------------------------------------------------------------------
 
 // GatewayClassReconciler reconciles a GatewayClass object.
-type GatewayClassReconciler struct { //nolint:revive
+type GatewayClassReconciler struct {
 	client.Client
 	Log              logr.Logger
 	Scheme           *runtime.Scheme

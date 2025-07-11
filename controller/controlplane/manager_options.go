@@ -5,14 +5,14 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	telemetryTypes "github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry/types"
 	"github.com/samber/mo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
 	"github.com/kong/kong-operator/controller/pkg/log"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	telemetryTypes "github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/vars"
 )

@@ -10,10 +10,10 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/fallback"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
 // mockGraphProvider is a mock implementation of the CacheGraphProvider interface.
@@ -368,7 +368,7 @@ func TestGenerator_ReturnsMetadata(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, meta.BrokenObjects, 1)
 		require.Len(t, meta.ExcludedObjects, 2)
-		require.Len(t, meta.BackfilledObjects, 0)
+		require.Empty(t, meta.BackfilledObjects)
 	})
 	t.Run("on backfilling", func(t *testing.T) {
 		_, meta, err := g.GenerateBackfillingBrokenObjects(inputCacheStores, &lastValidCacheStores, []fallback.ObjectHash{
