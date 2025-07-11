@@ -55,7 +55,7 @@ func TestQueue(t *testing.T) {
 	ingCH := q.Subscribe(ing1.GroupVersionKind())
 	assert.Len(t, q.subscriptions[ing1.GroupVersionKind().String()], 1, "internally a single channel should be created for the object kind")
 	t.Logf("%+v", q.subscriptions)
-	assert.Len(t, ingCH, 0, "the underlying channel should be empty")
+	assert.Empty(t, ingCH, "the underlying channel should be empty")
 
 	t.Log("verifying an object can have an event published for it")
 	q.Publish(ing1)
@@ -64,7 +64,7 @@ func TestQueue(t *testing.T) {
 
 	t.Log("verifying a published event can be consumed by the consumer")
 	assert.Equal(t, event.GenericEvent{Object: ing1}, <-ingCH)
-	assert.Len(t, ingCH, 0, "the event should be consumed")
+	assert.Empty(t, ingCH, "the event should be consumed")
 
 	t.Log("verifying publishing different named objects for kinds that have already been seen")
 	q.Publish(ing2)
@@ -110,9 +110,9 @@ func TestQueue(t *testing.T) {
 		assert.Equal(t, event.GenericEvent{Object: udp}, <-udpCH)
 	}
 	assert.Len(t, q.subscriptions, 3)
-	assert.Len(t, ingCH, 0)
-	assert.Len(t, tcpCH, 0)
-	assert.Len(t, udpCH, 0)
+	assert.Empty(t, ingCH)
+	assert.Empty(t, tcpCH)
+	assert.Empty(t, udpCH)
 
 	t.Log("verifying that multiple consumers can be subscribed to the same object kind and receive events")
 	ingCH2 := q.Subscribe(ing1.GroupVersionKind())

@@ -14,11 +14,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
 )
 
 func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
@@ -1665,7 +1665,7 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 				SupportRedirectPlugin:                   false,
 			}
 			translationResult := TranslateHTTPRoutesToKongstateServices(logger, fakeStore, tc.httpRoutes, translateOptions)
-			require.Len(t, translationResult.HTTPRouteNameToTranslationErrors, 0, "Should not get translation errors in translating")
+			require.Empty(t, translationResult.HTTPRouteNameToTranslationErrors, "Should not get translation errors in translating")
 
 			kongstateServices := translationResult.ServiceNameToKongstateService
 			require.Len(t, kongstateServices, len(tc.expectedServices))

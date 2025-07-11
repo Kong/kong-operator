@@ -24,11 +24,11 @@ import (
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/test"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/test"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/testlabels"
 )
 
 func TestKongUpstreamPolicyStatus(t *testing.T) {

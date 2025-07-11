@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/multiinstance"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
 )
 
 const (

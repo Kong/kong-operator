@@ -14,13 +14,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator/subtranslator"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
 )
 
 // httprouteGVK is the GVK for HTTPRoutes, needed in unit tests because
@@ -2657,7 +2657,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			result := newIngressRules()
 			translator.ingressRulesFromHTTPRoutesWithCombinedService(tc.httpRoutes, &result)
 			// check services
-			require.Equal(t, len(tc.expectedKongServices), len(result.ServiceNameToServices),
+			require.Len(t, result.ServiceNameToServices, len(tc.expectedKongServices),
 				"should have expected number of services")
 			for _, expectedKongService := range tc.expectedKongServices {
 				kongService, ok := result.ServiceNameToServices[*expectedKongService.Name]
@@ -2665,7 +2665,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 				require.Equal(t, expectedKongService.Backends, kongService.Backends)
 				// check routes
 				expectedKongRoutes := tc.expectedKongRoutes[*kongService.Name]
-				require.Equal(t, len(expectedKongRoutes), len(kongService.Routes))
+				require.Len(t, kongService.Routes, len(expectedKongRoutes))
 
 				kongRouteNameToRoute := lo.SliceToMap(kongService.Routes, func(r kongstate.Route) (string, kongstate.Route) {
 					return *r.Name, r
@@ -3034,7 +3034,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			result := newIngressRules()
 			tr.ingressRulesFromHTTPRoutesWithCombinedService(tc.httpRoutes, &result)
 			// check services
-			require.Equal(t, len(tc.expectedKongServices), len(result.ServiceNameToServices),
+			require.Len(t, result.ServiceNameToServices, len(tc.expectedKongServices),
 				"should have expected number of services")
 			for _, expectedKongService := range tc.expectedKongServices {
 				kongService, ok := result.ServiceNameToServices[*expectedKongService.Name]
@@ -3042,7 +3042,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 				require.Equal(t, expectedKongService.Backends, kongService.Backends)
 				// check routes
 				expectedKongRoutes := tc.expectedKongRoutes[*kongService.Name]
-				require.Equal(t, len(expectedKongRoutes), len(kongService.Routes))
+				require.Len(t, kongService.Routes, len(expectedKongRoutes))
 
 				kongRouteNameToRoute := lo.SliceToMap(kongService.Routes, func(r kongstate.Route) (string, kongstate.Route) {
 					return *r.Name, r

@@ -3,7 +3,6 @@ package store
 import (
 	"fmt"
 	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -15,10 +14,10 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 func TestCacheStoresGet(t *testing.T) {
@@ -67,13 +66,13 @@ spec:
 	t.Log("verifying that the cache store doesnt try to retrieve unsupported object types")
 	_, exists, err := cs.Get(new(appsv1.Deployment))
 	assert.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), "Deployment is not a supported cache object type"))
+	assert.Contains(t, err.Error(), "Deployment is not a supported cache object type")
 	assert.False(t, exists)
 
 	t.Log("verifying the integrity of the cache store")
 	assert.Len(t, cs.IngressV1.List(), 1)
 	assert.Len(t, cs.Service.List(), 1)
-	assert.Len(t, cs.KongIngress.List(), 0)
+	assert.Empty(t, cs.KongIngress.List())
 	_, exists, err = cs.Get(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "doesntexist", Name: "doesntexist"}})
 	assert.NoError(t, err)
 	assert.False(t, exists)

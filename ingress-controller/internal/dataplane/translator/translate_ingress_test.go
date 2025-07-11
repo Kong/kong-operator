@@ -14,13 +14,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator/subtranslator"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 )
 
 func TestFromIngressV1(t *testing.T) {
@@ -141,18 +141,18 @@ func TestFromIngressV1(t *testing.T) {
 		snts := result.ServiceNameToServices["my-ns.svc.80"]
 		require.Len(t, snts.Routes, 2, "ServiceNameToServices should have 2 routes: 1 for default and 1 for /foo")
 		if assert.Len(t, snts.Routes[0].Paths, 2) {
-			assert.Equal(t, *snts.Routes[0].Paths[0], "/foo/")
-			assert.Equal(t, *snts.Routes[0].Paths[1], "~/foo$")
+			assert.Equal(t, "/foo/", *snts.Routes[0].Paths[0])
+			assert.Equal(t, "~/foo$", *snts.Routes[0].Paths[1])
 		}
 		if assert.Len(t, snts.Routes[1].Paths, 1) {
-			assert.Equal(t, *snts.Routes[1].Paths[0], "/")
+			assert.Equal(t, "/", *snts.Routes[1].Paths[0])
 		}
 
 		require.Len(t, snts.Backends, 1)
-		assert.Equal(t, snts.Backends[0].Name(), "svc")
+		assert.Equal(t, "svc", snts.Backends[0].Name())
 
 		require.Contains(t, result.ServiceNameToParent, "my-ns.svc.80")
-		assert.Equal(t, result.ServiceNameToParent["my-ns.svc.80"].GetName(), "baz")
+		assert.Equal(t, "baz", result.ServiceNameToParent["my-ns.svc.80"].GetName())
 	})
 }
 
@@ -365,7 +365,7 @@ func TestGetDefaultBackendService(t *testing.T) {
 					require.Equal(t, subtranslator.IngressDefaultBackendPriority, *route.Priority)
 				} else {
 					require.Len(t, route.Paths, 1)
-					require.Equal(t, *route.Paths[0], "/")
+					require.Equal(t, "/", *route.Paths[0])
 				}
 			}
 		})

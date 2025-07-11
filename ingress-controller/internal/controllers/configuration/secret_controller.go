@@ -18,11 +18,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
-	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/internal/admission/validation/consumers/credentials"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
+	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
+	"github.com/kong/kong-operator/ingress-controller/internal/labels"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
 )
 
 // -----------------------------------------------------------------------------

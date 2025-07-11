@@ -15,21 +15,21 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	credsvalidation "github.com/kong/kong-operator/ingress-controller/internal/admission/validation/consumers/credentials"
+	gatewayvalidation "github.com/kong/kong-operator/ingress-controller/internal/admission/validation/gateway"
+	ingressvalidation "github.com/kong/kong-operator/ingress-controller/internal/admission/validation/ingress"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	gatewaycontroller "github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/ingress-controller/internal/util"
+
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-
-	credsvalidation "github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
-	gatewayvalidation "github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/gateway"
-	ingressvalidation "github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/ingress"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 // KongValidator validates Kong entities.

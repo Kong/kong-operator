@@ -3,7 +3,7 @@ package sendconfig
 import (
 	"github.com/samber/mo"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
 )
 
 // UpdateError wraps several pieces of error information relevant to a failed Kong update attempt.

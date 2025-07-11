@@ -11,8 +11,8 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/tracing"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/konnect/tracing"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 func NewKongClientForKonnectControlPlane(c managercfg.KonnectConfig) (*KonnectClient, error) {

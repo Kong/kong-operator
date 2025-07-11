@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
+	"github.com/kong/kong-operator/ingress-controller/test/kongintegration/containers"
 )
 
 // runKongEnterprise runs a Kong EE container using the version from `test_dependencies.yaml`.

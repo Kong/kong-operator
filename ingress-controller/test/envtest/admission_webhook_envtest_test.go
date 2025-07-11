@@ -21,15 +21,15 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/labels"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers/webhook"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
+
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/webhook"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 func TestAdmissionWebhook_KongVault(t *testing.T) {
@@ -1015,7 +1015,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 
 			err := ctrlClient.Create(ctx, tc.consumer)
 			if tc.wantErr {
-				require.Error(t, err, fmt.Sprintf("consumer %s should fail to create", tc.consumer.Name))
+				require.Error(t, err, "consumer %s should fail to create", tc.consumer.Name)
 				assert.Contains(t, err.Error(), tc.wantPartialErr,
 					"got error string %q, want a superstring of %q", err.Error(), tc.wantPartialErr,
 				)
@@ -1025,7 +1025,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 						assert.NoError(t, err)
 					}
 				})
-				require.NoError(t, err, fmt.Sprintf("consumer %s should create successfully", tc.consumer.Name))
+				require.NoError(t, err, "consumer %s should create successfully", tc.consumer.Name)
 			}
 		})
 	}

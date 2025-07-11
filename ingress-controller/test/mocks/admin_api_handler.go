@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/yaml"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
+	"github.com/kong/kong-operator/ingress-controller/internal/versions"
 )
 
 const mockConsumerError = `{

@@ -9,13 +9,13 @@ import (
 	"github.com/kong/go-kong/kong"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/license"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 // -----------------------------------------------------------------------------

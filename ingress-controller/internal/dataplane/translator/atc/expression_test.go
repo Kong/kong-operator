@@ -183,7 +183,7 @@ func TestGenerateExpression(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			exp := tc.matcher.Expression()
-			require.Equal(t, tc.expression, exp)
+			require.Equal(t, exp, tc.expression)
 		})
 	}
 }

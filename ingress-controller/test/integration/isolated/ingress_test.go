@@ -25,14 +25,14 @@ import (
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v3/test"
-	testconsts "github.com/kong/kubernetes-ingress-controller/v3/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
+	"github.com/kong/kong-operator/ingress-controller/test"
+	testconsts "github.com/kong/kong-operator/ingress-controller/test/consts"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
+	"github.com/kong/kong-operator/ingress-controller/test/integration/consts"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/testlabels"
 )
 
 func TestIngressGRPC(t *testing.T) {

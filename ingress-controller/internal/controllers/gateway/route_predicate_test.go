@@ -12,9 +12,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/scheme"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 )
 
 func TestIsRouteAttachedToReconciledGateway(t *testing.T) {

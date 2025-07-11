@@ -22,14 +22,14 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/configuration"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	constsmgr "github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/test"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers/configuration"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	constsmgr "github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
+	"github.com/kong/kong-operator/ingress-controller/test"
+	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
+	"github.com/kong/kong-operator/ingress-controller/test/integration/consts"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/testlabels"
 )
 
 // TestBackendTLSPolicy tests that BackendTLSPolicies are properly configured.

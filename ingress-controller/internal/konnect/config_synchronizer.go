@@ -12,15 +12,15 @@ import (
 	"github.com/samber/mo"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/clients"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/deckerrors"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/deckgen"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/internal/metrics"
+	"github.com/kong/kong-operator/ingress-controller/internal/util"
 )
 
 type ClientFactory interface {

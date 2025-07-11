@@ -24,10 +24,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	k8sobj "github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	k8sobj "github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
 )
 
 // -----------------------------------------------------------------------------

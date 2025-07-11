@@ -3,7 +3,6 @@ package rootcmd
 import (
 	"fmt"
 	"io"
-	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -98,7 +97,7 @@ func TestBindEnvVarsValidation(t *testing.T) {
 
 	err := cmd.Execute()
 	assert.Error(t, err)
-	assert.True(t, strings.Contains(err.Error(), "variable CONTROLLER_VALIDATION_TEST: bad value for var type testvar"))
+	assert.Contains(t, err.Error(), "variable CONTROLLER_VALIDATION_TEST: bad value for var type testvar")
 }
 
 // -----------------------------------------------------------------------------

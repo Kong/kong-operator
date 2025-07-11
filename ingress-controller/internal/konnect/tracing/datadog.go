@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
 )
 
 const (
@@ -30,7 +30,7 @@ func DoRequest(ctx context.Context, httpClient *http.Client, req *http.Request) 
 		return nil, err
 	}
 
-	logger := loggerWithDataDogTraceID(log.FromContext(ctx), httpResp)
+	logger := loggerWithDataDogTraceID(ctrllog.FromContext(ctx), httpResp)
 	if httpResp.StatusCode < 200 || httpResp.StatusCode >= 300 {
 		// In case of a non-2xx response, log at Error level for visibility.
 		logger.V(logging.ErrorLevel).Info(

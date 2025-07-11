@@ -4,7 +4,7 @@ import (
 	"github.com/kong/go-database-reconciler/pkg/file"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/fallback"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/fallback"
 )
 
 // DumpMeta annotates a config dump.

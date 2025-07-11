@@ -3,7 +3,7 @@ package testenv
 import (
 	"github.com/blang/semver/v4"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kong-operator/ingress-controller/test/consts"
 )
 
 func GetFeatureGates() string {

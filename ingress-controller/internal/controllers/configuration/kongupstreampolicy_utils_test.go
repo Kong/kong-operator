@@ -17,14 +17,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
+	gatewaycontroller "github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
+
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
-	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/scheme"
 )
 
 func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {

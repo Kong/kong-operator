@@ -15,10 +15,10 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/test"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
+	"github.com/kong/kong-operator/ingress-controller/test"
+	"github.com/kong/kong-operator/ingress-controller/test/consts"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
 )
 
 const (

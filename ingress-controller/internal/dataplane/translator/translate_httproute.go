@@ -6,8 +6,8 @@ import (
 
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator/subtranslator"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 )
 
 // -----------------------------------------------------------------------------

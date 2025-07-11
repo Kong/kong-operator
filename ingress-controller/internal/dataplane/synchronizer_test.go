@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 
-	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
+	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
 )
 
 const testSynchronizerTick = time.Millisecond * 10
@@ -59,7 +59,7 @@ func TestSynchronizer(t *testing.T) {
 	t.Log("verifying that trying to start the dataplane synchronizer while it's already started fails")
 	err = sync.Start(ctx)
 	assert.Error(t, err)
-	assert.Equal(t, err.Error(), "server is already running")
+	assert.Equal(t, "server is already running", err.Error())
 
 	t.Log("verifying that eventually the synchronizer reports as ready for a dbless dataplane")
 	assert.Eventually(t, func() bool { return sync.IsReady() }, testSynchronizerTick*3, testSynchronizerTick)

@@ -18,7 +18,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/metrics"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckerrors"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/deckerrors"
 )
 
 func TestNewGlobalCtrlRuntimeMetricsRecorder_DoesNotPanicWhenCalledTwice(t *testing.T) {

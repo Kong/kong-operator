@@ -12,15 +12,15 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/labels"
+	"github.com/kong/kong-operator/ingress-controller/internal/util"
+
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
 const (

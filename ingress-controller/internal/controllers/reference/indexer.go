@@ -7,10 +7,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/scheme"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/internal/util"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 )
 
 const (

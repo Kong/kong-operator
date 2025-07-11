@@ -6,7 +6,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	k8sobj "github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object"
+	k8sobj "github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object"
 )
 
 type Dataplane struct {

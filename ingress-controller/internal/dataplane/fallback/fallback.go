@@ -5,8 +5,8 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
 )
 
 type CacheGraphProvider interface {

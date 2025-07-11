@@ -14,10 +14,10 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
-	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
+	tlsutil "github.com/kong/kong-operator/ingress-controller/internal/util/tls"
+	"github.com/kong/kong-operator/ingress-controller/internal/versions"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/pkg/metadata"
 )
 
 // KongClientNotReadyError is returned when the Kong client is not ready to be used yet.
@@ -50,7 +50,7 @@ func NewKongAPIClient(adminURL string, kongAdminAPIConfig managercfg.AdminAPICli
 		return nil, err
 	}
 
-	client, err := kong.NewClient(kong.String(adminURL), httpClient) //nolint:forbidigo
+	client, err := kong.NewClient(kong.String(adminURL), httpClient)
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
 	}

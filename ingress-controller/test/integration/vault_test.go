@@ -22,11 +22,11 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
-	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/test"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
+	"github.com/kong/kong-operator/ingress-controller/test"
+	"github.com/kong/kong-operator/ingress-controller/test/consts"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 )
 
 func TestCustomVault(t *testing.T) {

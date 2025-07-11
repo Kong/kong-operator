@@ -24,9 +24,9 @@ import (
 	"k8s.io/client-go/rest"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/k8s"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/k8s"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
 )
 
 func TestTelemetry(t *testing.T) {

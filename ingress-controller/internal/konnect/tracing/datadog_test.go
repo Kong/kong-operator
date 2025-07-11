@@ -8,9 +8,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"github.com/tonglil/buflogr"
-	"sigs.k8s.io/controller-runtime/pkg/log"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/tracing"
+	"github.com/kong/kong-operator/ingress-controller/internal/konnect/tracing"
 )
 
 func TestDoRequest(t *testing.T) {
@@ -82,7 +82,7 @@ func TestDoRequest(t *testing.T) {
 
 			loggerBuf := &bytes.Buffer{}
 			logger := buflogr.NewWithBuffer(loggerBuf)
-			ctx := log.IntoContext(t.Context(), logger)
+			ctx := ctrllog.IntoContext(t.Context(), logger)
 
 			resp, err := tracing.DoRequest(ctx, client, request)
 			require.NoError(t, err)
