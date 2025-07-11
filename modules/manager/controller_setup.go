@@ -386,6 +386,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.GatewayControllerEnabled || c.ControlPlaneControllerEnabled,
 			Controller: &controlplane.Reconciler{
+				CacheSyncPeriod:          c.CacheSyncPeriod,
 				CacheSyncTimeout:         c.CacheSyncTimeout,
 				AnonymousReportsEnabled:  c.AnonymousReports,
 				LoggingMode:              c.LoggingMode,
