@@ -1,0 +1,75 @@
+# NOTE The Gateway APIs are not yet available by default in Kubernetes.
+# Follow these instructions to install them before using this example:
+# https://gateway-api.sigs.k8s.io/guides/#install-experimental-channel
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: udpecho
+  labels:
+    app: udpecho
+spec:
+  selector:
+    matchLabels:
+      app: udpecho
+  template:
+    metadata:
+      labels:
+        app: udpecho
+    spec:
+      containers:
+      - name: udpecho
+        image: kong/go-echo:0.3.0
+        ports:
+        - containerPort: 1026
+        env:
+        - name: POD_NAME
+          value: udproute-example-manifest
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: udpecho
+spec:
+  ports:
+  - port: 9999
+    protocol: UDP
+    targetPort: 1026
+  selector:
+    app: udpecho
+  type: ClusterIP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: example-udproute
+  annotations:
+    konghq.com/gatewayclass-unmanaged: "true"
+spec:
+  controllerName: konghq.com/kic-gateway-controller
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: example-udproute
+spec:
+  gatewayClassName: example-udproute
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+  - name: udp
+    protocol: UDP
+    port: 9999
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: UDPRoute
+metadata:
+  name: udpecho
+spec:
+  parentRefs:
+  - name: example-udproute
+  rules:
+  - backendRefs:
+    - name: udpecho
+      port: 9999

@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: kong
+resources:
+- namespace.yaml
+- ../crd
+- ../crd/incubator
+- ../rbac
+- ../rbac/gateway
+- ../rbac/crds
+- ingressclass.yaml
+- service.yaml
+- serviceaccount.yaml
+- validation-service.yaml
+- kong-ingress-dbless.yaml
+
+components:
+- ../image/oss
