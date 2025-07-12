@@ -83,6 +83,10 @@ jobs:
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
     runs-on: ubuntu-latest
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - uses: mukunku/tag-exists-action@bdad1eaa119ce71b150b952c97351c75025c06a9 # v1.6.0
         id: check-tag
         name: Check if tag already exists
@@ -130,6 +134,10 @@ jobs:
     runs-on: ubuntu-latest
     name: "test-integration-current-kubernetes"
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -187,6 +195,10 @@ jobs:
       - semver
       - build-push-images
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - name: Checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
@@ -249,6 +261,10 @@ jobs:
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - name: Check if we're not trying to trigger a major/minor release from non main
         if: ${{ inputs.base != 'main' && needs.semver.outputs.patch == '0' }}
         run: |
