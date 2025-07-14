@@ -10,7 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
+	"github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
 )
 
 const (

@@ -12,12 +12,12 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator/subtranslator"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
 )
 
 func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
@@ -437,7 +437,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 			result := newIngressRules()
 			translator.ingressRulesFromGRPCRoutesUsingExpressionRoutes(tc.grpcRoutes, &result)
 			// check services
-			require.Equal(t, len(tc.expectedKongServices), len(result.ServiceNameToServices),
+			require.Len(t, result.ServiceNameToServices, len(tc.expectedKongServices),
 				"should have expected number of services")
 			for _, expectedKongService := range tc.expectedKongServices {
 				kongService, ok := result.ServiceNameToServices[*expectedKongService.Name]
@@ -445,7 +445,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 				require.Equal(t, expectedKongService.Backends, kongService.Backends)
 				// check routes
 				expectedKongRoutes := tc.expectedKongRoutes[*kongService.Name]
-				require.Equal(t, len(expectedKongRoutes), len(kongService.Routes))
+				require.Len(t, kongService.Routes, len(expectedKongRoutes))
 
 				kongRouteNameToRoute := lo.SliceToMap(kongService.Routes, func(r kongstate.Route) (string, kongstate.Route) {
 					return *r.Name, r

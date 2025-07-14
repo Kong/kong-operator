@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry/types"
 	"github.com/stretchr/testify/require"
+
+	"github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
 )
 
 func Test_DefaultPayloadCustomizer_WithCustomHostnameRetriever(t *testing.T) {

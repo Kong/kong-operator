@@ -1,6 +1,6 @@
 package multiinstance
 
-import "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
+import "github.com/kong/kong-operator/ingress-controller/pkg/manager"
 
 // InstanceWithIDAlreadyScheduledError is an error indicating that an instance with the same ID is already scheduled.
 type InstanceWithIDAlreadyScheduledError struct {

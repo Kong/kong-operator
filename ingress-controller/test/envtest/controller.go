@@ -16,7 +16,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
+	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
 )
 
 // StartReconcilers creates a controller manager and starts the provided reconciler

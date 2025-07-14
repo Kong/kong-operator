@@ -162,7 +162,7 @@ func EventuallyGETPath(
 		if !assert.NoError(c, err) {
 			return
 		}
-		if !assert.Greater(c, n, int64(0)) {
+		if !assert.Positive(c, n) {
 			return
 		}
 		assert.Contains(c, b.String(), bodyContent)

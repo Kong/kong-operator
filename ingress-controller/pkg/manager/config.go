@@ -3,8 +3,8 @@ package manager
 import (
 	"fmt"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd/config"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/internal/cmd/rootcmd/config"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 // NewConfig is used to create a new configuration object with default values. Values can be overridden by passing

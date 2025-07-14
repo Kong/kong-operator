@@ -8,10 +8,10 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/client-go/rest"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
-	managerinternal "github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry"
+	"github.com/kong/kong-operator/ingress-controller/internal/clients"
+	managerinternal "github.com/kong/kong-operator/ingress-controller/internal/manager"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/pkg/telemetry"
 )
 
 // Manager is an object representing an instance of the Kong Ingress Controller.

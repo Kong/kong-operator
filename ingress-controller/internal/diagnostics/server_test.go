@@ -17,8 +17,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	testhelpers "github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	testhelpers "github.com/kong/kong-operator/ingress-controller/test/helpers"
 )
 
 // TestDiagnosticsServer_ConfigDumps tests that the diagnostics server can receive and serve config dumps.
@@ -114,7 +114,7 @@ func TestDiagnosticsServer_Diffs(t *testing.T) {
 	for _, available := range got.Available {
 		actual[available.ConfigHash] = nil
 	}
-	require.Equal(t, len(actual), len(configDiffs))
+	require.Len(t, configDiffs, len(actual))
 	for expected := range configDiffs {
 		_, ok := actual[expected]
 		require.Truef(t, ok, "expected hash %s not found in report", expected)
@@ -133,19 +133,19 @@ func TestDiagnosticsServer_Diffs(t *testing.T) {
 	_, err = b.ReadFrom(second.Body)
 	require.NoError(t, err)
 	require.NoError(t, json.Unmarshal(b.Bytes(), &got))
-	require.Equal(t, len(got.Available), diffHistorySize)
+	require.Equal(t, diffHistorySize, len(got.Available))
 
 	// confirm that the by hash endpoints cannot retrieve the last diff sent, and get a 404 for the first (now discarded)
 	// diff sent
 	third, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/diff-report?hash=%s", port, extra.Hash))
 	require.NoError(t, err)
 	defer third.Body.Close()
-	require.Equal(t, third.StatusCode, http.StatusOK)
+	require.Equal(t, http.StatusOK, third.StatusCode)
 
 	fourth, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/diff-report?hash=%s", port, first))
 	require.NoError(t, err)
 	defer fourth.Body.Close()
-	require.Equal(t, fourth.StatusCode, http.StatusNotFound)
+	require.Equal(t, http.StatusNotFound, fourth.StatusCode)
 }
 
 func testConfigDiff() ConfigDiff {

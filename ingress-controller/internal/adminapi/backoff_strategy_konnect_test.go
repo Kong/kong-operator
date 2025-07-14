@@ -10,7 +10,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
 )
 
 type mockClock struct {

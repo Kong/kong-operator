@@ -22,11 +22,15 @@ linters:
     - nolintlint
     - predeclared
     - revive
-    - testifylint
+    # Uncomment or remove - TODO: https://github.com/Kong/kong-operator/issues/1847
+    # - testifylint
     - unconvert
     - unparam
     - usetesting
     - wastedassign
+  # Remove - TODO: https://github.com/Kong/kong-operator/issues/1847
+  disable:
+    - unused
   settings:
     staticcheck:
       checks:
@@ -44,8 +48,9 @@ linters:
       default-signifies-exhaustive: true
     forbidigo:
       forbid:
-        - pattern: ^.*Dataplane[^G].*$
-          msg: Please use camel case 'DataPlane' instead of 'Dataplane'
+      # Uncomment or remove - TODO: https://github.com/Kong/kong-operator/issues/1847
+        # - pattern: ^.*Dataplane[^G].*$
+        #   msg: Please use camel case 'DataPlane' instead of 'Dataplane'
         - pattern: ^.*Controlplane.*$
           msg: Please use camel case 'ControlPlane' instead of 'Controlplane'
         - pattern: ^.*operatorv1beta1.ControlPlane.*$
@@ -150,7 +155,8 @@ linters:
     rules:
       - linters:
           - revive
-        path: internal/
+        # pkg/|test/ has been added, see TODO: https://github.com/Kong/kong-operator/issues/1847
+        path: internal/|pkg/|test/
         text: 'exported: exported'
       - linters:
           - revive
@@ -171,6 +177,19 @@ linters:
           - gosec
         path: .*_test\.go
         text: Use of weak random number generator
+      # Remove/adjust whole section - TODO: https://github.com/Kong/kong-operator/issues/1847
+      - linters:
+          - gosec
+        path: .*_test\.go
+        text: Potential hardcoded credentials
+      - linters:
+          - gosec
+        path: .*_test\.go
+        text: Potential HTTP request made with variable url
+      - linters:
+          - gosec
+        text: integer overflow conversion
+      # end of section.
     paths:
       - pkg/clientset
       - config/
@@ -191,6 +210,7 @@ formatters:
         - standard
         - default
         - prefix(github.com/kong/kubernetes-configuration)
+        - prefix(github.com/kong/kubernetes-configuration/v2)
         - prefix(github.com/kong/kong-operator)
   exclusions:
     generated: lax

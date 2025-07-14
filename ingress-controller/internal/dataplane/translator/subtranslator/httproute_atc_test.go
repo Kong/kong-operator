@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
+	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
 )
 
 func TestGenerateMatcherFromHTTPRouteMatch(t *testing.T) {
@@ -799,7 +799,7 @@ func TestAssignRoutePriorityToSplitHTTPRouteMatches(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			splitHTTPRoutesWithPriorities := assignRoutePriorityToSplitHTTPRouteMatches(logr.Discard(), tc.matches)
-			require.Equal(t, len(tc.priorities), len(splitHTTPRoutesWithPriorities), "should have required number of results")
+			require.Len(t, splitHTTPRoutesWithPriorities, len(tc.priorities), "should have required number of results")
 			for _, r := range splitHTTPRoutesWithPriorities {
 				httpRoute := r.Match.Source
 

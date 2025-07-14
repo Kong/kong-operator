@@ -15,7 +15,7 @@ import (
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 	"github.com/kong/kubernetes-configuration/pkg/clientset/scheme"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 )
 
 func TestKongIngressValidationWebhook(t *testing.T) {

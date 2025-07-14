@@ -3,7 +3,7 @@ package subtranslator
 import (
 	"strings"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/atc"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator/atc"
 )
 
 const (

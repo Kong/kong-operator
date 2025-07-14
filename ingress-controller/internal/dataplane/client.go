@@ -3,7 +3,7 @@ package dataplane
 import (
 	"context"
 
-	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
+	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
 )
 
 // -----------------------------------------------------------------------------

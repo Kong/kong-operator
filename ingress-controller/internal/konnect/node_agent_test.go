@@ -11,11 +11,11 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
+	"github.com/kong/kong-operator/ingress-controller/internal/clients"
+	"github.com/kong/kong-operator/ingress-controller/internal/konnect"
+	"github.com/kong/kong-operator/ingress-controller/internal/konnect/nodes"
+	"github.com/kong/kong-operator/ingress-controller/internal/versions"
+	"github.com/kong/kong-operator/ingress-controller/test/mocks"
 )
 
 const (

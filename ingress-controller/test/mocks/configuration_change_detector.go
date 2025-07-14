@@ -5,7 +5,7 @@ import (
 
 	"github.com/kong/go-database-reconciler/pkg/file"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
 )
 
 // ConfigurationChangeDetector is a mock implementation of sendconfig.ConfigurationChangeDetector.
