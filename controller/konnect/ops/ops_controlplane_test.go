@@ -19,13 +19,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
-	"github.com/kong/kong-operator/internal/metrics"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+
+	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
+	"github.com/kong/kong-operator/internal/metrics"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
 func TestCreateControlPlane(t *testing.T) {

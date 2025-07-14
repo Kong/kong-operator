@@ -6,9 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/controller/konnect/server"
-
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+
+	"github.com/kong/kong-operator/controller/konnect/server"
 )
 
 func TestServer(t *testing.T) {

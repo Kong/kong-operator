@@ -6,9 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/pkg/consts"
-
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
+
+	"github.com/kong/kong-operator/pkg/consts"
 )
 
 func TestLabelObjectAsKonnectExtensionManaged(t *testing.T) {

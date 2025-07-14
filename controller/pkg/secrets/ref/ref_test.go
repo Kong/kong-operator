@@ -13,9 +13,9 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
-
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
+
+	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
 func TestCheckReferenceGrantForSecret(t *testing.T) {

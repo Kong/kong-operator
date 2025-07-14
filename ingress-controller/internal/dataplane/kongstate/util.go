@@ -9,10 +9,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/store"
-
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
 func getKongIngressForServices(

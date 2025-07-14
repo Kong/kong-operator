@@ -11,11 +11,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kong-operator/controller/pkg/log"
-	secretref "github.com/kong/kong-operator/controller/pkg/secrets/ref"
-
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
+
+	"github.com/kong/kong-operator/controller/pkg/log"
+	secretref "github.com/kong/kong-operator/controller/pkg/secrets/ref"
 )
 
 // -----------------------------------------------------------------------------

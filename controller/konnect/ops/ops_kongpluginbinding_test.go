@@ -11,12 +11,12 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/kong-operator/modules/manager/scheme"
-
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
+
+	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
 func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {

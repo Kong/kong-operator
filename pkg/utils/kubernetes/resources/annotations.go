@@ -6,9 +6,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/pkg/consts"
-
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
+
+	"github.com/kong/kong-operator/pkg/consts"
 )
 
 // AnnotateConfigMapWithKongPluginInstallation ensures that annotation that maps

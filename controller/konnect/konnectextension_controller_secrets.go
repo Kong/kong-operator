@@ -8,10 +8,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
+
 	"github.com/kong/kong-operator/internal/utils/index"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 const (

@@ -13,18 +13,18 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kong-operator/controller/konnect/constraints"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
-	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/internal/metrics"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	kcfgkonnect "github.com/kong/kubernetes-configuration/v2/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+
+	"github.com/kong/kong-operator/controller/konnect/constraints"
+	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/internal/metrics"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
 // Op is the type for the operation type of a Konnect entity.

@@ -9,9 +9,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/kong-operator/modules/manager/scheme"
-
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+
+	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
 func TestHandleKongConsumerSpecific(t *testing.T) {

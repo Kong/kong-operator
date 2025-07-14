@@ -14,6 +14,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+
 	"github.com/kong/kong-operator/controller/dataplane/certificates"
 	dataplanepkg "github.com/kong/kong-operator/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/controller/pkg/log"
@@ -26,8 +28,6 @@ import (
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/kong-operator/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
-
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 )
 
 // restartAnnotationKey is the annotation key used to mark a Deployment as restarted.

@@ -21,6 +21,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	kcfgkonnect "github.com/kong/kubernetes-configuration/v2/api/konnect"
+
 	"github.com/kong/kong-operator/controller/pkg/address"
 	"github.com/kong/kong-operator/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/controller/pkg/extensions"
@@ -32,11 +37,6 @@ import (
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
-
-	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
-	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	kcfgkonnect "github.com/kong/kubernetes-configuration/v2/api/konnect"
 )
 
 // -----------------------------------------------------------------------------

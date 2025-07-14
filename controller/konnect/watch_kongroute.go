@@ -13,11 +13,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
-	"github.com/kong/kong-operator/internal/utils/index"
-
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+
+	operatorerrors "github.com/kong/kong-operator/internal/errors"
+	"github.com/kong/kong-operator/internal/utils/index"
 )
 
 // TODO(pmalek): this can be extracted and used in reconciler.go

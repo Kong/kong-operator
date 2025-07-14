@@ -212,6 +212,7 @@ formatters:
         - prefix(github.com/kong/kubernetes-configuration)
         - prefix(github.com/kong/kubernetes-configuration/v2)
         - prefix(github.com/kong/kong-operator)
+      custom-order: true
   exclusions:
     generated: lax
     paths:

@@ -13,9 +13,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
-
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+
+	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
 
 func createSNI(

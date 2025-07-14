@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
+
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
 // ConditionsChecker is a function type that checks the conditions of a resource.

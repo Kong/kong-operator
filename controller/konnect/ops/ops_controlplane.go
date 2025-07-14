@@ -13,10 +13,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
-
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+
+	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
 
 // convertCreateControlPlaneRequestToSDK converts the konnectv1alpha1.CreateControlPlaneRequest

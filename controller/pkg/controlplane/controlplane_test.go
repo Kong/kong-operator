@@ -3,9 +3,9 @@ package controlplane
 import (
 	"testing"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
-
 	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+
+	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
 func TestSpecDeepEqual(t *testing.T) {

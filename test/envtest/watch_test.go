@@ -8,9 +8,9 @@ import (
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	"github.com/kong/kong-operator/modules/manager/scheme"
-
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+
+	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
 func TestWatch(t *testing.T) {

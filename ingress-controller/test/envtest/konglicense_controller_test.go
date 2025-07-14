@@ -13,9 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	ctrllicense "github.com/kong/kong-operator/ingress-controller/internal/controllers/license"
-
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+
+	ctrllicense "github.com/kong/kong-operator/ingress-controller/internal/controllers/license"
 )
 
 func TestKongLicenseController(t *testing.T) {

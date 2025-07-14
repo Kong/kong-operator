@@ -5,9 +5,9 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	gwtypes "github.com/kong/kong-operator/internal/types"
-
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
+
+	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
 // ApplyControlPlaneKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it

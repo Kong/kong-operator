@@ -16,6 +16,12 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
+
 	"github.com/kong/kong-operator/controller/pkg/builder"
 	"github.com/kong/kong-operator/pkg/consts"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
@@ -23,12 +29,6 @@ import (
 	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/certificate"
 	"github.com/kong/kong-operator/test/helpers/deploy"
-
-	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 func TestKonnectExtensionKonnectControlPlaneNotFound(t *testing.T) {

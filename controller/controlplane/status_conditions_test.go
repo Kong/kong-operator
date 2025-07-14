@@ -7,10 +7,10 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
+
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
 func TestMarkAsProvisioned(t *testing.T) {

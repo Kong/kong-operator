@@ -29,6 +29,8 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+
 	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/clients"
@@ -45,8 +47,6 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/versions"
 	"github.com/kong/kong-operator/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/mocks"
-
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 )
 
 func TestUniqueObjects(t *testing.T) {

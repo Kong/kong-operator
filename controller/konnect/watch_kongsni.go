@@ -11,9 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/kong-operator/internal/utils/index"
-
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+
+	"github.com/kong/kong-operator/internal/utils/index"
 )
 
 // KongSNIReconciliationWatchOptions returns the watch options for

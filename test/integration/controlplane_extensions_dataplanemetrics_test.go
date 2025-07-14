@@ -11,15 +11,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kong-operator/pkg/consts"
-	osstestutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/pkg/vars"
-	osshelpers "github.com/kong/kong-operator/test/helpers"
-
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+
+	"github.com/kong/kong-operator/pkg/consts"
+	osstestutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/pkg/vars"
+	osshelpers "github.com/kong/kong-operator/test/helpers"
 )
 
 func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {

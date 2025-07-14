@@ -8,11 +8,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
+
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/pkg/vars"
-
-	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 )
 
 // Get returns a decorated GatewayClass object for the provided GatewayClass name. If the GatewayClass is
