@@ -11,9 +11,9 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
-
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+
+	operatorerrors "github.com/kong/kong-operator/internal/errors"
 )
 
 // listKonnectAPIAuthConfigurationsReferencingSecret returns a function that lists

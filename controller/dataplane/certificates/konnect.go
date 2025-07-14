@@ -13,6 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+
 	certutils "github.com/kong/kong-operator/controller/dataplane/utils/certificates"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	ossop "github.com/kong/kong-operator/controller/pkg/op"
@@ -21,8 +23,6 @@ import (
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	ossk8sreduce "github.com/kong/kong-operator/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
-
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 )
 
 //+kubebuilder:rbac:groups=cert-manager.io,resources=certificates,verbs=get;list;create;delete;patch;update;watch

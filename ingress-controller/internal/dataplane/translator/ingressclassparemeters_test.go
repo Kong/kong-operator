@@ -13,9 +13,9 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
-
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
 )
 
 func TestGetIngressClassParameters(t *testing.T) {

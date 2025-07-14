@@ -11,16 +11,16 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/kong-operator/controller/konnect/constraints"
-	"github.com/kong/kong-operator/controller/pkg/controlplane"
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
-	index2 "github.com/kong/kong-operator/internal/utils/index"
-
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+
+	"github.com/kong/kong-operator/controller/konnect/constraints"
+	"github.com/kong/kong-operator/controller/pkg/controlplane"
+	operatorerrors "github.com/kong/kong-operator/internal/errors"
+	index2 "github.com/kong/kong-operator/internal/utils/index"
 )
 
 // ReconciliationWatchOptionsForEntity returns the watch options for the given

@@ -24,6 +24,12 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
+	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
+	kcfggateway "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/gateway"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
+
 	controlplanecontroller "github.com/kong/kong-operator/controller/pkg/controlplane"
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	"github.com/kong/kong-operator/controller/pkg/log"
@@ -42,12 +48,6 @@ import (
 	k8sreduce "github.com/kong/kong-operator/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 	"github.com/kong/kong-operator/pkg/vars"
-
-	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
-	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
-	kcfggateway "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/gateway"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 // -----------------------------------------------------------------------------

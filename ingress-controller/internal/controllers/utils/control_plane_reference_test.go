@@ -8,9 +8,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
-	ctrlutils "github.com/kong/kong-operator/ingress-controller/internal/controllers/utils"
-
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+
+	ctrlutils "github.com/kong/kong-operator/ingress-controller/internal/controllers/utils"
 )
 
 type objectWithCPRefType struct {

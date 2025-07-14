@@ -13,10 +13,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
 	"github.com/kong/kong-operator/internal/utils/index"
-
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 )
 
 // KongTargetReconciliationWatchOptions  returns the watch options for

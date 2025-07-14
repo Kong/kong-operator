@@ -9,9 +9,9 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
-
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+
+	"github.com/kong/kong-operator/ingress-controller/internal/store"
 )
 
 func TestKongPluginFromK8SClusterPlugin(t *testing.T) {

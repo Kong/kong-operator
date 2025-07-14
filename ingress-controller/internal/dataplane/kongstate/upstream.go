@@ -5,10 +5,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 )
 
 // Upstream is a wrapper around Upstream object in Kong.

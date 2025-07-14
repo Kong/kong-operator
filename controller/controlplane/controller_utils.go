@@ -7,10 +7,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
-
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+
+	operatorerrors "github.com/kong/kong-operator/internal/errors"
 )
 
 // GetDataPlaneForControlPlane retrieves the DataPlane object referenced by a ControlPlane.

@@ -3,9 +3,9 @@ package ops
 import (
 	"fmt"
 
-	"github.com/kong/kong-operator/controller/konnect/constraints"
-
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
+
+	"github.com/kong/kong-operator/controller/konnect/constraints"
 )
 
 // FailedKonnectOpError is an error type that is returned when an operation against

@@ -6,10 +6,10 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kubernetes-configuration/pkg/metadata"
+
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/store"
-
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
 )
 
 // resolveObjectDependenciesPlugin resolves KongPlugin and KongClusterPlugin dependencies for an arbitrary object

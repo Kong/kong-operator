@@ -16,6 +16,9 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
+
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
@@ -23,9 +26,6 @@ import (
 	"github.com/kong/kong-operator/internal/utils/gatewayclass"
 	"github.com/kong/kong-operator/internal/utils/index"
 	"github.com/kong/kong-operator/pkg/vars"
-
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 // -----------------------------------------------------------------------------
