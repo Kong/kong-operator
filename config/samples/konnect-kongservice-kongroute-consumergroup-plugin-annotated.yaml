@@ -9,15 +9,16 @@ spec:
   serverURL: eu.api.konghq.tech
 ---
 kind: KonnectGatewayControlPlane
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: konnect.konghq.com/v1alpha2
 metadata:
   name: demo-cp
   namespace: default
 spec:
-  name: demo-cp
-  labels:
-    app: demo-cp
-    key1: demo-cp
+  createControlPlaneRequest:
+    name: demo-cp
+    labels:
+      app: demo-cp
+      key1: demo-cp
   konnect:
     authRef:
       name: demo-auth
