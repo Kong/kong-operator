@@ -12,7 +12,7 @@ retract v1.2.2
 
 require (
 	cloud.google.com/go/container v1.43.0
-	dario.cat/mergo v1.0.1
+	dario.cat/mergo v1.0.2
 	github.com/Kong/sdk-konnect-go v0.6.0
 	github.com/Masterminds/semver v1.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
