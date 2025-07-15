@@ -445,3 +445,11 @@ func WithGatewayDiscoveryReadinessCheckTimeout(timeout *metav1.Duration) manager
 		c.GatewayDiscoveryReadinessCheckTimeout = timeout.Duration
 	}
 }
+
+// WithInitCacheSyncDuration sets the initial delay to wait for Kubernetes object caches
+// before syncing configuration with dataplanes.
+func WithInitCacheSyncDuration(delay time.Duration) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.InitCacheSyncDuration = delay
+	}
+}
