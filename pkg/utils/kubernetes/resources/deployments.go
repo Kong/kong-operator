@@ -347,8 +347,8 @@ func DefaultControlPlaneResources() *corev1.ResourceRequirements {
 func ClusterCertificateVolume(certSecretName string) corev1.Volume {
 	clusterCertificateVolume := corev1.Volume{}
 	clusterCertificateVolume.Secret = &corev1.SecretVolumeSource{}
-	SetDefaultsVolume(&clusterCertificateVolume)
 	clusterCertificateVolume.Name = consts.ClusterCertificateVolume
+	SetDefaultsVolume(&clusterCertificateVolume)
 	clusterCertificateVolume.Secret = &corev1.SecretVolumeSource{
 		SecretName: certSecretName,
 		Items: []corev1.KeyToPath{
