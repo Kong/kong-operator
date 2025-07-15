@@ -516,7 +516,7 @@ E2E_TEST_TIMEOUT ?= "20m"
 .PHONY: test
 test: test.unit
 
-UNIT_TEST_PATHS := ./controller/... ./internal/... ./pkg/... ./modules/...
+UNIT_TEST_PATHS := ./controller/... ./internal/... ./pkg/... ./modules/... ./ingress-controller/internal/... ./ingress-controller/pkg/...
 
 .PHONY: _test.unit
 _test.unit: gotestsum
