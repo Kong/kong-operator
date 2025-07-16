@@ -4,7 +4,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 const (
@@ -22,17 +22,17 @@ const (
 func OptionsForKonnectGatewayControlPlane() []Option {
 	return []Option{
 		{
-			Object:         &konnectv1alpha1.KonnectGatewayControlPlane{},
+			Object:         &konnectv1alpha2.KonnectGatewayControlPlane{},
 			Field:          IndexFieldKonnectGatewayControlPlaneGroupOnMembers,
 			ExtractValueFn: konnectGatewayControlPlaneGroupMembers,
 		},
 		{
-			Object:         &konnectv1alpha1.KonnectGatewayControlPlane{},
+			Object:         &konnectv1alpha2.KonnectGatewayControlPlane{},
 			Field:          IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration,
 			ExtractValueFn: konnectGatewayControlPlaneAPIAuthConfigurationRef,
 		},
 		{
-			Object:         &konnectv1alpha1.KonnectGatewayControlPlane{},
+			Object:         &konnectv1alpha2.KonnectGatewayControlPlane{},
 			Field:          IndexFieldKonnectGatewayControlPlaneOnKonnectID,
 			ExtractValueFn: konnectGatewayControlPlaneKonnectID,
 		},
@@ -40,11 +40,11 @@ func OptionsForKonnectGatewayControlPlane() []Option {
 }
 
 func konnectGatewayControlPlaneGroupMembers(object client.Object) []string {
-	cp, ok := object.(*konnectv1alpha1.KonnectGatewayControlPlane)
+	cp, ok := object.(*konnectv1alpha2.KonnectGatewayControlPlane)
 	if !ok {
 		return nil
 	}
-	clusterType := cp.Spec.ClusterType
+	clusterType := cp.GetKonnectClusterType()
 	if clusterType == nil {
 		return nil
 	}
@@ -62,7 +62,7 @@ func konnectGatewayControlPlaneGroupMembers(object client.Object) []string {
 }
 
 func konnectGatewayControlPlaneAPIAuthConfigurationRef(object client.Object) []string {
-	cp, ok := object.(*konnectv1alpha1.KonnectGatewayControlPlane)
+	cp, ok := object.(*konnectv1alpha2.KonnectGatewayControlPlane)
 	if !ok {
 		return nil
 	}
@@ -71,7 +71,7 @@ func konnectGatewayControlPlaneAPIAuthConfigurationRef(object client.Object) []s
 }
 
 func konnectGatewayControlPlaneKonnectID(object client.Object) []string {
-	cp, ok := object.(*konnectv1alpha1.KonnectGatewayControlPlane)
+	cp, ok := object.(*konnectv1alpha2.KonnectGatewayControlPlane)
 	if !ok {
 		return nil
 	}

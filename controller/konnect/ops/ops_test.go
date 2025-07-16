@@ -18,6 +18,7 @@ import (
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	kcfgkonnect "github.com/kong/kubernetes-configuration/v2/api/konnect"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
@@ -38,19 +39,19 @@ type createTestCase[
 
 func TestCreate(t *testing.T) {
 	testCasesForKonnectGatewayControlPlane := []createTestCase[
-		konnectv1alpha1.KonnectGatewayControlPlane,
-		*konnectv1alpha1.KonnectGatewayControlPlane,
+		konnectv1alpha2.KonnectGatewayControlPlane,
+		*konnectv1alpha2.KonnectGatewayControlPlane,
 	]{
 		{
 			name: "BadRequest error is not propagated to the caller but object's status condition is updated",
-			entity: &konnectv1alpha1.KonnectGatewayControlPlane{
+			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cp",
 					Namespace: "test-ns",
 				},
-				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
-						Name: lo.ToPtr("test-cp"),
+				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
+						Name: "test-cp",
 						Labels: map[string]string{
 							"label": "very-long-label-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
 						},
@@ -96,7 +97,7 @@ func TestCreate(t *testing.T) {
 			},
 			// No error returned, only object's status condition updated to prevent endless reconciliation
 			// that operator cannot recover from (object's manifest needs to be changed).
-			assertions: func(t *testing.T, ent *konnectv1alpha1.KonnectGatewayControlPlane) {
+			assertions: func(t *testing.T, ent *konnectv1alpha2.KonnectGatewayControlPlane) {
 				require.Len(t, ent.Status.Conditions, 1)
 				assert.Equal(t, metav1.ConditionFalse, ent.Status.Conditions[0].Status)
 				assert.EqualValues(t, kcfgkonnect.KonnectEntitiesFailedToCreateReason, ent.Status.Conditions[0].Reason)
@@ -107,14 +108,14 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name: "SDKError (data constraint error) is not propagated to the caller but object's status condition is updated",
-			entity: &konnectv1alpha1.KonnectGatewayControlPlane{
+			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cp",
 					Namespace: "test-ns",
 				},
-				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
-						Name: lo.ToPtr("test-cp"),
+				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
+						Name: "test-cp",
 					},
 					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 				},
@@ -154,7 +155,7 @@ func TestCreate(t *testing.T) {
 			},
 			// No error returned, only object's status condition updated to prevent endless reconciliation
 			// that operator cannot recover from (object's manifest needs to be changed).
-			assertions: func(t *testing.T, ent *konnectv1alpha1.KonnectGatewayControlPlane) {
+			assertions: func(t *testing.T, ent *konnectv1alpha2.KonnectGatewayControlPlane) {
 				require.Len(t, ent.Status.Conditions, 1,
 					"Expected one condition (Programmed) to be set",
 				)
@@ -174,14 +175,14 @@ func TestCreate(t *testing.T) {
 		},
 		{
 			name: "other types of errors are propagated to the caller and object's status condition is updated",
-			entity: &konnectv1alpha1.KonnectGatewayControlPlane{
+			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cp",
 					Namespace: "test-ns",
 				},
-				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
-						Name: lo.ToPtr("test-cp"),
+				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
+						Name: "test-cp",
 					},
 					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 				},
@@ -203,7 +204,7 @@ func TestCreate(t *testing.T) {
 				return sdk
 			},
 			expectedErrorContains: "unexpected EOF",
-			assertions: func(t *testing.T, ent *konnectv1alpha1.KonnectGatewayControlPlane) {
+			assertions: func(t *testing.T, ent *konnectv1alpha2.KonnectGatewayControlPlane) {
 				require.Len(t, ent.Status.Conditions, 1,
 					"Expected one condition (Programmed) to be set",
 				)
@@ -268,12 +269,12 @@ type deleteTestCase[
 
 func TestDelete(t *testing.T) {
 	testCasesForKonnectGatewayControlPlane := []deleteTestCase[
-		konnectv1alpha1.KonnectGatewayControlPlane,
-		*konnectv1alpha1.KonnectGatewayControlPlane,
+		konnectv1alpha2.KonnectGatewayControlPlane,
+		*konnectv1alpha2.KonnectGatewayControlPlane,
 	]{
 		{
 			name: "no Konnect ID and no Programmed status condition - delete is not called",
-			entity: &konnectv1alpha1.KonnectGatewayControlPlane{
+			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cp",
 					Namespace: "test-ns",
@@ -282,18 +283,18 @@ func TestDelete(t *testing.T) {
 		},
 		{
 			name: "no Konnect ID and Programmed=False status condition - delete is not called",
-			entity: &konnectv1alpha1.KonnectGatewayControlPlane{
+			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cp",
 					Namespace: "test-ns",
 				},
-				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
-						Name: lo.ToPtr("test-cp"),
+				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
+						Name: "test-cp",
 					},
 					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 				},
-				Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
+				Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -305,18 +306,18 @@ func TestDelete(t *testing.T) {
 		},
 		{
 			name: "Konnect ID and Programmed=True status condition",
-			entity: &konnectv1alpha1.KonnectGatewayControlPlane{
+			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-cp",
 					Namespace: "test-ns",
 				},
-				Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-					CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
-						Name: lo.ToPtr("test-cp"),
+				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
+						Name: "test-cp",
 					},
 					Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 				},
-				Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
+				Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,

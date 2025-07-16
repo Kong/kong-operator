@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/controller/konnect/ops"
@@ -33,10 +34,10 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
 				func(obj client.Object) {
-					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-1"
-					cp.Spec.Name = lo.ToPtr("cp-1")
-					cp.Spec.Description = lo.ToPtr("test control plane 1")
+					cp.SetKonnectName("cp-1")
+					cp.SetKonnectDescription(lo.ToPtr("test control plane 1"))
 				},
 			)
 		},
@@ -83,7 +84,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				)
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
-			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
+			cp := &konnectv1alpha2.KonnectGatewayControlPlane{}
 			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
@@ -112,17 +113,17 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
 				func(obj client.Object) {
-					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-groupmember-1"
-					cp.Spec.Name = lo.ToPtr("cp-groupmember-1")
+					cp.SetKonnectName("cp-groupmember-1")
 				},
 			)
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
 				func(obj client.Object) {
-					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-2"
-					cp.Spec.Name = lo.ToPtr("cp-2")
-					cp.Spec.ClusterType = lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup)
+					cp.SetKonnectName("cp-2")
+					cp.SetKonnectClusterType(lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup))
 					cp.Spec.Members = []corev1.LocalObjectReference{
 						{
 							Name: "cp-groupmember-1",
@@ -224,7 +225,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Maybe()
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
-			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
+			cp := &konnectv1alpha2.KonnectGatewayControlPlane{}
 			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
@@ -246,7 +247,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			assert.Equal(t, "https://control-plane-endpoint", cp.Status.Endpoints.ControlPlaneEndpoint)
 			assert.Equal(t, "https://telemetry-endpoint", cp.Status.Endpoints.TelemetryEndpoint)
 
-			cpGroup := &konnectv1alpha1.KonnectGatewayControlPlane{}
+			cpGroup := &konnectv1alpha2.KonnectGatewayControlPlane{}
 			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
@@ -278,17 +279,17 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
 				func(obj client.Object) {
-					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-groupmember-2"
-					cp.Spec.Name = lo.ToPtr("cp-groupmember-2")
+					cp.SetKonnectName("cp-groupmember-2")
 				},
 			)
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
 				func(obj client.Object) {
-					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-3"
-					cp.Spec.Name = lo.ToPtr("cp-3")
-					cp.Spec.ClusterType = lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup)
+					cp.SetKonnectName("cp-3")
+					cp.SetKonnectClusterType(lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup))
 					cp.Spec.Members = []corev1.LocalObjectReference{
 						{
 							Name: "cp-groupmember-2",
@@ -394,7 +395,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Maybe()
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
-			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
+			cp := &konnectv1alpha2.KonnectGatewayControlPlane{}
 			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
@@ -412,7 +413,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				"Finalizer should be set on control plane",
 			)
 
-			cpGroup := &konnectv1alpha1.KonnectGatewayControlPlane{}
+			cpGroup := &konnectv1alpha2.KonnectGatewayControlPlane{}
 			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
@@ -441,9 +442,10 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
 				func(obj client.Object) {
-					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-4"
-					cp.Spec.Name = lo.ToPtr("cp-4")
+					cp.SetKonnectName("cp-4")
+
 				},
 			)
 		},
@@ -464,7 +466,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				ListControlPlanes(
 					mock.Anything,
 					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
-						var cp konnectv1alpha1.KonnectGatewayControlPlane
+						var cp konnectv1alpha2.KonnectGatewayControlPlane
 						require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Name: "cp-4"}, &cp))
 						// On conflict, we list cps by UID and check if there is already one created.
 						return r.Labels != nil && *r.Labels == ops.KubernetesUIDLabelKey+":"+string(cp.UID)
@@ -512,7 +514,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				)
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
-			cp := &konnectv1alpha1.KonnectGatewayControlPlane{}
+			cp := &konnectv1alpha2.KonnectGatewayControlPlane{}
 			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
@@ -541,18 +543,18 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 			auth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
 				func(obj client.Object) {
-					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-5"
-					cp.Spec.Name = lo.ToPtr("cp-5")
+					cp.SetKonnectName("cp-5")
 				},
 			)
 
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
 				func(obj client.Object) {
-					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-group-1"
-					cp.Spec.Name = lo.ToPtr("cp-group-1")
-					cp.Spec.ClusterType = lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup)
+					cp.SetKonnectName("cp-group-1")
+					cp.SetKonnectClusterType(lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup))
 					cp.Spec.Members = []corev1.LocalObjectReference{
 						{Name: "cp-5"},
 					}
@@ -591,7 +593,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				ListControlPlanes(
 					mock.Anything,
 					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
-						var cp konnectv1alpha1.KonnectGatewayControlPlane
+						var cp konnectv1alpha2.KonnectGatewayControlPlane
 						require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Name: "cp-group-1"}, &cp))
 						// On conflict, we list cps by UID and check if there is already one created.
 						return r.Labels != nil && *r.Labels == ops.KubernetesUIDLabelKey+":"+string(cp.UID)
@@ -698,7 +700,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				Maybe()
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
-			cpGroup := &konnectv1alpha1.KonnectGatewayControlPlane{}
+			cpGroup := &konnectv1alpha2.KonnectGatewayControlPlane{}
 			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{
@@ -728,10 +730,10 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, auth,
 				func(obj client.Object) {
-					cp := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-group-no-members"
-					cp.Spec.Name = lo.ToPtr("cp-group-no-members")
-					cp.Spec.ClusterType = lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup)
+					cp.SetKonnectName("cp-group-no-members")
+					cp.SetKonnectClusterType(lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup))
 				},
 			)
 		},
@@ -787,7 +789,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				)
 		},
 		eventuallyPredicate: func(ctx context.Context, t *assert.CollectT, cl client.Client, ns *corev1.Namespace) {
-			cpGroup := &konnectv1alpha1.KonnectGatewayControlPlane{}
+			cpGroup := &konnectv1alpha2.KonnectGatewayControlPlane{}
 			require.NoError(t,
 				cl.Get(ctx,
 					k8stypes.NamespacedName{

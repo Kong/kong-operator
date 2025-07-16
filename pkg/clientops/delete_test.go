@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/modules/manager/scheme"
@@ -131,14 +131,14 @@ func TestDeleteAllFromList(t *testing.T) {
 	scheme := scheme.Get()
 
 	testDeleteAllFromList(t, "empty list", scheme,
-		&konnectv1alpha1.KonnectGatewayControlPlaneList{
-			Items: []konnectv1alpha1.KonnectGatewayControlPlane{},
+		&konnectv1alpha2.KonnectGatewayControlPlaneList{
+			Items: []konnectv1alpha2.KonnectGatewayControlPlane{},
 		},
 	)
 
 	testDeleteAllFromList(t, "1 KonnectGatewayControlPlane", scheme,
-		&konnectv1alpha1.KonnectGatewayControlPlaneList{
-			Items: []konnectv1alpha1.KonnectGatewayControlPlane{
+		&konnectv1alpha2.KonnectGatewayControlPlaneList{
+			Items: []konnectv1alpha2.KonnectGatewayControlPlane{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cp-1",
@@ -150,8 +150,8 @@ func TestDeleteAllFromList(t *testing.T) {
 	)
 
 	testDeleteAllFromList(t, "2 KonnectGatewayControlPlanes", scheme,
-		&konnectv1alpha1.KonnectGatewayControlPlaneList{
-			Items: []konnectv1alpha1.KonnectGatewayControlPlane{
+		&konnectv1alpha2.KonnectGatewayControlPlaneList{
+			Items: []konnectv1alpha2.KonnectGatewayControlPlane{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cp-1",

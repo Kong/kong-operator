@@ -9,53 +9,57 @@ spec:
   serverURL: us.api.konghq.tech
 ---
 kind: KonnectGatewayControlPlane
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: konnect.konghq.com/v1alpha2
 metadata:
   name: test1
   namespace: default
 spec:
-  name: test1
+  createControlPlaneRequest:
+    name: test1
   konnect:
     authRef:
       name: konnect-api-auth-dev-1
 ---
 kind: KonnectGatewayControlPlane
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: konnect.konghq.com/v1alpha2
 metadata:
   name: test2
   namespace: default
 spec:
-  name: test2
+  createControlPlaneRequest:
+    name: test2
   konnect:
     authRef:
       name: konnect-api-auth-dev-1
 ---
 kind: KonnectGatewayControlPlane
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: konnect.konghq.com/v1alpha2
 metadata:
   name: test3
   namespace: default
 spec:
-  name: test3
+  createControlPlaneRequest:
+    name: test3
   konnect:
     authRef:
       name: konnect-api-auth-dev-1
 ---
 kind: KonnectGatewayControlPlane
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: konnect.konghq.com/v1alpha2
 metadata:
   name: group1
   namespace: default
 spec:
-  name: group1
-  cluster_type: CLUSTER_TYPE_CONTROL_PLANE_GROUP
+  createControlPlaneRequest:
+    name: group1
+    cluster_type: CLUSTER_TYPE_CONTROL_PLANE_GROUP
+    labels:
+      app: group1
+      key1: group1
   members:
   - name: test1
   - name: test2
   - name: test3
-  labels:
-    app: group1
-    key1: group1
   konnect:
     authRef:
       name: konnect-api-auth-dev-1
