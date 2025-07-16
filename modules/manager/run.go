@@ -72,6 +72,7 @@ type Config struct {
 	ClusterCAKeySize         int
 	LoggerOpts               *zap.Options
 	EnforceConfig            bool
+	ClusterDomain            string
 
 	// ServiceAccountToImpersonate is the name of the service account to impersonate,
 	// by the controller manager, when making requests to the API server.

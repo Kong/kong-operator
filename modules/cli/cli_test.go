@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	ingressmgrconfig "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/modules/manager"
 	mgrconfig "github.com/kong/kong-operator/modules/manager/config"
 	"github.com/kong/kong-operator/modules/manager/logging"
@@ -112,6 +113,17 @@ func TestParse(t *testing.T) {
 				return cfg
 			},
 		},
+		{
+			name: "cluster domain argument is set",
+			args: []string{
+				"--cluster-domain=foo.bar",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.ClusterDomain = "foo.bar"
+				return cfg
+			},
+		},
 	}
 
 	for _, tC := range testCases {
@@ -160,5 +172,6 @@ func expectedDefaultCfg() manager.Config {
 		KongPluginInstallationControllerEnabled: false,
 		LoggerOpts:                              &zap.Options{},
 		KonnectMaxConcurrentReconciles:          consts.DefaultKonnectMaxConcurrentReconciles,
+		ClusterDomain:                           ingressmgrconfig.DefaultClusterDomain,
 	}
 }

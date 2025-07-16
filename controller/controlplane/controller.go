@@ -60,6 +60,7 @@ type Reconciler struct {
 	EnforceConfig           bool
 	LoggingMode             logging.Mode
 	AnonymousReportsEnabled bool
+	ClusterDomain           string
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -393,6 +394,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		WithMetricsServerOff(),
 		WithAnonymousReports(r.AnonymousReportsEnabled),
 		WithAnonymousReportsFixedPayloadCustomizer(payloadCustomizer),
+		WithClusterDomain(r.ClusterDomain),
 	}
 
 	if cp.Spec.GatewayDiscovery != nil {

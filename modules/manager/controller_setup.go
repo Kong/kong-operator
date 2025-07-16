@@ -398,6 +398,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				KubeConfigPath:           c.KubeconfigPath,
 				RestConfig:               mgr.GetConfig(),
 				InstancesManager:         cpsMgr,
+				ClusterDomain:            c.ClusterDomain,
 			},
 		},
 		// DataPlane controller

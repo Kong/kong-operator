@@ -40,6 +40,15 @@
     updating dataplanes by `spec.cache.initSyncDuration`
     [#1858](https://github.com/Kong/kong-operator/pull/1858)
 
+### Breaking Changes
+
+> Add --cluster-domain flag and set default to 'cluster.local'
+  This commit introduces a new --cluster-domain flag to the KO binary, which is now propagated to the ingress-controller.
+  The default value for the cluster domain is set to 'cluster.local', whereas previously it was an empty string ("").
+  This is a breaking change, as any code or configuration relying on the previous default will now use 'cluster.local'
+  unless explicitly overridden.
+  [#1870](https://github.com/Kong/kong-operator/pull/1870)
+
 ## [v2.0.0-alpha.1]
 
 > Release date: 2025-06-11

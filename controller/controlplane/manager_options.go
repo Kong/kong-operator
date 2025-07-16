@@ -453,3 +453,10 @@ func WithInitCacheSyncDuration(delay time.Duration) managercfg.Opt {
 		c.InitCacheSyncDuration = delay
 	}
 }
+
+// WithClusterDomain sets the cluster domain for the manager.
+func WithClusterDomain(clusterDomain string) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.ClusterDomain = clusterDomain
+	}
+}
