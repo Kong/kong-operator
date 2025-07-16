@@ -17,6 +17,8 @@ limitations under the License.
 package v2alpha1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
@@ -124,6 +126,11 @@ type ControlPlaneOptions struct {
 	//
 	// +optional
 	GatewayDiscovery *ControlPlaneGatewayDiscovery `json:"gatewayDiscovery,omitempty"`
+
+	// Cache defines the configuration related to the kubernetes object caches.
+	//
+	// +optional
+	Cache *ControlPlaneK8sCache `json:"cache,omitempty"`
 }
 
 // ControlPlaneDataPlaneTarget defines the target for the DataPlane that the ControlPlane
@@ -186,6 +193,20 @@ type ControlPlaneGatewayDiscovery struct {
 	// +optional
 	ReadinessCheckTimeout *metav1.Duration `json:"readinessCheckTimeout,omitempty"`
 }
+
+// ControlPlaneK8sCache defines the configuration related to Kubernetes object caches
+// of the ControlPlane.
+type ControlPlaneK8sCache struct {
+	// InitSyncDuration defines the initial delay to wait for Kubernetes object caches to be synced before the initial configuration.
+	// If omitted, the default value (5s) is used.
+	//
+	// +optional
+	InitSyncDuration *metav1.Duration `json:"initSyncDuration,omitempty"`
+}
+
+// DefaultControlPlaneInitialCacheSyncDelay defines the default initial delay
+// to wait for the Kubernetes object caches to be synced.
+const DefaultControlPlaneInitialCacheSyncDelay = 5 * time.Second
 
 // ControllerState defines the state of a feature gate.
 type ControllerState string
