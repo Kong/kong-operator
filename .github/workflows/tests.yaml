@@ -379,6 +379,10 @@ jobs:
       with:
         name: tests-report-envtest-tests
         path: envtest-tests.xml
+  
+  kongintegration-tests:
+    uses: ./.github/workflows/_kongintegration_tests.yaml
+    secrets: inherit
 
   conformance-tests:
     runs-on: ubuntu-latest
@@ -646,6 +650,7 @@ jobs:
       - build
       - CRDs-validation
       - envtest-tests
+      - kongintegration-tests
       - conformance-tests
       - integration-tests
       - integration-tests-bluegreen
