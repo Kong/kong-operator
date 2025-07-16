@@ -622,12 +622,18 @@ _test.conformance: gotestsum download.telepresence
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		-race \
 		-parallel $(PARALLEL) \
-		./test/conformance/...
+		$(TEST_SUITE_PATH)
 
 .PHONY: test.conformance
 test.conformance:
 	@$(MAKE) _test.conformance \
-		GOTESTFLAGS="$(GOTESTFLAGS)"
+		GOTESTFLAGS="$(GOTESTFLAGS)" \
+		TEST_SUITE_PATH='./test/conformance/...'
+	@echo 'Conformance tests from the ingress-controller subdirectory'
+	@$(MAKE) _test.conformance \
+		GOTESTFLAGS="$(GOTESTFLAGS)-tags=conformance_tests" \
+		TEST_SUITE_PATH='./ingress-controller/test/conformance/...'
+
 
 .PHONY: test.samples
 test.samples:
