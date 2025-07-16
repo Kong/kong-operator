@@ -1,0 +1,49 @@
+package diagnostics
+
+import (
+	"context"
+	"errors"
+	"net/http"
+	"time"
+
+	"github.com/go-logr/logr"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+)
+
+type Server struct {
+	Addr    string
+	Exposer *ControlPlaneDiagnosticsExposer
+	Handler *HTTPHandler
+
+	Logger logr.Logger
+}
+
+var _ manager.Runnable = &Server{}
+
+// Start implements the Start method of manager.Runnable interface to add to the manager.
+// It starts up the HTTP server and blocks until ctx expires.
+func (s *Server) Start(ctx context.Context) error {
+	httpServer := &http.Server{
+		Addr:              s.Addr,
+		Handler:           s.Handler,
+		ReadHeaderTimeout: 10 * time.Second,
+	}
+
+	go func() {
+		err := httpServer.ListenAndServe()
+		if err != nil {
+			if !errors.Is(err, http.ErrServerClosed) {
+				s.Logger.Error(err, "Could not start diagnostics server")
+			}
+		}
+	}()
+
+	s.Logger.Info("Diagnostics server is starting to listen", "addr", s.Addr)
+
+	<-ctx.Done()
+
+	s.Logger.Info("Shutting down diagnostics server")
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	return httpServer.Shutdown(ctx) //nolint:contextcheck
+}
