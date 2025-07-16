@@ -8946,6 +8946,16 @@ spec:
           spec:
             description: Spec is the specification of the ControlPlane resource.
             properties:
+              cache:
+                description: Cache defines the configuration related to the kubernetes
+                  object caches.
+                properties:
+                  initSyncDuration:
+                    description: |-
+                      InitSyncDuration defines the initial delay to wait for Kubernetes object caches to be synced before the initial configuration.
+                      If omitted, the default value (5s) is used.
+                    type: string
+                type: object
               controllers:
                 description: Controllers defines the controllers that are enabled
                   for this ControlPlane.
@@ -36694,6 +36704,16 @@ spec:
                   ControlPlaneOptions is the specification for configuration
                   overrides for ControlPlane resources that will be managed as part of the Gateway.
                 properties:
+                  cache:
+                    description: Cache defines the configuration related to the kubernetes
+                      object caches.
+                    properties:
+                      initSyncDuration:
+                        description: |-
+                          InitSyncDuration defines the initial delay to wait for Kubernetes object caches to be synced before the initial configuration.
+                          If omitted, the default value (5s) is used.
+                        type: string
+                    type: object
                   controllers:
                     description: Controllers defines the controllers that are enabled
                       for this ControlPlane.
