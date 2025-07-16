@@ -3,6 +3,7 @@
 ## Table of Contents
 
 - [v2.0.0-alpha.1](#v200-alpha1)
+- [v1.6.2](#v162)
 - [v1.6.1](#v161)
 - [v1.6.0](#v160)
 - [v1.5.1](#v151)
@@ -28,15 +29,6 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
-
-## Unreleased
-
-### Fixed
-
-- Ignore the `ForbiddenError` in `sdk-konnect-go` returned from running CRUD
-  operations against Konnect APIs. This prevents endless reconciliation when an
-  operation is not allowed (due to e.g. exhausted quota).
-  [#1811](https://github.com/Kong/kong-operator/pull/1811)
 
 ## [v2.0.0-alpha.1]
 
@@ -76,6 +68,17 @@
   <!-- TODO: https://github.com/kong/kong-operator/issues/1732 -->
 - rename product from Kong Gateway Operator to Kong Operator.
   [#1767](https://github.com/Kong/kong-operator/pull/1767)
+
+## [v1.6.2]
+
+> Release date: 2025-07-11
+
+### Fixed
+
+- Ignore the `ForbiddenError` in `sdk-konnect-go` returned from running CRUD
+  operations against Konnect APIs. This prevents endless reconciliation when an
+  operation is not allowed (due to e.g. exhausted quota).
+  [#1811](https://github.com/Kong/kong-operator/pull/1811)
 
 ## [v1.6.1]
 
@@ -1178,6 +1181,9 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v1.6.2]: https://github.com/Kong/kong-operator/compare/v1.6.1..v1.6.2
+[v1.6.1]: https://github.com/Kong/kong-operator/compare/v1.6.0..v1.6.1
+[v1.6.0]: https://github.com/Kong/kong-operator/compare/v1.5.1..v1.6.0
 [v1.5.1]: https://github.com/kong/kong-operator/compare/v1.5.0..v1.5.1
 [v1.5.0]: https://github.com/kong/kong-operator/compare/v1.4.2..v1.5.0
 [v1.4.2]: https://github.com/kong/kong-operator/compare/v1.4.1..v1.4.2
