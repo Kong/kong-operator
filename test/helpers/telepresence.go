@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 
 	"github.com/kong/kong-operator/test"
 )
@@ -28,7 +29,11 @@ func SetupTelepresence(ctx context.Context) (func(), error) {
 	}
 
 	out, err := exec.CommandContext(ctx, telepresenceExecutable, "helm", "install").CombinedOutput()
-	if err != nil {
+	if err != nil && strings.Contains(string(out), "use 'telepresence helm upgrade' instead to replace it") {
+		if out, err := exec.CommandContext(ctx, telepresenceExecutable, "helm", "upgrade").CombinedOutput(); err != nil {
+			return nil, fmt.Errorf("failed to upgrade telepresence traffic manager: %w, %s", err, string(out))
+		}
+	} else if err != nil {
 		return nil, fmt.Errorf("failed to install telepresence traffic manager: %w, %s", err, string(out))
 	}
 
