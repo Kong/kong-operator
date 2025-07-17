@@ -30,6 +30,16 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Added
+
+- Support the following configuration for running control plane managers in
+  the `ControlPlane` CRD:
+  - Specifying the delay to wait for Kubernetes object caches sync before
+    updating dataplanes by `spec.cache.initSyncDuration`
+    [#1858](https://github.com/Kong/kong-operator/pull/1858)
+
 ## [v2.0.0-alpha.1]
 
 > Release date: 2025-06-11
