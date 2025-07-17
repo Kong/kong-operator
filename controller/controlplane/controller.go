@@ -402,6 +402,12 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		)
 	}
 
+	if cp.Spec.Cache != nil && cp.Spec.Cache.InitSyncDuration != nil {
+		cfgOpts = append(cfgOpts,
+			WithInitCacheSyncDuration(cp.Spec.Cache.InitSyncDuration.Duration),
+		)
+	}
+
 	// If the ControlPlane is owned by a Gateway, we set the Gateway to be the only one to reconcile.
 	if owner, ok := lo.Find(cp.GetOwnerReferences(), func(owner metav1.OwnerReference) bool {
 		return strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) &&
