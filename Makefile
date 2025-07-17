@@ -605,7 +605,8 @@ _test.e2e: gotestsum
 		-timeout $(E2E_TEST_TIMEOUT) \
 		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 		-race \
-		./test/e2e/...
+		./test/e2e/... \
+		./ingress-controller/test/e2e/...
 
 .PHONY: test.e2e
 test.e2e:
