@@ -280,6 +280,9 @@ lint.markdownlint: download.markdownlint-cli2
 		charts/kong-operator/README.md \
 		charts/kong-operator/CHANGELOG.md
 
+.PHONY: lint.all
+lint.all: lint lint.charts lint.actions lint.markdownlint
+
 .PHONY: verify
 verify: verify.manifests verify.generators
 
