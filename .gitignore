@@ -19,6 +19,9 @@ TODO
 # VSCode user settings folder
 .vscode/
 
+# Environment variables file
+.env
+
 # OS specific
 # macOS
 .DS_Store
