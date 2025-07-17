@@ -87,10 +87,11 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 				},
 			},
 			expectedUpstream: &kong.Upstream{
-				Algorithm:        lo.ToPtr("consistent-hashing"),
-				HashOn:           lo.ToPtr("cookie"),
-				HashOnCookie:     lo.ToPtr("foo"),
-				HashOnCookiePath: lo.ToPtr("/"),
+				Algorithm:                lo.ToPtr("consistent-hashing"),
+				HashOn:                   lo.ToPtr("cookie"),
+				HashOnCookie:             lo.ToPtr("foo"),
+				StickySessionsCookiePath: lo.ToPtr("/"),
+				HashOnCookiePath:         lo.ToPtr("/"),
 			},
 		},
 		{
