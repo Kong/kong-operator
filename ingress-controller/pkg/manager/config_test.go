@@ -66,7 +66,7 @@ func TestNewConfig(t *testing.T) {
 			GatewayAPIControllerName:               string(gateway.GetControllerName()),
 			Impersonate:                            "",
 			EmitKubernetesEvents:                   true,
-			ClusterDomain:                          consts.DefaultClusterDomain,
+			ClusterDomain:                          managercfg.DefaultClusterDomain,
 			PublishServiceUDP:                      managercfg.OptionalNamespacedName{},
 			PublishService:                         managercfg.OptionalNamespacedName{},
 			PublishStatusAddress:                   []string{},

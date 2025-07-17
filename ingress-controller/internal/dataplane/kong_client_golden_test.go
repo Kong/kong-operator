@@ -262,7 +262,7 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	s := store.New(cacheStores, "kong", logger)
 	p, err := translator.NewTranslator(logger, s, "", semver.MustParse("3.9.1"), tc.featureFlags, fakeSchemaServiceProvier{},
 		translator.Config{
-			ClusterDomain:      consts.DefaultClusterDomain,
+			ClusterDomain:      managercfg.DefaultClusterDomain,
 			EnableDrainSupport: consts.DefaultEnableDrainSupport,
 		},
 	)

@@ -26,10 +26,6 @@ const (
 	// KongClientEventRecorderComponentName is a KongClient component name used to identify the events recording component.
 	KongClientEventRecorderComponentName = "kong-client"
 
-	// DefaultClusterDomain is the default cluster domain used by the controller.
-	// TODO: change this in next major release: https://github.com/Kong/kubernetes-ingress-controller/issues/6756
-	DefaultClusterDomain = ""
-
 	// DefaultEnableDrainSupport is the default value for enabling drain support feature.
 	// When enabled, terminating endpoints are kept in Kong upstreams with weight=0 for graceful connection draining.
 	DefaultEnableDrainSupport = false

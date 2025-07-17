@@ -927,3 +927,10 @@ func TestWithGatewayDiscoveryReadinessCheckTimeout(t *testing.T) {
 		})
 	}
 }
+
+func TestWithClusterDomain(t *testing.T) {
+	cfg := &managercfg.Config{}
+	opt := WithClusterDomain("foo.bar")
+	opt(cfg)
+	assert.Equal(t, cfg.ClusterDomain, "foo.bar")
+}

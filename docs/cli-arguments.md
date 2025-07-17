@@ -11,6 +11,7 @@
 | `--cluster-ca-key-type` | `string` | Type of the key used for the cluster CA certificate (possible values: ecdsa, rsa). Default: ecdsa. | `ecdsa` |
 | `--cluster-ca-secret` | `string` | Name of the Secret containing the cluster CA certificate. | `kong-operator-ca` |
 | `--cluster-ca-secret-namespace` | `string` | Name of the namespace for Secret containing the cluster CA certificate. | `""` |
+| `--cluster-domain` | `string` | The cluster domain. This is used e.g. in generating addresses for upstream services. | `cluster.local` |
 | `--controller-name` | `string` | Controller name to use if other than the default, only needed for multi-tenancy. | `""` |
 | `--enable-controller-aigateway` | `bool` | Enable the AIGateway controller. (Experimental). | `false` |
 | `--enable-controller-controlplane` | `bool` | Enable the ControlPlane controller. | `true` |

@@ -26,3 +26,8 @@ const (
 	// DefaultKonnectConfigUploadPeriod is the default period between operations to upload Kong configuration to Konnect.
 	DefaultKonnectConfigUploadPeriod = 30 * time.Second
 )
+
+const (
+	// DefaultClusterDomain is the default cluster domain used by the controller.
+	DefaultClusterDomain = "cluster.local"
+)

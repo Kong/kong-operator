@@ -3859,7 +3859,7 @@ func TestGetEndpoints(t *testing.T) {
 			},
 			result: []util.Endpoint{
 				{
-					Address: "foo.bar.svc",
+					Address: "foo.bar.svc.cluster.local",
 					Port:    "2080",
 				},
 			},
@@ -3893,7 +3893,7 @@ func TestGetEndpoints(t *testing.T) {
 			},
 			result: []util.Endpoint{
 				{
-					Address: "foo.bar.svc",
+					Address: "foo.bar.svc.cluster.local",
 					Port:    "2080",
 				},
 			},
@@ -4163,7 +4163,7 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, testCase := range tests {
 		t.Run(testCase.name, func(t *testing.T) {
-			clusterDomain := consts.DefaultClusterDomain
+			clusterDomain := managercfg.DefaultClusterDomain
 			if testCase.clusterDomain != "" {
 				clusterDomain = testCase.clusterDomain
 			}
@@ -4490,7 +4490,7 @@ func TestGetEndpoints(t *testing.T) {
 		t.Run(testCase.name, func(t *testing.T) {
 			cfg := getEndpointsConfig{
 				IsSvcUpstream:      false,
-				ClusterDomain:      consts.DefaultClusterDomain,
+				ClusterDomain:      managercfg.DefaultClusterDomain,
 				EnableDrainSupport: testCase.enableDrainSupport,
 			}
 			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn, cfg)
@@ -5451,7 +5451,7 @@ func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 		fakeSchemaServiceProvier{},
 		Config{
 			EnableDrainSupport: consts.DefaultEnableDrainSupport,
-			ClusterDomain:      consts.DefaultClusterDomain,
+			ClusterDomain:      managercfg.DefaultClusterDomain,
 		},
 	)
 	require.NoError(t, err)
