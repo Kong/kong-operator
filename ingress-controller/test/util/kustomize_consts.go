@@ -12,6 +12,7 @@ import (
 
 const (
 	kubernetesConfigurationModulePath = "github.com/kong/kubernetes-configuration"
+	ingressControllerLocalPath        = "./ingress-controller/"
 )
 
 var (
@@ -29,19 +30,19 @@ func initKongIncubatorCRDsKustomizePath() string {
 }
 
 func initKongRBACsKustomizePath() string {
-	dir := filepath.Join(lo.Must(getRepoRoot()), "config/rbac/")
+	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/rbac/")
 	ensureDirExists(dir)
 	return dir
 }
 
 func initKongGatewayRBACsKustomizePath() string {
-	dir := filepath.Join(lo.Must(getRepoRoot()), "config/rbac/gateway")
+	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/rbac/gateway")
 	ensureDirExists(dir)
 	return dir
 }
 
 func initKongCRDsRBACsKustomizePath() string {
-	dir := filepath.Join(lo.Must(getRepoRoot()), "config/rbac/crds")
+	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/rbac/crds")
 	ensureDirExists(dir)
 	return dir
 }
@@ -65,6 +66,6 @@ func getRepoRoot() (string, error) {
 	if !ok {
 		return "", fmt.Errorf("failed to get repo root: runtime.Caller(0) failed")
 	}
-	d := filepath.Dir(path.Join(path.Dir(b), "../")) // Number of ../ depends on the path of this file.
+	d := filepath.Dir(path.Join(path.Dir(b), "../..")) // Number of ../ depends on the path of this file.
 	return filepath.Abs(d)
 }
