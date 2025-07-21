@@ -78,6 +78,7 @@ type Config struct {
 	LoggerOpts               *zap.Options
 	EnforceConfig            bool
 	ClusterDomain            string
+	EmitKubernetesEvents     bool
 
 	// ServiceAccountToImpersonate is the name of the service account to impersonate,
 	// by the controller manager, when making requests to the API server.

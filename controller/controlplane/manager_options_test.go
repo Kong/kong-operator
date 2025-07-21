@@ -997,3 +997,31 @@ func TestWithClusterDomain(t *testing.T) {
 	opt(cfg)
 	assert.Equal(t, cfg.ClusterDomain, "foo.bar")
 }
+
+func TestWithEmitKubernetesEvents(t *testing.T) {
+	testCases := []struct {
+		name     string
+		enabled  bool
+		expected bool
+	}{
+		{
+			name:     "emit kubernetes events enabled",
+			enabled:  true,
+			expected: true,
+		},
+		{
+			name:     "emit kubernetes events disabled",
+			enabled:  false,
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &managercfg.Config{}
+			opt := WithEmitKubernetesEvents(tc.enabled)
+			opt(cfg)
+			assert.Equal(t, tc.expected, cfg.EmitKubernetesEvents)
+		})
+	}
+}

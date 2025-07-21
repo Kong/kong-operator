@@ -62,6 +62,7 @@ type Reconciler struct {
 	LoggingMode             logging.Mode
 	AnonymousReportsEnabled bool
 	ClusterDomain           string
+	EmitKubernetesEvents    bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -99,7 +100,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	mgrID, err := manager.NewID(string(cp.GetUID()))
+	mgrID, err := manager.NewID(builControlPlaneInstanceID(cp))
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to create manager ID: %w", err)
 	}
@@ -400,6 +401,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		WithAnonymousReportsFixedPayloadCustomizer(payloadCustomizer),
 		WithClusterDomain(r.ClusterDomain),
 		WithQPSAndBurst(apiServerQPS, apiServerBurst),
+		WithEmitKubernetesEvents(r.EmitKubernetesEvents),
 	}
 
 	if dps := cp.Spec.DataPlaneSync; dps != nil {

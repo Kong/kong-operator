@@ -30,4 +30,6 @@ const (
 const (
 	// DefaultClusterDomain is the default cluster domain used by the controller.
 	DefaultClusterDomain = "cluster.local"
+	// DefaultEmitKubernetesEvents is the default value for emitting Kubernetes events.
+	DefaultEmitKubernetesEvents = true
 )
