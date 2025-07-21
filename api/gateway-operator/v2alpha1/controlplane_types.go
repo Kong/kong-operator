@@ -76,11 +76,6 @@ type ControlPlaneSpec struct {
 	// +required
 	DataPlane ControlPlaneDataPlaneTarget `json:"dataplane"`
 
-	// DataPlaneSync defines the configuration for syncing data to the DataPlane.
-	//
-	// +optional
-	DataPlaneSync *ControlPlaneDataPlaneSync `json:"dataplaneSync,omitempty"`
-
 	ControlPlaneOptions `json:",inline"`
 
 	// Extensions provide additional or replacement features for the ControlPlane
@@ -136,9 +131,14 @@ type ControlPlaneOptions struct {
 	//
 	// +optional
 	Cache *ControlPlaneK8sCache `json:"cache,omitempty"`
+
+	// DataPlaneSync defines the configuration for syncing Kong configuration to the DataPlane.
+	//
+	// +optional
+	DataPlaneSync *ControlPlaneDataPlaneSync `json:"dataplaneSync,omitempty"`
 }
 
-// ControlPlaneDataPlaneSync defines the configuration for syncing data to the DataPlane.
+// ControlPlaneDataPlaneSync defines the configuration for syncing Kong configuration to the DataPlane.
 //
 // +apireference:kgo:include
 type ControlPlaneDataPlaneSync struct {
@@ -147,6 +147,14 @@ type ControlPlaneDataPlaneSync struct {
 	// +optional
 	// +kubebuilder:default=false
 	EnableReverse *bool `json:"enableReverse,omitempty"`
+	// Interval is the interval between two rounds of syncing Kong configuration with dataplanes.
+	//
+	// +optional
+	Interval *metav1.Duration `json:"interval,omitempty"`
+	// Timeout is the timeout of a single run of syncing Kong configuration with dataplanes.
+	//
+	// +optional
+	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
 
 // ControlPlaneDataPlaneTarget defines the target for the DataPlane that the ControlPlane
