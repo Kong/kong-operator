@@ -460,3 +460,13 @@ func WithClusterDomain(clusterDomain string) managercfg.Opt {
 		c.ClusterDomain = clusterDomain
 	}
 }
+
+// WithCacheSyncPeriod sets the cache sync period for the manager.
+func WithCacheSyncPeriod(period time.Duration) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		if period <= 0 {
+			return
+		}
+		c.SyncPeriod = period
+	}
+}

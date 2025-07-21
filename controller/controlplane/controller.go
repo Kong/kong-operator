@@ -48,6 +48,7 @@ const requeueAfterBoot = time.Second
 // Reconciler reconciles a ControlPlane object
 type Reconciler struct {
 	client.Client
+	CacheSyncPeriod          time.Duration
 	CacheSyncTimeout         time.Duration
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
@@ -364,6 +365,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 
 	cfgOpts := []managercfg.Opt{
 		WithRestConfig(r.RestConfig, r.KubeConfigPath),
+		WithCacheSyncPeriod(r.CacheSyncPeriod),
 		WithKongAdminService(types.NamespacedName{
 			Name:      dataplaneAdminServiceName,
 			Namespace: cp.Namespace,
