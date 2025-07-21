@@ -423,6 +423,17 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		)
 	}
 
+	if cp.Spec.DataPlaneSync != nil {
+		cfgOpts = append(cfgOpts,
+			WithDataPlaneSyncOptions(
+				dataplaneSyncOptions{
+					interval: cp.Spec.DataPlaneSync.Interval,
+					timeout:  cp.Spec.DataPlaneSync.Timeout,
+				},
+			),
+		)
+	}
+
 	// If the ControlPlane is owned by a Gateway, we set the Gateway to be the only one to reconcile.
 	if owner, ok := lo.Find(cp.GetOwnerReferences(), func(owner metav1.OwnerReference) bool {
 		return strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) &&
