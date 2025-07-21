@@ -397,13 +397,20 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		WithAnonymousReports(r.AnonymousReportsEnabled),
 		WithAnonymousReportsFixedPayloadCustomizer(payloadCustomizer),
 		WithClusterDomain(r.ClusterDomain),
-		WithReverseSync(lo.FromPtr(lo.FromPtr(cp.Spec.DataPlaneSync).EnableReverse)),
 	}
 
-	if cp.Spec.GatewayDiscovery != nil {
-		cfgOpts = append(cfgOpts,
-			WithGatewayDiscoveryReadinessCheckInterval(cp.Spec.GatewayDiscovery.ReadinessCheckInterval),
-			WithGatewayDiscoveryReadinessCheckTimeout(cp.Spec.GatewayDiscovery.ReadinessCheckTimeout),
+	if dps := cp.Spec.DataPlaneSync; dps != nil {
+		cfgOpts = append(
+			cfgOpts,
+			WithReverseSync(dps.EnableReverse),
+		)
+	}
+
+	if cpgd := cp.Spec.GatewayDiscovery; cpgd != nil {
+		cfgOpts = append(
+			cfgOpts,
+			WithGatewayDiscoveryReadinessCheckInterval(cpgd.ReadinessCheckInterval),
+			WithGatewayDiscoveryReadinessCheckTimeout(cpgd.ReadinessCheckTimeout),
 		)
 	}
 
