@@ -256,6 +256,93 @@ func mustSampleKonnectClient(t *testing.T) *adminapi.KonnectClient {
 	return adminapi.NewKonnectClient(c, rgID, false)
 }
 
+func TestConfigSynchronizer_EnableReverseSync(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		name                   string
+		enableReverseSync      bool
+		expectSubsequentUpdate bool
+	}{
+		{
+			name:                   "reverse sync disabled - should not update when config unchanged",
+			enableReverseSync:      false,
+			expectSubsequentUpdate: false,
+		},
+		{
+			name:                   "reverse sync enabled - should update even when config unchanged",
+			enableReverseSync:      true,
+			expectSubsequentUpdate: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			log := logr.Discard()
+			updateStrategyResolver := mocks.NewUpdateStrategyResolver()
+
+			synchronizer := konnect.NewConfigSynchronizer(
+				konnect.ConfigSynchronizerParams{
+					Logger: log,
+					KongConfig: sendconfig.Config{
+						EnableReverseSync: tc.enableReverseSync,
+						InMemory:          true, // Use in-memory mode to ensure checksum comparison is performed
+					},
+					ConfigUploadTicker:     clock.NewTickerWithDuration(testSendConfigPeriod),
+					KonnectClientFactory:   &mocks.KonnectClientFactory{Client: mustSampleKonnectClient(t)},
+					UpdateStrategyResolver: updateStrategyResolver,
+					ConfigChangeDetector:   sendconfig.NewKonnectConfigurationChangeDetector(), // Use real detector
+					ConfigStatusNotifier:   clients.NewChannelConfigNotifier(log),
+					MetricsRecorder:        &mocks.MetricsRecorder{},
+				},
+			)
+
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			runSynchronizer(ctx, t, synchronizer)
+
+			t.Log("Sending initial configuration")
+			initialKongState := &kongstate.KongState{
+				Services: []kongstate.Service{
+					{
+						Service: kong.Service{
+							Name: kong.String("service1"),
+							Host: kong.String("example.com"),
+						},
+					},
+				},
+			}
+			synchronizer.UpdateKongState(initialKongState, false)
+
+			require.EventuallyWithT(t, func(t *assert.CollectT) {
+				urls := updateStrategyResolver.GetUpdateCalledForURLs()
+				require.Len(t, urls, 1, "should update Konnect URL after initial config")
+			}, testSendConfigAssertionTimeout, testSendConfigAssertionTick)
+
+			initialUpdateCount := len(updateStrategyResolver.GetUpdateCalledForURLs())
+
+			t.Log("Sending same configuration again (no changes)")
+			synchronizer.UpdateKongState(initialKongState, false)
+
+			if tc.expectSubsequentUpdate {
+				require.EventuallyWithT(t, func(t *assert.CollectT) {
+					urls := updateStrategyResolver.GetUpdateCalledForURLs()
+					require.Greater(t, len(urls), initialUpdateCount,
+						"should update again when reverse sync is enabled, even with no config changes",
+					)
+				}, testSendConfigAssertionTimeout, testSendConfigAssertionTick)
+			} else {
+				require.Never(t, func() bool {
+					urls := updateStrategyResolver.GetUpdateCalledForURLs()
+					return len(urls) > initialUpdateCount
+				}, testSendConfigAssertionTimeout, testSendConfigAssertionTick,
+					"should not update when reverse sync is disabled and no config changes",
+				)
+			}
+		})
+	}
+}
+
 func runSynchronizer(ctx context.Context, t *testing.T, s *konnect.ConfigSynchronizer) {
 	t.Log("Running Konnect config synchronizer")
 	go func() {

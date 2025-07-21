@@ -9015,6 +9015,25 @@ spec:
                   rule: self.type != 'ref' || has(self.ref)
                 - message: Ref cannot be provided when type is set to managedByOwner
                   rule: self.type != 'managedByOwner' || !has(self.ref)
+              dataplaneSync:
+                description: DataPlaneSync defines the configuration for syncing Kong
+                  configuration to the DataPlane.
+                properties:
+                  enableReverse:
+                    default: false
+                    description: EnableReverse sends configuration to DataPlane (Kong
+                      Gateway) even if the configuration checksum has not changed
+                      since previous update.
+                    type: boolean
+                  interval:
+                    description: Interval is the interval between two rounds of syncing
+                      Kong configuration with dataplanes.
+                    type: string
+                  timeout:
+                    description: Timeout is the timeout of a single run of syncing
+                      Kong configuration with dataplanes.
+                    type: string
+                type: object
               extensions:
                 description: |-
                   Extensions provide additional or replacement features for the ControlPlane
@@ -36742,6 +36761,25 @@ spec:
                     x-kubernetes-list-map-keys:
                     - name
                     x-kubernetes-list-type: map
+                  dataplaneSync:
+                    description: DataPlaneSync defines the configuration for syncing
+                      Kong configuration to the DataPlane.
+                    properties:
+                      enableReverse:
+                        default: false
+                        description: EnableReverse sends configuration to DataPlane
+                          (Kong Gateway) even if the configuration checksum has not
+                          changed since previous update.
+                        type: boolean
+                      interval:
+                        description: Interval is the interval between two rounds of
+                          syncing Kong configuration with dataplanes.
+                        type: string
+                      timeout:
+                        description: Timeout is the timeout of a single run of syncing
+                          Kong configuration with dataplanes.
+                        type: string
+                    type: object
                   featureGates:
                     description: FeatureGates is a list of feature gates that are
                       enabled for this ControlPlane.
