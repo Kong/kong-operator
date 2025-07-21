@@ -34,7 +34,9 @@ func New(m metadata.Info) *CLI {
 	flagSet.Var(newValidatedValue(&cfg.LoggingMode, logging.NewMode, withDefault(logging.ProductionMode)), "logging-mode", "Logging mode to use. Possible values: production, development.")
 
 	flagSet.BoolVar(&cfg.AnonymousReports, "anonymous-reports", true, "Send anonymized usage data to help improve Kong.")
-	flagSet.StringVar(&cfg.APIServerPath, "apiserver-host", "", "The Kubernetes API server URL. If not set, the operator will use cluster config discovery.")
+	flagSet.StringVar(&cfg.APIServerHost, "apiserver-host", "", "The Kubernetes API server URL. If not set, the operator will use cluster config discovery.")
+	flagSet.IntVar(&cfg.APIServerQPS, "apiserver-qps", 100, "The Kubernetes API RateLimiter maximum queries per second.")
+	flagSet.IntVar(&cfg.APIServerBurst, "apiserver-burst", 300, "The Kubernetes API RateLimiter maximum burst queries per second.")
 	flagSet.StringVar(&cfg.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 
 	flagSet.StringVar(&cfg.MetricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")

@@ -30,6 +30,7 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,7 +65,9 @@ type Config struct {
 	Out                      *os.File
 	ControllerName           string
 	ControllerNamespace      string
-	APIServerPath            string
+	APIServerHost            string
+	APIServerQPS             int
+	APIServerBurst           int
 	KubeconfigPath           string
 	CacheSyncPeriod          time.Duration
 	CacheSyncTimeout         time.Duration
@@ -162,7 +165,13 @@ func Run(
 		setupLog.Info("leader election disabled")
 	}
 
-	restCfg := ctrl.GetConfigOrDie()
+	restCfg, err := clientcmd.BuildConfigFromFlags(cfg.APIServerHost, cfg.KubeconfigPath)
+	if err != nil {
+		return err
+	}
+	// Configure K8s client rate-limiting.
+	restCfg.QPS = float32(cfg.APIServerQPS)
+	restCfg.Burst = cfg.APIServerBurst
 	restCfg.UserAgent = metadata.UserAgent()
 	restCfg.Impersonate = rest.ImpersonationConfig{
 		UserName: cfg.ServiceAccountToImpersonate,
