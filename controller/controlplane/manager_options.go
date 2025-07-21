@@ -133,6 +133,14 @@ func WithFeatureGates(logger logr.Logger, featureGates []gwtypes.ControlPlaneFea
 	}
 }
 
+// WithReverseSync sets whether configuration is sent to Kong even
+// if the configuration checksum has not changed since previous update.
+func WithReverseSync(enabled bool) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.EnableReverseSync = enabled
+	}
+}
+
 const (
 	// ControllerNameIngress identifies the controller for managing Kubernetes
 	// Ingress resources using the networking/v1 API version.

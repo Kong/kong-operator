@@ -40,7 +40,7 @@ require (
 	github.com/kong/go-database-reconciler v1.24.2
 	github.com/kong/go-kong v0.67.0
 	github.com/kong/kubernetes-configuration v1.4.1-0.20250708093327-e695c0e8302e
-	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.1.0.20250716020600-20242865bfa0
+	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.1.0.20250721090008-49233b84857e
 	github.com/kong/kubernetes-telemetry v0.1.10
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
@@ -72,11 +72,11 @@ require (
 	google.golang.org/api v0.242.0
 	google.golang.org/grpc v1.73.0
 	google.golang.org/protobuf v1.36.6
-	k8s.io/api v0.33.2
-	k8s.io/apiextensions-apiserver v0.33.2
-	k8s.io/apimachinery v0.33.2
+	k8s.io/api v0.33.3
+	k8s.io/apiextensions-apiserver v0.33.3
+	k8s.io/apimachinery v0.33.3
 	k8s.io/cli-runtime v0.33.2
-	k8s.io/client-go v0.33.2
+	k8s.io/client-go v0.33.3
 	k8s.io/component-base v0.33.2
 	k8s.io/kubectl v0.31.0
 	k8s.io/kubernetes v1.33.2

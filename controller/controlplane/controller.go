@@ -397,6 +397,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		WithAnonymousReports(r.AnonymousReportsEnabled),
 		WithAnonymousReportsFixedPayloadCustomizer(payloadCustomizer),
 		WithClusterDomain(r.ClusterDomain),
+		WithReverseSync(lo.FromPtr(lo.FromPtr(cp.Spec.DataPlaneSync).EnableReverse)),
 	}
 
 	if cp.Spec.GatewayDiscovery != nil {
