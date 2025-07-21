@@ -5,7 +5,9 @@
 | Flag | Type | Description | Default |
 | ---- | ---- | ----------- | ------- |
 | `--anonymous-reports` | `bool` | Send anonymized usage data to help improve Kong. | `true` |
+| `--apiserver-burst` | `string` | The Kubernetes API RateLimiter maximum burst queries per second. | `300` |
 | `--apiserver-host` | `string` | The Kubernetes API server URL. If not set, the operator will use cluster config discovery. | `""` |
+| `--apiserver-qps` | `string` | The Kubernetes API RateLimiter maximum queries per second. | `100` |
 | `--cache-sync-period` | `string` | Determine the minimum frequency at which watched resources are reconciled. By default or for 0s value, it falls back to controller-runtime's default. | `0s` |
 | `--cache-sync-timeout` | `string` | The time limit set to wait for syncing controllers' caches. Defaults to 0 to fall back to default from controller-runtime. | `0s` |
 | `--cluster-ca-key-size` | `string` | Size (in bits) of the key used for the cluster CA certificate. Only used for RSA keys. | `4096` |

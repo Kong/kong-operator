@@ -39,6 +39,10 @@
   - Specifying the delay to wait for Kubernetes object caches sync before
     updating dataplanes by `spec.cache.initSyncDuration`
     [#1858](https://github.com/Kong/kong-operator/pull/1858)
+- Introduce flags `--apiserver-host` for API, `--apiserver-qps` and
+  `--apiserver-burst` to control the QPS and burst (rate-limiting) for the
+  Kubernetes API server client.
+  [#1887](https://github.com/Kong/kong-operator/pull/1887)
 
 ### Breaking Changes
 

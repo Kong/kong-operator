@@ -142,6 +142,14 @@ func WithReverseSync(enabled *bool) managercfg.Opt {
 	}
 }
 
+// WithQPSAndBurst sets the QPS and burst for the API server.
+func WithQPSAndBurst(qps float32, burst int) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.APIServerQPS = int(qps)
+		c.APIServerBurst = burst
+	}
+}
+
 const (
 	// ControllerNameIngress identifies the controller for managing Kubernetes
 	// Ingress resources using the networking/v1 API version.

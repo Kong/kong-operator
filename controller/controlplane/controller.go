@@ -241,7 +241,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 			log.Debug(logger, "control plane instance not found, creating new instance")
 			cfgOpts, err := r.constructControlPlaneManagerConfigOptions(
-				logger, cp, &caSecret, mtlsSecret, dataplaneAdminServiceName, dataplaneIngressServiceName,
+				logger, cp, &caSecret, mtlsSecret, dataplaneAdminServiceName, dataplaneIngressServiceName, r.RestConfig.Burst, r.RestConfig.QPS,
 			)
 			if err != nil {
 				return ctrl.Result{}, err
@@ -265,7 +265,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	} else {
 		// Calculate the hash of config from the ControlPlane spec.
 		cfgOpts, err := r.constructControlPlaneManagerConfigOptions(
-			logger, cp, &caSecret, mtlsSecret, dataplaneAdminServiceName, dataplaneIngressServiceName,
+			logger, cp, &caSecret, mtlsSecret, dataplaneAdminServiceName, dataplaneIngressServiceName, r.RestConfig.Burst, r.RestConfig.QPS,
 		)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -345,6 +345,8 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	mtlsSecret *corev1.Secret,
 	dataplaneAdminServiceName string,
 	dataplaneIngressServiceName string,
+	apiServerBurst int,
+	apiServerQPS float32,
 ) ([]managercfg.Opt, error) {
 	// TODO: https://github.com/kong/kong-operator/issues/1361
 	// Configure the manager with Konnect options if KonnectExtension is attached to the ControlPlane.
@@ -397,6 +399,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		WithAnonymousReports(r.AnonymousReportsEnabled),
 		WithAnonymousReportsFixedPayloadCustomizer(payloadCustomizer),
 		WithClusterDomain(r.ClusterDomain),
+		WithQPSAndBurst(apiServerQPS, apiServerBurst),
 	}
 
 	if dps := cp.Spec.DataPlaneSync; dps != nil {
