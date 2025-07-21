@@ -11,7 +11,7 @@ toolchain go1.24.4
 retract v1.2.2
 
 require (
-	cloud.google.com/go/container v1.43.0
+	cloud.google.com/go/container v1.44.0
 	dario.cat/mergo v1.0.2
 	github.com/Kong/sdk-konnect-go v0.6.0
 	github.com/Masterminds/semver v1.5.0
@@ -307,7 +307,7 @@ require (
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.34.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250512202823-5a2f75b736a9 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250603155806-513f23925822 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250603155806-513f23925822 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
