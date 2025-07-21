@@ -76,6 +76,11 @@ type ControlPlaneSpec struct {
 	// +required
 	DataPlane ControlPlaneDataPlaneTarget `json:"dataplane"`
 
+	// DataPlaneSync defines the configuration for syncing data to the DataPlane.
+	//
+	// +optional
+	DataPlaneSync *ControlPlaneDataPlaneSync `json:"dataplaneSync,omitempty"`
+
 	ControlPlaneOptions `json:",inline"`
 
 	// Extensions provide additional or replacement features for the ControlPlane
@@ -131,6 +136,17 @@ type ControlPlaneOptions struct {
 	//
 	// +optional
 	Cache *ControlPlaneK8sCache `json:"cache,omitempty"`
+}
+
+// ControlPlaneDataPlaneSync defines the configuration for syncing data to the DataPlane.
+//
+// +apireference:kgo:include
+type ControlPlaneDataPlaneSync struct {
+	// EnableReverse sends configuration to DataPlane (Kong Gateway) even if the configuration checksum has not changed since previous update.
+	//
+	// +optional
+	// +kubebuilder:default=false
+	EnableReverse *bool `json:"enableReverse,omitempty"`
 }
 
 // ControlPlaneDataPlaneTarget defines the target for the DataPlane that the ControlPlane
