@@ -660,7 +660,6 @@ _test.kongintegration: gotestsum
 		-coverprofile=coverage.kongintegration.out \
 		./ingress-controller/test/kongintegration
 
-
 .PHONY: test.samples
 test.samples:
 	@cd config/samples/ && find . -not -name "kustomization.*" -type f | sort | xargs -I{} bash -c "echo;echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
