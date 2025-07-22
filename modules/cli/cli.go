@@ -69,7 +69,7 @@ func New(m metadata.Info) *CLI {
 
 	// controllers for ControlPlane
 	flagSet.BoolVar(&cfg.ControlPlaneConfigurationDumpEnabled, "enable-controlplane-config-dump", false, "Enable the server to dump generated Kong configuration from ControlPlanes. Only effective when ControlPlane controller is enabled.")
-	flagSet.StringVar(&cfg.ControlPlaneConfigurationDumpAddr, "controlplane-config-dump-bind-address", manager.DefaultControlPlaneConfigurationDumpAddr, "The address where server for dumping ControlPlane configuration. Only enabled when 'enable-controlplane-config-dump' is true. ")
+	flagSet.StringVar(&cfg.ControlPlaneConfigurationDumpAddr, "controlplane-config-dump-bind-address", manager.DefaultControlPlaneConfigurationDumpAddr, "The address where server for dumping ControlPlane configuration. Only enabled when 'enable-controlplane-config-dump' is true.")
 
 	// controllers for specialized APIs and features
 	flagSet.BoolVar(&cfg.AIGatewayControllerEnabled, "enable-controller-aigateway", false, "Enable the AIGateway controller. (Experimental).")

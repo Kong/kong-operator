@@ -301,19 +301,21 @@ func Run(
 
 	if cfg.ControlPlaneControllerEnabled && cfg.ControlPlaneConfigurationDumpEnabled {
 		diagLogger := ctrl.Log.WithName("cp_diagnostics_server")
-		exposer := &diagnostics.ControlPlaneDiagnosticsExposer{
-			Logger: diagLogger,
-		}
+		exposer := diagnostics.NewControlPlaneDiagnosticsExposer(diagLogger)
 		multiinstance.WithDiagnosticsExposer(exposer)(cpInstancesMgr)
 
 		diagServer := &diagnostics.Server{
-			Addr:    cfg.ControlPlaneConfigurationDumpAddr,
-			Exposer: exposer,
-			Handler: diagnostics.NewHTTPHandler(),
+			Addr: cfg.ControlPlaneConfigurationDumpAddr,
+			Handler: diagnostics.NewHTTPHandler(
+				mgr.GetClient(),
+				exposer,
+			),
 
 			Logger: diagLogger,
 		}
-		mgr.Add(diagServer)
+		if err = mgr.Add(diagServer); err != nil {
+			return fmt.Errorf("failed to run diagnostics server: %w", err)
+		}
 	}
 
 	controllers, err := setupControllers(mgr, &cfg, cpInstancesMgr)

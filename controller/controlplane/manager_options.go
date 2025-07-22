@@ -554,3 +554,17 @@ func WithTranslationOptions(opts *operatorv2alpha1.ControlPlaneTranslationOption
 		}
 	}
 }
+
+// WithConfigDumpEnabled enables/disables dumping Kong configuration in ControlPlane.
+func WithConfigDumpEnabled(enabled bool) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.EnableConfigDumps = enabled
+	}
+}
+
+// WithSensitiveConfigDumpEnabled enables/disables including sensitive parts in dumped configuration.
+func WithSensitiveConfigDumpEnabled(enabled bool) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.DumpSensitiveConfig = enabled
+	}
+}
