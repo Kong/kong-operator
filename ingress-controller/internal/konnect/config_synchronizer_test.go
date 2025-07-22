@@ -260,9 +260,10 @@ func TestConfigSynchronizer_EnableReverseSync(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
-		name                   string
-		enableReverseSync      bool
-		expectSubsequentUpdate bool
+		name                     string
+		enableReverseSync        bool
+		expectSubsequentUpdate   bool
+		shouldUpdateMoreThanOnce bool
 	}{
 		{
 			name:                   "reverse sync disabled - should not update when config unchanged",
@@ -270,9 +271,10 @@ func TestConfigSynchronizer_EnableReverseSync(t *testing.T) {
 			expectSubsequentUpdate: false,
 		},
 		{
-			name:                   "reverse sync enabled - should update even when config unchanged",
-			enableReverseSync:      true,
-			expectSubsequentUpdate: true,
+			name:                     "reverse sync enabled - should update even when config unchanged",
+			enableReverseSync:        true,
+			expectSubsequentUpdate:   true,
+			shouldUpdateMoreThanOnce: true, // This is to ensure that the reverse sync logic is tested
 		},
 	}
 
@@ -316,7 +318,11 @@ func TestConfigSynchronizer_EnableReverseSync(t *testing.T) {
 
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
 				urls := updateStrategyResolver.GetUpdateCalledForURLs()
-				require.Len(t, urls, 1, "should update Konnect URL after initial config")
+				if !tc.shouldUpdateMoreThanOnce {
+					require.Len(t, urls, 1, "should update Konnect URL after initial config")
+					return
+				}
+				require.Greater(t, len(urls), 1, "should update Konnect URL after initial config more than once")
 			}, testSendConfigAssertionTimeout, testSendConfigAssertionTick)
 
 			initialUpdateCount := len(updateStrategyResolver.GetUpdateCalledForURLs())
