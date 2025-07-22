@@ -16,6 +16,7 @@
 | `--cluster-ca-secret-namespace` | `string` | Name of the namespace for Secret containing the cluster CA certificate. | `""` |
 | `--cluster-domain` | `string` | The cluster domain. This is used e.g. in generating addresses for upstream services. | `cluster.local` |
 | `--controller-name` | `string` | Controller name to use if other than the default, only needed for multi-tenancy. | `""` |
+| `--emit-kubernetes-events` | `bool` | Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects. | `true` |
 | `--enable-controller-aigateway` | `bool` | Enable the AIGateway controller. (Experimental). | `false` |
 | `--enable-controller-controlplane` | `bool` | Enable the ControlPlane controller. | `true` |
 | `--enable-controller-controlplaneextensions` | `bool` | Enable the ControlPlane extensions controller. | `true` |
