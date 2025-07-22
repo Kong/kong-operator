@@ -106,7 +106,7 @@ rows:
     default: '`false`'
   - flag: '`--configmap-label-selector`'
     type: '`string`'
-    description: "Limits the configmaps ingested to those having this label set to "true"."
+    description: "Limits the configmaps ingested to those having this label set to \"true\"."
     default: '`konghq.com/configmap`'
   - flag: '`--dump-config`'
     type: '`bool`'
@@ -230,7 +230,7 @@ rows:
     default: '`5s`'
   - flag: '`--gateway-to-reconcile`'
     type: '`namespaced-name`'
-    description: "Gateway namespaced name in "namespace/name" format. Makes KIC reconcile only the specified Gateway."
+    description: "Gateway namespaced name in \"namespace/name\" format. Makes KIC reconcile only the specified Gateway."
     default: ""
   - flag: '`--health-probe-bind-address`'
     type: '`string`'
@@ -274,7 +274,7 @@ rows:
     default: '`1s`'
   - flag: '`--kong-admin-svc`'
     type: '`namespaced-name`'
-    description: "Kong Admin API Service namespaced name in "namespace/name" format, to use for Kong Gateway service discovery."
+    description: "Kong Admin API Service namespaced name in \"namespace/name\" format, to use for Kong Gateway service discovery."
     default: ""
   - flag: '`--kong-admin-svc-port-names`'
     type: '`strings`'
@@ -314,7 +314,7 @@ rows:
     default: ""
   - flag: '`--kong-admin-url`'
     type: '`strings`'
-    description: "Kong Admin URL(s) in comma-separated format (or specify this flag multiple times) to connect to in the format "protocol://address:port"."
+    description: "Kong Admin URL(s) in comma-separated format (or specify this flag multiple times) to connect to in the format \"protocol://address:port\"."
     default: '`[http://localhost:8001]`'
   - flag: '`--kong-workspace`'
     type: '`string`'
@@ -410,23 +410,23 @@ rows:
     default: '`30`'
   - flag: '`--publish-service`'
     type: '`namespaced-name`'
-    description: "Service fronting Ingress resources in "namespace/name" format. The controller will update Ingress status information with this Service's endpoints."
+    description: "Service fronting Ingress resources in \"namespace/name\" format. The controller will update Ingress status information with this Service's endpoints."
     default: ""
   - flag: '`--publish-service-udp`'
     type: '`namespaced-name`'
-    description: "Service fronting UDP routing resources in "namespace/name" format. The controller will update UDP route status information with this Service's endpoints. If omitted, the same Service will be used for both TCP and UDP routes."
+    description: "Service fronting UDP routing resources in \"namespace/name\" format. The controller will update UDP route status information with this Service's endpoints. If omitted, the same Service will be used for both TCP and UDP routes."
     default: ""
   - flag: '`--publish-status-address`'
     type: '`strings`'
-    description: "Addresses in comma-separated format (or specify this flag multiple times), for use in lieu of "publish-service" when that Service lacks useful address information (for example, in bare-metal environments)."
+    description: "Addresses in comma-separated format (or specify this flag multiple times), for use in lieu of \"publish-service\" when that Service lacks useful address information (for example, in bare-metal environments)."
     default: '`[]`'
   - flag: '`--publish-status-address-udp`'
     type: '`strings`'
-    description: "Addresses in comma-separated format (or specify this flag multiple times), for use in lieu of "publish-service-udp" when that Service lacks useful address information (for example, in bare-metal environments)."
+    description: "Addresses in comma-separated format (or specify this flag multiple times), for use in lieu of \"publish-service-udp\" when that Service lacks useful address information (for example, in bare-metal environments)."
     default: '`[]`'
   - flag: '`--secret-label-selector`'
     type: '`string`'
-    description: "Limits the secrets ingested to those having this label set to "true". If not specified, all secrets are ingested."
+    description: "Limits the secrets ingested to those having this label set to \"true\". If not specified, all secrets are ingested."
     default: ""
   - flag: '`--skip-ca-certificates`'
     type: '`bool`'
