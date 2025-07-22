@@ -8956,6 +8956,28 @@ spec:
                       If omitted, the default value (5s) is used.
                     type: string
                 type: object
+              configDump:
+                description: ConfigDump defines the options for dumping generated
+                  Kong configuration from a diagnostics server.
+                properties:
+                  dumpSensitive:
+                    default: false
+                    description: |-
+                      When DumpSensitive is true, the configuration will be dumped unchanged, including sensitive parts like private keys and credentials.
+                      When DumpSensitive is false, the sensitive configuration parts like private keys and credentials are redacted.
+                    type: boolean
+                  enabled:
+                    default: false
+                    description: When Enabled is true, Operator will dump the translated
+                      Kong configuration by it from a diagnostics server.
+                    type: boolean
+                required:
+                - dumpSensitive
+                - enabled
+                type: object
+                x-kubernetes-validations:
+                - message: Cannot enable dumpSensitive when enabled is set to false
+                  rule: self.enabled || !self.dumpSensitive
               controllers:
                 description: Controllers defines the controllers that are enabled
                   for this ControlPlane.
@@ -36733,6 +36755,29 @@ spec:
                           If omitted, the default value (5s) is used.
                         type: string
                     type: object
+                  configDump:
+                    description: ConfigDump defines the options for dumping generated
+                      Kong configuration from a diagnostics server.
+                    properties:
+                      dumpSensitive:
+                        default: false
+                        description: |-
+                          When DumpSensitive is true, the configuration will be dumped unchanged, including sensitive parts like private keys and credentials.
+                          When DumpSensitive is false, the sensitive configuration parts like private keys and credentials are redacted.
+                        type: boolean
+                      enabled:
+                        default: false
+                        description: When Enabled is true, Operator will dump the
+                          translated Kong configuration by it from a diagnostics server.
+                        type: boolean
+                    required:
+                    - dumpSensitive
+                    - enabled
+                    type: object
+                    x-kubernetes-validations:
+                    - message: Cannot enable dumpSensitive when enabled is set to
+                        false
+                      rule: self.enabled || !self.dumpSensitive
                   controllers:
                     description: Controllers defines the controllers that are enabled
                       for this ControlPlane.
