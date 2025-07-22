@@ -32,6 +32,12 @@
 
 ## Unreleased
 
+### Added
+
+- Introduce the flag `--emit-kubernetes-events` to enable/disable the creation of
+  Kubernetes events in the `ControlPlane`. The default value is `true`.
+  [#1888](https://github.com/Kong/kong-operator/pull/1888)
+
 ## [v2.0.0-alpha.2]
 
 > Release date: 2025-07-23
