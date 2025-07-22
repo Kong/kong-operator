@@ -16,6 +16,7 @@ func init() {
 // KonnectGatewayControlPlane is the Schema for the KonnectGatewayControlplanes API.
 //
 // +genclient
+// +kubebuilder:deprecatedversion:warning="This API version has been deprecated in favor of v1alpha2 and it will be removed in the future."
 // +kubebuilder:resource:scope=Namespaced
 // +kubebuilder:resource:categories=kong
 // +kubebuilder:object:root=true
