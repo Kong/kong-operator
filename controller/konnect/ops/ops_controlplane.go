@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
@@ -82,7 +83,7 @@ func createControlPlane(
 		return KonnectEntityCreatedButRelationsFailedError{
 			KonnectID: id,
 			Err:       err,
-			Reason:    konnectv1alpha2.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
+			Reason:    konnectv1alpha1.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
 		}
 	}
 
@@ -152,7 +153,7 @@ func updateControlPlane(
 		return KonnectEntityCreatedButRelationsFailedError{
 			KonnectID: id,
 			Err:       err,
-			Reason:    konnectv1alpha2.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
+			Reason:    konnectv1alpha1.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
 		}
 	}
 
@@ -275,7 +276,7 @@ func getControlPlaneForUID(
 		return id, KonnectEntityCreatedButRelationsFailedError{
 			KonnectID: id,
 			Err:       err,
-			Reason:    konnectv1alpha2.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
+			Reason:    konnectv1alpha1.KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers,
 		}
 	}
 
