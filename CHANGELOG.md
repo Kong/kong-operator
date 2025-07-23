@@ -2,7 +2,7 @@
 
 ## Table of Contents
 
-- [v2.0.0-alpha.1](#v200-alpha1)
+- [v2.0.0-alpha.2](#v200-alpha2)
 - [v1.6.2](#v162)
 - [v1.6.1](#v161)
 - [v1.6.0](#v160)
@@ -32,36 +32,28 @@
 
 ## Unreleased
 
-### Added
+## [v2.0.0-alpha.2]
 
-- Support the following configuration for running control plane managers in
-  the `ControlPlane` CRD:
-  - Specifying the delay to wait for Kubernetes object caches sync before
-    updating dataplanes by `spec.cache.initSyncDuration`
-    [#1858](https://github.com/Kong/kong-operator/pull/1858)
-  - Specifying the period and timeout of syncing Kong configuration to dataplanes
-    by `spec.dataplaneSync.interval` and `spec.dataplaneSync.timeout`
-    [#1886](https://github.com/Kong/kong-operator/pull/1886)
-- Introduce flags `--apiserver-host` for API, `--apiserver-qps` and
-  `--apiserver-burst` to control the QPS and burst (rate-limiting) for the
-  Kubernetes API server client.
-  [#1887](https://github.com/Kong/kong-operator/pull/1887)
+> Release date: 2025-07-23
+
+> KGO becomes KO, which stands for Kong Operator - Kubernetes Gateway Operator and Kubernetes Ingress Controller
+> become a single product.
 
 ### Breaking Changes
 
-> Add --cluster-domain flag and set default to 'cluster.local'
+- `KonnectExtension` has been bumped to `v1alpha2` and the Control plane reference via plain `KonnectID`
+  has been removed. `Mirror` `GatewayControlPlane` resource is now the only way to reference remote
+  control planes in read-only.
+  [#1711](https://github.com/kong/kong-operator/pull/1711)
+  <!-- TODO: https://github.com/kong/kong-operator/issues/1732 -->
+- rename product from Kong Gateway Operator to Kong Operator.
+  [#1767](https://github.com/Kong/kong-operator/pull/1767)
+- Add --cluster-domain flag and set default to 'cluster.local'
   This commit introduces a new --cluster-domain flag to the KO binary, which is now propagated to the ingress-controller.
   The default value for the cluster domain is set to 'cluster.local', whereas previously it was an empty string ("").
   This is a breaking change, as any code or configuration relying on the previous default will now use 'cluster.local'
   unless explicitly overridden.
   [#1870](https://github.com/Kong/kong-operator/pull/1870)
-
-## [v2.0.0-alpha.1]
-
-> Release date: 2025-06-11
-
-> KGO becomes KO, which stands for Kong Operator - Kubernetes Gateway Operator and Kubernetes Ingress Controller
-> become a single product.
 
 ### Added
 
@@ -77,6 +69,18 @@
     [#1818](https://github.com/kong/kong-operator/pull/1818)
   - `--cache-sync-period` to control controller-runtime's cache sync period.
     [#1846](https://github.com/kong/kong-operator/pull/1846)
+- Support the following configuration for running control plane managers in
+  the `ControlPlane` CRD:
+  - Specifying the delay to wait for Kubernetes object caches sync before
+    updating dataplanes by `spec.cache.initSyncDuration`
+    [#1858](https://github.com/Kong/kong-operator/pull/1858)
+  - Specifying the period and timeout of syncing Kong configuration to dataplanes
+    by `spec.dataplaneSync.interval` and `spec.dataplaneSync.timeout`
+    [#1886](https://github.com/Kong/kong-operator/pull/1886)
+- Introduce flags `--apiserver-host` for API, `--apiserver-qps` and
+  `--apiserver-burst` to control the QPS and burst (rate-limiting) for the
+  Kubernetes API server client.
+  [#1887](https://github.com/Kong/kong-operator/pull/1887)
 
 ### Fixed
 
@@ -86,16 +90,6 @@
   re-created. When this happens, the `KonnectGatewayControlPlane` sees its Konnect ID changed, as well
   as the endpoints. All this data is constantly enforced into the `KonnectExtension` status.
   [#1684](https://github.com/kong/kong-operator/pull/1684)
-
-### Breaking Changes
-
-- `KonnectExtension` has been bumped to `v1alpha2` and the Control plane reference via plain `KonnectID`
-  has been removed. `Mirror` `GatewayControlPlane` resource is now the only way to reference remote
-  control planes in read-only.
-  [#1711](https://github.com/kong/kong-operator/pull/1711)
-  <!-- TODO: https://github.com/kong/kong-operator/issues/1732 -->
-- rename product from Kong Gateway Operator to Kong Operator.
-  [#1767](https://github.com/Kong/kong-operator/pull/1767)
 
 ## [v1.6.2]
 
@@ -1209,6 +1203,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.0.0-alpha.2]: https://github.com/Kong/kong-operator/compare/v1.6.2..v2.0.0-alpha.2
 [v1.6.2]: https://github.com/Kong/kong-operator/compare/v1.6.1..v1.6.2
 [v1.6.1]: https://github.com/Kong/kong-operator/compare/v1.6.0..v1.6.1
 [v1.6.0]: https://github.com/Kong/kong-operator/compare/v1.5.1..v1.6.0
