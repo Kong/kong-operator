@@ -425,12 +425,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 
 	if cp.Spec.DataPlaneSync != nil {
 		cfgOpts = append(cfgOpts,
-			WithDataPlaneSyncOptions(
-				dataplaneSyncOptions{
-					interval: cp.Spec.DataPlaneSync.Interval,
-					timeout:  cp.Spec.DataPlaneSync.Timeout,
-				},
-			),
+			WithDataPlaneSyncOptions(*cp.Spec.DataPlaneSync),
 		)
 	}
 
