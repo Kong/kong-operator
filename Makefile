@@ -638,6 +638,28 @@ test.conformance:
 		TEST_SUITE_PATH='./ingress-controller/test/conformance/...'
 
 
+.PHONY: test.kongintegration
+test.kongintegration:
+	@$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=standard-verbose
+
+.PHONY: test.kongintegration.pretty
+test.kongintegration.pretty:
+	@$(MAKE) _test.kongintegration GOTESTSUM_FORMAT=testname
+
+.PHONY: _test.kongintegration
+_test.kongintegration: gotestsum
+	# Disable testcontainer's reaper (Ryuk). It's needed because Ryuk requires
+	# privileged mode to run, which is not desired and could cause issues in CI.
+	TESTCONTAINERS_RYUK_DISABLED="true" \
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+	$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		-race \
+		-ldflags="$(LDFLAGS_COMMON)" \
+		-parallel $(NCPU) \
+		-coverpkg=$(PKG_LIST) \
+		-coverprofile=coverage.kongintegration.out \
+		./ingress-controller/test/kongintegration
+
 .PHONY: test.samples
 test.samples:
 	@cd config/samples/ && find . -not -name "kustomization.*" -type f | sort | xargs -I{} bash -c "echo;echo {}; kubectl apply -f {} && kubectl delete -f {}" \;

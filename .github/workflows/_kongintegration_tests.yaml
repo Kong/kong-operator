@@ -56,7 +56,7 @@ jobs:
           MISE_VERBOSE: 1
           MISE_DEBUG: 1
           GOTESTSUM_JUNITFILE: ${{ env.GOTESTSUM_JUNITFILE }}
-          TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.K8S_TEAM_KONNECT_ACCESS_TOKEN }}
+          TEST_KONG_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           TEST_KONG_ENTERPRISE: ${{ matrix.enterprise }}
 
