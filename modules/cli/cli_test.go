@@ -59,6 +59,7 @@ func TestParse(t *testing.T) {
 				loggerOpts.Development = true
 				cfg.LoggerOpts = logging.SetupLogEncoder(logging.DevelopmentMode, loggerOpts)
 				cfg.AnonymousReports = false
+				cfg.EmitKubernetesEvents = true
 				return cfg
 			},
 		},
@@ -124,6 +125,17 @@ func TestParse(t *testing.T) {
 				return cfg
 			},
 		},
+		{
+			name: "--emit-kubernetes-events argument is set to false",
+			args: []string{
+				"--emit-kubernetes-events=false",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.EmitKubernetesEvents = false
+				return cfg
+			},
+		},
 	}
 
 	for _, tC := range testCases {
@@ -175,5 +187,6 @@ func expectedDefaultCfg() manager.Config {
 		LoggerOpts:                              &zap.Options{},
 		KonnectMaxConcurrentReconciles:          consts.DefaultKonnectMaxConcurrentReconciles,
 		ClusterDomain:                           ingressmgrconfig.DefaultClusterDomain,
+		EmitKubernetesEvents:                    true,
 	}
 }
