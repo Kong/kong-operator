@@ -1,5 +1,5 @@
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-version: v2.2.2
+version: v2.3.0
 name: golangci-kube-api-linter
 destination: ./bin
 plugins:
