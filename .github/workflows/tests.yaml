@@ -381,6 +381,7 @@ jobs:
         path: envtest-tests.xml
   
   kongintegration-tests:
+    needs: [check-docs-only]
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     uses: ./.github/workflows/_kongintegration_tests.yaml
     secrets: inherit
