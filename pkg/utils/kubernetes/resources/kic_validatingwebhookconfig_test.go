@@ -18,12 +18,18 @@ func TestGenerateValidatingWebhookConfigurationForControlPlane(t *testing.T) {
 		validateControlPlaneImage bool
 	}{
 		{
+			image:                     "kong/kubernetes-ingress-controller:3.4.0",
+			validateControlPlaneImage: true,
+		},
+		{
 			image:                     "kong/kubernetes-ingress-controller:3.2.0",
 			validateControlPlaneImage: true,
+			expectedError:             k8sresources.ErrControlPlaneVersionNotSupported,
 		},
 		{
 			image:                     "kong/kubernetes-ingress-controller:3.1.2",
 			validateControlPlaneImage: true,
+			expectedError:             k8sresources.ErrControlPlaneVersionNotSupported,
 		},
 		{
 			image:                     "kong/kubernetes-ingress-controller:3.0.0",
