@@ -18,7 +18,7 @@ const (
 
 // minimumControlPlaneVersion indicates the bare minimum version of the
 // ControlPlane that can be used by the operator.
-var minimumControlPlaneVersion = semver.MustParse("3.1.2")
+var minimumControlPlaneVersion = semver.MustParse("3.3.0")
 
 // ManifestsVersionsForKICVersions is a map that explicitly sets which manifests version to use upon the KIC
 // version. It is used in /hack/generators/kic to generate the roles and webhook configuration to be used by KIC.
@@ -36,8 +36,6 @@ var minimumControlPlaneVersion = semver.MustParse("3.1.2")
 var ManifestsVersionsForKICVersions = map[string]semver.Version{
 	">=3.4":       semver.MustParse("3.4.2"),
 	">=3.3, <3.4": semver.MustParse("3.3.1"),
-	">=3.2, <3.3": semver.MustParse("3.2.4"),
-	">=3.1, <3.2": semver.MustParse("3.1.6"),
 }
 
 // IsControlPlaneImageVersionSupported is a helper intended to validate the
