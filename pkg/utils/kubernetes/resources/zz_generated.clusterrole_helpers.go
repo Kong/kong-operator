@@ -4,13 +4,6 @@ package resources
 
 import (
 	"fmt"
-
-	"github.com/Masterminds/semver"
-	semverv4 "github.com/kong/semver/v4"
-	rbacv1 "k8s.io/api/rbac/v1"
-
-	"github.com/kong/kong-operator/internal/versions"
-	"github.com/kong/kong-operator/pkg/utils/kubernetes/resources/clusterroles"
 )
 
 // -----------------------------------------------------------------------------
@@ -18,87 +11,3 @@ import (
 // -----------------------------------------------------------------------------
 
 var ErrControlPlaneVersionNotSupported = fmt.Errorf("version not supported")
-
-// GenerateNewClusterRoleForControlPlane is a helper function that extract
-// the version from the tag, and returns the ClusterRole with all the needed
-// permissions.
-func GenerateNewClusterRoleForControlPlane(controlplaneName string, image string, validateControlPlaneImage bool) (*rbacv1.ClusterRole, error) {
-	versionToUse := versions.DefaultControlPlaneVersion
-	var constraint *semver.Constraints
-
-	if image != "" {
-		// In dev mode we run in unsafe mode, to allow trying nightly or testing versions
-		// of the controlplane. When an invalid or unsupported image is used in dev mode,
-		// the clusterRole associated to the default ControlPlane image is used instead.
-		v, err := versions.FromImage(image)
-		if err != nil && validateControlPlaneImage {
-			return nil, err
-		}
-
-		supported, err := versions.IsControlPlaneImageVersionSupported(image)
-		if err != nil && validateControlPlaneImage {
-			return nil, err
-		}
-		if !validateControlPlaneImage {
-			if !supported {
-				v, err = semverv4.Parse(versions.DefaultControlPlaneVersion)
-				if err != nil {
-					return nil, fmt.Errorf("error when creating semver from the default controlplane version: %w", err)
-				}
-			}
-		} else {
-			if !supported {
-				return nil, ErrControlPlaneVersionNotSupported
-			}
-		}
-
-		versionToUse = v.String()
-	}
-
-	semVersion, err := semver.NewVersion(versionToUse)
-	if err != nil {
-		return nil, err
-	}
-
-	constraint, err = semver.NewConstraint(">=3.1, <3.2")
-	if err != nil {
-		return nil, err
-	}
-	if constraint.Check(semVersion) {
-		cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_1_lt3_2(controlplaneName)
-		LabelObjectAsControlPlaneManaged(cr)
-		return cr, nil
-	}
-
-	constraint, err = semver.NewConstraint(">=3.2, <3.3")
-	if err != nil {
-		return nil, err
-	}
-	if constraint.Check(semVersion) {
-		cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_2_lt3_3(controlplaneName)
-		LabelObjectAsControlPlaneManaged(cr)
-		return cr, nil
-	}
-
-	constraint, err = semver.NewConstraint(">=3.3, <3.4")
-	if err != nil {
-		return nil, err
-	}
-	if constraint.Check(semVersion) {
-		cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_3_lt3_4(controlplaneName)
-		LabelObjectAsControlPlaneManaged(cr)
-		return cr, nil
-	}
-
-	constraint, err = semver.NewConstraint(">=3.4")
-	if err != nil {
-		return nil, err
-	}
-	if constraint.Check(semVersion) {
-		cr := clusterroles.GenerateNewClusterRoleForControlPlane_ge3_4(controlplaneName)
-		LabelObjectAsControlPlaneManaged(cr)
-		return cr, nil
-	}
-
-	return nil, ErrControlPlaneVersionNotSupported
-}
