@@ -11,6 +11,9 @@ import (
 	"github.com/tonglil/buflogr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/internal/telemetry"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -924,6 +927,66 @@ func TestWithGatewayDiscoveryReadinessCheckTimeout(t *testing.T) {
 			opt := WithGatewayDiscoveryReadinessCheckTimeout(tc.timeout)
 			opt(cfg)
 			assert.Equal(t, tc.expected, cfg.GatewayDiscoveryReadinessCheckTimeout)
+		})
+	}
+}
+
+func TestWithDataPlaneSyncOptions(t *testing.T) {
+	testCases := []struct {
+		name                    string
+		options                 *operatorv2alpha1.ControlPlaneDataPlaneSync
+		expectedIntervalSeconds float32
+		expectedTimeoutSeconds  float32
+	}{
+		{
+			name:                    "empty value sets default interval and timeout",
+			options:                 &operatorv2alpha1.ControlPlaneDataPlaneSync{},
+			expectedIntervalSeconds: float32(3.0),
+			expectedTimeoutSeconds:  float32(30),
+		},
+		{
+			name: "only specify interval",
+			options: &operatorv2alpha1.ControlPlaneDataPlaneSync{
+				Interval: &metav1.Duration{
+					Duration: 5 * time.Second,
+				},
+			},
+			expectedIntervalSeconds: float32(5.0),
+			expectedTimeoutSeconds:  float32(30),
+		},
+		{
+			name: "only specify timeout",
+			options: &operatorv2alpha1.ControlPlaneDataPlaneSync{
+				Timeout: &metav1.Duration{
+					Duration: time.Minute,
+				},
+			},
+			expectedIntervalSeconds: float32(3.0),
+			expectedTimeoutSeconds:  float32(60),
+		},
+		{
+			name: "specify both interval and timeout",
+			options: &operatorv2alpha1.ControlPlaneDataPlaneSync{
+				Interval: &metav1.Duration{
+					Duration: 10 * time.Second,
+				},
+				Timeout: &metav1.Duration{
+					Duration: time.Minute,
+				},
+			},
+			expectedIntervalSeconds: float32(10),
+			expectedTimeoutSeconds:  float32(60),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg, err := manager.NewConfig(
+				WithDataPlaneSyncOptions(*tc.options),
+			)
+			require.NoError(t, err)
+			require.Equal(t, tc.expectedIntervalSeconds, cfg.ProxySyncSeconds)
+			require.Equal(t, tc.expectedTimeoutSeconds, cfg.ProxyTimeoutSeconds)
 		})
 	}
 }

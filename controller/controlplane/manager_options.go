@@ -11,6 +11,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+
 	"github.com/kong/kong-operator/controller/pkg/log"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	telemetryTypes "github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
@@ -485,5 +487,19 @@ func WithCacheSyncPeriod(period time.Duration) managercfg.Opt {
 			return
 		}
 		c.SyncPeriod = period
+	}
+}
+
+// WithDataPlaneSyncOptions sets the option to sync Kong configuration with managed dataplanes.
+func WithDataPlaneSyncOptions(syncOptions operatorv2alpha1.ControlPlaneDataPlaneSync) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		// TODO: use `time.Duration` in mananger Config to specify interval & timeout:
+		// https://github.com/Kong/kong-operator/issues/1904
+		if syncOptions.Interval != nil {
+			c.ProxySyncSeconds = float32(syncOptions.Interval.Seconds())
+		}
+		if syncOptions.Timeout != nil {
+			c.ProxyTimeoutSeconds = float32(syncOptions.Timeout.Seconds())
+		}
 	}
 }
