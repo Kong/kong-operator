@@ -15,6 +15,7 @@ import (
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
 	"github.com/kong/kong-operator/internal/utils/index"
@@ -41,7 +42,7 @@ func KongVaultReconciliationWatchOptions(cl client.Client) []func(*ctrl.Builder)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.KonnectGatewayControlPlane{},
+				&konnectv1alpha2.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectForKonnectGatewayControlPlane[configurationv1alpha1.KongVaultList](
 						cl, index.IndexFieldKongVaultOnKonnectGatewayControlPlane,
@@ -85,7 +86,7 @@ func enqueueKongVaultForKonnectAPIAuthConfiguration(
 				if nn.Namespace != auth.Namespace {
 					continue
 				}
-				var cp konnectv1alpha1.KonnectGatewayControlPlane
+				var cp konnectv1alpha2.KonnectGatewayControlPlane
 				if err := cl.Get(ctx, nn, &cp); err != nil {
 					ctrllog.FromContext(ctx).Error(
 						err,

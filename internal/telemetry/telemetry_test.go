@@ -34,6 +34,7 @@ import (
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/metadata"
@@ -100,7 +101,7 @@ func createRESTMapper() meta.RESTMapper {
 	restMapper.Add(schema.GroupVersionKind{
 		Group:   konnectv1alpha1.SchemeGroupVersion.Group,
 		Version: konnectv1alpha1.SchemeGroupVersion.Version,
-		Kind:    konnectv1alpha1.KonnectGatewayControlPlane{}.GetTypeName(),
+		Kind:    konnectv1alpha2.KonnectGatewayControlPlane{}.GetTypeName(),
 	}, meta.RESTScopeNamespace)
 
 	return restMapper

@@ -22,6 +22,7 @@ import (
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -240,7 +241,7 @@ func createManager(
 			}
 			{
 				group, version := konnectv1alpha1.GroupVersion.Group, konnectv1alpha1.GroupVersion.Version
-				AddObjectCountProviderOrLog[konnectv1alpha1.KonnectGatewayControlPlane](w, dyn, cl.RESTMapper(), log, group, version)
+				AddObjectCountProviderOrLog[konnectv1alpha2.KonnectGatewayControlPlane](w, dyn, cl.RESTMapper(), log, group, version)
 			}
 		}
 

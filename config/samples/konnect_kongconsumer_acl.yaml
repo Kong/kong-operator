@@ -9,15 +9,16 @@ spec:
   serverURL: us.api.konghq.com
 ---
 kind: KonnectGatewayControlPlane
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: konnect.konghq.com/v1alpha2
 metadata:
   name: test-cp-acl
   namespace: default
 spec:
-  name: test-cp-acl
-  labels:
-    app: test-cp-acl
-    key1: test-cp-acl
+  createControlPlaneRequest:
+    name: test-cp-acl
+    labels:
+      app: test-cp-acl
+      key1: test-cp-acl
   konnect:
     authRef:
       name: konnect-api-auth-dev-1

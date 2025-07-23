@@ -1,6 +1,6 @@
 ---
 kind: KonnectGatewayControlPlane
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: konnect.konghq.com/v1alpha2
 metadata:
   name: test
 spec:

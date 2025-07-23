@@ -15,6 +15,7 @@ import (
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
@@ -35,12 +36,12 @@ type handleControlPlaneRefTestCase[T constraints.SupportedKonnectEntityType, TEn
 
 func TestHandleControlPlaneRef(t *testing.T) {
 	var (
-		cpOK = &konnectv1alpha1.KonnectGatewayControlPlane{
+		cpOK = &konnectv1alpha2.KonnectGatewayControlPlane{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "default",
 				Name:      "cp-ok",
 			},
-			Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
+			Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 				KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
 					ID: "cp-12345",
 				},
@@ -53,17 +54,17 @@ func TestHandleControlPlaneRef(t *testing.T) {
 			},
 		}
 
-		cpGroup = &konnectv1alpha1.KonnectGatewayControlPlane{
+		cpGroup = &konnectv1alpha2.KonnectGatewayControlPlane{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "default",
 				Name:      "cp-group",
 			},
-			Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-				CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
+			Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+				CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 					ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
 				},
 			},
-			Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
+			Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 				KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
 					ID: "cp-group-12345",
 				},
@@ -76,12 +77,12 @@ func TestHandleControlPlaneRef(t *testing.T) {
 			},
 		}
 
-		cpNotProgrammed = &konnectv1alpha1.KonnectGatewayControlPlane{
+		cpNotProgrammed = &konnectv1alpha2.KonnectGatewayControlPlane{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: "default",
 				Name:      "cp-not-programmed",
 			},
-			Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
+			Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 				KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
 					ID: "cp-12345",
 				},

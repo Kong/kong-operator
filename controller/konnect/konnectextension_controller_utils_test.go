@@ -14,18 +14,18 @@ import (
 )
 
 func TestEnforceKonnectExtensionStatus(t *testing.T) {
-	cp := konnectv1alpha1.KonnectGatewayControlPlane{
-		Status: konnectv1alpha1.KonnectGatewayControlPlaneStatus{
+	cp := konnectv1alpha2.KonnectGatewayControlPlane{
+		Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 			KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
 				ID: "cp-id",
 			},
-			Endpoints: &konnectv1alpha1.KonnectEndpoints{
+			Endpoints: &konnectv1alpha2.KonnectEndpoints{
 				ControlPlaneEndpoint: "cp-endpoint",
 				TelemetryEndpoint:    "telemetry-endpoint",
 			},
 		},
-		Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
-			CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
+		Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+			CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 				ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane.ToPointer(),
 			},
 		},

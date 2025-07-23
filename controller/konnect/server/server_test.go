@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/server"
 )
@@ -56,7 +57,7 @@ func TestServer(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := server.NewServer[konnectv1alpha1.KonnectGatewayControlPlane](tc.input)
+			got, err := server.NewServer[konnectv1alpha2.KonnectGatewayControlPlane](tc.input)
 			if tc.expectedErrorContains != "" {
 				require.Error(t, err)
 				require.ErrorContains(t, err, tc.expectedErrorContains)

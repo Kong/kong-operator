@@ -16,6 +16,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
@@ -41,7 +42,7 @@ func ReconciliationWatchOptionsForEntity[
 		return KongRouteReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.KongService:
 		return KongServiceReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.KonnectGatewayControlPlane:
+	case *konnectv1alpha2.KonnectGatewayControlPlane:
 		return KonnectGatewayControlPlaneReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		return KonnectCloudGatewayNetworkReconciliationWatchOptions(cl)
@@ -171,7 +172,7 @@ func enqueueObjectForKonnectGatewayControlPlane[
 	index string,
 ) func(context.Context, client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		cp, ok := obj.(*konnectv1alpha1.KonnectGatewayControlPlane)
+		cp, ok := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 		if !ok {
 			return nil
 		}
@@ -222,7 +223,7 @@ func enqueueObjectForAPIAuthThroughControlPlaneRef[
 			return nil
 		}
 
-		var cpList konnectv1alpha1.KonnectGatewayControlPlaneList
+		var cpList konnectv1alpha2.KonnectGatewayControlPlaneList
 		if err := cl.List(ctx, &cpList,
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(auth.GetNamespace()),
