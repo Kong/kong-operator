@@ -39,6 +39,22 @@
 > KGO becomes KO, which stands for Kong Operator - Kubernetes Gateway Operator and Kubernetes Ingress Controller
 > become a single product.
 
+### Breaking Changes
+
+- `KonnectExtension` has been bumped to `v1alpha2` and the Control plane reference via plain `KonnectID`
+  has been removed. `Mirror` `GatewayControlPlane` resource is now the only way to reference remote
+  control planes in read-only.
+  [#1711](https://github.com/kong/kong-operator/pull/1711)
+  <!-- TODO: https://github.com/kong/kong-operator/issues/1732 -->
+- rename product from Kong Gateway Operator to Kong Operator.
+  [#1767](https://github.com/Kong/kong-operator/pull/1767)
+- Add --cluster-domain flag and set default to 'cluster.local'
+  This commit introduces a new --cluster-domain flag to the KO binary, which is now propagated to the ingress-controller.
+  The default value for the cluster domain is set to 'cluster.local', whereas previously it was an empty string ("").
+  This is a breaking change, as any code or configuration relying on the previous default will now use 'cluster.local'
+  unless explicitly overridden.
+  [#1870](https://github.com/Kong/kong-operator/pull/1870)
+
 ### Added
 
 - Move implementation of ControlPlane Extensions mechanism and DataPlaneMetricsExtension from EE.
@@ -74,22 +90,6 @@
   re-created. When this happens, the `KonnectGatewayControlPlane` sees its Konnect ID changed, as well
   as the endpoints. All this data is constantly enforced into the `KonnectExtension` status.
   [#1684](https://github.com/kong/kong-operator/pull/1684)
-
-### Breaking Changes
-
-- `KonnectExtension` has been bumped to `v1alpha2` and the Control plane reference via plain `KonnectID`
-  has been removed. `Mirror` `GatewayControlPlane` resource is now the only way to reference remote
-  control planes in read-only.
-  [#1711](https://github.com/kong/kong-operator/pull/1711)
-  <!-- TODO: https://github.com/kong/kong-operator/issues/1732 -->
-- rename product from Kong Gateway Operator to Kong Operator.
-  [#1767](https://github.com/Kong/kong-operator/pull/1767)
-- Add --cluster-domain flag and set default to 'cluster.local'
-  This commit introduces a new --cluster-domain flag to the KO binary, which is now propagated to the ingress-controller.
-  The default value for the cluster domain is set to 'cluster.local', whereas previously it was an empty string ("").
-  This is a breaking change, as any code or configuration relying on the previous default will now use 'cluster.local'
-  unless explicitly overridden.
-  [#1870](https://github.com/Kong/kong-operator/pull/1870)
 
 ## [v1.6.2]
 
