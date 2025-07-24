@@ -367,11 +367,18 @@ jobs:
       with:
         install: false
 
+    - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master @ 20250107
+      id: license
+      with:
+        op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+        
+
     - name: run envtest tests
       working-directory: ${{ matrix.directory }}
       run: make test.envtest
       env:
-        GOTESTSUM_JUNITFILE: "envtest-tests.xml"
+        KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
+        GOTESTSUM_JUNITFILE: "${{ matrix.directory }}/envtest-tests.xml"
 
     - name: collect test coverage
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -482,7 +489,7 @@ jobs:
       env:
         KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
         KONG_CONTROLLER_OUT: stdout
-        GOTESTSUM_JUNITFILE: integration-tests.xml
+        GOTESTSUM_JUNITFILE: "${{ matrix.directory }}/integration-tests.xml"
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
