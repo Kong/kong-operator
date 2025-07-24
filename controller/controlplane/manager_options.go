@@ -493,13 +493,11 @@ func WithCacheSyncPeriod(period time.Duration) managercfg.Opt {
 // WithDataPlaneSyncOptions sets the option to sync Kong configuration with managed dataplanes.
 func WithDataPlaneSyncOptions(syncOptions operatorv2alpha1.ControlPlaneDataPlaneSync) managercfg.Opt {
 	return func(c *managercfg.Config) {
-		// TODO: use `time.Duration` in mananger Config to specify interval & timeout:
-		// https://github.com/Kong/kong-operator/issues/1904
 		if syncOptions.Interval != nil {
-			c.ProxySyncSeconds = float32(syncOptions.Interval.Seconds())
+			c.ProxySyncInterval = syncOptions.Interval.Duration
 		}
 		if syncOptions.Timeout != nil {
-			c.ProxyTimeoutSeconds = float32(syncOptions.Timeout.Seconds())
+			c.ProxySyncTimeout = syncOptions.Timeout.Duration
 		}
 	}
 }

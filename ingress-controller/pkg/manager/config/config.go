@@ -62,9 +62,9 @@ type Config struct {
 	GatewayDiscoveryReadinessCheckInterval time.Duration
 	GatewayDiscoveryReadinessCheckTimeout  time.Duration
 	KongAdminSvcPortNames                  []string
-	ProxySyncSeconds                       float32
+	ProxySyncInterval                      time.Duration
 	InitCacheSyncDuration                  time.Duration
-	ProxyTimeoutSeconds                    float32
+	ProxySyncTimeout                       time.Duration
 
 	// KubeRestConfig takes precedence over any fields related to what it configures,
 	// such as APIServerHost, APIServerQPS, etc. It's intended to be used when the controller
