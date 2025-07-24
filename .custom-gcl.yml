@@ -4,6 +4,4 @@ name: golangci-kube-api-linter
 destination: ./bin
 plugins:
 - module: 'sigs.k8s.io/kube-api-linter'
-  # This version will not get auto updated so ideally we'd add a renovate
-  # config to update this file automatically.
   version: e719da12d8403e66335882c7ad704f8e95927ce0
