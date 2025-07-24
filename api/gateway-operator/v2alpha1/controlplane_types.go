@@ -136,7 +136,35 @@ type ControlPlaneOptions struct {
 	//
 	// +optional
 	DataPlaneSync *ControlPlaneDataPlaneSync `json:"dataplaneSync,omitempty"`
+
+	// Translation defines the configuration for translating Kong configuration.
+	//
+	// +optional
+	Translation *ControlPlaneTranslationOptions `json:"translation,omitempty"`
 }
+
+// ControlPlaneTranslationOptions defines the configuration for translating
+// cluster resources into Kong configuration.
+type ControlPlaneTranslationOptions struct {
+	// CombinedServicesFromDifferentHTTPRoutes indicates whether the ControlPlane should
+	// combine services from different HTTPRoutes into a single Kong DataPlane service.
+	//
+	// +optional
+	// +kubebuilder:default=enabled
+	// +kubebuilder:validation:Enum=enabled;disabled
+	CombinedServicesFromDifferentHTTPRoutes *ControlPlaneCombinedServicesFromDifferentHTTPRoutesState `json:"combinedServicesFromDifferentHTTPRoutes,omitempty"`
+}
+
+// ControlPlaneCombinedServicesFromDifferentHTTPRoutesState defines the state of the
+// feature that allows the ControlPlane to combine services from different HTTPRoutes.
+type ControlPlaneCombinedServicesFromDifferentHTTPRoutesState string
+
+const (
+	// ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled indicates that the feature is enabled.
+	ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled ControlPlaneCombinedServicesFromDifferentHTTPRoutesState = "enabled"
+	// ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled indicates that the feature is disabled.
+	ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled ControlPlaneCombinedServicesFromDifferentHTTPRoutesState = "disabled"
+)
 
 // ControlPlaneDataPlaneSync defines the configuration for syncing Kong configuration to the DataPlane.
 //
