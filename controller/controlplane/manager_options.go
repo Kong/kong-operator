@@ -509,6 +509,27 @@ func WithDataPlaneSyncOptions(syncOptions operatorv2alpha1.ControlPlaneDataPlane
 func WithEmitKubernetesEvents(emit bool) managercfg.Opt {
 	return func(c *managercfg.Config) {
 		c.EmitKubernetesEvents = emit
+
+	}
+}
+
+// TODO: We need to support multiple label selectors for secrets/config maps in ingress controller managers
+// when we support specifying both operator level and per ControlPlane selectors:
+// https://github.com/Kong/kong-operator/issues/1863
+
+// WithSecretLabelSelector sets the label selector to filter ingested secrets.
+// When label selector is not empty, only the `Secret`s having the given label with value "true" are ingested.
+func WithSecretLabelSelector(labelSelector string) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.SecretLabelSelector = labelSelector
+	}
+}
+
+// WithConfigMapLabelSelector sets the label selector to filter ingested config maps.
+// When label selector is not empty, only the `ConfigMap`s having the given label with value "true" are ingested.
+func WithConfigMapLabelSelector(labelSelector string) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.ConfigMapLabelSelector = labelSelector
 	}
 }
 

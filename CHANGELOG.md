@@ -32,6 +32,19 @@
 
 ## Unreleased
 
+### Breaking Changes
+
+- Add flags `--secret-label-selector` and `--config-map-label-selector` to
+  filter watched `Secret`s and `ConfigMap`s. Only secrets or configMaps with
+  the given label and has the value set to `true` are reconciled by the
+  controllers. For example, if `--secret-label-selector` is set to `konghq.com/secret`,
+  only `Secret`s with the label `konghq.com/secret:true` are reconciled.
+  The default value of the two labels are set to `konghq.com/secret` and
+  `konghq.com/configmap` so it breaks when you are using `Secret`s and
+  `ConfigMap`s without the given labels.
+  [#1922](https://github.com/Kong/kong-operator/pull/1922)
+
+
 ### Added
 
 - Introduce the flag `--emit-kubernetes-events` to enable/disable the creation of
