@@ -49,7 +49,7 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 TOOLS_VERSIONS_FILE = $(PROJECT_DIR)/.tools_versions.yaml
 
 .PHONY: tools
-tools: kic-role-generator controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq crd-ref-docs
+tools: controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq crd-ref-docs
 
 MISE := $(shell which mise)
 .PHONY: mise
@@ -63,11 +63,6 @@ mise-plugin-install: mise
 .PHONY: mise-install
 mise-install: mise
 	@$(MISE) install -q $(DEP_VER)
-
-KIC_ROLE_GENERATOR = $(PROJECT_DIR)/bin/kic-role-generator
-.PHONY: kic-role-generator
-kic-role-generator:
-	( cd ./hack/generators/kic/role-generator && go build -o $(KIC_ROLE_GENERATOR) . )
 
 KIC_WEBHOOKCONFIG_GENERATOR = $(PROJECT_DIR)/bin/kic-webhook-config-generator
 .PHONY: kic-webhook-config-generator
@@ -307,7 +302,7 @@ verify.generators: verify.repo generate verify.diff
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.rbacs generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.kic-webhook-config generate.mocks generate.cli-arguments-docs
+generate: generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.kic-webhook-config generate.mocks generate.cli-arguments-docs
 
 .PHONY: generate.crd-kustomize
 generate.crd-kustomize:
@@ -336,9 +331,6 @@ generate.clientsets: client-gen
 		--output-pkg $(REPO)/pkg/
 	rm apis
 	find ./pkg/clientset/ -type f -name '*.go' -exec sed -i '' -e 's/github.com\/kong\/gateway-operator\/apis/github.com\/kong\/gateway-operator\/api/gI' {} \; &> /dev/null
-.PHONY: generate.rbacs
-generate.rbacs: kic-role-generator
-	$(KIC_ROLE_GENERATOR) --force
 
 .PHONY: generate.k8sio-gomod-replace
 generate.k8sio-gomod-replace:
@@ -355,19 +347,11 @@ generate.cli-arguments-docs:
 	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments.md
 
 # ------------------------------------------------------------------------------
-# Files generation checks
-# ------------------------------------------------------------------------------
-
-.PHONY: check.rbacs
-check.rbacs: kic-role-generator
-	$(KIC_ROLE_GENERATOR) --fail-on-error
-
-# ------------------------------------------------------------------------------
 # Build - Manifests
 # ------------------------------------------------------------------------------
 
 CONTROLLER_GEN_CRD_OPTIONS ?= "+crd:generateEmbeddedObjectMeta=true"
-CONTROLLER_GEN_PATHS_RAW := ./pkg/utils/kubernetes/resources/clusterroles/ ./pkg/utils/kubernetes/reduce/ ./controller/...
+CONTROLLER_GEN_PATHS_RAW := ./pkg/utils/kubernetes/reduce/ ./controller/... ./ingress-controller/internal/controllers/... ./ingress-controller/internal/konnect/ ./modules/manager/
 CONTROLLER_GEN_PATHS := $(patsubst %,%;,$(strip $(CONTROLLER_GEN_PATHS_RAW)))
 CONFIG_DIR = $(PROJECT_DIR)/config
 CONFIG_CRD_DIR = $(CONFIG_DIR)/crd
@@ -387,7 +371,9 @@ manifests.crds: controller-gen ## Generate CustomResourceDefinition objects.
 
 .PHONY: manifests.role
 manifests.role: controller-gen
-	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" rbac:roleName=manager-role output:rbac:dir=$(CONFIG_RBAC_ROLE_DIR)
+	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" \
+		rbac:roleName=manager-role \
+		output:rbac:dir=$(CONFIG_RBAC_ROLE_DIR)
 
 # manifests.versions ensures that image versions are set in the manifests according to the current version.
 .PHONY: manifests.versions

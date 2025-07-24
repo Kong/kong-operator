@@ -129,6 +129,8 @@ func DefaultConfig() Config {
 // in Run function.
 type SetupControllersFunc func(manager.Manager, *Config, *multiinstance.Manager) ([]ControllerDef, error)
 
+//+kubebuilder:rbac:groups=coordination.k8s.io,resources=leases,verbs=get;list;watch;create;update;patch;delete
+
 // Run runs the manager. Parameter cfg represents the configuration for the manager
 // that for normal operation is derived from command-line flags. The function
 // setupControllers is expected to return a list of configured ControllerDef
