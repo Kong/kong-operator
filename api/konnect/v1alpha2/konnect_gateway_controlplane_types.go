@@ -112,15 +112,6 @@ type MirrorKonnect struct {
 // KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayControlPlane.
 // +apireference:kgo:include
 type KonnectGatewayControlPlaneStatus struct {
-	konnectv1alpha1.KonnectEntityStatus `json:",inline"`
-
-	// Endpoints defines the Konnect endpoints for the control plane.
-	// They are required by the DataPlane to be properly configured in
-	// Konnect and connect to the control plane.
-	//
-	// +optional
-	Endpoints *KonnectEndpoints `json:"konnectEndpoints,omitempty"`
-
 	// Conditions describe the current conditions of the KonnectGatewayControlPlane.
 	//
 	// Known condition types are:
@@ -129,10 +120,21 @@ type KonnectGatewayControlPlaneStatus struct {
 	//
 	// +listType=map
 	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
+	konnectv1alpha1.KonnectEntityStatus `json:",inline"`
+
+	// Endpoints defines the Konnect endpoints for the control plane.
+	// They are required by the DataPlane to be properly configured in
+	// Konnect and connect to the control plane.
+	//
+	// +optional
+	Endpoints *KonnectEndpoints `json:"konnectEndpoints,omitempty"`
 }
 
 // GetKonnectLabels gets the Konnect Labels from object's spec.

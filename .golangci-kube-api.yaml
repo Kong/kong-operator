@@ -15,6 +15,7 @@ linters:
             enable:
               - jsontags
               - duplicatemarkers
+              - conditions
               # - maxlength
               - integers
               - nobools
@@ -55,3 +56,18 @@ linters:
           - kubeapilinter
         path: api/konnect/v1alpha1/konnect_gateway_controlplane_types.go
         text: "nobools: field CloudGateway pointer should not use a bool. Use a string type with meaningful constant values as an enum."
+      # NOTE: Let the old APIs be as they are.
+      - linters:
+          - kubeapilinter
+        path: api/konnect/v1alpha1/.*
+        text: "conditions: Conditions field is missing the following markers: patchStrategy=merge, patchMergeKey=type"
+      # NOTE: Let the old APIs be as they are.
+      - linters:
+          - kubeapilinter
+        path: api/konnect/v1alpha1/.*
+        text: "conditions: Conditions field has incorrect tags, should be:"
+      # NOTE: Let the old APIs be as they are.
+      - linters:
+          - kubeapilinter
+        path: api/konnect/v1alpha1/.*
+        text: "conditions: Conditions field must be the first field in the struct"

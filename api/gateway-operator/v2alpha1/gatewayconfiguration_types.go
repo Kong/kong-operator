@@ -225,8 +225,10 @@ type GatewayConfigurationStatus struct {
 	// +optional
 	// +listType=map
 	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
 	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
 // GatewayConfigurationList contains a list of GatewayConfiguration

@@ -310,9 +310,11 @@ type ControlPlaneStatus struct {
 	// +optional
 	// +listType=map
 	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Scheduled", status: "Unknown", reason:"NotReconciled", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
 	// FeatureGates is a list of effective feature gates for this ControlPlane.
 	//
