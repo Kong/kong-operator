@@ -1025,3 +1025,17 @@ func TestWithEmitKubernetesEvents(t *testing.T) {
 		})
 	}
 }
+
+func TestWithSecretLabelSelector(t *testing.T) {
+	cfg := &managercfg.Config{}
+	opt := WithSecretLabelSelector("konghq.com/secret")
+	opt(cfg)
+	assert.Equal(t, "konghq.com/secret", cfg.SecretLabelSelector)
+}
+
+func TestConfigMapLabelSelector(t *testing.T) {
+	cfg := &managercfg.Config{}
+	opt := WithConfigMapLabelSelector("konghq.com/configmap")
+	opt(cfg)
+	assert.Equal(t, "konghq.com/configmap", cfg.ConfigMapLabelSelector)
+}

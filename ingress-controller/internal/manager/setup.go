@@ -53,6 +53,10 @@ import (
 func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.Config, dbmode dpconf.DBMode) ctrl.Options {
 	logger.Info("Building the manager runtime scheme and loading apis into the scheme")
 
+	cacheOptions := cache.Options{
+		SyncPeriod: &c.SyncPeriod,
+	}
+
 	// configure the general manager options
 	managerOpts := ctrl.Options{
 		Controller: config.Controller{
@@ -81,11 +85,9 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.
 		WebhookServer:    webhook.NewServer(webhook.Options{Port: 9443}),
 		LeaderElection:   leaderElectionEnabled(logger, *c, dbmode),
 		LeaderElectionID: c.LeaderElectionID,
-		Cache: cache.Options{
-			SyncPeriod: &c.SyncPeriod,
-		},
-		Logger:    ctrl.LoggerFrom(ctx),
-		NewClient: newManagerClient,
+		Cache:            cacheOptions,
+		Logger:           ctrl.LoggerFrom(ctx),
+		NewClient:        newManagerClient,
 	}
 
 	// If there are no configured watch namespaces, then we're watching ALL namespaces,

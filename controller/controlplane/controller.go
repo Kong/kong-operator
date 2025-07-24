@@ -63,6 +63,13 @@ type Reconciler struct {
 	AnonymousReportsEnabled bool
 	ClusterDomain           string
 	EmitKubernetesEvents    bool
+
+	// SecretLabelSelector is the label selector configured at the operator level.
+	// When not empty, it is used as the secret label selector of all ingress cotrollers' managers.
+	SecretLabelSelector string
+	// ConfigMapLabelSelector is the label selector configured at the oprator level.
+	// When not empty, it is used as the config map label selector of all ingress cotrollers' managers.
+	ConfigMapLabelSelector string
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -402,6 +409,13 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		WithClusterDomain(r.ClusterDomain),
 		WithQPSAndBurst(apiServerQPS, apiServerBurst),
 		WithEmitKubernetesEvents(r.EmitKubernetesEvents),
+	}
+
+	if r.SecretLabelSelector != "" {
+		cfgOpts = append(cfgOpts, WithSecretLabelSelector(r.SecretLabelSelector))
+	}
+	if r.ConfigMapLabelSelector != "" {
+		cfgOpts = append(cfgOpts, WithConfigMapLabelSelector(r.ConfigMapLabelSelector))
 	}
 
 	if dps := cp.Spec.DataPlaneSync; dps != nil {
