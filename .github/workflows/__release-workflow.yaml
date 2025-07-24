@@ -310,6 +310,10 @@ jobs:
         if: ${{ inputs.regenerate-manifests }}
         run: make manifests
 
+      # Chart and golden tests for it includes information about current KO version.
+      - name: Update version in chart and its tests
+        run: make test.charts.golden.update
+
       # The generated bundle is part of the release PR.
       # This is done locally in this job, to avoid including unintended changes.
       # If anything needs to be fixed before the release, it should be done on the base branch
