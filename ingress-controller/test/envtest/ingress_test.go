@@ -52,7 +52,7 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
-		WithProxySyncSeconds(0.01),
+		WithProxySyncInterval(10*time.Millisecond),
 		WithDiagnosticsServer(diagPort),
 	)
 
