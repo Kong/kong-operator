@@ -1,2 +1,4 @@
 Kong/charts:
-  - charts/kong-operator
+  - source: charts/kong-operator
+    destination: charts/kong-operator
+    deleteOrphaned: true
