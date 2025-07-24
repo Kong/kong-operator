@@ -14,6 +14,7 @@ on:
       - .github/workflows/charts-sync.yaml
     branches:
       - main
+      - fix-sync
   workflow_dispatch:
 
 permissions:
