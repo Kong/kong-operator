@@ -158,7 +158,7 @@ func setupDataplaneSynchronizer(
 ) (*dataplane.Synchronizer, error) {
 	if proxySyncInterval < dataplane.DefaultSyncInterval {
 		logger.Info(fmt.Sprintf(
-			"WARNING: --proxy-sync-seconds is configured for %v, in DBLESS mode this may result in"+
+			"WARNING: --proxy-sync-interval is configured for %v, in DBLESS mode this may result in"+
 				" problems of inconsistency in the proxy state. For DBLESS mode %v+ is recommended (3s is the default).",
 			proxySyncInterval, dataplane.DefaultSyncInterval,
 		))
