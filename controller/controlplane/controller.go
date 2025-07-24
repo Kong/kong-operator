@@ -407,7 +407,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	if dps := cp.Spec.DataPlaneSync; dps != nil {
 		cfgOpts = append(
 			cfgOpts,
-			WithReverseSync(dps.EnableReverse),
+			WithReverseSync(dps.ReverseSync),
 		)
 	}
 
