@@ -501,3 +501,10 @@ func WithDataPlaneSyncOptions(syncOptions operatorv2alpha1.ControlPlaneDataPlane
 		}
 	}
 }
+
+// WithEmitKubernetesEvents sets whether to emit Kubernetes events for the manager.
+func WithEmitKubernetesEvents(emit bool) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.EmitKubernetesEvents = emit
+	}
+}
