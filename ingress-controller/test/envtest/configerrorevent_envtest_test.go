@@ -113,7 +113,7 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
 		WithKongUpstreamPolicyEnabled(),
-		WithProxySyncSeconds(0.1),
+		WithProxySyncInterval(100*time.Millisecond),
 	)
 
 	const numberOfExpectedEvents = 13
@@ -186,7 +186,7 @@ func TestConfigErrorEventGenerationDBMode(t *testing.T) {
 		),
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
-		WithProxySyncSeconds(0.1),
+		WithProxySyncInterval(100*time.Millisecond),
 	)
 
 	const numberOfExpectedEvents = 6
@@ -275,7 +275,7 @@ func TestStickySessionsNotSupportedEventGeneration(t *testing.T) {
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
 		WithKongServiceFacadeFeatureEnabled(),
-		WithProxySyncSeconds(0.1),
+		WithProxySyncInterval(100*time.Millisecond),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 

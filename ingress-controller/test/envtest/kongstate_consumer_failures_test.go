@@ -117,7 +117,7 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 		"consumer-empty-cred": `credential "empty-cred" failure: failed to provision credential: key-auth is invalid: no key`,
 	}
 
-	RunManager(ctx, t, cfg, AdminAPIOptFns(), WithProxySyncSeconds(0.5))
+	RunManager(ctx, t, cfg, AdminAPIOptFns(), WithProxySyncInterval(500*time.Millisecond))
 
 	require.Eventually(t, func() bool {
 		events := &corev1.EventList{}

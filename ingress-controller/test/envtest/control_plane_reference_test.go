@@ -5,6 +5,7 @@ package envtest
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/samber/lo"
@@ -51,7 +52,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 		WithUpdateStatus(),
 		WithIngressClass(ingressClassName),
 		WithPublishService(ns.Name),
-		WithProxySyncSeconds(0.10),
+		WithProxySyncInterval(100*time.Millisecond),
 		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)

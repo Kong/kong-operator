@@ -1,6 +1,12 @@
 version: "2"
 run:
   timeout: 8m
+  build-tags:
+    - integration_tests
+    - e2e_tests
+    - conformance_tests
+    - istio_tests
+    - envtest
 linters:
   enable:
     - asciicheck

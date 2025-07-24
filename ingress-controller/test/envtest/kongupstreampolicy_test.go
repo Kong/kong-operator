@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -53,7 +54,7 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 		WithGatewayFeatureEnabled,
 		WithKongServiceFacadeFeatureEnabled(),
 		WithGatewayAPIControllers(),
-		WithProxySyncSeconds(0.10),
+		WithProxySyncInterval(100*time.Millisecond),
 		WithDiagnosticsServer(diagPort),
 	)
 
@@ -176,7 +177,7 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 		WithIngressClass(ingressClassName),
 		WithGatewayFeatureEnabled,
 		WithGatewayAPIControllers(),
-		WithProxySyncSeconds(0.10),
+		WithProxySyncInterval(100*time.Millisecond),
 		WithDiagnosticsServer(diagPort),
 	)
 
@@ -360,7 +361,7 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
-		WithProxySyncSeconds(0.10),
+		WithProxySyncInterval(100*time.Millisecond),
 	)
 
 	t.Log("creating a KongUpstreamPolicy")
