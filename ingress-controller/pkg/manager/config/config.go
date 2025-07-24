@@ -62,9 +62,10 @@ type Config struct {
 	GatewayDiscoveryReadinessCheckInterval time.Duration
 	GatewayDiscoveryReadinessCheckTimeout  time.Duration
 	KongAdminSvcPortNames                  []string
-	ProxySyncSeconds                       float32
-	InitCacheSyncDuration                  time.Duration
-	ProxyTimeoutSeconds                    float32
+	// REVIEW: totally remove it as we do not support running ingress-controller by CLI in KO repo?
+	ProxySyncInterval     time.Duration
+	InitCacheSyncDuration time.Duration
+	ProxySyncTimeout      time.Duration
 
 	// KubeRestConfig takes precedence over any fields related to what it configures,
 	// such as APIServerHost, APIServerQPS, etc. It's intended to be used when the controller

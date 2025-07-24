@@ -101,11 +101,9 @@ func (c *CLIConfig) bindFlagSet() {
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", consts.MetricsPort), "The address the metric endpoint binds to.")
 	flagSet.Var(flags.NewValidatedValue(&c.MetricsAccessFilter, metricsAccessFilterFromFlagValue, flags.WithDefault(managercfg.MetricsAccessFilterOff)), "metrics-access-filter", "Specifies the filter access function to be used for accessing the metrics endpoint (possible values: off, rbac).")
 	flagSet.StringVar(&c.ProbeAddr, "health-probe-bind-address", fmt.Sprintf(":%v", consts.HealthzPort), "The address the probe endpoint binds to.")
-	flagSet.Float32Var(&c.ProxySyncSeconds, "proxy-sync-seconds", dataplane.DefaultSyncSeconds,
-		"Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API.")
+	flagSet.DurationVar(&c.ProxySyncInterval, "proxy-sync-interval", dataplane.DefaultSyncInterval, "Define the rate in which configuration updates will be applied to the Kong Admin API.")
 	flagSet.DurationVar(&c.InitCacheSyncDuration, "init-cache-sync-duration", dataplane.DefaultCacheSyncWaitDuration, `The initial delay to wait for Kubernetes object caches to be synced before the initial configuration.`)
-	flagSet.Float32Var(&c.ProxyTimeoutSeconds, "proxy-timeout-seconds", dataplane.DefaultTimeoutSeconds,
-		"Sets the timeout (in seconds) for all requests to Kong's Admin API.")
+	flagSet.DurationVar(&c.ProxySyncTimeout, "proxy-sync-timeout", dataplane.DefaultTimeout, "Sets the timeout for all requests to Kong's Admin API.")
 
 	// Kubernetes configurations
 	flagSet.Var(flags.NewValidatedValue(&c.GatewayAPIControllerName, gatewayAPIControllerNameFromFlagValue, flags.WithDefault(string(gateway.GetControllerName()))), "gateway-api-controller-name", "The controller name to match on Gateway API resources.")

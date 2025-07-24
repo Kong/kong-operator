@@ -933,16 +933,16 @@ func TestWithGatewayDiscoveryReadinessCheckTimeout(t *testing.T) {
 
 func TestWithDataPlaneSyncOptions(t *testing.T) {
 	testCases := []struct {
-		name                    string
-		options                 *operatorv2alpha1.ControlPlaneDataPlaneSync
-		expectedIntervalSeconds float32
-		expectedTimeoutSeconds  float32
+		name             string
+		options          *operatorv2alpha1.ControlPlaneDataPlaneSync
+		expectedInterval time.Duration
+		expectedTimeout  time.Duration
 	}{
 		{
-			name:                    "empty value sets default interval and timeout",
-			options:                 &operatorv2alpha1.ControlPlaneDataPlaneSync{},
-			expectedIntervalSeconds: float32(3.0),
-			expectedTimeoutSeconds:  float32(30),
+			name:             "empty value sets default interval and timeout",
+			options:          &operatorv2alpha1.ControlPlaneDataPlaneSync{},
+			expectedInterval: 3 * time.Second,
+			expectedTimeout:  30 * time.Second,
 		},
 		{
 			name: "only specify interval",
@@ -951,8 +951,8 @@ func TestWithDataPlaneSyncOptions(t *testing.T) {
 					Duration: 5 * time.Second,
 				},
 			},
-			expectedIntervalSeconds: float32(5.0),
-			expectedTimeoutSeconds:  float32(30),
+			expectedInterval: 5 * time.Second,
+			expectedTimeout:  30 * time.Second,
 		},
 		{
 			name: "only specify timeout",
@@ -961,8 +961,8 @@ func TestWithDataPlaneSyncOptions(t *testing.T) {
 					Duration: time.Minute,
 				},
 			},
-			expectedIntervalSeconds: float32(3.0),
-			expectedTimeoutSeconds:  float32(60),
+			expectedInterval: 3 * time.Second,
+			expectedTimeout:  time.Minute,
 		},
 		{
 			name: "specify both interval and timeout",
@@ -974,8 +974,8 @@ func TestWithDataPlaneSyncOptions(t *testing.T) {
 					Duration: time.Minute,
 				},
 			},
-			expectedIntervalSeconds: float32(10),
-			expectedTimeoutSeconds:  float32(60),
+			expectedInterval: 10 * time.Second,
+			expectedTimeout:  time.Minute,
 		},
 	}
 
@@ -985,8 +985,8 @@ func TestWithDataPlaneSyncOptions(t *testing.T) {
 				WithDataPlaneSyncOptions(*tc.options),
 			)
 			require.NoError(t, err)
-			require.Equal(t, tc.expectedIntervalSeconds, cfg.ProxySyncSeconds)
-			require.Equal(t, tc.expectedTimeoutSeconds, cfg.ProxyTimeoutSeconds)
+			require.Equal(t, tc.expectedInterval, cfg.ProxySyncInterval)
+			require.Equal(t, tc.expectedTimeout, cfg.ProxySyncTimeout)
 		})
 	}
 }

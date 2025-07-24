@@ -17,7 +17,7 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	// DefaultSyncSeconds indicates the time.Duration (minimum) that will occur between
+	// DefaultSyncInterval indicates the time.Duration (minimum) that will occur between
 	// updates to the DataplaneClient.
 	//
 	// This default was based on local testing wherein it appeared sub-second updates
@@ -26,7 +26,7 @@ const (
 	// for improvements we still need to investigate upstream.
 	//
 	// See Also: https://github.com/Kong/kubernetes-ingress-controller/issues/1398
-	DefaultSyncSeconds float32 = 3.0
+	DefaultSyncInterval = 3 * time.Second
 
 	DefaultCacheSyncWaitDuration = 5 * time.Second
 )
@@ -77,7 +77,7 @@ func WithInitCacheSyncDuration(period time.Duration) SynchronizerOption {
 func NewSynchronizer(logger logr.Logger, client Client, opts ...SynchronizerOption) (*Synchronizer, error) {
 	synchronizer := &Synchronizer{
 		logger:          logger,
-		stagger:         time.Duration(DefaultSyncSeconds),
+		stagger:         DefaultSyncInterval,
 		initWaitPeriod:  DefaultCacheSyncWaitDuration,
 		dataplaneClient: client,
 		configApplied:   false,

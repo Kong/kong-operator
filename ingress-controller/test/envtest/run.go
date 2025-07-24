@@ -45,7 +45,7 @@ func WithDefaultEnvTestsConfig(envcfg *rest.Config) func(cfg *managercfg.Config)
 
 		// Shorten the wait in tests.
 		cfg.UpdateStatus = false
-		cfg.ProxySyncSeconds = 0.1
+		cfg.ProxySyncInterval = 100 * time.Millisecond
 		cfg.InitCacheSyncDuration = 0
 
 		cfg.MetricsAddr = "0"
@@ -115,9 +115,9 @@ func WithIngressClass(name string) func(cfg *managercfg.Config) {
 	}
 }
 
-func WithProxySyncSeconds(period float32) func(cfg *managercfg.Config) {
+func WithProxySyncInterval(period time.Duration) func(cfg *managercfg.Config) {
 	return func(cfg *managercfg.Config) {
-		cfg.ProxySyncSeconds = period
+		cfg.ProxySyncInterval = period
 	}
 }
 

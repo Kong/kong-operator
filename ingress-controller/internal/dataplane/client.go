@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"context"
+	"time"
 
 	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
 )
@@ -11,12 +12,12 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	// DefaultTimeoutSeconds indicates the time.Duration allowed for responses to
+	// DefaultTimeout indicates the time.Duration allowed for responses to
 	// come back from the backend data-plane API.
 	//
 	// NOTE: the current default is based on observed latency in a CI environment using
 	// the GKE cloud provider with the Kong Admin API.
-	DefaultTimeoutSeconds float32 = 30.0
+	DefaultTimeout = 30 * time.Second
 )
 
 // -----------------------------------------------------------------------------

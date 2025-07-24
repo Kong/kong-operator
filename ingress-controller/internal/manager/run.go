@@ -246,7 +246,7 @@ func New(
 	}
 	dataplaneClient, err := dataplane.NewKongClient(
 		logger,
-		time.Duration(c.ProxyTimeoutSeconds*float32(time.Second)),
+		c.ProxySyncTimeout,
 		kongConfig,
 		eventRecorder,
 		dbMode,
@@ -265,7 +265,7 @@ func New(
 	}
 
 	setupLog.Info("Initializing Dataplane Synchronizer")
-	synchronizer, err := setupDataplaneSynchronizer(logger, mgr, dataplaneClient, c.ProxySyncSeconds, c.InitCacheSyncDuration)
+	synchronizer, err := setupDataplaneSynchronizer(logger, mgr, dataplaneClient, c.ProxySyncInterval, c.InitCacheSyncDuration)
 	if err != nil {
 		return nil, fmt.Errorf("unable to initialize dataplane synchronizer: %w", err)
 	}
