@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"github.com/samber/mo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -138,9 +137,13 @@ func WithFeatureGates(logger logr.Logger, featureGates []gwtypes.ControlPlaneFea
 
 // WithReverseSync sets whether configuration is sent to Kong even
 // if the configuration checksum has not changed since previous update.
-func WithReverseSync(enabled *bool) managercfg.Opt {
+func WithReverseSync(state *operatorv2alpha1.ControlPlaneReverseSyncState) managercfg.Opt {
 	return func(c *managercfg.Config) {
-		c.EnableReverseSync = lo.FromPtr(enabled)
+		if state == nil {
+			return
+		}
+
+		c.EnableReverseSync = *state == operatorv2alpha1.ControlPlaneReverseSyncStateEnabled
 	}
 }
 

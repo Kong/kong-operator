@@ -9019,15 +9019,15 @@ spec:
                 description: DataPlaneSync defines the configuration for syncing Kong
                   configuration to the DataPlane.
                 properties:
-                  enableReverse:
-                    default: false
-                    description: EnableReverse sends configuration to DataPlane (Kong
-                      Gateway) even if the configuration checksum has not changed
-                      since previous update.
-                    type: boolean
                   interval:
                     description: Interval is the interval between two rounds of syncing
                       Kong configuration with dataplanes.
+                    type: string
+                  reverseSync:
+                    default: disabled
+                    description: |-
+                      ReverseSync sends configuration to DataPlane (Kong Gateway) even if
+                      the configuration checksum has not changed since previous update.
                     type: string
                   timeout:
                     description: Timeout is the timeout of a single run of syncing
@@ -36765,15 +36765,15 @@ spec:
                     description: DataPlaneSync defines the configuration for syncing
                       Kong configuration to the DataPlane.
                     properties:
-                      enableReverse:
-                        default: false
-                        description: EnableReverse sends configuration to DataPlane
-                          (Kong Gateway) even if the configuration checksum has not
-                          changed since previous update.
-                        type: boolean
                       interval:
                         description: Interval is the interval between two rounds of
                           syncing Kong configuration with dataplanes.
+                        type: string
+                      reverseSync:
+                        default: disabled
+                        description: |-
+                          ReverseSync sends configuration to DataPlane (Kong Gateway) even if
+                          the configuration checksum has not changed since previous update.
                         type: string
                       timeout:
                         description: Timeout is the timeout of a single run of syncing
