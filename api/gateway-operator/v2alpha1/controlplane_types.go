@@ -142,20 +142,33 @@ type ControlPlaneOptions struct {
 //
 // +apireference:kgo:include
 type ControlPlaneDataPlaneSync struct {
-	// EnableReverse sends configuration to DataPlane (Kong Gateway) even if the configuration checksum has not changed since previous update.
+	// ReverseSync sends configuration to DataPlane (Kong Gateway) even if
+	// the configuration checksum has not changed since previous update.
 	//
 	// +optional
-	// +kubebuilder:default=false
-	EnableReverse *bool `json:"enableReverse,omitempty"`
+	// +kubebuilder:default=disabled
+	ReverseSync *ControlPlaneReverseSyncState `json:"reverseSync,omitempty"`
+
 	// Interval is the interval between two rounds of syncing Kong configuration with dataplanes.
 	//
 	// +optional
 	Interval *metav1.Duration `json:"interval,omitempty"`
+
 	// Timeout is the timeout of a single run of syncing Kong configuration with dataplanes.
 	//
 	// +optional
 	Timeout *metav1.Duration `json:"timeout,omitempty"`
 }
+
+// ControlPlaneReverseSyncState defines the state of the reverse sync feature.
+type ControlPlaneReverseSyncState string
+
+const (
+	// ControlPlaneReverseSyncStateEnabled indicates that reverse sync is enabled.
+	ControlPlaneReverseSyncStateEnabled ControlPlaneReverseSyncState = "enabled"
+	// ControlPlaneReverseSyncStateDisabled indicates that reverse sync is disabled.
+	ControlPlaneReverseSyncStateDisabled ControlPlaneReverseSyncState = "disabled"
+)
 
 // ControlPlaneDataPlaneTarget defines the target for the DataPlane that the ControlPlane
 // is responsible for configuring.

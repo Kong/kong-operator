@@ -17,6 +17,7 @@ linters:
               - duplicatemarkers
               # - maxlength
               - integers
+              - nobools
               - nofloats
               - nomaps
               - nophase
@@ -48,3 +49,9 @@ linters:
           - kubeapilinter
         path: .*
         text: "(optionalorrequired: field Spec must be marked as optional or required)"
+      # NOTE: kubeapilinter has been introduced after v1alpha1/konnect_gateway_controlplane_types.go
+      #       has been created and to prevent changes in the API and docs we disable the rule.
+      - linters:
+          - kubeapilinter
+        path: api/konnect/v1alpha1/konnect_gateway_controlplane_types.go
+        text: "nobools: field CloudGateway pointer should not use a bool. Use a string type with meaningful constant values as an enum."
