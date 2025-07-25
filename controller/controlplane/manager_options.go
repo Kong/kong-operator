@@ -511,3 +511,17 @@ func WithEmitKubernetesEvents(emit bool) managercfg.Opt {
 		c.EmitKubernetesEvents = emit
 	}
 }
+
+// WithTranslationOptions sets the translation options for the manager.
+func WithTranslationOptions(opts *operatorv2alpha1.ControlPlaneTranslationOptions) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		if opts == nil {
+			return
+		}
+
+		if opts.CombinedServicesFromDifferentHTTPRoutes != nil {
+			c.CombinedServicesFromDifferentHTTPRoutes = *opts.CombinedServicesFromDifferentHTTPRoutes ==
+				operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled
+		}
+	}
+}
