@@ -9167,6 +9167,15 @@ spec:
                     - enabled
                     - disabled
                     type: string
+                  drainSupport:
+                    default: enabled
+                    description: |-
+                      DrainSupport defines the configuration for the ControlPlane to include
+                      terminating endpoints in Kong upstreams with weight=0 for graceful connection draining.
+                    enum:
+                    - enabled
+                    - disabled
+                    type: string
                   fallbackConfiguration:
                     description: FallbackConfiguration defines the fallback configuration
                       options for the ControlPlane.
@@ -36924,6 +36933,15 @@ spec:
                         description: |-
                           CombinedServicesFromDifferentHTTPRoutes indicates whether the ControlPlane should
                           combine services from different HTTPRoutes into a single Kong DataPlane service.
+                        enum:
+                        - enabled
+                        - disabled
+                        type: string
+                      drainSupport:
+                        default: enabled
+                        description: |-
+                          DrainSupport defines the configuration for the ControlPlane to include
+                          terminating endpoints in Kong upstreams with weight=0 for graceful connection draining.
                         enum:
                         - enabled
                         - disabled

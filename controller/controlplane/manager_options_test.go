@@ -1028,27 +1028,39 @@ func TestWithEmitKubernetesEvents(t *testing.T) {
 
 func TestWithTranslationOptions(t *testing.T) {
 	testCases := []struct {
-		name                                        string
-		opts                                        *operatorv2alpha1.ControlPlaneTranslationOptions
-		expectedCombinedServicesFromDifferentRoutes bool
-		expectedUseLastValidConfigForFallback       bool
+		name   string
+		opts   *operatorv2alpha1.ControlPlaneTranslationOptions
+		assert func(t *testing.T, cfg *managercfg.Config)
 	}{
 		{
 			name: "nil options should not modify config",
 			opts: nil,
-			expectedCombinedServicesFromDifferentRoutes: false, // default
-			expectedUseLastValidConfigForFallback:       false, // default
+			assert: func(t *testing.T, cfg *managercfg.Config) {
+				assert.False(t, cfg.CombinedServicesFromDifferentHTTPRoutes) // default value
+				assert.False(t, cfg.UseLastValidConfigForFallback)           // default value
+			},
 		},
 		{
-			name: "enabled options",
+			name: "options with nil CombinedServicesFromDifferentHTTPRoutes should not modify config",
+			opts: &operatorv2alpha1.ControlPlaneTranslationOptions{
+				CombinedServicesFromDifferentHTTPRoutes: nil,
+			},
+			assert: func(t *testing.T, cfg *managercfg.Config) {
+				assert.False(t, cfg.CombinedServicesFromDifferentHTTPRoutes) // default value
+			},
+		},
+		{
+			name: "options with CombinedServicesFromDifferentHTTPRoutes enabled",
 			opts: &operatorv2alpha1.ControlPlaneTranslationOptions{
 				CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
 				FallbackConfiguration: &operatorv2alpha1.ControlPlaneFallbackConfiguration{
 					UseLastValidConfig: lo.ToPtr(operatorv2alpha1.ControlPlaneFallbackConfigurationStateEnabled),
 				},
 			},
-			expectedCombinedServicesFromDifferentRoutes: true,
-			expectedUseLastValidConfigForFallback:       true,
+			assert: func(t *testing.T, cfg *managercfg.Config) {
+				assert.True(t, cfg.CombinedServicesFromDifferentHTTPRoutes)
+				assert.True(t, cfg.UseLastValidConfigForFallback)
+			},
 		},
 		{
 			name: "disabled options",
@@ -1058,8 +1070,41 @@ func TestWithTranslationOptions(t *testing.T) {
 					UseLastValidConfig: lo.ToPtr(operatorv2alpha1.ControlPlaneFallbackConfigurationStateDisabled),
 				},
 			},
-			expectedCombinedServicesFromDifferentRoutes: false,
-			expectedUseLastValidConfigForFallback:       false,
+			assert: func(t *testing.T, cfg *managercfg.Config) {
+				assert.False(t, cfg.CombinedServicesFromDifferentHTTPRoutes)
+			},
+		},
+		{
+			name: "options with DrainSupport enabled",
+			opts: &operatorv2alpha1.ControlPlaneTranslationOptions{
+				DrainSupport: lo.ToPtr(operatorv2alpha1.ControlPlaneDrainSupportStateEnabled),
+			},
+			assert: func(t *testing.T, cfg *managercfg.Config) {
+				assert.True(t, cfg.EnableDrainSupport)
+				assert.False(t, cfg.UseLastValidConfigForFallback)
+			},
+		},
+		{
+			name: "options with DrainSupport disabled",
+			opts: &operatorv2alpha1.ControlPlaneTranslationOptions{
+				DrainSupport: lo.ToPtr(operatorv2alpha1.ControlPlaneDrainSupportStateDisabled),
+			},
+			assert: func(t *testing.T, cfg *managercfg.Config) {
+				assert.False(t, cfg.EnableDrainSupport)
+				assert.False(t, cfg.UseLastValidConfigForFallback)
+			},
+		},
+		{
+			name: "options with both CombinedServicesFromDifferentHTTPRoutes and DrainSupport enabled",
+			opts: &operatorv2alpha1.ControlPlaneTranslationOptions{
+				CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+				DrainSupport:                            lo.ToPtr(operatorv2alpha1.ControlPlaneDrainSupportStateEnabled),
+			},
+			assert: func(t *testing.T, cfg *managercfg.Config) {
+				assert.True(t, cfg.CombinedServicesFromDifferentHTTPRoutes)
+				assert.True(t, cfg.EnableDrainSupport)
+				assert.False(t, cfg.UseLastValidConfigForFallback)
+			},
 		},
 	}
 
@@ -1068,8 +1113,7 @@ func TestWithTranslationOptions(t *testing.T) {
 			cfg := &managercfg.Config{}
 			opt := WithTranslationOptions(tc.opts)
 			opt(cfg)
-			assert.Equal(t, tc.expectedCombinedServicesFromDifferentRoutes, cfg.CombinedServicesFromDifferentHTTPRoutes)
-			assert.Equal(t, tc.expectedUseLastValidConfigForFallback, cfg.UseLastValidConfigForFallback)
+			tc.assert(t, cfg)
 		})
 	}
 }
