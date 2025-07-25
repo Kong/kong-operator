@@ -520,8 +520,12 @@ func WithTranslationOptions(opts *operatorv2alpha1.ControlPlaneTranslationOption
 		}
 
 		if opts.CombinedServicesFromDifferentHTTPRoutes != nil {
-			c.CombinedServicesFromDifferentHTTPRoutes = *opts.CombinedServicesFromDifferentHTTPRoutes ==
-				operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled
+			c.CombinedServicesFromDifferentHTTPRoutes = (*opts.CombinedServicesFromDifferentHTTPRoutes ==
+				operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled)
+		}
+		if fc := opts.FallbackConfiguration; fc != nil && fc.UseLastValidConfig != nil {
+			c.UseLastValidConfigForFallback = (*fc.UseLastValidConfig ==
+				operatorv2alpha1.ControlPlaneFallbackConfigurationStateEnabled)
 		}
 	}
 }
