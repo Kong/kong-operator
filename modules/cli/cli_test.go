@@ -172,6 +172,8 @@ func expectedDefaultCfg() manager.Config {
 		APIServerQPS:                            100,
 		APIServerBurst:                          300,
 		KubeconfigPath:                          "",
+		SecretLabelSelector:                     mgrconfig.DefaultSecretLabelSelector,
+		ConfigMapLabelSelector:                  mgrconfig.DefaultConfigMapLabelSelector,
 		ClusterCASecretName:                     "kong-operator-ca",
 		ClusterCASecretNamespace:                "kong-system",
 		ClusterCAKeyType:                        mgrconfig.ECDSA,

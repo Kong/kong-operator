@@ -210,6 +210,7 @@ func EnsureCertificate[
 	}
 
 	secretOpts := append(getSecretOpts(owner), matchingLabelsToSecretOpt(matchingLabels))
+
 	generatedSecret := k8sresources.GenerateNewTLSSecret(owner, secretOpts...)
 
 	// If there are no secrets yet, then create one.
