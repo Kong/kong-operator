@@ -70,7 +70,7 @@ require (
 	golang.org/x/mod v0.26.0
 	golang.org/x/sync v0.16.0
 	google.golang.org/api v0.243.0
-	google.golang.org/grpc v1.73.0
+	google.golang.org/grpc v1.74.2
 	google.golang.org/protobuf v1.36.6
 	k8s.io/api v0.33.3
 	k8s.io/apiextensions-apiserver v0.33.3
