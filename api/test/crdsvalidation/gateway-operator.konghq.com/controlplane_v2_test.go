@@ -359,5 +359,103 @@ func TestControlPlaneV2(t *testing.T) {
 				ExpectedErrorMessage: lo.ToPtr("spec.translation.combinedServicesFromDifferentHTTPRoutes: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
 			},
 		}.Run(t)
+
+		t.Run("configDump", func(t *testing.T) {
+			common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+				{
+					Name: "configDump.state and configDump.dumpsensitive set to enabled",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								ConfigDump: &operatorv2alpha1.ControlPlaneConfigDump{
+									State:         operatorv2alpha1.ConfigDumpStateEnabled,
+									DumpSensitive: operatorv2alpha1.ConfigDumpStateEnabled,
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: "configDump.state and configDump.dumpSensitive set to disabled",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								ConfigDump: &operatorv2alpha1.ControlPlaneConfigDump{
+									State:         operatorv2alpha1.ConfigDumpStateDisabled,
+									DumpSensitive: operatorv2alpha1.ConfigDumpStateDisabled,
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: "configDump.state set to enabled and configDump.dumpSensitive set to disabled",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								ConfigDump: &operatorv2alpha1.ControlPlaneConfigDump{
+									State:         operatorv2alpha1.ConfigDumpStateEnabled,
+									DumpSensitive: operatorv2alpha1.ConfigDumpStateDisabled,
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: "configDump.state set to disabled and configDump.dumpSensitive set to enabled is invalid",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								ConfigDump: &operatorv2alpha1.ControlPlaneConfigDump{
+									State:         operatorv2alpha1.ConfigDumpStateDisabled,
+									DumpSensitive: operatorv2alpha1.ConfigDumpStateEnabled,
+								},
+							},
+						},
+					},
+					ExpectedErrorMessage: lo.ToPtr("Cannot enable dumpSensitive when state is disabled"),
+				},
+				{
+					Name: "configDump.state set to disallowed value",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								ConfigDump: &operatorv2alpha1.ControlPlaneConfigDump{
+									State:         operatorv2alpha1.ConfigDumpState("invalid"),
+									DumpSensitive: operatorv2alpha1.ConfigDumpStateEnabled,
+								},
+							},
+						},
+					},
+					ExpectedErrorMessage: lo.ToPtr(`spec.configDump.state: Unsupported value: "invalid": supported values: "enabled", "disabled"`),
+				},
+				{
+					Name: "configDump.dumpSensitive is set to disallowed value",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								ConfigDump: &operatorv2alpha1.ControlPlaneConfigDump{
+									State:         operatorv2alpha1.ConfigDumpStateEnabled,
+									DumpSensitive: operatorv2alpha1.ConfigDumpState("invalid"),
+								},
+							},
+						},
+					},
+					ExpectedErrorMessage: lo.ToPtr(`spec.configDump.dumpSensitive: Unsupported value: "invalid": supported values: "enabled", "disabled"`),
+				},
+			}.Run(t)
+		})
 	})
 }

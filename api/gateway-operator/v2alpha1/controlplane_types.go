@@ -141,6 +141,11 @@ type ControlPlaneOptions struct {
 	//
 	// +optional
 	Translation *ControlPlaneTranslationOptions `json:"translation,omitempty"`
+
+	// ConfigDump defines the options for dumping generated Kong configuration from a diagnostics server.
+	//
+	// +optional
+	ConfigDump *ControlPlaneConfigDump `json:"configDump,omitempty"`
 }
 
 // ControlPlaneTranslationOptions defines the configuration for translating
@@ -261,6 +266,8 @@ type ControlPlaneGatewayDiscovery struct {
 
 // ControlPlaneK8sCache defines the configuration related to Kubernetes object caches
 // of the ControlPlane.
+//
+// +apireference:kgo:include
 type ControlPlaneK8sCache struct {
 	// InitSyncDuration defines the initial delay to wait for Kubernetes object caches to be synced before the initial configuration.
 	// If omitted, the default value (5s) is used.
@@ -269,17 +276,48 @@ type ControlPlaneK8sCache struct {
 	InitSyncDuration *metav1.Duration `json:"initSyncDuration,omitempty"`
 }
 
+// ConfigDumpState defines the state of configuration dump.
+type ConfigDumpState string
+
+const (
+	// ConfigDumpStateEnabled indicates that configuration dump is enabled.
+	ConfigDumpStateEnabled ConfigDumpState = "enabled"
+	// ConfigDumpStateDisabled indicates that the configuration dump is disabled.
+	ConfigDumpStateDisabled ConfigDumpState = "disabled"
+)
+
+// ControlPlaneConfigDump defines the options for dumping translated Kong configuration from a diagnostics server.
+//
+// +apireference:kgo:include
+// +kubebuilder:validation:XValidation:message="Cannot enable dumpSensitive when state is disabled",rule="self.state == 'enabled' || self.dumpSensitive == 'disabled'"
+type ControlPlaneConfigDump struct {
+	// When State is enabled, Operator will dump the translated Kong configuration by it from a diagnostics server.
+	//
+	// +required
+	// +kubebuilder:validation:Enum=enabled;disabled
+	// +kubebuilder:default="disabled"
+	State ConfigDumpState `json:"state"`
+
+	// When DumpSensitive is enabled, the configuration will be dumped unchanged, including sensitive parts like private keys and credentials.
+	// When DumpSensitive is disabled, the sensitive configuration parts like private keys and credentials are redacted.
+	//
+	// +required
+	// +kubebuilder:validation:Enum=enabled;disabled
+	// +kubebuilder:default="disabled"
+	DumpSensitive ConfigDumpState `json:"dumpSensitive"`
+}
+
 // DefaultControlPlaneInitialCacheSyncDelay defines the default initial delay
 // to wait for the Kubernetes object caches to be synced.
 const DefaultControlPlaneInitialCacheSyncDelay = 5 * time.Second
 
-// ControllerState defines the state of a feature gate.
+// ControllerState defines the state of a controller.
 type ControllerState string
 
 const (
-	// ControllerStateEnabled indicates that the feature gate is enabled.
+	// ControllerStateEnabled indicates that the controller is enabled.
 	ControllerStateEnabled ControllerState = "enabled"
-	// ControllerStateDisabled indicates that the feature gate is disabled.
+	// ControllerStateDisabled indicates that the controller is disabled.
 	ControllerStateDisabled ControllerState = "disabled"
 )
 
