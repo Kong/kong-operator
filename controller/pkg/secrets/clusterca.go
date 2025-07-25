@@ -17,7 +17,7 @@ import (
 )
 
 // CreateClusterCACertificate creates a cluster CA certificate Secret.
-func CreateClusterCACertificate(ctx context.Context, cl client.Client, secretNN types.NamespacedName, keyConfig KeyConfig) error {
+func CreateClusterCACertificate(ctx context.Context, cl client.Client, secretNN types.NamespacedName, secretLabels map[string]string, keyConfig KeyConfig) error {
 	serial, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
 	if err != nil {
 		return err
@@ -52,6 +52,7 @@ func CreateClusterCACertificate(ctx context.Context, cl client.Client, secretNN 
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: secretNN.Namespace,
 			Name:      secretNN.Name,
+			Labels:    secretLabels,
 		},
 		Type: v1.SecretTypeTLS,
 		StringData: map[string]string{

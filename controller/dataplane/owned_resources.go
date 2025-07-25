@@ -37,11 +37,16 @@ func ensureDataPlaneCertificate(
 	dataplane *operatorv1beta1.DataPlane,
 	clusterCASecretNN types.NamespacedName,
 	adminServiceNN types.NamespacedName,
+	secretLabelSelector string,
 	keyConfig secrets.KeyConfig,
 ) (op.Result, *corev1.Secret, error) {
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
 		certificatesv1.UsageDigitalSignature, certificatesv1.UsageServerAuth,
+	}
+	matchingLabels := secrets.GetManagedLabelForServiceSecret(adminServiceNN)
+	if secretLabelSelector != "" {
+		matchingLabels[secretLabelSelector] = "true"
 	}
 	return secrets.EnsureCertificate(ctx,
 		dataplane,
@@ -50,7 +55,7 @@ func ensureDataPlaneCertificate(
 		usages,
 		keyConfig,
 		cl,
-		secrets.GetManagedLabelForServiceSecret(adminServiceNN),
+		matchingLabels,
 	)
 }
 
