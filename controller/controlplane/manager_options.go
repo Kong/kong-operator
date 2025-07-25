@@ -523,5 +523,9 @@ func WithTranslationOptions(opts *operatorv2alpha1.ControlPlaneTranslationOption
 			c.CombinedServicesFromDifferentHTTPRoutes = *opts.CombinedServicesFromDifferentHTTPRoutes ==
 				operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled
 		}
+
+		if opts.DrainSupport != nil {
+			c.EnableDrainSupport = *opts.DrainSupport == operatorv2alpha1.ControlPlaneDrainSupportStateEnabled
+		}
 	}
 }
