@@ -60,6 +60,10 @@
   This is a breaking change, as any code or configuration relying on the previous default will now use 'cluster.local'
   unless explicitly overridden.
   [#1870](https://github.com/Kong/kong-operator/pull/1870)
+- Introduce `ControlPlane` in version `v2alpha1`
+  - Usage of the last valid config for fallback configuration is enabled by default,
+    can be adjusted in the `spec.translation.fallbackConfiguration.useLastValidConfig` field.
+    [#1939](https://github.com/Kong/kong-operator/issues/1939)
 
 ### Added
 
