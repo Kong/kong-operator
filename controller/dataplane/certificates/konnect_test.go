@@ -31,6 +31,7 @@ func TestCreateKonnectCert(t *testing.T) {
 		name                  string
 		dataplane             *operatorv1beta1.DataPlane
 		noCertificateCRD      bool
+		opts                  []CertOpt
 		wantErr               error
 		dataplaneSubResources []controllerruntimeclient.Object
 		// the following are core aspects of the certificate that we can test without building the entire struct
@@ -39,6 +40,9 @@ func TestCreateKonnectCert(t *testing.T) {
 		wantIssuerName string
 		wantIssuerKind string
 		wantDNSNames   []string
+		// extraChecks defines extra checks for the generated certificate.
+		// it returns false with error message if the check fails.
+		extraChecks func(certmanagerv1.Certificate) (bool, string)
 	}{
 		{
 			name: "no issuer completes successfully",
@@ -156,6 +160,47 @@ func TestCreateKonnectCert(t *testing.T) {
 				Status: operatorv1beta1.DataPlaneStatus{},
 			},
 		},
+		{
+			name: "add WithSecretLabel option",
+			dataplane: &operatorv1beta1.DataPlane{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
+					Kind:       "DataPlane",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-dataplane",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Network: operatorv1beta1.DataPlaneNetworkOptions{
+							KonnectCertificateOptions: &operatorv1beta1.KonnectCertificateOptions{
+								Issuer: operatorv1beta1.NamespacedName{
+									Name: "test-issuer",
+								},
+							},
+						},
+					},
+				},
+				Status: operatorv1beta1.DataPlaneStatus{},
+			},
+			opts: []CertOpt{
+				WithSecretLabel("key", "value"),
+			},
+			wantIssuerName: "test-issuer",
+			wantIssuerKind: "ClusterIssuer",
+			wantDNSNames:   []string{"test-dataplane.test-namespace.dataplane.konnect"},
+			extraChecks: func(cert certmanagerv1.Certificate) (bool, string) {
+				if cert.Spec.SecretTemplate == nil || cert.Spec.SecretTemplate.Labels == nil {
+					return false, "spec.secretTemplate.labels not specified"
+				}
+				if cert.Spec.SecretTemplate.Labels["key"] != "value" {
+					return false, "spec.secretTemplate.labels does not contain label 'key:value'"
+				}
+				return true, ""
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -182,7 +227,7 @@ func TestCreateKonnectCert(t *testing.T) {
 				Build()
 
 			ctx := t.Context()
-			err := CreateKonnectCert(ctx, logr.Discard(), tc.dataplane, fakeClient)
+			err := CreateKonnectCert(ctx, logr.Discard(), tc.dataplane, fakeClient, tc.opts...)
 			require.Equal(t, tc.wantErr, err)
 
 			if tc.noCertificateCRD {
@@ -209,6 +254,10 @@ func TestCreateKonnectCert(t *testing.T) {
 				require.Equal(t, tc.wantIssuerKind, certs[0].Spec.IssuerRef.Kind)
 			} else {
 				require.Empty(t, certs)
+			}
+			if tc.extraChecks != nil {
+				ok, msg := tc.extraChecks(certs[0])
+				require.True(t, ok, msg)
 			}
 		})
 	}

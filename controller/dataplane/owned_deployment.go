@@ -45,6 +45,8 @@ type DeploymentBuilder struct {
 	additionalLabels       client.MatchingLabels
 	defaultImage           string
 	opts                   []k8sresources.DeploymentOpt
+
+	secretLabelSelector string
 }
 
 // NewDeploymentBuilder creates a DeploymentBuilder.
@@ -73,6 +75,13 @@ func (d *DeploymentBuilder) WithDefaultImage(image string) *DeploymentBuilder {
 	return d
 }
 
+// WithSecretLabelSelector sets the label of created `Secret`s to "true" to get the secrets
+// to be reconciled by other controllers.
+func (d *DeploymentBuilder) WithSecretLabelSelector(key string) *DeploymentBuilder {
+	d.secretLabelSelector = key
+	return d
+}
+
 // WithOpts adds option functions to a DeploymentBuilder.
 func (d *DeploymentBuilder) WithOpts(opts ...k8sresources.DeploymentOpt) *DeploymentBuilder {
 	d.opts = opts
@@ -88,7 +97,11 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 	enforceConfig bool,
 	validateDataPlaneImage bool,
 ) (*appsv1.Deployment, op.Result, error) {
-	if err := certificates.CreateKonnectCert(ctx, d.logger, dataplane, d.client); err != nil {
+	opts := []certificates.CertOpt{}
+	if d.secretLabelSelector != "" {
+		opts = append(opts, certificates.WithSecretLabel(d.secretLabelSelector, "true"))
+	}
+	if err := certificates.CreateKonnectCert(ctx, d.logger, dataplane, d.client, opts...); err != nil {
 		return nil, op.Noop, fmt.Errorf("failed creating konnect cert: %w", err)
 	}
 
