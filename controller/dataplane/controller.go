@@ -207,7 +207,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		WithClusterCertificate(certSecret.Name).
 		WithOpts(deploymentOpts...).
 		WithDefaultImage(r.DefaultImage).
-		WithAdditionalLabels(deploymentLabels)
+		WithAdditionalLabels(deploymentLabels).
+		WithSecretLabelSelector(r.SecretLabelSelector)
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.ValidateDataPlaneImage)
 	if err != nil {

@@ -44,7 +44,6 @@
   `ConfigMap`s without the given labels.
   [#1922](https://github.com/Kong/kong-operator/pull/1922)
 
-
 ### Added
 
 - Introduce the flag `--emit-kubernetes-events` to enable/disable the creation of
