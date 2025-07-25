@@ -882,3 +882,20 @@ deploy: manifests kustomize
 .PHONY: undeploy
 undeploy:
 	$(KUSTOMIZE) build config/default | kubectl delete --wait=false --ignore-not-found=$(ignore-not-found) -f -
+
+# Install and connect telepresence to the cluster.
+# This target is essential for debugging the operator from an IDE as it establishes
+# connectivity between the local development environment and the Kubernetes cluster.
+# It allows the locally running operator to interact with the cluster resources
+# as if it were running inside the cluster itself.
+.PHONY: install.telepresence
+install.telepresence: download.telepresence
+	@$(PROJECT_DIR)/scripts/telepresence-manager.sh install "$(TELEPRESENCE)"
+
+# Disconnect and uninstall telepresence from the cluster.
+# This target cleans up the telepresence resources created by the install.telepresence target.
+# It should be used when you're done debugging the operator locally to ensure proper
+# cleanup of network connections and cluster resources.
+.PHONY: uninstall.telepresence
+uninstall.telepresence: download.telepresence
+	@$(PROJECT_DIR)/scripts/telepresence-manager.sh uninstall "$(TELEPRESENCE)"
