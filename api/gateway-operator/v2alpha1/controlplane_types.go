@@ -158,6 +158,11 @@ type ControlPlaneTranslationOptions struct {
 	// +kubebuilder:default=enabled
 	// +kubebuilder:validation:Enum=enabled;disabled
 	CombinedServicesFromDifferentHTTPRoutes *ControlPlaneCombinedServicesFromDifferentHTTPRoutesState `json:"combinedServicesFromDifferentHTTPRoutes,omitempty"`
+
+	// FallbackConfiguration defines the fallback configuration options for the ControlPlane.
+	//
+	// +optional
+	FallbackConfiguration *ControlPlaneFallbackConfiguration `json:"fallbackConfiguration,omitempty"`
 }
 
 // ControlPlaneCombinedServicesFromDifferentHTTPRoutesState defines the state of the
@@ -169,6 +174,27 @@ const (
 	ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled ControlPlaneCombinedServicesFromDifferentHTTPRoutesState = "enabled"
 	// ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled indicates that the feature is disabled.
 	ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled ControlPlaneCombinedServicesFromDifferentHTTPRoutesState = "disabled"
+)
+
+// ControlPlaneFallbackConfiguration defines the fallback configuration options for the ControlPlane.
+type ControlPlaneFallbackConfiguration struct {
+	// UseLastValidConfig indicates whether the ControlPlane should use the last valid configuration
+	// when the current configuration is invalid.
+	//
+	// +optional
+	// +kubebuilder:default=enabled
+	// +kubebuilder:validation:Enum=enabled;disabled
+	UseLastValidConfig *ControlPlaneFallbackConfigurationState `json:"useLastValidConfig,omitempty"`
+}
+
+// ControlPlaneFallbackConfigurationState defines the state of the fallback configuration feature.
+type ControlPlaneFallbackConfigurationState string
+
+const (
+	// ControlPlaneFallbackConfigurationStateEnabled indicates that the fallback configuration is enabled.
+	ControlPlaneFallbackConfigurationStateEnabled ControlPlaneFallbackConfigurationState = "enabled"
+	// ControlPlaneFallbackConfigurationStateDisabled indicates that the fallback configuration is disabled.
+	ControlPlaneFallbackConfigurationStateDisabled ControlPlaneFallbackConfigurationState = "disabled"
 )
 
 // ControlPlaneDataPlaneSync defines the configuration for syncing Kong configuration to the DataPlane.

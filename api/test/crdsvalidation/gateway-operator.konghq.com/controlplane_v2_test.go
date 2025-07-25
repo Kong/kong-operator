@@ -360,6 +360,60 @@ func TestControlPlaneV2(t *testing.T) {
 			},
 		}.Run(t)
 
+		t.Run("fallbackConfiguration", func(t *testing.T) {
+			common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+				{
+					Name: "fallbackConfiguration.useLastValidConfig set to enabled",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
+									FallbackConfiguration: &operatorv2alpha1.ControlPlaneFallbackConfiguration{
+										UseLastValidConfig: lo.ToPtr(operatorv2alpha1.ControlPlaneFallbackConfigurationStateEnabled),
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: "fallbackConfiguration.useLastValidConfig set to disabled",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
+									FallbackConfiguration: &operatorv2alpha1.ControlPlaneFallbackConfiguration{
+										UseLastValidConfig: lo.ToPtr(operatorv2alpha1.ControlPlaneFallbackConfigurationStateDisabled),
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: "fallbackConfiguration.useLastValidConfig set to disallowed value",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
+									FallbackConfiguration: &operatorv2alpha1.ControlPlaneFallbackConfiguration{
+										UseLastValidConfig: lo.ToPtr(operatorv2alpha1.ControlPlaneFallbackConfigurationState("invalid")),
+									},
+								},
+							},
+						},
+					},
+					ExpectedErrorMessage: lo.ToPtr("spec.translation.fallbackConfiguration.useLastValidConfig: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
+				},
+			}.Run(t)
+		})
+
 		t.Run("configDump", func(t *testing.T) {
 			common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
 				{
