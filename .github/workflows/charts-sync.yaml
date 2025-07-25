@@ -33,6 +33,7 @@ jobs:
       - uses: BetaHuhn/repo-file-sync-action@8b92be3375cf1d1b0cd579af488a9255572e4619 # v1.21.1
         with:
           GH_PAT: ${{ secrets.PAT_GITHUB }}
+          TEAM_REVIEWERS: k8s-maintainers
           GIT_EMAIL: team-k8s+github-bot@konghq.com
           CONFIG_PATH: .github/charts-sync.yaml
           OVERWRITE_EXISTING_PR: true
