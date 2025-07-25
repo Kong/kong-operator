@@ -15,6 +15,7 @@
 | `--cluster-ca-secret` | `string` | Name of the Secret containing the cluster CA certificate. | `kong-operator-ca` |
 | `--cluster-ca-secret-namespace` | `string` | Name of the namespace for Secret containing the cluster CA certificate. | `""` |
 | `--cluster-domain` | `string` | The cluster domain. This is used e.g. in generating addresses for upstream services. | `cluster.local` |
+| `--config-map-label-selector` | `string` | Limits the configmaps ingested to those having this label set to "true". If empty, all config maps are ingested. | `konghq.com/configmap` |
 | `--controller-name` | `string` | Controller name to use if other than the default, only needed for multi-tenancy. | `""` |
 | `--emit-kubernetes-events` | `bool` | Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects. | `true` |
 | `--enable-controller-aigateway` | `bool` | Enable the AIGateway controller. (Experimental). | `false` |
@@ -36,6 +37,7 @@
 | `--metrics-access-filter` | `string` | Specifies the filter access function to be used for accessing the metrics endpoint (possible values: off, rbac). Default is off. | `off` |
 | `--metrics-bind-address` | `string` | The address the metric endpoint binds to. | `:8080` |
 | `--no-leader-election` | `bool` | Disable leader election for controller manager. Disabling this will not ensure there is only one active controller manager. | `false` |
+| `--secret-label-selector` | `string` | Limits the secrets ingested to those having this label set to "true". If empty, all secrets are ingested. | `konghq.com/secret` |
 | `--validate-images` | `bool` | Validate the images set in ControlPlane and DataPlane specifications. | `true` |
 | `--version` | `bool` | Print version information. | `false` |
 | `--webhook-certificate-config-base-image` | `string` | The base image for the certgen Jobs. DEPRECATED: This flag is no-op and will be removed in a future release. | `registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.3.0` |

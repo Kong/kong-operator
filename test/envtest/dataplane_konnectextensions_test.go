@@ -112,6 +112,8 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 	require.NoError(t, secrets.CreateClusterCACertificate(ctx, cl, types.NamespacedName{
 		Name:      clusterCASecretName,
 		Namespace: ns.Name,
+	}, map[string]string{
+		"konghq.com/secret": "true",
 	}, clusterCAKeyConfig))
 
 	t.Logf("Creating KonnectAPIAuthConfiguration")

@@ -39,6 +39,9 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      uuid.NewString(),
+			Labels: map[string]string{
+				"konghq.com/configmap": "true",
+			},
 		},
 		Data: map[string]string{
 			testEnvVarFromKV: testEnvVarFromKV,

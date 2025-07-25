@@ -102,6 +102,9 @@ func (r *Reconciler) ensureAdminMTLSCertificateSecret(
 	matchingLabels := client.MatchingLabels{
 		consts.SecretUsedByServiceLabel: consts.ControlPlaneServiceKindAdmin,
 	}
+	if r.SecretLabelSelector != "" {
+		matchingLabels[r.SecretLabelSelector] = "true"
+	}
 	// this subject is arbitrary. data planes only care that client certificates are signed by the trusted CA, and will
 	// accept a certificate with any subject
 	return secrets.EnsureCertificate(ctx,

@@ -90,6 +90,9 @@ func TestAIGatewayCreation(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      credSecretName,
 			Namespace: namespace.Name,
+			Labels: map[string]string{
+				"konghq.com/secret": "true",
+			},
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{

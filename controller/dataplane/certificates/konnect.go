@@ -61,8 +61,32 @@ func certificateCRDNotInstalled(logger logr.Logger, cl client.Client) bool {
 	return !exist
 }
 
+// CertOpt modifies generated cerfificates.
+type CertOpt func(*certmanagerv1.Certificate)
+
+// WithSecretLabel adds a label "key:value" to the secrets generated for the certificate.
+func WithSecretLabel(key, value string) CertOpt {
+	return func(cert *certmanagerv1.Certificate) {
+		if cert.Spec.SecretTemplate == nil {
+			cert.Spec.SecretTemplate = &certmanagerv1.CertificateSecretTemplate{
+				Labels: map[string]string{},
+			}
+		}
+		if cert.Spec.SecretTemplate.Labels == nil {
+			cert.Spec.SecretTemplate.Labels = map[string]string{}
+		}
+		cert.Spec.SecretTemplate.Labels[key] = value
+	}
+}
+
 // CreateKonnectCert creates a cert-manager certificate request for a DataPlane.
-func CreateKonnectCert(ctx context.Context, logger logr.Logger, dataplane *operatorv1beta1.DataPlane, cl client.Client) error {
+func CreateKonnectCert(
+	ctx context.Context,
+	logger logr.Logger,
+	dataplane *operatorv1beta1.DataPlane,
+	cl client.Client,
+	certOpts ...CertOpt,
+) error {
 	// Skip creating Konnect certificate if KonnectCertificateOptions is not specified and certificate CRD is not installed.
 	if dataplane.Spec.Network.KonnectCertificateOptions == nil && certificateCRDNotInstalled(logger, cl) {
 		log.Debug(logger, "skipping because dataplane does not have Konnect certificate options and certificate CRD is not installed",
@@ -120,6 +144,9 @@ func CreateKonnectCert(ctx context.Context, logger logr.Logger, dataplane *opera
 			fmt.Sprintf("%s-%s", dataplane.Name, DataPlaneKonnectClientCertificateName),
 			labels,
 		)
+		for _, opt := range certOpts {
+			opt(generatedCertificate)
+		}
 		if err != nil {
 			return fmt.Errorf("could not generate Certificate: %w", err)
 		}

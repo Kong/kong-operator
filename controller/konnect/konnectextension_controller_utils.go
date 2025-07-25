@@ -212,6 +212,9 @@ func (r *KonnectExtensionReconciler) ensureCertificateSecret(ctx context.Context
 		consts.SecretProvisioningLabelKey:      consts.SecretProvisioningAutomaticLabelValue,
 		SecretKonnectDataPlaneCertificateLabel: "true",
 	}
+	if r.SecretLabelSelector != "" {
+		matchingLabels[r.SecretLabelSelector] = "true"
+	}
 	return secrets.EnsureCertificate(ctx,
 		ext,
 		fmt.Sprintf("%s.%s", ext.Name, ext.Namespace),

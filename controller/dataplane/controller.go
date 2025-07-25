@@ -40,6 +40,7 @@ type Reconciler struct {
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
+	SecretLabelSelector      string
 	DefaultImage             string
 	KonnectEnabled           bool
 	EnforceConfig            bool
@@ -156,6 +157,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			Namespace: dataplaneAdminService.Namespace,
 			Name:      dataplaneAdminService.Name,
 		},
+		r.SecretLabelSelector,
 		r.ClusterCAKeyConfig,
 	)
 	if err != nil {
@@ -205,7 +207,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		WithClusterCertificate(certSecret.Name).
 		WithOpts(deploymentOpts...).
 		WithDefaultImage(r.DefaultImage).
-		WithAdditionalLabels(deploymentLabels)
+		WithAdditionalLabels(deploymentLabels).
+		WithSecretLabelSelector(r.SecretLabelSelector)
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.ValidateDataPlaneImage)
 	if err != nil {
