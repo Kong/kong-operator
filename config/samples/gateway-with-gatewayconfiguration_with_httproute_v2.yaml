@@ -19,8 +19,6 @@ spec:
     featureGates:
     - name: GatewayAlpha
       state: enabled
-    - name: CombinedServicesFromDifferentHTTPRoutes
-      state: enabled
     controllers:
     - name: KONG_UDPINGRESS
       state: disabled
