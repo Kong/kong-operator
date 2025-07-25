@@ -83,6 +83,9 @@
   - Specifying the period and timeout of syncing Kong configuration to dataplanes
     by `spec.dataplaneSync.interval` and `spec.dataplaneSync.timeout`
     [#1886](https://github.com/Kong/kong-operator/pull/1886)
+  - Specifying the combined services from HTTPRoutes feature via
+    by `spec.translation.combinedServicesFromDifferentHTTPRoutes`
+    [#1934](https://github.com/Kong/kong-operator/pull/1934)
 - Introduce flags `--apiserver-host` for API, `--apiserver-qps` and
   `--apiserver-burst` to control the QPS and burst (rate-limiting) for the
   Kubernetes API server client.

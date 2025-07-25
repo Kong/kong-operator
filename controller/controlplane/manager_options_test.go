@@ -1025,3 +1025,47 @@ func TestWithEmitKubernetesEvents(t *testing.T) {
 		})
 	}
 }
+
+func TestWithTranslationOptions(t *testing.T) {
+	testCases := []struct {
+		name     string
+		opts     *operatorv2alpha1.ControlPlaneTranslationOptions
+		expected bool
+	}{
+		{
+			name:     "nil options should not modify config",
+			opts:     nil,
+			expected: false, // default value
+		},
+		{
+			name: "options with nil CombinedServicesFromDifferentHTTPRoutes should not modify config",
+			opts: &operatorv2alpha1.ControlPlaneTranslationOptions{
+				CombinedServicesFromDifferentHTTPRoutes: nil,
+			},
+			expected: false, // default value
+		},
+		{
+			name: "options with CombinedServicesFromDifferentHTTPRoutes enabled",
+			opts: &operatorv2alpha1.ControlPlaneTranslationOptions{
+				CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+			},
+			expected: true,
+		},
+		{
+			name: "options with CombinedServicesFromDifferentHTTPRoutes disabled",
+			opts: &operatorv2alpha1.ControlPlaneTranslationOptions{
+				CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled),
+			},
+			expected: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &managercfg.Config{}
+			opt := WithTranslationOptions(tc.opts)
+			opt(cfg)
+			assert.Equal(t, tc.expected, cfg.CombinedServicesFromDifferentHTTPRoutes)
+		})
+	}
+}

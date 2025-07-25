@@ -402,6 +402,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		WithClusterDomain(r.ClusterDomain),
 		WithQPSAndBurst(apiServerQPS, apiServerBurst),
 		WithEmitKubernetesEvents(r.EmitKubernetesEvents),
+		WithTranslationOptions(cp.Spec.Translation),
 	}
 
 	if dps := cp.Spec.DataPlaneSync; dps != nil {

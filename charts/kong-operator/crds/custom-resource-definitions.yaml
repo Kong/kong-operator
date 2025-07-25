@@ -9126,6 +9126,20 @@ spec:
 
                   If omitted, Ingress resources will not be supported by the ControlPlane.
                 type: string
+              translation:
+                description: Translation defines the configuration for translating
+                  Kong configuration.
+                properties:
+                  combinedServicesFromDifferentHTTPRoutes:
+                    default: enabled
+                    description: |-
+                      CombinedServicesFromDifferentHTTPRoutes indicates whether the ControlPlane should
+                      combine services from different HTTPRoutes into a single Kong DataPlane service.
+                    enum:
+                    - enabled
+                    - disabled
+                    type: string
+                type: object
               watchNamespaces:
                 default:
                   type: all
@@ -36831,6 +36845,20 @@ spec:
 
                       If omitted, Ingress resources will not be supported by the ControlPlane.
                     type: string
+                  translation:
+                    description: Translation defines the configuration for translating
+                      Kong configuration.
+                    properties:
+                      combinedServicesFromDifferentHTTPRoutes:
+                        default: enabled
+                        description: |-
+                          CombinedServicesFromDifferentHTTPRoutes indicates whether the ControlPlane should
+                          combine services from different HTTPRoutes into a single Kong DataPlane service.
+                        enum:
+                        - enabled
+                        - disabled
+                        type: string
+                    type: object
                   watchNamespaces:
                     default:
                       type: all
