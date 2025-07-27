@@ -163,7 +163,26 @@ type ControlPlaneTranslationOptions struct {
 	//
 	// +optional
 	FallbackConfiguration *ControlPlaneFallbackConfiguration `json:"fallbackConfiguration,omitempty"`
+
+	// DrainSupport defines the configuration for the ControlPlane to include
+	// terminating endpoints in Kong upstreams with weight=0 for graceful connection draining.
+	//
+	// +optional
+	// +kubebuilder:default=enabled
+	// +kubebuilder:validation:Enum=enabled;disabled
+	DrainSupport *ControlPlaneDrainSupportState `json:"drainSupport,omitempty"`
 }
+
+// ControlPlaneDrainSupportState defines the state of the feature that allows the ControlPlane
+// to include terminating endpoints in Kong upstreams with weight=0 for graceful connection draining.
+type ControlPlaneDrainSupportState string
+
+const (
+	// ControlPlaneDrainSupportStateEnabled indicates that the feature is enabled.
+	ControlPlaneDrainSupportStateEnabled ControlPlaneDrainSupportState = "enabled"
+	// ControlPlaneDrainSupportStateDisabled indicates that the feature is disabled.
+	ControlPlaneDrainSupportStateDisabled ControlPlaneDrainSupportState = "disabled"
+)
 
 // ControlPlaneCombinedServicesFromDifferentHTTPRoutesState defines the state of the
 // feature that allows the ControlPlane to combine services from different HTTPRoutes.

@@ -358,6 +358,64 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.translation.combinedServicesFromDifferentHTTPRoutes: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
 			},
+			{
+				Name: "drainSupport set to enabled",
+				TestObject: &operatorv2alpha1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+							Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
+								DrainSupport: lo.ToPtr(operatorv2alpha1.ControlPlaneDrainSupportStateEnabled),
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "drainSupport set to disabled",
+				TestObject: &operatorv2alpha1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+							Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
+								DrainSupport: lo.ToPtr(operatorv2alpha1.ControlPlaneDrainSupportStateDisabled),
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "drainSupport set to disallowed value",
+				TestObject: &operatorv2alpha1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+							Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
+								DrainSupport: lo.ToPtr(operatorv2alpha1.ControlPlaneDrainSupportState("invalid")),
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.translation.drainSupport: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
+			},
+			{
+				Name: "both combinedServicesFromDifferentHTTPRoutes and drainSupport set",
+				TestObject: &operatorv2alpha1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2alpha1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+							Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
+								CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+								DrainSupport:                            lo.ToPtr(operatorv2alpha1.ControlPlaneDrainSupportStateDisabled),
+							},
+						},
+					},
+				},
+			},
 		}.Run(t)
 
 		t.Run("fallbackConfiguration", func(t *testing.T) {
