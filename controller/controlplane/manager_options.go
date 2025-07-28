@@ -527,5 +527,9 @@ func WithTranslationOptions(opts *operatorv2alpha1.ControlPlaneTranslationOption
 			c.UseLastValidConfigForFallback = (*fc.UseLastValidConfig ==
 				operatorv2alpha1.ControlPlaneFallbackConfigurationStateEnabled)
 		}
+
+		if opts.DrainSupport != nil {
+			c.EnableDrainSupport = *opts.DrainSupport == operatorv2alpha1.ControlPlaneDrainSupportStateEnabled
+		}
 	}
 }
