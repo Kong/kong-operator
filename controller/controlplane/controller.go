@@ -190,6 +190,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, err
 		}
 		log.Debug(logger, "no existing dataplane for controlplane", "error", err)
+		return ctrl.Result{}, err
 	} else {
 		dataplaneIngressServiceName, err = gatewayutils.GetDataPlaneServiceName(ctx, r.Client, dataplane, consts.DataPlaneIngressServiceLabelValue)
 		if err != nil {
