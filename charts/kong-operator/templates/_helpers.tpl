@@ -65,6 +65,11 @@ Create a list of env vars based on the values of the `env` and `customEnv` maps.
 {{- $_ := set $defaultEnv "GATEWAY_OPERATOR_HEALTH_PROBE_BIND_ADDRESS" ":8081" -}}
 {{- $_ := set $defaultEnv "GATEWAY_OPERATOR_METRICS_BIND_ADDRESS" "0.0.0.0:8080" -}}
 
+{{- if .Values.enableControlplaneConfigDump -}}
+{{- $_ := set $defaultEnv "GATEWAY_OPERATOR_ENABLE_CONTROLPLANE_CONFIG_DUMP" "true" -}}
+{{- $_ := set $defaultEnv "GATEWAY_OPERATOR_CONTROLPLANE_CONFIG_DUMP_BIND_ADDRESS" (print ":" .Values.controlplaneConfigDumpPort) -}}
+{{- end -}}
+
 {{- range $key, $val := .Values.env -}}
   {{- $var := printf "GATEWAY_OPERATOR_%s" ( upper $key ) -}}
   {{- if hasKey $defaultEnv $var -}}

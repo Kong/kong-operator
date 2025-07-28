@@ -451,10 +451,10 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	}
 
 	if cp.Spec.ConfigDump != nil {
-		if cp.Spec.ConfigDump.State == operatorv2alpha1.ControllerStateEnabled {
+		if cp.Spec.ConfigDump.State == operatorv2alpha1.ConfigDumpStateEnabled {
 			cfgOpts = append(cfgOpts, WithConfigDumpEnabled(true))
 		}
-		if cp.Spec.ConfigDump.DumpSensitive == operatorv2alpha1.ControllerStateEnabled {
+		if cp.Spec.ConfigDump.DumpSensitive == operatorv2alpha1.ConfigDumpStateEnabled {
 			cfgOpts = append(cfgOpts, WithSensitiveConfigDumpEnabled(true))
 		}
 	}

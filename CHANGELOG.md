@@ -48,6 +48,13 @@
 - Introduce the flag `--emit-kubernetes-events` to enable/disable the creation of
   Kubernetes events in the `ControlPlane`. The default value is `true`.
   [#1888](https://github.com/Kong/kong-operator/pull/1888)
+- Added the flag `--enable-controlplane-config-dump` to enable debug server for
+  dumping Kong configuration translated from `ControlPlane`s and flag
+  `--controlplane-config-dump-bind-address` to set the bind address of server.
+  You can access `GET /debug/controlplanes` to list managed `ControlPlane`s and
+  `GET /debug/controlplanes/namespace/{namespace}/name/{name}/config/*` to dump
+  Kong configuration of a specific `ControlPlane`.
+  [#1894](https://github.com/Kong/kong-operator/pull/1894)
 
 ## [v2.0.0-alpha.2]
 
