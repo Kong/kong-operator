@@ -182,6 +182,8 @@ func expectedDefaultCfg() manager.Config {
 		ControlPlaneControllerEnabled:           true,
 		DataPlaneControllerEnabled:              true,
 		DataPlaneBlueGreenControllerEnabled:     true,
+		ControlPlaneConfigurationDumpEnabled:    false,
+		ControlPlaneConfigurationDumpAddr:       ":10256",
 		ControlPlaneExtensionsControllerEnabled: true,
 		KonnectControllersEnabled:               false,
 		KonnectSyncPeriod:                       consts.DefaultKonnectSyncPeriod,
