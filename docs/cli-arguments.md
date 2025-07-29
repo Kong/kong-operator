@@ -17,7 +17,7 @@
 | `--cluster-domain` | `string` | The cluster domain. This is used e.g. in generating addresses for upstream services. | `cluster.local` |
 | `--config-map-label-selector` | `string` | Limits the configmaps ingested to those having this label set to "true". If empty, all config maps are ingested. | `konghq.com/configmap` |
 | `--controller-name` | `string` | Controller name to use if other than the default, only needed for multi-tenancy. | `""` |
-| `--controlplane-config-dump-bind-address` | `string` | The address where server for dumping ControlPlane configuration. Only enabled when 'enable-controlplane-config-dump' is true. | `:10256` |
+| `--controlplane-config-dump-bind-address` | `string` | The address where server dumps ControlPlane configuration. Only enabled when 'enable-controlplane-config-dump' is true. | `:10256` |
 | `--emit-kubernetes-events` | `bool` | Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects. | `true` |
 | `--enable-controller-aigateway` | `bool` | Enable the AIGateway controller. (Experimental). | `false` |
 | `--enable-controller-controlplane` | `bool` | Enable the ControlPlane controller. | `true` |

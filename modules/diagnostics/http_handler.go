@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,8 +18,8 @@ import (
 
 // HTTPHandler is a handler for the diagnostics HTTP endpoints.
 type HTTPHandler struct {
-	cl client.Client
-
+	cl      client.Client
+	logger  logr.Logger
 	mux     *http.ServeMux
 	exposer *ControlPlaneDiagnosticsExposer
 }
@@ -26,10 +27,12 @@ type HTTPHandler struct {
 // NewHTTPHandler returns a new HTTP Handler to handle HTTP requests to the diagnostics server.
 func NewHTTPHandler(
 	cl client.Client,
+	logger logr.Logger,
 	exposer *ControlPlaneDiagnosticsExposer,
 ) *HTTPHandler {
 	h := &HTTPHandler{
 		cl:      cl,
+		logger:  logger,
 		exposer: exposer,
 	}
 
@@ -62,11 +65,10 @@ type ListControlPlaneItem struct {
 func (h *HTTPHandler) handleListControlPlanes(rw http.ResponseWriter, r *http.Request, cl client.Client) {
 	// List all ControlPlane CRDs.
 	cpList := operatorv2alpha1.ControlPlaneList{}
-	err := cl.List(r.Context(), &cpList)
-	if err != nil {
-		// TODO: log the error instead of directly return to the client.
-		_, _ = rw.Write([]byte(err.Error()))
+	if err := cl.List(r.Context(), &cpList); err != nil {
+		h.logger.Error(err, "failed to list managed ControlPlanes")
 		rw.WriteHeader(http.StatusInternalServerError)
+		_, _ = rw.Write([]byte("failed to list ControlPlanes"))
 		return
 	}
 
@@ -75,7 +77,7 @@ func (h *HTTPHandler) handleListControlPlanes(rw http.ResponseWriter, r *http.Re
 	cpIDMap := lo.SliceToMap(cpIDs, func(id manager.ID) (string, struct{}) {
 		return id.String(), struct{}{}
 	})
-	// TODO: list only CPs that enabled config dump?
+
 	managedCPs := lo.Filter(cpList.Items, func(cp operatorv2alpha1.ControlPlane, _ int) bool {
 		_, ok := cpIDMap[string(cp.UID)]
 		return ok
@@ -135,27 +137,25 @@ func (h *HTTPHandler) handleControlPlaneConfigDump(rw http.ResponseWriter, r *ht
 	}
 
 	cp := &operatorv2alpha1.ControlPlane{}
-	err := h.cl.Get(r.Context(), client.ObjectKey{
+	if err := h.cl.Get(r.Context(), client.ObjectKey{
 		Namespace: namespace,
 		Name:      name,
-	}, cp)
-
-	if err != nil {
+	}, cp); err != nil {
 		if k8serrors.IsNotFound(err) {
 			rw.WriteHeader(http.StatusNotFound)
 			_, _ = fmt.Fprintf(rw, "ControlPlane %s/%s not found", namespace, name)
 			return
 		}
-		// TODO: log the error instead of directly return to the client.
+		h.logger.Error(err, "failed to get control plane", "namespace", namespace, "name", name)
 		rw.WriteHeader(http.StatusInternalServerError)
-		_, _ = rw.Write([]byte(err.Error()))
+		_, _ = rw.Write([]byte("failed to list ControlPlanes"))
 		return
 	}
 	cpID, _ := manager.NewID(string(cp.UID))
 	handler, ok := h.exposer.getHandlerByID(cpID)
 	if !ok {
 		rw.WriteHeader(http.StatusNotFound)
-		fmt.Fprintf(rw, "ControlPlane %s/%s not ready or not managed by the controller", namespace, name)
+		fmt.Fprintf(rw, "ControlPlane %s/%s is not ready or not managed by the controller", namespace, name)
 		return
 	}
 	// If ControlPlane does not enable config dump, a `nil` handler is registered.

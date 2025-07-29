@@ -52,8 +52,21 @@
   dumping Kong configuration translated from `ControlPlane`s and flag
   `--controlplane-config-dump-bind-address` to set the bind address of server.
   You can access `GET /debug/controlplanes` to list managed `ControlPlane`s and
-  `GET /debug/controlplanes/namespace/{namespace}/name/{name}/config/*` to dump
-  Kong configuration of a specific `ControlPlane`.
+  get response like `[{"namespace":"default","name":"kong-12345","id":"abcd1234-..."}]`
+  listing the namespace, name and UID of managed `ControlPlane`s.
+  Calling `GET /debug/controlplanes/namespace/{namespace}/name/{name}/config/{req_type}`
+  can dump Kong configuration of a specific `ControlPlane`. This endpoint is
+  only available when the `ControlPlane`'s `spec.configDump.state` is set to `enabled`.
+  The `{req_type}` stands for the request type of dumping configuration.
+  Supported `{req_type}`s are:
+  - `successful` for configuration in the last successful application.
+  - `failed` for configuration in the last failed application.
+  - `fallback` for configuration applied in the last fallback procedure.
+  - `raw-error` for raw errors returned from the dataplane in the last failed
+     application.
+  - `diff-report` for summaries of differences between the last applied 
+     configuration and the confiugration in the dataplane before that application.
+     It requires the `ControlPlane` set `spec.configDump.dumpSensitive` to `enabled`.
   [#1894](https://github.com/Kong/kong-operator/pull/1894)
 
 ## [v2.0.0-alpha.2]

@@ -301,13 +301,14 @@ func Run(
 
 	if cfg.ControlPlaneControllerEnabled && cfg.ControlPlaneConfigurationDumpEnabled {
 		diagLogger := ctrl.Log.WithName("cp_diagnostics_server")
-		exposer := diagnostics.NewControlPlaneDiagnosticsExposer(diagLogger)
+		exposer := diagnostics.NewControlPlaneDiagnosticsExposer(diagLogger.WithName("exposer"))
 		multiinstance.WithDiagnosticsExposer(exposer)(cpInstancesMgr)
 
 		diagServer := &diagnostics.Server{
 			Addr: cfg.ControlPlaneConfigurationDumpAddr,
 			Handler: diagnostics.NewHTTPHandler(
 				mgr.GetClient(),
+				diagLogger.WithName("http_handler"),
 				exposer,
 			),
 
