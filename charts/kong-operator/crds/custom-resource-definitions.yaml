@@ -45261,8 +45261,6 @@ spec:
                                         enum:
                                         - BreakBeforePromotion
                                         type: string
-                                    required:
-                                    - strategy
                                     type: object
                                   resources:
                                     default:
@@ -45289,12 +45287,8 @@ spec:
                                             type: string
                                         type: object
                                     type: object
-                                required:
-                                - promotion
                                 type: object
                             type: object
-                        required:
-                        - strategy
                         type: object
                       scaling:
                         description: Scaling defines the scaling options for the deployment.

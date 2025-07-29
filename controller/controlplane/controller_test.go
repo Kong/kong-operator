@@ -78,8 +78,8 @@ func TestReconciler_Reconcile(t *testing.T) {
 						},
 					},
 					ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-						WatchNamespaces: &operatorv1beta1.WatchNamespaces{
-							Type: operatorv1beta1.WatchNamespacesTypeAll,
+						WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
+							Type: operatorv2alpha1.WatchNamespacesTypeAll,
 						},
 					},
 				},
