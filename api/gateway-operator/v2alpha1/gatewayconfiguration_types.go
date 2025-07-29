@@ -22,7 +22,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 )
 
 func init() {
@@ -93,7 +92,7 @@ type GatewayConfigControlPlaneOptions struct {
 // +apireference:kgo:include
 type GatewayConfigDataPlaneOptions struct {
 	// +optional
-	Deployment operatorv1beta1.DataPlaneDeploymentOptions `json:"deployment"`
+	Deployment DataPlaneDeploymentOptions `json:"deployment"`
 
 	// +optional
 	Network GatewayConfigDataPlaneNetworkOptions `json:"network"`
@@ -107,6 +106,18 @@ type GatewayConfigDataPlaneOptions struct {
 	//
 	// +optional
 	PluginsToInstall []NamespacedName `json:"pluginsToInstall,omitempty"`
+}
+
+// DataPlaneDeploymentOptions specifies options for the Deployments (as in the Kubernetes
+// resource "Deployment") which are created and managed for the DataPlane resource.
+// +apireference:kgo:include
+type DataPlaneDeploymentOptions struct {
+	// Rollout describes a custom rollout strategy.
+	//
+	// +optional
+	Rollout *Rollout `json:"rollout,omitempty"`
+
+	DeploymentOptions `json:",inline"`
 }
 
 // GatewayConfigDataPlaneNetworkOptions defines network related options for a DataPlane.

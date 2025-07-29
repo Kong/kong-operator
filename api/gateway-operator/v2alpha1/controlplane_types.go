@@ -22,7 +22,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 )
 
 func init() {
@@ -104,7 +103,7 @@ type ControlPlaneOptions struct {
 	//
 	// +optional
 	// +kubebuilder:default={type: all}
-	WatchNamespaces *operatorv1beta1.WatchNamespaces `json:"watchNamespaces,omitempty"`
+	WatchNamespaces *WatchNamespaces `json:"watchNamespaces,omitempty"`
 
 	// FeatureGates is a list of feature gates that are enabled for this ControlPlane.
 	//
