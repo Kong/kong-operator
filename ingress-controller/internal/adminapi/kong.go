@@ -16,23 +16,10 @@ import (
 
 	tlsutil "github.com/kong/kong-operator/ingress-controller/internal/util/tls"
 	"github.com/kong/kong-operator/ingress-controller/internal/versions"
+	ingresserrors "github.com/kong/kong-operator/ingress-controller/pkg/errors"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/pkg/metadata"
 )
-
-// KongClientNotReadyError is returned when the Kong client is not ready to be used yet.
-// This can happen if the Kong Admin API is not reachable, or if it's reachable but `GET /status` does not return 200.
-type KongClientNotReadyError struct {
-	Err error
-}
-
-func (e KongClientNotReadyError) Error() string {
-	return fmt.Sprintf("client not ready: %s", e.Err)
-}
-
-func (e KongClientNotReadyError) Unwrap() error {
-	return e.Err
-}
 
 type KongGatewayUnsupportedVersionError struct {
 	msg string
@@ -76,7 +63,7 @@ func NewKongClientForWorkspace(
 	// because the client may not be granted to call /status and only allowed to access the given workspace.
 	if wsName == "" {
 		if _, err := client.Status(ctx); err != nil {
-			return nil, KongClientNotReadyError{Err: err}
+			return nil, ingresserrors.KongClientNotReadyError{Err: err}
 		}
 	} else {
 		// If a workspace was provided, verify whether or not it exists.
@@ -100,7 +87,7 @@ func NewKongClientForWorkspace(
 		// Now that we have set the workspace, ensure that the client is ready
 		// to be used with said workspace.
 		if _, err := client.Status(ctx); err != nil {
-			return nil, KongClientNotReadyError{Err: err}
+			return nil, ingresserrors.KongClientNotReadyError{Err: err}
 		}
 	}
 

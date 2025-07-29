@@ -20,3 +20,19 @@ func NewNoAvailableEndpointsError(serviceNN k8stypes.NamespacedName) NoAvailable
 func (e NoAvailableEndpointsError) Error() string {
 	return fmt.Sprintf("no endpoints for service: %q", e.serviceNN)
 }
+
+// KongClientNotReadyError is returned when the Kong client is not ready to be used yet.
+// This can happen if the Kong Admin API is not reachable, or if it's reachable but `GET /status` does not return 200.
+type KongClientNotReadyError struct {
+	Err error
+}
+
+// Error implements the error interface for KongClientNotReadyError.
+func (e KongClientNotReadyError) Error() string {
+	return fmt.Sprintf("client not ready: %s", e.Err)
+}
+
+// Unwrap allows access to the underlying error wrapped by KongClientNotReadyError.
+func (e KongClientNotReadyError) Unwrap() error {
+	return e.Err
+}

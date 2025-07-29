@@ -15,6 +15,7 @@ import (
 
 	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/versions"
+	ingresserrors "github.com/kong/kong-operator/ingress-controller/pkg/errors"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
 	"github.com/kong/kong-operator/ingress-controller/test/mocks"
@@ -138,14 +139,14 @@ func TestNewKongClientForWorkspace(t *testing.T) {
 			name:          "admin api is not ready",
 			adminAPIReady: false,
 			workspace:     "",
-			expectError:   adminapi.KongClientNotReadyError{},
+			expectError:   ingresserrors.KongClientNotReadyError{},
 		},
 		{
 			name:            "admin api is not ready for an existing workspace",
 			adminAPIReady:   false,
 			workspace:       workspace,
 			workspaceExists: true,
-			expectError:     adminapi.KongClientNotReadyError{},
+			expectError:     ingresserrors.KongClientNotReadyError{},
 		},
 		{
 			name:            "admin api is in too old version",

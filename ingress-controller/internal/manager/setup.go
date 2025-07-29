@@ -372,8 +372,9 @@ func AdminAPIClientFromServiceDiscovery(
 			// log the error if the error is NOT caused by 0 available gateway endpoints.
 			if !errors.As(err, &ingresserrors.NoAvailableEndpointsError{}) {
 				logger.V(logging.DebugLevel).Info("Failed to create kong client(s)", "error", err)
+			} else {
+				logger.V(logging.DebugLevel).Info("Failed to create kong client(s), retrying...", "error", err, "delay", delay)
 			}
-			logger.V(logging.DebugLevel).Info("Failed to create kong client(s), retrying...", "error", err, "delay", delay)
 		}),
 	}, retryOpts...)
 

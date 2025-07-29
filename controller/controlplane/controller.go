@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"reflect"
 	"strings"
 	"time"
@@ -537,18 +536,29 @@ func (r *Reconciler) handleScheduleInstanceOutcome(
 	cp *ControlPlane,
 	err error,
 ) (ctrl.Result, error) {
+	var (
+		endpointsError   = &ingresserrors.NoAvailableEndpointsError{}
+		kongClientError  = &ingresserrors.KongClientNotReadyError{}
+		conditionMessage string
+	)
+
 	// If the error is transient, we log it and requeue the resource. Such errors include:
 	// - NoAvailableEndpointsError: indicates that there are no available endpoints for the dataplane;
-	// - io.EOF: indicates that the connection to the dataplane service was closed unexpectedly.
+	// - KongClientNotReadyError: indicates that the Kong client is not ready.
 	// These errors are considered transient and will be retried after a delay.
-	if errors.As(err, &ingresserrors.NoAvailableEndpointsError{}) || errors.Is(err, io.EOF) {
+	if errors.As(err, endpointsError) {
+		conditionMessage = endpointsError.Error()
+	} else if errors.As(err, kongClientError) {
+		conditionMessage = kongClientError.Error()
+	}
+	if conditionMessage != "" {
 		logger.Info("Transient error encountered while creating kong api clients, retrying after delay", "error", err, "retryDelay", requeueAfterBoot)
 		k8sutils.SetCondition(
 			k8sutils.NewCondition(
 				kcfgdataplane.ReadyType,
 				metav1.ConditionFalse,
 				kcfgdataplane.WaitingToBecomeReadyReason,
-				kcfgdataplane.WaitingToBecomeReadyMessage,
+				fmt.Sprintf("Unable to connect to data plane: %s", conditionMessage),
 			),
 			cp,
 		)
