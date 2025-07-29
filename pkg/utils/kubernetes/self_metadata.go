@@ -55,7 +55,8 @@ func GetSelfPodLabels() (map[string]string, error) {
 }
 
 // RunningOnKubernetes returns true if it is running in the kubernetes environment.
-// If the env KUBERNETES_SERVICE_HOST is configured to access the kubernetes API server, // it is considered to be running on k8s.
+// If the env KUBERNETES_SERVICE_HOST is configured to access the kubernetes API server,
+// it is considered to be running on k8s.
 func RunningOnKubernetes() bool {
 	return os.Getenv("KUBERNETES_SERVICE_HOST") != ""
 }
