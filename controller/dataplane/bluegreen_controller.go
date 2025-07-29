@@ -63,6 +63,8 @@ type BlueGreenReconciler struct {
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
 
+	SecretLabelSelector string
+
 	DefaultImage string
 
 	KonnectEnabled bool
@@ -183,6 +185,7 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			Namespace: dataplaneAdminService.Namespace,
 			Name:      dataplaneAdminService.Name,
 		},
+		r.SecretLabelSelector,
 		r.ClusterCAKeyConfig,
 	)
 	if err != nil {
@@ -528,7 +531,8 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 		WithClusterCertificate(certSecret.Name).
 		WithOpts(deploymentOpts...).
 		WithDefaultImage(r.DefaultImage).
-		WithAdditionalLabels(deploymentLabels)
+		WithAdditionalLabels(deploymentLabels).
+		WithSecretLabelSelector(r.SecretLabelSelector)
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.ValidateDataPlaneImage)
 	if err != nil {

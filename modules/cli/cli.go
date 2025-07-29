@@ -39,6 +39,9 @@ func New(m metadata.Info) *CLI {
 	flagSet.IntVar(&cfg.APIServerBurst, "apiserver-burst", 300, "The Kubernetes API RateLimiter maximum burst queries per second.")
 	flagSet.StringVar(&cfg.KubeconfigPath, "kubeconfig", "", "Path to the kubeconfig file.")
 
+	flagSet.StringVar(&cfg.SecretLabelSelector, "secret-label-selector", mgrconfig.DefaultSecretLabelSelector, `Limits the secrets ingested to those having this label set to "true". If empty, all secrets are ingested.`)
+	flagSet.StringVar(&cfg.ConfigMapLabelSelector, "config-map-label-selector", mgrconfig.DefaultConfigMapLabelSelector, `Limits the configmaps ingested to those having this label set to "true". If empty, all config maps are ingested.`)
+
 	flagSet.StringVar(&cfg.MetricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
 	flagSet.Var(&cfg.MetricsAccessFilter, "metrics-access-filter", "Specifies the filter access function to be used for accessing the metrics endpoint (possible values: off, rbac). Default is off.")
 	flagSet.StringVar(&cfg.ProbeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")

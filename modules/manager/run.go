@@ -28,7 +28,9 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -79,6 +81,10 @@ type Config struct {
 	EnforceConfig            bool
 	ClusterDomain            string
 	EmitKubernetesEvents     bool
+	// SecretLabelSelector specifies the label which will be used to limit the ingestion of secrets. Only those that have this label set to "true" will be ingested.
+	SecretLabelSelector string
+	// ConfigMapLabelSelector specifies the label which will be used to limit the ingestion of configmaps. Only those that have this label set to "true" will be ingested.
+	ConfigMapLabelSelector string
 
 	// ServiceAccountToImpersonate is the name of the service account to impersonate,
 	// by the controller manager, when making requests to the API server.
@@ -119,6 +125,8 @@ func DefaultConfig() Config {
 		ClusterCASecretName:           "kong-operator-ca",
 		ClusterCASecretNamespace:      defaultNamespace,
 		ControllerNamespace:           defaultNamespace,
+		SecretLabelSelector:           mgrconfig.DefaultSecretLabelSelector,
+		ConfigMapLabelSelector:        mgrconfig.DefaultConfigMapLabelSelector,
 		LoggerOpts:                    &zap.Options{},
 		GatewayControllerEnabled:      true,
 		ControlPlaneControllerEnabled: true,
@@ -186,6 +194,27 @@ func Run(
 		cacheOptions.SyncPeriod = &cfg.CacheSyncPeriod
 	}
 
+	cacheOptions.ByObject = map[client.Object]cache.ByObject{}
+	if cfg.SecretLabelSelector != "" {
+		req, err := labels.NewRequirement(cfg.SecretLabelSelector, selection.Equals, []string{"true"})
+		if err != nil {
+			return fmt.Errorf("failed to make label requirement for secrets: %w", err)
+		}
+		cacheOptions.ByObject[&corev1.Secret{}] = cache.ByObject{
+			Label: labels.NewSelector().Add(*req),
+		}
+	}
+
+	if cfg.ConfigMapLabelSelector != "" {
+		req, err := labels.NewRequirement(cfg.ConfigMapLabelSelector, selection.Equals, []string{"true"})
+		if err != nil {
+			return fmt.Errorf("failed to make label requirement for config maps: %w", err)
+		}
+		cacheOptions.ByObject[&corev1.ConfigMap{}] = cache.ByObject{
+			Label: labels.NewSelector().Add(*req),
+		}
+	}
+
 	mgr, err := ctrl.NewManager(
 		restCfg,
 		ctrl.Options{
@@ -235,6 +264,11 @@ func Run(
 			Type: keyType,
 			Size: cfg.ClusterCAKeySize,
 		},
+	}
+	if cfg.SecretLabelSelector != "" {
+		caMgr.SecretLabels = map[string]string{
+			cfg.SecretLabelSelector: "true",
+		}
 	}
 	if err = mgr.Add(caMgr); err != nil {
 		return fmt.Errorf("unable to start manager: %w", err)
@@ -326,6 +360,7 @@ type caManager struct {
 	Client          client.Client
 	SecretName      string
 	SecretNamespace string
+	SecretLabels    map[string]string
 	KeyConfig       secrets.KeyConfig
 }
 
@@ -354,7 +389,7 @@ func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
 	if err := m.Client.Get(ctx, objectKey, &ca); err != nil {
 		if k8serrors.IsNotFound(err) {
 			m.Logger.Info(fmt.Sprintf("no CA certificate Secret %s found, generating CA certificate", objectKey))
-			return secrets.CreateClusterCACertificate(ctx, m.Client, objectKey, m.KeyConfig)
+			return secrets.CreateClusterCACertificate(ctx, m.Client, objectKey, m.SecretLabels, m.KeyConfig)
 		}
 
 		return err
