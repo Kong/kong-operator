@@ -36,9 +36,9 @@ func GetSelfPodLabels() (map[string]string, error) {
 		return nil, fmt.Errorf("cannot find pod labels from file %s: %w", podLabelsFile, err)
 	}
 
-	labelList := strings.Split(string(buf), "\n")
-	ret := make(map[string]string, len(labelList))
-	for _, label := range labelList {
+	labels := strings.SplitSeq(string(buf), "\n")
+	ret := make(map[string]string)
+	for label := range labels {
 		labelKV := strings.SplitN(label, "=", 2)
 		if len(labelKV) != 2 {
 			return nil, fmt.Errorf("invalid label format, should be key=value")
@@ -55,7 +55,7 @@ func GetSelfPodLabels() (map[string]string, error) {
 }
 
 // RunningOnKubernetes returns true if it is running in the kubernetes environment.
-// If the env KUBERNETES_SERVICE_HOST is configured to access the kubernetes API server, it is considered to running on k8s.
+// If the env KUBERNETES_SERVICE_HOST is configured to access the kubernetes API server, // it is considered to be running on k8s.
 func RunningOnKubernetes() bool {
 	return os.Getenv("KUBERNETES_SERVICE_HOST") != ""
 }
