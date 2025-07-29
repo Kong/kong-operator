@@ -62,5 +62,15 @@ spec:
           requests:
             cpu: 10m
             memory: 128Mi
+        volumeMounts:
+        - name: controller-manager-pod-labels
+          mountPath: /etc/podinfo
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
+      volumes:
+      - name: controller-manager-pod-labels
+        downwardAPI:
+          items:
+          - path: labels
+            fieldRef:
+              fieldPath: metadata.labels
