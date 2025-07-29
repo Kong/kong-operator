@@ -4,6 +4,8 @@ package config
 const DefaultClusterCAKeySize = 4096
 
 const (
-	DefaultSecretLabelSelector    = "konghq.com/secret"
+	// DefaultSecretLabelSelector is the deafult label selector to filter reconciled `Secret`s.
+	DefaultSecretLabelSelector = "konghq.com/secret"
+	// DefaultConfigMapLabelSelector is the default label selector to filter reconciled `ConfigMap`s.
 	DefaultConfigMapLabelSelector = "konghq.com/configmap"
 )
