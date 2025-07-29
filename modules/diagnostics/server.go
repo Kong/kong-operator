@@ -30,8 +30,7 @@ func (s *Server) Start(ctx context.Context) error {
 	}
 
 	go func() {
-		err := httpServer.ListenAndServe()
-		if err != nil {
+		if err := httpServer.ListenAndServe(); err != nil {
 			if !errors.Is(err, http.ErrServerClosed) {
 				s.Logger.Error(err, "Could not start diagnostics server")
 			}
