@@ -770,7 +770,7 @@ spec:
         volumeMounts:
         - name: chartsnap-kong-operator-certs-dir
           mountPath: /tmp/k8s-webhook-server/serving-certs
-        - name: chartsnap-kong-operator-pod-info
+        - name: chartsnap-kong-operator-pod-labels
           mountPath: /etc/podinfo
       securityContext:
         runAsNonRoot: true
@@ -780,7 +780,7 @@ spec:
       - name: chartsnap-kong-operator-certs-dir
         emptyDir:
           sizeLimit: 256Mi
-      - name: chartsnap-kong-operator-pod-info
+      - name: chartsnap-kong-operator-pod-labels
         downwardAPI:
           items:
           - path: labels

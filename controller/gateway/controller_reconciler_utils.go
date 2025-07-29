@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"net"
 	"net/http"
 	"strconv"
@@ -305,7 +304,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 		return false, errors.New("number of networkPolicies reduced")
 	}
 
-	// generate the network policy that allow the KO pod to access dataplane pods.
+	// generate the network policy that allows the KO pod to access the admin APIs of dataplane pods.
 	generatedPolicy, err := generateDataPlaneNetworkPolicy(r.Namespace, dataplane, r.PodLabels)
 	if err != nil {
 		return false, fmt.Errorf("failed generating network policy for DataPlane %s: %w", dataplane.Name, err)
@@ -333,6 +332,8 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 	return true, r.Create(ctx, generatedPolicy)
 }
 
+// generateDataPlaneNetworkPolicy generates the NetworkPolicy that allows the KO pod to access admin API of dataplane pods.
+// the params `namespace` and `podLabels` are namespace and labels of the KO pod itself, and `dataplane` is the target dataplane.
 func generateDataPlaneNetworkPolicy(
 	namespace string,
 	dataplane *operatorv1beta1.DataPlane,
@@ -344,6 +345,16 @@ func generateDataPlaneNetworkPolicy(
 		proxyPort       = intstr.FromInt(consts.DataPlaneProxyPort)
 		proxySSLPort    = intstr.FromInt(consts.DataPlaneProxySSLPort)
 		metricsPort     = intstr.FromInt(consts.DataPlaneMetricsPort)
+		// The label keys to match Kong operator pod.
+		// To not create new NetworkPolicy on upgrade of , we just keep the keys marking the application
+		// and remove the keys related to versions such as `version`,`pod-template-hash`,`helm.sh/chart`.
+		podLabelSelectorKeys = []string{
+			"app",
+			"app.kubernetes.io/component",
+			"app.kubernetes.io/instance",
+			"app.kubernetes.io/name",
+			"control-plane",
+		}
 	)
 
 	// Check if KONG_PROXY_LISTEN and/or KONG_ADMIN_LISTEN are set in
@@ -385,10 +396,17 @@ func generateDataPlaneNetworkPolicy(
 			},
 		},
 	}
+
 	if len(podLabels) > 0 {
-		podLabelsCopy := maps.Clone(podLabels)
+		matchPodLabels := map[string]string{}
+		for _, key := range podLabelSelectorKeys {
+			value, ok := podLabels[key]
+			if ok {
+				matchPodLabels[key] = value
+			}
+		}
 		policyPeerForControllerPod.PodSelector = &metav1.LabelSelector{
-			MatchLabels: podLabelsCopy,
+			MatchLabels: matchPodLabels,
 		}
 	}
 	limitAdminAPIIngress := networkingv1.NetworkPolicyIngressRule{

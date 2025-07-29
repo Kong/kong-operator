@@ -94,7 +94,7 @@ Create a list of env vars based on the values of the `env` and `customEnv` maps.
 - name: {{ template "kong.fullname" . }}-certs-dir
   emptyDir:
     sizeLimit: {{ .Values.certsDir.sizeLimit }}
-- name: {{ template "kong.fullname" . }}-pod-info
+- name: {{ template "kong.fullname" . }}-pod-labels
   downwardAPI:
     items:
     - path: labels
@@ -105,7 +105,7 @@ Create a list of env vars based on the values of the `env` and `customEnv` maps.
 {{- define "kong.volumeMounts" -}}
 - name: {{ template "kong.fullname" . }}-certs-dir
   mountPath: /tmp/k8s-webhook-server/serving-certs
-- name: {{ template "kong.fullname" . }}-pod-info
+- name: {{ template "kong.fullname" . }}-pod-labels
   mountPath: /etc/podinfo
 {{- end }}
 

@@ -33,7 +33,7 @@ func GetSelfNamespace() (string, error) {
 func GetSelfPodLabels() (map[string]string, error) {
 	buf, err := os.ReadFile(podLabelsFile)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot find pod labels from file %s: %w", podLabelsFile, err)
+		return nil, fmt.Errorf("cannot find pod labels from file %s: %w", podLabelsFile, err)
 	}
 
 	labelList := strings.Split(string(buf), "\n")
@@ -41,8 +41,7 @@ func GetSelfPodLabels() (map[string]string, error) {
 	for _, label := range labelList {
 		labelKV := strings.SplitN(label, "=", 2)
 		if len(labelKV) != 2 {
-			// TODO: return error here?
-			continue
+			return nil, fmt.Errorf("invalid label format, should be key=value")
 		}
 		key := labelKV[0]
 		// The value in labels are escaped, e.g: "ko" => "\"ko\"". So we need to unquote it.
@@ -53,4 +52,10 @@ func GetSelfPodLabels() (map[string]string, error) {
 		ret[key] = value
 	}
 	return ret, nil
+}
+
+// RunningOnKubernetes returns true if it is running in the kubernetes environment.
+// If the env KUBERNETES_SERVICE_HOST is configured to access the kubernetes API server, it is considered to running on k8s.
+func RunningOnKubernetes() bool {
+	return os.Getenv("KUBERNETES_SERVICE_HOST") != ""
 }

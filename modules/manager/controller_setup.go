@@ -356,7 +356,9 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	}
 	podLabels, err := k8sutils.GetSelfPodLabels()
 	if err != nil {
-		// TODO: output some log here?
+		if k8sutils.RunningOnKubernetes() {
+			return nil, fmt.Errorf("failed to get pod labels: %w", err)
+		}
 		podLabels = map[string]string{}
 	}
 
