@@ -20,7 +20,7 @@ func TestSetByObjectFor(t *testing.T) {
 		err := setByObjectFor[corev1.Secret](selector, byObject)
 		require.NoError(t, err)
 
-		// Verify the label selector was set correctly
+		// Verify the label selector was set correctly.
 		expectedReq, err := labels.NewRequirement(selector, selection.Equals, []string{"true"})
 		require.NoError(t, err)
 		expectedSelector := labels.NewSelector().Add(*expectedReq)
