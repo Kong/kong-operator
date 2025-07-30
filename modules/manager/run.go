@@ -218,8 +218,9 @@ func Run(
 		watchNamespaces := strings.Split(cfg.WatchNamespaces, ",")
 		setupLog.Info("Manager set up with multiple namespaces", "namespaces", watchNamespaces)
 		watched := make(map[string]cache.Config)
-		for _, n := range watchNamespaces {
-			watched[n] = cache.Config{}
+		for _, ns := range watchNamespaces {
+			ns = strings.TrimSpace(ns)
+			watched[ns] = cache.Config{}
 		}
 		cacheOptions.DefaultNamespaces = watched
 	}
