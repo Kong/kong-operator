@@ -46,6 +46,7 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/internal/telemetry"
+	"github.com/kong/kong-operator/internal/webhook/conversion"
 	"github.com/kong/kong-operator/modules/diagnostics"
 	mgrconfig "github.com/kong/kong-operator/modules/manager/config"
 	"github.com/kong/kong-operator/modules/manager/logging"
@@ -114,6 +115,9 @@ type Config struct {
 
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool
+
+	// Webhook options.
+	ConversionWebhookEnabled bool
 }
 
 const (
@@ -147,6 +151,7 @@ func DefaultConfig() Config {
 		GatewayControllerEnabled:      true,
 		ControlPlaneControllerEnabled: true,
 		DataPlaneControllerEnabled:    true,
+		ConversionWebhookEnabled:      true,
 	}
 }
 
@@ -323,6 +328,12 @@ func Run(
 	for _, c := range controllers {
 		if err := c.MaybeSetupWithManager(ctx, mgr); err != nil {
 			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
+		}
+	}
+
+	if cfg.ConversionWebhookEnabled {
+		if err := conversion.SetupWebhooksWithManager(mgr); err != nil {
+			return fmt.Errorf("unable to set up conversion webhook: %w", err)
 		}
 	}
 

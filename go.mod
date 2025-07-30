@@ -38,7 +38,7 @@ require (
 	github.com/kong/go-database-reconciler v1.24.3
 	github.com/kong/go-kong v0.67.0
 	github.com/kong/kubernetes-configuration v1.4.1-0.20250708093327-e695c0e8302e
-	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.1.0.20250805095629-79af287845fd
+	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.1.0.20250806075027-d946ffc313fb
 	github.com/kong/kubernetes-telemetry v0.1.10
 	github.com/kong/kubernetes-testing-framework v0.47.3-0.20250806132524-715c7d56419d
 	github.com/kong/semver/v4 v4.0.1

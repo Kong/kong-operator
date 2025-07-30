@@ -83,6 +83,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.UintVar(&cfg.KonnectMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultKonnectMaxConcurrentReconciles, "Maximum number of concurrent reconciles for Konnect entities.")
 
 	// webhook and validation options
+	flagSet.BoolVar(&cfg.ConversionWebhookEnabled, "enable-conversion-webhook", true, "Enable the conversion webhook.")
 	var validatingWebhookEnabled bool
 	flagSet.BoolVar(&validatingWebhookEnabled, "enable-validating-webhook", false, "Enable the validating webhook. DEPRECATED: This flag is no-op and will be removed in a future release.")
 	var validatingWebhookConfigBaseImage string

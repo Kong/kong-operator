@@ -66,3 +66,7 @@ const (
 func ControlPlaneGVR() schema.GroupVersionResource {
 	return operatorv2alpha1.ControlPlaneGVR()
 }
+
+func GatewayConfigurationGVR() schema.GroupVersionResource {
+	return operatorv2alpha1.GatewayConfigurationGVR()
+}
