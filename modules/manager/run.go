@@ -46,6 +46,7 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/internal/telemetry"
+	wv1 "github.com/kong/kong-operator/internal/webhook/gateway-operator.konghq.com/v2alpha1"
 	"github.com/kong/kong-operator/modules/diagnostics"
 	mgrconfig "github.com/kong/kong-operator/modules/manager/config"
 	"github.com/kong/kong-operator/modules/manager/logging"
@@ -328,6 +329,10 @@ func Run(
 		if err := c.MaybeSetupWithManager(ctx, mgr); err != nil {
 			return fmt.Errorf("unable to create controller %q: %w", c.Name(), err)
 		}
+	}
+
+	if err := wv1.SetupControlPlaneWebhookWithManager(mgr); err != nil {
+		return fmt.Errorf("unable to set up ControlPlane webhook: %w", err)
 	}
 
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
