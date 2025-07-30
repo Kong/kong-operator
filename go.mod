@@ -1,8 +1,6 @@
 module github.com/kong/kong-operator
 
-go 1.24.3
-
-toolchain go1.24.4
+go 1.24.4
 
 // 1.2.2 was released on main branch with a breaking change that was not
 // intended to be released in 1.2.x:
@@ -37,7 +35,7 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2
 	github.com/hashicorp/go-retryablehttp v0.7.8
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.24.2
+	github.com/kong/go-database-reconciler v1.24.3
 	github.com/kong/go-kong v0.67.0
 	github.com/kong/kubernetes-configuration v1.4.1-0.20250708093327-e695c0e8302e
 	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.1.0.20250729175122-fca328cabf60
