@@ -31,7 +31,7 @@ func init() {
 // ControlPlane is the Schema for the controlplanes API
 //
 // +genclient
-// +kubebuilder:deprecatedversion:warning="This API version has been deprecated in favor of v2alpha1 and it will be removed in the future."
+// +kubebuilder:deprecatedversion:warning="ControlPlane v1beta1 has been deprecated in favor of v2alpha1 and it will be removed in the future."
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
