@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -139,8 +140,18 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 	gatewayConfigNamespace string,
 	opts GatewayConfigDataPlaneOptions,
 ) *operatorv1beta1.DataPlaneOptions {
-	dataPlaneOptions := &operatorv1beta1.DataPlaneOptions{
-		Deployment: opts.Deployment,
+	dataPlaneOptions := &operatorv1beta1.DataPlaneOptions{}
+
+	// NOTICE: Convert v2alpha1.DataPlaneDeploymentOptions to v1beta1.DataPlaneDeploymentOptions
+	// using JSON marshaling/unmarshaling since the types are structurally identical.
+	// This is a hacky way that will be resolved in the future in the following issue:
+	// https://github.com/Kong/kong-operator/issues/1728
+	if deploymentBytes, err := json.Marshal(opts.Deployment); err == nil {
+		var v1beta1Deployment operatorv1beta1.DataPlaneDeploymentOptions
+		if err := json.Unmarshal(deploymentBytes, &v1beta1Deployment); err != nil {
+			panic(fmt.Sprintf("failed to unmarshal DataPlaneDeploymentOptions should never happen: %v", err))
+		}
+		dataPlaneOptions.Deployment = v1beta1Deployment
 	}
 
 	if len(opts.PluginsToInstall) > 0 {

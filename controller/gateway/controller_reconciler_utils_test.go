@@ -1177,8 +1177,8 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 			name:            "deployment options",
 			gatewayConfigNS: "default",
 			opts: GatewayConfigDataPlaneOptions{
-				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+				Deployment: operatorv2alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv2alpha1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
