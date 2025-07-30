@@ -68,6 +68,10 @@
      configuration and the confiugration in the dataplane before that application.
      It requires the `ControlPlane` set `spec.configDump.dumpSensitive` to `enabled`.
   [#1894](https://github.com/Kong/kong-operator/pull/1894)
+- Introduce the flag `--watch-namespaces` to specify which namespaces the operator
+  should watch for configuration resources.
+  The default value is `""` which makes the operator watch all namespaces.
+  [#1958](https://github.com/Kong/kong-operator/pull/1958)
 
 ## [v2.0.0-alpha.2]
 
