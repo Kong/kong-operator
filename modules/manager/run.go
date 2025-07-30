@@ -228,10 +228,10 @@ func Run(
 	if cfg.ConfigMapLabelSelector != "" || cfg.SecretLabelSelector != "" {
 		cacheOptions.ByObject = map[client.Object]cache.ByObject{}
 		if err := setByObjectFor[corev1.Secret](cfg.SecretLabelSelector, cacheOptions.ByObject); err != nil {
-			return fmt.Errorf("failed to set byObject for secrets: %w", err)
+			return fmt.Errorf("failed to set byObject for Secrets: %w", err)
 		}
 		if err := setByObjectFor[corev1.ConfigMap](cfg.ConfigMapLabelSelector, cacheOptions.ByObject); err != nil {
-			return fmt.Errorf("failed to set byObject for config maps: %w", err)
+			return fmt.Errorf("failed to set byObject for ConfigMaps: %w", err)
 		}
 	}
 
