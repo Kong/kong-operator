@@ -37,11 +37,13 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/konnect"
 	konnectLicense "github.com/kong/kong-operator/ingress-controller/internal/konnect/license"
 	"github.com/kong/kong-operator/ingress-controller/internal/license"
+	"github.com/kong/kong-operator/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/ingress-controller/internal/metrics"
 	"github.com/kong/kong-operator/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/ingress-controller/internal/util/clock"
 	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
+	ingresserrors "github.com/kong/kong-operator/ingress-controller/pkg/errors"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 )
@@ -332,14 +334,6 @@ func adminAPIClients(
 	return clients, nil
 }
 
-type NoAvailableEndpointsError struct {
-	serviceNN k8stypes.NamespacedName
-}
-
-func (e NoAvailableEndpointsError) Error() string {
-	return fmt.Sprintf("no endpoints for service: %q", e.serviceNN)
-}
-
 type AdminAPIsDiscoverer interface {
 	GetAdminAPIsForService(context.Context, client.Client, k8stypes.NamespacedName) (sets.Set[adminapi.DiscoveredAdminAPI], error)
 }
@@ -376,10 +370,11 @@ func AdminAPIClientFromServiceDiscovery(
 		retry.Delay(delay),
 		retry.OnRetry(func(_ uint, err error) {
 			// log the error if the error is NOT caused by 0 available gateway endpoints.
-			if !errors.As(err, &NoAvailableEndpointsError{}) {
-				logger.Error(err, "Failed to create kong client(s)")
+			if !errors.As(err, &ingresserrors.NoAvailableEndpointsError{}) {
+				logger.V(logging.DebugLevel).Info("Failed to create kong client(s)", "error", err)
+			} else {
+				logger.V(logging.DebugLevel).Info("Failed to create kong client(s), retrying...", "error", err, "delay", delay)
 			}
-			logger.Error(err, "Failed to create kong client(s), retrying...", "delay", delay)
 		}),
 	}, retryOpts...)
 
@@ -390,7 +385,7 @@ func AdminAPIClientFromServiceDiscovery(
 			return retry.Unrecoverable(err)
 		}
 		if s.Len() == 0 {
-			return NoAvailableEndpointsError{serviceNN: kongAdminSvcNN}
+			return ingresserrors.NewNoAvailableEndpointsError(kongAdminSvcNN)
 		}
 		adminAPIs = s.UnsortedList()
 		return nil

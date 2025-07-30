@@ -32,6 +32,7 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
+	ingresserrors "github.com/kong/kong-operator/ingress-controller/pkg/errors"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
@@ -263,7 +264,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			}
 			mgrCfg.DisableRunningDiagnosticsServer = true
 			if err := r.scheduleInstance(ctx, logger, mgrID, mgrCfg); err != nil {
-				return ctrl.Result{}, err
+				return r.handleScheduleInstanceOutcome(ctx, logger, cp, err)
 			}
 			r.ensureControlPlaneStatus(cp, mgrCfg)
 		}
@@ -299,7 +300,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			}
 
 			if err := r.scheduleInstance(ctx, logger, mgrID, mgrCfg); err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to schedule instance: %w", err)
+				return r.handleScheduleInstanceOutcome(ctx, logger, cp, err)
 			}
 			r.ensureControlPlaneStatus(cp, mgrCfg)
 
@@ -525,4 +526,51 @@ func (r *Reconciler) initStatusToWaitingToBecomeReady(
 		return res, nil
 	}
 	return ctrl.Result{RequeueAfter: requeueAfterBoot}, nil
+}
+
+// handleScheduleInstanceOutcome handles the outcome of r.scheduleInstance.
+// It checks for transient errors, logs them, and requeues the resource with a patched status.
+func (r *Reconciler) handleScheduleInstanceOutcome(
+	ctx context.Context,
+	logger logr.Logger,
+	cp *ControlPlane,
+	err error,
+) (ctrl.Result, error) {
+	var (
+		endpointsError   = &ingresserrors.NoAvailableEndpointsError{}
+		kongClientError  = &ingresserrors.KongClientNotReadyError{}
+		conditionMessage string
+	)
+
+	// If the error is transient, we log it and requeue the resource. Such errors include:
+	// - NoAvailableEndpointsError: indicates that there are no available endpoints for the dataplane;
+	// - KongClientNotReadyError: indicates that the Kong client is not ready.
+	// These errors are considered transient and will be retried after a delay.
+	if errors.As(err, endpointsError) {
+		conditionMessage = endpointsError.Error()
+	} else if errors.As(err, kongClientError) {
+		conditionMessage = kongClientError.Error()
+	}
+	if conditionMessage != "" {
+		logger.Info("Transient error encountered while creating kong api clients, retrying after delay", "error", err, "retryDelay", requeueAfterBoot)
+		k8sutils.SetCondition(
+			k8sutils.NewCondition(
+				kcfgdataplane.ReadyType,
+				metav1.ConditionFalse,
+				kcfgdataplane.WaitingToBecomeReadyReason,
+				fmt.Sprintf("Unable to connect to data plane: %s", conditionMessage),
+			),
+			cp,
+		)
+		res, patchErr := r.patchStatus(ctx, logger, cp)
+		if patchErr != nil {
+			logger.Error(patchErr, "Failed to patch ControlPlane status")
+			return ctrl.Result{}, patchErr
+		}
+		if !res.IsZero() {
+			return res, nil
+		}
+		return ctrl.Result{RequeueAfter: requeueAfterBoot}, nil
+	}
+	return ctrl.Result{}, err
 }
