@@ -42,6 +42,7 @@
 | `--secret-label-selector` | `string` | Limits the secrets ingested to those having this label set to "true". If empty, all secrets are ingested. | `konghq.com/secret` |
 | `--validate-images` | `bool` | Validate the images set in ControlPlane and DataPlane specifications. | `true` |
 | `--version` | `bool` | Print version information. | `false` |
+| `--watch-namespaces` | `string` | Comma-separated list of namespaces to watch. If empty (default), all namespaces are watched. | `""` |
 | `--webhook-certificate-config-base-image` | `string` | The base image for the certgen Jobs. DEPRECATED: This flag is no-op and will be removed in a future release. | `registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.3.0` |
 | `--webhook-certificate-config-shell-image` | `string` | The shell image for the certgen Jobs. DEPRECATED: This flag is no-op and will be removed in a future release. | `busybox` |
 | `--zap-devel` | `bool` | Development Mode defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn). Production Mode defaults(encoder=jsonEncoder,logLevel=Info,stackTraceLevel=Error). | `false` |

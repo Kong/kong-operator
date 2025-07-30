@@ -86,6 +86,8 @@ type Config struct {
 	SecretLabelSelector string
 	// ConfigMapLabelSelector specifies the label which will be used to limit the ingestion of configmaps. Only those that have this label set to "true" will be ingested.
 	ConfigMapLabelSelector string
+	// WatchNamespaces is a comma-separated list of namespaces to watch. If empty (default), all namespaces are watched.
+	WatchNamespaces string
 
 	// ServiceAccountToImpersonate is the name of the service account to impersonate,
 	// by the controller manager, when making requests to the API server.
@@ -202,64 +204,66 @@ func Run(
 		UserName: cfg.ServiceAccountToImpersonate,
 	}
 
-	cacheOptions := cache.Options{}
+	var cacheOptions cache.Options
 	if cfg.CacheSyncPeriod > 0 {
 		setupLog.Info("cache sync period set", "period", cfg.CacheSyncPeriod)
 		cacheOptions.SyncPeriod = &cfg.CacheSyncPeriod
 	}
 
-	cacheOptions.ByObject = map[client.Object]cache.ByObject{}
-	if cfg.SecretLabelSelector != "" {
-		req, err := labels.NewRequirement(cfg.SecretLabelSelector, selection.Equals, []string{"true"})
-		if err != nil {
-			return fmt.Errorf("failed to make label requirement for secrets: %w", err)
+	// If there are no configured watch namespaces, then we're watching ALL namespaces,
+	// and we don't have to bother individually caching any particular namespaces.
+	// This is the default behavior of the controller-runtime manager.
+	// If there are configured watch namespaces, then we're watching only those namespaces.
+	if len(cfg.WatchNamespaces) > 0 {
+		watchNamespaces := strings.Split(cfg.WatchNamespaces, ",")
+		setupLog.Info("Manager set up with multiple namespaces", "namespaces", watchNamespaces)
+		watched := make(map[string]cache.Config)
+		for _, n := range watchNamespaces {
+			watched[n] = cache.Config{}
 		}
-		cacheOptions.ByObject[&corev1.Secret{}] = cache.ByObject{
-			Label: labels.NewSelector().Add(*req),
+		cacheOptions.DefaultNamespaces = watched
+	}
+
+	if cfg.ConfigMapLabelSelector != "" || cfg.SecretLabelSelector != "" {
+		cacheOptions.ByObject = map[client.Object]cache.ByObject{}
+		if err := setByObjectFor[corev1.Secret](cfg.SecretLabelSelector, cacheOptions.ByObject); err != nil {
+			return fmt.Errorf("failed to set byObject for secrets: %w", err)
+		}
+		if err := setByObjectFor[corev1.ConfigMap](cfg.ConfigMapLabelSelector, cacheOptions.ByObject); err != nil {
+			return fmt.Errorf("failed to set byObject for config maps: %w", err)
 		}
 	}
 
-	if cfg.ConfigMapLabelSelector != "" {
-		req, err := labels.NewRequirement(cfg.ConfigMapLabelSelector, selection.Equals, []string{"true"})
-		if err != nil {
-			return fmt.Errorf("failed to make label requirement for config maps: %w", err)
-		}
-		cacheOptions.ByObject[&corev1.ConfigMap{}] = cache.ByObject{
-			Label: labels.NewSelector().Add(*req),
-		}
-	}
-
-	mgr, err := ctrl.NewManager(
-		restCfg,
-		ctrl.Options{
-			Controller: config.Controller{
-				// This is needed because controller-runtime since v0.19.0 keeps a global list of controller
-				// names and panics if there are duplicates. This is a workaround for that in tests.
-				// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
-				SkipNameValidation: lo.ToPtr(true),
-			},
-			Scheme: scheme,
-			Metrics: server.Options{
-				BindAddress: cfg.MetricsAddr,
-				FilterProvider: func() func(c *rest.Config, httpClient *http.Client) (server.Filter, error) {
-					switch cfg.MetricsAccessFilter {
-					case MetricsAccessFilterRBAC:
-						return filters.WithAuthenticationAndAuthorization
-					case MetricsAccessFilterOff:
-						return nil
-					default:
-						// This is checked in flags validation so this should never happen.
-						panic("unsupported metrics filter")
-					}
-				}(),
-			},
-			HealthProbeBindAddress:  cfg.ProbeAddr,
-			LeaderElection:          cfg.LeaderElection,
-			LeaderElectionNamespace: cfg.LeaderElectionNamespace,
-			LeaderElectionID:        "a7feedc84.konghq.com",
-			Cache:                   cacheOptions,
+	managerOpts := ctrl.Options{
+		Controller: config.Controller{
+			// This is needed because controller-runtime since v0.19.0 keeps a global list of controller
+			// names and panics if there are duplicates. This is a workaround for that in tests.
+			// Ref: https://github.com/kubernetes-sigs/controller-runtime/pull/2902#issuecomment-2284194683
+			SkipNameValidation: lo.ToPtr(true),
 		},
-	)
+		Scheme: scheme,
+		Metrics: server.Options{
+			BindAddress: cfg.MetricsAddr,
+			FilterProvider: func() func(c *rest.Config, httpClient *http.Client) (server.Filter, error) {
+				switch cfg.MetricsAccessFilter {
+				case MetricsAccessFilterRBAC:
+					return filters.WithAuthenticationAndAuthorization
+				case MetricsAccessFilterOff:
+					return nil
+				default:
+					// This is checked in flags validation so this should never happen.
+					panic("unsupported metrics filter")
+				}
+			}(),
+		},
+		HealthProbeBindAddress:  cfg.ProbeAddr,
+		LeaderElection:          cfg.LeaderElection,
+		LeaderElectionNamespace: cfg.LeaderElectionNamespace,
+		LeaderElectionID:        "a7feedc84.konghq.com",
+		Cache:                   cacheOptions,
+	}
+
+	mgr, err := ctrl.NewManager(restCfg, managerOpts)
 	if err != nil {
 		return err
 	}
@@ -471,4 +475,26 @@ func setupAnonymousReports(
 	}
 
 	return tMgr.Stop, nil
+}
+
+func setByObjectFor[
+	T corev1.Secret | corev1.ConfigMap,
+	TPtr interface {
+		*T
+		client.Object
+	},
+](
+	selector string,
+	byObject map[client.Object]cache.ByObject,
+) error {
+	req, err := labels.NewRequirement(selector, selection.Equals, []string{"true"})
+	if err != nil {
+		return fmt.Errorf("failed to make label requirement for secrets: %w", err)
+	}
+	var t T
+	var obj TPtr = &t
+	byObject[obj] = cache.ByObject{
+		Label: labels.NewSelector().Add(*req),
+	}
+	return nil
 }

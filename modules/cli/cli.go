@@ -59,6 +59,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.StringVar(&cfg.ClusterDomain, "cluster-domain", ingressmgrconfig.DefaultClusterDomain, "The cluster domain. This is used e.g. in generating addresses for upstream services.")
 	flagSet.DurationVar(&cfg.CacheSyncPeriod, "cache-sync-period", 0, "Determine the minimum frequency at which watched resources are reconciled. By default or for 0s value, it falls back to controller-runtime's default.")
 	flagSet.BoolVar(&cfg.EmitKubernetesEvents, "emit-kubernetes-events", ingressmgrconfig.DefaultEmitKubernetesEvents, "Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects.")
+	flagSet.StringVar(&cfg.WatchNamespaces, "watch-namespaces", "", "Comma-separated list of namespaces to watch. If empty (default), all namespaces are watched.")
 
 	// controllers for standard APIs and features
 	flagSet.BoolVar(&cfg.GatewayControllerEnabled, "enable-controller-gateway", true, "Enable the Gateway controller.")
