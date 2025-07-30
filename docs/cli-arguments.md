@@ -17,6 +17,7 @@
 | `--cluster-domain` | `string` | The cluster domain. This is used e.g. in generating addresses for upstream services. | `cluster.local` |
 | `--config-map-label-selector` | `string` | Limits the configmaps ingested to those having this label set to "true". If empty, all config maps are ingested. | `konghq.com/configmap` |
 | `--controller-name` | `string` | Controller name to use if other than the default, only needed for multi-tenancy. | `""` |
+| `--controlplane-config-dump-bind-address` | `string` | The address where server dumps ControlPlane configuration. Only enabled when 'enable-controlplane-config-dump' is true. | `:10256` |
 | `--emit-kubernetes-events` | `bool` | Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects. | `true` |
 | `--enable-controller-aigateway` | `bool` | Enable the AIGateway controller. (Experimental). | `false` |
 | `--enable-controller-controlplane` | `bool` | Enable the ControlPlane controller. | `true` |
@@ -26,6 +27,7 @@
 | `--enable-controller-gateway` | `bool` | Enable the Gateway controller. | `true` |
 | `--enable-controller-kongplugininstallation` | `bool` | Enable the KongPluginInstallation controller. | `false` |
 | `--enable-controller-konnect` | `bool` | Enable the Konnect controllers. | `false` |
+| `--enable-controlplane-config-dump` | `bool` | Enable the server to dump generated Kong configuration from ControlPlanes. Only effective when ControlPlane controller is enabled. | `false` |
 | `--enable-gateway-api-experimental` | `bool` | Enable the Gateway API experimental features. | `false` |
 | `--enable-validating-webhook` | `bool` | Enable the validating webhook. DEPRECATED: This flag is no-op and will be removed in a future release. | `false` |
 | `--enforce-config` | `bool` | Enforce the configuration on the generated cluster resources. If set to false, the operator will only enforce the configuration when the owner resource spec changes. | `true` |

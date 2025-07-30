@@ -46,6 +46,7 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/internal/telemetry"
+	"github.com/kong/kong-operator/modules/diagnostics"
 	mgrconfig "github.com/kong/kong-operator/modules/manager/config"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/metadata"
@@ -97,6 +98,10 @@ type Config struct {
 	DataPlaneControllerEnabled          bool
 	DataPlaneBlueGreenControllerEnabled bool
 
+	// Options for controlling features related to ControlPlanes.
+	ControlPlaneConfigurationDumpEnabled bool
+	ControlPlaneConfigurationDumpAddr    string
+
 	// Controllers for specialty APIs and experimental features.
 	AIGatewayControllerEnabled              bool
 	KongPluginInstallationControllerEnabled bool
@@ -108,6 +113,15 @@ type Config struct {
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool
 }
+
+const (
+	// DefaultMetricsAddr is the default bind address for the metrics server.
+	DefaultMetricsAddr = ":8080"
+	// DefaultProbeAddr is the default bind address for the health probe server.
+	DefaultProbeAddr = ":8081"
+	// DefaultControlPlaneConfigurationDumpAddr is the default bind address for the server to dump ControlPlane configuration.
+	DefaultControlPlaneConfigurationDumpAddr = ":10256"
+)
 
 // DefaultConfig returns a default configuration for the manager.
 func DefaultConfig() Config {
@@ -283,6 +297,26 @@ func Run(
 	cpInstancesMgr := multiinstance.NewManager(mgr.GetLogger())
 	if err := mgr.Add(cpInstancesMgr); err != nil {
 		return fmt.Errorf("unable to add CP instances manager: %w", err)
+	}
+
+	if cfg.ControlPlaneControllerEnabled && cfg.ControlPlaneConfigurationDumpEnabled {
+		diagLogger := ctrl.Log.WithName("cp_diagnostics_server")
+		exposer := diagnostics.NewControlPlaneDiagnosticsExposer(diagLogger.WithName("exposer"))
+		multiinstance.WithDiagnosticsExposer(exposer)(cpInstancesMgr)
+
+		diagServer := &diagnostics.Server{
+			Addr: cfg.ControlPlaneConfigurationDumpAddr,
+			Handler: diagnostics.NewHTTPHandler(
+				mgr.GetClient(),
+				diagLogger.WithName("http_handler"),
+				exposer,
+			),
+
+			Logger: diagLogger,
+		}
+		if err = mgr.Add(diagServer); err != nil {
+			return fmt.Errorf("failed to run diagnostics server: %w", err)
+		}
 	}
 
 	controllers, err := setupControllers(mgr, &cfg, cpInstancesMgr)

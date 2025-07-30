@@ -67,6 +67,10 @@ func New(m metadata.Info) *CLI {
 	flagSet.BoolVar(&cfg.DataPlaneBlueGreenControllerEnabled, "enable-controller-dataplane-bluegreen", true, "Enable the DataPlane BlueGreen controller. Mutually exclusive with DataPlane controller.")
 	flagSet.BoolVar(&cfg.ControlPlaneExtensionsControllerEnabled, "enable-controller-controlplaneextensions", true, "Enable the ControlPlane extensions controller.")
 
+	// controllers for ControlPlane
+	flagSet.BoolVar(&cfg.ControlPlaneConfigurationDumpEnabled, "enable-controlplane-config-dump", false, "Enable the server to dump generated Kong configuration from ControlPlanes. Only effective when ControlPlane controller is enabled.")
+	flagSet.StringVar(&cfg.ControlPlaneConfigurationDumpAddr, "controlplane-config-dump-bind-address", manager.DefaultControlPlaneConfigurationDumpAddr, "The address where server dumps ControlPlane configuration. Only enabled when 'enable-controlplane-config-dump' is true.")
+
 	// controllers for specialized APIs and features
 	flagSet.BoolVar(&cfg.AIGatewayControllerEnabled, "enable-controller-aigateway", false, "Enable the AIGateway controller. (Experimental).")
 	flagSet.BoolVar(&cfg.KongPluginInstallationControllerEnabled, "enable-controller-kongplugininstallation", false, "Enable the KongPluginInstallation controller.")
