@@ -18,7 +18,7 @@ func init() {
 // +genclient
 // +kubebuilder:deprecatedversion:warning="This API version has been deprecated in favor of v1alpha2 and it will be removed in the future."
 // +kubebuilder:resource:scope=Namespaced
-// +kubebuilder:resource:categories=kong
+// +kubebuilder:resource:categories=kong;konnect
 // +kubebuilder:object:root=true
 // +kubebuilder:object:generate=true
 // +kubebuilder:subresource:status

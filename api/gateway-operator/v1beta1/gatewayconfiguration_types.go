@@ -34,7 +34,7 @@ func init() {
 // +kubebuilder:deprecatedversion:warning="GatewayConfiguration v1beta1 has been deprecated in favor of v2alpha1 and it will be removed in future."
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=kogc,categories=kong;all
+// +kubebuilder:resource:shortName=kogc,categories=kong
 // +kubebuilder:validation:XValidation:message="Extension not allowed for GatewayConfiguration",rule="has(self.spec.extensions) ? self.spec.extensions.all(e, (e.group == 'konnect.konghq.com' && e.kind == 'KonnectExtension') || (e.group == 'gateway-operator.konghq.com' && e.kind == 'DataPlaneMetricsExtension')) : true"
 type GatewayConfiguration struct {
 	metav1.TypeMeta   `json:",inline"`

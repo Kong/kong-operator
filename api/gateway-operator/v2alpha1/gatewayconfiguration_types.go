@@ -37,7 +37,7 @@ func init() {
 // +kong:channels=gateway-operator
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=kogc,categories=kong;all
+// +kubebuilder:resource:shortName=kogc,categories=kong
 type GatewayConfiguration struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

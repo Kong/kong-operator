@@ -33,7 +33,7 @@ func init() {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=kpi,categories=kong;all
+// +kubebuilder:resource:shortName=kpi,categories=kong
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Accepted",description="The Resource is accepted",type=string,JSONPath=`.status.conditions[?(@.type=='Accepted')].status`
 // +apireference:kgo:include

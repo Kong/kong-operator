@@ -35,7 +35,7 @@ func init() {
 // +kubebuilder:storageversion
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:shortName=kocp,categories=kong;all
+// +kubebuilder:resource:shortName=kocp,categories=kong
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +apireference:kgo:include
 // +kong:channels=gateway-operator

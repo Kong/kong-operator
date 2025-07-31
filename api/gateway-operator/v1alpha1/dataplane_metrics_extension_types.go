@@ -34,7 +34,7 @@ const (
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:categories=kong;all
+// +kubebuilder:resource:categories=kong
 // +kubebuilder:subresource:status
 
 // DataPlaneMetricsExtension holds the configuration for the DataPlane metrics extension.

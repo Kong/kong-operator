@@ -38,7 +38,7 @@ func init() {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:subresource:scale:specpath=.spec.deployment.replicas,statuspath=.status.replicas,selectorpath=.status.selector
-// +kubebuilder:resource:shortName=kodp,categories=kong;all
+// +kubebuilder:resource:shortName=kodp,categories=kong
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:validation:XValidation:message="DataPlane requires an image to be set on proxy container",rule="has(self.spec.deployment.podTemplateSpec) && has(self.spec.deployment.podTemplateSpec.spec.containers) && self.spec.deployment.podTemplateSpec.spec.containers.exists(c, c.name == 'proxy' && has(c.image))"
 // +kubebuilder:validation:XValidation:message="DataPlane supports only db mode 'off'",rule="!has(self.spec.deployment.podTemplateSpec) ? true : ( self.spec.deployment.podTemplateSpec.spec.containers.size() == 0 || self.spec.deployment.podTemplateSpec.spec.containers[0].name == 'proxy' ? (!has(self.spec.deployment.podTemplateSpec.spec.containers[0].env) ? true : self.spec.deployment.podTemplateSpec.spec.containers[0].env.all(e, e.name != 'KONG_DATABASE' || e.value == 'off' || size(e.value)==0)) : true)"

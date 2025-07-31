@@ -37,7 +37,7 @@ const (
 // +kubebuilder:deprecatedversion:warning="This API has been deprecated in favor of v1alpha2 konnectextensions.konnect.konghq.com and it will be removed in future version."
 // +kubebuilder:unservedversion
 // +kubebuilder:resource:scope=Namespaced
-// +kubebuilder:resource:categories=kong
+// +kubebuilder:resource:categories=kong;konnect
 // +kubebuilder:object:root=true
 // +kubebuilder:object:generate=true
 // +kubebuilder:subresource:status

@@ -14,7 +14,7 @@ func init() {
 //
 // +genclient
 // +kubebuilder:resource:scope=Namespaced
-// +kubebuilder:resource:categories=kong
+// +kubebuilder:resource:categories=kong;konnect
 // +kubebuilder:object:root=true
 // +kubebuilder:object:generate=true
 // +kubebuilder:subresource:status
