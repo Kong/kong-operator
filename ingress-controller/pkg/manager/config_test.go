@@ -44,7 +44,7 @@ func TestNewConfig(t *testing.T) {
 			APIServerCAData:                        nil,
 			APIServerCertData:                      nil,
 			APIServerKeyData:                       nil,
-			MetricsAddr:                            ":10255",
+			MetricsAddr:                            "",
 			MetricsAccessFilter:                    "off",
 			ProbeAddr:                              ":10254",
 			KongAdminURLs:                          []string{"http://localhost:8001"},

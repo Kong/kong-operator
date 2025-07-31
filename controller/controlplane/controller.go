@@ -406,8 +406,9 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		WithFeatureGates(logger, cp.Spec.FeatureGates),
 		WithControllers(logger, cp.Spec.Controllers),
 		WithIngressClass(cp.Spec.IngressClass),
-
-		// TODO: https://github.com/kong/kong-operator/issues/1749 metrics.
+		// We disable the metrics server by default, as all the ControlPlane metrics
+		// are exposed via the operator's metrics server (through a shared, global
+		// metrics registry handle).
 		WithMetricsServerOff(),
 		WithAnonymousReports(r.AnonymousReportsEnabled),
 		WithAnonymousReportsFixedPayloadCustomizer(payloadCustomizer),
