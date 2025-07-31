@@ -145,6 +145,11 @@ type ControlPlaneOptions struct {
 	//
 	// +optional
 	ConfigDump *ControlPlaneConfigDump `json:"configDump,omitempty"`
+
+	// ObjectFilters defines the filters to limit watched objects by the controllers.
+	//
+	// +optional
+	ObjectFilters *ControlPlaneObjectFilters `json:"objectFilters,omitempty"`
 }
 
 // ControlPlaneTranslationOptions defines the configuration for translating
@@ -349,6 +354,31 @@ type ControlPlaneConfigDump struct {
 	// +kubebuilder:validation:Enum=enabled;disabled
 	// +kubebuilder:default="disabled"
 	DumpSensitive ConfigDumpState `json:"dumpSensitive"`
+}
+
+// ControlPlaneObjectFilters defines filters to limit watched objects by the controllers.
+type ControlPlaneObjectFilters struct {
+	// Secrets defines the filters for watched secrets.
+	//
+	// +optional
+	Secrets *ControlPlaneFilterForObjectType `json:"secrets,omitempty"`
+	// ConfigMaps defines the filters for watched config maps.
+	//
+	// +optional
+	ConfigMaps *ControlPlaneFilterForObjectType `json:"configMaps,omitempty"`
+}
+
+// ControlPlaneFilterForObjectType defines the filters for a certain type of object.
+type ControlPlaneFilterForObjectType struct {
+	// MatchLabels defines the labels that the object must match to get reconciled by the controller for the ControlPlane.
+	// For example, if `secrets.matchLabels` is `{"label1":"val1","label2":"val2"}`,
+	// only secrets with labels `label1=val1` and `label2=val2` are reconciled.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=8
+	// +kubebuilder:validation:XValidation:message="Minimum length of key in matchLabels is 1",rule="self.all(key,key.size() >= 1)"
+	// +kubebuilder:validation:XValidation:message="Maximum length of value in matchLabels is 63",rule="self.all(key,self[key].size() <= 63)"
+	MatchLabels map[string]string `json:"matchLabels,omitempty"`
 }
 
 // DefaultControlPlaneInitialCacheSyncDelay defines the default initial delay

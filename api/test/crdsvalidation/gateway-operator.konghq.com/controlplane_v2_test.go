@@ -569,5 +569,93 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 			}.Run(t)
 		})
+
+		t.Run("objectFilters", func(t *testing.T) {
+			common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+				{
+					Name: "objectFilters.secrets and objectFilters.configMaps are set",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								ObjectFilters: &operatorv2alpha1.ControlPlaneObjectFilters{
+									Secrets: &operatorv2alpha1.ControlPlaneFilterForObjectType{
+										MatchLabels: map[string]string{"konghq.com/secret": "true"},
+									},
+									ConfigMaps: &operatorv2alpha1.ControlPlaneFilterForObjectType{
+										MatchLabels: map[string]string{"konghq.com/configmap": "true"},
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Name: "maximum items in matchLabels is 8",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								ObjectFilters: &operatorv2alpha1.ControlPlaneObjectFilters{
+									Secrets: &operatorv2alpha1.ControlPlaneFilterForObjectType{
+										MatchLabels: map[string]string{
+											"konghq.com/secret": "true",
+											"label1":            "value1",
+											"label2":            "value2",
+											"label3":            "value3",
+											"label4":            "value4",
+											"label5":            "value5",
+											"label6":            "value6",
+											"label7":            "value7",
+											"label8":            "value8",
+										},
+									},
+								},
+							},
+						},
+					},
+					ExpectedErrorMessage: lo.ToPtr("spec.objectFilters.secrets.matchLabels: Too many: 9: must have at most 8 items"),
+				},
+				{
+					Name: "key of objectFilters.*.matchLabels must have minimum length 1",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								ObjectFilters: &operatorv2alpha1.ControlPlaneObjectFilters{
+									Secrets: &operatorv2alpha1.ControlPlaneFilterForObjectType{
+										MatchLabels: map[string]string{"konghq.com/secret": "true"},
+									},
+									ConfigMaps: &operatorv2alpha1.ControlPlaneFilterForObjectType{
+										MatchLabels: map[string]string{"": "aaa"},
+									},
+								},
+							},
+						},
+					},
+					ExpectedErrorMessage: lo.ToPtr("Minimum length of key in matchLabels is 1"),
+				},
+				{
+					Name: "value of objectFilters.*.matchLabels must have maximum length 63",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								ObjectFilters: &operatorv2alpha1.ControlPlaneObjectFilters{
+									Secrets: &operatorv2alpha1.ControlPlaneFilterForObjectType{
+										MatchLabels: map[string]string{"konghq.com/secret": "this-is-a-very-very-long-label-which-is-longer-than-63-characters"},
+									},
+								},
+							},
+						},
+					},
+					ExpectedErrorMessage: lo.ToPtr("Maximum length of value in matchLabels is 63"),
+				},
+			}.Run(t)
+		})
 	})
 }
