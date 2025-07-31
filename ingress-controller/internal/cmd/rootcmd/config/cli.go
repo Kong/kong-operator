@@ -95,7 +95,6 @@ func (c *CLIConfig) bindFlagSet() {
 		"Timeout of readiness checks on gateway admin clients.")
 
 	// Kong Proxy and Proxy Cache configurations
-	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
 	flagSet.IntVar(&c.APIServerQPS, "apiserver-qps", 100, "The Kubernetes API RateLimiter maximum queries per second.")
 	flagSet.IntVar(&c.APIServerBurst, "apiserver-burst", 300, "The Kubernetes API RateLimiter maximum burst queries per second.")
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", consts.MetricsPort), "The address the metric endpoint binds to.")
