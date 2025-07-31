@@ -227,9 +227,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		log.Debug(logger, "DataPlane not set, deployment for ControlPlane will remain dormant")
 	}
 
-	// TODO: Make sure there are no error logs from the manager constructor when DP instances are not ready.
-	// https://github.com/kong/kong-operator/issues/1375
-
 	var caSecret corev1.Secret
 	if err := r.Get(ctx, types.NamespacedName{
 		Namespace: r.ClusterCASecretNamespace,
