@@ -192,16 +192,9 @@ func Run(
 		setupLog.Info("leader election disabled")
 	}
 
-	restCfg, err := clientcmd.BuildConfigFromFlags(cfg.APIServerHost, cfg.KubeconfigPath)
+	restCfg, err := getRestConfig(cfg, metadata)
 	if err != nil {
 		return err
-	}
-	// Configure K8s client rate-limiting.
-	restCfg.QPS = float32(cfg.APIServerQPS)
-	restCfg.Burst = cfg.APIServerBurst
-	restCfg.UserAgent = metadata.UserAgent()
-	restCfg.Impersonate = rest.ImpersonationConfig{
-		UserName: cfg.ServiceAccountToImpersonate,
 	}
 
 	var cacheOptions cache.Options
@@ -498,4 +491,31 @@ func setByObjectFor[
 		Label: labels.NewSelector().Add(*req),
 	}
 	return nil
+}
+
+func getRestConfig(cfg Config, metadata metadata.Info) (*rest.Config, error) {
+	var (
+		restCfg *rest.Config
+		err     error
+	)
+	if cfg.KubeconfigPath != "" {
+		restCfg, err = clientcmd.BuildConfigFromFlags("", cfg.KubeconfigPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build REST config from kubeconfig: %w", err)
+		}
+	} else {
+		restCfg, err = ctrl.GetConfig()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get REST config: %w", err)
+		}
+	}
+
+	// Configure K8s client rate-limiting.
+	restCfg.QPS = float32(cfg.APIServerQPS)
+	restCfg.Burst = cfg.APIServerBurst
+	restCfg.UserAgent = metadata.UserAgent()
+	restCfg.Impersonate = rest.ImpersonationConfig{
+		UserName: cfg.ServiceAccountToImpersonate,
+	}
+	return restCfg, nil
 }
