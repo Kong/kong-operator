@@ -20,6 +20,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 
 	"github.com/kong/kong-operator/pkg/consts"
 	"github.com/kong/kong-operator/pkg/utils/gateway"
@@ -68,7 +69,7 @@ func TestHelmUpgrade(t *testing.T) {
 			fromVersion: "2.0.0-alpha.1", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator@only-patch
 			toVersion:   "2.0.0-alpha.1", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
 			objectsToDeploy: []client.Object{
-				&operatorv1beta1.GatewayConfiguration{
+				&operatorv2alpha1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "gwconf-upgrade-onebeforelatestminor-latestminor",
 					},
@@ -144,7 +145,7 @@ func TestHelmUpgrade(t *testing.T) {
 			// It's needed for the chart to properly render semver-conditional templates.
 			upgradeToEffectiveSemver: "2.0.0-alpha.1",
 			objectsToDeploy: []client.Object{
-				&operatorv1beta1.GatewayConfiguration{
+				&operatorv2alpha1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "gwconf-upgrade-latestminor-current",
 					},
@@ -219,7 +220,7 @@ func TestHelmUpgrade(t *testing.T) {
 			// It's needed for the chart to properly render semver-conditional templates.
 			upgradeToEffectiveSemver: "2.0.0-alpha.1",
 			objectsToDeploy: []client.Object{
-				&operatorv1beta1.GatewayConfiguration{
+				&operatorv2alpha1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
 						Name: "gwconf-upgrade-nightly-current",
 					},
@@ -450,11 +451,11 @@ func splitRepoVersionFromImage(t *testing.T, image string) (string, string) {
 	return strings.Join(splitImage[:l-1], ":"), splitImage[l-1]
 }
 
-func baseGatewayConfigurationSpec() operatorv1beta1.GatewayConfigurationSpec {
-	return operatorv1beta1.GatewayConfigurationSpec{
-		DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
-			Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-				DeploymentOptions: operatorv1beta1.DeploymentOptions{
+func baseGatewayConfigurationSpec() operatorv2alpha1.GatewayConfigurationSpec {
+	return operatorv2alpha1.GatewayConfigurationSpec{
+		DataPlaneOptions: &operatorv2alpha1.GatewayConfigDataPlaneOptions{
+			Deployment: operatorv2alpha1.DataPlaneDeploymentOptions{
+				DeploymentOptions: operatorv2alpha1.DeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
 							Containers: []corev1.Container{

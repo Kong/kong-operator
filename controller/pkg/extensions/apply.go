@@ -12,6 +12,7 @@ import (
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 	kcfgkonnect "github.com/kong/kubernetes-configuration/v2/api/konnect"
 
 	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
@@ -30,7 +31,7 @@ type ExtendableT interface {
 
 	*operatorv1beta1.DataPlane |
 		*gwtypes.ControlPlane |
-		*operatorv1beta1.GatewayConfiguration
+		*operatorv2alpha1.GatewayConfiguration
 }
 
 type withExtensions interface {

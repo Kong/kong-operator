@@ -9,6 +9,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
@@ -27,17 +28,17 @@ func TestGatewayConfigurationServiceName(t *testing.T) {
 	customServiceName := "custom-service-name-" + uuid.NewString()
 
 	t.Log("deploying a GatewayConfiguration resource with a custom service name")
-	gatewayConfig := &operatorv1beta1.GatewayConfiguration{
+	gatewayConfig := &operatorv2alpha1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      uuid.NewString(),
 		},
-		Spec: operatorv1beta1.GatewayConfigurationSpec{
-			DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
-				Network: operatorv1beta1.GatewayConfigDataPlaneNetworkOptions{
-					Services: &operatorv1beta1.GatewayConfigDataPlaneServices{
-						Ingress: &operatorv1beta1.GatewayConfigServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
+		Spec: operatorv2alpha1.GatewayConfigurationSpec{
+			DataPlaneOptions: &operatorv2alpha1.GatewayConfigDataPlaneOptions{
+				Network: operatorv2alpha1.GatewayConfigDataPlaneNetworkOptions{
+					Services: &operatorv2alpha1.GatewayConfigDataPlaneServices{
+						Ingress: &operatorv2alpha1.GatewayConfigServiceOptions{
+							ServiceOptions: operatorv2alpha1.ServiceOptions{
 								Name: &customServiceName,
 							},
 						},
@@ -46,7 +47,7 @@ func TestGatewayConfigurationServiceName(t *testing.T) {
 			},
 		},
 	}
-	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 

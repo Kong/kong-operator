@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
@@ -91,7 +92,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		// watch for updates to GatewayConfigurations, if any configuration targets a
 		// Gateway that is supported, enqueue that Gateway.
 		Watches(
-			&operatorv1beta1.GatewayConfiguration{},
+			&operatorv2alpha1.GatewayConfiguration{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayConfig),
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayConfigurationMatchesController))).
 		// watch for updates to GatewayClasses, if any GatewayClasses change, enqueue
