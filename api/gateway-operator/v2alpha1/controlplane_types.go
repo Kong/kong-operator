@@ -150,6 +150,11 @@ type ControlPlaneOptions struct {
 	//
 	// +optional
 	ObjectFilters *ControlPlaneObjectFilters `json:"objectFilters,omitempty"`
+
+	// Konnect defines the Konnect-related configuration options for the ControlPlane.
+	//
+	// +optional
+	Konnect *ControlPlaneKonnectOptions `json:"konnect,omitempty"`
 }
 
 // ControlPlaneTranslationOptions defines the configuration for translating
@@ -487,3 +492,84 @@ func (c *ControlPlane) SetConditions(conditions []metav1.Condition) {
 func (c *ControlPlane) GetExtensions() []commonv1alpha1.ExtensionRef {
 	return c.Spec.Extensions
 }
+
+// ControlPlaneKonnectOptions defines the Konnect-related configuration options for the ControlPlane.
+//
+// +apireference:kgo:include
+type ControlPlaneKonnectOptions struct {
+	// ConsumersSync indicates whether consumer synchronization with Konnect is enabled.
+	//
+	// +optional
+	// +kubebuilder:default=enabled
+	// +kubebuilder:validation:Enum=enabled;disabled
+	ConsumersSync *ControlPlaneKonnectConsumersSyncState `json:"consumersSync,omitempty"`
+
+	// Licensing defines the configuration for Konnect licensing.
+	//
+	// +optional
+	Licensing *ControlPlaneKonnectLicensing `json:"licensing,omitempty"`
+
+	// NodeRefreshPeriod is the period for refreshing the node information in Konnect.
+	//
+	// +optional
+	NodeRefreshPeriod *metav1.Duration `json:"nodeRefreshPeriod,omitempty"`
+
+	// ConfigUploadPeriod is the period for uploading configuration to Konnect.
+	//
+	// +optional
+	ConfigUploadPeriod *metav1.Duration `json:"configUploadPeriod,omitempty"`
+}
+
+// ControlPlaneKonnectConsumersSyncState defines the state of consumer synchronization with Konnect.
+type ControlPlaneKonnectConsumersSyncState string
+
+const (
+	// ControlPlaneKonnectConsumersSyncStateEnabled indicates that consumer synchronization is enabled.
+	ControlPlaneKonnectConsumersSyncStateEnabled ControlPlaneKonnectConsumersSyncState = "enabled"
+	// ControlPlaneKonnectConsumersSyncStateDisabled indicates that consumer synchronization is disabled.
+	ControlPlaneKonnectConsumersSyncStateDisabled ControlPlaneKonnectConsumersSyncState = "disabled"
+)
+
+// ControlPlaneKonnectLicensing defines the configuration for Konnect licensing.
+//
+// +apireference:kgo:include
+// +kubebuilder:validation:XValidation:message="initialPollingPeriod can only be set when licensing is enabled",rule="!has(self.initialPollingPeriod) || self.state == 'enabled'"
+// +kubebuilder:validation:XValidation:message="pollingPeriod can only be set when licensing is enabled",rule="!has(self.pollingPeriod) || self.state == 'enabled'"
+// +kubebuilder:validation:XValidation:message="storageState can only be set to enabled when licensing is enabled",rule="!has(self.storageState) || self.storageState == 'disabled' || self.state == 'enabled'"
+type ControlPlaneKonnectLicensing struct {
+	// State indicates whether Konnect licensing is enabled.
+	//
+	// +optional
+	// +kubebuilder:default=disabled
+	// +kubebuilder:validation:Enum=enabled;disabled
+	State *ControlPlaneKonnectLicensingState `json:"state,omitempty"`
+
+	// InitialPollingPeriod is the initial polling period for license checks.
+	//
+	// +optional
+	InitialPollingPeriod *metav1.Duration `json:"initialPollingPeriod,omitempty"`
+
+	// PollingPeriod is the polling period for license checks.
+	//
+	// +optional
+	PollingPeriod *metav1.Duration `json:"pollingPeriod,omitempty"`
+
+	// StorageState indicates whether to store licenses fetched from Konnect
+	// to Secrets locally to use them later when connection to Konnect is broken.
+	// Only effective when State is set to enabled.
+	//
+	// +optional
+	// +kubebuilder:default=enabled
+	// +kubebuilder:validation:Enum=enabled;disabled
+	StorageState *ControlPlaneKonnectLicensingState `json:"storageState,omitempty"`
+}
+
+// ControlPlaneKonnectLicensingState defines the state of Konnect licensing.
+type ControlPlaneKonnectLicensingState string
+
+const (
+	// ControlPlaneKonnectLicensingStateEnabled indicates that Konnect licensing is enabled.
+	ControlPlaneKonnectLicensingStateEnabled ControlPlaneKonnectLicensingState = "enabled"
+	// ControlPlaneKonnectLicensingStateDisabled indicates that Konnect licensing is disabled.
+	ControlPlaneKonnectLicensingStateDisabled ControlPlaneKonnectLicensingState = "disabled"
+)
