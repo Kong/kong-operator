@@ -86,8 +86,8 @@ type Config struct {
 	SecretLabelSelector string
 	// ConfigMapLabelSelector specifies the label which will be used to limit the ingestion of configmaps. Only those that have this label set to "true" will be ingested.
 	ConfigMapLabelSelector string
-	// WatchNamespaces is a comma-separated list of namespaces to watch. If empty (default), all namespaces are watched.
-	WatchNamespaces string
+	// WatchNamespaces is a list of namespaces to watch. If empty (default), all namespaces are watched.
+	WatchNamespaces []string
 
 	// ServiceAccountToImpersonate is the name of the service account to impersonate,
 	// by the controller manager, when making requests to the API server.
@@ -208,11 +208,9 @@ func Run(
 	// This is the default behavior of the controller-runtime manager.
 	// If there are configured watch namespaces, then we're watching only those namespaces.
 	if len(cfg.WatchNamespaces) > 0 {
-		watchNamespaces := strings.Split(cfg.WatchNamespaces, ",")
-		setupLog.Info("Manager set up with multiple namespaces", "namespaces", watchNamespaces)
+		setupLog.Info("Manager set up with multiple namespaces", "namespaces", cfg.WatchNamespaces)
 		watched := make(map[string]cache.Config)
-		for _, ns := range watchNamespaces {
-			ns = strings.TrimSpace(ns)
+		for _, ns := range cfg.WatchNamespaces {
 			watched[ns] = cache.Config{}
 		}
 		cacheOptions.DefaultNamespaces = watched
