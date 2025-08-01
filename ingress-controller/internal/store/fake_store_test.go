@@ -169,78 +169,6 @@ func TestFakeStoreIngressClassV1(t *testing.T) {
 	assert.Len(store.ListIngressClassesV1(), 2)
 }
 
-func TestFakeStoreListTCPIngress(t *testing.T) {
-	assert := assert.New(t)
-	require := require.New(t)
-
-	ingresses := []*configurationv1beta1.TCPIngress{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
-			},
-			Spec: configurationv1beta1.TCPIngressSpec{
-				Rules: []configurationv1beta1.IngressRule{
-					{
-						Port: 9000,
-						Backend: configurationv1beta1.IngressBackend{
-							ServiceName: "foo-svc",
-							ServicePort: 80,
-						},
-					},
-				},
-			},
-		},
-		{
-			// this TCPIngress should *not* be loaded, as it lacks a class
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "baz",
-				Namespace: "default",
-			},
-			Spec: configurationv1beta1.TCPIngressSpec{
-				Rules: []configurationv1beta1.IngressRule{
-					{
-						Port: 9000,
-						Backend: configurationv1beta1.IngressBackend{
-							ServiceName: "foo-svc",
-							ServicePort: 80,
-						},
-					},
-				},
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
-				Namespace: "default",
-				Annotations: map[string]string{
-					annotations.IngressClassKey: "not-kong",
-				},
-			},
-			Spec: configurationv1beta1.TCPIngressSpec{
-				Rules: []configurationv1beta1.IngressRule{
-					{
-						Port: 8000,
-						Backend: configurationv1beta1.IngressBackend{
-							ServiceName: "bar-svc",
-							ServicePort: 80,
-						},
-					},
-				},
-			},
-		},
-	}
-	store, err := NewFakeStore(FakeObjects{TCPIngresses: ingresses})
-	require.NoError(err)
-	require.NotNil(store)
-	ings, err := store.ListTCPIngresses()
-	assert.NoError(err)
-	assert.Len(ings, 1)
-}
-
 func TestFakeStoreService(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
@@ -498,31 +426,6 @@ func TestFakeStoreSecret(t *testing.T) {
 	secret, err = store.GetSecret("default", "does-not-exist")
 	assert.Nil(secret)
 	assert.Error(err)
-	assert.True(errors.As(err, &NotFoundError{}))
-}
-
-func TestFakeKongIngress(t *testing.T) {
-	assert := assert.New(t)
-	require := require.New(t)
-
-	kongIngresses := []*configurationv1.KongIngress{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-			},
-		},
-	}
-	store, err := NewFakeStore(FakeObjects{KongIngresses: kongIngresses})
-	require.NoError(err)
-	require.NotNil(store)
-	kingress, err := store.GetKongIngress("default", "foo")
-	assert.NoError(err)
-	assert.NotNil(kingress)
-
-	kingress, err = store.GetKongIngress("default", "does-not-exist")
-	assert.Error(err)
-	assert.Nil(kingress)
 	assert.True(errors.As(err, &NotFoundError{}))
 }
 

@@ -9,24 +9,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest/observer"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
 )
 
 // TestGatewayAPIControllersMayBeDynamicallyStarted ensures that in case of missing CRDs installation in the
@@ -127,66 +122,7 @@ func TestCRDValidations(t *testing.T) {
 		name     string
 		scenario func(ctx context.Context, t *testing.T, ns string)
 	}{
-		{
-			name: "invalid TCPIngress service name",
-			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createFaultyTCPIngress(ctx, t, envcfg, ns, func(ingress *configurationv1beta1.TCPIngress) {
-					ingress.Spec.Rules[0].Backend.ServiceName = ""
-				})
 
-				require.ErrorContains(t, err, "serviceName")
-			},
-		},
-		{
-			name: "invalid TCPIngress service port",
-			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createFaultyTCPIngress(ctx, t, envcfg, ns, func(ingress *configurationv1beta1.TCPIngress) {
-					ingress.Spec.Rules[0].Backend.ServicePort = 0
-				})
-
-				require.ErrorContains(t, err, "servicePort")
-			},
-		},
-		{
-			name: "invalid TCPIngress rule port",
-			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createFaultyTCPIngress(ctx, t, envcfg, ns, func(ingress *configurationv1beta1.TCPIngress) {
-					ingress.Spec.Rules[0].Port = 0
-				})
-
-				require.ErrorContains(t, err, "spec.rules[0].port")
-			},
-		},
-		{
-			name: "invalid UDPIngress service name",
-			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createFaultyUDPIngress(ctx, t, envcfg, ns, func(ingress *configurationv1beta1.UDPIngress) {
-					ingress.Spec.Rules[0].Backend.ServiceName = ""
-				})
-
-				require.ErrorContains(t, err, "serviceName")
-			},
-		},
-		{
-			name: "invalid UDPIngress service port",
-			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createFaultyUDPIngress(ctx, t, envcfg, ns, func(ingress *configurationv1beta1.UDPIngress) {
-					ingress.Spec.Rules[0].Backend.ServicePort = 0
-				})
-
-				require.ErrorContains(t, err, "servicePort")
-			},
-		},
-		{
-			name: "invalid UDPIngress rule port",
-			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				err := createFaultyUDPIngress(ctx, t, envcfg, ns, func(ingress *configurationv1beta1.UDPIngress) {
-					ingress.Spec.Rules[0].Port = 0
-				})
-
-				require.ErrorContains(t, err, "spec.rules[0].port")
-			},
-		},
 		{
 			name: "KongUpstreamPolicy - only one of spec.hashOn.(input|cookie|header|uriCapture|queryArg) can be set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
@@ -892,80 +828,6 @@ func TestCRDValidations(t *testing.T) {
 			ns := CreateNamespace(ctx, t, ctrlClient)
 			tc.scenario(ctx, t, ns.Name)
 		})
-	}
-}
-
-func createFaultyTCPIngress(ctx context.Context, t *testing.T, envcfg *rest.Config, ns string, modifier func(*configurationv1beta1.TCPIngress)) error {
-	ingress := validTCPIngress()
-	modifier(ingress)
-
-	gatewayClient, err := clientset.NewForConfig(envcfg)
-	require.NoError(t, err)
-
-	c := gatewayClient.ConfigurationV1beta1().TCPIngresses(ns)
-	ingress, err = c.Create(ctx, ingress, metav1.CreateOptions{})
-	if !assert.Error(t, err) {
-		t.Cleanup(func() { _ = c.Delete(ctx, ingress.Name, metav1.DeleteOptions{}) })
-	}
-	return err
-}
-
-func validTCPIngress() *configurationv1beta1.TCPIngress {
-	return &configurationv1beta1.TCPIngress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
-		},
-		Spec: configurationv1beta1.TCPIngressSpec{
-			Rules: []configurationv1beta1.IngressRule{
-				{
-					Port: 80,
-					Backend: configurationv1beta1.IngressBackend{
-						ServiceName: "service-name",
-						ServicePort: 80,
-					},
-				},
-			},
-		},
-	}
-}
-
-func createFaultyUDPIngress(ctx context.Context, t *testing.T, envcfg *rest.Config, ns string, modifier func(ingress *configurationv1beta1.UDPIngress)) error {
-	ingress := validUDPIngress()
-	modifier(ingress)
-
-	gatewayClient, err := clientset.NewForConfig(envcfg)
-	require.NoError(t, err)
-
-	c := gatewayClient.ConfigurationV1beta1().UDPIngresses(ns)
-	ingress, err = c.Create(ctx, ingress, metav1.CreateOptions{})
-	if !assert.Error(t, err) {
-		t.Cleanup(func() { _ = c.Delete(ctx, ingress.Name, metav1.DeleteOptions{}) })
-	}
-	return err
-}
-
-func validUDPIngress() *configurationv1beta1.UDPIngress {
-	return &configurationv1beta1.UDPIngress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
-		},
-		Spec: configurationv1beta1.UDPIngressSpec{
-			Rules: []configurationv1beta1.UDPIngressRule{
-				{
-					Port: 80,
-					Backend: configurationv1beta1.IngressBackend{
-						ServiceName: "service-name",
-						ServicePort: 80,
-					},
-				},
-			},
-		},
 	}
 }
 

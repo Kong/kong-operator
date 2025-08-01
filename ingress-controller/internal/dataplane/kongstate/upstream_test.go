@@ -82,13 +82,13 @@ func TestOverrideUpstream(t *testing.T) {
 	}
 
 	for _, testcase := range testTable {
-		testcase.inUpstream.override(testcase.inKongIngresss, testcase.svc)
+		testcase.inUpstream.override(testcase.svc)
 		require.Equal(t, testcase.inUpstream, testcase.outUpstream)
 	}
 
 	require.NotPanics(t, func() {
 		var nilUpstream *Upstream
-		nilUpstream.override(nil, nil)
+		nilUpstream.override(nil)
 	})
 }
 

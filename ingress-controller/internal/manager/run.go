@@ -281,7 +281,7 @@ func New(
 	}
 
 	setupLog.Info("Initializing Dataplane address Discovery")
-	dataplaneAddressFinder, udpDataplaneAddressFinder, err := setupDataplaneAddressFinder(mgr.GetClient(), c, setupLog)
+	dataplaneAddressFinder, _, err := setupDataplaneAddressFinder(mgr.GetClient(), c, setupLog)
 	if err != nil {
 		return nil, err
 	}
@@ -293,7 +293,6 @@ func New(
 		dataplaneClient,
 		referenceIndexers,
 		dataplaneAddressFinder,
-		udpDataplaneAddressFinder,
 		kubernetesStatusQueue,
 		c,
 		c.FeatureGates,
