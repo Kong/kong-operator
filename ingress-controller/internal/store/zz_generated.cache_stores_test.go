@@ -24,136 +24,124 @@ func TestCacheStores(t *testing.T) {
 		name          string
 		objectToStore client.Object
 	}{
-
+		
 		{
-			name:          "Ingress",
+			name: "Ingress",
 			objectToStore: &netv1.Ingress{},
 		},
-
+		
 		{
-			name:          "IngressClass",
+			name: "IngressClass",
 			objectToStore: &netv1.IngressClass{},
 		},
-
+		
 		{
-			name:          "Service",
+			name: "Service",
 			objectToStore: &corev1.Service{},
 		},
-
+		
 		{
-			name:          "Secret",
+			name: "Secret",
 			objectToStore: &corev1.Secret{},
 		},
-
+		
 		{
-			name:          "ConfigMap",
+			name: "ConfigMap",
 			objectToStore: &corev1.ConfigMap{},
 		},
-
+		
 		{
-			name:          "EndpointSlice",
+			name: "EndpointSlice",
 			objectToStore: &discoveryv1.EndpointSlice{},
 		},
-
+		
 		{
-			name:          "HTTPRoute",
+			name: "HTTPRoute",
 			objectToStore: &gatewayapi.HTTPRoute{},
 		},
-
+		
 		{
-			name:          "UDPRoute",
+			name: "UDPRoute",
 			objectToStore: &gatewayapi.UDPRoute{},
 		},
-
+		
 		{
-			name:          "TCPRoute",
+			name: "TCPRoute",
 			objectToStore: &gatewayapi.TCPRoute{},
 		},
-
+		
 		{
-			name:          "TLSRoute",
+			name: "TLSRoute",
 			objectToStore: &gatewayapi.TLSRoute{},
 		},
-
+		
 		{
-			name:          "GRPCRoute",
+			name: "GRPCRoute",
 			objectToStore: &gatewayapi.GRPCRoute{},
 		},
-
+		
 		{
-			name:          "ReferenceGrant",
+			name: "ReferenceGrant",
 			objectToStore: &gatewayapi.ReferenceGrant{},
 		},
-
+		
 		{
-			name:          "Gateway",
+			name: "Gateway",
 			objectToStore: &gatewayapi.Gateway{},
 		},
-
+		
 		{
-			name:          "BackendTLSPolicy",
+			name: "BackendTLSPolicy",
 			objectToStore: &gatewayapi.BackendTLSPolicy{},
 		},
-
+		
 		{
-			name:          "KongPlugin",
+			name: "KongPlugin",
 			objectToStore: &kongv1.KongPlugin{},
 		},
-
+		
 		{
-			name:          "KongClusterPlugin",
+			name: "KongClusterPlugin",
 			objectToStore: &kongv1.KongClusterPlugin{},
 		},
-
+		
 		{
-			name:          "KongConsumer",
+			name: "KongConsumer",
 			objectToStore: &kongv1.KongConsumer{},
 		},
-
+		
 		{
-			name:          "KongConsumerGroup",
+			name: "KongConsumerGroup",
 			objectToStore: &kongv1beta1.KongConsumerGroup{},
 		},
+		
 
+		
 		{
-			name:          "KongIngress",
-			objectToStore: &kongv1.KongIngress{},
-		},
-
-		{
-			name:          "TCPIngress",
-			objectToStore: &kongv1beta1.TCPIngress{},
-		},
-
-		{
-			name:          "UDPIngress",
-			objectToStore: &kongv1beta1.UDPIngress{},
-		},
-
-		{
-			name:          "KongUpstreamPolicy",
+			name: "KongUpstreamPolicy",
 			objectToStore: &kongv1beta1.KongUpstreamPolicy{},
 		},
-
+		
 		{
-			name:          "IngressClassParameters",
+			name: "IngressClassParameters",
 			objectToStore: &kongv1alpha1.IngressClassParameters{},
 		},
-
+		
 		{
-			name:          "KongServiceFacade",
+			name: "KongServiceFacade",
 			objectToStore: &incubatorv1alpha1.KongServiceFacade{},
 		},
-
+		
 		{
-			name:          "KongVault",
+			name: "KongVault",
 			objectToStore: &kongv1alpha1.KongVault{},
 		},
-
+		
 		{
-			name:          "KongCustomEntity",
+			name: "KongCustomEntity",
 			objectToStore: &kongv1alpha1.KongCustomEntity{},
 		},
+		
 	}
 
 	for _, tc := range testCases {

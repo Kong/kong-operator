@@ -105,11 +105,7 @@ var (
 		Version:  configurationv1.SchemeGroupVersion.Version,
 		Resource: "kongclusterplugins",
 	}
-	kongIngressGVResource = metav1.GroupVersionResource{
-		Group:    configurationv1.SchemeGroupVersion.Group,
-		Version:  configurationv1.SchemeGroupVersion.Version,
-		Resource: "kongingresses",
-	}
+
 	kongVaultGVResource = metav1.GroupVersionResource{
 		Group:    configurationv1alpha1.SchemeGroupVersion.Group,
 		Version:  configurationv1alpha1.SchemeGroupVersion.Version,
@@ -157,8 +153,7 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 		return h.handleGateway(ctx, request, responseBuilder)
 	case gatewayapi.V1HTTPRouteGVResource, gatewayapi.V1beta1HTTPRouteGVResource:
 		return h.handleHTTPRoute(ctx, request, responseBuilder)
-	case kongIngressGVResource:
-		return h.handleKongIngress(ctx, request, responseBuilder)
+
 	case kongVaultGVResource:
 		return h.handleKongVault(ctx, request, responseBuilder)
 	case kongCustomEntityGVResource:
@@ -418,39 +413,9 @@ func (h RequestHandler) handleHTTPRoute(
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
-const (
-	proxyWarning    = "Support for 'proxy' was removed in 3.0. It will have no effect. Use Service's annotations instead."
-	routeWarning    = "Support for 'route' was removed in 3.0. It will have no effect. Use Ingress' annotations instead."
-	upstreamWarning = "'upstream' is DEPRECATED and will be removed in a future version. Use a KongUpstreamPolicy resource instead."
-)
 
-// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongingresses,versions=v1,name=kongingresses.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
-func (h RequestHandler) handleKongIngress(_ context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
-	kongIngress := configurationv1.KongIngress{}
-	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongIngress)
-	if err != nil {
-		return nil, err
-	}
 
-	// KongIngress is always allowed.
-	responseBuilder = responseBuilder.Allowed(true)
-
-	// Proxy and Route fields are now disallowed to be set with the use of CEL rules in the CRD definition.
-	// We still warn about them here only just in case someone doesn't install new CRDs with CEL rules.
-	if kongIngress.Proxy != nil {
-		responseBuilder = responseBuilder.WithWarning(proxyWarning)
-	}
-	if kongIngress.Route != nil {
-		responseBuilder = responseBuilder.WithWarning(routeWarning)
-	}
-
-	if kongIngress.Upstream != nil {
-		responseBuilder = responseBuilder.WithWarning(upstreamWarning)
-	}
-
-	return responseBuilder.Build(), nil
-}
 
 const (
 	serviceWarning = "%s is deprecated and will be removed in a future release. Use Service annotations " +

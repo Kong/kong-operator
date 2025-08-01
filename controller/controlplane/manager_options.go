@@ -166,15 +166,11 @@ const (
 	// managing IngressClass parameters.
 	ControllerNameIngressClassParameters = "INGRESS_CLASS_PARAMETERS"
 
-	// ControllerNameKongUDPIngress identifies the controller for managing Kong
-	// UDP ingress resources.
-	ControllerNameKongUDPIngress = "KONG_UDPINGRESS"
+
 	// ControllerNameKongTCPIngress identifies the controller for managing Kong
 	// TCP ingress resources.
 	ControllerNameKongTCPIngress = "KONG_TCPINGRESS"
-	// ControllerNameKongIngress identifies the controller for managing
-	// Kong-specific ingress resources.
-	ControllerNameKongIngress = "KONG_INGRESS"
+
 	// ControllerNameKongClusterPlugin identifies the controller for managing
 	// Kong cluster-scoped plugin resources.
 	ControllerNameKongClusterPlugin = "KONG_CLUSTERPLUGIN"
@@ -244,15 +240,10 @@ func WithControllers(logger logr.Logger, controllers []gwtypes.ControlPlaneContr
 
 			// Kong related controllers.
 
-			case ControllerNameKongUDPIngress:
-				setOpt(&c.UDPIngressEnabled, controller.State)
-				logDeprecated(logger, c.UDPIngressEnabled, controller.Name)
 			case ControllerNameKongTCPIngress:
 				setOpt(&c.TCPIngressEnabled, controller.State)
 				logDeprecated(logger, c.TCPIngressEnabled, controller.Name)
-			case ControllerNameKongIngress:
-				setOpt(&c.KongIngressEnabled, controller.State)
-				logDeprecated(logger, c.KongIngressEnabled, controller.Name)
+
 			case ControllerNameKongClusterPlugin:
 				setOpt(&c.KongClusterPluginEnabled, controller.State)
 			case ControllerNameKongPlugin:
@@ -317,20 +308,14 @@ func managerConfigToStatusControllers(
 		State: boolToControllerState(cfg.IngressClassParametersEnabled),
 	})
 
-	controllers = append(controllers, gwtypes.ControlPlaneController{
-		Name:  ControllerNameKongUDPIngress,
-		State: boolToControllerState(cfg.UDPIngressEnabled),
-	})
+
 
 	controllers = append(controllers, gwtypes.ControlPlaneController{
 		Name:  ControllerNameKongTCPIngress,
 		State: boolToControllerState(cfg.TCPIngressEnabled),
 	})
 
-	controllers = append(controllers, gwtypes.ControlPlaneController{
-		Name:  ControllerNameKongIngress,
-		State: boolToControllerState(cfg.KongIngressEnabled),
-	})
+
 
 	controllers = append(controllers, gwtypes.ControlPlaneController{
 		Name:  ControllerNameKongClusterPlugin,

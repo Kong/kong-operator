@@ -160,45 +160,9 @@ func setupControllers(
 		// ---------------------------------------------------------------------------
 		// Kong API Controllers
 		// ---------------------------------------------------------------------------
-		{
-			Enabled: c.UDPIngressEnabled,
-			Controller: &configuration.KongV1Beta1UDPIngressReconciler{
-				Client:                     mgr.GetClient(),
-				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("UDPIngress"),
-				Scheme:                     mgr.GetScheme(),
-				DataplaneClient:            dataplaneClient,
-				IngressClassName:           c.IngressClassName,
-				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
-				StatusQueue:                kubernetesStatusQueue,
-				DataplaneAddressFinder:     udpDataplaneAddressFinder,
-				CacheSyncTimeout:           c.CacheSyncTimeout,
-			},
-		},
-		{
-			Enabled: c.TCPIngressEnabled,
-			Controller: &configuration.KongV1Beta1TCPIngressReconciler{
-				Client:                     mgr.GetClient(),
-				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TCPIngress"),
-				Scheme:                     mgr.GetScheme(),
-				DataplaneClient:            dataplaneClient,
-				IngressClassName:           c.IngressClassName,
-				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
-				StatusQueue:                kubernetesStatusQueue,
-				DataplaneAddressFinder:     dataplaneAddressFinder,
-				CacheSyncTimeout:           c.CacheSyncTimeout,
-				ReferenceIndexers:          referenceIndexers,
-			},
-		},
-		{
-			Enabled: c.KongIngressEnabled,
-			Controller: &configuration.KongV1KongIngressReconciler{
-				Client:           mgr.GetClient(),
-				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongIngress"),
-				Scheme:           mgr.GetScheme(),
-				DataplaneClient:  dataplaneClient,
-				CacheSyncTimeout: c.CacheSyncTimeout,
-			},
-		},
+
+
+
 		{
 			Enabled: c.IngressClassParametersEnabled,
 			Controller: &configuration.KongV1Alpha1IngressClassParametersReconciler{

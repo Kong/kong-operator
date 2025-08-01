@@ -45,30 +45,8 @@ func TestUpdateLoadBalancerIngress(t *testing.T) {
 					},
 				},
 			},
-			&configurationv1beta1.TCPIngress{
-				Status: configurationv1beta1.TCPIngressStatus{
-					LoadBalancer: corev1.LoadBalancerStatus{
-						Ingress: []corev1.LoadBalancerIngress{
-							{
-								IP:       oldIP,
-								Hostname: oldHostname,
-							},
-						},
-					},
-				},
-			},
-			&configurationv1beta1.UDPIngress{
-				Status: configurationv1beta1.UDPIngressStatus{
-					LoadBalancer: corev1.LoadBalancerStatus{
-						Ingress: []corev1.LoadBalancerIngress{
-							{
-								IP:       oldIP,
-								Hostname: oldHostname,
-							},
-						},
-					},
-				},
-			},
+
+
 		}
 	}
 

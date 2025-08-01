@@ -72,7 +72,6 @@ spec:
 	t.Log("verifying the integrity of the cache store")
 	assert.Len(t, cs.IngressV1.List(), 1)
 	assert.Len(t, cs.Service.List(), 1)
-	assert.Empty(t, cs.KongIngress.List())
 	_, exists, err = cs.Get(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "doesntexist", Name: "doesntexist"}})
 	assert.NoError(t, err)
 	assert.False(t, exists)

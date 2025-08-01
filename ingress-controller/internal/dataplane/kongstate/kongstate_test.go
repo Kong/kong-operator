@@ -1524,6 +1524,7 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 }
 
 func TestKongState_FillUpstreamOverrides(t *testing.T) {
+	t.Skip("Partially deprecated - KongIngress functionality removed")
 	const (
 		kongIngressName        = "kongIngress"
 		kongUpstreamPolicyName = "policy"

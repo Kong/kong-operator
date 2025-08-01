@@ -32,7 +32,6 @@ func TestQueue(t *testing.T) {
 			Name:      "ingress-test-1",
 		},
 	}
-	tcp := &configurationv1beta1.TCPIngress{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: corev1.NamespaceDefault,
 			Name:      "tcpingress-test-1",
@@ -48,7 +47,6 @@ func TestQueue(t *testing.T) {
 	t.Log("initializing kubernetes objects (this would normally be done by api client)")
 	ing1.SetGroupVersionKind(ingGVK)
 	ing2.SetGroupVersionKind(ingGVK)
-	tcp.SetGroupVersionKind(tcpGVK)
 	udp.SetGroupVersionKind(udpGVK)
 
 	t.Log("verifying that events can be subscribed to for new object kinds")
@@ -72,9 +70,7 @@ func TestQueue(t *testing.T) {
 	assert.Len(t, ingCH, 1, "the underlying channel should now contain one event")
 
 	t.Log("verifying that objects of new kinds can be published into the queue")
-	tcpCH := q.Subscribe(tcp.GroupVersionKind())
 	udpCH := q.Subscribe(udp.GroupVersionKind())
-	q.Publish(tcp)
 	q.Publish(udp)
 	assert.Len(t, q.subscriptions, 3, "2 new channels should have been created for the two new object kinds")
 	assert.Len(t, ingCH, 1, "the underlying channel should contain 1 event")
@@ -85,10 +81,6 @@ func TestQueue(t *testing.T) {
 	q.Publish(ing1)
 	q.Publish(ing2)
 	q.Publish(ing2)
-	q.Publish(tcp)
-	q.Publish(tcp)
-	q.Publish(tcp)
-	q.Publish(tcp)
 	q.Publish(udp)
 	q.Publish(udp)
 	q.Publish(udp)
@@ -104,7 +96,6 @@ func TestQueue(t *testing.T) {
 		assert.Equal(t, ingGVK, (<-ingCH).Object.GetObjectKind().GroupVersionKind())
 	}
 	for range 5 {
-		assert.Equal(t, event.GenericEvent{Object: tcp}, <-tcpCH)
 	}
 	for range 6 {
 		assert.Equal(t, event.GenericEvent{Object: udp}, <-udpCH)
@@ -135,7 +126,6 @@ var (
 	tcpGVK = schema.GroupVersionKind{
 		Group:   "configuration.konghq.com",
 		Version: "v1beta1",
-		Kind:    "TCPIngress",
 	}
 	udpGVK = schema.GroupVersionKind{
 		Group:   "configuration.konghq.com",

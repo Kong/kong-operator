@@ -14,7 +14,7 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	outputFile = "../../internal/controllers/configuration/zz_generated.controllers.go"
+	outputFile = "../../../../internal/controllers/configuration/zz_generated.controllers.go"
 
 	corev1      = "k8s.io/api/core/v1"
 	discoveryv1 = "k8s.io/api/discovery/v1"
@@ -92,20 +92,7 @@ var inputControllersNeeded = &typesNeeded{
 		AcceptsIngressClassNameSpec:       false,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
-	typeNeeded{
-		Group:                             "configuration.konghq.com",
-		Version:                           "v1",
-		Kind:                              "KongIngress",
-		PackageImportAlias:                "kongv1",
-		PackageAlias:                      "KongV1",
-		Package:                           kongv1,
-		Plural:                            "kongingresses",
-		CacheType:                         "KongIngress",
-		NeedsStatusPermissions:            true,
-		AcceptsIngressClassNameAnnotation: false,
-		AcceptsIngressClassNameSpec:       false,
-		RBACVerbs:                         []string{"get", "list", "watch"},
-	},
+
 	typeNeeded{
 		Group:                            "configuration.konghq.com",
 		Version:                          "v1",
@@ -201,22 +188,7 @@ var inputControllersNeeded = &typesNeeded{
 		NeedsUpdateReferences:             true,
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
-	typeNeeded{
-		Group:                             "configuration.konghq.com",
-		Version:                           "v1beta1",
-		Kind:                              "UDPIngress",
-		PackageImportAlias:                "kongv1beta1",
-		PackageAlias:                      "KongV1Beta1",
-		Package:                           kongv1beta1,
-		Plural:                            "udpingresses",
-		CacheType:                         "UDPIngress",
-		NeedsStatusPermissions:            true,
-		ConfigStatusNotificationsEnabled:  true,
-		IngressAddressUpdatesEnabled:      true,
-		AcceptsIngressClassNameAnnotation: true,
-		AcceptsIngressClassNameSpec:       false,
-		RBACVerbs:                         []string{"get", "list", "watch"},
-	},
+
 	typeNeeded{
 		Group:                             "configuration.konghq.com",
 		Version:                           "v1alpha1",
@@ -323,7 +295,7 @@ func main() {
 func header() (*bytes.Buffer, error) {
 	buf := new(bytes.Buffer)
 
-	boilerPlate, err := os.ReadFile("../../hack/boilerplate.go.txt")
+	boilerPlate, err := os.ReadFile("../../../../hack/boilerplate.go.txt")
 	if err != nil {
 		return nil, err
 	}

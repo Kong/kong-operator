@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
 
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
@@ -39,8 +39,7 @@ func updateReferredObjects(
 		referredSecretList = listKongClusterPluginReferredSecrets(obj)
 	case *configurationv1.KongConsumer:
 		referredSecretList = listKongConsumerReferredSecrets(obj)
-	case *configurationv1beta1.TCPIngress:
-		referredSecretList = listTCPIngressReferredSecrets(obj)
+
 	}
 
 	for _, nsName := range referredSecretList {
@@ -143,17 +142,4 @@ func listKongConsumerReferredSecrets(consumer *configurationv1.KongConsumer) []k
 	return referredSecretNames
 }
 
-func listTCPIngressReferredSecrets(tcpIngress *configurationv1beta1.TCPIngress) []k8stypes.NamespacedName {
-	referredSecretNames := make([]k8stypes.NamespacedName, 0, len(tcpIngress.Spec.TLS))
-	for _, tls := range tcpIngress.Spec.TLS {
-		if tls.SecretName == "" {
-			continue
-		}
-		nsName := k8stypes.NamespacedName{
-			Namespace: tcpIngress.Namespace,
-			Name:      tls.SecretName,
-		}
-		referredSecretNames = append(referredSecretNames, nsName)
-	}
-	return referredSecretNames
-}
+

@@ -70,7 +70,7 @@ type Storer interface {
 	ListCACerts() ([]*corev1.Secret, []*corev1.ConfigMap, error)
 
 	// Kong resources.
-	GetKongIngress(namespace, name string) (*configurationv1.KongIngress, error)
+
 	GetKongPlugin(namespace, name string) (*configurationv1.KongPlugin, error)
 	GetKongClusterPlugin(name string) (*configurationv1.KongClusterPlugin, error)
 	GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error)
@@ -81,8 +81,8 @@ type Storer interface {
 	GetKongVault(name string) (*configurationv1alpha1.KongVault, error)
 	GetKongCustomEntity(namespace, name string) (*configurationv1alpha1.KongCustomEntity, error)
 	ListIngressClassParametersV1Alpha1() []*configurationv1alpha1.IngressClassParameters
-	ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error)
-	ListUDPIngresses() ([]*configurationv1beta1.UDPIngress, error)
+
+
 	ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error)
 	ListKongPlugins() []*configurationv1.KongPlugin
 	ListKongClusterPlugins() []*configurationv1.KongClusterPlugin
@@ -378,48 +378,9 @@ func (s Store) ListBackendTLSPoliciesByTargetService(service k8stypes.Namespaced
 	return policiesToReturn, nil
 }
 
-// ListTCPIngresses returns the list of TCP Ingresses from
-// configuration.konghq.com group.
-func (s Store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
-	var ingresses []*configurationv1beta1.TCPIngress
-	err := cache.ListAll(s.stores.TCPIngress, labels.NewSelector(),
-		func(ob any) {
-			ing, ok := ob.(*configurationv1beta1.TCPIngress)
-			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
-				ingresses = append(ingresses, ing)
-			}
-		})
-	if err != nil {
-		return nil, err
-	}
-	sort.SliceStable(ingresses, func(i, j int) bool {
-		return strings.Compare(fmt.Sprintf("%s/%s", ingresses[i].Namespace, ingresses[i].Name),
-			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0
-	})
-	return ingresses, nil
-}
 
-// ListUDPIngresses returns the list of UDP Ingresses.
-func (s Store) ListUDPIngresses() ([]*configurationv1beta1.UDPIngress, error) {
-	ingresses := []*configurationv1beta1.UDPIngress{}
-	if s.stores.UDPIngress == nil {
-		// older versions of the KIC do not support UDPIngress so short circuit to maintain support with them
-		return ingresses, nil
-	}
 
-	err := cache.ListAll(s.stores.UDPIngress, labels.NewSelector(),
-		func(ob any) {
-			ing, ok := ob.(*configurationv1beta1.UDPIngress)
-			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
-				ingresses = append(ingresses, ing)
-			}
-		})
-	sort.SliceStable(ingresses, func(i, j int) bool {
-		return strings.Compare(fmt.Sprintf("%s/%s", ingresses[i].Namespace, ingresses[i].Name),
-			fmt.Sprintf("%s/%s", ingresses[j].Namespace, ingresses[j].Name)) < 0
-	})
-	return ingresses, err
-}
+
 
 // GetEndpointSlicesForService returns all EndpointSlices for service
 // 'namespace/name' inside K8s.
@@ -472,18 +433,7 @@ func (s Store) GetKongClusterPlugin(name string) (*configurationv1.KongClusterPl
 	return p.(*configurationv1.KongClusterPlugin), nil
 }
 
-// GetKongIngress returns the 'name' KongIngress resource in namespace.
-func (s Store) GetKongIngress(namespace, name string) (*configurationv1.KongIngress, error) {
-	key := fmt.Sprintf("%v/%v", namespace, name)
-	p, exists, err := s.stores.KongIngress.GetByKey(key)
-	if err != nil {
-		return nil, err
-	}
-	if !exists {
-		return nil, NotFoundError{fmt.Sprintf("KongIngress %v not found", name)}
-	}
-	return p.(*configurationv1.KongIngress), nil
-}
+
 
 // GetKongConsumer returns the 'name' KongConsumer resource in namespace.
 func (s Store) GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error) {
@@ -842,12 +792,9 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	// Kong APIs
 	// ----------------------------------------------------------------------------
-	case configurationv1.SchemeGroupVersion.WithKind("KongIngress"):
-		return &configurationv1.KongIngress{}, nil
-	case configurationv1beta1.SchemeGroupVersion.WithKind("UDPIngress"):
-		return &configurationv1beta1.UDPIngress{}, nil
-	case configurationv1beta1.SchemeGroupVersion.WithKind("TCPIngress"):
-		return &configurationv1beta1.TCPIngress{}, nil
+
+
+
 	case configurationv1.SchemeGroupVersion.WithKind("KongPlugin"):
 		return &configurationv1.KongPlugin{}, nil
 	case configurationv1.SchemeGroupVersion.WithKind("KongClusterPlugin"):
