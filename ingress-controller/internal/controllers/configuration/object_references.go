@@ -11,7 +11,6 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 
-
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
 	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
@@ -141,5 +140,3 @@ func listKongConsumerReferredSecrets(consumer *configurationv1.KongConsumer) []k
 	}
 	return referredSecretNames
 }
-
-

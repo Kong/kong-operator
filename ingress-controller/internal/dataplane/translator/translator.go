@@ -187,7 +187,6 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 	ingressRules := mergeIngressRules(
 		t.ingressRulesFromIngressV1(),
 
-
 		t.ingressRulesFromHTTPRoutes(),
 		t.ingressRulesFromUDPRoutes(),
 		t.ingressRulesFromTCPRoutes(),

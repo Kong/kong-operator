@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -33,6 +34,8 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 )
+
+var tlsMutex = sync.Mutex{}
 
 const (
 	tlsRouteHostname      = "tlsroute.kong.example"

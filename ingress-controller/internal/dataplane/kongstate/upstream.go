@@ -37,8 +37,6 @@ func (u *Upstream) overrideByAnnotation(anns map[string]string) {
 	u.overrideHostHeader(anns)
 }
 
-
-
 func (u *Upstream) overrideByKongUpstreamPolicy(policy *configurationv1beta1.KongUpstreamPolicy) {
 	if u == nil {
 		return

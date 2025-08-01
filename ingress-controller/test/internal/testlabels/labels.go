@@ -2,15 +2,15 @@ package testlabels
 
 const (
 	// Kind is the label key used to store the primary kind that's being tested.
-	Kind                   = "kind"
-	KindUDPRoute           = "UDPRoute"
-	KindTCPRoute           = "TCPRoute"
-	KindTLSRoute           = "TLSRoute"
-	KindHTTPRoute          = "HTTPRoute"
-	KindGRPCRoute          = "GRPCRoute"
-	KindBackendTLSPolicy   = "BackendTLSPolicy"
-	KindIngress            = "Ingress"
-	KindKongServiceFacade  = "KongServiceFacade"
+	Kind                  = "kind"
+	KindUDPRoute          = "UDPRoute"
+	KindTCPRoute          = "TCPRoute"
+	KindTLSRoute          = "TLSRoute"
+	KindHTTPRoute         = "HTTPRoute"
+	KindGRPCRoute         = "GRPCRoute"
+	KindBackendTLSPolicy  = "BackendTLSPolicy"
+	KindIngress           = "Ingress"
+	KindKongServiceFacade = "KongServiceFacade"
 
 	KindKongUpstreamPolicy = "KongUpstreamPolicy"
 	KindKongLicense        = "KongLicense"

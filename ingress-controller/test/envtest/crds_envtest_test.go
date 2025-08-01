@@ -9,24 +9,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap/zaptest/observer"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
 )
 
 // TestGatewayAPIControllersMayBeDynamicallyStarted ensures that in case of missing CRDs installation in the
@@ -835,8 +830,6 @@ func TestCRDValidations(t *testing.T) {
 		})
 	}
 }
-
-
 
 func createKongUpstreamPolicy(ctx context.Context, client client.Client, ns string, spec configurationv1beta1.KongUpstreamPolicySpec) error {
 	return client.Create(ctx, &configurationv1beta1.KongUpstreamPolicy{

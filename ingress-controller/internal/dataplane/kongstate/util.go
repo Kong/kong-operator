@@ -8,8 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-
-
 // prettyPrintServiceList makes a clean printable list of Kubernetes
 // services for the purpose of logging (errors, info, etc.).
 func prettyPrintServiceList(services []*corev1.Service) string {

@@ -41,8 +41,6 @@ var (
 	}
 )
 
-
-
 func TestHandleService(t *testing.T) {
 	tests := []struct {
 		name         string

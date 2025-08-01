@@ -7,8 +7,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-
-
 )
 
 // UpdateLoadBalancerIngress updates any supported Ingress object with new []netv1.IngressLoadBalancerIngress
@@ -31,7 +29,6 @@ func UpdateLoadBalancerIngress(
 	switch obj := ingress.(type) {
 	case *netv1.Ingress:
 		obj.Status.LoadBalancer.Ingress = newAddresses
-
 
 	default:
 		return false, fmt.Errorf("unsupported ingress type: %T", obj)
@@ -56,7 +53,6 @@ func ingressToNetV1LoadBalancerIngressStatus(in any) ([]netv1.IngressLoadBalance
 	switch obj := in.(type) {
 	case *netv1.Ingress:
 		return obj.Status.LoadBalancer.Ingress, nil
-
 
 	default:
 		return nil, fmt.Errorf("unsupported ingress type: %T", obj)

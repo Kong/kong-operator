@@ -103,10 +103,6 @@ func resolveKongConsumerGroupDependencies(cache store.CacheStores, kongConsumerG
 	return resolveObjectDependenciesPlugin(cache, kongConsumerGroup)
 }
 
-
-
-
-
 // resolveKongServiceFacadeDependencies resolves potential dependencies for a KongServiceFacade object:
 // - KongPlugin
 // - KongClusterPlugin

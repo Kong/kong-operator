@@ -620,7 +620,6 @@ func TestResolveDependencies_UDPIngress(t *testing.T) {
 	}
 }
 
-
 func TestResolveDependencies_KongCustomEntity(t *testing.T) {
 	testCases := []resolveDependenciesTestCase{
 		{

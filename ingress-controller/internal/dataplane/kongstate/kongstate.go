@@ -20,11 +20,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/admission/validation/consumers/credentials"
-
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/logging"
@@ -712,8 +710,6 @@ func (ks *KongState) FillIDs(logger logr.Logger, workspace string) {
 		}
 	}
 }
-
-
 
 // getServiceIDFromPluginRels returns the ID of the services which a plugin refers to in RelatedEntitiesRef.
 // It fills the IDs of services directly referred, and IDs of services where referred routes attaches to.
