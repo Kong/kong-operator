@@ -166,3 +166,13 @@ func ReduceKongCredentials[
 	filtered := filterKongCredentials[T, TPtr](kongCredentials)
 	return clientops.DeleteAll[T, TPtr](ctx, k8sClient, filtered)
 }
+
+// TODO: comment
+func ReduceKongDataPlaneClientCertificates(
+	ctx context.Context,
+	k8sClient client.Client,
+	certificates []configurationv1alpha1.KongDataPlaneClientCertificate,
+) error {
+	filtered := filterKongDataPlaneClientCertificates(certificates)
+	return clientops.DeleteAll(ctx, k8sClient, filtered)
+}

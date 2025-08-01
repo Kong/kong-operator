@@ -57,18 +57,15 @@ type KonnectExtensionReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	ls := metav1.LabelSelector{
+	var konnectExtensionSecretLabelSelector = metav1.LabelSelector{
 		// A secret must have `konghq.com/konnect-dp-cert` label to be watched by the controller.
 		// This constraint is added to prevent from watching all secrets which may cause high resource consumption.
 		// TODO: https://github.com/kong/kong-operator/issues/1255 set label constraints of `Secret`s on manager level if possible.
 		MatchExpressions: []metav1.LabelSelectorRequirement{
-			{
-				Key:      SecretKonnectDataPlaneCertificateLabel,
-				Operator: metav1.LabelSelectorOpExists,
-			},
+			konnectDataPlaneCertificateLabelMatchExpression,
 		},
 	}
-	labelSelectorPredicate, err := predicate.LabelSelectorPredicate(ls)
+	labelSelectorPredicate, err := predicate.LabelSelectorPredicate(konnectExtensionSecretLabelSelector)
 	if err != nil {
 		return err
 	}
@@ -154,6 +151,8 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	)
 	ctx = ctrllog.IntoContext(ctx, logger)
 	log.Debug(logger, "reconciling")
+
+	hasCPRef := ext.Spec.Konnect.ControlPlane.Ref.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
 
 	if err := r.List(ctx, &dataPlaneList, client.MatchingFields{
 		index.KonnectExtensionIndex: client.ObjectKeyFromObject(&ext).String(),
@@ -399,174 +398,177 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	log.Debug(logger, "DataPlane certificate validity checked")
 
-	// get the list of DataPlane client certificates in Konnect
-	dpCertificates, err := ops.ListKongDataPlaneClientCertificates(ctx, sdk.GetDataPlaneCertificatesSDK(), cp.Status.ID)
-	if err != nil {
-		certProvisionedCond.Status = metav1.ConditionFalse
-		certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
-		certProvisionedCond.Message = err.Error()
-		if res, updated, err := patch.StatusWithConditions(
-			ctx,
-			r.Client,
-			&ext,
-			readyCondition,
-			certProvisionedCond,
-		); err != nil || updated || !res.IsZero() {
-			return res, err
-		}
-
-		log.Debug(logger, "DataPlane client certificate list retrieval failed in Konnect")
-		// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
-		// if the syncPeriod is set to zero, the controller won't requeue.
-		return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
-	}
-
-	var (
-		cert      sdkkonnectcomp.DataPlaneClientCertificate
-		certFound bool
-	)
-	// retrieve all the konnect certificates bound to this secret
-	mappedIDs := lo.FilterMap(dpCertificates, func(c sdkkonnectcomp.DataPlaneClientCertificate, _ int) (k string, include bool) {
-		if c.Cert != nil && c.ID != nil {
-			certStr := sanitizeCert(*c.Cert)
-			certDataStr := sanitizeCert(string(certData))
-			if certStr == certDataStr {
-				cert = c
-				certFound = true
-				return *c.ID, true
+	if !hasCPRef {
+		// get the list of DataPlane client certificates in Konnect
+		dpCertificates, err := ops.ListKongDataPlaneClientCertificates(ctx, sdk.GetDataPlaneCertificatesSDK(), cp.Status.ID)
+		if err != nil {
+			certProvisionedCond.Status = metav1.ConditionFalse
+			certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
+			certProvisionedCond.Message = err.Error()
+			if res, updated, err := patch.StatusWithConditions(
+				ctx,
+				r.Client,
+				&ext,
+				readyCondition,
+				certProvisionedCond,
+			); err != nil || updated || !res.IsZero() {
+				return res, err
 			}
-		}
-		return "", false
-	})
 
-	// update the secret annotation with the IDs of the mapped certificates
-	newMappedIDsStr := strings.Join(mappedIDs, ",")
-	if certificateSecret.Annotations[consts.DataPlaneCertificateIDAnnotationKey] != newMappedIDsStr {
-		if certificateSecret.Annotations == nil {
-			certificateSecret.Annotations = map[string]string{}
+			log.Debug(logger, "DataPlane client certificate list retrieval failed in Konnect")
+			// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
+			// if the syncPeriod is set to zero, the controller won't requeue.
+			return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
 		}
-		certificateSecret.Annotations[consts.DataPlaneCertificateIDAnnotationKey] = newMappedIDsStr
-		if err := r.Update(ctx, certificateSecret); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, nil
-	}
 
-	secretCleanup := certificateSecret.DeletionTimestamp != nil && certificateSecret.DeletionTimestamp.Before(&metav1.Time{Time: time.Now()})
-	switch {
-	case !cleanup && !secretCleanup:
-		if !certFound {
-			log.Debug(logger, "DataPlane client certificate enforced in Konnect")
-			dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
-				certificateSecret.Name,
-				certificateSecret.Namespace,
-				&ext.Spec.Konnect.ControlPlane.Ref,
-				string(certificateSecret.Data[consts.TLSCRT]),
-				func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) {
-					dpCert.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-						// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
-						// that expects the ControlPlaneID to be set in the status.
-						ControlPlaneID: cp.Status.ID,
+		var (
+			cert      sdkkonnectcomp.DataPlaneClientCertificate
+			certFound bool
+		)
+		// retrieve all the konnect certificates bound to this secret
+		mappedIDs := lo.FilterMap(dpCertificates, func(c sdkkonnectcomp.DataPlaneClientCertificate, _ int) (k string, include bool) {
+			if c.Cert != nil && c.ID != nil {
+				certStr := sanitizeCert(*c.Cert)
+				certDataStr := sanitizeCert(string(certData))
+				if certStr == certDataStr {
+					cert = c
+					certFound = true
+					return *c.ID, true
+				}
+			}
+			return "", false
+		})
+
+		// update the secret annotation with the IDs of the mapped certificates
+		newMappedIDsStr := strings.Join(mappedIDs, ",")
+		if certificateSecret.Annotations[consts.DataPlaneCertificateIDAnnotationKey] != newMappedIDsStr {
+			if certificateSecret.Annotations == nil {
+				certificateSecret.Annotations = map[string]string{}
+			}
+			certificateSecret.Annotations[consts.DataPlaneCertificateIDAnnotationKey] = newMappedIDsStr
+			if err := r.Update(ctx, certificateSecret); err != nil {
+				return ctrl.Result{}, err
+			}
+			return ctrl.Result{}, nil
+		}
+
+		secretCleanup := certificateSecret.DeletionTimestamp != nil && certificateSecret.DeletionTimestamp.Before(&metav1.Time{Time: time.Now()})
+		switch {
+		case !cleanup && !secretCleanup:
+			if !certFound {
+				log.Debug(logger, "DataPlane client certificate enforced in Konnect")
+				dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
+					certificateSecret.Name,
+					certificateSecret.Namespace,
+					&ext.Spec.Konnect.ControlPlane.Ref,
+					string(certificateSecret.Data[consts.TLSCRT]),
+					func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) {
+						dpCert.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+							// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
+							// that expects the ControlPlaneID to be set in the status.
+							ControlPlaneID: cp.Status.ID,
+						}
+					},
+				)
+				if err := ops.CreateKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), &dpCert); err != nil {
+					certProvisionedCond.Status = metav1.ConditionFalse
+					certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
+					certProvisionedCond.Message = err.Error()
+					if res, updated, err := patch.StatusWithConditions(
+						ctx,
+						r.Client,
+						&ext,
+						readyCondition,
+						certProvisionedCond,
+					); err != nil || updated || !res.IsZero() {
+						return res, err
 					}
-				},
-			)
-			if err := ops.CreateKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), &dpCert); err != nil {
-				certProvisionedCond.Status = metav1.ConditionFalse
-				certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
-				certProvisionedCond.Message = err.Error()
-				if res, updated, err := patch.StatusWithConditions(
-					ctx,
-					r.Client,
-					&ext,
-					readyCondition,
-					certProvisionedCond,
-				); err != nil || updated || !res.IsZero() {
+					// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
+					// if the syncPeriod is set to zero, the controller won't requeue.
+					return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
+				}
+				updated, res, err := patch.WithFinalizer(ctx, r.Client, client.Object(certificateSecret), KonnectCleanupFinalizer)
+				if err != nil || !res.IsZero() {
 					return res, err
 				}
-				// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
-				// if the syncPeriod is set to zero, the controller won't requeue.
-				return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
+				if updated {
+					log.Info(logger, "konnect-cleanup finalizer on the referenced secret updated")
+					// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
+					// if the syncPeriod is set to zero, the controller won't requeue.
+					return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
+				}
 			}
-			updated, res, err := patch.WithFinalizer(ctx, r.Client, client.Object(certificateSecret), KonnectCleanupFinalizer)
+			updated, res, err := patch.WithFinalizer(ctx, r.Client, &ext, KonnectCleanupFinalizer)
 			if err != nil || !res.IsZero() {
 				return res, err
 			}
 			if updated {
-				log.Info(logger, "konnect-cleanup finalizer on the referenced secret updated")
-				// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
-				// if the syncPeriod is set to zero, the controller won't requeue.
-				return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
+				log.Info(logger, "KonnectExtension finalizer added", "finalizer", KonnectCleanupFinalizer)
+				return ctrl.Result{}, nil
 			}
-		}
-		updated, res, err := patch.WithFinalizer(ctx, r.Client, &ext, KonnectCleanupFinalizer)
-		if err != nil || !res.IsZero() {
-			return res, err
-		}
-		if updated {
-			log.Info(logger, "KonnectExtension finalizer added", "finalizer", KonnectCleanupFinalizer)
-			return ctrl.Result{}, nil
-		}
-	case cleanup || secretCleanup:
-		if certFound {
-			// This should never happen, but checking to make the dereference below bullet-proof
-			if cert.ID == nil {
-				return ctrl.Result{}, errors.New("cannot cleanup certificate in Konnect without ID")
-			}
-			dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
-				certificateSecret.Name,
-				certificateSecret.Namespace,
-				&ext.Spec.Konnect.ControlPlane.Ref,
-				string(certificateSecret.Data[consts.TLSCRT]),
-				func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) {
-					dpCert.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-						// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
-						// that expects the ControlPlaneID to be set in the status.
-						ControlPlaneID: cp.Status.ID,
-						// setting the ID in the status as a workaround for the DeleteKongDataPlaneClientCertificate method,
-						// that expects the ID to be set in the status.
-						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
-							ID: *cert.ID,
-						},
-					}
-				},
-			)
-			if err := ops.DeleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), &dpCert); err != nil {
-				certProvisionedCond.Status = metav1.ConditionFalse
-				certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
-				certProvisionedCond.Message = err.Error()
-				if res, updated, err := patch.StatusWithConditions(
-					ctx,
-					r.Client,
-					&ext,
-					readyCondition,
-					certProvisionedCond,
-				); err != nil || updated || !res.IsZero() {
-					return res, err
+		case cleanup || secretCleanup:
+			if certFound {
+				// This should never happen, but checking to make the dereference below bullet-proof
+				if cert.ID == nil {
+					return ctrl.Result{}, errors.New("cannot cleanup certificate in Konnect without ID")
 				}
-				// In case of an error in the Konnect ops, the resync period will take care of a new creation attempt.
-				// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
-				// if the syncPeriod is set to zero, the controller won't requeue.
-				return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
+				dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
+					certificateSecret.Name,
+					certificateSecret.Namespace,
+					&ext.Spec.Konnect.ControlPlane.Ref,
+					string(certificateSecret.Data[consts.TLSCRT]),
+					func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) {
+						dpCert.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+							// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
+							// that expects the ControlPlaneID to be set in the status.
+							ControlPlaneID: cp.Status.ID,
+							// setting the ID in the status as a workaround for the DeleteKongDataPlaneClientCertificate method,
+							// that expects the ID to be set in the status.
+							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+								ID: *cert.ID,
+							},
+						}
+					},
+				)
+				if err := ops.DeleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), &dpCert); err != nil {
+					certProvisionedCond.Status = metav1.ConditionFalse
+					certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
+					certProvisionedCond.Message = err.Error()
+					if res, updated, err := patch.StatusWithConditions(
+						ctx,
+						r.Client,
+						&ext,
+						readyCondition,
+						certProvisionedCond,
+					); err != nil || updated || !res.IsZero() {
+						return res, err
+					}
+					// In case of an error in the Konnect ops, the resync period will take care of a new creation attempt.
+					// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
+					// if the syncPeriod is set to zero, the controller won't requeue.
+					return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
+				}
+				return ctrl.Result{Requeue: true}, err
 			}
-			return ctrl.Result{Requeue: true}, err
-		}
 
-		// in case no IDs are mapped to the secret, we can remove the finalizer from the secret.
-		if len(mappedIDs) == 0 {
-			updated = controllerutil.RemoveFinalizer(certificateSecret, KonnectCleanupFinalizer)
-			if updated {
-				if err := r.Update(ctx, certificateSecret); err != nil {
-					if k8serrors.IsConflict(err) {
-						return ctrl.Result{Requeue: true}, nil
+			// in case no IDs are mapped to the secret, we can remove the finalizer from the secret.
+			if len(mappedIDs) == 0 {
+				updated = controllerutil.RemoveFinalizer(certificateSecret, KonnectCleanupFinalizer)
+				if updated {
+					if err := r.Update(ctx, certificateSecret); err != nil {
+						if k8serrors.IsConflict(err) {
+							return ctrl.Result{Requeue: true}, nil
+						}
+						return ctrl.Result{}, err
 					}
-					return ctrl.Result{}, err
+					log.Info(logger, "Secret finalizer removed")
 				}
-				log.Info(logger, "Secret finalizer removed")
+				log.Debug(logger, "DataPlane client certificate Deleted in Konnect")
+				return ctrl.Result{Requeue: true}, nil
 			}
-			log.Debug(logger, "DataPlane client certificate Deleted in Konnect")
-			return ctrl.Result{Requeue: true}, nil
 		}
 	}
+
 	// set the certificateProvisioned condition to true
 	if res, updated, err := patch.StatusWithConditions(
 		ctx,

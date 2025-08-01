@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"strings"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -28,8 +29,16 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/patch"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/internal/utils/index"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
+	"github.com/kong/kubernetes-configuration/api/konnect"
+
+	k8stypes "k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // getGatewayKonnectControlPlane retrieves the Konnect Control Plane from K8s cluster
@@ -202,15 +211,18 @@ func getKonnectAPIAuthRefNN(ctx context.Context, cl client.Client, ext *konnectv
 	}, nil
 }
 
-func (r *KonnectExtensionReconciler) ensureCertificateSecret(ctx context.Context, ext *konnectv1alpha2.KonnectExtension) (op.Result, *corev1.Secret, error) {
+func (r *KonnectExtensionReconciler) ensureCertificateSecret(ctx context.Context, ext *konnectv1alpha1.KonnectExtension) (op.Result, *corev1.Secret, error) {
+	hasCPRef := ext.Spec.Konnect.ControlPlane.Ref.Type == configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef
+
 	usages := []certificatesv1.KeyUsage{
 		certificatesv1.UsageKeyEncipherment,
 		certificatesv1.UsageDigitalSignature,
 		certificatesv1.UsageClientAuth,
 	}
 	matchingLabels := client.MatchingLabels{
-		consts.SecretProvisioningLabelKey:      consts.SecretProvisioningAutomaticLabelValue,
-		SecretKonnectDataPlaneCertificateLabel: "true",
+		consts.SecretProvisioningLabelKey:                consts.SecretProvisioningAutomaticLabelValue,
+		SecretKonnectDataPlaneCertificateLabel:           "true",
+		SecretKonnectDataPlaneCertificateReconcilerLabel: strconv.FormatBool(hasCPRef),
 	}
 	if r.SecretLabelSelector != "" {
 		matchingLabels[r.SecretLabelSelector] = "true"
@@ -307,4 +319,77 @@ func sanitizeCert(cert string) string {
 	newCert := strings.TrimSuffix(cert, "\n")
 	newCert = strings.ReplaceAll(newCert, "\r", "")
 	return newCert
+}
+
+const (
+	// SecretKonnectDataPlaneCertificateLabel is the label to mark that the secret is used as a Konnect DP certificate.
+	// A secret must have the label to be watched by the KonnectExtension reconciler.
+	SecretKonnectDataPlaneCertificateLabel = "konghq.com/konnect-dp-cert" //nolint:gosec
+
+	// TODO: comment
+	SecretKonnectDataPlaneCertificateReconcilerLabel = "konghq.com/konnect-dp-cert-reconciler"
+)
+
+func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *corev1.Secret) ([]konnectv1alpha1.KonnectExtension, error) {
+	// Get all the secrets explicitly referenced by KonnectExtensions in the spec.
+	l := &konnectv1alpha1.KonnectExtensionList{}
+	err := cl.List(
+		ctx, l,
+		client.InNamespace(s.Namespace),
+		client.MatchingFields{
+			index.IndexFieldKonnectExtensionOnSecrets: s.Name,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add all the konnectExtensions that own the secret.
+	for _, ownerRef := range s.GetOwnerReferences() {
+		if ownerRef.Controller != nil &&
+			*ownerRef.Controller &&
+			ownerRef.Kind == konnectv1alpha1.KonnectExtensionKind &&
+			ownerRef.APIVersion == konnectv1alpha1.GroupVersion.String() {
+			owner := &konnectv1alpha1.KonnectExtension{}
+			err := cl.Get(ctx, k8stypes.NamespacedName{
+				Namespace: s.Namespace,
+				Name:      ownerRef.Name,
+			}, owner)
+			if err != nil {
+				return nil, err
+			}
+			l.Items = append(l.Items, *owner)
+		}
+	}
+
+	return l.Items, nil
+}
+
+func enqueueKonnectExtensionsForSecret(cl client.Client) func(context.Context, client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		secret, ok := obj.(*corev1.Secret)
+		if !ok {
+			return nil
+		}
+		konnectExtensions, err := listKonnectExtensionsBySecret(ctx, cl, secret)
+		if err != nil {
+			return nil
+		}
+
+		reqs := make([]reconcile.Request, 0, len(konnectExtensions))
+		for _, ke := range konnectExtensions {
+			if (ke.Spec.ClientAuth != nil &&
+				ke.Spec.ClientAuth.CertificateSecret.CertificateSecretRef != nil &&
+				ke.Spec.ClientAuth.CertificateSecret.CertificateSecretRef.Name == obj.GetName()) ||
+				k8sutils.IsOwnedByRefUID(secret, ke.UID) {
+				reqs = append(reqs, reconcile.Request{
+					NamespacedName: k8stypes.NamespacedName{
+						Namespace: ke.Namespace,
+						Name:      ke.Name,
+					},
+				})
+			}
+		}
+		return reqs
+	}
 }
