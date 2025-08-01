@@ -509,7 +509,6 @@ func WithDataPlaneSyncOptions(syncOptions operatorv2alpha1.ControlPlaneDataPlane
 func WithEmitKubernetesEvents(emit bool) managercfg.Opt {
 	return func(c *managercfg.Config) {
 		c.EmitKubernetesEvents = emit
-
 	}
 }
 
@@ -566,5 +565,12 @@ func WithConfigDumpEnabled(enabled bool) managercfg.Opt {
 func WithSensitiveConfigDumpEnabled(enabled bool) managercfg.Opt {
 	return func(c *managercfg.Config) {
 		c.DumpSensitiveConfig = enabled
+	}
+}
+
+// WithWatchNamespaces enables/disables watching namespaces for the manager.
+func WithWatchNamespaces(watchNamespaces []string) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.WatchNamespaces = watchNamespaces
 	}
 }
