@@ -21,7 +21,7 @@ import (
 func TestGetAcceptedCondition(t *testing.T) {
 	scheme := runtime.NewScheme()
 	assert.NoError(t, gatewayv1.Install(scheme))
-	assert.NoError(t, operatorv1beta1.AddToScheme(scheme))
+	assert.NoError(t, operatorv2alpha1.AddToScheme(scheme))
 
 	tests := []struct {
 		name           string

@@ -11,11 +11,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-var (
-	// ErrExtractValueFromEnvSourceNotImplemented is the error when the Env references value from `ResourceRef` or `FieldRef`
-	// that we do not support to extract values yet.
-	ErrExtractValueFromEnvSourceNotImplemented = errors.New("EnvSource type not implemented for extracting value yet")
-)
+// ErrExtractValueFromEnvSourceNotImplemented is the error when the Env references value from `ResourceRef` or `FieldRef`
+// that we do not support to extract values yet.
+var ErrExtractValueFromEnvSourceNotImplemented = errors.New("EnvSource type not implemented for extracting value yet")
 
 // -----------------------------------------------------------------------------
 // Kubernetes Utils - EnvVars

@@ -21,21 +21,19 @@ var (
 	)
 )
 
-var (
-	commonSupportedFeatures = sets.New(
-		// core features
-		features.SupportHTTPRoute,
-		features.SupportGateway,
-		features.SupportReferenceGrant,
+var commonSupportedFeatures = sets.New(
+	// core features
+	features.SupportHTTPRoute,
+	features.SupportGateway,
+	features.SupportReferenceGrant,
 
-		// Gateway extended
-		features.SupportGatewayPort8080,
+	// Gateway extended
+	features.SupportGatewayPort8080,
 
-		// HTTPRoute extended
-		features.SupportHTTPRouteResponseHeaderModification,
-		features.SupportHTTPRoutePathRewrite,
-		features.SupportHTTPRouteHostRewrite,
-	)
+	// HTTPRoute extended
+	features.SupportHTTPRouteResponseHeaderModification,
+	features.SupportHTTPRoutePathRewrite,
+	features.SupportHTTPRouteHostRewrite,
 )
 
 // GetSupportedFeatures returns the supported features for the given router type.

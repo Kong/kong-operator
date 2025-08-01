@@ -292,5 +292,4 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 			require.Equal(t, tc.allow, allow)
 		})
 	}
-
 }
