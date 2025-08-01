@@ -38,7 +38,7 @@ require (
 	github.com/kong/go-database-reconciler v1.24.3
 	github.com/kong/go-kong v0.67.0
 	github.com/kong/kubernetes-configuration v1.4.1-0.20250708093327-e695c0e8302e
-	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.1.0.20250729175122-fca328cabf60
+	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.1.0.20250730122650-4dd0c53dd542
 	github.com/kong/kubernetes-telemetry v0.1.10
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
@@ -46,6 +46,8 @@ require (
 	github.com/lithammer/dedent v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/moul/pb v0.0.0-20220425114252-bca18df4138c
+	github.com/onsi/ginkgo/v2 v2.22.0
+	github.com/onsi/gomega v1.36.1
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
 	github.com/prometheus/client_golang v1.23.0
@@ -172,6 +174,7 @@ require (
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
+	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/gonvenience/bunt v1.3.5 // indirect

@@ -18,7 +18,7 @@ resources:
   controller: true
   group: gateway-operator.konghq.com
   kind: ControlPlane
-  path: github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1
+  path: github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1
   version: v1beta1
 - api:
     crdVersion: v1
@@ -26,14 +26,14 @@ resources:
   controller: true
   group: gateway-operator.konghq.com
   kind: DataPlane
-  path: github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1
+  path: github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1
   version: v1beta1
 - api:
     crdVersion: v1
     namespaced: true
   group: gateway-operator.konghq.com
   kind: GatewayConfiguration
-  path: github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1
+  path: github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1
   version: v1beta1
 - api:
     crdVersion: v1
@@ -41,7 +41,7 @@ resources:
   controller: true
   group: gateway-operator.konghq.com
   kind: AIGateway
-  path: github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1
+  path: github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
@@ -49,6 +49,6 @@ resources:
   controller: true
   group: gateway-operator.konghq.com
   kind: DataPlaneMetricsExtension
-  path: github.com/kong/kubernetes-configuration/api/gateway-operator/v1alpha1
+  path: github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1
   version: v1alpha1
 version: "3"

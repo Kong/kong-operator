@@ -30,7 +30,13 @@ generate_kustomization_file() {
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - ${resource_url}?${KCONF_VERSION} # Version is auto-updated by the generating script." > "${file_path}"
+  - ${resource_url}?${KCONF_VERSION} # Version is auto-updated by the generating script.
+
+patches:
+  - path: patches/webhook_in_gateway-operator.konghq.com_controlplanes.yaml
+
+configurations:
+  - kustomizeconfig.yaml" > "${file_path}"
 }
 
 generate_kustomization_file \
