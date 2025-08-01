@@ -43,7 +43,10 @@
   `konghq.com/configmap`.
   [#1922](https://github.com/Kong/kong-operator/pull/1922)
 - `GatewayConfiguration` `v1beta1` has been replaced by the new API version `v2alpha1`.
+  The `GatewayConfiguration` `v1beta1` is still available but has been marked as
+  deprecated.
   [#1792](https://github.com/Kong/kong-operator/pull/1972)
+  <!-- https://github.com/Kong/kong-operator/issues/1944 -->
 
 ### Added
 
