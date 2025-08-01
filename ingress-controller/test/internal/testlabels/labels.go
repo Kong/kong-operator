@@ -11,8 +11,7 @@ const (
 	KindBackendTLSPolicy   = "BackendTLSPolicy"
 	KindIngress            = "Ingress"
 	KindKongServiceFacade  = "KongServiceFacade"
-	KindKongUDPIngress     = "UDPIngress"
-	KindKongTCPIngress     = "TCPIngress"
+
 	KindKongUpstreamPolicy = "KongUpstreamPolicy"
 	KindKongLicense        = "KongLicense"
 	KindKongCustomEntity   = "KongCustomEntity"

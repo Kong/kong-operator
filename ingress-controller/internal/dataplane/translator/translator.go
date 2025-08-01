@@ -186,8 +186,8 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 	// Translate and merge all rules together from all Kubernetes API sources
 	ingressRules := mergeIngressRules(
 		t.ingressRulesFromIngressV1(),
-		t.ingressRulesFromTCPIngressV1beta1(),
-		t.ingressRulesFromUDPIngressV1beta1(),
+
+
 		t.ingressRulesFromHTTPRoutes(),
 		t.ingressRulesFromUDPRoutes(),
 		t.ingressRulesFromTCPRoutes(),

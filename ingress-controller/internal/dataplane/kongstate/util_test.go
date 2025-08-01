@@ -16,7 +16,8 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/store"
 )
 
-func TestGetKongIngressForServices(t *testing.T) {
+func TestDeprecated_GetKongIngressForServices(t *testing.T) {
+	t.Skip("KongIngress has been deprecated and removed")
 	for _, tt := range []struct {
 		name                string
 		services            []*corev1.Service
@@ -172,7 +173,8 @@ func TestGetKongIngressForServices(t *testing.T) {
 	}
 }
 
-func TestGetKongIngressFromObjectMeta(t *testing.T) {
+func TestDeprecated_GetKongIngressFromObjectMeta(t *testing.T) {
+	t.Skip("KongIngress has been deprecated and removed")
 	for _, tt := range []struct {
 		name                string
 		route               client.Object

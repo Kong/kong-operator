@@ -47,10 +47,8 @@ func ResolveDependencies(cache store.CacheStores, obj client.Object) ([]client.O
 		return resolveKongConsumerDependencies(cache, obj), nil
 	case *configurationv1beta1.KongConsumerGroup:
 		return resolveKongConsumerGroupDependencies(cache, obj), nil
-	case *configurationv1beta1.UDPIngress:
-		return resolveUDPIngressDependencies(cache, obj), nil
-	case *configurationv1beta1.TCPIngress:
-		return resolveTCPIngressDependencies(cache, obj), nil
+
+
 	case *incubatorv1alpha1.KongServiceFacade:
 		return resolveKongServiceFacadeDependencies(cache, obj), nil
 	case *configurationv1alpha1.KongCustomEntity:
@@ -63,7 +61,7 @@ func ResolveDependencies(cache store.CacheStores, obj client.Object) ([]client.O
 		*gatewayapi.ReferenceGrant,
 		*gatewayapi.Gateway,
 		*gatewayapi.BackendTLSPolicy,
-		*configurationv1.KongIngress,
+
 		*configurationv1beta1.KongUpstreamPolicy,
 		*configurationv1alpha1.IngressClassParameters,
 		*configurationv1alpha1.KongVault:

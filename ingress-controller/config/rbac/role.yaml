@@ -54,13 +54,10 @@ rules:
   - kongconsumergroups
   - kongconsumers
   - kongcustomentities
-  - kongingresses
   - konglicenses
   - kongplugins
   - kongupstreampolicies
   - kongvaults
-  - tcpingresses
-  - udpingresses
   verbs:
   - get
   - list
@@ -72,13 +69,10 @@ rules:
   - kongconsumergroups/status
   - kongconsumers/status
   - kongcustomentities/status
-  - kongingresses/status
   - konglicenses/status
   - kongplugins/status
   - kongupstreampolicies/status
   - kongvaults/status
-  - tcpingresses/status
-  - udpingresses/status
   verbs:
   - get
   - patch

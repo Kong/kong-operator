@@ -20,11 +20,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+
 	"github.com/kong/kubernetes-configuration/pkg/metadata"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/admission/validation/consumers/credentials"
-	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/logging"
@@ -286,16 +286,8 @@ func (ks *KongState) FillUpstreamOverrides(
 	for i := 0; i < len(ks.Upstreams); i++ {
 		servicesGroup := lo.Values(ks.Upstreams[i].Service.K8sServices)
 
-		// In case `konghq.com/override` annotation is set on any of the services, we should log a deprecation error.
-		maybeLogKongIngressDeprecationError(logger, servicesGroup)
-
-		kongIngress, err := getKongIngressForServices(s, servicesGroup)
-		if err != nil {
-			failuresCollector.PushResourceFailure(err.Error(), lo.Map(servicesGroup, servicesAsObjects)...)
-		} else {
-			for _, svc := range servicesGroup {
-				ks.Upstreams[i].override(kongIngress, svc)
-			}
+		for _, svc := range servicesGroup {
+			ks.Upstreams[i].override(svc)
 		}
 
 		kongUpstreamPolicy, err := GetKongUpstreamPolicyForServices(s, servicesGroup)
@@ -721,36 +713,7 @@ func (ks *KongState) FillIDs(logger logr.Logger, workspace string) {
 	}
 }
 
-// maybeLogKongIngressDeprecationError iterates over services and logs a deprecation error if a service
-// is annotated with `konghq.com/override` annotation.
-func maybeLogKongIngressDeprecationError(logger logr.Logger, services []*corev1.Service) {
-	for _, svc := range services {
-		_, upstreamPolicyAnnotationSet := annotations.ExtractUpstreamPolicy(svc.Annotations)
-		kongOverrideAnnotationSet := annotations.ExtractConfigurationName(svc.Annotations) != ""
 
-		// If both `konghq.com/override` and `konghq.com/upstream-policy` are set, we should log a more specific error.
-		if kongOverrideAnnotationSet && upstreamPolicyAnnotationSet {
-			logger.Error(nil, fmt.Sprintf("Service uses both %s and %s annotations, should use only %s annotation. Settings "+
-				"from %s will take precedence",
-				annotations.AnnotationPrefix+annotations.ConfigurationKey,
-				configurationv1beta1.KongUpstreamPolicyAnnotationKey,
-				configurationv1beta1.KongUpstreamPolicyAnnotationKey,
-				configurationv1beta1.KongUpstreamPolicyAnnotationKey),
-				"namespace", svc.Namespace, "name", svc.Name,
-			)
-		}
-
-		// In case it's just `konghq.com/override` set, we should log a deprecation error.
-		if kongOverrideAnnotationSet {
-			logger.Error(nil, fmt.Sprintf(
-				"Service uses deprecated %s annotation and KongIngress, migrate to %s and KongUpstreamPolicy",
-				annotations.AnnotationPrefix+annotations.ConfigurationKey,
-				configurationv1beta1.KongUpstreamPolicyAnnotationKey),
-				"namespace", svc.Namespace, "name", svc.Name,
-			)
-		}
-	}
-}
 
 // getServiceIDFromPluginRels returns the ID of the services which a plugin refers to in RelatedEntitiesRef.
 // It fills the IDs of services directly referred, and IDs of services where referred routes attaches to.

@@ -42,8 +42,8 @@ type FakeObjects struct {
 	ReferenceGrants                []*gatewayapi.ReferenceGrant
 	Gateways                       []*gatewayapi.Gateway
 	BackendTLSPolicies             []*gatewayapi.BackendTLSPolicy
-	TCPIngresses                   []*configurationv1beta1.TCPIngress
-	UDPIngresses                   []*configurationv1beta1.UDPIngress
+
+
 	IngressClassParametersV1alpha1 []*configurationv1alpha1.IngressClassParameters
 	Services                       []*corev1.Service
 	EndpointSlices                 []*discoveryv1.EndpointSlice
@@ -51,7 +51,7 @@ type FakeObjects struct {
 	ConfigMaps                     []*corev1.ConfigMap
 	KongPlugins                    []*configurationv1.KongPlugin
 	KongClusterPlugins             []*configurationv1.KongClusterPlugin
-	KongIngresses                  []*configurationv1.KongIngress
+
 	KongConsumers                  []*configurationv1.KongConsumer
 	KongConsumerGroups             []*configurationv1beta1.KongConsumerGroup
 	KongUpstreamPolicies           []*configurationv1beta1.KongUpstreamPolicy
@@ -135,19 +135,8 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
-	tcpIngressStore := cache.NewStore(namespacedKeyFunc)
-	for _, ingress := range objects.TCPIngresses {
-		err := tcpIngressStore.Add(ingress)
-		if err != nil {
-			return nil, err
-		}
-	}
-	udpIngressStore := cache.NewStore(namespacedKeyFunc)
-	for _, ingress := range objects.UDPIngresses {
-		if err := udpIngressStore.Add(ingress); err != nil {
-			return nil, err
-		}
-	}
+
+
 	serviceStore := cache.NewStore(namespacedKeyFunc)
 	for _, s := range objects.Services {
 		err := serviceStore.Add(s)
@@ -175,13 +164,7 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
-	kongIngressStore := cache.NewStore(namespacedKeyFunc)
-	for _, k := range objects.KongIngresses {
-		err := kongIngressStore.Add(k)
-		if err != nil {
-			return nil, err
-		}
-	}
+
 	consumerStore := cache.NewStore(namespacedKeyFunc)
 	for _, c := range objects.KongConsumers {
 		err := consumerStore.Add(c)
@@ -250,8 +233,8 @@ func NewFakeStore(
 			ReferenceGrant:                 referencegrantStore,
 			Gateway:                        gatewayStore,
 			BackendTLSPolicy:               backendTLSPolicyStore,
-			TCPIngress:                     tcpIngressStore,
-			UDPIngress:                     udpIngressStore,
+
+	
 			Service:                        serviceStore,
 			EndpointSlice:                  endpointSliceStore,
 			Secret:                         secretsStore,
@@ -260,7 +243,7 @@ func NewFakeStore(
 			ClusterPlugin:                  kongClusterPluginsStore,
 			Consumer:                       consumerStore,
 			ConsumerGroup:                  consumerGroupStore,
-			KongIngress:                    kongIngressStore,
+
 			IngressClassParametersV1alpha1: IngressClassParametersV1alpha1Store,
 			KongUpstreamPolicy:             kongUpstreamPolicyStore,
 			KongServiceFacade:              kongServiceFacade,
@@ -301,15 +284,15 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 		reflect.TypeOf(&gatewayapi.ReferenceGrant{}):                    gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"),
 		reflect.TypeOf(&gatewayapi.Gateway{}):                           gatewayv1.SchemeGroupVersion.WithKind("Gateway"),
 		reflect.TypeOf(&gatewayapi.BackendTLSPolicy{}):                  gatewayv1alpha3.SchemeGroupVersion.WithKind("BackendTLSPolicy"),
-		reflect.TypeOf(&configurationv1beta1.TCPIngress{}):              configurationv1beta1.SchemeGroupVersion.WithKind("TCPIngress"),
-		reflect.TypeOf(&configurationv1beta1.UDPIngress{}):              configurationv1beta1.SchemeGroupVersion.WithKind("UDPIngress"),
+
+
 		reflect.TypeOf(&configurationv1alpha1.IngressClassParameters{}): configurationv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"),
 		reflect.TypeOf(&corev1.Service{}):                               corev1.SchemeGroupVersion.WithKind("Service"),
 		reflect.TypeOf(&discoveryv1.EndpointSlice{}):                    discoveryv1.SchemeGroupVersion.WithKind("EndpointSlice"),
 		reflect.TypeOf(&corev1.Secret{}):                                corev1.SchemeGroupVersion.WithKind("Secret"),
 		reflect.TypeOf(&configurationv1.KongPlugin{}):                   configurationv1.SchemeGroupVersion.WithKind("KongPlugin"),
 		reflect.TypeOf(&configurationv1.KongClusterPlugin{}):            configurationv1.SchemeGroupVersion.WithKind("KongClusterPlugin"),
-		reflect.TypeOf(&configurationv1.KongIngress{}):                  configurationv1.SchemeGroupVersion.WithKind("KongIngress"),
+
 		reflect.TypeOf(&configurationv1.KongConsumer{}):                 configurationv1.SchemeGroupVersion.WithKind("KongConsumer"),
 		reflect.TypeOf(&configurationv1beta1.KongConsumerGroup{}):       configurationv1beta1.SchemeGroupVersion.WithKind("KongConsumerGroup"),
 		reflect.TypeOf(&configurationv1alpha1.KongVault{}):              configurationv1alpha1.SchemeGroupVersion.WithKind(configurationv1alpha1.KongVaultKind),
@@ -346,15 +329,15 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	allObjects = append(allObjects, lo.ToAnySlice(objects.ReferenceGrants)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.Gateways)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.BackendTLSPolicies)...)
-	allObjects = append(allObjects, lo.ToAnySlice(objects.TCPIngresses)...)
-	allObjects = append(allObjects, lo.ToAnySlice(objects.UDPIngresses)...)
+
+
 	allObjects = append(allObjects, lo.ToAnySlice(objects.IngressClassParametersV1alpha1)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.Services)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.EndpointSlices)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.Secrets)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongPlugins)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongClusterPlugins)...)
-	allObjects = append(allObjects, lo.ToAnySlice(objects.KongIngresses)...)
+
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongConsumers)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongConsumerGroups)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongVaults)...)

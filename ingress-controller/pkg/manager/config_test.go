@@ -78,7 +78,7 @@ func TestNewConfig(t *testing.T) {
 			IngressClassParametersEnabled:          true,
 			UDPIngressEnabled:                      true,
 			TCPIngressEnabled:                      true,
-			KongIngressEnabled:                     true,
+
 			KongClusterPluginEnabled:               true,
 			KongPluginEnabled:                      true,
 			KongConsumerEnabled:                    true,

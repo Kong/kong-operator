@@ -98,9 +98,10 @@ type Config struct {
 	IngressNetV1Enabled           bool
 	IngressClassNetV1Enabled      bool
 	IngressClassParametersEnabled bool
-	UDPIngressEnabled             bool
+
 	TCPIngressEnabled             bool
-	KongIngressEnabled            bool
+
+
 	KongClusterPluginEnabled      bool
 	KongPluginEnabled             bool
 	KongConsumerEnabled           bool

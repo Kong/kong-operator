@@ -30,7 +30,6 @@ webhooks:
     - kongconsumergroups
     - kongplugins
     - kongclusterplugins
-    - kongingresses
     - kongvaults
     scope: '*'
   - apiGroups:
