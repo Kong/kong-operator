@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/gateway-api/conformance/utils/suite"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/metadata"
@@ -119,16 +119,16 @@ func TestGatewayConformance(t *testing.T) {
 	conformance.RunConformanceWithOptions(t, opts)
 }
 
-func createGatewayConfiguration(ctx context.Context, t *testing.T, c ConformanceConfig) *operatorv1beta1.GatewayConfiguration {
-	gwconf := operatorv1beta1.GatewayConfiguration{
+func createGatewayConfiguration(ctx context.Context, t *testing.T, c ConformanceConfig) *operatorv2alpha1.GatewayConfiguration {
+	gwconf := operatorv2alpha1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "kgo-gwconf-conformance-",
 			Namespace:    "default",
 		},
-		Spec: operatorv1beta1.GatewayConfigurationSpec{
-			DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
-				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+		Spec: operatorv2alpha1.GatewayConfigurationSpec{
+			DataPlaneOptions: &operatorv2alpha1.GatewayConfigDataPlaneOptions{
+				Deployment: operatorv2alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv2alpha1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -174,7 +174,7 @@ func createGatewayConfiguration(ctx context.Context, t *testing.T, c Conformance
 	return &gwconf
 }
 
-func createGatewayClass(ctx context.Context, t *testing.T, gwconf *operatorv1beta1.GatewayConfiguration) *gatewayv1.GatewayClass {
+func createGatewayClass(ctx context.Context, t *testing.T, gwconf *operatorv2alpha1.GatewayConfiguration) *gatewayv1.GatewayClass {
 	gwc := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "kgo-gwclass-conformance-",

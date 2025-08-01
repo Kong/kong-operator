@@ -12,7 +12,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
@@ -28,15 +28,15 @@ func TestAIGatewayCreation(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	t.Log("deploying a GatewayConfiguration resource")
-	gatewayConfiguration := &operatorv1beta1.GatewayConfiguration{
+	gatewayConfiguration := &operatorv2alpha1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      uuid.New().String(),
 			Namespace: namespace.Name,
 		},
-		Spec: operatorv1beta1.GatewayConfigurationSpec{
-			DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
-				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+		Spec: operatorv2alpha1.GatewayConfigurationSpec{
+			DataPlaneOptions: &operatorv2alpha1.GatewayConfigDataPlaneOptions{
+				Deployment: operatorv2alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv2alpha1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{{
@@ -68,7 +68,7 @@ func TestAIGatewayCreation(t *testing.T) {
 			// https://github.com/kong/kong-operator/issues/1728
 		},
 	}
-	gatewayConfiguration, err := GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfiguration, metav1.CreateOptions{})
+	gatewayConfiguration, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfiguration, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfiguration)
 

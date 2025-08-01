@@ -14,7 +14,7 @@ import (
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 
 	"github.com/kong/kong-operator/pkg/consts"
 	osstestutils "github.com/kong/kong-operator/pkg/utils/test"
@@ -87,14 +87,14 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 	cleaner.Add(dbMetricExt1)
 
 	t.Log("deploying a GatewayConfiguration resource")
-	gatewayConfig := &operatorv1beta1.GatewayConfiguration{
+	gatewayConfig := &operatorv2alpha1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "gwconfig-",
 		},
-		Spec: operatorv1beta1.GatewayConfigurationSpec{
-			DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
-				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+		Spec: operatorv2alpha1.GatewayConfigurationSpec{
+			DataPlaneOptions: &operatorv2alpha1.GatewayConfigDataPlaneOptions{
+				Deployment: operatorv2alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv2alpha1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -119,7 +119,7 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 			// https://github.com/kong/kong-operator/issues/1728
 		},
 	}
-	gatewayConfig, err = operatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err = operatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	t.Logf("deployed GatewayConfiguration %s", gatewayConfig.Name)
 	cleaner.Add(gatewayConfig)
@@ -215,8 +215,8 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 
 	t.Run("verify Prometheus plugin is deleted when ControlPlane extension ref is removed and Service gets konghq.com/plugins annotation cleared", func(t *testing.T) {
 		t.Logf("updating GatewayConfiguration %s to remove the DataPlaneMetricsExtension ref", gatewayConfig.Name)
-		gatewayConfig.Spec.ControlPlaneOptions.Extensions = nil
-		gatewayConfig, err = operatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name).Update(ctx, gatewayConfig, metav1.UpdateOptions{})
+		gatewayConfig.Spec.Extensions = nil
+		gatewayConfig, err = operatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(namespace.Name).Update(ctx, gatewayConfig, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		t.Logf("checking if KongPlugin is deleted")
@@ -256,10 +256,10 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 
 	t.Run("verify Prometheus plugin is re-created and Service gets konghq.com/plugins annotation set again equal to created Plugins's name", func(t *testing.T) {
 		t.Logf("updating GatewayConfiguration %s to re-add the DataPlaneMetricsExtension ref", gatewayConfig.Name)
-		gatewayConfig.Spec.ControlPlaneOptions.Extensions = []commonv1alpha1.ExtensionRef{
+		gatewayConfig.Spec.Extensions = []commonv1alpha1.ExtensionRef{
 			createExtensionRefWithoutNamespace(dbMetricExt1.Name),
 		}
-		gatewayConfig, err = operatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name).Update(ctx, gatewayConfig, metav1.UpdateOptions{})
+		gatewayConfig, err = operatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(namespace.Name).Update(ctx, gatewayConfig, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
 		var kongPlugin configurationv1.KongPlugin
