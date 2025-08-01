@@ -82,7 +82,7 @@ spec:
         containers:
         - name: controller
           # renovate: datasource=docker versioning=docker
-          image: kong/kubernetes-ingress-controller:3.5.0
+          image: kong/kubernetes-ingress-controller:3.5.1
           readinessProbe:
             initialDelaySeconds: 1
             periodSeconds: 3
