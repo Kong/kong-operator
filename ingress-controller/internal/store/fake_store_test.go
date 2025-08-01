@@ -169,7 +169,6 @@ func TestFakeStoreIngressClassV1(t *testing.T) {
 	assert.Len(store.ListIngressClassesV1(), 2)
 }
 
-
 func TestFakeStoreService(t *testing.T) {
 	assert := assert.New(t)
 	require := require.New(t)
@@ -429,8 +428,6 @@ func TestFakeStoreSecret(t *testing.T) {
 	assert.Error(err)
 	assert.True(errors.As(err, &NotFoundError{}))
 }
-
-
 
 func TestFakeStore_ListCACerts(t *testing.T) {
 	assert := assert.New(t)

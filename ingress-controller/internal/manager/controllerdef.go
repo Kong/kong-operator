@@ -62,7 +62,6 @@ func setupControllers(
 	dataplaneClient controllers.DataPlane,
 	referenceIndexers ctrlref.CacheIndexers,
 	dataplaneAddressFinder *dataplane.AddressFinder,
-	udpDataplaneAddressFinder *dataplane.AddressFinder,
 	kubernetesStatusQueue *status.Queue,
 	c managercfg.Config,
 	featureGates managercfg.FeatureGates,
@@ -160,8 +159,6 @@ func setupControllers(
 		// ---------------------------------------------------------------------------
 		// Kong API Controllers
 		// ---------------------------------------------------------------------------
-
-
 
 		{
 			Enabled: c.IngressClassParametersEnabled,

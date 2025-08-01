@@ -362,7 +362,7 @@ func TestNormalizeProtocols(t *testing.T) {
 
 	assert.NotPanics(func() {
 		var nilUpstream *Upstream
-		nilUpstream.override(nil, nil)
+		nilUpstream.override(nil)
 	})
 }
 

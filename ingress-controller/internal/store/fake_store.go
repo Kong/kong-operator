@@ -32,17 +32,16 @@ import (
 
 // FakeObjects can be used to populate a fake Store.
 type FakeObjects struct {
-	IngressesV1                    []*netv1.Ingress
-	IngressClassesV1               []*netv1.IngressClass
-	HTTPRoutes                     []*gatewayapi.HTTPRoute
-	UDPRoutes                      []*gatewayapi.UDPRoute
-	TCPRoutes                      []*gatewayapi.TCPRoute
-	TLSRoutes                      []*gatewayapi.TLSRoute
-	GRPCRoutes                     []*gatewayapi.GRPCRoute
-	ReferenceGrants                []*gatewayapi.ReferenceGrant
-	Gateways                       []*gatewayapi.Gateway
-	BackendTLSPolicies             []*gatewayapi.BackendTLSPolicy
-
+	IngressesV1        []*netv1.Ingress
+	IngressClassesV1   []*netv1.IngressClass
+	HTTPRoutes         []*gatewayapi.HTTPRoute
+	UDPRoutes          []*gatewayapi.UDPRoute
+	TCPRoutes          []*gatewayapi.TCPRoute
+	TLSRoutes          []*gatewayapi.TLSRoute
+	GRPCRoutes         []*gatewayapi.GRPCRoute
+	ReferenceGrants    []*gatewayapi.ReferenceGrant
+	Gateways           []*gatewayapi.Gateway
+	BackendTLSPolicies []*gatewayapi.BackendTLSPolicy
 
 	IngressClassParametersV1alpha1 []*configurationv1alpha1.IngressClassParameters
 	Services                       []*corev1.Service
@@ -52,12 +51,12 @@ type FakeObjects struct {
 	KongPlugins                    []*configurationv1.KongPlugin
 	KongClusterPlugins             []*configurationv1.KongClusterPlugin
 
-	KongConsumers                  []*configurationv1.KongConsumer
-	KongConsumerGroups             []*configurationv1beta1.KongConsumerGroup
-	KongUpstreamPolicies           []*configurationv1beta1.KongUpstreamPolicy
-	KongServiceFacades             []*incubatorv1alpha1.KongServiceFacade
-	KongVaults                     []*configurationv1alpha1.KongVault
-	KongCustomEntities             []*configurationv1alpha1.KongCustomEntity
+	KongConsumers        []*configurationv1.KongConsumer
+	KongConsumerGroups   []*configurationv1beta1.KongConsumerGroup
+	KongUpstreamPolicies []*configurationv1beta1.KongUpstreamPolicy
+	KongServiceFacades   []*incubatorv1alpha1.KongServiceFacade
+	KongVaults           []*configurationv1alpha1.KongVault
+	KongCustomEntities   []*configurationv1alpha1.KongCustomEntity
 }
 
 // NewFakeStore creates a store backed by the objects passed in as arguments.
@@ -135,7 +134,6 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
-
 
 	serviceStore := cache.NewStore(namespacedKeyFunc)
 	for _, s := range objects.Services {
@@ -223,26 +221,25 @@ func NewFakeStore(
 
 	s = &Store{
 		stores: CacheStores{
-			IngressV1:                      ingressV1Store,
-			IngressClassV1:                 ingressClassV1Store,
-			HTTPRoute:                      httprouteStore,
-			UDPRoute:                       udprouteStore,
-			TCPRoute:                       tcprouteStore,
-			TLSRoute:                       tlsrouteStore,
-			GRPCRoute:                      grpcrouteStore,
-			ReferenceGrant:                 referencegrantStore,
-			Gateway:                        gatewayStore,
-			BackendTLSPolicy:               backendTLSPolicyStore,
+			IngressV1:        ingressV1Store,
+			IngressClassV1:   ingressClassV1Store,
+			HTTPRoute:        httprouteStore,
+			UDPRoute:         udprouteStore,
+			TCPRoute:         tcprouteStore,
+			TLSRoute:         tlsrouteStore,
+			GRPCRoute:        grpcrouteStore,
+			ReferenceGrant:   referencegrantStore,
+			Gateway:          gatewayStore,
+			BackendTLSPolicy: backendTLSPolicyStore,
 
-	
-			Service:                        serviceStore,
-			EndpointSlice:                  endpointSliceStore,
-			Secret:                         secretsStore,
-			ConfigMap:                      configMapStore,
-			Plugin:                         kongPluginsStore,
-			ClusterPlugin:                  kongClusterPluginsStore,
-			Consumer:                       consumerStore,
-			ConsumerGroup:                  consumerGroupStore,
+			Service:       serviceStore,
+			EndpointSlice: endpointSliceStore,
+			Secret:        secretsStore,
+			ConfigMap:     configMapStore,
+			Plugin:        kongPluginsStore,
+			ClusterPlugin: kongClusterPluginsStore,
+			Consumer:      consumerStore,
+			ConsumerGroup: consumerGroupStore,
 
 			IngressClassParametersV1alpha1: IngressClassParametersV1alpha1Store,
 			KongUpstreamPolicy:             kongUpstreamPolicyStore,
@@ -274,17 +271,16 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	// In many cases objects we'd like to dump do not have their GVK set, so we need to set it manually based on
 	// their known type - otherwise the YAML dump will not work.
 	typeToGVK := map[reflect.Type]schema.GroupVersionKind{
-		reflect.TypeOf(&netv1.Ingress{}):                                netv1.SchemeGroupVersion.WithKind("Ingress"),
-		reflect.TypeOf(&netv1.IngressClass{}):                           netv1.SchemeGroupVersion.WithKind("IngressClass"),
-		reflect.TypeOf(&gatewayapi.HTTPRoute{}):                         gatewayv1.SchemeGroupVersion.WithKind("HTTPRoute"),
-		reflect.TypeOf(&gatewayapi.UDPRoute{}):                          gatewayv1alpha2.SchemeGroupVersion.WithKind("UDPRoute"),
-		reflect.TypeOf(&gatewayapi.TCPRoute{}):                          gatewayv1alpha2.SchemeGroupVersion.WithKind("TCPRoute"),
-		reflect.TypeOf(&gatewayapi.TLSRoute{}):                          gatewayv1alpha2.SchemeGroupVersion.WithKind("TLSRoute"),
-		reflect.TypeOf(&gatewayapi.GRPCRoute{}):                         gatewayv1.SchemeGroupVersion.WithKind("GRPCRoute"),
-		reflect.TypeOf(&gatewayapi.ReferenceGrant{}):                    gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"),
-		reflect.TypeOf(&gatewayapi.Gateway{}):                           gatewayv1.SchemeGroupVersion.WithKind("Gateway"),
-		reflect.TypeOf(&gatewayapi.BackendTLSPolicy{}):                  gatewayv1alpha3.SchemeGroupVersion.WithKind("BackendTLSPolicy"),
-
+		reflect.TypeOf(&netv1.Ingress{}):               netv1.SchemeGroupVersion.WithKind("Ingress"),
+		reflect.TypeOf(&netv1.IngressClass{}):          netv1.SchemeGroupVersion.WithKind("IngressClass"),
+		reflect.TypeOf(&gatewayapi.HTTPRoute{}):        gatewayv1.SchemeGroupVersion.WithKind("HTTPRoute"),
+		reflect.TypeOf(&gatewayapi.UDPRoute{}):         gatewayv1alpha2.SchemeGroupVersion.WithKind("UDPRoute"),
+		reflect.TypeOf(&gatewayapi.TCPRoute{}):         gatewayv1alpha2.SchemeGroupVersion.WithKind("TCPRoute"),
+		reflect.TypeOf(&gatewayapi.TLSRoute{}):         gatewayv1alpha2.SchemeGroupVersion.WithKind("TLSRoute"),
+		reflect.TypeOf(&gatewayapi.GRPCRoute{}):        gatewayv1.SchemeGroupVersion.WithKind("GRPCRoute"),
+		reflect.TypeOf(&gatewayapi.ReferenceGrant{}):   gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"),
+		reflect.TypeOf(&gatewayapi.Gateway{}):          gatewayv1.SchemeGroupVersion.WithKind("Gateway"),
+		reflect.TypeOf(&gatewayapi.BackendTLSPolicy{}): gatewayv1alpha3.SchemeGroupVersion.WithKind("BackendTLSPolicy"),
 
 		reflect.TypeOf(&configurationv1alpha1.IngressClassParameters{}): configurationv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"),
 		reflect.TypeOf(&corev1.Service{}):                               corev1.SchemeGroupVersion.WithKind("Service"),
@@ -293,10 +289,10 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 		reflect.TypeOf(&configurationv1.KongPlugin{}):                   configurationv1.SchemeGroupVersion.WithKind("KongPlugin"),
 		reflect.TypeOf(&configurationv1.KongClusterPlugin{}):            configurationv1.SchemeGroupVersion.WithKind("KongClusterPlugin"),
 
-		reflect.TypeOf(&configurationv1.KongConsumer{}):                 configurationv1.SchemeGroupVersion.WithKind("KongConsumer"),
-		reflect.TypeOf(&configurationv1beta1.KongConsumerGroup{}):       configurationv1beta1.SchemeGroupVersion.WithKind("KongConsumerGroup"),
-		reflect.TypeOf(&configurationv1alpha1.KongVault{}):              configurationv1alpha1.SchemeGroupVersion.WithKind(configurationv1alpha1.KongVaultKind),
-		reflect.TypeOf(&configurationv1alpha1.KongCustomEntity{}):       configurationv1alpha1.SchemeGroupVersion.WithKind(configurationv1alpha1.KongCustomEntityKind),
+		reflect.TypeOf(&configurationv1.KongConsumer{}):           configurationv1.SchemeGroupVersion.WithKind("KongConsumer"),
+		reflect.TypeOf(&configurationv1beta1.KongConsumerGroup{}): configurationv1beta1.SchemeGroupVersion.WithKind("KongConsumerGroup"),
+		reflect.TypeOf(&configurationv1alpha1.KongVault{}):        configurationv1alpha1.SchemeGroupVersion.WithKind(configurationv1alpha1.KongVaultKind),
+		reflect.TypeOf(&configurationv1alpha1.KongCustomEntity{}): configurationv1alpha1.SchemeGroupVersion.WithKind(configurationv1alpha1.KongCustomEntityKind),
 	}
 
 	out := &bytes.Buffer{}
@@ -329,7 +325,6 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	allObjects = append(allObjects, lo.ToAnySlice(objects.ReferenceGrants)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.Gateways)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.BackendTLSPolicies)...)
-
 
 	allObjects = append(allObjects, lo.ToAnySlice(objects.IngressClassParametersV1alpha1)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.Services)...)

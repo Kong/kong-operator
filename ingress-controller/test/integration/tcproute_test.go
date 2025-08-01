@@ -3,6 +3,7 @@
 package integration
 
 import (
+	"sync"
 	"testing"
 	"time"
 
@@ -22,6 +23,8 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 )
+
+var tcpMutex = sync.Mutex{}
 
 func TestTCPRouteReferenceGrant(t *testing.T) {
 	ctx := t.Context()

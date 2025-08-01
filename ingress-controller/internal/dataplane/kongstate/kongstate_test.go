@@ -1756,7 +1756,6 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			s, err := store.NewFakeStore(store.FakeObjects{
 				KongUpstreamPolicies: tc.kongUpstreamPolicies,
-				KongIngresses:        tc.kongIngresses,
 			})
 			require.NoError(t, err)
 			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())

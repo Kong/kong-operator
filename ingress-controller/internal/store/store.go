@@ -82,7 +82,6 @@ type Storer interface {
 	GetKongCustomEntity(namespace, name string) (*configurationv1alpha1.KongCustomEntity, error)
 	ListIngressClassParametersV1Alpha1() []*configurationv1alpha1.IngressClassParameters
 
-
 	ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error)
 	ListKongPlugins() []*configurationv1.KongPlugin
 	ListKongClusterPlugins() []*configurationv1.KongClusterPlugin
@@ -378,10 +377,6 @@ func (s Store) ListBackendTLSPoliciesByTargetService(service k8stypes.Namespaced
 	return policiesToReturn, nil
 }
 
-
-
-
-
 // GetEndpointSlicesForService returns all EndpointSlices for service
 // 'namespace/name' inside K8s.
 func (s Store) GetEndpointSlicesForService(namespace, name string) ([]*discoveryv1.EndpointSlice, error) {
@@ -432,8 +427,6 @@ func (s Store) GetKongClusterPlugin(name string) (*configurationv1.KongClusterPl
 	}
 	return p.(*configurationv1.KongClusterPlugin), nil
 }
-
-
 
 // GetKongConsumer returns the 'name' KongConsumer resource in namespace.
 func (s Store) GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error) {
@@ -792,8 +785,6 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	// Kong APIs
 	// ----------------------------------------------------------------------------
-
-
 
 	case configurationv1.SchemeGroupVersion.WithKind("KongPlugin"):
 		return &configurationv1.KongPlugin{}, nil

@@ -413,10 +413,6 @@ func (h RequestHandler) handleHTTPRoute(
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
-
-
-
-
 const (
 	serviceWarning = "%s is deprecated and will be removed in a future release. Use Service annotations " +
 		"for the 'proxy' section and %s with a KongUpstreamPolicy resource instead."

@@ -11,8 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/event"
-
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 func TestQueue(t *testing.T) {
@@ -32,22 +30,10 @@ func TestQueue(t *testing.T) {
 			Name:      "ingress-test-1",
 		},
 	}
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: corev1.NamespaceDefault,
-			Name:      "tcpingress-test-1",
-		},
-	}
-	udp := &configurationv1beta1.UDPIngress{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: corev1.NamespaceDefault,
-			Name:      "udpingress-test-1",
-		},
-	}
 
 	t.Log("initializing kubernetes objects (this would normally be done by api client)")
 	ing1.SetGroupVersionKind(ingGVK)
 	ing2.SetGroupVersionKind(ingGVK)
-	udp.SetGroupVersionKind(udpGVK)
 
 	t.Log("verifying that events can be subscribed to for new object kinds")
 	ingCH := q.Subscribe(ing1.GroupVersionKind())
@@ -69,41 +55,26 @@ func TestQueue(t *testing.T) {
 	assert.Len(t, q.subscriptions[ing1.GroupVersionKind().String()], 1, "a channel was already created for the object kind: no more should be created")
 	assert.Len(t, ingCH, 1, "the underlying channel should now contain one event")
 
-	t.Log("verifying that objects of new kinds can be published into the queue")
-	udpCH := q.Subscribe(udp.GroupVersionKind())
-	q.Publish(udp)
-	assert.Len(t, q.subscriptions, 3, "2 new channels should have been created for the two new object kinds")
-	assert.Len(t, ingCH, 1, "the underlying channel should contain 1 event")
-	assert.Len(t, tcpCH, 1, "the underlying channel should contain 1 event")
-	assert.Len(t, udpCH, 1, "the underlying channel should contain 1 event")
+	t.Log("verifying that publishing different named objects for kinds that have already been seen")
+	q.Publish(ing2)
+	assert.Len(t, q.subscriptions[ing1.GroupVersionKind().String()], 1, "a channel was already created for the object kind: no more should be created")
+	assert.Len(t, ingCH, 2, "the underlying channel should now contain two events")
 
 	t.Log("verifying that multiple events can be submitted for the same object")
 	q.Publish(ing1)
 	q.Publish(ing2)
 	q.Publish(ing2)
-	q.Publish(udp)
-	q.Publish(udp)
-	q.Publish(udp)
-	q.Publish(udp)
-	q.Publish(udp)
-	assert.Len(t, q.subscriptions, 3)
-	assert.Len(t, ingCH, 4)
-	assert.Len(t, tcpCH, 5)
-	assert.Len(t, udpCH, 6)
+	q.Publish(ing1)
+	q.Publish(ing1)
+	assert.Len(t, q.subscriptions, 1)
+	assert.Len(t, ingCH, 7)
 
 	t.Log("verifying that all objects can be consumed and the queue can be drained")
-	for range 4 {
+	for range 7 {
 		assert.Equal(t, ingGVK, (<-ingCH).Object.GetObjectKind().GroupVersionKind())
 	}
-	for range 5 {
-	}
-	for range 6 {
-		assert.Equal(t, event.GenericEvent{Object: udp}, <-udpCH)
-	}
-	assert.Len(t, q.subscriptions, 3)
+	assert.Len(t, q.subscriptions, 1)
 	assert.Empty(t, ingCH)
-	assert.Empty(t, tcpCH)
-	assert.Empty(t, udpCH)
 
 	t.Log("verifying that multiple consumers can be subscribed to the same object kind and receive events")
 	ingCH2 := q.Subscribe(ing1.GroupVersionKind())
@@ -122,15 +93,6 @@ var (
 		Group:   "networking.k8s.io",
 		Version: "v1",
 		Kind:    "Ingress",
-	}
-	tcpGVK = schema.GroupVersionKind{
-		Group:   "configuration.konghq.com",
-		Version: "v1beta1",
-	}
-	udpGVK = schema.GroupVersionKind{
-		Group:   "configuration.konghq.com",
-		Version: "v1beta1",
-		Kind:    "UDPIngress",
 	}
 )
 

@@ -8,8 +8,6 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 )
 
 func TestObjectConfigurationStatusSet(t *testing.T) {
@@ -38,7 +36,6 @@ func TestObjectConfigurationStatusSet(t *testing.T) {
 		},
 	}
 	ing3.SetGroupVersionKind(ingGVK)
-
 
 	t.Log("verifying creation of an object configure status set")
 	set := &ConfigurationStatusSet{}
@@ -80,5 +77,4 @@ var (
 		Version: "v1",
 		Kind:    "Ingress",
 	}
-
 )

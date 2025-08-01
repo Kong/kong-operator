@@ -166,7 +166,6 @@ const (
 	// managing IngressClass parameters.
 	ControllerNameIngressClassParameters = "INGRESS_CLASS_PARAMETERS"
 
-
 	// ControllerNameKongTCPIngress identifies the controller for managing Kong
 	// TCP ingress resources.
 	ControllerNameKongTCPIngress = "KONG_TCPINGRESS"
@@ -308,14 +307,10 @@ func managerConfigToStatusControllers(
 		State: boolToControllerState(cfg.IngressClassParametersEnabled),
 	})
 
-
-
 	controllers = append(controllers, gwtypes.ControlPlaneController{
 		Name:  ControllerNameKongTCPIngress,
 		State: boolToControllerState(cfg.TCPIngressEnabled),
 	})
-
-
 
 	controllers = append(controllers, gwtypes.ControlPlaneController{
 		Name:  ControllerNameKongClusterPlugin,
