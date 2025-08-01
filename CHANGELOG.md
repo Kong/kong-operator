@@ -42,6 +42,8 @@
   The default value of the two labels are set to `konghq.com/secret` and
   `konghq.com/configmap`.
   [#1922](https://github.com/Kong/kong-operator/pull/1922)
+- `GatewayConfiguration` `v1beta1` has been replaced by the new API version `v2alpha1`.
+  [#1792](https://github.com/Kong/kong-operator/pull/1972)
 
 ### Added
 
