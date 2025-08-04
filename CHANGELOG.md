@@ -73,6 +73,12 @@
   The default value is `""` which makes the operator watch all namespaces.
   [#1958](https://github.com/Kong/kong-operator/pull/1958)
 
+### Fixed
+
+- Fix the issue that invalid label value causing ingress controller fails to
+  store the license from Konnect into `Secret`.
+  [#1976](https://github.com/Kong/kong-operator/pull/1976)
+
 ## [v2.0.0-alpha.2]
 
 > Release date: 2025-07-23
