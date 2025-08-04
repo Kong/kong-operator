@@ -246,6 +246,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	log.Trace(logger, "validating WatchNamespaceGrants exist for the ControlPlane")
 	validatedWatchNamespaces, err := r.validateWatchNamespaceGrants(ctx, cp)
 	if err != nil { //nolint:gocritic
+		// If there was an error validating the WatchNamespaceGrants, we set the condition
+		// to false indicating that the WatchNamespaceGrants are invalid or missing.
+
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				kcfgcontrolplane.ConditionTypeWatchNamespaceGrantValid,
@@ -260,24 +263,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// This will prevent users using the ControlPlane with previous
 		// WatchNamespaces spec.
 		// We do not patch the status here either because that's done below.
-	} else if cp.Spec.WatchNamespaces != nil {
-		k8sutils.SetCondition(
-			k8sutils.NewConditionWithGeneration(
-				kcfgcontrolplane.ConditionTypeWatchNamespaceGrantValid,
-				metav1.ConditionTrue,
-				kcfgcontrolplane.ConditionReasonWatchNamespaceGrantValid,
-				"WatchNamespaceGrant(s) are present and valid",
-				cp.GetGeneration(),
-			),
-			cp,
-		)
 	} else {
+		// If the WatchNamespaceGrants are present and valid, we set the condition to true.
+		// We note that grants are not expected if the watch namespaces are not
+		// specified in the ControlPlane spec.
+
+		msg := "WatchNamespaceGrant(s) are present and valid"
+		if cp.Spec.WatchNamespaces != nil {
+			msg = "WatchNamespaceGrant(s) not required"
+		}
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
 				kcfgcontrolplane.ConditionTypeWatchNamespaceGrantValid,
 				metav1.ConditionTrue,
 				kcfgcontrolplane.ConditionReasonWatchNamespaceGrantValid,
-				"WatchNamespaceGrant(s) not required",
+				msg,
 				cp.GetGeneration(),
 			),
 			cp,
