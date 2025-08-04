@@ -423,7 +423,7 @@ func TestValidateWatchNamespaces(t *testing.T) {
 			},
 			watchNamespaces: []string{"ns1", "ns2"},
 			expectedError:   true,
-			errorContains:   "ControlPlane's watchNamespaces requests ns3, but operator is only allowed on: [ns1 ns2]",
+			errorContains:   "ControlPlane's watchNamespaces requests [ns1 ns2 ns3], but operator is only allowed on: [ns1 ns2]",
 		},
 		{
 			name: "WatchNamespacesTypeList - no match - should fail",
@@ -443,7 +443,7 @@ func TestValidateWatchNamespaces(t *testing.T) {
 			},
 			watchNamespaces: []string{"ns3", "ns4"},
 			expectedError:   true,
-			errorContains:   "ControlPlane's watchNamespaces requests ns1, but operator is only allowed on: [ns3 ns4]",
+			errorContains:   "ControlPlane's watchNamespaces requests [ns1 ns2], but operator is only allowed on: [ns3 ns4]",
 		},
 		{
 			name: "WatchNamespacesTypeList - single namespace not allowed - should fail",
@@ -463,7 +463,7 @@ func TestValidateWatchNamespaces(t *testing.T) {
 			},
 			watchNamespaces: []string{"ns1", "ns2"},
 			expectedError:   true,
-			errorContains:   "ControlPlane's watchNamespaces requests forbidden-ns, but operator is only allowed on: [ns1 ns2]",
+			errorContains:   "ControlPlane's watchNamespaces requests [forbidden-ns], but operator is only allowed on: [ns1 ns2]",
 		},
 	}
 

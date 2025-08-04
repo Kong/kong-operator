@@ -234,13 +234,11 @@ func validateWatchNamespaces(
 			return nil
 		}
 
-		for _, ns := range cp.Spec.WatchNamespaces.List {
-			if !lo.Contains(watchNamespaces, ns) {
-				return fmt.Errorf(
-					"ControlPlane's watchNamespaces requests %v, but operator is only allowed on: %v",
-					ns, watchNamespaces,
-				)
-			}
+		if !lo.Every(watchNamespaces, cp.Spec.WatchNamespaces.List) {
+			return fmt.Errorf(
+				"ControlPlane's watchNamespaces requests %v, but operator is only allowed on: %v",
+				cp.Spec.WatchNamespaces.List, watchNamespaces,
+			)
 		}
 	}
 
