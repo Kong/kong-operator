@@ -56,19 +56,8 @@ func TestOverrideUpstream(t *testing.T) {
 			},
 			outUpstream: Upstream{
 				Upstream: kong.Upstream{
-					Name:                   kong.String("foo.com"),
-					HashOn:                 kong.String("HashOn"),
-					HashOnCookie:           kong.String("HashOnCookie"),
-					HashOnCookiePath:       kong.String("HashOnCookiePath"),
-					HashOnHeader:           kong.String("HashOnHeader"),
-					HashFallback:           kong.String("HashFallback"),
-					HashFallbackHeader:     kong.String("HashFallbackHeader"),
-					HostHeader:             kong.String("foo.com"),
-					HashOnQueryArg:         kong.String("HashOnQueryArg"),
-					HashFallbackQueryArg:   kong.String("HashFallbackQueryArg"),
-					HashOnURICapture:       kong.String("HashOnURICapture"),
-					HashFallbackURICapture: kong.String("HashFallbackURICapture"),
-					Slots:                  kong.Int(42),
+					Name:       kong.String("foo.com"),
+					HostHeader: kong.String("foo.com"),
 				},
 			},
 			svc: &corev1.Service{
