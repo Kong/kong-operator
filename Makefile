@@ -248,7 +248,10 @@ govulncheck: download.govulncheck
 
 GOLANGCI_LINT_CONFIG ?= $(PROJECT_DIR)/.golangci.yaml
 .PHONY: lint
-lint: golangci-lint lint.modernize
+lint: lint.golangci-lint lint.modernize
+
+.PHONY: lint.golangci-lint
+lint.golangci-lint: golangci-lint
 	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) $(GOLANGCI_LINT_FLAGS)
 
 .PHONY: lint.modernize

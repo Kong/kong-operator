@@ -14,6 +14,7 @@ import (
 	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
 func (r *Reconciler) listControlPlanesForWatchNamespaceGrants(
@@ -39,7 +40,7 @@ func (r *Reconciler) listControlPlanesForWatchNamespaceGrants(
 
 	var recs []reconcile.Request
 	for _, from := range fromsForControlPlane {
-		var controlPlaneList operatorv2alpha1.ControlPlaneList
+		var controlPlaneList gwtypes.ControlPlaneList
 		if err := r.List(ctx, &controlPlaneList,
 			client.InNamespace(from.Namespace),
 		); err != nil {
