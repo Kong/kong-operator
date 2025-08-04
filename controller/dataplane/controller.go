@@ -19,6 +19,7 @@ import (
 
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
+	extensionsKonnect "github.com/kong/kong-operator/controller/pkg/extensions/konnect"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
@@ -87,7 +88,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "applying extensions")
-	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, dataplane, r.KonnectEnabled)
+	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, dataplane, r.KonnectEnabled, &extensionsKonnect.DataPlaneKonnectExtensionProcessor{})
 	if err != nil {
 		if extensionserrors.IsKonnectExtensionError(err) {
 			log.Debug(logger, "failed to apply extensions", "err", err)

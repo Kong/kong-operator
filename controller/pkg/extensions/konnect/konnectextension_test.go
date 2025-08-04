@@ -370,6 +370,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			processor := &DataPlaneKonnectExtensionProcessor{}
 			objs := []runtime.Object{tt.dataPlane}
 			if tt.konnectExt != nil {
 				objs = append(objs, tt.konnectExt)
@@ -380,7 +381,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(s).WithRuntimeObjects(objs...).Build()
 
 			dataplane := tt.dataPlane.DeepCopy()
-			applied, err := ApplyDataPlaneKonnectExtension(t.Context(), cl, dataplane)
+			applied, err := processor.Process(t.Context(), cl, dataplane)
 			require.Equal(t, tt.applied, applied)
 			if tt.expectedError != nil {
 				require.ErrorIs(t, err, tt.expectedError)

@@ -31,6 +31,9 @@ import (
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	ctrlconsts "github.com/kong/kong-operator/controller/consts"
+	"github.com/kong/kong-operator/controller/pkg/extensions"
+	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
+	extensionsKonnect "github.com/kong/kong-operator/controller/pkg/extensions/konnect"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
@@ -199,6 +202,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil // no need to requeue, status update will requeue
 	}
 
+	log.Trace(logger, "applying extensions")
+	konnectExtensionProcessor := &extensionsKonnect.ControlPlaneKonnectExtensionProcessor{}
+	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, cp, r.KonnectEnabled, konnectExtensionProcessor)
+	if err != nil {
+		if extensionserrors.IsKonnectExtensionError(err) {
+			log.Debug(logger, "failed to apply extensions", "err", err)
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
+	}
+	if stop || !result.IsZero() {
+		return result, nil
+	}
+
 	log.Trace(logger, "retrieving connected dataplane")
 	dataplane, err := GetDataPlaneForControlPlane(ctx, r.Client, cp)
 	var dataplaneIngressServiceName, dataplaneAdminServiceName string
@@ -307,7 +324,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			log.Debug(logger, "control plane instance not found, creating new instance")
 			cfgOpts, err := r.constructControlPlaneManagerConfigOptions(
 				logger, cp, &caSecret, mtlsSecret, dataplaneAdminServiceName, dataplaneIngressServiceName,
-				r.RestConfig.Burst, r.RestConfig.QPS, validatedWatchNamespaces,
+				r.RestConfig.Burst, r.RestConfig.QPS, validatedWatchNamespaces, konnectExtensionProcessor.GetKonnectConfig(),
 			)
 			if err != nil {
 				return ctrl.Result{}, err
@@ -333,7 +350,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// Calculate the hash of config from the ControlPlane spec.
 		cfgOpts, err := r.constructControlPlaneManagerConfigOptions(
 			logger, cp, &caSecret, mtlsSecret, dataplaneAdminServiceName, dataplaneIngressServiceName,
-			r.RestConfig.Burst, r.RestConfig.QPS, validatedWatchNamespaces,
+			r.RestConfig.Burst, r.RestConfig.QPS, validatedWatchNamespaces, konnectExtensionProcessor.GetKonnectConfig(),
 		)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -367,7 +384,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	markAsProvisioned(cp)
 	k8sutils.SetReady(cp)
 
-	result, err := r.patchStatus(ctx, logger, cp)
+	result, err = r.patchStatus(ctx, logger, cp)
 	if err != nil {
 		log.Debug(logger, "unable to patch ControlPlane status", "error", err)
 		return ctrl.Result{}, err
@@ -417,6 +434,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	apiServerBurst int,
 	apiServerQPS float32,
 	validatedWatchNamespaces []string,
+	konnectConfig *managercfg.KonnectConfig,
 ) ([]managercfg.Opt, error) {
 	// TODO: https://github.com/kong/kong-operator/issues/1361
 	// Configure the manager with Konnect options if KonnectExtension is attached to the ControlPlane.
@@ -474,6 +492,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		WithEmitKubernetesEvents(r.EmitKubernetesEvents),
 		WithTranslationOptions(cp.Spec.Translation),
 		WithWatchNamespaces(validatedWatchNamespaces),
+		WithKonnectConfig(konnectConfig),
 	}
 
 	if r.SecretLabelSelector != "" {
