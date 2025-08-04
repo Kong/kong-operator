@@ -88,11 +88,6 @@ var supportedTypes = []cacheStoreSupportedType{
 	},
 
 	{
-		Type:    "TCPIngress",
-		Package: "kongv1beta1",
-	},
-
-	{
 		Type:    "KongUpstreamPolicy",
 		Package: "kongv1beta1",
 	},

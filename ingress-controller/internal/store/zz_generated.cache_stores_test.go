@@ -115,8 +115,6 @@ func TestCacheStores(t *testing.T) {
 			objectToStore: &kongv1beta1.KongConsumerGroup{},
 		},
 		
-
-		
 		{
 			name: "KongUpstreamPolicy",
 			objectToStore: &kongv1beta1.KongUpstreamPolicy{},

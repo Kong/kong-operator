@@ -41,7 +41,6 @@ type CacheStores struct {
 	ClusterPlugin cache.Store
 	Consumer cache.Store
 	ConsumerGroup cache.Store
-
 	KongUpstreamPolicy cache.Store
 	IngressClassParametersV1alpha1 cache.Store
 	KongServiceFacade cache.Store
@@ -72,7 +71,6 @@ func NewCacheStores() CacheStores {
 		ClusterPlugin: cache.NewStore(clusterWideKeyFunc),
 		Consumer: cache.NewStore(namespacedKeyFunc),
 		ConsumerGroup: cache.NewStore(namespacedKeyFunc),
-
 		KongUpstreamPolicy: cache.NewStore(namespacedKeyFunc),
 		IngressClassParametersV1alpha1: cache.NewStore(namespacedKeyFunc),
 		KongServiceFacade: cache.NewStore(namespacedKeyFunc),
@@ -125,7 +123,6 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.Consumer.Get(obj)
 	case *kongv1beta1.KongConsumerGroup:
 		return c.ConsumerGroup.Get(obj)
-
 	case *kongv1beta1.KongUpstreamPolicy:
 		return c.KongUpstreamPolicy.Get(obj)
 	case *kongv1alpha1.IngressClassParameters:
@@ -183,7 +180,6 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.Consumer.Add(obj)
 	case *kongv1beta1.KongConsumerGroup:
 		return c.ConsumerGroup.Add(obj)
-
 	case *kongv1beta1.KongUpstreamPolicy:
 		return c.KongUpstreamPolicy.Add(obj)
 	case *kongv1alpha1.IngressClassParameters:
@@ -241,7 +237,6 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.Consumer.Delete(obj)
 	case *kongv1beta1.KongConsumerGroup:
 		return c.ConsumerGroup.Delete(obj)
-
 	case *kongv1beta1.KongUpstreamPolicy:
 		return c.KongUpstreamPolicy.Delete(obj)
 	case *kongv1alpha1.IngressClassParameters:
@@ -277,7 +272,6 @@ func (c CacheStores) ListAllStores() []cache.Store {
 		c.ClusterPlugin,
 		c.Consumer,
 		c.ConsumerGroup,
-
 		c.KongUpstreamPolicy,
 		c.IngressClassParametersV1alpha1,
 		c.KongServiceFacade,
@@ -307,7 +301,6 @@ func (c CacheStores) SupportedTypes() []client.Object {
 		&kongv1.KongClusterPlugin{},
 		&kongv1.KongConsumer{},
 		&kongv1beta1.KongConsumerGroup{},
-
 		&kongv1beta1.KongUpstreamPolicy{},
 		&kongv1alpha1.IngressClassParameters{},
 		&incubatorv1alpha1.KongServiceFacade{},

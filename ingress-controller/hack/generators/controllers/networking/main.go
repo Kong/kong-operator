@@ -171,23 +171,6 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 		HasControlPlaneReference:          true,
 	},
-	typeNeeded{
-		Group:                             "configuration.konghq.com",
-		Version:                           "v1beta1",
-		Kind:                              "TCPIngress",
-		PackageImportAlias:                "kongv1beta1",
-		PackageAlias:                      "KongV1Beta1",
-		Package:                           kongv1beta1,
-		Plural:                            "tcpingresses",
-		CacheType:                         "TCPIngress",
-		NeedsStatusPermissions:            true,
-		ConfigStatusNotificationsEnabled:  true,
-		IngressAddressUpdatesEnabled:      true,
-		AcceptsIngressClassNameAnnotation: true,
-		AcceptsIngressClassNameSpec:       false,
-		NeedsUpdateReferences:             true,
-		RBACVerbs:                         []string{"get", "list", "watch"},
-	},
 
 	typeNeeded{
 		Group:                             "configuration.konghq.com",
