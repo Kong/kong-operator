@@ -23,7 +23,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
@@ -72,6 +74,9 @@ type Reconciler struct {
 	// ConfigMapLabelSelector is the label selector configured at the oprator level.
 	// When not empty, it is used as the config map label selector of all ingress cotrollers' managers.
 	ConfigMapLabelSelector string
+
+	// WatchNamespaces is a list of namespaces to watch. If empty (default), all namespaces are watched.
+	WatchNamespaces []string
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -82,7 +87,10 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		}).
 		For(&ControlPlane{}).
 		// Watch for changes in Secret objects that are owned by ControlPlane objects.
-		Owns(&corev1.Secret{})
+		Owns(&corev1.Secret{}).
+		Watches(
+			&operatorv1alpha1.WatchNamespaceGrant{},
+			handler.EnqueueRequestsFromMapFunc(r.listControlPlanesForWatchNamespaceGrants))
 
 	if r.KonnectEnabled {
 		// Watch for changes in KonnectExtension objects that are referenced by ControlPlane objects.
@@ -227,6 +235,55 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		log.Debug(logger, "DataPlane not set, deployment for ControlPlane will remain dormant")
 	}
 
+	log.Trace(logger, "validating watch namespaces for the ControlPlane")
+	if err := validateWatchNamespaces(cp, r.WatchNamespaces); err != nil {
+		// TODO: Set status condition on the ControlPlane.
+		// https://github.com/Kong/kong-operator/issues/1975
+		log.Debug(logger, "watch namespaces validation failed", "error", err)
+		return ctrl.Result{}, err
+	}
+
+	log.Trace(logger, "validating WatchNamespaceGrants exist for the ControlPlane")
+	validatedWatchNamespaces, err := r.validateWatchNamespaceGrants(ctx, cp)
+	if err != nil {
+		// If there was an error validating the WatchNamespaceGrants, we set the condition
+		// to false indicating that the WatchNamespaceGrants are invalid or missing.
+
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(
+				kcfgcontrolplane.ConditionTypeWatchNamespaceGrantValid,
+				metav1.ConditionFalse,
+				kcfgcontrolplane.ConditionReasonWatchNamespaceGrantInvalid,
+				fmt.Sprintf("WatchNamespaceGrant(s) are missing or invalid for the ControlPlane: %v", err),
+				cp.GetGeneration(),
+			),
+			cp,
+		)
+		// We do not return here as we want to proceed with reconciling the Deployment.
+		// This will prevent users using the ControlPlane with previous
+		// WatchNamespaces spec.
+		// We do not patch the status here either because that's done below.
+	} else {
+		// If the WatchNamespaceGrants are present and valid, we set the condition to true.
+		// We note that grants are not expected if the watch namespaces are not
+		// specified in the ControlPlane spec.
+
+		msg := "WatchNamespaceGrant(s) are present and valid"
+		if cp.Spec.WatchNamespaces != nil {
+			msg = "WatchNamespaceGrant(s) not required"
+		}
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(
+				kcfgcontrolplane.ConditionTypeWatchNamespaceGrantValid,
+				metav1.ConditionTrue,
+				kcfgcontrolplane.ConditionReasonWatchNamespaceGrantValid,
+				msg,
+				cp.GetGeneration(),
+			),
+			cp,
+		)
+	}
+
 	var caSecret corev1.Secret
 	if err := r.Get(ctx, types.NamespacedName{
 		Namespace: r.ClusterCASecretNamespace,
@@ -249,7 +306,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 			log.Debug(logger, "control plane instance not found, creating new instance")
 			cfgOpts, err := r.constructControlPlaneManagerConfigOptions(
-				logger, cp, &caSecret, mtlsSecret, dataplaneAdminServiceName, dataplaneIngressServiceName, r.RestConfig.Burst, r.RestConfig.QPS,
+				logger, cp, &caSecret, mtlsSecret, dataplaneAdminServiceName, dataplaneIngressServiceName,
+				r.RestConfig.Burst, r.RestConfig.QPS, validatedWatchNamespaces,
 			)
 			if err != nil {
 				return ctrl.Result{}, err
@@ -274,7 +332,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	} else {
 		// Calculate the hash of config from the ControlPlane spec.
 		cfgOpts, err := r.constructControlPlaneManagerConfigOptions(
-			logger, cp, &caSecret, mtlsSecret, dataplaneAdminServiceName, dataplaneIngressServiceName, r.RestConfig.Burst, r.RestConfig.QPS,
+			logger, cp, &caSecret, mtlsSecret, dataplaneAdminServiceName, dataplaneIngressServiceName,
+			r.RestConfig.Burst, r.RestConfig.QPS, validatedWatchNamespaces,
 		)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -357,6 +416,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	dataplaneIngressServiceName string,
 	apiServerBurst int,
 	apiServerQPS float32,
+	validatedWatchNamespaces []string,
 ) ([]managercfg.Opt, error) {
 	// TODO: https://github.com/kong/kong-operator/issues/1361
 	// Configure the manager with Konnect options if KonnectExtension is attached to the ControlPlane.
@@ -413,6 +473,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		WithQPSAndBurst(apiServerQPS, apiServerBurst),
 		WithEmitKubernetesEvents(r.EmitKubernetesEvents),
 		WithTranslationOptions(cp.Spec.Translation),
+		WithWatchNamespaces(validatedWatchNamespaces),
 	}
 
 	if r.SecretLabelSelector != "" {

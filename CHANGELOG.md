@@ -76,7 +76,17 @@
 - Introduce the flag `--watch-namespaces` to specify which namespaces the operator
   should watch for configuration resources.
   The default value is `""` which makes the operator watch all namespaces.
+  This flag is checked against the `ControlPlane`'s `spec.watchNamespaces`
+  field during `ControlPlane` reconciliation and if incompatible, `ControlPlane`
+  reconciliation returns with an error.
   [#1958](https://github.com/Kong/kong-operator/pull/1958)
+  [#1974](https://github.com/Kong/kong-operator/pull/1974)
+
+### Fixed
+
+- Fix the issue that invalid label value causing ingress controller fails to
+  store the license from Konnect into `Secret`.
+  [#1976](https://github.com/Kong/kong-operator/pull/1976)
 
 ## [v2.0.0-alpha.2]
 

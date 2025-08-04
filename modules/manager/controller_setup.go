@@ -413,6 +413,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				InstancesManager:         cpsMgr,
 				ClusterDomain:            c.ClusterDomain,
 				EmitKubernetesEvents:     c.EmitKubernetesEvents,
+				WatchNamespaces:          c.WatchNamespaces,
 			},
 		},
 		// DataPlane controller

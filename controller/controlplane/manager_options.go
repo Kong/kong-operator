@@ -567,3 +567,10 @@ func WithSensitiveConfigDumpEnabled(enabled bool) managercfg.Opt {
 		c.DumpSensitiveConfig = enabled
 	}
 }
+
+// WithWatchNamespaces enables/disables watching namespaces for the manager.
+func WithWatchNamespaces(watchNamespaces []string) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.WatchNamespaces = watchNamespaces
+	}
+}
