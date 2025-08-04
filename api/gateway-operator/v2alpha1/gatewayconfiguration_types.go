@@ -266,3 +266,6 @@ func (g *GatewayConfiguration) SetConditions(conditions []metav1.Condition) {
 func (g *GatewayConfiguration) GetExtensions() []commonv1alpha1.ExtensionRef {
 	return g.Spec.Extensions
 }
+
+// Hub marks the GatewayConfiguration type as a hub type (storageversion) for conversion webhook.
+func (g *GatewayConfiguration) Hub() {}

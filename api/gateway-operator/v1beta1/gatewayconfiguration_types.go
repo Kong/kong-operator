@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 )
@@ -179,4 +180,16 @@ func (g *GatewayConfiguration) SetConditions(conditions []metav1.Condition) {
 // GetExtensions retrieves the GatewayConfiguration Extensions
 func (g *GatewayConfiguration) GetExtensions() []commonv1alpha1.ExtensionRef {
 	return g.Spec.Extensions
+}
+
+// ConvertTo converts this GatewayConfiguration (v1beta1) to the Hub version.
+func (g *GatewayConfiguration) ConvertTo(dstRaw conversion.Hub) error {
+	_ = dstRaw
+	panic("v1beta1 GatewayConfiguration ConvertTo(...) is not implemented yet")
+}
+
+// ConvertFrom converts from the Hub version to this version (v1beta1).
+func (g *GatewayConfiguration) ConvertFrom(srcRaw conversion.Hub) error {
+	_ = srcRaw
+	panic("v1beta1 GatewayConfiguration ConvertFrom(...) is not implemented yet")
 }

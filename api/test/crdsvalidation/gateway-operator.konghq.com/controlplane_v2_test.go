@@ -684,10 +684,10 @@ func TestControlPlaneV2(t *testing.T) {
 								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
 									ConsumersSync: lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectConsumersSyncStateEnabled),
 									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-										State:              lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
+										State:                lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
 										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
 										PollingPeriod:        lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
-										StorageState:       lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
+										StorageState:         lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
 									},
 									NodeRefreshPeriod:  lo.ToPtr(metav1.Duration{Duration: 60 * time.Second}),
 									ConfigUploadPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
@@ -749,22 +749,22 @@ func TestControlPlaneV2(t *testing.T) {
 
 		t.Run("licensing", func(t *testing.T) {
 			common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
-			{
-				Name: "licensing set to enabled without polling periods is allowed",
-				TestObject: &operatorv2alpha1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
-						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-								Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-									State: lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
+				{
+					Name: "licensing set to enabled without polling periods is allowed",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
+									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
+										State: lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
+									},
 								},
 							},
 						},
 					},
 				},
-			},
 				{
 					Name: "licensing set to disabled",
 					TestObject: &operatorv2alpha1.ControlPlane{
@@ -791,10 +791,10 @@ func TestControlPlaneV2(t *testing.T) {
 							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
 								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
 									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-										State:              lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
+										State:                lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
 										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
 										PollingPeriod:        lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
-										StorageState:       lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
+										StorageState:         lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
 									},
 								},
 							},
@@ -810,10 +810,10 @@ func TestControlPlaneV2(t *testing.T) {
 							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
 								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
 									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-										State:              lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
+										State:                lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
 										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
 										PollingPeriod:        lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
-										StorageState:       lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateDisabled),
+										StorageState:         lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateDisabled),
 									},
 								},
 							},
@@ -853,47 +853,47 @@ func TestControlPlaneV2(t *testing.T) {
 								},
 							},
 						},
+					},
+					ExpectedErrorMessage: lo.ToPtr("storageState can only be set to enabled when licensing is enabled"),
 				},
-				ExpectedErrorMessage: lo.ToPtr("storageState can only be set to enabled when licensing is enabled"),
-			},
-			{
-				Name: "licensing set to disabled with initialPollingPeriod",
-				TestObject: &operatorv2alpha1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
-						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-								Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-									State:              lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateDisabled),
-									InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
+				{
+					Name: "licensing set to disabled with initialPollingPeriod",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
+									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
+										State:                lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateDisabled),
+										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
+									},
 								},
 							},
 						},
 					},
+					ExpectedErrorMessage: lo.ToPtr("initialPollingPeriod can only be set when licensing is enabled"),
 				},
-				ExpectedErrorMessage: lo.ToPtr("initialPollingPeriod can only be set when licensing is enabled"),
-			},
-			{
-				Name: "licensing set to disabled with pollingPeriod",
-				TestObject: &operatorv2alpha1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
-						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-								Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-									State:        lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateDisabled),
-									PollingPeriod: lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
+				{
+					Name: "licensing set to disabled with pollingPeriod",
+					TestObject: &operatorv2alpha1.ControlPlane{
+						ObjectMeta: common.CommonObjectMeta,
+						Spec: operatorv2alpha1.ControlPlaneSpec{
+							DataPlane: validDataPlaneTarget,
+							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
+									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
+										State:         lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateDisabled),
+										PollingPeriod: lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
+									},
 								},
 							},
 						},
 					},
+					ExpectedErrorMessage: lo.ToPtr("pollingPeriod can only be set when licensing is enabled"),
 				},
-				ExpectedErrorMessage: lo.ToPtr("pollingPeriod can only be set when licensing is enabled"),
-			},
-			{
-				Name: "licensing set to disallowed value",
+				{
+					Name: "licensing set to disallowed value",
 					TestObject: &operatorv2alpha1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
 						Spec: operatorv2alpha1.ControlPlaneSpec{

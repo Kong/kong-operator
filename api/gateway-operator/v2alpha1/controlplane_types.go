@@ -573,3 +573,6 @@ const (
 	// ControlPlaneKonnectLicensingStateDisabled indicates that Konnect licensing is disabled.
 	ControlPlaneKonnectLicensingStateDisabled ControlPlaneKonnectLicensingState = "disabled"
 )
+
+// Hub marks the ControlPlane type as a hub type (storageversion) for conversion webhook.
+func (c *ControlPlane) Hub() {}
