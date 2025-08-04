@@ -10,3 +10,12 @@ func ControlPlaneGVR() schema.GroupVersionResource {
 		Resource: "controlplanes",
 	}
 }
+
+// GatewayConfigurationGVR returns current package GatewayConfiguration GVR.
+func GatewayConfigurationGVR() schema.GroupVersionResource {
+	return schema.GroupVersionResource{
+		Group:    SchemeGroupVersion.Group,
+		Version:  SchemeGroupVersion.Version,
+		Resource: "gatewayconfigurations",
+	}
+}
