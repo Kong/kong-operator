@@ -245,7 +245,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	log.Trace(logger, "validating WatchNamespaceGrants exist for the ControlPlane")
 	validatedWatchNamespaces, err := r.validateWatchNamespaceGrants(ctx, cp)
-	if err != nil { //nolint:gocritic
+	if err != nil {
 		// If there was an error validating the WatchNamespaceGrants, we set the condition
 		// to false indicating that the WatchNamespaceGrants are invalid or missing.
 
