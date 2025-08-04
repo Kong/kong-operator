@@ -177,13 +177,9 @@ func ensureWatchNamespaceGrantsForNamespace(
 	}
 	for _, grant := range grants.Items {
 		if watchNamespaceGrantContainsControlPlaneFrom(grant, cp) {
-		// return nil if there is one grant allows the CP to watch the namespace.
-		    return nil
+			// return nil if there is one grant allows the CP to watch the namespace.
+			return nil
 		}
-			continue
-		}
-
-		return nil
 	}
 	return fmt.Errorf("WatchNamespaceGrant in Namespace %s to ControlPlane in Namespace %s not found", ns, cp.Namespace)
 }
