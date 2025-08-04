@@ -30,7 +30,7 @@ func TestHTTPRoute(t *testing.T) {
 
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
-	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -127,7 +127,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
-	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 

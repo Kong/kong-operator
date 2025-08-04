@@ -13,6 +13,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 
 	"github.com/kong/kong-operator/pkg/consts"
 )
@@ -20,7 +21,7 @@ import (
 func TestGetAcceptedCondition(t *testing.T) {
 	scheme := runtime.NewScheme()
 	assert.NoError(t, gatewayv1.Install(scheme))
-	assert.NoError(t, operatorv1beta1.AddToScheme(scheme))
+	assert.NoError(t, operatorv2alpha1.AddToScheme(scheme))
 
 	tests := []struct {
 		name           string
@@ -101,7 +102,7 @@ func TestGetAcceptedCondition(t *testing.T) {
 				},
 			},
 			existingObjs: []runtime.Object{
-				&operatorv1beta1.GatewayConfiguration{
+				&operatorv2alpha1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "valid-config",
 						Namespace: "default",
@@ -139,7 +140,7 @@ func TestGetRouterFlavor(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		gatewayConfig  *operatorv1beta1.GatewayConfiguration
+		gatewayConfig  *operatorv2alpha1.GatewayConfiguration
 		existingObjs   []runtime.Object
 		expectedFlavor consts.RouterFlavor
 	}{
@@ -150,8 +151,8 @@ func TestGetRouterFlavor(t *testing.T) {
 		},
 		{
 			name: "DataPlaneOptions is nil",
-			gatewayConfig: &operatorv1beta1.GatewayConfiguration{
-				Spec: operatorv1beta1.GatewayConfigurationSpec{
+			gatewayConfig: &operatorv2alpha1.GatewayConfiguration{
+				Spec: operatorv2alpha1.GatewayConfigurationSpec{
 					DataPlaneOptions: nil,
 				},
 			},
@@ -159,11 +160,11 @@ func TestGetRouterFlavor(t *testing.T) {
 		},
 		{
 			name: "PodTemplateSpec is nil",
-			gatewayConfig: &operatorv1beta1.GatewayConfiguration{
-				Spec: operatorv1beta1.GatewayConfigurationSpec{
-					DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
-						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+			gatewayConfig: &operatorv2alpha1.GatewayConfiguration{
+				Spec: operatorv2alpha1.GatewayConfigurationSpec{
+					DataPlaneOptions: &operatorv2alpha1.GatewayConfigDataPlaneOptions{
+						Deployment: operatorv2alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv2alpha1.DeploymentOptions{
 								PodTemplateSpec: nil,
 							},
 						},
@@ -174,11 +175,11 @@ func TestGetRouterFlavor(t *testing.T) {
 		},
 		{
 			name: "Container not found",
-			gatewayConfig: &operatorv1beta1.GatewayConfiguration{
-				Spec: operatorv1beta1.GatewayConfigurationSpec{
-					DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
-						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+			gatewayConfig: &operatorv2alpha1.GatewayConfiguration{
+				Spec: operatorv2alpha1.GatewayConfigurationSpec{
+					DataPlaneOptions: &operatorv2alpha1.GatewayConfigDataPlaneOptions{
+						Deployment: operatorv2alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv2alpha1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{},
@@ -193,14 +194,14 @@ func TestGetRouterFlavor(t *testing.T) {
 		},
 		{
 			name: "KONG_ROUTER_FLAVOR not found",
-			gatewayConfig: &operatorv1beta1.GatewayConfiguration{
+			gatewayConfig: &operatorv2alpha1.GatewayConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 				},
-				Spec: operatorv1beta1.GatewayConfigurationSpec{
-					DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
-						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+				Spec: operatorv2alpha1.GatewayConfigurationSpec{
+					DataPlaneOptions: &operatorv2alpha1.GatewayConfigDataPlaneOptions{
+						Deployment: operatorv2alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv2alpha1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{
@@ -219,14 +220,14 @@ func TestGetRouterFlavor(t *testing.T) {
 		},
 		{
 			name: "KONG_ROUTER_FLAVOR found",
-			gatewayConfig: &operatorv1beta1.GatewayConfiguration{
+			gatewayConfig: &operatorv2alpha1.GatewayConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "default",
 				},
-				Spec: operatorv1beta1.GatewayConfigurationSpec{
-					DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
-						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+				Spec: operatorv2alpha1.GatewayConfigurationSpec{
+					DataPlaneOptions: &operatorv2alpha1.GatewayConfigDataPlaneOptions{
+						Deployment: operatorv2alpha1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv2alpha1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{

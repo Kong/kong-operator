@@ -445,7 +445,6 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 					cp := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 					cp.Name = "cp-4"
 					cp.SetKonnectName("cp-4")
-
 				},
 			)
 		},

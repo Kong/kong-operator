@@ -12,7 +12,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
@@ -66,22 +66,22 @@ func GenerateGateway(gatewayNSN types.NamespacedName, gatewayClass *gatewayv1.Ga
 	return gateway
 }
 
-type gatewayConfigurationOption func(*operatorv1beta1.GatewayConfiguration)
+type gatewayConfigurationOption func(*operatorv2alpha1.GatewayConfiguration)
 
 // GenerateGatewayConfiguration generates a GatewayConfiguration to be used in tests
-func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfigurationOption) *operatorv1beta1.GatewayConfiguration {
-	gwc := &operatorv1beta1.GatewayConfiguration{
+func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfigurationOption) *operatorv2alpha1.GatewayConfiguration {
+	gwc := &operatorv2alpha1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace,
 			Name:      uuid.NewString(),
 		},
-		Spec: operatorv1beta1.GatewayConfigurationSpec{
+		Spec: operatorv2alpha1.GatewayConfigurationSpec{
 			// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
 			// https://github.com/kong/kong-operator/issues/1728
 
-			DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
-				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+			DataPlaneOptions: &operatorv2alpha1.GatewayConfigDataPlaneOptions{
+				Deployment: operatorv2alpha1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv2alpha1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -118,12 +118,15 @@ func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfiguration
 }
 
 // WithControlPlaneWebhookDisabled disables the admission webhook for the control plane
-func WithControlPlaneWebhookDisabled() func(*operatorv1beta1.GatewayConfiguration) {
-	return func(gc *operatorv1beta1.GatewayConfiguration) {
-		gc.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env = append(gc.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env, corev1.EnvVar{
-			Name:  "CONTROLLER_ADMISSION_WEBHOOK_LISTEN",
-			Value: "off",
-		})
+func WithControlPlaneWebhookDisabled() func(*operatorv2alpha1.GatewayConfiguration) {
+	return func(gc *operatorv2alpha1.GatewayConfiguration) {
+		// Commenting as we don't have a way to disable the webhook in the GatewayConfiguration v2 API yet.
+		// TODO: https://github.com/kong/kong-operator/issues/1367"
+		//
+		// gc.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env = append(gc.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env, corev1.EnvVar{
+		// 	Name:  "CONTROLLER_ADMISSION_WEBHOOK_LISTEN",
+		// 	Value: "off",
+		// })
 	}
 }
 

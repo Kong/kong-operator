@@ -47,7 +47,7 @@ func copyFS(dir string, fsys fs.FS) error {
 	return fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, _ error) error {
 		targ := filepath.Join(dir, filepath.FromSlash(path))
 		if d.IsDir() {
-			if err := os.MkdirAll(targ, 0777); err != nil {
+			if err := os.MkdirAll(targ, 0o777); err != nil {
 				return err
 			}
 			return nil
@@ -61,7 +61,7 @@ func copyFS(dir string, fsys fs.FS) error {
 		if err != nil {
 			return err
 		}
-		w, err := os.OpenFile(targ, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0666|info.Mode()&0777)
+		w, err := os.OpenFile(targ, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0o666|info.Mode()&0o777)
 		if err != nil {
 			return err
 		}

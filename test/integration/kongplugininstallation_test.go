@@ -33,7 +33,7 @@ import (
 )
 
 func TestKongPluginInstallationEssentials(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
+	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1367")
 
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 	t.Log("this test accesses container registries on public internet")
@@ -217,7 +217,7 @@ func deployGatewayWithKPI(
 	// thus it requires strict order of deployment which is not guaranteed.
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace, helpers.WithControlPlaneWebhookDisabled())
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
-	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV1beta1().GatewayConfigurations(namespace).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(namespace).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
