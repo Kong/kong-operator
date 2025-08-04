@@ -93,8 +93,9 @@ func (c *Client) Get(ctx context.Context) (mo.Option[license.KonnectLicense], er
 	}
 
 	if c.enableLicenseStorage && l.IsPresent() {
-		err = c.licenseStore.Store(ctx, l.MustGet())
-		c.logger.Error(err, "failed to store retrieved license to local storage")
+		if err := c.licenseStore.Store(ctx, l.MustGet()); err != nil {
+			c.logger.Error(err, "failed to store retrieved license to local storage")
+		}
 	}
 
 	return l, nil
