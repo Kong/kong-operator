@@ -365,7 +365,7 @@ func TestValidateWatchNamespaces(t *testing.T) {
 			},
 			watchNamespaces: []string{"ns1", "ns2"},
 			expectedError:   true,
-			errorContains:   "ControlPlane's watchNamespaces is set to 'Own', but operator is only allowed on: [ns1 ns2]",
+			errorContains:   "ControlPlane's watchNamespaces is set to 'Own' (current ControlPlane namespace: cp-ns), but operator is only allowed on: [ns1 ns2]",
 		},
 		{
 			name: "WatchNamespacesTypeList - empty operator watchNamespaces - should pass",

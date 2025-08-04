@@ -222,10 +222,13 @@ func validateWatchNamespaces(
 		}
 
 	case operatorv2alpha1.WatchNamespacesTypeOwn:
+		// NOTE: In case the operator Pod does not have watch namespaces flag/environment variable set
+		// to include the ControlPlane's namespace, it will not be able to watch
+		// the ControlPlane's own namespace, which is required for the operator to function properly.
 		if len(watchNamespaces) > 0 && !lo.Contains(watchNamespaces, cp.Namespace) {
 			return fmt.Errorf(
-				"ControlPlane's watchNamespaces is set to 'Own', but operator is only allowed on: %v",
-				watchNamespaces,
+				"ControlPlane's watchNamespaces is set to 'Own' (current ControlPlane namespace: %v), but operator is only allowed on: %v",
+				cp.Namespace, watchNamespaces,
 			)
 		}
 
