@@ -120,7 +120,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	mgrID, err := manager.NewID(builControlPlaneInstanceID(cp))
+	mgrID, err := manager.NewID(string(cp.GetUID()))
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to create manager ID: %w", err)
 	}

@@ -42,9 +42,3 @@ func GetDataPlaneForControlPlane(
 		return nil, fmt.Errorf("unsupported ControlPlane's DataPlane type: %s", cp.Spec.DataPlane.Type)
 	}
 }
-
-// builControlPlaneInstanceID builds a unique identifier for the ControlPlane instance
-// based on its namespace, name, and UID.
-func builControlPlaneInstanceID(cp *operatorv2alpha1.ControlPlane) string {
-	return cp.Namespace + "/" + cp.Name + "-" + string(cp.GetUID())
-}
