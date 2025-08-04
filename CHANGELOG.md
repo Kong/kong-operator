@@ -47,7 +47,7 @@
   deprecated.
   [#1792](https://github.com/Kong/kong-operator/pull/1972)
   <!-- https://github.com/Kong/kong-operator/issues/1944 -->
-- Removed KongIngress, TCPIngress and UDPIngress CRDs and related logics.
+- Removed `KongIngress`, `TCPIngress` and `UDPIngress` CRDs together with their controllers.
   [#1971](https://github.com/Kong/kong-operator/pull/1971)
 
 ### Added
