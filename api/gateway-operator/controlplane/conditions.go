@@ -26,13 +26,13 @@ const (
 type ConditionReason string
 
 const (
-	// ConditionReasonPodsNotReady is a reason which indicates why a ControlPlane
-	// has not yet reached a fully Provisioned status.
-	ConditionReasonPodsNotReady consts.ConditionReason = "PodsNotReady"
+	// ConditionReasonProvisioningInProgress is a reason which indicates that a ControlPlane
+	// is currently being provisioned.
+	ConditionReasonProvisioningInProgress consts.ConditionReason = "ProvisioningInProgress"
 
-	// ConditionReasonPodsReady is a reason which indicates how a ControlPlane
-	// reached fully Provisioned status.
-	ConditionReasonPodsReady consts.ConditionReason = "PodsReady"
+	// ConditionReasonProvisioned is a reason which indicates that a ControlPlane
+	// has been fully provisioned.
+	ConditionReasonProvisioned consts.ConditionReason = "Provisioned"
 
 	// ConditionReasonNoDataPlane is a reason which indicates that no DataPlane
 	// has been provisioned.
