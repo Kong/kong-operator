@@ -499,10 +499,21 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	}
 
 	if r.SecretLabelSelector != "" {
-		cfgOpts = append(cfgOpts, WithSecretLabelSelector(r.SecretLabelSelector))
+		cfgOpts = append(cfgOpts, WithSecretLabelSelectorMatchLabel(r.SecretLabelSelector, "true"))
 	}
+	if cp.Spec.ObjectFilters != nil && cp.Spec.ObjectFilters.Secrets != nil {
+		for k, v := range cp.Spec.ObjectFilters.Secrets.MatchLabels {
+			cfgOpts = append(cfgOpts, WithSecretLabelSelectorMatchLabel(k, v))
+		}
+	}
+
 	if r.ConfigMapLabelSelector != "" {
-		cfgOpts = append(cfgOpts, WithConfigMapLabelSelector(r.ConfigMapLabelSelector))
+		cfgOpts = append(cfgOpts, WithConfigMapLabelSelectorMatchLabel(r.ConfigMapLabelSelector, "true"))
+	}
+	if cp.Spec.ObjectFilters != nil && cp.Spec.ObjectFilters.ConfigMaps != nil {
+		for k, v := range cp.Spec.ObjectFilters.ConfigMaps.MatchLabels {
+			cfgOpts = append(cfgOpts, WithConfigMapLabelSelectorMatchLabel(k, v))
+		}
 	}
 
 	if dps := cp.Spec.DataPlaneSync; dps != nil {

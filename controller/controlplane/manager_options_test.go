@@ -1057,16 +1057,20 @@ func TestWithTranslationOptions(t *testing.T) {
 	}
 }
 
-func TestWithSecretLabelSelector(t *testing.T) {
+func TestWithSecretLabelSelectorMatchLabel(t *testing.T) {
 	cfg := &managercfg.Config{}
-	opt := WithSecretLabelSelector("konghq.com/secret")
+	opt := WithSecretLabelSelectorMatchLabel("konghq.com/secret", "true")
 	opt(cfg)
-	assert.Equal(t, "konghq.com/secret", cfg.SecretLabelSelector)
+	assert.Equal(t, map[string]string{
+		"konghq.com/secret": "true",
+	}, cfg.SecretLabelSelector)
 }
 
 func TestConfigMapLabelSelector(t *testing.T) {
 	cfg := &managercfg.Config{}
-	opt := WithConfigMapLabelSelector("konghq.com/configmap")
+	opt := WithConfigMapLabelSelectorMatchLabel("konghq.com/configmap", "true")
 	opt(cfg)
-	assert.Equal(t, "konghq.com/configmap", cfg.ConfigMapLabelSelector)
+	assert.Equal(t, map[string]string{
+		"konghq.com/configmap": "true",
+	}, cfg.ConfigMapLabelSelector)
 }
