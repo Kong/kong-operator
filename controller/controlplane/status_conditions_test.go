@@ -31,7 +31,7 @@ func TestMarkAsProvisioned(t *testing.T) {
 				},
 				expectedCondition: metav1.Condition{
 					Type:    string(kcfgcontrolplane.ConditionTypeProvisioned),
-					Reason:  string(kcfgcontrolplane.ConditionReasonPodsReady),
+					Reason:  string(kcfgcontrolplane.ConditionReasonProvisioned),
 					Message: "ControlPlane has been provisioned",
 					Status:  metav1.ConditionTrue,
 				},
@@ -45,7 +45,7 @@ func TestMarkAsProvisioned(t *testing.T) {
 				},
 				expectedCondition: metav1.Condition{
 					Type:               string(kcfgcontrolplane.ConditionTypeProvisioned),
-					Reason:             string(kcfgcontrolplane.ConditionReasonPodsReady),
+					Reason:             string(kcfgcontrolplane.ConditionReasonProvisioned),
 					Message:            "ControlPlane has been provisioned",
 					Status:             metav1.ConditionTrue,
 					ObservedGeneration: 3,

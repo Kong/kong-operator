@@ -88,6 +88,13 @@
   store the license from Konnect into `Secret`.
   [#1976](https://github.com/Kong/kong-operator/pull/1976)
 
+### Changes
+
+- `ControlPlane` provisioned conditions' reasons have been renamed to actually reflect
+  the new operator architecture. `PodsReady` is now `Provisioned` and `PodsNotReady`
+  is now `ProvisioningInProgress`.
+  [#1985](https://github.com/Kong/kong-operator/pull/1985)
+
 ## [v2.0.0-alpha.2]
 
 > Release date: 2025-07-23
