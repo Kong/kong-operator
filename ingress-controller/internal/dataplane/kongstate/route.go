@@ -245,7 +245,7 @@ func (r *Route) overrideByAnnotation(logger logr.Logger) {
 	}
 }
 
-// Override sets Route fields by KongIngress first, then by annotation.
+// Override sets Route fields by annotation.
 func (r *Route) Override(logger logr.Logger) {
 	if r == nil {
 		return

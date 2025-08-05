@@ -214,7 +214,7 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 		}
 	}
 
-	// merge KongIngress with Routes, Services and Upstream
+	// Apply overrides to Routes, Services and Upstream
 	result.FillOverrides(t.logger, t.storer, t.failuresCollector, t.kongVersion)
 
 	// generate consumers and credentials

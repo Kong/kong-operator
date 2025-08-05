@@ -84,10 +84,6 @@ rows:
     type: '`int`'
     description: "The Kubernetes API RateLimiter maximum burst queries per second."
     default: '`300`'
-  - flag: '`--apiserver-host`'
-    type: '`string`'
-    description: "The Kubernetes API server URL. If not set, the controller will use cluster config discovery."
-    default: ""
   - flag: '`--apiserver-qps`'
     type: '`int`'
     description: "The Kubernetes API RateLimiter maximum queries per second."
@@ -184,10 +180,6 @@ rows:
     type: '`bool`'
     description: "Enable the KongConsumer controller."
     default: '`true`'
-  - flag: '`--enable-controller-kongingress`'
-    type: '`bool`'
-    description: "Enable the KongIngress controller."
-    default: '`true`'
   - flag: '`--enable-controller-kongplugin`'
     type: '`bool`'
     description: "Enable the KongPlugin controller."
@@ -195,14 +187,6 @@ rows:
   - flag: '`--enable-controller-service`'
     type: '`bool`'
     description: "Enable the Service controller."
-    default: '`true`'
-  - flag: '`--enable-controller-tcpingress`'
-    type: '`bool`'
-    description: "Enable the TCPIngress controller."
-    default: '`true`'
-  - flag: '`--enable-controller-udpingress`'
-    type: '`bool`'
-    description: "Enable the UDPIngress controller."
     default: '`true`'
   - flag: '`--enable-drain-support`'
     type: '`bool`'
@@ -392,22 +376,18 @@ rows:
     type: '`string`'
     description: "Specifies the filter access function to be used for accessing the metrics endpoint (possible values: off, rbac)."
     default: '`"off"`'
-  - flag: '`--metrics-bind-address`'
-    type: '`string`'
-    description: "The address the metric endpoint binds to."
-    default: '`:10255`'
   - flag: '`--profiling`'
     type: '`bool`'
     description: "Enable profiling via web interface host:10256/debug/pprof/."
     default: '`false`'
-  - flag: '`--proxy-sync-seconds`'
-    type: '`float`'
-    description: "Define the rate (in seconds) in which configuration updates will be applied to the Kong Admin API."
-    default: '`3`'
-  - flag: '`--proxy-timeout-seconds`'
-    type: '`float`'
-    description: "Sets the timeout (in seconds) for all requests to Kong's Admin API."
-    default: '`30`'
+  - flag: '`--proxy-sync-interval`'
+    type: '`duration`'
+    description: "Define the rate in which configuration updates will be applied to the Kong Admin API."
+    default: '`3s`'
+  - flag: '`--proxy-sync-timeout`'
+    type: '`duration`'
+    description: "Sets the timeout for all requests to Kong's Admin API."
+    default: '`30s`'
   - flag: '`--publish-service`'
     type: '`namespaced-name`'
     description: "Service fronting Ingress resources in \"namespace/name\" format. The controller will update Ingress status information with this Service's endpoints."
