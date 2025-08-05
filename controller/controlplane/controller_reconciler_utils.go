@@ -35,7 +35,7 @@ func (r *Reconciler) ensureIsMarkedScheduled(
 		condition := k8sutils.NewCondition(
 			kcfgcontrolplane.ConditionTypeProvisioned,
 			metav1.ConditionFalse,
-			kcfgcontrolplane.ConditionReasonPodsNotReady,
+			kcfgcontrolplane.ConditionReasonProvisioningInProgress,
 			"ControlPlane resource is scheduled for provisioning",
 		)
 
@@ -62,7 +62,7 @@ func (r *Reconciler) ensureDataPlaneStatus(
 			newCondition = k8sutils.NewCondition(
 				kcfgcontrolplane.ConditionTypeProvisioned,
 				metav1.ConditionFalse,
-				kcfgcontrolplane.ConditionReasonPodsNotReady,
+				kcfgcontrolplane.ConditionReasonProvisioningInProgress,
 				"DataPlane was set, ControlPlane resource is scheduled for provisioning",
 			)
 		} else {

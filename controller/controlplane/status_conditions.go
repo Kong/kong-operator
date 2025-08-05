@@ -17,7 +17,7 @@ func markAsProvisioned[T *ControlPlane](resource T) {
 			k8sutils.NewConditionWithGeneration(
 				kcfgcontrolplane.ConditionTypeProvisioned,
 				metav1.ConditionTrue,
-				kcfgcontrolplane.ConditionReasonPodsReady,
+				kcfgcontrolplane.ConditionReasonProvisioned,
 				"ControlPlane has been provisioned",
 				cp.Generation,
 			),
