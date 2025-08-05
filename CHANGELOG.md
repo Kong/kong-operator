@@ -146,6 +146,24 @@
   by introducing the `ExtensionProcessor` interface.
   This change enables KonnecExtensions for `ControlPlane v2alpha1`.
   [#1978](https://github.com/Kong/kong-operator/pull/1978)
+- Support specifying labels to filter watched `Secret`s and `ConfigMap`s of
+  each `ControlPlane` by `spec.objectFilters.secrets.matchLabels` and
+  `spec.objectFilters.configMaps.matchLabels`. Only secrets or configmaps that
+  have the labels matching the specified labels in spec are reconciled.
+  If Kong operator has also flags `--secret-label-selector` or
+  `--config-map-label-selector` set, the controller for each `ControlPlane` also
+  requires reconciled secrets or configmaps to set the labels given in the flags
+  to `true`.
+  [#1982](https://github.com/Kong/kong-operator/pull/1982)
+
+### Fixed
+
+- Fix the issue that invalid label value causing ingress controller fails to
+  store the license from Konnect into `Secret`.
+  [#1976](https://github.com/Kong/kong-operator/pull/1976)
+
+### Changes
+
 - `ControlPlane` provisioned conditions' reasons have been renamed to actually reflect
   the new operator architecture. `PodsReady` is now `Provisioned` and `PodsNotReady`
   is now `ProvisioningInProgress`.
