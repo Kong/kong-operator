@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 	client "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -20,6 +19,7 @@ import (
 	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
 func TestBuildKonnectAddress(t *testing.T) {
@@ -309,10 +309,7 @@ func TestGetKonnectConfig(t *testing.T) {
 
 func TestControlPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 	// Create a scheme for the fake client.
-	s := scheme.Scheme
-	require.NoError(t, konnectv1alpha1.AddToScheme(s))
-	require.NoError(t, konnectv1alpha2.AddToScheme(s))
-	require.NoError(t, corev1.AddToScheme(s))
+	s := scheme.Get()
 
 	// Define test namespace and names.
 	const (

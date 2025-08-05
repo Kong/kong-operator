@@ -30,7 +30,7 @@ type ControlPlaneKonnectExtensionProcessor struct {
 }
 
 // Compile-time check to ensure ControlPlaneKonnectExtensionProcessor implements the extensions.ExtensionProcessor interface.
-var _ extensions.ExtensionProcessor = (*ControlPlaneKonnectExtensionProcessor)(nil)
+var _ extensions.Processor = (*ControlPlaneKonnectExtensionProcessor)(nil)
 
 // Process extracts the KonnectExtension from the ControlPlane and generates the KonnectExtensionConfig.
 // It returns true if a KonnectExtension was found and processed, false otherwise.
@@ -62,8 +62,8 @@ func (p *ControlPlaneKonnectExtensionProcessor) Process(ctx context.Context, cl 
 
 	config, err := kicInKonnectDefaults(ctx, cl, konnectExtension)
 	if err != nil {
-		return false, fmt.Errorf("failed to generate configuration from KonnectExtension %s/%s for ControlPlane %s/%s: %w",
-			konnectExtension.Namespace, konnectExtension.Name, cp.Namespace, cp.Name, err)
+		return false, fmt.Errorf("failed to generate configuration from KonnectExtension %s for ControlPlane %s: %w",
+			client.ObjectKeyFromObject(konnectExtension), client.ObjectKeyFromObject(cp), err)
 	}
 	p.KonnectExtensionConfig = config
 
@@ -159,10 +159,7 @@ func getTLSClientCertAndKey(ctx context.Context, cl client.Client, secretName, s
 	return string(tlsCert), string(tlsKey), nil
 }
 
-// applyFeatureGatesToControlPlane applies the FillIDs feature gate to the ControlPlane's FeatureGates.
-// If the FeatureGates field is nil, it initializes it with the FillIDs feature gate.
-// If the FillIDs feature gate is already present, it ensures its value is set to enabled.
-// If the FillIDs feature gate is not present, it appends it to the FeatureGates slice.
+// applyFeatureGatesToControlPlane applies the feature gates to the ControlPlane.
 func applyFeatureGatesToControlPlane(cp *gwtypes.ControlPlane) {
 	fillIDsFeatureGate := gwtypes.ControlPlaneFeatureGate{
 		Name:  managercfg.FillIDsFeature,

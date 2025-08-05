@@ -23,7 +23,7 @@ import (
 type DataPlaneKonnectExtensionProcessor struct{}
 
 // Compile-time check to ensure DataPlaneKonnectExtensionProcessor implements the extensions.ExtensionProcessor interface.
-var _ extensions.ExtensionProcessor = (*DataPlaneKonnectExtensionProcessor)(nil)
+var _ extensions.Processor = (*DataPlaneKonnectExtensionProcessor)(nil)
 
 // Process gets the DataPlane as argument, and in case it references a KonnectExtension, it
 // fetches the referenced extension and applies the necessary changes to the DataPlane spec.

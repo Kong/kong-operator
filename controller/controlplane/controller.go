@@ -120,6 +120,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
+	// The mgrID is used to identify the ControlPlane instance in the multi-instance manager.
+	// It is also used as UUID for the ControlPlane instance in Konnect. If changing the UUID format,
+	// ensure that it is compatible with the Konnect API.
 	mgrID, err := manager.NewID(string(cp.GetUID()))
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to create manager ID: %w", err)

@@ -47,7 +47,7 @@ type withExtensions interface {
 //     of an API server error), the resource should be requeued. For misconfiguration errors, the resource does not
 //     need to be requeued, and feedback is provided via resource status conditions.
 //   - err: an error in case of failure.
-func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, o t, konnectEnabled bool, processor ExtensionProcessor) (stop bool, res ctrl.Result, err error) {
+func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, o t, konnectEnabled bool, processor Processor) (stop bool, res ctrl.Result, err error) {
 	// extensionsCondition can be nil. In that case, no extensions are referenced by the object.
 	extensionsCondition := validateExtensions(o)
 	if extensionsCondition == nil {
