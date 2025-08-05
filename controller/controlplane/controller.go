@@ -33,7 +33,7 @@ import (
 	ctrlconsts "github.com/kong/kong-operator/controller/consts"
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
-	extensionsKonnect "github.com/kong/kong-operator/controller/pkg/extensions/konnect"
+	extensionskonnect "github.com/kong/kong-operator/controller/pkg/extensions/konnect"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
@@ -203,7 +203,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "applying extensions")
-	konnectExtensionProcessor := &extensionsKonnect.ControlPlaneKonnectExtensionProcessor{}
+	konnectExtensionProcessor := &extensionskonnect.ControlPlaneKonnectExtensionProcessor{}
 	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, cp, r.KonnectEnabled, konnectExtensionProcessor)
 	if err != nil {
 		if extensionserrors.IsKonnectExtensionError(err) {

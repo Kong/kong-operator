@@ -169,23 +169,17 @@ func applyFeatureGatesToControlPlane(cp *gwtypes.ControlPlane) {
 		State: gwtypes.FeatureGateStateEnabled,
 	}
 
-	if cp.Spec.FeatureGates == nil {
-		cp.Spec.FeatureGates = []gwtypes.ControlPlaneFeatureGate{
-			fillIDsFeatureGate,
-		}
-	} else {
-		found := false
-		for i, fg := range cp.Spec.FeatureGates {
-			if fg.Name == fillIDsFeatureGate.Name {
-				found = true
-				if fg.State != gwtypes.FeatureGateStateEnabled {
-					cp.Spec.FeatureGates[i].State = gwtypes.FeatureGateStateEnabled
-				}
-				break
+	found := false
+	for i, fg := range cp.Spec.FeatureGates {
+		if fg.Name == fillIDsFeatureGate.Name {
+			found = true
+			if fg.State != gwtypes.FeatureGateStateEnabled {
+				cp.Spec.FeatureGates[i].State = gwtypes.FeatureGateStateEnabled
 			}
+			break
 		}
-		if !found {
-			cp.Spec.FeatureGates = append(cp.Spec.FeatureGates, fillIDsFeatureGate)
-		}
+	}
+	if !found {
+		cp.Spec.FeatureGates = append(cp.Spec.FeatureGates, fillIDsFeatureGate)
 	}
 }
