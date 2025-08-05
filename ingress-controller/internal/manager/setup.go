@@ -12,6 +12,8 @@ import (
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
@@ -57,6 +59,37 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.
 
 	cacheOptions := cache.Options{
 		SyncPeriod: &c.SyncPeriod,
+		ByObject:   map[client.Object]cache.ByObject{},
+	}
+
+	// Add label selector for Secrets and ConfigMaps on the manager level.
+	if c.SecretLabelSelector != nil {
+		// TODO: move the code to build cache's ByObject options to common utils packages.
+		labelSelector := labels.NewSelector()
+		for k, v := range c.SecretLabelSelector {
+			labelReq, err := labels.NewRequirement(k, selection.Equals, []string{v})
+			if err != nil {
+				continue
+			}
+			labelSelector.Add(*labelReq)
+		}
+		cacheOptions.ByObject[&corev1.Secret{}] = cache.ByObject{
+			Label: labelSelector,
+		}
+	}
+
+	if c.ConfigMapLabelSelector != nil {
+		labelSelector := labels.NewSelector()
+		for k, v := range c.ConfigMapLabelSelector {
+			labelReq, err := labels.NewRequirement(k, selection.Equals, []string{v})
+			if err != nil {
+				continue
+			}
+			labelSelector.Add(*labelReq)
+		}
+		cacheOptions.ByObject[&corev1.ConfigMap{}] = cache.ByObject{
+			Label: labelSelector,
+		}
 	}
 
 	// configure the general manager options
