@@ -99,9 +99,6 @@ type Config struct {
 	IngressClassNetV1Enabled      bool
 	IngressClassParametersEnabled bool
 
-	TCPIngressEnabled             bool
-
-
 	KongClusterPluginEnabled      bool
 	KongPluginEnabled             bool
 	KongConsumerEnabled           bool

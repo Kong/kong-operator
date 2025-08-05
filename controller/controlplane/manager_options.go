@@ -166,10 +166,6 @@ const (
 	// managing IngressClass parameters.
 	ControllerNameIngressClassParameters = "INGRESS_CLASS_PARAMETERS"
 
-	// ControllerNameKongTCPIngress identifies the controller for managing Kong
-	// TCP ingress resources.
-	ControllerNameKongTCPIngress = "KONG_TCPINGRESS"
-
 	// ControllerNameKongClusterPlugin identifies the controller for managing
 	// Kong cluster-scoped plugin resources.
 	ControllerNameKongClusterPlugin = "KONG_CLUSTERPLUGIN"
@@ -214,11 +210,6 @@ const (
 
 // WithControllers sets the controllers for the manager.
 func WithControllers(logger logr.Logger, controllers []gwtypes.ControlPlaneController) managercfg.Opt {
-	logDeprecated := func(logger logr.Logger, enabled bool, controllerName string) {
-		if enabled {
-			log.Info(logger, "chosen controller is deprecated", "controller", controllerName)
-		}
-	}
 	setOpt := func(b *bool, state gwtypes.ControllerState) {
 		if b == nil {
 			return
@@ -238,10 +229,6 @@ func WithControllers(logger logr.Logger, controllers []gwtypes.ControlPlaneContr
 				setOpt(&c.IngressClassParametersEnabled, controller.State)
 
 			// Kong related controllers.
-
-			case ControllerNameKongTCPIngress:
-				setOpt(&c.TCPIngressEnabled, controller.State)
-				logDeprecated(logger, c.TCPIngressEnabled, controller.Name)
 
 			case ControllerNameKongClusterPlugin:
 				setOpt(&c.KongClusterPluginEnabled, controller.State)
@@ -305,11 +292,6 @@ func managerConfigToStatusControllers(
 	controllers = append(controllers, gwtypes.ControlPlaneController{
 		Name:  ControllerNameIngressClassParameters,
 		State: boolToControllerState(cfg.IngressClassParametersEnabled),
-	})
-
-	controllers = append(controllers, gwtypes.ControlPlaneController{
-		Name:  ControllerNameKongTCPIngress,
-		State: boolToControllerState(cfg.TCPIngressEnabled),
 	})
 
 	controllers = append(controllers, gwtypes.ControlPlaneController{
