@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	waitTime = time.Minute
+	waitTime = 90 * time.Second
 	tickTime = 250 * time.Millisecond
 )
 

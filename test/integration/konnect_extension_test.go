@@ -65,8 +65,6 @@ func TestKonnectExtensionKonnectControlPlaneNotFound(t *testing.T) {
 }
 
 func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
-	t.Skip("TODO: adapt to ControlPlane v2alpha1 https://github.com/kong/kong-operator/issues/1730")
-
 	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	// Let's generate a unique test ID that we can refer to in Konnect entities.
@@ -160,8 +158,6 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 }
 
 func TestKonnectExtension(t *testing.T) {
-	t.Skip("TODO: adapt to ControlPlane v2alpha1 https://github.com/kong/kong-operator/issues/1730")
-
 	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	// Let's generate a unique test ID that we can refer to in Konnect entities.
