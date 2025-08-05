@@ -3,6 +3,7 @@ package configuration
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -37,8 +38,8 @@ type CoreV1ConfigMapReconciler struct {
 	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
 
-	ReferenceIndexers ctrlref.CacheIndexers
-	LabelSelector     string
+	ReferenceIndexers        ctrlref.CacheIndexers
+	LabelSelectorMatchLabels map[string]string
 }
 
 var _ controllers.Reconciler = &CoreV1ConfigMapReconciler{}
@@ -54,9 +55,9 @@ func (r *CoreV1ConfigMapReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		labelSelector  metav1.LabelSelector
 		err            error
 	)
-	if r.LabelSelector != "" {
+	if len(r.LabelSelectorMatchLabels) > 0 {
 		labelSelector = metav1.LabelSelector{
-			MatchLabels: map[string]string{r.LabelSelector: "true"},
+			MatchLabels: maps.Clone(r.LabelSelectorMatchLabels),
 		}
 	}
 

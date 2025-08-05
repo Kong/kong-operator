@@ -90,8 +90,8 @@ func TestNewConfig(t *testing.T) {
 			GatewayAPIReferenceGrantController:     true,
 			GatewayAPIGRPCRouteController:          true,
 			GatewayToReconcile:                     managercfg.OptionalNamespacedName{},
-			SecretLabelSelector:                    "",
-			ConfigMapLabelSelector:                 consts.DefaultConfigMapSelector,
+			SecretLabelSelector:                    nil,
+			ConfigMapLabelSelector:                 nil,
 			AdmissionServer: managercfg.AdmissionServerConfig{
 				ListenAddr: "off",
 			},
