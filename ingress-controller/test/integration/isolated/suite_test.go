@@ -28,6 +28,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/consts"
 	testhelpers "github.com/kong/kong-operator/ingress-controller/test/helpers"
@@ -230,7 +231,7 @@ func setUpNamespaceAndCleaner(ctx context.Context, t *testing.T, cfg *envconf.Co
 	}
 
 	t.Log("Create a cluster cleaner")
-	cleaner := clusters.NewCleaner(cluster)
+	cleaner := clusters.NewCleaner(cluster, scheme.Get())
 	t.Cleanup(func() {
 		helpers.DumpDiagnosticsIfFailed(ctx, t, cluster)
 		t.Logf("Start cleanup for test %s", t.Name())

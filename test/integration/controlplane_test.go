@@ -206,7 +206,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 func TestControlPlaneWatchNamespaces(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
-	clOperator := GetClients().OperatorClient
+	// clOperator := GetClients().OperatorClient
 	cl := GetClients().MgrClient
 
 	dp := builder.NewDataPlaneBuilder().
@@ -268,10 +268,12 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	}
 
 	t.Log("deploying controlplane resource")
-	cp, err := clOperator.GatewayOperatorV2alpha1().
-		ControlPlanes(namespace.Name).
-		Create(ctx, cp, metav1.CreateOptions{})
-	require.NoError(t, err)
+	// cp, err := clOperator.GatewayOperatorV2alpha1().
+	// 	ControlPlanes(namespace.Name).
+	// 	Create(ctx, cp, metav1.CreateOptions{})
+	// // require.NoError(t, err)
+	require.NoError(t, cl.Create(GetCtx(), cp))
+	cleaner.Add(cp)
 
 	t.Log("verifying controlplane has a status condition indicating missing WatchNamespaceGrants")
 	require.Eventually(t,

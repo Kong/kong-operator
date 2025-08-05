@@ -22,6 +22,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/consts"
 	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
@@ -114,7 +115,7 @@ func TestMain(m *testing.M) {
 	env, err = builder.Build(ctx)
 	helpers.ExitOnErr(ctx, err)
 
-	cleaner := clusters.NewCleaner(env.Cluster())
+	cleaner := clusters.NewCleaner(env.Cluster(), scheme.Get())
 	defer func() {
 		if err := cleaner.Cleanup(ctx); err != nil {
 			fmt.Printf("ERROR: failed cleaning up the cluster: %v\n", err)
