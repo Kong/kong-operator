@@ -744,15 +744,15 @@ spec:
       containers:
       - name: manager
         env:
-        - name: GATEWAY_OPERATOR_ENABLE_CONTROLLER_GATEWAY
+        - name: KONG_OPERATOR_ENABLE_CONTROLLER_GATEWAY
           value: "true"
-        - name: GATEWAY_OPERATOR_CONTROLPLANE_CONFIG_DUMP_BIND_ADDRESS
+        - name: KONG_OPERATOR_CONTROLPLANE_CONFIG_DUMP_BIND_ADDRESS
           value: ":10256"
-        - name: GATEWAY_OPERATOR_ENABLE_CONTROLPLANE_CONFIG_DUMP
+        - name: KONG_OPERATOR_ENABLE_CONTROLPLANE_CONFIG_DUMP
           value: "true"
-        - name: GATEWAY_OPERATOR_HEALTH_PROBE_BIND_ADDRESS
+        - name: KONG_OPERATOR_HEALTH_PROBE_BIND_ADDRESS
           value: ":8081"
-        - name: GATEWAY_OPERATOR_METRICS_BIND_ADDRESS
+        - name: KONG_OPERATOR_METRICS_BIND_ADDRESS
           value: "0.0.0.0:8080"
         - name: POD_NAMESPACE
           valueFrom:

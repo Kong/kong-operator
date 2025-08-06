@@ -587,7 +587,7 @@ test.integration:
 .PHONY: test.integration_bluegreen
 test.integration_bluegreen:
 	@$(MAKE) _test.integration \
-		GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER="true" \
+		KONG_OPERATOR_BLUEGREEN_CONTROLLER="true" \
 		GOTESTFLAGS="-run='BlueGreen|TestDataPlane' $(GOTESTFLAGS)" \
 		COVERPROFILE="coverage.integration-bluegreen.out" \
 
@@ -762,9 +762,9 @@ _run:
 	@$(TELEPRESENCE) connect
 	bash -c "trap \
 		'$(TELEPRESENCE) quit -s; $(TELEPRESENCE) helm uninstall; rm -rf $(TMP_KUBECONFIG) || 1' EXIT; \
-		GATEWAY_OPERATOR_KUBECONFIG=$(or $(TMP_KUBECONFIG),$(KUBECONFIG)) \
-		GATEWAY_OPERATOR_ANONYMOUS_REPORTS=false \
-		GATEWAY_OPERATOR_LOGGING_MODE=development \
+		KONG_OPERATOR_KUBECONFIG=$(or $(TMP_KUBECONFIG),$(KUBECONFIG)) \
+		KONG_OPERATOR_ANONYMOUS_REPORTS=false \
+		KONG_OPERATOR_LOGGING_MODE=development \
 		go run ./cmd/main.go \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
@@ -809,8 +809,8 @@ run.skaffold:
 
 .PHONY: debug
 debug: manifests generate install.all _ensure-kong-system-namespace
-	GATEWAY_OPERATOR_ANONYMOUS_REPORTS=false \
-	GATEWAY_OPERATOR_LOGGING_MODE=development \
+	KONG_OPERATOR_ANONYMOUS_REPORTS=false \
+	KONG_OPERATOR_LOGGING_MODE=development \
 		dlv debug ./cmd/main.go -- \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \

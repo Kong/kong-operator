@@ -33,7 +33,7 @@ var (
 	existingCluster      = os.Getenv("KONG_TEST_CLUSTER")
 	controllerManagerOut = os.Getenv("KONG_CONTROLLER_OUT")
 	skipClusterCleanup   = strings.ToLower(os.Getenv("KONG_TEST_CLUSTER_PERSIST")) == "true"
-	blueGreenController  = strings.ToLower(os.Getenv("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER")) == "true"
+	blueGreenController  = strings.ToLower(os.Getenv("KONG_OPERATOR_BLUEGREEN_CONTROLLER")) == "true"
 )
 
 var (

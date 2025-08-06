@@ -44,16 +44,16 @@ func TestParse(t *testing.T) {
 			name: "no command line arguments, logging mode is set to development, anonymous reports off",
 			args: []string{},
 			envVars: map[string]string{
-				"POD_NAMESPACE":                      "test",
-				"GATEWAY_OPERATOR_LOGGING_MODE":      "development",
-				"GATEWAY_OPERATOR_ANONYMOUS_REPORTS": "false",
+				"POD_NAMESPACE":                   "test",
+				"KONG_OPERATOR_LOGGING_MODE":      "development",
+				"KONG_OPERATOR_ANONYMOUS_REPORTS": "false",
 			},
 			expectedCfg: func() manager.Config {
 				cfg := expectedDefaultCfg()
 				cfg.LeaderElectionNamespace = "test"
 				cfg.ClusterCASecretNamespace = "test"
 				cfg.ControllerNamespace = "test"
-				// All the below config changes are the result of GATEWAY_OPERATOR_LOGGING_MODE=development.
+				// All the below config changes are the result of KONG_OPERATOR_LOGGING_MODE=development.
 				cfg.LoggingMode = logging.DevelopmentMode
 				loggerOpts := manager.DefaultConfig().LoggerOpts
 				loggerOpts.Development = true
@@ -69,8 +69,8 @@ func TestParse(t *testing.T) {
 				"--metrics-bind-address=:18080",
 			},
 			envVars: map[string]string{
-				"GATEWAY_OPERATOR_METRICS_BIND_ADDRESS":      ":28080",
-				"GATEWAY_OPERATOR_HEALTH_PROBE_BIND_ADDRESS": ":28081",
+				"KONG_OPERATOR_METRICS_BIND_ADDRESS":      ":28080",
+				"KONG_OPERATOR_HEALTH_PROBE_BIND_ADDRESS": ":28081",
 			},
 			expectedCfg: func() manager.Config {
 				cfg := expectedDefaultCfg()
