@@ -103,38 +103,6 @@ func resolveKongConsumerGroupDependencies(cache store.CacheStores, kongConsumerG
 	return resolveObjectDependenciesPlugin(cache, kongConsumerGroup)
 }
 
-// resolveUDPIngressDependencies resolves potential dependencies for a UDPIngress object:
-// - KongPlugin
-// - KongClusterPlugin
-// - Service.
-func resolveUDPIngressDependencies(cache store.CacheStores, udpIngress *configurationv1beta1.UDPIngress) []client.Object {
-	dependencies := resolveObjectDependenciesPlugin(cache, udpIngress)
-	for _, rule := range udpIngress.Spec.Rules {
-		if service, exists, err := cache.Service.GetByKey(
-			fmt.Sprintf("%s/%s", udpIngress.GetNamespace(), rule.Backend.ServiceName),
-		); err == nil && exists {
-			dependencies = append(dependencies, service.(client.Object))
-		}
-	}
-	return dependencies
-}
-
-// resolveTCPIngressDependencies resolves potential dependencies for a TCPIngress object:
-// - KongPlugin
-// - KongClusterPlugin
-// - Service.
-func resolveTCPIngressDependencies(cache store.CacheStores, tcpIngress *configurationv1beta1.TCPIngress) []client.Object {
-	dependencies := resolveObjectDependenciesPlugin(cache, tcpIngress)
-	for _, rule := range tcpIngress.Spec.Rules {
-		if service, exists, err := cache.Service.GetByKey(
-			fmt.Sprintf("%s/%s", tcpIngress.GetNamespace(), rule.Backend.ServiceName),
-		); err == nil && exists {
-			dependencies = append(dependencies, service.(client.Object))
-		}
-	}
-	return dependencies
-}
-
 // resolveKongServiceFacadeDependencies resolves potential dependencies for a KongServiceFacade object:
 // - KongPlugin
 // - KongClusterPlugin

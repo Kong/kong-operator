@@ -138,8 +138,9 @@ func IngressClassValidatorFuncFromV1Ingress(
 	}
 }
 
-// ExtractConfigurationName extracts the name of the KongIngress object that holds
-// information about the configuration to use in Routes, Services and Upstreams.
+// ExtractConfigurationName extracts the konghq.com/override annotation value.
+// This annotation was used to reference KongIngress objects, which are now deprecated.
+// This function is retained for backward compatibility to detect deprecated usage.
 func ExtractConfigurationName(anns map[string]string) string {
 	return anns[AnnotationPrefix+ConfigurationKey]
 }

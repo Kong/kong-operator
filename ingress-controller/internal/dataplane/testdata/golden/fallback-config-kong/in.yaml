@@ -46,38 +46,6 @@ metadata:
     kubernetes.io/ingress.class: kong
     test.konghq.com/broken: "true"
 ---
-apiVersion: configuration.konghq.com/v1beta1
-kind: UDPIngress
-metadata:
-  name: udpingress
-  namespace: default
-  uid: "8c80b242-75fb-44f2-b70d-ab1995da92d8"
-  annotations:
-    kubernetes.io/ingress.class: "kong"
-    test.konghq.com/broken: "true"
-spec:
-  rules:
-    - backend:
-        serviceName: service
-        servicePort: 80
-      port: 9999
----
-apiVersion: configuration.konghq.com/v1beta1
-kind: TCPIngress
-metadata:
-  name: tcpingress
-  namespace: default
-  uid: "1aec1466-196d-495a-8201-d8e07b246e19"
-  annotations:
-    kubernetes.io/ingress.class: kong
-    test.konghq.com/broken: "true"
-spec:
-  rules:
-    - port: 9999
-      backend:
-        serviceName: service
-        servicePort: 80
----
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:

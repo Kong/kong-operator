@@ -87,18 +87,6 @@ var supportedTypes = []cacheStoreSupportedType{
 		StoreField: "ConsumerGroup",
 	},
 	{
-		Type:    "KongIngress",
-		Package: "kongv1",
-	},
-	{
-		Type:    "TCPIngress",
-		Package: "kongv1beta1",
-	},
-	{
-		Type:    "UDPIngress",
-		Package: "kongv1beta1",
-	},
-	{
 		Type:    "KongUpstreamPolicy",
 		Package: "kongv1beta1",
 	},

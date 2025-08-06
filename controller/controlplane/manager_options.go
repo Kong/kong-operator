@@ -166,15 +166,6 @@ const (
 	// managing IngressClass parameters.
 	ControllerNameIngressClassParameters = "INGRESS_CLASS_PARAMETERS"
 
-	// ControllerNameKongUDPIngress identifies the controller for managing Kong
-	// UDP ingress resources.
-	ControllerNameKongUDPIngress = "KONG_UDPINGRESS"
-	// ControllerNameKongTCPIngress identifies the controller for managing Kong
-	// TCP ingress resources.
-	ControllerNameKongTCPIngress = "KONG_TCPINGRESS"
-	// ControllerNameKongIngress identifies the controller for managing
-	// Kong-specific ingress resources.
-	ControllerNameKongIngress = "KONG_INGRESS"
 	// ControllerNameKongClusterPlugin identifies the controller for managing
 	// Kong cluster-scoped plugin resources.
 	ControllerNameKongClusterPlugin = "KONG_CLUSTERPLUGIN"
@@ -219,11 +210,6 @@ const (
 
 // WithControllers sets the controllers for the manager.
 func WithControllers(logger logr.Logger, controllers []gwtypes.ControlPlaneController) managercfg.Opt {
-	logDeprecated := func(logger logr.Logger, enabled bool, controllerName string) {
-		if enabled {
-			log.Info(logger, "chosen controller is deprecated", "controller", controllerName)
-		}
-	}
 	setOpt := func(b *bool, state gwtypes.ControllerState) {
 		if b == nil {
 			return
@@ -244,15 +230,6 @@ func WithControllers(logger logr.Logger, controllers []gwtypes.ControlPlaneContr
 
 			// Kong related controllers.
 
-			case ControllerNameKongUDPIngress:
-				setOpt(&c.UDPIngressEnabled, controller.State)
-				logDeprecated(logger, c.UDPIngressEnabled, controller.Name)
-			case ControllerNameKongTCPIngress:
-				setOpt(&c.TCPIngressEnabled, controller.State)
-				logDeprecated(logger, c.TCPIngressEnabled, controller.Name)
-			case ControllerNameKongIngress:
-				setOpt(&c.KongIngressEnabled, controller.State)
-				logDeprecated(logger, c.KongIngressEnabled, controller.Name)
 			case ControllerNameKongClusterPlugin:
 				setOpt(&c.KongClusterPluginEnabled, controller.State)
 			case ControllerNameKongPlugin:
@@ -315,21 +292,6 @@ func managerConfigToStatusControllers(
 	controllers = append(controllers, gwtypes.ControlPlaneController{
 		Name:  ControllerNameIngressClassParameters,
 		State: boolToControllerState(cfg.IngressClassParametersEnabled),
-	})
-
-	controllers = append(controllers, gwtypes.ControlPlaneController{
-		Name:  ControllerNameKongUDPIngress,
-		State: boolToControllerState(cfg.UDPIngressEnabled),
-	})
-
-	controllers = append(controllers, gwtypes.ControlPlaneController{
-		Name:  ControllerNameKongTCPIngress,
-		State: boolToControllerState(cfg.TCPIngressEnabled),
-	})
-
-	controllers = append(controllers, gwtypes.ControlPlaneController{
-		Name:  ControllerNameKongIngress,
-		State: boolToControllerState(cfg.KongIngressEnabled),
 	})
 
 	controllers = append(controllers, gwtypes.ControlPlaneController{

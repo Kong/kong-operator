@@ -167,33 +167,3 @@ metadata:
   annotations:
     kubernetes.io/ingress.class: kong
     konghq.com/plugins: plugin-consumer-group
----
-apiVersion: configuration.konghq.com/v1beta1
-kind: UDPIngress
-metadata:
-  name: udpingress
-  namespace: default
-  annotations:
-    kubernetes.io/ingress.class: "kong"
-    konghq.com/plugins: plugin
-spec:
-  rules:
-    - backend:
-        serviceName: service
-        servicePort: 80
-      port: 9999
----
-apiVersion: configuration.konghq.com/v1beta1
-kind: TCPIngress
-metadata:
-  name: tcpingress
-  namespace: default
-  annotations:
-    kubernetes.io/ingress.class: kong
-    konghq.com/plugins: plugin
-spec:
-  rules:
-    - port: 9999
-      backend:
-        serviceName: service
-        servicePort: 80

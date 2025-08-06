@@ -36,7 +36,7 @@ func NewCacheStoresFromObjYAML(objs ...[]byte) (c CacheStores, err error) {
 
 // NewCacheStoresFromObjs provides a new CacheStores object given any number of Kubernetes
 // objects that should be pre-populated. This function will sort objects into the appropriate
-// sub-storage (e.g. IngressV1, TCPIngress, e.t.c.) but will produce an error if any of the
+// sub-storage (e.g. IngressV1) but will produce an error if any of the
 // input objects are erroneous or otherwise unusable as Kubernetes objects.
 func NewCacheStoresFromObjs(objs ...runtime.Object) (CacheStores, error) {
 	c := NewCacheStores()

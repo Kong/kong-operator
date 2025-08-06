@@ -119,28 +119,6 @@ func TestWithControllers(t *testing.T) {
 			},
 		},
 		{
-			name: "deprecated kong controllers",
-			controllers: []gwtypes.ControlPlaneController{
-				{
-					Name:  "KONG_UDPINGRESS",
-					State: gwtypes.ControlPlaneControllerStateEnabled,
-				},
-				{
-					Name:  "KONG_TCPINGRESS",
-					State: gwtypes.ControlPlaneControllerStateEnabled,
-				},
-				{
-					Name:  "KONG_INGRESS",
-					State: gwtypes.ControlPlaneControllerStateEnabled,
-				},
-			},
-			validate: func(t *testing.T, cfg *managercfg.Config, logs *bytes.Buffer) {
-				assert.True(t, cfg.UDPIngressEnabled)
-				assert.True(t, cfg.TCPIngressEnabled)
-				assert.True(t, cfg.KongIngressEnabled)
-			},
-		},
-		{
 			name: "unknown controller",
 			controllers: []gwtypes.ControlPlaneController{
 				{
@@ -359,9 +337,6 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 				IngressNetV1Enabled:                false,
 				IngressClassNetV1Enabled:           false,
 				IngressClassParametersEnabled:      false,
-				UDPIngressEnabled:                  false,
-				TCPIngressEnabled:                  false,
-				KongIngressEnabled:                 false,
 				KongClusterPluginEnabled:           false,
 				KongPluginEnabled:                  false,
 				KongConsumerEnabled:                false,
@@ -387,18 +362,6 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 				},
 				{
 					Name:  ControllerNameIngressClassParameters,
-					State: gwtypes.ControlPlaneControllerStateDisabled,
-				},
-				{
-					Name:  ControllerNameKongUDPIngress,
-					State: gwtypes.ControlPlaneControllerStateDisabled,
-				},
-				{
-					Name:  ControllerNameKongTCPIngress,
-					State: gwtypes.ControlPlaneControllerStateDisabled,
-				},
-				{
-					Name:  ControllerNameKongIngress,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
 				{
@@ -476,18 +439,6 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 					State: gwtypes.ControlPlaneControllerStateEnabled,
 				},
 				{
-					Name:  ControllerNameKongUDPIngress,
-					State: gwtypes.ControlPlaneControllerStateDisabled,
-				},
-				{
-					Name:  ControllerNameKongTCPIngress,
-					State: gwtypes.ControlPlaneControllerStateDisabled,
-				},
-				{
-					Name:  ControllerNameKongIngress,
-					State: gwtypes.ControlPlaneControllerStateDisabled,
-				},
-				{
 					Name:  ControllerNameKongClusterPlugin,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
@@ -557,18 +508,6 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 				},
 				{
 					Name:  ControllerNameIngressClassParameters,
-					State: gwtypes.ControlPlaneControllerStateDisabled,
-				},
-				{
-					Name:  ControllerNameKongUDPIngress,
-					State: gwtypes.ControlPlaneControllerStateDisabled,
-				},
-				{
-					Name:  ControllerNameKongTCPIngress,
-					State: gwtypes.ControlPlaneControllerStateDisabled,
-				},
-				{
-					Name:  ControllerNameKongIngress,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
 				{

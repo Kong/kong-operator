@@ -38,7 +38,6 @@ Package v1 contains API Schema definitions for the konghq.com v1 API group.
 
 - [KongClusterPlugin](#kongclusterplugin)
 - [KongConsumer](#kongconsumer)
-- [KongIngress](#kongingress)
 - [KongPlugin](#kongplugin)
 ### KongClusterPlugin
 
@@ -82,25 +81,6 @@ KongConsumer is the Schema for the kongconsumers API.
 | `credentials` _string array_ | Credentials are references to secrets containing a credential to be provisioned in Kong. |
 | `consumerGroups` _string array_ | ConsumerGroups are references to consumer groups (that consumer wants to be part of) provisioned in Kong. |
 | `spec` _[KongConsumerSpec](#kongconsumerspec)_ |  |
-
-
-
-### KongIngress
-
-
-KongIngress is the Schema for the kongingresses API.
-Deprecated: Use annotations and KongUpstreamPolicy instead. See https://developer.konghq.com/kubernetes-ingress-controller/migrate/kongingress/
-
-{% include md/kic/crd-ref/kong_ingress_description.md kong_version=page.kong_version %}
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `configuration.konghq.com/v1`
-| `kind` _string_ | `KongIngress`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `upstream` _[KongIngressUpstream](#kongingressupstream)_ | Upstream represents a virtual hostname and can be used to loadbalance incoming requests over multiple targets (e.g. Kubernetes `Services` can be a target, OR `Endpoints` can be targets). |
-| `proxy` _[KongIngressService](#kongingressservice)_ | Proxy defines additional connection options for the routes to be configured in the Kong Gateway, e.g. `connection_timeout`, `retries`, etc. |
-| `route` _[KongIngressRoute](#kongingressroute)_ | Route define rules to match client requests. Each Route is associated with a Service, and a Service may have multiple Routes associated to it. |
 
 
 
@@ -190,84 +170,6 @@ _Appears in:_
 
 
 
-#### KongIngressRoute
-
-
-KongIngressRoute contains KongIngress route configuration.
-It contains the subset of `go-kong.kong.Route` fields supported by `kongstate.Route.overrideByKongIngress`.
-Deprecated: use Ingress' annotations instead.
-
-
-
-| Field | Description |
-| --- | --- |
-| `methods` _string array_ | Methods is a list of HTTP methods that match this Route. Deprecated: use Ingress' "konghq.com/methods" annotation instead. |
-| `headers` _object (keys:string, values:string array)_ | Headers contains one or more lists of values indexed by header name that will cause this Route to match if present in the request. The Host header cannot be used with this attribute. Deprecated: use Ingress' "konghq.com/headers" annotation instead. |
-| `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols is an array of the protocols this Route should allow. Deprecated: use Ingress' "konghq.com/protocols" annotation instead. |
-| `regex_priority` _integer_ | RegexPriority is a number used to choose which route resolves a given request when several routes match it using regexes simultaneously. Deprecated: use Ingress' "konghq.com/regex-priority" annotation instead. |
-| `strip_path` _boolean_ | StripPath sets When matching a Route via one of the paths strip the matching prefix from the upstream request URL. Deprecated: use Ingress' "konghq.com/strip-path" annotation instead. |
-| `preserve_host` _boolean_ | PreserveHost sets When matching a Route via one of the hosts domain names, use the request Host header in the upstream request headers. If set to false, the upstream Host header will be that of the Service’s host. Deprecated: use Ingress' "konghq.com/preserve-host" annotation instead. |
-| `https_redirect_status_code` _integer_ | HTTPSRedirectStatusCode is the status code Kong responds with when all properties of a Route match except the protocol. Deprecated: use Ingress' "ingress.kubernetes.io/force-ssl-redirect" or "konghq.com/https-redirect-status-code" annotations instead. |
-| `path_handling` _string_ | PathHandling controls how the Service path, Route path and requested path are combined when sending a request to the upstream. Deprecated: use Ingress' "konghq.com/path-handling" annotation instead. |
-| `snis` _string array_ | SNIs is a list of SNIs that match this Route when using stream routing. Deprecated: use Ingress' "konghq.com/snis" annotation instead. |
-| `request_buffering` _boolean_ | RequestBuffering sets whether to enable request body buffering or not. Deprecated: use Ingress' "konghq.com/request-buffering" annotation instead. |
-| `response_buffering` _boolean_ | ResponseBuffering sets whether to enable response body buffering or not. Deprecated: use Ingress' "konghq.com/response-buffering" annotation instead. |
-
-
-_Appears in:_
-- [KongIngress](#kongingress)
-
-#### KongIngressService
-
-
-KongIngressService contains KongIngress service configuration.
-It contains the subset of go-kong.kong.Service fields supported by kongstate.Service.overrideByKongIngress.
-Deprecated: use Service's annotations instead.
-
-
-
-| Field | Description |
-| --- | --- |
-| `protocol` _string_ | The protocol used to communicate with the upstream. Deprecated: use Service's "konghq.com/protocol" annotation instead. |
-| `path` _string_ | (optional) The path to be used in requests to the upstream server. Deprecated: use Service's "konghq.com/path" annotation instead. |
-| `retries` _integer_ | The number of retries to execute upon failure to proxy. Deprecated: use Service's "konghq.com/retries" annotation instead. |
-| `connect_timeout` _integer_ | The timeout in milliseconds for	establishing a connection to the upstream server. Deprecated: use Service's "konghq.com/connect-timeout" annotation instead. |
-| `read_timeout` _integer_ | The timeout in milliseconds between two successive read operations for transmitting a request to the upstream server. Deprecated: use Service's "konghq.com/read-timeout" annotation instead. |
-| `write_timeout` _integer_ | The timeout in milliseconds between two successive write operations for transmitting a request to the upstream server. Deprecated: use Service's "konghq.com/write-timeout" annotation instead. |
-
-
-_Appears in:_
-- [KongIngress](#kongingress)
-
-#### KongIngressUpstream
-
-
-KongIngressUpstream contains KongIngress upstream configuration.
-It contains the subset of `go-kong.kong.Upstream` fields supported by `kongstate.Upstream.overrideByKongIngress`.
-
-
-
-| Field | Description |
-| --- | --- |
-| `host_header` _string_ | HostHeader is The hostname to be used as Host header when proxying requests through Kong. |
-| `algorithm` _string_ | Algorithm is the load balancing algorithm to use. Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency". |
-| `slots` _integer_ | Slots is the number of slots in the load balancer algorithm. |
-| `healthchecks` _[Healthcheck](#healthcheck)_ | Healthchecks defines the health check configurations in Kong. |
-| `hash_on` _string_ | HashOn defines what to use as hashing input. Accepted values are: "none", "consumer", "ip", "header", "cookie", "path", "query_arg", "uri_capture". |
-| `hash_fallback` _string_ | HashFallback defines What to use as hashing input if the primary hash_on does not return a hash. Accepted values are: "none", "consumer", "ip", "header", "cookie". |
-| `hash_on_header` _string_ | HashOnHeader defines the header name to take the value from as hash input. Only required when "hash_on" is set to "header". |
-| `hash_fallback_header` _string_ | HashFallbackHeader is the header name to take the value from as hash input. Only required when "hash_fallback" is set to "header". |
-| `hash_on_cookie` _string_ | The cookie name to take the value from as hash input. Only required when "hash_on" or "hash_fallback" is set to "cookie". |
-| `hash_on_cookie_path` _string_ | The cookie path to set in the response headers. Only required when "hash_on" or "hash_fallback" is set to "cookie". |
-| `hash_on_query_arg` _string_ | HashOnQueryArg is the query string parameter whose value is the hash input when "hash_on" is set to "query_arg". |
-| `hash_fallback_query_arg` _string_ | HashFallbackQueryArg is the "hash_fallback" version of HashOnQueryArg. |
-| `hash_on_uri_capture` _string_ | HashOnURICapture is the name of the capture group whose value is the hash input when "hash_on" is set to "uri_capture". |
-| `hash_fallback_uri_capture` _string_ | HashFallbackURICapture is the "hash_fallback" version of HashOnURICapture. |
-
-
-_Appears in:_
-- [KongIngress](#kongingress)
-
 
 
 #### KongProtocol
@@ -282,7 +184,6 @@ This alias is necessary to deal with https://github.com/kubernetes-sigs/controll
 
 _Appears in:_
 - [KongClusterPlugin](#kongclusterplugin)
-- [KongIngressRoute](#kongingressroute)
 - [KongPlugin](#kongplugin)
 
 #### NamespacedConfigPatch
@@ -561,8 +462,6 @@ Package v1beta1 contains API Schema definitions for the configuration.konghq.com
 
 - [KongConsumerGroup](#kongconsumergroup)
 - [KongUpstreamPolicy](#kongupstreampolicy)
-- [TCPIngress](#tcpingress)
-- [UDPIngress](#udpingress)
 ### KongConsumerGroup
 
 
@@ -583,16 +482,11 @@ KongConsumerGroup is the Schema for the kongconsumergroups API.
 
 
 KongUpstreamPolicy allows configuring algorithm that should be used for load balancing traffic between Kong
-Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets.<br /><br />
-Its configuration is similar to Kong Upstream object (https://docs.konghq.com/gateway/latest/admin-api/#upstream-object),
-and it is applied to Kong Upstream objects created by the controller.<br /><br />
-It can be attached to Services. To attach it to a Service, it has to be annotated with
+Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets.<br /><br />Its configuration is similar to Kong Upstream object (https://docs.konghq.com/gateway/latest/admin-api/#upstream-object),
+and it is applied to Kong Upstream objects created by the controller.<br /><br />It can be attached to Services. To attach it to a Service, it has to be annotated with
 `konghq.com/upstream-policy: <name>`, where `<name>` is the name of the KongUpstreamPolicy
-object in the same namespace as the Service.<br /><br />
-When attached to a Service, it will affect all Kong Upstreams created for the Service.<br /><br />
-When attached to a Service used in a Gateway API *Route rule with multiple BackendRefs, all of its Services MUST
-be configured with the same KongUpstreamPolicy. Otherwise, the controller will *ignore* the KongUpstreamPolicy.<br /><br />
-Note: KongUpstreamPolicy doesn't implement Gateway API's GEP-713 strictly.
+object in the same namespace as the Service.<br /><br />When attached to a Service, it will affect all Kong Upstreams created for the Service.<br /><br />When attached to a Service used in a Gateway API *Route rule with multiple BackendRefs, all of its Services MUST
+be configured with the same KongUpstreamPolicy. Otherwise, the controller will *ignore* the KongUpstreamPolicy.<br /><br />Note: KongUpstreamPolicy doesn't implement Gateway API's GEP-713 strictly.
 In particular, it doesn't use the TargetRef for attaching to Services and Gateway API *Routes - annotations are
 used instead. This is to allow reusing the same KongUpstreamPolicy for multiple Services and Gateway API *Routes.
 
@@ -604,40 +498,6 @@ used instead. This is to allow reusing the same KongUpstreamPolicy for multiple 
 | `kind` _string_ | `KongUpstreamPolicy`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongUpstreamPolicySpec](#kongupstreampolicyspec)_ | Spec contains the configuration of the Kong upstream. |
-
-
-
-### TCPIngress
-
-
-TCPIngress is the Schema for the tcpingresses API.
-Deprecated: Use Gateway API instead. See https://developer.konghq.com/kubernetes-ingress-controller/migrate/ingress-to-gateway/
-
-{% include md/kic/crd-ref/tcp_ingress_description.md kong_version=page.kong_version %}
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
-| `kind` _string_ | `TCPIngress`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[TCPIngressSpec](#tcpingressspec)_ | Spec is the TCPIngress specification. |
-
-
-
-### UDPIngress
-
-
-UDPIngress is the Schema for the udpingresses API.
-Deprecated: Use Gateway API instead. See https://developer.konghq.com/kubernetes-ingress-controller/migrate/ingress-to-gateway/
-
-{% include md/kic/crd-ref/udp_ingress_description.md kong_version=page.kong_version %}
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
-| `kind` _string_ | `UDPIngress`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[UDPIngressSpec](#udpingressspec)_ | Spec is the UDPIngress specification. |
 
 
 
@@ -661,7 +521,7 @@ _Appears in:_
 _Underlying type:_ `string`
 
 HashInput is the input for consistent-hashing load balancing algorithm.
-It is required use "none" to disable hashing when "algorithm" is set to sticky sessions.
+Use "none" to disable hashing, it is required for sticky sessions.
 
 
 
@@ -669,57 +529,6 @@ It is required use "none" to disable hashing when "algorithm" is set to sticky s
 
 _Appears in:_
 - [KongUpstreamHash](#kongupstreamhash)
-
-#### IngressBackend
-
-
-IngressBackend describes all endpoints for a given service and port.
-
-
-
-| Field | Description |
-| --- | --- |
-| `serviceName` _string_ | Specifies the name of the referenced service. |
-| `servicePort` _integer_ | Specifies the port of the referenced service. |
-
-
-_Appears in:_
-- [IngressRule](#ingressrule)
-- [UDPIngressRule](#udpingressrule)
-
-#### IngressRule
-
-
-IngressRule represents a rule to apply against incoming requests.
-Matching is performed based on an (optional) SNI and port.
-
-
-
-| Field | Description |
-| --- | --- |
-| `host` _string_ | Host is the fully qualified domain name of a network host, as defined by RFC 3986. If a Host is not specified, then port-based TCP routing is performed. Kong doesn't care about the content of the TCP stream in this case. If a Host is specified, the protocol must be TLS over TCP. A plain-text TCP request cannot be routed based on Host. It can only be routed based on Port. |
-| `port` _integer_ | Port is the port on which to accept TCP or TLS over TCP sessions and route. It is a required field. If a Host is not specified, the requested are routed based only on Port. |
-| `backend` _[IngressBackend](#ingressbackend)_ | Backend defines the referenced service endpoint to which the traffic will be forwarded to. |
-
-
-_Appears in:_
-- [TCPIngressSpec](#tcpingressspec)
-
-#### IngressTLS
-
-
-IngressTLS describes the transport layer security.
-
-
-
-| Field | Description |
-| --- | --- |
-| `hosts` _string array_ | Hosts are a list of hosts included in the TLS certificate. The values in this list must match the name/s used in the tlsSecret. Defaults to the wildcard host setting for the loadbalancer controller fulfilling this Ingress, if left unspecified. |
-| `secretName` _string_ | SecretName is the name of the secret used to terminate SSL traffic. |
-
-
-_Appears in:_
-- [TCPIngressSpec](#tcpingressspec)
 
 #### KongConsumerGroupSpec
 
@@ -894,58 +703,5 @@ This is achieved using cookies and requires Kong Enterprise Gateway.
 
 _Appears in:_
 - [KongUpstreamPolicySpec](#kongupstreampolicyspec)
-
-#### TCPIngressSpec
-
-
-TCPIngressSpec defines the desired state of TCPIngress.
-
-
-
-| Field | Description |
-| --- | --- |
-| `rules` _[IngressRule](#ingressrule) array_ | A list of rules used to configure the Ingress. |
-| `tls` _[IngressTLS](#ingresstls) array_ | TLS configuration. This is similar to the `tls` section in the Ingress resource in networking.v1beta1 group. The mapping of SNIs to TLS cert-key pair defined here will be used for HTTP Ingress rules as well. Once can define the mapping in this resource or the original Ingress resource, both have the same effect. |
-
-
-_Appears in:_
-- [TCPIngress](#tcpingress)
-
-
-
-#### UDPIngressRule
-
-
-UDPIngressRule represents a rule to apply against incoming requests
-wherein no Host matching is available for request routing, only the port
-is used to match requests.
-
-
-
-| Field | Description |
-| --- | --- |
-| `port` _integer_ | Port indicates the port for the Kong proxy to accept incoming traffic on, which will then be routed to the service Backend. |
-| `backend` _[IngressBackend](#ingressbackend)_ | Backend defines the Kubernetes service which accepts traffic from the listening Port defined above. |
-
-
-_Appears in:_
-- [UDPIngressSpec](#udpingressspec)
-
-#### UDPIngressSpec
-
-
-UDPIngressSpec defines the desired state of UDPIngress.
-
-
-
-| Field | Description |
-| --- | --- |
-| `rules` _[UDPIngressRule](#udpingressrule) array_ | A list of rules used to configure the Ingress. |
-
-
-_Appears in:_
-- [UDPIngress](#udpingress)
-
-
 
 <!-- vale on -->

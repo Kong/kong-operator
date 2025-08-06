@@ -23,32 +23,29 @@ import (
 // CacheStores stores cache.Store for all Kinds of k8s objects that
 // the Ingress Controller reads.
 type CacheStores struct {
-	IngressV1                      cache.Store
-	IngressClassV1                 cache.Store
-	Service                        cache.Store
-	Secret                         cache.Store
-	ConfigMap                      cache.Store
-	EndpointSlice                  cache.Store
-	HTTPRoute                      cache.Store
-	UDPRoute                       cache.Store
-	TCPRoute                       cache.Store
-	TLSRoute                       cache.Store
-	GRPCRoute                      cache.Store
-	ReferenceGrant                 cache.Store
-	Gateway                        cache.Store
-	BackendTLSPolicy               cache.Store
-	Plugin                         cache.Store
-	ClusterPlugin                  cache.Store
-	Consumer                       cache.Store
-	ConsumerGroup                  cache.Store
-	KongIngress                    cache.Store
-	TCPIngress                     cache.Store
-	UDPIngress                     cache.Store
-	KongUpstreamPolicy             cache.Store
+	IngressV1 cache.Store
+	IngressClassV1 cache.Store
+	Service cache.Store
+	Secret cache.Store
+	ConfigMap cache.Store
+	EndpointSlice cache.Store
+	HTTPRoute cache.Store
+	UDPRoute cache.Store
+	TCPRoute cache.Store
+	TLSRoute cache.Store
+	GRPCRoute cache.Store
+	ReferenceGrant cache.Store
+	Gateway cache.Store
+	BackendTLSPolicy cache.Store
+	Plugin cache.Store
+	ClusterPlugin cache.Store
+	Consumer cache.Store
+	ConsumerGroup cache.Store
+	KongUpstreamPolicy cache.Store
 	IngressClassParametersV1alpha1 cache.Store
-	KongServiceFacade              cache.Store
-	KongVault                      cache.Store
-	KongCustomEntity               cache.Store
+	KongServiceFacade cache.Store
+	KongVault cache.Store
+	KongCustomEntity cache.Store
 
 	l *sync.RWMutex
 }
@@ -56,32 +53,29 @@ type CacheStores struct {
 // NewCacheStores is a convenience function for CacheStores to initialize all attributes with new cache stores.
 func NewCacheStores() CacheStores {
 	return CacheStores{
-		IngressV1:                      cache.NewStore(namespacedKeyFunc),
-		IngressClassV1:                 cache.NewStore(clusterWideKeyFunc),
-		Service:                        cache.NewStore(namespacedKeyFunc),
-		Secret:                         cache.NewStore(namespacedKeyFunc),
-		ConfigMap:                      cache.NewStore(namespacedKeyFunc),
-		EndpointSlice:                  cache.NewStore(namespacedKeyFunc),
-		HTTPRoute:                      cache.NewStore(namespacedKeyFunc),
-		UDPRoute:                       cache.NewStore(namespacedKeyFunc),
-		TCPRoute:                       cache.NewStore(namespacedKeyFunc),
-		TLSRoute:                       cache.NewStore(namespacedKeyFunc),
-		GRPCRoute:                      cache.NewStore(namespacedKeyFunc),
-		ReferenceGrant:                 cache.NewStore(namespacedKeyFunc),
-		Gateway:                        cache.NewStore(namespacedKeyFunc),
-		BackendTLSPolicy:               cache.NewStore(namespacedKeyFunc),
-		Plugin:                         cache.NewStore(namespacedKeyFunc),
-		ClusterPlugin:                  cache.NewStore(clusterWideKeyFunc),
-		Consumer:                       cache.NewStore(namespacedKeyFunc),
-		ConsumerGroup:                  cache.NewStore(namespacedKeyFunc),
-		KongIngress:                    cache.NewStore(namespacedKeyFunc),
-		TCPIngress:                     cache.NewStore(namespacedKeyFunc),
-		UDPIngress:                     cache.NewStore(namespacedKeyFunc),
-		KongUpstreamPolicy:             cache.NewStore(namespacedKeyFunc),
+		IngressV1: cache.NewStore(namespacedKeyFunc),
+		IngressClassV1: cache.NewStore(clusterWideKeyFunc),
+		Service: cache.NewStore(namespacedKeyFunc),
+		Secret: cache.NewStore(namespacedKeyFunc),
+		ConfigMap: cache.NewStore(namespacedKeyFunc),
+		EndpointSlice: cache.NewStore(namespacedKeyFunc),
+		HTTPRoute: cache.NewStore(namespacedKeyFunc),
+		UDPRoute: cache.NewStore(namespacedKeyFunc),
+		TCPRoute: cache.NewStore(namespacedKeyFunc),
+		TLSRoute: cache.NewStore(namespacedKeyFunc),
+		GRPCRoute: cache.NewStore(namespacedKeyFunc),
+		ReferenceGrant: cache.NewStore(namespacedKeyFunc),
+		Gateway: cache.NewStore(namespacedKeyFunc),
+		BackendTLSPolicy: cache.NewStore(namespacedKeyFunc),
+		Plugin: cache.NewStore(namespacedKeyFunc),
+		ClusterPlugin: cache.NewStore(clusterWideKeyFunc),
+		Consumer: cache.NewStore(namespacedKeyFunc),
+		ConsumerGroup: cache.NewStore(namespacedKeyFunc),
+		KongUpstreamPolicy: cache.NewStore(namespacedKeyFunc),
 		IngressClassParametersV1alpha1: cache.NewStore(namespacedKeyFunc),
-		KongServiceFacade:              cache.NewStore(namespacedKeyFunc),
-		KongVault:                      cache.NewStore(clusterWideKeyFunc),
-		KongCustomEntity:               cache.NewStore(namespacedKeyFunc),
+		KongServiceFacade: cache.NewStore(namespacedKeyFunc),
+		KongVault: cache.NewStore(clusterWideKeyFunc),
+		KongCustomEntity: cache.NewStore(namespacedKeyFunc),
 
 		l: &sync.RWMutex{},
 	}
@@ -129,12 +123,6 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.Consumer.Get(obj)
 	case *kongv1beta1.KongConsumerGroup:
 		return c.ConsumerGroup.Get(obj)
-	case *kongv1.KongIngress:
-		return c.KongIngress.Get(obj)
-	case *kongv1beta1.TCPIngress:
-		return c.TCPIngress.Get(obj)
-	case *kongv1beta1.UDPIngress:
-		return c.UDPIngress.Get(obj)
 	case *kongv1beta1.KongUpstreamPolicy:
 		return c.KongUpstreamPolicy.Get(obj)
 	case *kongv1alpha1.IngressClassParameters:
@@ -192,12 +180,6 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.Consumer.Add(obj)
 	case *kongv1beta1.KongConsumerGroup:
 		return c.ConsumerGroup.Add(obj)
-	case *kongv1.KongIngress:
-		return c.KongIngress.Add(obj)
-	case *kongv1beta1.TCPIngress:
-		return c.TCPIngress.Add(obj)
-	case *kongv1beta1.UDPIngress:
-		return c.UDPIngress.Add(obj)
 	case *kongv1beta1.KongUpstreamPolicy:
 		return c.KongUpstreamPolicy.Add(obj)
 	case *kongv1alpha1.IngressClassParameters:
@@ -255,12 +237,6 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.Consumer.Delete(obj)
 	case *kongv1beta1.KongConsumerGroup:
 		return c.ConsumerGroup.Delete(obj)
-	case *kongv1.KongIngress:
-		return c.KongIngress.Delete(obj)
-	case *kongv1beta1.TCPIngress:
-		return c.TCPIngress.Delete(obj)
-	case *kongv1beta1.UDPIngress:
-		return c.UDPIngress.Delete(obj)
 	case *kongv1beta1.KongUpstreamPolicy:
 		return c.KongUpstreamPolicy.Delete(obj)
 	case *kongv1alpha1.IngressClassParameters:
@@ -296,9 +272,6 @@ func (c CacheStores) ListAllStores() []cache.Store {
 		c.ClusterPlugin,
 		c.Consumer,
 		c.ConsumerGroup,
-		c.KongIngress,
-		c.TCPIngress,
-		c.UDPIngress,
 		c.KongUpstreamPolicy,
 		c.IngressClassParametersV1alpha1,
 		c.KongServiceFacade,
@@ -328,9 +301,6 @@ func (c CacheStores) SupportedTypes() []client.Object {
 		&kongv1.KongClusterPlugin{},
 		&kongv1.KongConsumer{},
 		&kongv1beta1.KongConsumerGroup{},
-		&kongv1.KongIngress{},
-		&kongv1beta1.TCPIngress{},
-		&kongv1beta1.UDPIngress{},
 		&kongv1beta1.KongUpstreamPolicy{},
 		&kongv1alpha1.IngressClassParameters{},
 		&incubatorv1alpha1.KongServiceFacade{},
