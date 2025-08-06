@@ -20,6 +20,7 @@ import (
 	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -70,20 +71,20 @@ func TestReconciler_Reconcile(t *testing.T) {
 						string(ControlPlaneFinalizerCleanupValidatingWebhookConfiguration),
 					},
 				},
-				Spec: operatorv2alpha1.ControlPlaneSpec{
-					DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-						Type: operatorv2alpha1.ControlPlaneDataPlaneTargetRefType,
-						Ref: &operatorv2alpha1.ControlPlaneDataPlaneTargetRef{
+				Spec: gwtypes.ControlPlaneSpec{
+					DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+						Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+						Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
 							Name: "test-dataplane",
 						},
 					},
-					ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
+					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 						WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
 							Type: operatorv2alpha1.WatchNamespacesTypeAll,
 						},
 					},
 				},
-				Status: operatorv2alpha1.ControlPlaneStatus{
+				Status: gwtypes.ControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
 							Type:   string(kcfgcontrolplane.ConditionTypeProvisioned),

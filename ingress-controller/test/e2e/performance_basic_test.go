@@ -166,7 +166,7 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 		for j := i; j < i+batchSize && j < defaultResNum; j++ {
 			resourceYaml += fmt.Sprintf(rulesTpl, j, j, j, j, base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(consumerUsername, j))), j, j, fmt.Sprintf(consumerUsername, j), j)
 		}
-		err = applyResourceWithKubectl(ctx, t, kubeconfig, resourceYaml)
+		err = applyResourceWithKubectl(ctx, kubeconfig, resourceYaml)
 		require.NoError(t, err)
 	}
 	completionTime := time.Now()
@@ -200,11 +200,10 @@ func TestResourceApplyAndUpdatePerf(t *testing.T) {
 	t.Logf("time to make %d ingress rules take effect: %v", defaultResNum, effectTime.Sub(completionTime))
 	writeResultToTempFile(t, allResourceTakeEffectReport, defaultResNum, int(effectTime.Sub(completionTime).Milliseconds()))
 
-	rand.Seed(time.Now().UnixNano())
 	randomInt := rand.Intn(10000)
 
 	startTime = time.Now()
-	err = applyResourceWithKubectl(ctx, t, kubeconfig, fmt.Sprintf(updatedIngressTpl, randomInt, randomInt, randomInt))
+	err = applyResourceWithKubectl(ctx, kubeconfig, fmt.Sprintf(updatedIngressTpl, randomInt, randomInt, randomInt))
 	require.NoError(t, err)
 	completionTime = time.Now()
 
@@ -254,7 +253,7 @@ func isRouteActive(ctx context.Context, t *testing.T, client *http.Client, proxy
 	return false
 }
 
-func applyResourceWithKubectl(ctx context.Context, t *testing.T, kubeconfig, resourceYAML string) error {
+func applyResourceWithKubectl(ctx context.Context, kubeconfig, resourceYAML string) error {
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "apply", "-f", "-")
 	cmd.Stdin = strings.NewReader(resourceYAML)
 	err := cmd.Run()
@@ -279,7 +278,7 @@ func writeResultToTempFile(t *testing.T, filename string, resourceNum, time int)
 	}
 	defer file.Close()
 
-	_, err = file.WriteString(fmt.Sprintf("%d %d\n", resourceNum, time))
+	_, err = fmt.Fprintf(file, "%d %d\n", resourceNum, time)
 	if err != nil {
 		t.Logf("failed to write to file: %v", err)
 		return

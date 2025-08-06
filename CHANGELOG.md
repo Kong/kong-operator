@@ -81,6 +81,10 @@
   reconciliation returns with an error.
   [#1958](https://github.com/Kong/kong-operator/pull/1958)
   [#1974](https://github.com/Kong/kong-operator/pull/1974)
+- Refactored Konnect extension processing for `ControlPlane` and `DataPlane` resources
+  by introducing the `ExtensionProcessor` interface.
+  This change enables KonnecExtensions for `ControlPlane v2alpha1`.
+  [#1978](https://github.com/Kong/kong-operator/pull/1978)
 
 ### Fixed
 

@@ -7,6 +7,7 @@ run:
     - conformance_tests
     - istio_tests
     - envtest
+    - performance_tests
 linters:
   enable:
     - asciicheck
@@ -54,13 +55,16 @@ linters:
       default-signifies-exhaustive: true
     forbidigo:
       forbid:
-      # Uncomment or remove - TODO: https://github.com/Kong/kong-operator/issues/1847
+        # Uncomment or remove - TODO: https://github.com/Kong/kong-operator/issues/1847
         # - pattern: ^.*Dataplane[^G].*$
         #   msg: Please use camel case 'DataPlane' instead of 'Dataplane'
         - pattern: ^.*Controlplane.*$
           msg: Please use camel case 'ControlPlane' instead of 'Controlplane'
         - pattern: ^.*operatorv1beta1.ControlPlane.*$
           msg: Please use v2alpha1 ControlPlane (through github.com/kong/kong-operator/internal/types)
+        # NOTE: When all references use the types package, this rule can use .* instead of listing types.
+        - pattern: ^.*operatorv2alpha1.(ControlPlane|ControlPlaneStatus|ControlPlaneList|ControlPlaneSpec|ControlPlaneOptions|ControlPlaneDataPlaneTarget\w*)\b.*$
+          msg: Please use the types package to refer to the type (through github.com/kong/kong-operator/internal/types)
     gomodguard:
       blocked:
         modules:
@@ -195,7 +199,10 @@ linters:
       - linters:
           - gosec
         text: integer overflow conversion
-      # end of section.
+      - linters:
+          - forbidigo
+        path: internal/types/operatortypes.go
+        text: use of `operatorv2alpha1.(ControlPlane\w*)` forbidden
     paths:
       - pkg/clientset
       - config/

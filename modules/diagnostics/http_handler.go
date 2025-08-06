@@ -11,9 +11,8 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
-
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
 // HTTPHandler is a handler for the diagnostics HTTP endpoints.
@@ -64,7 +63,7 @@ type ListControlPlaneItem struct {
 
 func (h *HTTPHandler) handleListControlPlanes(rw http.ResponseWriter, r *http.Request, cl client.Client) {
 	// List all ControlPlane CRDs.
-	cpList := operatorv2alpha1.ControlPlaneList{}
+	cpList := gwtypes.ControlPlaneList{}
 	if err := cl.List(r.Context(), &cpList); err != nil {
 		h.logger.Error(err, "failed to list managed ControlPlanes")
 		rw.WriteHeader(http.StatusInternalServerError)
@@ -78,14 +77,14 @@ func (h *HTTPHandler) handleListControlPlanes(rw http.ResponseWriter, r *http.Re
 		return id.String(), struct{}{}
 	})
 
-	managedCPs := lo.Filter(cpList.Items, func(cp operatorv2alpha1.ControlPlane, _ int) bool {
+	managedCPs := lo.Filter(cpList.Items, func(cp gwtypes.ControlPlane, _ int) bool {
 		_, ok := cpIDMap[string(cp.UID)]
 		return ok
 	})
 
 	// Make up the response from the filtered ControlPlanes.
 	resp := &ListControlPlanesResponse{
-		ControlPlanes: lo.Map(managedCPs, func(cp operatorv2alpha1.ControlPlane, _ int) ListControlPlaneItem {
+		ControlPlanes: lo.Map(managedCPs, func(cp gwtypes.ControlPlane, _ int) ListControlPlaneItem {
 			return ListControlPlaneItem{
 				Namespace: cp.Namespace,
 				Name:      cp.Name,
@@ -136,7 +135,7 @@ func (h *HTTPHandler) handleControlPlaneConfigDump(rw http.ResponseWriter, r *ht
 		return
 	}
 
-	cp := &operatorv2alpha1.ControlPlane{}
+	cp := &gwtypes.ControlPlane{}
 	if err := h.cl.Get(r.Context(), client.ObjectKey{
 		Namespace: namespace,
 		Name:      name,

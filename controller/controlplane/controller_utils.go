@@ -8,9 +8,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
 // GetDataPlaneForControlPlane retrieves the DataPlane object referenced by a ControlPlane.
@@ -20,7 +20,7 @@ func GetDataPlaneForControlPlane(
 	cp *ControlPlane,
 ) (*operatorv1beta1.DataPlane, error) {
 	switch cp.Spec.DataPlane.Type {
-	case operatorv2alpha1.ControlPlaneDataPlaneTargetRefType:
+	case gwtypes.ControlPlaneDataPlaneTargetRefType:
 		if cp.Spec.DataPlane.Ref == nil || cp.Spec.DataPlane.Ref.Name == "" {
 			return nil, fmt.Errorf("%w, controlplane = %s/%s", operatorerrors.ErrDataPlaneNotSet, cp.Namespace, cp.Name)
 		}
@@ -41,10 +41,4 @@ func GetDataPlaneForControlPlane(
 	default:
 		return nil, fmt.Errorf("unsupported ControlPlane's DataPlane type: %s", cp.Spec.DataPlane.Type)
 	}
-}
-
-// builControlPlaneInstanceID builds a unique identifier for the ControlPlane instance
-// based on its namespace, name, and UID.
-func builControlPlaneInstanceID(cp *operatorv2alpha1.ControlPlane) string {
-	return cp.Namespace + "/" + cp.Name + "-" + string(cp.GetUID())
 }

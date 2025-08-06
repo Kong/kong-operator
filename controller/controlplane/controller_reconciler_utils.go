@@ -19,6 +19,7 @@ import (
 
 	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
@@ -54,7 +55,7 @@ func (r *Reconciler) ensureDataPlaneStatus(
 	dataplane *operatorv1beta1.DataPlane,
 ) (dataplaneIsSet bool, err error) {
 	switch cp.Spec.DataPlane.Type {
-	case operatorv2alpha1.ControlPlaneDataPlaneTargetRefType:
+	case gwtypes.ControlPlaneDataPlaneTargetRefType:
 		dataplaneIsSet = cp.Spec.DataPlane.Ref != nil && cp.Spec.DataPlane.Ref.Name == dataplane.Name
 
 		var newCondition metav1.Condition
@@ -91,7 +92,7 @@ func (r *Reconciler) ensureDataPlaneStatus(
 // communication between the ControlPlane and the DataPlane.
 func (r *Reconciler) ensureAdminMTLSCertificateSecret(
 	ctx context.Context,
-	cp *operatorv2alpha1.ControlPlane,
+	cp *gwtypes.ControlPlane,
 ) (
 	op.Result,
 	*corev1.Secret,

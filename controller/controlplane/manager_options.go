@@ -574,3 +574,12 @@ func WithWatchNamespaces(watchNamespaces []string) managercfg.Opt {
 		c.WatchNamespaces = watchNamespaces
 	}
 }
+
+// WithKonnectConfig sets the Konnect configuration for the manager.
+func WithKonnectConfig(konnectConfig *managercfg.KonnectConfig) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		if konnectConfig != nil {
+			c.Konnect = *konnectConfig
+		}
+	}
+}
