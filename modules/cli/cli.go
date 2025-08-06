@@ -119,29 +119,42 @@ type flagsForFurtherEvaluation struct {
 }
 
 const (
-	envVarFlagPrefix = "GATEWAY_OPERATOR_"
+	envDeprecatedVarFlagPrefix = "GATEWAY_OPERATOR_"
+	envVarFlagPrefix           = "KONG_OPERATOR_"
 )
+
+// setFlagFromEnvVar looks for the env var name corresponding to `f`: if the env val is found its value is set
+// to the flag. In case of error it panics.
+func setFlagFromEnvVar(f *flag.Flag) {
+	envVarFlagName := strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))
+
+	deprecatedEnvKey := envDeprecatedVarFlagPrefix + envVarFlagName
+	if envValue, envSet := os.LookupEnv(deprecatedEnvKey); envSet {
+		fmt.Printf("WARN: %q env variable is deprecated, please use %q instead\n", deprecatedEnvKey, deprecatedEnvKey)
+		if err := f.Value.Set(envValue); err != nil {
+			panic(fmt.Errorf("environment binding failed for variable %s: %w", deprecatedEnvKey, err))
+		}
+	}
+
+	envKey := envVarFlagPrefix + envVarFlagName
+	if envValue, envSet := os.LookupEnv(envKey); envSet {
+		if err := f.Value.Set(envValue); err != nil {
+			panic(fmt.Errorf("environment binding failed for variable %s: %w", envKey, err))
+		}
+	}
+}
 
 // bindEnvVarsToFlags, for each flag defined on `cmd` (local or parent persistent), looks up the corresponding environment
 // variable and (if the flag is unset) takes that environment variable value as the flag value.
-
 func (c *CLI) bindEnvVarsToFlags() (err error) {
-	var envKey string
+	// setFlagFromEnvVar panics: that way we can recover and extract the variable name that failed.
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("environment binding failed for variable %s: %v", envKey, r)
+			err = fmt.Errorf("%v", r)
 		}
 	}()
 
-	c.flagSet.VisitAll(func(f *flag.Flag) {
-		envKey = fmt.Sprintf("%s%s", envVarFlagPrefix, strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_")))
-
-		if envValue, envSet := os.LookupEnv(envKey); envSet {
-			if err := f.Value.Set(envValue); err != nil {
-				panic(err)
-			}
-		}
-	})
+	c.flagSet.VisitAll(setFlagFromEnvVar)
 
 	return err
 }
