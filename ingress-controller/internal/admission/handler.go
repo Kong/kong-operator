@@ -105,7 +105,6 @@ var (
 		Version:  configurationv1.SchemeGroupVersion.Version,
 		Resource: "kongclusterplugins",
 	}
-
 	kongVaultGVResource = metav1.GroupVersionResource{
 		Group:    configurationv1alpha1.SchemeGroupVersion.Group,
 		Version:  configurationv1alpha1.SchemeGroupVersion.Version,
@@ -153,7 +152,6 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 		return h.handleGateway(ctx, request, responseBuilder)
 	case gatewayapi.V1HTTPRouteGVResource, gatewayapi.V1beta1HTTPRouteGVResource:
 		return h.handleHTTPRoute(ctx, request, responseBuilder)
-
 	case kongVaultGVResource:
 		return h.handleKongVault(ctx, request, responseBuilder)
 	case kongCustomEntityGVResource:

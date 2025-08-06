@@ -171,7 +171,6 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 		HasControlPlaneReference:          true,
 	},
-
 	typeNeeded{
 		Group:                             "configuration.konghq.com",
 		Version:                           "v1alpha1",

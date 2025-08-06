@@ -11,7 +11,6 @@ spec:
   - name: GatewayAlpha
     state: enabled
   controllers:
-
   - name: KONG_INGRESS
     state: disabled
   - name: GWAPI_GATEWAY

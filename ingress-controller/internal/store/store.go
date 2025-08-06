@@ -70,7 +70,6 @@ type Storer interface {
 	ListCACerts() ([]*corev1.Secret, []*corev1.ConfigMap, error)
 
 	// Kong resources.
-
 	GetKongPlugin(namespace, name string) (*configurationv1.KongPlugin, error)
 	GetKongClusterPlugin(name string) (*configurationv1.KongClusterPlugin, error)
 	GetKongConsumer(namespace, name string) (*configurationv1.KongConsumer, error)
@@ -81,7 +80,6 @@ type Storer interface {
 	GetKongVault(name string) (*configurationv1alpha1.KongVault, error)
 	GetKongCustomEntity(namespace, name string) (*configurationv1alpha1.KongCustomEntity, error)
 	ListIngressClassParametersV1Alpha1() []*configurationv1alpha1.IngressClassParameters
-
 	ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlugin, error)
 	ListKongPlugins() []*configurationv1.KongPlugin
 	ListKongClusterPlugins() []*configurationv1.KongClusterPlugin
@@ -785,7 +783,6 @@ func mkObjFromGVK(gvk schema.GroupVersionKind) (runtime.Object, error) {
 	// ----------------------------------------------------------------------------
 	// Kong APIs
 	// ----------------------------------------------------------------------------
-
 	case configurationv1.SchemeGroupVersion.WithKind("KongPlugin"):
 		return &configurationv1.KongPlugin{}, nil
 	case configurationv1.SchemeGroupVersion.WithKind("KongClusterPlugin"):

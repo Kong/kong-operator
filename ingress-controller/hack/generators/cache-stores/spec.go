@@ -86,7 +86,6 @@ var supportedTypes = []cacheStoreSupportedType{
 		Package:    "kongv1beta1",
 		StoreField: "ConsumerGroup",
 	},
-
 	{
 		Type:    "KongUpstreamPolicy",
 		Package: "kongv1beta1",

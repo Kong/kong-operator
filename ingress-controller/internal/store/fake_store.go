@@ -271,28 +271,26 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	// In many cases objects we'd like to dump do not have their GVK set, so we need to set it manually based on
 	// their known type - otherwise the YAML dump will not work.
 	typeToGVK := map[reflect.Type]schema.GroupVersionKind{
-		reflect.TypeOf(&netv1.Ingress{}):               netv1.SchemeGroupVersion.WithKind("Ingress"),
-		reflect.TypeOf(&netv1.IngressClass{}):          netv1.SchemeGroupVersion.WithKind("IngressClass"),
-		reflect.TypeOf(&gatewayapi.HTTPRoute{}):        gatewayv1.SchemeGroupVersion.WithKind("HTTPRoute"),
-		reflect.TypeOf(&gatewayapi.UDPRoute{}):         gatewayv1alpha2.SchemeGroupVersion.WithKind("UDPRoute"),
-		reflect.TypeOf(&gatewayapi.TCPRoute{}):         gatewayv1alpha2.SchemeGroupVersion.WithKind("TCPRoute"),
-		reflect.TypeOf(&gatewayapi.TLSRoute{}):         gatewayv1alpha2.SchemeGroupVersion.WithKind("TLSRoute"),
-		reflect.TypeOf(&gatewayapi.GRPCRoute{}):        gatewayv1.SchemeGroupVersion.WithKind("GRPCRoute"),
-		reflect.TypeOf(&gatewayapi.ReferenceGrant{}):   gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"),
-		reflect.TypeOf(&gatewayapi.Gateway{}):          gatewayv1.SchemeGroupVersion.WithKind("Gateway"),
-		reflect.TypeOf(&gatewayapi.BackendTLSPolicy{}): gatewayv1alpha3.SchemeGroupVersion.WithKind("BackendTLSPolicy"),
-
+		reflect.TypeOf(&netv1.Ingress{}):                                netv1.SchemeGroupVersion.WithKind("Ingress"),
+		reflect.TypeOf(&netv1.IngressClass{}):                           netv1.SchemeGroupVersion.WithKind("IngressClass"),
+		reflect.TypeOf(&gatewayapi.HTTPRoute{}):                         gatewayv1.SchemeGroupVersion.WithKind("HTTPRoute"),
+		reflect.TypeOf(&gatewayapi.UDPRoute{}):                          gatewayv1alpha2.SchemeGroupVersion.WithKind("UDPRoute"),
+		reflect.TypeOf(&gatewayapi.TCPRoute{}):                          gatewayv1alpha2.SchemeGroupVersion.WithKind("TCPRoute"),
+		reflect.TypeOf(&gatewayapi.TLSRoute{}):                          gatewayv1alpha2.SchemeGroupVersion.WithKind("TLSRoute"),
+		reflect.TypeOf(&gatewayapi.GRPCRoute{}):                         gatewayv1.SchemeGroupVersion.WithKind("GRPCRoute"),
+		reflect.TypeOf(&gatewayapi.ReferenceGrant{}):                    gatewayv1beta1.SchemeGroupVersion.WithKind("ReferenceGrant"),
+		reflect.TypeOf(&gatewayapi.Gateway{}):                           gatewayv1.SchemeGroupVersion.WithKind("Gateway"),
+		reflect.TypeOf(&gatewayapi.BackendTLSPolicy{}):                  gatewayv1alpha3.SchemeGroupVersion.WithKind("BackendTLSPolicy"),
 		reflect.TypeOf(&configurationv1alpha1.IngressClassParameters{}): configurationv1alpha1.SchemeGroupVersion.WithKind("IngressClassParameters"),
 		reflect.TypeOf(&corev1.Service{}):                               corev1.SchemeGroupVersion.WithKind("Service"),
 		reflect.TypeOf(&discoveryv1.EndpointSlice{}):                    discoveryv1.SchemeGroupVersion.WithKind("EndpointSlice"),
 		reflect.TypeOf(&corev1.Secret{}):                                corev1.SchemeGroupVersion.WithKind("Secret"),
 		reflect.TypeOf(&configurationv1.KongPlugin{}):                   configurationv1.SchemeGroupVersion.WithKind("KongPlugin"),
 		reflect.TypeOf(&configurationv1.KongClusterPlugin{}):            configurationv1.SchemeGroupVersion.WithKind("KongClusterPlugin"),
-
-		reflect.TypeOf(&configurationv1.KongConsumer{}):           configurationv1.SchemeGroupVersion.WithKind("KongConsumer"),
-		reflect.TypeOf(&configurationv1beta1.KongConsumerGroup{}): configurationv1beta1.SchemeGroupVersion.WithKind("KongConsumerGroup"),
-		reflect.TypeOf(&configurationv1alpha1.KongVault{}):        configurationv1alpha1.SchemeGroupVersion.WithKind(configurationv1alpha1.KongVaultKind),
-		reflect.TypeOf(&configurationv1alpha1.KongCustomEntity{}): configurationv1alpha1.SchemeGroupVersion.WithKind(configurationv1alpha1.KongCustomEntityKind),
+		reflect.TypeOf(&configurationv1.KongConsumer{}):                 configurationv1.SchemeGroupVersion.WithKind("KongConsumer"),
+		reflect.TypeOf(&configurationv1beta1.KongConsumerGroup{}):       configurationv1beta1.SchemeGroupVersion.WithKind("KongConsumerGroup"),
+		reflect.TypeOf(&configurationv1alpha1.KongVault{}):              configurationv1alpha1.SchemeGroupVersion.WithKind(configurationv1alpha1.KongVaultKind),
+		reflect.TypeOf(&configurationv1alpha1.KongCustomEntity{}):       configurationv1alpha1.SchemeGroupVersion.WithKind(configurationv1alpha1.KongCustomEntityKind),
 	}
 
 	out := &bytes.Buffer{}
@@ -325,14 +323,12 @@ func (objects FakeObjects) MarshalToYAML() ([]byte, error) {
 	allObjects = append(allObjects, lo.ToAnySlice(objects.ReferenceGrants)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.Gateways)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.BackendTLSPolicies)...)
-
 	allObjects = append(allObjects, lo.ToAnySlice(objects.IngressClassParametersV1alpha1)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.Services)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.EndpointSlices)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.Secrets)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongPlugins)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongClusterPlugins)...)
-
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongConsumers)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongConsumerGroups)...)
 	allObjects = append(allObjects, lo.ToAnySlice(objects.KongVaults)...)

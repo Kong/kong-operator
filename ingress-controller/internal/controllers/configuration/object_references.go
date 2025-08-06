@@ -38,7 +38,6 @@ func updateReferredObjects(
 		referredSecretList = listKongClusterPluginReferredSecrets(obj)
 	case *configurationv1.KongConsumer:
 		referredSecretList = listKongConsumerReferredSecrets(obj)
-
 	}
 
 	for _, nsName := range referredSecretList {

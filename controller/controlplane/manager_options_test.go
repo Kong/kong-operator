@@ -364,7 +364,6 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 					Name:  ControllerNameIngressClassParameters,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
-
 				{
 					Name:  ControllerNameKongClusterPlugin,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
@@ -439,7 +438,6 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 					Name:  ControllerNameIngressClassParameters,
 					State: gwtypes.ControlPlaneControllerStateEnabled,
 				},
-
 				{
 					Name:  ControllerNameKongClusterPlugin,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
@@ -512,7 +510,6 @@ func TestManagerConfigToStatusControllers(t *testing.T) {
 					Name:  ControllerNameIngressClassParameters,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
 				},
-
 				{
 					Name:  ControllerNameKongClusterPlugin,
 					State: gwtypes.ControlPlaneControllerStateDisabled,
