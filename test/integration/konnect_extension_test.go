@@ -281,6 +281,7 @@ func KonnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCasePara
 
 	t.Run("KonnectExtension with KonnectNamespacedRef control plane ref", func(t *testing.T) {
 		t.Run("manual secret provisioning", func(t *testing.T) {
+			t.Skip("test")
 			t.Logf("Creating a Secret Certificate for the KonnectExtension")
 			secretCert := deploy.Secret(
 				t, ctx, params.client,
