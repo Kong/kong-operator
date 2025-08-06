@@ -121,7 +121,7 @@ func listExtendableReferencedExtensions[t extensions.ExtendableT](_ context.Cont
 	recs := []reconcile.Request{}
 
 	for _, ext := range o.GetExtensions() {
-		if ext.Group != konnectv1alpha1.SchemeGroupVersion.Group ||
+		if ext.Group != konnectv1alpha2.SchemeGroupVersion.Group ||
 			ext.Kind != konnectv1alpha2.KonnectExtensionKind {
 			continue
 		}
