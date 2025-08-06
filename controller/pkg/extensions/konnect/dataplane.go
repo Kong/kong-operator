@@ -2,6 +2,7 @@ package konnect
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/samber/lo"
 	appsv1 "k8s.io/api/apps/v1"
@@ -11,16 +12,30 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
+	"github.com/kong/kong-operator/controller/pkg/extensions"
 	"github.com/kong/kong-operator/internal/utils/config"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 )
 
-// ApplyDataPlaneKonnectExtension gets the DataPlane as argument, and in case it references a KonnectExtension, it
+// DataPlaneKonnectExtensionProcessor processes Konnect extensions for DataPlane resources.
+type DataPlaneKonnectExtensionProcessor struct{}
+
+// Compile-time check to ensure DataPlaneKonnectExtensionProcessor implements the extensions.ExtensionProcessor interface.
+var _ extensions.Processor = (*DataPlaneKonnectExtensionProcessor)(nil)
+
+// Process gets the DataPlane as argument, and in case it references a KonnectExtension, it
 // fetches the referenced extension and applies the necessary changes to the DataPlane spec.
-func ApplyDataPlaneKonnectExtension(ctx context.Context, cl client.Client, dataPlane *operatorv1beta1.DataPlane) (bool, error) {
+func (p *DataPlaneKonnectExtensionProcessor) Process(ctx context.Context, cl client.Client, object client.Object) (bool, error) {
 	var konnectExtension *konnectv1alpha2.KonnectExtension
+
+	// First thing we do is check if the object is a DataPlane.
+	dataPlane, ok := object.(*operatorv1beta1.DataPlane)
+	if !ok {
+		return false, fmt.Errorf("object is not a DataPlane: %T", object)
+	}
+
 	for _, extensionRef := range dataPlane.Spec.Extensions {
 		extension, err := getExtension(ctx, cl, dataPlane.Namespace, extensionRef)
 		if err != nil {
