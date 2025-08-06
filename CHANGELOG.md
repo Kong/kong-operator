@@ -48,6 +48,8 @@
   [#1792](https://github.com/Kong/kong-operator/pull/1972)
   <!-- https://github.com/Kong/kong-operator/issues/1944 -->
 - Removed `KongIngress`, `TCPIngress` and `UDPIngress` CRDs together with their controllers.
+  For migration guidance from these resources to Gateway API, please refer to the
+  [migration documentation](https://developer.konghq.com/kubernetes-ingress-controller/migrate/ingress-to-gateway/).
   [#1971](https://github.com/Kong/kong-operator/pull/1971)
 
 ### Added
