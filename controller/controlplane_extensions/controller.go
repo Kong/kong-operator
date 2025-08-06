@@ -26,7 +26,6 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
 
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	"github.com/kong/kong-operator/controller/pkg/log"
@@ -83,7 +82,7 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 			CacheSyncTimeout: r.CacheSyncTimeout,
 		}).
 		// Watch for changes to owned ControlPlane that had DataPlane.
-		For(&operatorv2alpha1.ControlPlane{},
+		For(&gwtypes.ControlPlane{},
 			builder.WithPredicates(
 				ControlPlaneDataPlanePluginsSpecChangedPredicate{},
 			),

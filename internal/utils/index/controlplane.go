@@ -3,8 +3,6 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
-
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
@@ -43,7 +41,7 @@ func dataPlaneNameOnControlPlane(o client.Object) []string {
 	}
 	dp := controlPlane.Spec.DataPlane
 	switch dp.Type {
-	case operatorv2alpha1.ControlPlaneDataPlaneTargetRefType:
+	case gwtypes.ControlPlaneDataPlaneTargetRefType:
 		// Note: .Name is a pointer, enforced to be non nil at the CRD level.
 		return []string{controlPlane.Spec.DataPlane.Ref.Name}
 	// TODO(pmalek): implement DataPlane external URL type
