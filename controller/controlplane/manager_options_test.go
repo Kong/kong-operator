@@ -1072,3 +1072,116 @@ func TestConfigMapLabelSelector(t *testing.T) {
 		"konghq.com/configmap": "true",
 	}, cfg.ConfigMapLabelSelector)
 }
+
+func TestWithKonnectOptions(t *testing.T) {
+	tests := []struct {
+		name                  string
+		konnectOptions        *operatorv2alpha1.ControlPlaneKonnectOptions
+		existingKonnectConfig *managercfg.KonnectConfig
+		expectedConfig        managercfg.KonnectConfig
+	}{
+		{
+			name:           "nil konnect options should not modify config",
+			konnectOptions: nil,
+			existingKonnectConfig: &managercfg.KonnectConfig{
+				ConfigSynchronizationEnabled: true,
+				ControlPlaneID:               "test-cp-id",
+			},
+			expectedConfig: managercfg.KonnectConfig{
+				ConfigSynchronizationEnabled: true,
+				ControlPlaneID:               "test-cp-id",
+			},
+		},
+		{
+			name: "should configure consumer sync disabled",
+			konnectOptions: &operatorv2alpha1.ControlPlaneKonnectOptions{
+				ConsumersSync: func() *operatorv2alpha1.ControlPlaneKonnectConsumersSyncState {
+					state := operatorv2alpha1.ControlPlaneKonnectConsumersSyncStateDisabled
+					return &state
+				}(),
+			},
+			existingKonnectConfig: &managercfg.KonnectConfig{},
+			expectedConfig: managercfg.KonnectConfig{
+				ConsumersSyncDisabled: true,
+			},
+		},
+		{
+			name: "should configure consumer sync enabled",
+			konnectOptions: &operatorv2alpha1.ControlPlaneKonnectOptions{
+				ConsumersSync: func() *operatorv2alpha1.ControlPlaneKonnectConsumersSyncState {
+					state := operatorv2alpha1.ControlPlaneKonnectConsumersSyncStateEnabled
+					return &state
+				}(),
+			},
+			existingKonnectConfig: &managercfg.KonnectConfig{},
+			expectedConfig: managercfg.KonnectConfig{
+				ConsumersSyncDisabled: false,
+			},
+		},
+		{
+			name: "should configure licensing options",
+			konnectOptions: &operatorv2alpha1.ControlPlaneKonnectOptions{
+				Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
+					State: func() *operatorv2alpha1.ControlPlaneKonnectLicensingState {
+						state := operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled
+						return &state
+					}(),
+					InitialPollingPeriod: &metav1.Duration{Duration: 5 * time.Minute},
+					PollingPeriod:        &metav1.Duration{Duration: 10 * time.Minute},
+					StorageState: func() *operatorv2alpha1.ControlPlaneKonnectLicensingState {
+						state := operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled
+						return &state
+					}(),
+				},
+			},
+			existingKonnectConfig: &managercfg.KonnectConfig{},
+			expectedConfig: managercfg.KonnectConfig{
+				LicenseSynchronizationEnabled: true,
+				InitialLicensePollingPeriod:   5 * time.Minute,
+				LicensePollingPeriod:          10 * time.Minute,
+				LicenseStorageEnabled:         true,
+			},
+		},
+		{
+			name: "should configure node refresh and config upload periods",
+			konnectOptions: &operatorv2alpha1.ControlPlaneKonnectOptions{
+				NodeRefreshPeriod:  &metav1.Duration{Duration: 15 * time.Second},
+				ConfigUploadPeriod: &metav1.Duration{Duration: 30 * time.Second},
+			},
+			existingKonnectConfig: &managercfg.KonnectConfig{},
+			expectedConfig: managercfg.KonnectConfig{
+				RefreshNodePeriod:  15 * time.Second,
+				UploadConfigPeriod: 30 * time.Second,
+			},
+		},
+		{
+			name: "should merge with existing config",
+			konnectOptions: &operatorv2alpha1.ControlPlaneKonnectOptions{
+				ConsumersSync: func() *operatorv2alpha1.ControlPlaneKonnectConsumersSyncState {
+					state := operatorv2alpha1.ControlPlaneKonnectConsumersSyncStateDisabled
+					return &state
+				}(),
+			},
+			existingKonnectConfig: &managercfg.KonnectConfig{
+				ConfigSynchronizationEnabled: true,
+				ControlPlaneID:               "existing-cp-id",
+				Address:                      "https://konnect.konghq.com",
+			},
+			expectedConfig: managercfg.KonnectConfig{
+				ConfigSynchronizationEnabled: true,
+				ControlPlaneID:               "existing-cp-id",
+				Address:                      "https://konnect.konghq.com",
+				ConsumersSyncDisabled:        true,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &managercfg.Config{}
+			opt := WithKonnectOptions(tt.konnectOptions, tt.existingKonnectConfig)
+			opt(cfg)
+			assert.Equal(t, tt.expectedConfig, cfg.Konnect)
+		})
+	}
+}

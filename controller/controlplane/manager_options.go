@@ -537,11 +537,48 @@ func WithWatchNamespaces(watchNamespaces []string) managercfg.Opt {
 	}
 }
 
-// WithKonnectConfig sets the Konnect configuration for the manager.
-func WithKonnectConfig(konnectConfig *managercfg.KonnectConfig) managercfg.Opt {
+// WithKonnectOptions merges Konnect options from ControlPlane spec with the existing Konnect configuration.
+func WithKonnectOptions(konnectOptions *operatorv2alpha1.ControlPlaneKonnectOptions, existingKonnectConfig *managercfg.KonnectConfig) managercfg.Opt {
 	return func(c *managercfg.Config) {
-		if konnectConfig != nil {
-			c.Konnect = *konnectConfig
+		// Start with existing config if provided
+		if existingKonnectConfig != nil {
+			c.Konnect = *existingKonnectConfig
+		}
+
+		// Apply ControlPlane Konnect options if specified
+		if konnectOptions == nil {
+			return
+		}
+
+		// Configure consumer synchronization
+		if konnectOptions.ConsumersSync != nil {
+			c.Konnect.ConsumersSyncDisabled = (*konnectOptions.ConsumersSync == operatorv2alpha1.ControlPlaneKonnectConsumersSyncStateDisabled)
+		}
+
+		// Configure licensing
+		if licensing := konnectOptions.Licensing; licensing != nil {
+			if licensing.State != nil {
+				c.Konnect.LicenseSynchronizationEnabled = (*licensing.State == operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled)
+			}
+			if licensing.InitialPollingPeriod != nil {
+				c.Konnect.InitialLicensePollingPeriod = licensing.InitialPollingPeriod.Duration
+			}
+			if licensing.PollingPeriod != nil {
+				c.Konnect.LicensePollingPeriod = licensing.PollingPeriod.Duration
+			}
+			if licensing.StorageState != nil {
+				c.Konnect.LicenseStorageEnabled = (*licensing.StorageState == operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled)
+			}
+		}
+
+		// Configure node refresh period
+		if konnectOptions.NodeRefreshPeriod != nil {
+			c.Konnect.RefreshNodePeriod = konnectOptions.NodeRefreshPeriod.Duration
+		}
+
+		// Configure config upload period
+		if konnectOptions.ConfigUploadPeriod != nil {
+			c.Konnect.UploadConfigPeriod = konnectOptions.ConfigUploadPeriod.Duration
 		}
 	}
 }
