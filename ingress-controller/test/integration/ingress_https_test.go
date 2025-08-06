@@ -115,7 +115,7 @@ func TestHTTPSIngress(t *testing.T) {
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	assert.NoError(t, err)
 	cleaner.Add(service)
 
@@ -173,18 +173,20 @@ func TestHTTPSIngress(t *testing.T) {
 	// created before and after referred secret created both works.
 	// so here we interleave the creating process of deploying 2 ingresses and secrets.
 	t.Log("deploying secrets and ingresses")
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress1))
+	ingress1, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress1, metav1.CreateOptions{})
+	require.NoError(t, err)
 	cleaner.Add(ingress1)
 
 	secret1, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secrets[0], metav1.CreateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	cleaner.Add(secret1)
 
 	secret2, err := env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, secrets[1], metav1.CreateOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	cleaner.Add(secret2)
 
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress2))
+	ingress2, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress2, metav1.CreateOptions{})
+	require.NoError(t, err)
 	cleaner.Add(ingress2)
 
 	t.Log("checking first ingress status readiness")

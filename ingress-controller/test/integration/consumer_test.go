@@ -43,7 +43,7 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service)
 
@@ -52,7 +52,8 @@ func TestConsumerCredential(t *testing.T) {
 		"konghq.com/strip-path": "true",
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	require.NoError(t, err)
 	cleaner.Add(ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
@@ -123,7 +124,7 @@ func TestConsumerCredential(t *testing.T) {
 			"password": "test_consumer_credential",
 		},
 	}
-	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, credential, metav1.CreateOptions{})
+	credential, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Create(ctx, credential, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(credential)
 
@@ -137,7 +138,7 @@ func TestConsumerCredential(t *testing.T) {
 		Username:    uuid.NewString(),
 		Credentials: []string{credential.Name},
 	}
-	_, err = c.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, consumer, metav1.CreateOptions{})
+	consumer, err = c.ConfigurationV1().KongConsumers(ns.Name).Create(ctx, consumer, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(consumer)
 
