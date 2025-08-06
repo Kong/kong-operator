@@ -384,18 +384,18 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 
 	t.Logf("exposing deployment %s via service", deployment1.Name)
 	service1 := generators.NewServiceForDeployment(deployment1, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service1, metav1.CreateOptions{})
+	service1, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service1, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("exposing deployment %s via service", deployment2.Name)
 	service2 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service2, metav1.CreateOptions{})
+	service2, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service2, metav1.CreateOptions{})
 	require.NoError(t, err)
 	// service3 has an annotation the others don't. we expect the controller to skip rules that have different annotations
 	service3 := generators.NewServiceForDeployment(deployment2, corev1.ServiceTypeLoadBalancer)
 	service3.Annotations = map[string]string{annotations.AnnotationPrefix + annotations.HostHeaderKey: "example.com"}
 	service3.Name = "nginx-host"
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service3, metav1.CreateOptions{})
+	service3, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service3, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service1)
 	cleaner.Add(service2)

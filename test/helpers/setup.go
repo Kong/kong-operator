@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
 // TODO https://github.com/Kong/kubernetes-testing-framework/issues/302
@@ -24,7 +26,7 @@ func SetupTestEnv(t *testing.T, ctx context.Context, env environments.Environmen
 	t.Helper()
 
 	t.Log("performing test setup")
-	cleaner := clusters.NewCleaner(env.Cluster())
+	cleaner := clusters.NewCleaner(env.Cluster(), scheme.Get())
 	t.Cleanup(func() {
 		t.Helper()
 

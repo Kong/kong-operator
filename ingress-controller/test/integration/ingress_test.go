@@ -58,7 +58,7 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service)
 
@@ -67,7 +67,8 @@ func TestIngressEssentials(t *testing.T) {
 		"konghq.com/strip-path": "true",
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	require.NoError(t, err)
 	cleaner.Add(ingress)
 
 	t.Log("waiting for updated ingress status to include IP")
@@ -166,7 +167,7 @@ func TestIngressDefaultBackend(t *testing.T) {
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service)
 
@@ -183,7 +184,8 @@ func TestIngressDefaultBackend(t *testing.T) {
 			},
 		},
 	}
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	require.NoError(t, err)
 	cleaner.Add(ingress)
 
 	t.Log("matching path")
@@ -216,7 +218,7 @@ func TestIngressClassNameSpec(t *testing.T) {
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service)
 
@@ -226,7 +228,8 @@ func TestIngressClassNameSpec(t *testing.T) {
 		service,
 	)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	require.NoError(t, err)
 	cleaner.Add(ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
@@ -327,7 +330,8 @@ func TestIngressServiceUpstream(t *testing.T) {
 		"konghq.com/strip-path": "true",
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	require.NoError(t, err)
 	cleaner.Add(ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
@@ -528,7 +532,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 		Scope:     kong.String(netv1.IngressClassParametersReferenceScopeNamespace),
 		Namespace: &params.Namespace,
 	}
-	_, err = env.Cluster().Client().NetworkingV1().IngressClasses().Update(ctx, class, metav1.UpdateOptions{})
+	class, err = env.Cluster().Client().NetworkingV1().IngressClasses().Update(ctx, class, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	defer func() {
@@ -576,7 +580,8 @@ func TestIngressClassRegexToggle(t *testing.T) {
 			},
 		},
 	}
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	require.NoError(t, err)
 	cleaner.Add(ingress)
 
 	// we only test the positive case here, and assume the negative case (without the toggle, this will not route)
@@ -654,11 +659,11 @@ func TestIngressRegexPrefix(t *testing.T) {
 			},
 		},
 	}
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	require.NoError(t, err)
 	cleaner.Add(ingress)
 
 	t.Logf("creating an ingress with a non-default prefix for service %s", service.Name)
-	require.NoError(t, err)
 	ingressMod := &netv1.Ingress{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "regex-prefix-ns",
@@ -705,7 +710,8 @@ func TestIngressRegexPrefix(t *testing.T) {
 			},
 		},
 	}
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingressMod))
+	ingressMod, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingressMod, metav1.CreateOptions{})
+	require.NoError(t, err)
 	cleaner.Add(ingressMod)
 
 	t.Log("waiting for ingress path to become available")

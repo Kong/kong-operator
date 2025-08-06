@@ -9,6 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 )
 
 // Setup is a test helper function which:
@@ -24,7 +26,7 @@ func Setup(ctx context.Context, t *testing.T, env environments.Environment) (*co
 
 	t.Log("performing test setup")
 	cluster := env.Cluster()
-	cleaner := clusters.NewCleaner(cluster)
+	cleaner := clusters.NewCleaner(cluster, scheme.Get())
 	t.Cleanup(func() { //nolint:contextcheck
 		// We still want to dump the diagnostics and perform the cleanup so use
 		// a separate context.

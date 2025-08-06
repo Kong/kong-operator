@@ -48,7 +48,7 @@ func TestPluginEssentials(t *testing.T) {
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service)
 
@@ -57,7 +57,8 @@ func TestPluginEssentials(t *testing.T) {
 		"konghq.com/strip-path": "true",
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	require.NoError(t, err)
 	cleaner.Add(ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
@@ -108,9 +109,10 @@ func TestPluginEssentials(t *testing.T) {
 	require.NoError(t, err)
 	kongplugin, err = c.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, kongplugin, metav1.CreateOptions{})
 	require.NoError(t, err)
+	cleaner.Add(kongplugin)
+
 	kongclusterplugin, err = c.ConfigurationV1().KongClusterPlugins().Create(ctx, kongclusterplugin, metav1.CreateOptions{})
 	require.NoError(t, err)
-	cleaner.Add(kongplugin)
 	cleaner.Add(kongclusterplugin)
 
 	t.Logf("updating Ingress to use plugin %s", kongplugin.Name)
@@ -177,7 +179,7 @@ func TestPluginConfigPatch(t *testing.T) {
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service)
 
@@ -186,7 +188,8 @@ func TestPluginConfigPatch(t *testing.T) {
 		"konghq.com/strip-path": "true",
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	require.NoError(t, err)
 	cleaner.Add(ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
@@ -503,7 +506,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service)
 
@@ -512,7 +515,8 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 		"konghq.com/strip-path": "true",
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
-	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), ns.Name, ingress))
+	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	require.NoError(t, err)
 	cleaner.Add(ingress)
 
 	t.Log("waiting for routes from Ingress to be operational")
@@ -578,7 +582,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 			"key": "thirtytangas",
 		},
 	}
-	_, err = env.Cluster().Client().CoreV1().Secrets(remote.Name).Create(ctx, credential, metav1.CreateOptions{})
+	credential, err = env.Cluster().Client().CoreV1().Secrets(remote.Name).Create(ctx, credential, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(credential)
 
@@ -593,7 +597,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 		Username:    uuid.NewString(),
 		Credentials: []string{credential.Name},
 	}
-	_, err = c.ConfigurationV1().KongConsumers(remote.Name).Create(ctx, consumer, metav1.CreateOptions{})
+	consumer, err = c.ConfigurationV1().KongConsumers(remote.Name).Create(ctx, consumer, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(consumer)
 
@@ -661,7 +665,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 		},
 	}
 	// Not the namespace as the plugin.
-	_, err = gatewayClient.GatewayV1beta1().ReferenceGrants(remote.Name).Create(ctx, grant, metav1.CreateOptions{})
+	grant, err = gatewayClient.GatewayV1beta1().ReferenceGrants(remote.Name).Create(ctx, grant, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(grant)
 
@@ -677,7 +681,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 	}, negativeCheckWait, waitTick)
 
 	t.Logf("creating a ReferenceGrant that permits kongconsumer access from %s to kongplugins in %s", remote.Name, ns.Name)
-	grant = &gatewayapi.ReferenceGrant{
+	grant2 := &gatewayapi.ReferenceGrant{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: uuid.NewString(),
 		},
@@ -697,9 +701,9 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 			},
 		},
 	}
-	_, err = gatewayClient.GatewayV1beta1().ReferenceGrants(ns.Name).Create(ctx, grant, metav1.CreateOptions{})
+	grant2, err = gatewayClient.GatewayV1beta1().ReferenceGrants(ns.Name).Create(ctx, grant2, metav1.CreateOptions{})
 	require.NoError(t, err)
-	cleaner.Add(grant)
+	cleaner.Add(grant2)
 
 	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {

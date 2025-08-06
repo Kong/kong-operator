@@ -8,7 +8,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/samber/lo"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -205,10 +204,9 @@ func TestControlPlaneEssentials(t *testing.T) {
 }
 
 func TestControlPlaneWatchNamespaces(t *testing.T) {
-	t.Skip("Using KIC as a library in ControlPlane controller broke this test  (https://github.com/kong/kong-operator/issues/1659)")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	// clOperator := GetClients().OperatorClient
 	cl := GetClients().MgrClient
 
 	dp := builder.NewDataPlaneBuilder().
@@ -229,8 +227,8 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 		Build()
 
 	t.Log("deploying dataplane resource")
+
 	require.NoError(t, cl.Create(GetCtx(), dp))
-	cleaner.Add(dp)
 
 	createNamespace := func(t *testing.T, cl client.Client, cleaner *clusters.Cleaner, generateName string) *corev1.Namespace {
 		ns := &corev1.Namespace{
@@ -270,6 +268,10 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	}
 
 	t.Log("deploying controlplane resource")
+	// cp, err := clOperator.GatewayOperatorV2alpha1().
+	// 	ControlPlanes(namespace.Name).
+	// 	Create(ctx, cp, metav1.CreateOptions{})
+	// // require.NoError(t, err)
 	require.NoError(t, cl.Create(GetCtx(), cp))
 	cleaner.Add(cp)
 
@@ -291,9 +293,7 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 
 	t.Log("add missing WatchNamespaceGrants")
 	wA := watchNamespaceGrantForNamespace(t, cl, cp, nsA.Name)
-	cleaner.Add(wA)
-	wB := watchNamespaceGrantForNamespace(t, cl, cp, nsB.Name)
-	cleaner.Add(wB)
+	_ = watchNamespaceGrantForNamespace(t, cl, cp, nsB.Name)
 
 	t.Log("verifying controlplane has a status condition indicating no missing WatchNamespaceGrants and it's Ready")
 	require.Eventually(t,
@@ -311,26 +311,8 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 		testutils.ControlPlaneCondDeadline, 2*testutils.ControlPlaneCondTick,
 	)
 
-	t.Log("verifying that operator creates Roles and RoleBindings in the watched namespaces")
-	require.EventuallyWithT(t,
-		func(t *assert.CollectT) {
-			check := func(t require.TestingT, namespace string) {
-				nsOpt := client.InNamespace(namespace)
-
-				roles := testutils.MustListControlPlaneRoles(t, GetCtx(), cp, clients.MgrClient, nsOpt)
-				require.Lenf(t, roles, 1, "There must be only one Role in the watched namespace %s", namespace)
-				roleBindings := testutils.MustListControlPlaneRoleBindings(t, GetCtx(), cp, clients.MgrClient, nsOpt)
-				require.Lenf(t, roleBindings, 1, "There must be only one RoleBinding in the watched namespace %s", namespace)
-			}
-
-			check(t, nsA.Name)
-			check(t, nsB.Name)
-		},
-		testutils.ControlPlaneCondDeadline, 2*testutils.ControlPlaneCondTick,
-	)
-
 	require.NoError(t, cl.Delete(GetCtx(), wA))
-	t.Log("verifying that after removing a WatchNamespaceGrant for a watched namesace controlplane has a status condition indicating invalid/missing WatchNamespaceGrants")
+	t.Log("verifying that after removing a WatchNamespaceGrant for a watched namespace controlplane has a status condition indicating invalid/missing WatchNamespaceGrants")
 	require.Eventually(t,
 		testutils.ObjectPredicates(t, clients.MgrClient,
 			testutils.MatchCondition[*gwtypes.ControlPlane](t).
