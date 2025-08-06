@@ -23,7 +23,7 @@ setup-envtest: "0.21.0"
 # renovate: datasource=github-releases depName=rhysd/actionlint
 actionlint: "1.7.7"
 # renovate: datasource=github-releases depName=koalaman/shellcheck
-shellcheck: "0.10.0"
+shellcheck: "0.11.0"
 # NOTE: This does not work and requires further investigation.
 # Perhaps it's possible to use a git url but https://go.googlesource.com/vuln/
 # does not seem to provide one.
