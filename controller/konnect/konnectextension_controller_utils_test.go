@@ -9,14 +9,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 func TestEnforceKonnectExtensionStatus(t *testing.T) {
 	cp := konnectv1alpha2.KonnectGatewayControlPlane{
 		Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-			KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "cp-id",
 			},
 			Endpoints: &konnectv1alpha2.KonnectEndpoints{

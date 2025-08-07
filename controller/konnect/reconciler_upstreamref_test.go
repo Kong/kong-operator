@@ -50,8 +50,8 @@ var testKongUpstreamOK = &configurationv1alpha1.KongUpstream{
 		},
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
-		Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-			KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
 			ControlPlaneID: "123456789",
@@ -121,8 +121,8 @@ var testKongUpstreamControlPlaneRefNotFound = &configurationv1alpha1.KongUpstrea
 		},
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
-		Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-			KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
 			ControlPlaneID: "123456789",
@@ -153,8 +153,8 @@ var testKongUpstreamControlPlaneRefNotProgrammed = &configurationv1alpha1.KongUp
 		},
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
-		Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-			KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
 			ControlPlaneID: "123456789",
@@ -175,7 +175,7 @@ var testControlPlaneOK = &konnectv1alpha2.KonnectGatewayControlPlane{
 	},
 	Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{},
 	Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-		KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+		KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 			ID: "123456789",
 		},
 		Conditions: []metav1.Condition{

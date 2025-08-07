@@ -90,7 +90,7 @@ type EntityType[T any] interface {
 	// Additional methods which are used in reconciling Konnect entities.
 
 	SetKonnectID(string)
-	GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
+	GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus
 }
 
 // SupportedKonnectEntityPluginReferenceableType is an interface that all Konnect
@@ -110,5 +110,5 @@ type SupportedKonnectEntityPluginReferenceableType interface {
 // Konnect entities that are defined within a ControlPlane do not because their
 // KonnectAPIAuthConfigurationRef is defined in the referenced ControlPlane.
 type EntityWithKonnectAPIAuthConfigurationRef interface {
-	GetKonnectAPIAuthConfigurationRef() konnectv1alpha1.KonnectAPIAuthConfigurationRef
+	GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.KonnectAPIAuthConfigurationRef
 }

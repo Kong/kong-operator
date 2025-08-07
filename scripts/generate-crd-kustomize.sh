@@ -16,8 +16,8 @@ if [[ $(echo "${RAW_VERSION}" | tr -cd '-' | wc -c) -ge 2 ]]; then
     # If there are 2 or more hyphens, extract the part after the last hyphen as
     # that's a git commit hash (e.g. `v1.1.1-0.20250217181409-44e5ddce290d`).
     SHA_SHORT="$(echo "${RAW_VERSION}" | rev | cut -d'-' -f1 | rev)"
-    [[ "${GITHUB_TOKEN}" ]] && OPTS=(--header "authorization: Bearer ${GITHUB_TOKEN}")
-    COMMIT_JSON=$(curl -s "${OPTS[@]}" https://api.github.com/repos/Kong/kubernetes-configuration/commits/${SHA_SHORT})
+    [[ -n "${GITHUB_TOKEN-}" ]] && OPTS=(--header "authorization: Bearer ${GITHUB_TOKEN}")
+    COMMIT_JSON=$(curl -s ${OPTS[@]:-} https://api.github.com/repos/Kong/kubernetes-configuration/commits/${SHA_SHORT})
     [[ $(echo "${COMMIT_JSON}" | jq '. | has("sha")') == "false" ]] && {
         echo "ERROR: Could not find commit ${SHA_SHORT} in Kong/kubernetes-configuration repository."
         echo "Output from GitHub: ${COMMIT_JSON}"

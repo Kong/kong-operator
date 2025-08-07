@@ -463,7 +463,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				&ext.Spec.Konnect.ControlPlane.Ref,
 				string(certificateSecret.Data[consts.TLSCRT]),
 				func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) {
-					dpCert.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+					dpCert.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 						// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
 						// that expects the ControlPlaneID to be set in the status.
 						ControlPlaneID: cp.Status.ID,
@@ -518,13 +518,13 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				&ext.Spec.Konnect.ControlPlane.Ref,
 				string(certificateSecret.Data[consts.TLSCRT]),
 				func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) {
-					dpCert.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+					dpCert.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 						// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
 						// that expects the ControlPlaneID to be set in the status.
 						ControlPlaneID: cp.Status.ID,
 						// setting the ID in the status as a workaround for the DeleteKongDataPlaneClientCertificate method,
 						// that expects the ID to be set in the status.
-						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 							ID: *cert.ID,
 						},
 					}

@@ -14,6 +14,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
@@ -124,7 +125,7 @@ func handleKongKeySetRef[T constraints.SupportedKonnectEntityType, TEnt constrai
 	// have a KeySetRef, hence the type constraints in the reconciler can't be used.
 	if key, ok := any(ent).(*configurationv1alpha1.KongKey); ok {
 		if key.Status.Konnect == nil {
-			key.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndKeySetRef{}
+			key.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndKeySetRef{}
 		}
 		key.Status.Konnect.KeySetID = keySet.Status.Konnect.GetKonnectID()
 	}

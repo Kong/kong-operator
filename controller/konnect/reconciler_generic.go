@@ -15,6 +15,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/konnect/ops"
@@ -506,7 +507,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 func setStatusServerURLAndOrgID(
 	ent interface {
-		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
+		GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus
 	},
 	serverURL server.Server,
 	orgID string,
