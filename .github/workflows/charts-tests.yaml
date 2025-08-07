@@ -157,11 +157,8 @@ jobs:
           CHART_NAME: ${{ matrix.chart-name }}
         run: ./scripts/charts-test-env.sh
 
-      - name: Install kubernetes-configuration CRDs (ingress-controller)
-        run: make install.kubernetes-configuration-crds-ingress-controller
-
-      - name: Install kubernetes-configuration CRDs (operator)
-        run: make install.kubernetes-configuration-crds-operator
+      - name: Install Kong charts CRDs
+        run: kubectl apply -f ./charts/kong-operator/crds
 
       - name: Install Gateway API CRDs
         run: make install.gateway-api-crds
