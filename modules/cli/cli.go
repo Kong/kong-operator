@@ -82,15 +82,6 @@ func New(m metadata.Info) *CLI {
 	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
 	flagSet.UintVar(&cfg.KonnectMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultKonnectMaxConcurrentReconciles, "Maximum number of concurrent reconciles for Konnect entities.")
 
-	// webhook and validation options
-	flagSet.BoolVar(&cfg.ConversionWebhookEnabled, "enable-conversion-webhook", true, "Enable the conversion webhook.")
-	var validatingWebhookEnabled bool
-	flagSet.BoolVar(&validatingWebhookEnabled, "enable-validating-webhook", false, "Enable the validating webhook. DEPRECATED: This flag is no-op and will be removed in a future release.")
-	var validatingWebhookConfigBaseImage string
-	flagSet.StringVar(&validatingWebhookConfigBaseImage, "webhook-certificate-config-base-image", consts.WebhookCertificateConfigBaseImage, "The base image for the certgen Jobs. DEPRECATED: This flag is no-op and will be removed in a future release.")
-	var validatingWebhookConfigShellImage string
-	flagSet.StringVar(&validatingWebhookConfigShellImage, "webhook-certificate-config-shell-image", consts.WebhookCertificateConfigShellImage, "The shell image for the certgen Jobs. DEPRECATED: This flag is no-op and will be removed in a future release.")
-
 	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information.")
 
 	loggerOpts := lo.ToPtr(*manager.DefaultConfig().LoggerOpts)
