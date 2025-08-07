@@ -5,9 +5,95 @@ namespace: kong-system
 namePrefix: gateway-operator-
 
 resources:
+- ../crd
 - ../rbac
 - ../manager
+- ../webhook
+- ../certmanager
 - ./validating_policies/
 
 patches:
 - path: manager_metrics_access_filter_rbac_patch.yaml
+- path: manager_webhook_patch.yaml
+
+replacements:
+- source:
+    kind: Service
+    version: v1
+    name: gateway-operator-webhook-service
+    fieldPath: metadata.name
+  targets:
+  - select:
+      kind: Certificate
+      group: cert-manager.io
+      version: v1
+    fieldPaths:
+    - spec.dnsNames.0
+    - spec.dnsNames.1
+    options:
+      delimiter: '.'
+      index: 0
+  - select:
+      kind: CustomResourceDefinition
+      group: apiextensions.k8s.io
+      version: v1
+      name: controlplanes.gateway-operator.konghq.com
+    fieldPaths:
+    - spec.conversion.webhook.clientConfig.service.name
+- source:
+    kind: Service
+    version: v1
+    name: gateway-operator-webhook-service
+    fieldPath: metadata.namespace
+  targets:
+  - select:
+      kind: Certificate
+      group: cert-manager.io
+      version: v1
+    fieldPaths:
+    - spec.dnsNames.0
+    - spec.dnsNames.1
+    options:
+      delimiter: '.'
+      index: 1
+  - select:
+      kind: CustomResourceDefinition
+      group: apiextensions.k8s.io
+      version: v1
+      name: controlplanes.gateway-operator.konghq.com
+    fieldPaths:
+    - spec.conversion.webhook.clientConfig.service.namespace
+- source:
+    kind: Certificate
+    group: cert-manager.io
+    version: v1
+    name: gateway-operator-serving-cert
+    fieldPath: metadata.name
+  targets:
+  - select:
+      kind: CustomResourceDefinition
+      group: apiextensions.k8s.io
+      version: v1
+      name: controlplanes.gateway-operator.konghq.com
+    fieldPaths:
+    - metadata.annotations.[cert-manager.io/inject-ca-from]
+    options:
+      delimiter: '/'
+      index: 1
+- source:
+    kind: Certificate
+    group: cert-manager.io
+    version: v1
+    name: gateway-operator-serving-cert
+    fieldPath: metadata.namespace
+  targets:
+  - select:
+      kind: CustomResourceDefinition
+      group: apiextensions.k8s.io
+      version: v1
+      name: controlplanes.gateway-operator.konghq.com
+    fieldPaths:
+    - metadata.annotations.[cert-manager.io/inject-ca-from]
+    options:
+      delimiter: '/'
+      index: 0

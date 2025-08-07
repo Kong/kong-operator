@@ -256,7 +256,7 @@ jobs:
       run: make undeploy
 
     - name: Verify that uninstalling operator CRDs via kustomize works
-      run: make uninstall
+      run: make ignore-not-found=true uninstall
 
   build:
     runs-on: ubuntu-latest

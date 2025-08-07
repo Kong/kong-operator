@@ -366,7 +366,11 @@ KUBERNETES_CONFIGURATION_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(KUB
 KUBERNETES_CONFIGURATION_PACKAGE_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_PACKAGE)@$(KUBERNETES_CONFIGURATION_VERSION)
 
 .PHONY: manifests
-manifests: manifests.versions manifests.crds manifests.role manifests.charts ## Generate ClusterRole and CustomResourceDefinition objects.
+manifests: manifests.conversion-webhook manifests.versions manifests.crds manifests.role manifests.charts ## Generate ClusterRole and CustomResourceDefinition objects.
+
+.PHONY: manifests.conversion-webhook
+manifests.conversion-webhook:
+	go run hack/generators/conversion-webhook/main.go
 
 .PHONY: manifests.crds
 manifests.crds: controller-gen ## Generate CustomResourceDefinition objects.
@@ -737,6 +741,7 @@ _ensure-kong-system-namespace:
 	@kubectl create ns kong-system 2>/dev/null || true
 
 # Run a controller from your host.
+# TODO: https://github.com/Kong/kong-operator/issues/1989
 .PHONY: run
 run: download.telepresence manifests generate install.all _ensure-kong-system-namespace install.rbacs
 	@$(MAKE) _run
@@ -767,6 +772,7 @@ _run:
 		-enable-controller-aigateway \
 		-enable-controller-konnect \
 		-enable-controller-controlplaneextensions \
+		-enable-conversion-webhook=false \
 		-zap-time-encoding iso8601 \
 		-zap-log-level 2 \
 		-zap-devel true \
@@ -824,9 +830,25 @@ debug.skaffold.continuous: _ensure-kong-system-namespace
 	TAG=$(TAG)-debug REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
 		$(SKAFFOLD) debug --port-forward=pods --profile=debug --auto-build --auto-deploy --auto-sync
 
+CERT_MANAGER_VERSION = $(shell $(YQ) -r '.cert-manager' < $(TOOLS_VERSIONS_FILE))
+.PHONY: install.helm.cert-manager
+install.helm.cert-manager: yq
+	helm repo add jetstack https://charts.jetstack.io && \
+	helm repo update && \
+	helm upgrade --install \
+	  cert-manager jetstack/cert-manager \
+	  --namespace cert-manager \
+	  --create-namespace \
+	  --version $(CERT_MANAGER_VERSION) \
+	  --set crds.enabled=true
+
+.PHONY: uninstall.helm.cert-manager
+uninstall.helm.cert-manager:
+	helm uninstall cert-manager --namespace cert-manager
+
 # Install CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install
-install: manifests kustomize install.gateway-api-crds
+install: install.helm.cert-manager manifests kustomize install.gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
 
 KUBERNETES_CONFIGURATION_PACKAGE_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_PACKAGE)@$(KUBERNETES_CONFIGURATION_VERSION)
@@ -850,13 +872,13 @@ install.rbacs: kustomize
 
 # Install standard and experimental CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.all
-install.all: manifests kustomize install.gateway-api-crds install.kubernetes-configuration-crds-operator install.kubernetes-configuration-crds-ingress-controller
+install.all: install.helm.cert-manager manifests kustomize install.gateway-api-crds install.kubernetes-configuration-crds-operator install.kubernetes-configuration-crds-ingress-controller
 	kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
 
 # Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall
-uninstall: manifests kustomize uninstall.gateway-api-crds
+uninstall: manifests kustomize uninstall.gateway-api-crds uninstall.helm.cert-manager
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: uninstall.kubernetes-configuration-crds
@@ -866,7 +888,7 @@ uninstall.kubernetes-configuration-crds: kustomize
 # Uninstall standard and experimental CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall.all
-uninstall.all: manifests kustomize uninstall.gateway-api-crds uninstall.kubernetes-configuration-crds
+uninstall.all: manifests kustomize uninstall.gateway-api-crds uninstall.kubernetes-configuration-crds uninstall.helm.cert-manager
 
 # Deploy controller to the K8s cluster specified in ~/.kube/config.
 # This will wait for operator's Deployment to get Available.

@@ -40,6 +40,8 @@ func DefaultControllerConfigForTests(opts ...ControllerConfigOption) manager.Con
 	cfg.GatewayAPIExperimentalEnabled = true
 	cfg.EnforceConfig = true
 	cfg.ServiceAccountToImpersonate = ServiceAccountToImpersonate
+	// TODO: https://github.com/Kong/kong-operator/issues/1986
+	cfg.ConversionWebhookEnabled = false
 
 	// Apply all the provided options
 	for _, opt := range opts {

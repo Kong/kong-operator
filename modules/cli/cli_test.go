@@ -192,5 +192,6 @@ func expectedDefaultCfg() manager.Config {
 		KonnectMaxConcurrentReconciles:          consts.DefaultKonnectMaxConcurrentReconciles,
 		ClusterDomain:                           ingressmgrconfig.DefaultClusterDomain,
 		EmitKubernetesEvents:                    true,
+		ConversionWebhookEnabled:                true,
 	}
 }

@@ -28,6 +28,7 @@
 | `--enable-controller-kongplugininstallation` | `bool` | Enable the KongPluginInstallation controller. | `false` |
 | `--enable-controller-konnect` | `bool` | Enable the Konnect controllers. | `false` |
 | `--enable-controlplane-config-dump` | `bool` | Enable the server to dump generated Kong configuration from ControlPlanes. Only effective when ControlPlane controller is enabled. | `false` |
+| `--enable-conversion-webhook` | `bool` | Enable the conversion webhook. | `true` |
 | `--enable-gateway-api-experimental` | `bool` | Enable the Gateway API experimental features. | `false` |
 | `--enable-validating-webhook` | `bool` | Enable the validating webhook. DEPRECATED: This flag is no-op and will be removed in a future release. | `false` |
 | `--enforce-config` | `bool` | Enforce the configuration on the generated cluster resources. If set to false, the operator will only enforce the configuration when the owner resource spec changes. | `true` |
