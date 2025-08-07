@@ -30,7 +30,7 @@ func TestHTTPRoute(t *testing.T) {
 
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
-	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -120,14 +120,14 @@ func TestHTTPRoute(t *testing.T) {
 }
 
 func TestHTTPRouteWithTLS(t *testing.T) {
-	t.Skip("skipping as this test requires changed after changes to ControlPlane API in v2alpha1")
+	t.Skip("skipping as this test requires changed after changes to ControlPlane API in v2beta1")
 
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
-	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 

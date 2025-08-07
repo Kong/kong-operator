@@ -20,7 +20,7 @@ import (
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
 	"github.com/kong/kong-operator/controller/pkg/builder"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -187,7 +187,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 	require.Eventually(t, testutils.ControlPlaneIsProvisioned(t, GetCtx(), controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	t.Run("webhook", func(t *testing.T) {
-		t.Skip("Skipping webhook tests for now, as they are not implemented yet for ControlPlane v2alpha1, TODO: https://github.com/Kong/kong-operator/issues/1367")
+		t.Skip("Skipping webhook tests for now, as they are not implemented yet for ControlPlane v2beta1, TODO: https://github.com/Kong/kong-operator/issues/1367")
 
 		t.Log("verifying controlplane has a validating webhook service created")
 		require.Eventually(t, testutils.ControlPlaneHasAdmissionWebhookService(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
@@ -256,8 +256,8 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 				},
 			},
 			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-				WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-					Type: operatorv2alpha1.WatchNamespacesTypeList,
+				WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+					Type: operatorv2beta1.WatchNamespacesTypeList,
 					List: []string{
 						nsA.Name,
 						nsB.Name,
@@ -418,7 +418,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
-	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV2alpha1().ControlPlanes(namespace.Name)
+	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV2beta1().ControlPlanes(namespace.Name)
 
 	dataplaneName := types.NamespacedName{
 		Namespace: namespace.Name,

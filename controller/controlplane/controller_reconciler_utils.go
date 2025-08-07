@@ -15,7 +15,7 @@ import (
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
 	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
@@ -136,12 +136,12 @@ func (r *Reconciler) validateWatchNamespaceGrants(
 	switch cp.Spec.WatchNamespaces.Type {
 	// NOTE: We currentlty do not require any ReferenceGrants or other permission
 	// granting resources for the "All" case.
-	case operatorv2alpha1.WatchNamespacesTypeAll:
+	case operatorv2beta1.WatchNamespacesTypeAll:
 		return nil, nil
 	// No special permissions are required to watch the controlplane's own namespace.
-	case operatorv2alpha1.WatchNamespacesTypeOwn:
+	case operatorv2beta1.WatchNamespacesTypeOwn:
 		return []string{cp.Namespace}, nil
-	case operatorv2alpha1.WatchNamespacesTypeList:
+	case operatorv2beta1.WatchNamespacesTypeList:
 		var nsList []string
 		for _, ns := range cp.Spec.WatchNamespaces.List {
 			if err := ensureWatchNamespaceGrantsForNamespace(ctx, r.Client, cp, ns); err != nil {
@@ -190,7 +190,7 @@ func watchNamespaceGrantContainsControlPlaneFrom(
 	cp *ControlPlane,
 ) bool {
 	for _, from := range grant.Spec.From {
-		if from.Group == operatorv2alpha1.SchemeGroupVersion.Group &&
+		if from.Group == operatorv2beta1.SchemeGroupVersion.Group &&
 			from.Kind == "ControlPlane" &&
 			from.Namespace == cp.Namespace {
 			return true
@@ -213,7 +213,7 @@ func validateWatchNamespaces(
 	// not be configured to watch any specific namespaces: it should have the watchNamespaces
 	// list empty, indicating that it will watch all namespaces.
 	switch cp.Spec.WatchNamespaces.Type {
-	case operatorv2alpha1.WatchNamespacesTypeAll:
+	case operatorv2beta1.WatchNamespacesTypeAll:
 		if len(watchNamespaces) > 0 {
 			return fmt.Errorf(
 				"ControlPlane's watchNamespaces is set to 'All', but operator is only allowed on: %v",
@@ -221,7 +221,7 @@ func validateWatchNamespaces(
 			)
 		}
 
-	case operatorv2alpha1.WatchNamespacesTypeOwn:
+	case operatorv2beta1.WatchNamespacesTypeOwn:
 		// NOTE: In case the operator Pod does not have watch namespaces flag/environment variable set
 		// to include the ControlPlane's namespace, it will not be able to watch
 		// the ControlPlane's own namespace, which is required for the operator to function properly.
@@ -232,7 +232,7 @@ func validateWatchNamespaces(
 			)
 		}
 
-	case operatorv2alpha1.WatchNamespacesTypeList:
+	case operatorv2beta1.WatchNamespacesTypeList:
 		if len(watchNamespaces) == 0 {
 			return nil
 		}

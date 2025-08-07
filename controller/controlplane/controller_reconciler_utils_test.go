@@ -11,7 +11,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/scheme"
@@ -285,8 +285,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 				},
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-						WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-							Type: operatorv2alpha1.WatchNamespacesTypeAll,
+						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+							Type: operatorv2beta1.WatchNamespacesTypeAll,
 						},
 					},
 				},
@@ -303,8 +303,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 				},
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-						WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-							Type: operatorv2alpha1.WatchNamespacesTypeAll,
+						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+							Type: operatorv2beta1.WatchNamespacesTypeAll,
 						},
 					},
 				},
@@ -322,8 +322,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 				},
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-						WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-							Type: operatorv2alpha1.WatchNamespacesTypeOwn,
+						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+							Type: operatorv2beta1.WatchNamespacesTypeOwn,
 						},
 					},
 				},
@@ -340,8 +340,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 				},
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-						WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-							Type: operatorv2alpha1.WatchNamespacesTypeOwn,
+						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+							Type: operatorv2beta1.WatchNamespacesTypeOwn,
 						},
 					},
 				},
@@ -358,8 +358,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 				},
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-						WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-							Type: operatorv2alpha1.WatchNamespacesTypeOwn,
+						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+							Type: operatorv2beta1.WatchNamespacesTypeOwn,
 						},
 					},
 				},
@@ -377,8 +377,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 				},
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-						WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-							Type: operatorv2alpha1.WatchNamespacesTypeList,
+						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+							Type: operatorv2beta1.WatchNamespacesTypeList,
 							List: []string{"ns1", "ns2"},
 						},
 					},
@@ -396,8 +396,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 				},
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-						WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-							Type: operatorv2alpha1.WatchNamespacesTypeList,
+						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+							Type: operatorv2beta1.WatchNamespacesTypeList,
 							List: []string{"ns1", "ns2"},
 						},
 					},
@@ -415,8 +415,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 				},
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-						WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-							Type: operatorv2alpha1.WatchNamespacesTypeList,
+						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+							Type: operatorv2beta1.WatchNamespacesTypeList,
 							List: []string{"ns1", "ns2", "ns3"},
 						},
 					},
@@ -435,8 +435,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 				},
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-						WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-							Type: operatorv2alpha1.WatchNamespacesTypeList,
+						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+							Type: operatorv2beta1.WatchNamespacesTypeList,
 							List: []string{"ns1", "ns2"},
 						},
 					},
@@ -455,8 +455,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 				},
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-						WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-							Type: operatorv2alpha1.WatchNamespacesTypeList,
+						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+							Type: operatorv2beta1.WatchNamespacesTypeList,
 							List: []string{"forbidden-ns"},
 						},
 					},

@@ -27,7 +27,7 @@ import (
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	ctrlconsts "github.com/kong/kong-operator/controller/consts"
@@ -533,10 +533,10 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	}
 
 	if cp.Spec.ConfigDump != nil {
-		if cp.Spec.ConfigDump.State == operatorv2alpha1.ConfigDumpStateEnabled {
+		if cp.Spec.ConfigDump.State == operatorv2beta1.ConfigDumpStateEnabled {
 			cfgOpts = append(cfgOpts, WithConfigDumpEnabled(true))
 		}
-		if cp.Spec.ConfigDump.DumpSensitive == operatorv2alpha1.ConfigDumpStateEnabled {
+		if cp.Spec.ConfigDump.DumpSensitive == operatorv2beta1.ConfigDumpStateEnabled {
 			cfgOpts = append(cfgOpts, WithSensitiveConfigDumpEnabled(true))
 		}
 	}

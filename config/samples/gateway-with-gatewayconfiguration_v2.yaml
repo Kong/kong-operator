@@ -1,7 +1,7 @@
 kind: GatewayConfiguration
-apiVersion: gateway-operator.konghq.com/v2alpha1
+apiVersion: gateway-operator.konghq.com/v2beta1
 metadata:
-  name: kong-v2alpha1
+  name: kong-v2beta1
   namespace: default
 spec:
   dataPlaneOptions:
@@ -19,22 +19,22 @@ spec:
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
-  name: kong-v2alpha1
+  name: kong-v2beta1
 spec:
   controllerName: konghq.com/gateway-operator
   parametersRef:
     group: gateway-operator.konghq.com
     kind: GatewayConfiguration
-    name: kong-v2alpha1
+    name: kong-v2beta1
     namespace: default
 ---
 kind: Gateway
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
-  name: kong-v2alpha1
+  name: kong-v2beta1
   namespace: default
 spec:
-  gatewayClassName: kong-v2alpha1
+  gatewayClassName: kong-v2beta1
   listeners:
   - name: http
     protocol: HTTP

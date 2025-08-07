@@ -14,7 +14,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
@@ -39,15 +39,15 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 	newDataPlaneImage := fmt.Sprintf("%s:%s", originalDataPlaneImageName, newDataPlaneImageVersion)
 
 	t.Log("deploying a GatewayConfiguration resource")
-	gatewayConfig := &operatorv2alpha1.GatewayConfiguration{
+	gatewayConfig := &operatorv2beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      uuid.NewString(),
 		},
-		Spec: operatorv2alpha1.GatewayConfigurationSpec{
-			DataPlaneOptions: &operatorv2alpha1.GatewayConfigDataPlaneOptions{
-				Deployment: operatorv2alpha1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv2alpha1.DeploymentOptions{
+		Spec: operatorv2beta1.GatewayConfigurationSpec{
+			DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv2beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -69,7 +69,7 @@ func TestManualGatewayUpgradesAndDowngrades(t *testing.T) {
 		},
 	}
 	var err error
-	gatewayConfig, err = GetClients().OperatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err = GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -234,12 +234,12 @@ func verifyContainerImageForGateway(gateway *gwtypes.Gateway, dataPlaneImage str
 // changeDataPlaneImage is a helper function to update the image
 // for DataPlane in a given GatewayConfiguration.
 func changeDataPlaneImage(
-	gcfg *operatorv2alpha1.GatewayConfiguration,
+	gcfg *operatorv2beta1.GatewayConfiguration,
 	dataPlaneImageName,
 	dataPlaneImageVersion string,
 ) error {
 	// refresh the object
-	gcfg, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(gcfg.Namespace).Get(GetCtx(), gcfg.Name, metav1.GetOptions{})
+	gcfg, err := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(gcfg.Namespace).Get(GetCtx(), gcfg.Name, metav1.GetOptions{})
 	if err != nil {
 		return err
 	}
@@ -250,6 +250,6 @@ func changeDataPlaneImage(
 	}
 	container.Image = fmt.Sprintf("%s:%s", dataPlaneImageName, dataPlaneImageVersion)
 
-	_, err = GetClients().OperatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(gcfg.Namespace).Update(GetCtx(), gcfg, metav1.UpdateOptions{})
+	_, err = GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(gcfg.Namespace).Update(GetCtx(), gcfg, metav1.UpdateOptions{})
 	return err
 }

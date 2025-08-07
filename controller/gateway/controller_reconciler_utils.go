@@ -27,7 +27,7 @@ import (
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	kcfggateway "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
@@ -142,7 +142,7 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 ) *operatorv1beta1.DataPlaneOptions {
 	dataPlaneOptions := &operatorv1beta1.DataPlaneOptions{}
 
-	// NOTICE: Convert v2alpha1.DataPlaneDeploymentOptions to v1beta1.DataPlaneDeploymentOptions
+	// NOTICE: Convert v2beta1.DataPlaneDeploymentOptions to v1beta1.DataPlaneDeploymentOptions
 	// using JSON marshaling/unmarshaling since the types are structurally identical.
 	// This is a hacky way that will be resolved in the future in the following issue:
 	// https://github.com/Kong/kong-operator/issues/1728
@@ -156,7 +156,7 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 
 	if len(opts.PluginsToInstall) > 0 {
 		dataPlaneOptions.PluginsToInstall = lo.Map(opts.PluginsToInstall,
-			func(pluginReference operatorv2alpha1.NamespacedName, _ int) operatorv1beta1.NamespacedName {
+			func(pluginReference operatorv2beta1.NamespacedName, _ int) operatorv1beta1.NamespacedName {
 				nn := operatorv1beta1.NamespacedName{
 					Name:      pluginReference.Name,
 					Namespace: pluginReference.Namespace,

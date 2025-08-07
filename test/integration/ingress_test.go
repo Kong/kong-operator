@@ -40,7 +40,7 @@ const (
 )
 
 func TestIngressEssentials(t *testing.T) {
-	t.Skip("skipping as this test requires changed after changes to ControlPlane API in v2alpha1")
+	t.Skip("skipping as this test requires changed after changes to ControlPlane API in v2beta1")
 
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())

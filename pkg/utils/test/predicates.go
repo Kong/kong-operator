@@ -45,7 +45,7 @@ func controlPlanePredicate(
 	predicate func(controlplane *gwtypes.ControlPlane) bool,
 	operatorClient *clientset.Clientset,
 ) func() bool {
-	controlplaneClient := operatorClient.GatewayOperatorV2alpha1().ControlPlanes(controlplaneName.Namespace)
+	controlplaneClient := operatorClient.GatewayOperatorV2beta1().ControlPlanes(controlplaneName.Namespace)
 	return func() bool {
 		controlplane, err := controlplaneClient.Get(ctx, controlplaneName.Name, metav1.GetOptions{})
 		require.NoError(t, err)
@@ -605,7 +605,7 @@ func HTTPRouteUpdateEventually(t *testing.T, ctx context.Context, httpRouteNN ty
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneUpdateEventually(t *testing.T, ctx context.Context, controlplaneNN types.NamespacedName, clients K8sClients, updateFunc func(*gwtypes.ControlPlane)) func() bool {
 	return func() bool {
-		cl := clients.OperatorClient.GatewayOperatorV2alpha1().ControlPlanes(controlplaneNN.Namespace)
+		cl := clients.OperatorClient.GatewayOperatorV2beta1().ControlPlanes(controlplaneNN.Namespace)
 		cp, err := cl.Get(ctx, controlplaneNN.Name, metav1.GetOptions{})
 		if err != nil {
 			t.Logf("error getting controlplane: %v", err)

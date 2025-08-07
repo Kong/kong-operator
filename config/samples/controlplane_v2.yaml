@@ -1,4 +1,4 @@
-apiVersion: gateway-operator.konghq.com/v2alpha1
+apiVersion: gateway-operator.konghq.com/v2beta1
 kind: ControlPlane
 metadata:
   name: controlplane-v2
