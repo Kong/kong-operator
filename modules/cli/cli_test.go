@@ -30,7 +30,7 @@ func TestParse(t *testing.T) {
 		},
 		{
 			name: "many command line arguments, one environment variable",
-			args: []string{"--no-leader-election", "--enable-validating-webhook=false"},
+			args: []string{"--no-leader-election"},
 			envVars: map[string]string{
 				"WEBHOOK_CERT_DIR": "/tmp/foo",
 			},
@@ -76,17 +76,6 @@ func TestParse(t *testing.T) {
 				cfg := expectedDefaultCfg()
 				cfg.MetricsAddr = ":18080" // values from cli args takes precedence
 				cfg.ProbeAddr = ":28081"   // env var is present but no cli args is given, use the value from env var
-				return cfg
-			},
-		},
-		{
-			name: "webhook certificate configuration arguments are set",
-			args: []string{
-				"--webhook-certificate-config-base-image=mybaseimage:42",
-				"--webhook-certificate-config-shell-image=shellimg",
-			},
-			expectedCfg: func() manager.Config {
-				cfg := expectedDefaultCfg()
 				return cfg
 			},
 		},
