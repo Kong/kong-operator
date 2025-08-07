@@ -32,7 +32,7 @@
 
 ## [v2.0.0-alpha.3]
 
-> Release date: 2025-08-8
+> Release date: 2025-08-08
 
 > KGO becomes KO, which stands for Kong Operator - Kubernetes Gateway Operator and Kubernetes Ingress Controller
 > become a single product.
