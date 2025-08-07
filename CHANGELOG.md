@@ -76,6 +76,9 @@
   For migration guidance from these resources to Gateway API, please refer to the
   [migration documentation](https://developer.konghq.com/kubernetes-ingress-controller/migrate/ingress-to-gateway/).
   [#1971](https://github.com/Kong/kong-operator/pull/1971)
+- Change env vars prefix from `GATEWAY_OPERATOR_` to `KONG_OPERATOR`.
+  `GATEWAY_OPERATOR_` prefixed env vars are still accepted but reported as deprecated.
+  [#2004](https://github.com/Kong/kong-operator/pull/2004)
 
 ### Added
 
