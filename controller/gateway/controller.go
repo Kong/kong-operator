@@ -29,7 +29,7 @@ import (
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	kcfggateway "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	controlplanecontroller "github.com/kong/kong-operator/controller/pkg/controlplane"
@@ -92,7 +92,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		// watch for updates to GatewayConfigurations, if any configuration targets a
 		// Gateway that is supported, enqueue that Gateway.
 		Watches(
-			&operatorv2alpha1.GatewayConfiguration{},
+			&operatorv2beta1.GatewayConfiguration{},
 			handler.EnqueueRequestsFromMapFunc(r.listGatewaysForGatewayConfig),
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayConfigurationMatchesController))).
 		// watch for updates to GatewayClasses, if any GatewayClasses change, enqueue

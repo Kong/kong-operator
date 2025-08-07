@@ -17,7 +17,7 @@ import (
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -79,8 +79,8 @@ func TestReconciler_Reconcile(t *testing.T) {
 						},
 					},
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-						WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-							Type: operatorv2alpha1.WatchNamespacesTypeAll,
+						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+							Type: operatorv2beta1.WatchNamespacesTypeAll,
 						},
 					},
 				},

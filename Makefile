@@ -366,7 +366,7 @@ KUBERNETES_CONFIGURATION_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(KUB
 KUBERNETES_CONFIGURATION_PACKAGE_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_PACKAGE)@$(KUBERNETES_CONFIGURATION_VERSION)
 
 .PHONY: manifests
-manifests: manifests.conversion-webhook manifests.versions manifests.crds manifests.role manifests.charts ## Generate ClusterRole and CustomResourceDefinition objects.
+manifests: manifests.conversion-webhook manifests.versions manifests.crds manifests.role # (TODO: re-enable after v2.0.0-alpha.3) manifests.charts ## Generate ClusterRole and CustomResourceDefinition objects.
 
 .PHONY: manifests.conversion-webhook
 manifests.conversion-webhook:

@@ -14,7 +14,7 @@ import (
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayapipkg "github.com/kong/kong-operator/pkg/gatewayapi"
@@ -44,7 +44,7 @@ func getAcceptedCondition(ctx context.Context, cl client.Client, gwc *gatewayv1.
 		}
 
 		if validRef {
-			gatewayConfig := operatorv2alpha1.GatewayConfiguration{}
+			gatewayConfig := operatorv2beta1.GatewayConfiguration{}
 			err := cl.Get(ctx, client.ObjectKey{Name: gwc.Spec.ParametersRef.Name, Namespace: string(*gwc.Spec.ParametersRef.Namespace)}, &gatewayConfig)
 			if client.IgnoreNotFound(err) != nil {
 				return nil, err
@@ -73,7 +73,7 @@ func getAcceptedCondition(ctx context.Context, cl client.Client, gwc *gatewayv1.
 
 // setSupportedFeatures sets the supported features in the gatewayClass status.
 // The set of supported features depends on the router flavor.
-func setSupportedFeatures(ctx context.Context, cl client.Client, gwc *gatewayv1.GatewayClass, gatewayConfig *operatorv2alpha1.GatewayConfiguration) error {
+func setSupportedFeatures(ctx context.Context, cl client.Client, gwc *gatewayv1.GatewayClass, gatewayConfig *operatorv2beta1.GatewayConfiguration) error {
 	flavor, err := getRouterFlavor(ctx, cl, gatewayConfig)
 	if err != nil {
 		return err
@@ -94,8 +94,8 @@ func setSupportedFeatures(ctx context.Context, cl client.Client, gwc *gatewayv1.
 }
 
 // getGatewayConfiguration returns the GatewayConfiguration referenced by the GatewayClass.
-func getGatewayConfiguration(ctx context.Context, cl client.Client, gwc *gatewayv1.GatewayClass) (*operatorv2alpha1.GatewayConfiguration, error) {
-	gatewayConfig := operatorv2alpha1.GatewayConfiguration{}
+func getGatewayConfiguration(ctx context.Context, cl client.Client, gwc *gatewayv1.GatewayClass) (*operatorv2beta1.GatewayConfiguration, error) {
+	gatewayConfig := operatorv2beta1.GatewayConfiguration{}
 
 	if gwc.Spec.ParametersRef == nil {
 		return nil, nil
@@ -111,7 +111,7 @@ func getGatewayConfiguration(ctx context.Context, cl client.Client, gwc *gateway
 
 // getRouterFlavor returns the router flavor to be used by the GatewayClass. It is inferred by
 // the KONG_ROUTER_FLAVOR environment variable in the DataPlane proxy container.
-func getRouterFlavor(ctx context.Context, cl client.Client, gatewayConfig *operatorv2alpha1.GatewayConfiguration) (consts.RouterFlavor, error) {
+func getRouterFlavor(ctx context.Context, cl client.Client, gatewayConfig *operatorv2beta1.GatewayConfiguration) (consts.RouterFlavor, error) {
 	if gatewayConfig == nil ||
 		gatewayConfig.Spec.DataPlaneOptions == nil ||
 		gatewayConfig.Spec.DataPlaneOptions.Deployment.PodTemplateSpec == nil {

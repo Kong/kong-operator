@@ -3,68 +3,68 @@ package types
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 )
 
 // Aliases below allow to easily switch between different versions of the ControlPlane API
 // without changing the rest of the codebase.
 
 type (
-	// ControlPlane is an alias for the v2alpha1 ControlPlane type.
-	ControlPlane = operatorv2alpha1.ControlPlane
+	// ControlPlane is an alias for the v2beta1 ControlPlane type.
+	ControlPlane = operatorv2beta1.ControlPlane
 
-	// ControlPlaneSpec is an alias for the v2alpha1 ControlPlaneSpec type.
-	ControlPlaneSpec = operatorv2alpha1.ControlPlaneSpec
+	// ControlPlaneSpec is an alias for the v2beta1 ControlPlaneSpec type.
+	ControlPlaneSpec = operatorv2beta1.ControlPlaneSpec
 
-	// ControlPlaneOptions is an alias for the v2alpha1 ControlPlaneOptions type.
-	ControlPlaneOptions = operatorv2alpha1.ControlPlaneOptions
+	// ControlPlaneOptions is an alias for the v2beta1 ControlPlaneOptions type.
+	ControlPlaneOptions = operatorv2beta1.ControlPlaneOptions
 
-	// ControlPlaneDataPlaneTarget is an alias for the v2alpha1 ControlPlaneDataPlaneTarget type.
-	ControlPlaneDataPlaneTarget = operatorv2alpha1.ControlPlaneDataPlaneTarget
+	// ControlPlaneDataPlaneTarget is an alias for the v2beta1 ControlPlaneDataPlaneTarget type.
+	ControlPlaneDataPlaneTarget = operatorv2beta1.ControlPlaneDataPlaneTarget
 
-	// ControlPlaneDataPlaneTargetRef is an alias for the v2alpha1 ControlPlaneDataPlaneTargetRef type.
-	ControlPlaneDataPlaneTargetRef = operatorv2alpha1.ControlPlaneDataPlaneTargetRef
+	// ControlPlaneDataPlaneTargetRef is an alias for the v2beta1 ControlPlaneDataPlaneTargetRef type.
+	ControlPlaneDataPlaneTargetRef = operatorv2beta1.ControlPlaneDataPlaneTargetRef
 
-	// ControlPlaneList is an alias for the v2alpha1 ControlPlaneList type.
-	ControlPlaneList = operatorv2alpha1.ControlPlaneList
+	// ControlPlaneList is an alias for the v2beta1 ControlPlaneList type.
+	ControlPlaneList = operatorv2beta1.ControlPlaneList
 
-	// ControlPlaneStatus is an alias for the v2alpha1 ControlPlaneStatus type.
-	ControlPlaneStatus = operatorv2alpha1.ControlPlaneStatus
+	// ControlPlaneStatus is an alias for the v2beta1 ControlPlaneStatus type.
+	ControlPlaneStatus = operatorv2beta1.ControlPlaneStatus
 
-	// ControlPlaneFeatureGate is an alias for the v2alpha1 ControlPlaneFeatureGate type.
-	ControlPlaneFeatureGate = operatorv2alpha1.ControlPlaneFeatureGate
+	// ControlPlaneFeatureGate is an alias for the v2beta1 ControlPlaneFeatureGate type.
+	ControlPlaneFeatureGate = operatorv2beta1.ControlPlaneFeatureGate
 
-	// ControlPlaneController is an alias for the v2alpha1 ControlPlaneController type.
-	ControlPlaneController = operatorv2alpha1.ControlPlaneController
+	// ControlPlaneController is an alias for the v2beta1 ControlPlaneController type.
+	ControlPlaneController = operatorv2beta1.ControlPlaneController
 
-	// ControllerState is an alias for the v2alpha1 ControllerState type.
-	ControllerState = operatorv2alpha1.ControllerState
+	// ControllerState is an alias for the v2beta1 ControllerState type.
+	ControllerState = operatorv2beta1.ControllerState
 )
 
 type (
-	// GatewayConfiguration is an alias for the v2alpha1 GatewayConfiguration type.
-	GatewayConfiguration = operatorv2alpha1.GatewayConfiguration
-	// GatewayConfigDataPlaneOptions is an alias for the v2alpha1 GatewayConfigDataPlaneOptions type.
-	GatewayConfigDataPlaneOptions = operatorv2alpha1.GatewayConfigDataPlaneOptions
+	// GatewayConfiguration is an alias for the v2beta1 GatewayConfiguration type.
+	GatewayConfiguration = operatorv2beta1.GatewayConfiguration
+	// GatewayConfigDataPlaneOptions is an alias for the v2beta1 GatewayConfigDataPlaneOptions type.
+	GatewayConfigDataPlaneOptions = operatorv2beta1.GatewayConfigDataPlaneOptions
 )
 
 const (
-	// ControlPlaneDataPlaneTargetRefType is an alias for the v2alpha1 ControlPlaneDataPlaneTargetRefType type.
-	ControlPlaneDataPlaneTargetRefType = operatorv2alpha1.ControlPlaneDataPlaneTargetRefType
+	// ControlPlaneDataPlaneTargetRefType is an alias for the v2beta1 ControlPlaneDataPlaneTargetRefType type.
+	ControlPlaneDataPlaneTargetRefType = operatorv2beta1.ControlPlaneDataPlaneTargetRefType
 
-	// FeatureGateStateEnabled is an alias for the v2alpha1 FeatureGateStateEnabled type.
-	FeatureGateStateEnabled = operatorv2alpha1.FeatureGateStateEnabled
-	// FeatureGateStateDisabled is an alias for the v2alpha1 FeatureGateStateDisabled type.
-	FeatureGateStateDisabled = operatorv2alpha1.FeatureGateStateDisabled
+	// FeatureGateStateEnabled is an alias for the v2beta1 FeatureGateStateEnabled type.
+	FeatureGateStateEnabled = operatorv2beta1.FeatureGateStateEnabled
+	// FeatureGateStateDisabled is an alias for the v2beta1 FeatureGateStateDisabled type.
+	FeatureGateStateDisabled = operatorv2beta1.FeatureGateStateDisabled
 
-	// ControlPlaneControllerStateEnabled is an alias for the v2alpha1 ControlPlaneControllerStateEnabled type.
-	ControlPlaneControllerStateEnabled = operatorv2alpha1.ControllerStateEnabled
-	// ControlPlaneControllerStateDisabled is an alias for the v2alpha1 ControlPlaneControllerStateDisabled type.
-	ControlPlaneControllerStateDisabled = operatorv2alpha1.ControllerStateDisabled
+	// ControlPlaneControllerStateEnabled is an alias for the v2beta1 ControlPlaneControllerStateEnabled type.
+	ControlPlaneControllerStateEnabled = operatorv2beta1.ControllerStateEnabled
+	// ControlPlaneControllerStateDisabled is an alias for the v2beta1 ControlPlaneControllerStateDisabled type.
+	ControlPlaneControllerStateDisabled = operatorv2beta1.ControllerStateDisabled
 )
 
 func ControlPlaneGVR() schema.GroupVersionResource {
-	return operatorv2alpha1.ControlPlaneGVR()
+	return operatorv2beta1.ControlPlaneGVR()
 }
 
 func GatewayConfigurationGVR() schema.GroupVersionResource {

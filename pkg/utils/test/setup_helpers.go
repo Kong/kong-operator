@@ -280,7 +280,7 @@ func waitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Cli
 				continue
 			}
 			fmt.Printf("INFO: checking KO ControlPlane CRD\n")
-			if _, err := operatorClient.GatewayOperatorV2alpha1().ControlPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
+			if _, err := operatorClient.GatewayOperatorV2beta1().ControlPlanes(corev1.NamespaceDefault).List(ctx, metav1.ListOptions{}); client.IgnoreNotFound(err) != nil {
 				continue
 			}
 			fmt.Printf("INFO: checking KO AIGateway CRD\n")

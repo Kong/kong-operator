@@ -3,7 +3,7 @@ package controlplane
 import (
 	"testing"
 
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
@@ -42,18 +42,18 @@ func TestSpecDeepEqual(t *testing.T) {
 		{
 			name: "same controllers",
 			spec1: &gwtypes.ControlPlaneOptions{
-				Controllers: []operatorv2alpha1.ControlPlaneController{
+				Controllers: []operatorv2beta1.ControlPlaneController{
 					{
 						Name:  "controller1",
-						State: operatorv2alpha1.ControllerStateEnabled,
+						State: operatorv2beta1.ControllerStateEnabled,
 					},
 				},
 			},
 			spec2: &gwtypes.ControlPlaneOptions{
-				Controllers: []operatorv2alpha1.ControlPlaneController{
+				Controllers: []operatorv2beta1.ControlPlaneController{
 					{
 						Name:  "controller1",
-						State: operatorv2alpha1.ControllerStateEnabled,
+						State: operatorv2beta1.ControllerStateEnabled,
 					},
 				},
 			},
@@ -62,26 +62,26 @@ func TestSpecDeepEqual(t *testing.T) {
 		{
 			name: "different controllers order",
 			spec1: &gwtypes.ControlPlaneOptions{
-				Controllers: []operatorv2alpha1.ControlPlaneController{
+				Controllers: []operatorv2beta1.ControlPlaneController{
 					{
 						Name:  "controller1",
-						State: operatorv2alpha1.ControllerStateEnabled,
+						State: operatorv2beta1.ControllerStateEnabled,
 					},
 					{
 						Name:  "controller2",
-						State: operatorv2alpha1.ControllerStateEnabled,
+						State: operatorv2beta1.ControllerStateEnabled,
 					},
 				},
 			},
 			spec2: &gwtypes.ControlPlaneOptions{
-				Controllers: []operatorv2alpha1.ControlPlaneController{
+				Controllers: []operatorv2beta1.ControlPlaneController{
 					{
 						Name:  "controller2",
-						State: operatorv2alpha1.ControllerStateEnabled,
+						State: operatorv2beta1.ControllerStateEnabled,
 					},
 					{
 						Name:  "controller1",
-						State: operatorv2alpha1.ControllerStateEnabled,
+						State: operatorv2beta1.ControllerStateEnabled,
 					},
 				},
 			},
@@ -90,22 +90,22 @@ func TestSpecDeepEqual(t *testing.T) {
 		{
 			name: "different controllers length",
 			spec1: &gwtypes.ControlPlaneOptions{
-				Controllers: []operatorv2alpha1.ControlPlaneController{
+				Controllers: []operatorv2beta1.ControlPlaneController{
 					{
 						Name:  "controller1",
-						State: operatorv2alpha1.ControllerStateEnabled,
+						State: operatorv2beta1.ControllerStateEnabled,
 					},
 				},
 			},
 			spec2: &gwtypes.ControlPlaneOptions{
-				Controllers: []operatorv2alpha1.ControlPlaneController{
+				Controllers: []operatorv2beta1.ControlPlaneController{
 					{
 						Name:  "controller2",
-						State: operatorv2alpha1.ControllerStateEnabled,
+						State: operatorv2beta1.ControllerStateEnabled,
 					},
 					{
 						Name:  "controller1",
-						State: operatorv2alpha1.ControllerStateEnabled,
+						State: operatorv2beta1.ControllerStateEnabled,
 					},
 				},
 			},
@@ -114,22 +114,22 @@ func TestSpecDeepEqual(t *testing.T) {
 		{
 			name: "different controllers content",
 			spec1: &gwtypes.ControlPlaneOptions{
-				Controllers: []operatorv2alpha1.ControlPlaneController{
+				Controllers: []operatorv2beta1.ControlPlaneController{
 					{
 						Name:  "controller1",
-						State: operatorv2alpha1.ControllerStateEnabled,
+						State: operatorv2beta1.ControllerStateEnabled,
 					},
 				},
 			},
 			spec2: &gwtypes.ControlPlaneOptions{
-				Controllers: []operatorv2alpha1.ControlPlaneController{
+				Controllers: []operatorv2beta1.ControlPlaneController{
 					{
 						Name:  "controller1",
-						State: operatorv2alpha1.ControllerStateEnabled,
+						State: operatorv2beta1.ControllerStateEnabled,
 					},
 					{
 						Name:  "controller3",
-						State: operatorv2alpha1.ControllerStateEnabled,
+						State: operatorv2beta1.ControllerStateEnabled,
 					},
 				},
 			},
@@ -138,10 +138,10 @@ func TestSpecDeepEqual(t *testing.T) {
 		{
 			name: "one has controllers, other doesn't",
 			spec1: &gwtypes.ControlPlaneOptions{
-				Controllers: []operatorv2alpha1.ControlPlaneController{
+				Controllers: []operatorv2beta1.ControlPlaneController{
 					{
 						Name:  "controller1",
-						State: operatorv2alpha1.ControllerStateEnabled,
+						State: operatorv2beta1.ControllerStateEnabled,
 					},
 				},
 			},
@@ -151,18 +151,18 @@ func TestSpecDeepEqual(t *testing.T) {
 		{
 			name: "same feature gates",
 			spec1: &gwtypes.ControlPlaneOptions{
-				FeatureGates: []operatorv2alpha1.ControlPlaneFeatureGate{
+				FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
 					{
 						Name:  "feature1",
-						State: operatorv2alpha1.FeatureGateStateEnabled,
+						State: operatorv2beta1.FeatureGateStateEnabled,
 					},
 				},
 			},
 			spec2: &gwtypes.ControlPlaneOptions{
-				FeatureGates: []operatorv2alpha1.ControlPlaneFeatureGate{
+				FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
 					{
 						Name:  "feature1",
-						State: operatorv2alpha1.FeatureGateStateEnabled,
+						State: operatorv2beta1.FeatureGateStateEnabled,
 					},
 				},
 			},
@@ -171,10 +171,10 @@ func TestSpecDeepEqual(t *testing.T) {
 		{
 			name: "one has feature gates, other doesn't",
 			spec1: &gwtypes.ControlPlaneOptions{
-				FeatureGates: []operatorv2alpha1.ControlPlaneFeatureGate{
+				FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
 					{
 						Name:  "feature1",
-						State: operatorv2alpha1.FeatureGateStateEnabled,
+						State: operatorv2beta1.FeatureGateStateEnabled,
 					},
 				},
 			},

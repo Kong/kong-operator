@@ -61,9 +61,9 @@ linters:
         - pattern: ^.*Controlplane.*$
           msg: Please use camel case 'ControlPlane' instead of 'Controlplane'
         - pattern: ^.*operatorv1beta1.ControlPlane.*$
-          msg: Please use v2alpha1 ControlPlane (through github.com/kong/kong-operator/internal/types)
+          msg: Please use v2beta1 ControlPlane (through github.com/kong/kong-operator/internal/types)
         # NOTE: When all references use the types package, this rule can use .* instead of listing types.
-        - pattern: ^.*operatorv2alpha1.(ControlPlane|ControlPlaneStatus|ControlPlaneList|ControlPlaneSpec|ControlPlaneOptions|ControlPlaneDataPlaneTarget\w*)\b.*$
+        - pattern: ^.*operatorv2beta1.(ControlPlane|ControlPlaneStatus|ControlPlaneList|ControlPlaneSpec|ControlPlaneOptions|ControlPlaneDataPlaneTarget\w*)\b.*$
           msg: Please use the types package to refer to the type (through github.com/kong/kong-operator/internal/types)
     gomodguard:
       blocked:
@@ -202,7 +202,7 @@ linters:
       - linters:
           - forbidigo
         path: internal/types/operatortypes.go
-        text: use of `operatorv2alpha1.(ControlPlane\w*)` forbidden
+        text: use of `operatorv2beta1.(ControlPlane\w*)` forbidden
     paths:
       - pkg/clientset
       - config/

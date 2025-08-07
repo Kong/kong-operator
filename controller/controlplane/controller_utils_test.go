@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -21,14 +21,14 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 		{
 			name: "different watch namespaces yield unequal specs",
 			spec1: &gwtypes.ControlPlaneOptions{
-				WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-					Type: operatorv2alpha1.WatchNamespacesTypeList,
+				WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+					Type: operatorv2beta1.WatchNamespacesTypeList,
 					List: []string{"ns1", "ns2"},
 				},
 			},
 			spec2: &gwtypes.ControlPlaneOptions{
-				WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-					Type: operatorv2alpha1.WatchNamespacesTypeList,
+				WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+					Type: operatorv2beta1.WatchNamespacesTypeList,
 					List: []string{"ns1", "ns2", "ns3"},
 				},
 			},
@@ -37,14 +37,14 @@ func TestControlPlaneSpecDeepEqual(t *testing.T) {
 		{
 			name: "the same watch namespaces yield equal specs",
 			spec1: &gwtypes.ControlPlaneOptions{
-				WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-					Type: operatorv2alpha1.WatchNamespacesTypeList,
+				WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+					Type: operatorv2beta1.WatchNamespacesTypeList,
 					List: []string{"ns1", "ns2"},
 				},
 			},
 			spec2: &gwtypes.ControlPlaneOptions{
-				WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-					Type: operatorv2alpha1.WatchNamespacesTypeList,
+				WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+					Type: operatorv2beta1.WatchNamespacesTypeList,
 					List: []string{"ns1", "ns2"},
 				},
 			},

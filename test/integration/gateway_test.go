@@ -23,7 +23,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
 	"github.com/kong/kong-operator/pkg/consts"
 	"github.com/kong/kong-operator/pkg/gatewayapi"
@@ -93,7 +93,7 @@ func TestGatewayEssentials(t *testing.T) {
 
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
-	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV2alpha1().ControlPlanes(namespace.Name)
+	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV2beta1().ControlPlanes(namespace.Name)
 
 	t.Log("verifying that dataplane has 1 ready replica")
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneNN, clients, 1), time.Minute, time.Second)
@@ -168,7 +168,7 @@ func TestGatewayEssentials(t *testing.T) {
 
 	t.Log("verifying that ControlPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
-		_, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplane.Name, metav1.GetOptions{})
+		_, err := GetClients().OperatorClient.GatewayOperatorV2beta1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplane.Name, metav1.GetOptions{})
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
@@ -389,11 +389,11 @@ func TestGatewayMultiple(t *testing.T) {
 
 	t.Log("verifying that ControlPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
-		_, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplaneOne.Name, metav1.GetOptions{})
+		_, err := GetClients().OperatorClient.GatewayOperatorV2beta1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplaneOne.Name, metav1.GetOptions{})
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 	assert.Eventually(t, func() bool {
-		_, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplaneTwo.Name, metav1.GetOptions{})
+		_, err := GetClients().OperatorClient.GatewayOperatorV2beta1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplaneTwo.Name, metav1.GetOptions{})
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
@@ -513,7 +513,7 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
-	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -639,7 +639,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	var err error
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
-	gatewayConfig, err = GetClients().OperatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	gatewayConfig, err = GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfig)
 
@@ -738,7 +738,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 		// TODO: https://github.com/kong/kong-operator/issues/184
 		t.Skip("re-enable once https://github.com/kong/kong-operator/issues/184 is fixed")
 
-		gwcClient := GetClients().OperatorClient.GatewayOperatorV2alpha1().GatewayConfigurations(namespace.Name)
+		gwcClient := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name)
 
 		setGatewayConfigurationEnvProxyPort(t, gatewayConfig, 8005, 8999)
 		gatewayConfig, err = gwcClient.Update(GetCtx(), gatewayConfig, metav1.UpdateOptions{})
@@ -802,12 +802,12 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	})
 }
 
-func setGatewayConfigurationEnvProxyPort(t *testing.T, gatewayConfiguration *operatorv2alpha1.GatewayConfiguration, proxyPort int, proxySSLPort int) {
+func setGatewayConfigurationEnvProxyPort(t *testing.T, gatewayConfiguration *operatorv2beta1.GatewayConfiguration, proxyPort int, proxySSLPort int) {
 	t.Helper()
 
 	dpOptions := gatewayConfiguration.Spec.DataPlaneOptions
 	if dpOptions == nil {
-		dpOptions = &operatorv2alpha1.GatewayConfigDataPlaneOptions{}
+		dpOptions = &operatorv2beta1.GatewayConfigDataPlaneOptions{}
 	}
 	if dpOptions.Deployment.PodTemplateSpec == nil {
 		dpOptions.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
@@ -828,12 +828,12 @@ func setGatewayConfigurationEnvProxyPort(t *testing.T, gatewayConfiguration *ope
 	gatewayConfiguration.Spec.DataPlaneOptions = dpOptions
 }
 
-func setGatewayConfigurationEnvAdminAPIPort(t *testing.T, gatewayConfiguration *operatorv2alpha1.GatewayConfiguration, adminAPIPort int) {
+func setGatewayConfigurationEnvAdminAPIPort(t *testing.T, gatewayConfiguration *operatorv2beta1.GatewayConfiguration, adminAPIPort int) {
 	t.Helper()
 
 	dpOptions := gatewayConfiguration.Spec.DataPlaneOptions
 	if dpOptions == nil {
-		dpOptions = &operatorv2alpha1.GatewayConfigDataPlaneOptions{}
+		dpOptions = &operatorv2beta1.GatewayConfigDataPlaneOptions{}
 	}
 
 	container := k8sutils.GetPodContainerByName(&dpOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)

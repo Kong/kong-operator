@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -33,7 +33,7 @@ func (r *Reconciler) listControlPlanesForWatchNamespaceGrants(
 
 	fromsForControlPlane := lo.Filter(rg.Spec.From,
 		func(from operatorv1alpha1.WatchNamespaceGrantFrom, _ int) bool {
-			return from.Group == operatorv2alpha1.ControlPlaneGVR().Group &&
+			return from.Group == operatorv2beta1.ControlPlaneGVR().Group &&
 				from.Kind == "ControlPlane"
 		},
 	)

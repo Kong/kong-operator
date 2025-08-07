@@ -11,7 +11,7 @@ import (
 	"github.com/tonglil/buflogr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
@@ -873,19 +873,19 @@ func TestWithGatewayDiscoveryReadinessCheckTimeout(t *testing.T) {
 func TestWithDataPlaneSyncOptions(t *testing.T) {
 	testCases := []struct {
 		name             string
-		options          *operatorv2alpha1.ControlPlaneDataPlaneSync
+		options          *operatorv2beta1.ControlPlaneDataPlaneSync
 		expectedInterval time.Duration
 		expectedTimeout  time.Duration
 	}{
 		{
 			name:             "empty value sets default interval and timeout",
-			options:          &operatorv2alpha1.ControlPlaneDataPlaneSync{},
+			options:          &operatorv2beta1.ControlPlaneDataPlaneSync{},
 			expectedInterval: 3 * time.Second,
 			expectedTimeout:  30 * time.Second,
 		},
 		{
 			name: "only specify interval",
-			options: &operatorv2alpha1.ControlPlaneDataPlaneSync{
+			options: &operatorv2beta1.ControlPlaneDataPlaneSync{
 				Interval: &metav1.Duration{
 					Duration: 5 * time.Second,
 				},
@@ -895,7 +895,7 @@ func TestWithDataPlaneSyncOptions(t *testing.T) {
 		},
 		{
 			name: "only specify timeout",
-			options: &operatorv2alpha1.ControlPlaneDataPlaneSync{
+			options: &operatorv2beta1.ControlPlaneDataPlaneSync{
 				Timeout: &metav1.Duration{
 					Duration: time.Minute,
 				},
@@ -905,7 +905,7 @@ func TestWithDataPlaneSyncOptions(t *testing.T) {
 		},
 		{
 			name: "specify both interval and timeout",
-			options: &operatorv2alpha1.ControlPlaneDataPlaneSync{
+			options: &operatorv2beta1.ControlPlaneDataPlaneSync{
 				Interval: &metav1.Duration{
 					Duration: 10 * time.Second,
 				},
@@ -968,7 +968,7 @@ func TestWithEmitKubernetesEvents(t *testing.T) {
 func TestWithTranslationOptions(t *testing.T) {
 	testCases := []struct {
 		name   string
-		opts   *operatorv2alpha1.ControlPlaneTranslationOptions
+		opts   *operatorv2beta1.ControlPlaneTranslationOptions
 		assert func(t *testing.T, cfg *managercfg.Config)
 	}{
 		{
@@ -981,7 +981,7 @@ func TestWithTranslationOptions(t *testing.T) {
 		},
 		{
 			name: "options with nil CombinedServicesFromDifferentHTTPRoutes should not modify config",
-			opts: &operatorv2alpha1.ControlPlaneTranslationOptions{
+			opts: &operatorv2beta1.ControlPlaneTranslationOptions{
 				CombinedServicesFromDifferentHTTPRoutes: nil,
 			},
 			assert: func(t *testing.T, cfg *managercfg.Config) {
@@ -990,10 +990,10 @@ func TestWithTranslationOptions(t *testing.T) {
 		},
 		{
 			name: "options with CombinedServicesFromDifferentHTTPRoutes enabled",
-			opts: &operatorv2alpha1.ControlPlaneTranslationOptions{
-				CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
-				FallbackConfiguration: &operatorv2alpha1.ControlPlaneFallbackConfiguration{
-					UseLastValidConfig: lo.ToPtr(operatorv2alpha1.ControlPlaneFallbackConfigurationStateEnabled),
+			opts: &operatorv2beta1.ControlPlaneTranslationOptions{
+				CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+				FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+					UseLastValidConfig: lo.ToPtr(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
 				},
 			},
 			assert: func(t *testing.T, cfg *managercfg.Config) {
@@ -1003,10 +1003,10 @@ func TestWithTranslationOptions(t *testing.T) {
 		},
 		{
 			name: "disabled options",
-			opts: &operatorv2alpha1.ControlPlaneTranslationOptions{
-				CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled),
-				FallbackConfiguration: &operatorv2alpha1.ControlPlaneFallbackConfiguration{
-					UseLastValidConfig: lo.ToPtr(operatorv2alpha1.ControlPlaneFallbackConfigurationStateDisabled),
+			opts: &operatorv2beta1.ControlPlaneTranslationOptions{
+				CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled),
+				FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+					UseLastValidConfig: lo.ToPtr(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
 				},
 			},
 			assert: func(t *testing.T, cfg *managercfg.Config) {
@@ -1015,8 +1015,8 @@ func TestWithTranslationOptions(t *testing.T) {
 		},
 		{
 			name: "options with DrainSupport enabled",
-			opts: &operatorv2alpha1.ControlPlaneTranslationOptions{
-				DrainSupport: lo.ToPtr(operatorv2alpha1.ControlPlaneDrainSupportStateEnabled),
+			opts: &operatorv2beta1.ControlPlaneTranslationOptions{
+				DrainSupport: lo.ToPtr(operatorv2beta1.ControlPlaneDrainSupportStateEnabled),
 			},
 			assert: func(t *testing.T, cfg *managercfg.Config) {
 				assert.True(t, cfg.EnableDrainSupport)
@@ -1025,8 +1025,8 @@ func TestWithTranslationOptions(t *testing.T) {
 		},
 		{
 			name: "options with DrainSupport disabled",
-			opts: &operatorv2alpha1.ControlPlaneTranslationOptions{
-				DrainSupport: lo.ToPtr(operatorv2alpha1.ControlPlaneDrainSupportStateDisabled),
+			opts: &operatorv2beta1.ControlPlaneTranslationOptions{
+				DrainSupport: lo.ToPtr(operatorv2beta1.ControlPlaneDrainSupportStateDisabled),
 			},
 			assert: func(t *testing.T, cfg *managercfg.Config) {
 				assert.False(t, cfg.EnableDrainSupport)
@@ -1035,9 +1035,9 @@ func TestWithTranslationOptions(t *testing.T) {
 		},
 		{
 			name: "options with both CombinedServicesFromDifferentHTTPRoutes and DrainSupport enabled",
-			opts: &operatorv2alpha1.ControlPlaneTranslationOptions{
-				CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
-				DrainSupport:                            lo.ToPtr(operatorv2alpha1.ControlPlaneDrainSupportStateEnabled),
+			opts: &operatorv2beta1.ControlPlaneTranslationOptions{
+				CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+				DrainSupport:                            lo.ToPtr(operatorv2beta1.ControlPlaneDrainSupportStateEnabled),
 			},
 			assert: func(t *testing.T, cfg *managercfg.Config) {
 				assert.True(t, cfg.CombinedServicesFromDifferentHTTPRoutes)

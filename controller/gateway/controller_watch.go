@@ -17,7 +17,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/pkg/log"
@@ -121,9 +121,9 @@ func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client
 // listGatewaysForKonnectExtension is a watch predicate which finds all Gateways
 // that use a GatewayConfiguration that references a specific KonnectExtension.
 func (r *Reconciler) listGatewaysForKonnectExtension(ctx context.Context, ext *konnectv1alpha2.KonnectExtension) []reconcile.Request {
-	gatewayConfigurationsRequests := index.ListObjectsReferencingKonnectExtension(r.Client, &operatorv2alpha1.GatewayConfigurationList{})(ctx, ext)
-	gatewayConfigurations := lo.Map(gatewayConfigurationsRequests, func(req reconcile.Request, _ int) operatorv2alpha1.GatewayConfiguration {
-		return operatorv2alpha1.GatewayConfiguration{
+	gatewayConfigurationsRequests := index.ListObjectsReferencingKonnectExtension(r.Client, &operatorv2beta1.GatewayConfigurationList{})(ctx, ext)
+	gatewayConfigurations := lo.Map(gatewayConfigurationsRequests, func(req reconcile.Request, _ int) operatorv2beta1.GatewayConfiguration {
+		return operatorv2beta1.GatewayConfiguration{
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: req.Namespace,
 				Name:      req.Name,
@@ -142,7 +142,7 @@ func (r *Reconciler) listGatewaysForKonnectExtension(ctx context.Context, ext *k
 func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := ctrllog.FromContext(ctx)
 
-	gatewayConfig, ok := obj.(*operatorv2alpha1.GatewayConfiguration)
+	gatewayConfig, ok := obj.(*operatorv2beta1.GatewayConfiguration)
 	if !ok {
 		logger.Error(
 			operatorerrors.ErrUnexpectedObject,

@@ -34,6 +34,9 @@
 
 ### Breaking Changes
 
+- `ControlPlane` `v2alpha1` has been replaced by `ControlPlane` `v2beta1`.
+  `GatewayConfiguration` `v2alpha1` has been replaced by `GatewayConfiguration` `v2beta1`.
+  [#2008](https://github.com/Kong/kong-operator/pull/2008)
 - Add flags `--secret-label-selector` and `--config-map-label-selector` to
   filter watched `Secret`s and `ConfigMap`s. Only secrets or configMaps with
   the given label to `true` are reconciled by the controllers.
