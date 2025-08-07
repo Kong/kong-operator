@@ -30,7 +30,6 @@
 | `--enable-controlplane-config-dump` | `bool` | Enable the server to dump generated Kong configuration from ControlPlanes. Only effective when ControlPlane controller is enabled. | `false` |
 | `--enable-conversion-webhook` | `bool` | Enable the conversion webhook. | `true` |
 | `--enable-gateway-api-experimental` | `bool` | Enable the Gateway API experimental features. | `false` |
-| `--enable-validating-webhook` | `bool` | Enable the validating webhook. DEPRECATED: This flag is no-op and will be removed in a future release. | `false` |
 | `--enforce-config` | `bool` | Enforce the configuration on the generated cluster resources. If set to false, the operator will only enforce the configuration when the owner resource spec changes. | `true` |
 | `--health-probe-bind-address` | `string` | The address the probe endpoint binds to. | `:8081` |
 | `--konnect-controller-max-concurrent-reconciles` | `string` | Maximum number of concurrent reconciles for Konnect entities. | `8` |
@@ -44,8 +43,6 @@
 | `--validate-images` | `bool` | Validate the images set in ControlPlane and DataPlane specifications. | `true` |
 | `--version` | `bool` | Print version information. | `false` |
 | `--watch-namespaces` | `string` | Comma-separated list of namespaces to watch. If empty (default), all namespaces are watched. | `""` |
-| `--webhook-certificate-config-base-image` | `string` | The base image for the certgen Jobs. DEPRECATED: This flag is no-op and will be removed in a future release. | `registry.k8s.io/ingress-nginx/kube-webhook-certgen:v1.3.0` |
-| `--webhook-certificate-config-shell-image` | `string` | The shell image for the certgen Jobs. DEPRECATED: This flag is no-op and will be removed in a future release. | `busybox` |
 | `--zap-devel` | `bool` | Development Mode defaults(encoder=consoleEncoder,logLevel=Debug,stackTraceLevel=Warn). Production Mode defaults(encoder=jsonEncoder,logLevel=Info,stackTraceLevel=Error). | `false` |
 | `--zap-encoder` | `string` | Zap log encoding (one of 'json' or 'console'). | `""` |
 | `--zap-log-level` | `string` | Zap Level to configure the verbosity of logging. Can be one of 'debug', 'info', 'error', 'panic'or any integer value > 0 which corresponds to custom debug levels of increasing verbosity. | `""` |
