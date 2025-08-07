@@ -68,5 +68,5 @@ func ControlPlaneGVR() schema.GroupVersionResource {
 }
 
 func GatewayConfigurationGVR() schema.GroupVersionResource {
-	return operatorv2alpha1.GatewayConfigurationGVR()
+	return operatorv2beta1.GatewayConfigurationGVR()
 }
