@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -22,6 +23,7 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
+	"github.com/kong/kong-operator/controller/controlplane"
 	"github.com/kong/kong-operator/controller/pkg/builder"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
@@ -206,7 +208,6 @@ func TestControlPlaneEssentials(t *testing.T) {
 func TestControlPlaneWatchNamespaces(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
-	// clOperator := GetClients().OperatorClient
 	cl := GetClients().MgrClient
 
 	dp := builder.NewDataPlaneBuilder().
@@ -268,10 +269,6 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	}
 
 	t.Log("deploying controlplane resource")
-	// cp, err := clOperator.GatewayOperatorV2alpha1().
-	// 	ControlPlanes(namespace.Name).
-	// 	Create(ctx, cp, metav1.CreateOptions{})
-	// // require.NoError(t, err)
 	require.NoError(t, cl.Create(GetCtx(), cp))
 	cleaner.Add(cp)
 
@@ -412,8 +409,6 @@ func eventuallyVerifyControlPlaneWebhookIsFunctional(t *testing.T, ctx context.C
 }
 
 func TestControlPlaneUpdate(t *testing.T) {
-	t.Skip("Using KIC as a library in ControlPlane controller broke this test (https://github.com/kong/kong-operator/issues/1196)")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -457,7 +452,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	controlplane := &gwtypes.ControlPlane{
+	cp := &gwtypes.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: controlplaneName.Namespace,
 			Name:      controlplaneName.Name,
@@ -486,12 +481,44 @@ func TestControlPlaneUpdate(t *testing.T) {
 	)
 
 	t.Log("deploying controlplane resource")
-	controlplane, err = controlplaneClient.Create(GetCtx(), controlplane, metav1.CreateOptions{})
+	cp, err = controlplaneClient.Create(GetCtx(), cp, metav1.CreateOptions{})
 	require.NoError(t, err)
-	cleaner.Add(controlplane)
+	cleaner.Add(cp)
 
 	t.Log("verifying that the controlplane gets marked as provisioned")
 	require.Eventually(t, testutils.ControlPlaneIsProvisioned(t, GetCtx(), controlplaneName, clients),
+		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+	)
+
+	t.Log("verifying that the controlplane gets marked as ready")
+	require.Eventually(t, testutils.ControlPlaneIsReady(t, GetCtx(), controlplaneName, clients),
+		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+	)
+
+	t.Log("updating controlplane to enable the GatewayAPIReferenceGrant controller")
+	require.Eventually(t,
+		testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients,
+			func(cp *gwtypes.ControlPlane) {
+				cp.Spec.Controllers = append(cp.Spec.Controllers, gwtypes.ControlPlaneController{
+					Name:  controlplane.ControllerNameGatewayAPIReferenceGrant,
+					State: gwtypes.ControlPlaneControllerStateEnabled,
+				})
+			},
+		),
+		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
+	)
+
+	t.Log("verifying that the controlplane has the GatewayAPIReferenceGrant controller enabled (set in status field)")
+	require.EventuallyWithT(t,
+		func(t *assert.CollectT) {
+			cp, err := controlplaneClient.Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
+			require.NoError(t, err)
+
+			assert.Contains(t, cp.Status.Controllers, gwtypes.ControlPlaneController{
+				Name:  controlplane.ControllerNameGatewayAPIReferenceGrant,
+				State: gwtypes.ControlPlaneControllerStateEnabled,
+			})
+		},
 		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 	)
 }
