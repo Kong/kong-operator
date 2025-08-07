@@ -8,37 +8,37 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 )
 
 func TestControlPlaneV2(t *testing.T) {
-	validDataPlaneTarget := operatorv2alpha1.ControlPlaneDataPlaneTarget{
-		Type: operatorv2alpha1.ControlPlaneDataPlaneTargetRefType,
-		Ref: &operatorv2alpha1.ControlPlaneDataPlaneTargetRef{
+	validDataPlaneTarget := operatorv2beta1.ControlPlaneDataPlaneTarget{
+		Type: operatorv2beta1.ControlPlaneDataPlaneTargetRefType,
+		Ref: &operatorv2beta1.ControlPlaneDataPlaneTargetRef{
 			Name: "dataplane-1",
 		},
 	}
 
 	t.Run("extensions", func(t *testing.T) {
-		common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+		common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
 			{
 				Name: "no extensions",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane:           validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{},
 					},
 				},
 			},
 			{
 				Name: "konnectExtension set",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane:           validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{},
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: "konnect.konghq.com",
@@ -53,11 +53,11 @@ func TestControlPlaneV2(t *testing.T) {
 			},
 			{
 				Name: "konnectExtension and DataPlaneMetricsExtension set",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane:           validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{},
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: "konnect.konghq.com",
@@ -79,11 +79,11 @@ func TestControlPlaneV2(t *testing.T) {
 			},
 			{
 				Name: "invalid extension",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane:           validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{},
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: "invalid.konghq.com",
@@ -101,42 +101,42 @@ func TestControlPlaneV2(t *testing.T) {
 	})
 
 	t.Run("dataplane", func(t *testing.T) {
-		common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+		common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
 			{
 				Name: "missing dataplane causes an error",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
+					Spec: operatorv2beta1.ControlPlaneSpec{
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{},
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.dataplane.type: Unsupported value: \"\""),
 			},
 			{
 				Name: "when dataplane.type is set to name, name must be specified",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
-						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetRefType,
+					Spec: operatorv2beta1.ControlPlaneSpec{
+						DataPlane: operatorv2beta1.ControlPlaneDataPlaneTarget{
+							Type: operatorv2beta1.ControlPlaneDataPlaneTargetRefType,
 						},
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{},
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("Ref has to be provided when type is set to ref"),
 			},
 			{
 				Name: "specifying dataplane ref name when type is ref passes",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
-						DataPlane: operatorv2alpha1.ControlPlaneDataPlaneTarget{
-							Type: operatorv2alpha1.ControlPlaneDataPlaneTargetRefType,
-							Ref: &operatorv2alpha1.ControlPlaneDataPlaneTargetRef{
+					Spec: operatorv2beta1.ControlPlaneSpec{
+						DataPlane: operatorv2beta1.ControlPlaneDataPlaneTarget{
+							Type: operatorv2beta1.ControlPlaneDataPlaneTargetRefType,
+							Ref: &operatorv2beta1.ControlPlaneDataPlaneTargetRef{
 								Name: "dataplane-1",
 							},
 						},
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{},
 					},
 				},
 			},
@@ -144,28 +144,28 @@ func TestControlPlaneV2(t *testing.T) {
 	})
 
 	t.Run("feature gates", func(t *testing.T) {
-		common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+		common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
 			{
 				Name: "no feature gates",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane:           validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{},
 					},
 				},
 			},
 			{
 				Name: "feature gate set",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							FeatureGates: []operatorv2alpha1.ControlPlaneFeatureGate{
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
 								{
 									Name:  "KongCustomEntity",
-									State: operatorv2alpha1.FeatureGateStateEnabled,
+									State: operatorv2beta1.FeatureGateStateEnabled,
 								},
 							},
 						},
@@ -174,15 +174,15 @@ func TestControlPlaneV2(t *testing.T) {
 			},
 			{
 				Name: "feature gate disabled",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							FeatureGates: []operatorv2alpha1.ControlPlaneFeatureGate{
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
 								{
 									Name:  "KongCustomEntity",
-									State: operatorv2alpha1.FeatureGateStateDisabled,
+									State: operatorv2beta1.FeatureGateStateDisabled,
 								},
 							},
 						},
@@ -191,32 +191,32 @@ func TestControlPlaneV2(t *testing.T) {
 			},
 			{
 				Name: "feature gate set and then removed",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							FeatureGates: []operatorv2alpha1.ControlPlaneFeatureGate{
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
 								{
 									Name:  "KongCustomEntity",
-									State: operatorv2alpha1.FeatureGateStateEnabled,
+									State: operatorv2beta1.FeatureGateStateEnabled,
 								},
 							},
 						},
 					},
 				},
-				Update: func(cp *operatorv2alpha1.ControlPlane) {
-					cp.Spec.ControlPlaneOptions = operatorv2alpha1.ControlPlaneOptions{}
+				Update: func(cp *operatorv2beta1.ControlPlane) {
+					cp.Spec.ControlPlaneOptions = operatorv2beta1.ControlPlaneOptions{}
 				},
 			},
 			{
 				Name: "cannot provide a feature gate with enabled unset",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							FeatureGates: []operatorv2alpha1.ControlPlaneFeatureGate{
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
 								{
 									Name: "KongCustomEntity",
 								},
@@ -230,28 +230,28 @@ func TestControlPlaneV2(t *testing.T) {
 	})
 
 	t.Run("controllers", func(t *testing.T) {
-		common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+		common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
 			{
 				Name: "no controller overrides specified",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane:           validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{},
 					},
 				},
 			},
 			{
 				Name: "controller overrides specified",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Controllers: []operatorv2alpha1.ControlPlaneController{
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							Controllers: []operatorv2beta1.ControlPlaneController{
 								{
 									Name:  "GatewayAPI",
-									State: operatorv2alpha1.ControllerStateEnabled,
+									State: operatorv2beta1.ControllerStateEnabled,
 								},
 							},
 						},
@@ -260,15 +260,15 @@ func TestControlPlaneV2(t *testing.T) {
 			},
 			{
 				Name: "controller overrides specified - disabled",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Controllers: []operatorv2alpha1.ControlPlaneController{
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							Controllers: []operatorv2beta1.ControlPlaneController{
 								{
 									Name:  "GatewayAPI",
-									State: operatorv2alpha1.ControllerStateDisabled,
+									State: operatorv2beta1.ControllerStateDisabled,
 								},
 							},
 						},
@@ -277,32 +277,32 @@ func TestControlPlaneV2(t *testing.T) {
 			},
 			{
 				Name: "controller overrides specified and then removed",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Controllers: []operatorv2alpha1.ControlPlaneController{
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							Controllers: []operatorv2beta1.ControlPlaneController{
 								{
 									Name:  "GatewayAPI",
-									State: operatorv2alpha1.ControllerStateEnabled,
+									State: operatorv2beta1.ControllerStateEnabled,
 								},
 							},
 						},
 					},
 				},
-				Update: func(cp *operatorv2alpha1.ControlPlane) {
-					cp.Spec.ControlPlaneOptions = operatorv2alpha1.ControlPlaneOptions{}
+				Update: func(cp *operatorv2beta1.ControlPlane) {
+					cp.Spec.ControlPlaneOptions = operatorv2beta1.ControlPlaneOptions{}
 				},
 			},
 			{
 				Name: "cannot provide a controller with enabled unset",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Controllers: []operatorv2alpha1.ControlPlaneController{
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							Controllers: []operatorv2beta1.ControlPlaneController{
 								{
 									Name: "GatewayAPI",
 								},
@@ -316,16 +316,16 @@ func TestControlPlaneV2(t *testing.T) {
 	})
 
 	t.Run("translation", func(t *testing.T) {
-		common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+		common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
 			{
 				Name: "combinedServicesFromDifferentHTTPRoutes set to enabled",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
-								CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
 							},
 						},
 					},
@@ -333,13 +333,13 @@ func TestControlPlaneV2(t *testing.T) {
 			},
 			{
 				Name: "combinedServicesFromDifferentHTTPRoutes set to disabled",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
-								CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
 							},
 						},
 					},
@@ -347,13 +347,13 @@ func TestControlPlaneV2(t *testing.T) {
 			},
 			{
 				Name: "combinedServicesFromDifferentHTTPRoutes set to disallowed value",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
-								CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesState("invalid")),
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesState("invalid")),
 							},
 						},
 					},
@@ -362,13 +362,13 @@ func TestControlPlaneV2(t *testing.T) {
 			},
 			{
 				Name: "drainSupport set to enabled",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
-								DrainSupport: lo.ToPtr(operatorv2alpha1.ControlPlaneDrainSupportStateEnabled),
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								DrainSupport: lo.ToPtr(operatorv2beta1.ControlPlaneDrainSupportStateEnabled),
 							},
 						},
 					},
@@ -376,13 +376,13 @@ func TestControlPlaneV2(t *testing.T) {
 			},
 			{
 				Name: "drainSupport set to disabled",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
-								DrainSupport: lo.ToPtr(operatorv2alpha1.ControlPlaneDrainSupportStateDisabled),
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								DrainSupport: lo.ToPtr(operatorv2beta1.ControlPlaneDrainSupportStateDisabled),
 							},
 						},
 					},
@@ -390,13 +390,13 @@ func TestControlPlaneV2(t *testing.T) {
 			},
 			{
 				Name: "drainSupport set to disallowed value",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
-								DrainSupport: lo.ToPtr(operatorv2alpha1.ControlPlaneDrainSupportState("invalid")),
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								DrainSupport: lo.ToPtr(operatorv2beta1.ControlPlaneDrainSupportState("invalid")),
 							},
 						},
 					},
@@ -405,14 +405,14 @@ func TestControlPlaneV2(t *testing.T) {
 			},
 			{
 				Name: "both combinedServicesFromDifferentHTTPRoutes and drainSupport set",
-				TestObject: &operatorv2alpha1.ControlPlane{
+				TestObject: &operatorv2beta1.ControlPlane{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.ControlPlaneSpec{
+					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
-						ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-							Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
-								CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
-								DrainSupport:                            lo.ToPtr(operatorv2alpha1.ControlPlaneDrainSupportStateDisabled),
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+								CombinedServicesFromDifferentHTTPRoutes: lo.ToPtr(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+								DrainSupport:                            lo.ToPtr(operatorv2beta1.ControlPlaneDrainSupportStateDisabled),
 							},
 						},
 					},
@@ -421,17 +421,17 @@ func TestControlPlaneV2(t *testing.T) {
 		}.Run(t)
 
 		t.Run("fallbackConfiguration", func(t *testing.T) {
-			common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+			common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
 				{
 					Name: "fallbackConfiguration.useLastValidConfig set to enabled",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
-									FallbackConfiguration: &operatorv2alpha1.ControlPlaneFallbackConfiguration{
-										UseLastValidConfig: lo.ToPtr(operatorv2alpha1.ControlPlaneFallbackConfigurationStateEnabled),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+									FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+										UseLastValidConfig: lo.ToPtr(operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled),
 									},
 								},
 							},
@@ -440,14 +440,14 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "fallbackConfiguration.useLastValidConfig set to disabled",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
-									FallbackConfiguration: &operatorv2alpha1.ControlPlaneFallbackConfiguration{
-										UseLastValidConfig: lo.ToPtr(operatorv2alpha1.ControlPlaneFallbackConfigurationStateDisabled),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+									FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+										UseLastValidConfig: lo.ToPtr(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
 									},
 								},
 							},
@@ -456,14 +456,14 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "fallbackConfiguration.useLastValidConfig set to disallowed value",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Translation: &operatorv2alpha1.ControlPlaneTranslationOptions{
-									FallbackConfiguration: &operatorv2alpha1.ControlPlaneFallbackConfiguration{
-										UseLastValidConfig: lo.ToPtr(operatorv2alpha1.ControlPlaneFallbackConfigurationState("invalid")),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+									FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+										UseLastValidConfig: lo.ToPtr(operatorv2beta1.ControlPlaneFallbackConfigurationState("invalid")),
 									},
 								},
 							},
@@ -475,17 +475,17 @@ func TestControlPlaneV2(t *testing.T) {
 		})
 
 		t.Run("configDump", func(t *testing.T) {
-			common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+			common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
 				{
 					Name: "configDump.state and configDump.dumpsensitive set to enabled",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								ConfigDump: &operatorv2alpha1.ControlPlaneConfigDump{
-									State:         operatorv2alpha1.ConfigDumpStateEnabled,
-									DumpSensitive: operatorv2alpha1.ConfigDumpStateEnabled,
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
+									State:         operatorv2beta1.ConfigDumpStateEnabled,
+									DumpSensitive: operatorv2beta1.ConfigDumpStateEnabled,
 								},
 							},
 						},
@@ -493,14 +493,14 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "configDump.state and configDump.dumpSensitive set to disabled",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								ConfigDump: &operatorv2alpha1.ControlPlaneConfigDump{
-									State:         operatorv2alpha1.ConfigDumpStateDisabled,
-									DumpSensitive: operatorv2alpha1.ConfigDumpStateDisabled,
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
+									State:         operatorv2beta1.ConfigDumpStateDisabled,
+									DumpSensitive: operatorv2beta1.ConfigDumpStateDisabled,
 								},
 							},
 						},
@@ -508,14 +508,14 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "configDump.state set to enabled and configDump.dumpSensitive set to disabled",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								ConfigDump: &operatorv2alpha1.ControlPlaneConfigDump{
-									State:         operatorv2alpha1.ConfigDumpStateEnabled,
-									DumpSensitive: operatorv2alpha1.ConfigDumpStateDisabled,
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
+									State:         operatorv2beta1.ConfigDumpStateEnabled,
+									DumpSensitive: operatorv2beta1.ConfigDumpStateDisabled,
 								},
 							},
 						},
@@ -523,14 +523,14 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "configDump.state set to disabled and configDump.dumpSensitive set to enabled is invalid",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								ConfigDump: &operatorv2alpha1.ControlPlaneConfigDump{
-									State:         operatorv2alpha1.ConfigDumpStateDisabled,
-									DumpSensitive: operatorv2alpha1.ConfigDumpStateEnabled,
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
+									State:         operatorv2beta1.ConfigDumpStateDisabled,
+									DumpSensitive: operatorv2beta1.ConfigDumpStateEnabled,
 								},
 							},
 						},
@@ -539,14 +539,14 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "configDump.state set to disallowed value",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								ConfigDump: &operatorv2alpha1.ControlPlaneConfigDump{
-									State:         operatorv2alpha1.ConfigDumpState("invalid"),
-									DumpSensitive: operatorv2alpha1.ConfigDumpStateEnabled,
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
+									State:         operatorv2beta1.ConfigDumpState("invalid"),
+									DumpSensitive: operatorv2beta1.ConfigDumpStateEnabled,
 								},
 							},
 						},
@@ -555,14 +555,14 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "configDump.dumpSensitive is set to disallowed value",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								ConfigDump: &operatorv2alpha1.ControlPlaneConfigDump{
-									State:         operatorv2alpha1.ConfigDumpStateEnabled,
-									DumpSensitive: operatorv2alpha1.ConfigDumpState("invalid"),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
+									State:         operatorv2beta1.ConfigDumpStateEnabled,
+									DumpSensitive: operatorv2beta1.ConfigDumpState("invalid"),
 								},
 							},
 						},
@@ -573,19 +573,19 @@ func TestControlPlaneV2(t *testing.T) {
 		})
 
 		t.Run("objectFilters", func(t *testing.T) {
-			common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+			common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
 				{
 					Name: "objectFilters.secrets and objectFilters.configMaps are set",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								ObjectFilters: &operatorv2alpha1.ControlPlaneObjectFilters{
-									Secrets: &operatorv2alpha1.ControlPlaneFilterForObjectType{
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								ObjectFilters: &operatorv2beta1.ControlPlaneObjectFilters{
+									Secrets: &operatorv2beta1.ControlPlaneFilterForObjectType{
 										MatchLabels: map[string]string{"konghq.com/secret": "true"},
 									},
-									ConfigMaps: &operatorv2alpha1.ControlPlaneFilterForObjectType{
+									ConfigMaps: &operatorv2beta1.ControlPlaneFilterForObjectType{
 										MatchLabels: map[string]string{"konghq.com/configmap": "true"},
 									},
 								},
@@ -595,13 +595,13 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "maximum items in matchLabels is 8",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								ObjectFilters: &operatorv2alpha1.ControlPlaneObjectFilters{
-									Secrets: &operatorv2alpha1.ControlPlaneFilterForObjectType{
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								ObjectFilters: &operatorv2beta1.ControlPlaneObjectFilters{
+									Secrets: &operatorv2beta1.ControlPlaneFilterForObjectType{
 										MatchLabels: map[string]string{
 											"konghq.com/secret": "true",
 											"label1":            "value1",
@@ -622,16 +622,16 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "key of objectFilters.*.matchLabels must have minimum length 1",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								ObjectFilters: &operatorv2alpha1.ControlPlaneObjectFilters{
-									Secrets: &operatorv2alpha1.ControlPlaneFilterForObjectType{
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								ObjectFilters: &operatorv2beta1.ControlPlaneObjectFilters{
+									Secrets: &operatorv2beta1.ControlPlaneFilterForObjectType{
 										MatchLabels: map[string]string{"konghq.com/secret": "true"},
 									},
-									ConfigMaps: &operatorv2alpha1.ControlPlaneFilterForObjectType{
+									ConfigMaps: &operatorv2beta1.ControlPlaneFilterForObjectType{
 										MatchLabels: map[string]string{"": "aaa"},
 									},
 								},
@@ -642,13 +642,13 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "value of objectFilters.*.matchLabels must have maximum length 63",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								ObjectFilters: &operatorv2alpha1.ControlPlaneObjectFilters{
-									Secrets: &operatorv2alpha1.ControlPlaneFilterForObjectType{
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								ObjectFilters: &operatorv2beta1.ControlPlaneObjectFilters{
+									Secrets: &operatorv2beta1.ControlPlaneFilterForObjectType{
 										MatchLabels: map[string]string{"konghq.com/secret": "this-is-a-very-very-long-label-which-is-longer-than-63-characters"},
 									},
 								},
@@ -663,31 +663,31 @@ func TestControlPlaneV2(t *testing.T) {
 
 	t.Run("konnect", func(t *testing.T) {
 		t.Run("basic configuration", func(t *testing.T) {
-			common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+			common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
 				{
 					Name: "no konnect configuration",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane:           validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{},
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{},
 						},
 					},
 				},
 				{
 					Name: "konnect configuration with all options set",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-									ConsumersSync: lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectConsumersSyncStateEnabled),
-									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-										State:                lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									ConsumersSync: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateEnabled),
+									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
+										State:                lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
 										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
 										PollingPeriod:        lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
-										StorageState:         lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
+										StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
 									},
 									NodeRefreshPeriod:  lo.ToPtr(metav1.Duration{Duration: 60 * time.Second}),
 									ConfigUploadPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
@@ -700,16 +700,16 @@ func TestControlPlaneV2(t *testing.T) {
 		})
 
 		t.Run("consumersSync", func(t *testing.T) {
-			common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+			common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
 				{
 					Name: "consumersSync set to enabled",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-									ConsumersSync: lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectConsumersSyncStateEnabled),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									ConsumersSync: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateEnabled),
 								},
 							},
 						},
@@ -717,13 +717,13 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "consumersSync set to disabled",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-									ConsumersSync: lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectConsumersSyncStateDisabled),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									ConsumersSync: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateDisabled),
 								},
 							},
 						},
@@ -731,13 +731,13 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "consumersSync set to disallowed value",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-									ConsumersSync: lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectConsumersSyncState("invalid")),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									ConsumersSync: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectConsumersSyncState("invalid")),
 								},
 							},
 						},
@@ -748,17 +748,17 @@ func TestControlPlaneV2(t *testing.T) {
 		})
 
 		t.Run("licensing", func(t *testing.T) {
-			common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+			common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
 				{
 					Name: "licensing set to enabled without polling periods is allowed",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-										State: lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
+										State: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
 									},
 								},
 							},
@@ -767,15 +767,15 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "licensing set to disabled",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-										State:        lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateDisabled),
-										StorageState: lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateDisabled),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
+										State:        lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
+										StorageState: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
 									},
 								},
 							},
@@ -784,17 +784,17 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "licensing with polling periods and storage",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-										State:                lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
+										State:                lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
 										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
 										PollingPeriod:        lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
-										StorageState:         lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
+										StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
 									},
 								},
 							},
@@ -803,17 +803,17 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "licensing with storage disabled",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-										State:                lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
+										State:                lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
 										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
 										PollingPeriod:        lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
-										StorageState:         lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateDisabled),
+										StorageState:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
 									},
 								},
 							},
@@ -822,15 +822,15 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "licensing storage set to disallowed value",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-										State:        lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
-										StorageState: lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingState("invalid")),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
+										State:        lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
+										StorageState: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingState("invalid")),
 									},
 								},
 							},
@@ -840,15 +840,15 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "storageState set when licensing is disabled",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-										State:        lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateDisabled),
-										StorageState: lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
+										State:        lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
+										StorageState: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
 									},
 								},
 							},
@@ -858,14 +858,14 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "licensing set to disabled with initialPollingPeriod",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-										State:                lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateDisabled),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
+										State:                lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
 										InitialPollingPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
 									},
 								},
@@ -876,14 +876,14 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "licensing set to disabled with pollingPeriod",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-										State:         lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingStateDisabled),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
+										State:         lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingStateDisabled),
 										PollingPeriod: lo.ToPtr(metav1.Duration{Duration: 300 * time.Second}),
 									},
 								},
@@ -894,14 +894,14 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "licensing set to disallowed value",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
-									Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-										State: lo.ToPtr(operatorv2alpha1.ControlPlaneKonnectLicensingState("invalid")),
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+									Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
+										State: lo.ToPtr(operatorv2beta1.ControlPlaneKonnectLicensingState("invalid")),
 									},
 								},
 							},
@@ -913,15 +913,15 @@ func TestControlPlaneV2(t *testing.T) {
 		})
 
 		t.Run("periods", func(t *testing.T) {
-			common.TestCasesGroup[*operatorv2alpha1.ControlPlane]{
+			common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
 				{
 					Name: "nodeRefreshPeriod set",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									NodeRefreshPeriod: lo.ToPtr(metav1.Duration{Duration: 60 * time.Second}),
 								},
 							},
@@ -930,12 +930,12 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "configUploadPeriod set",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									ConfigUploadPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
 								},
 							},
@@ -944,12 +944,12 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				{
 					Name: "both periods set",
-					TestObject: &operatorv2alpha1.ControlPlane{
+					TestObject: &operatorv2beta1.ControlPlane{
 						ObjectMeta: common.CommonObjectMeta,
-						Spec: operatorv2alpha1.ControlPlaneSpec{
+						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								Konnect: &operatorv2alpha1.ControlPlaneKonnectOptions{
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
 									NodeRefreshPeriod:  lo.ToPtr(metav1.Duration{Duration: 60 * time.Second}),
 									ConfigUploadPeriod: lo.ToPtr(metav1.Duration{Duration: 30 * time.Second}),
 								},

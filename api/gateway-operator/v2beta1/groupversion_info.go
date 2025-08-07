@@ -14,10 +14,10 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v2alpha1 contains API Schema definitions for the gateway-operator.konghq.com v2alpha1 API group
+// Package v2beta1 contains API Schema definitions for the gateway-operator.konghq.com v2beta1 API group
 // +kubebuilder:object:generate=true
 // +groupName=gateway-operator.konghq.com
-package v2alpha1
+package v2beta1
 
 import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -26,7 +26,7 @@ import (
 
 var (
 	// SchemeGroupVersion is group version used to register these objects
-	SchemeGroupVersion = schema.GroupVersion{Group: "gateway-operator.konghq.com", Version: "v2alpha1"}
+	SchemeGroupVersion = schema.GroupVersion{Group: "gateway-operator.konghq.com", Version: "v2beta1"}
 
 	// SchemeBuilder is used to add go types to the GroupVersionKind scheme
 	SchemeBuilder = &scheme.Builder{GroupVersion: SchemeGroupVersion}

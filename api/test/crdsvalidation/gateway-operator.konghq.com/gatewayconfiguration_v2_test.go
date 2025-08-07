@@ -8,25 +8,25 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	operatorv2alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2alpha1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 )
 
 func TestGatewayConfigurationV2(t *testing.T) {
 	t.Run("extensions", func(t *testing.T) {
-		common.TestCasesGroup[*operatorv2alpha1.GatewayConfiguration]{
+		common.TestCasesGroup[*operatorv2beta1.GatewayConfiguration]{
 			{
 				Name: "it is valid to specify no extensions",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
+				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec:       operatorv2alpha1.GatewayConfigurationSpec{},
+					Spec:       operatorv2beta1.GatewayConfigurationSpec{},
 				},
 			},
 			{
 				Name: "valid konnectExtension at the gatewayConfiguration level",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
+				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.GatewayConfigurationSpec{
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: "konnect.konghq.com",
@@ -41,9 +41,9 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			},
 			{
 				Name: "valid DataPlaneMetricsExtension at the gatewayConfiguration level",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
+				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.GatewayConfigurationSpec{
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: "gateway-operator.konghq.com",
@@ -58,9 +58,9 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			},
 			{
 				Name: "valid DataPlaneMetricsExtension and KonnectExtension at the gatewayConfiguration level",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
+				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.GatewayConfigurationSpec{
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: "gateway-operator.konghq.com",
@@ -82,9 +82,9 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			},
 			{
 				Name: "invalid 3 extensions (max 2 are allowed) at the gatewayConfiguration level",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
+				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.GatewayConfigurationSpec{
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: "gateway-operator.konghq.com",
@@ -114,9 +114,9 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			},
 			{
 				Name: "invalid konnectExtension",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
+				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.GatewayConfigurationSpec{
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: "wrong.konghq.com",
@@ -134,30 +134,30 @@ func TestGatewayConfigurationV2(t *testing.T) {
 	})
 
 	t.Run("DataPlaneOptions", func(t *testing.T) {
-		common.TestCasesGroup[*operatorv2alpha1.GatewayConfiguration]{
+		common.TestCasesGroup[*operatorv2beta1.GatewayConfiguration]{
 			{
 				Name: "it is valid to specify no DataPlaneOptions",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
+				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.GatewayConfigurationSpec{
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						DataPlaneOptions: nil,
 					},
 				},
 			},
 			{
 				Name: "specifying resources.PodDisruptionBudget",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
+				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.GatewayConfigurationSpec{
-						DataPlaneOptions: &operatorv2alpha1.GatewayConfigDataPlaneOptions{
-							Deployment: operatorv2alpha1.DataPlaneDeploymentOptions{
-								DeploymentOptions: operatorv2alpha1.DeploymentOptions{
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+							Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv2beta1.DeploymentOptions{
 									Replicas: lo.ToPtr(int32(4)),
 								},
 							},
-							Resources: &operatorv2alpha1.GatewayConfigDataPlaneResources{
-								PodDisruptionBudget: &operatorv2alpha1.PodDisruptionBudget{
-									Spec: operatorv2alpha1.PodDisruptionBudgetSpec{
+							Resources: &operatorv2beta1.GatewayConfigDataPlaneResources{
+								PodDisruptionBudget: &operatorv2beta1.PodDisruptionBudget{
+									Spec: operatorv2beta1.PodDisruptionBudgetSpec{
 										MinAvailable:               lo.ToPtr(intstr.FromInt(1)),
 										UnhealthyPodEvictionPolicy: lo.ToPtr(policyv1.IfHealthyBudget),
 									},
@@ -169,18 +169,18 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			},
 			{
 				Name: "specifying resources.PodDisruptionBudget can only specify onf of maxUnavailable and minAvailable",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
+				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.GatewayConfigurationSpec{
-						DataPlaneOptions: &operatorv2alpha1.GatewayConfigDataPlaneOptions{
-							Deployment: operatorv2alpha1.DataPlaneDeploymentOptions{
-								DeploymentOptions: operatorv2alpha1.DeploymentOptions{
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+							Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv2beta1.DeploymentOptions{
 									Replicas: lo.ToPtr(int32(4)),
 								},
 							},
-							Resources: &operatorv2alpha1.GatewayConfigDataPlaneResources{
-								PodDisruptionBudget: &operatorv2alpha1.PodDisruptionBudget{
-									Spec: operatorv2alpha1.PodDisruptionBudgetSpec{
+							Resources: &operatorv2beta1.GatewayConfigDataPlaneResources{
+								PodDisruptionBudget: &operatorv2beta1.PodDisruptionBudget{
+									Spec: operatorv2beta1.PodDisruptionBudgetSpec{
 										MinAvailable:   lo.ToPtr(intstr.FromInt(1)),
 										MaxUnavailable: lo.ToPtr(intstr.FromInt(1)),
 									},
@@ -195,25 +195,25 @@ func TestGatewayConfigurationV2(t *testing.T) {
 	})
 
 	t.Run("ControlPlaneOptions", func(t *testing.T) {
-		common.TestCasesGroup[*operatorv2alpha1.GatewayConfiguration]{
+		common.TestCasesGroup[*operatorv2beta1.GatewayConfiguration]{
 			{
 				Name: "it is valid to specify no ControlPlaneOptions",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
+				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.GatewayConfigurationSpec{
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: nil,
 					},
 				},
 			},
 			{
 				Name: "specifying watch namespaces, type=all",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
+				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.GatewayConfigurationSpec{
-						ControlPlaneOptions: &operatorv2alpha1.GatewayConfigControlPlaneOptions{
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-									Type: operatorv2alpha1.WatchNamespacesTypeAll,
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+									Type: operatorv2beta1.WatchNamespacesTypeAll,
 								},
 							},
 						},
@@ -222,13 +222,13 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			},
 			{
 				Name: "specifying watch namespaces, type=own",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
+				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.GatewayConfigurationSpec{
-						ControlPlaneOptions: &operatorv2alpha1.GatewayConfigControlPlaneOptions{
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-									Type: operatorv2alpha1.WatchNamespacesTypeOwn,
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+									Type: operatorv2beta1.WatchNamespacesTypeOwn,
 								},
 							},
 						},
@@ -237,13 +237,13 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			},
 			{
 				Name: "specifying watch namespaces, type=list",
-				TestObject: &operatorv2alpha1.GatewayConfiguration{
+				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2alpha1.GatewayConfigurationSpec{
-						ControlPlaneOptions: &operatorv2alpha1.GatewayConfigControlPlaneOptions{
-							ControlPlaneOptions: operatorv2alpha1.ControlPlaneOptions{
-								WatchNamespaces: &operatorv2alpha1.WatchNamespaces{
-									Type: operatorv2alpha1.WatchNamespacesTypeList,
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
+							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+								WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+									Type: operatorv2beta1.WatchNamespacesTypeList,
 									List: []string{
 										"namespace1",
 										"namespace2",

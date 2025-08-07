@@ -32,7 +32,7 @@ func init() {
 // +genclient
 // +apireference:kgo:include
 // +kong:channels=gateway-operator
-// +kubebuilder:deprecatedversion:warning="GatewayConfiguration v1beta1 has been deprecated in favor of v2alpha1 and it will be removed in future."
+// +kubebuilder:deprecatedversion:warning="GatewayConfiguration v1beta1 has been deprecated in favor of v2beta1 and it will be removed in future."
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=kogc,categories=kong
