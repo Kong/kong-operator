@@ -12,6 +12,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -25,7 +26,7 @@ func updateKongConsumerStatusWithKonnectID(
 	id string,
 	cpID string,
 ) {
-	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 		ControlPlaneID:      cpID,
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}
@@ -41,7 +42,7 @@ func updateKongConsumerGroupStatusWithKonnectID(
 	id string,
 	cpID string,
 ) {
-	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 		ControlPlaneID:      cpID,
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}
@@ -57,7 +58,7 @@ func updateKongServiceStatusWithProgrammed(
 	id string,
 	cpID string,
 ) {
-	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 		ControlPlaneID:      cpID,
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}
@@ -77,7 +78,7 @@ func updateKongRouteStatusWithProgrammed(
 	cpID string,
 	serviceID string,
 ) {
-	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs{
+	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndServiceRefs{
 		ServiceID:           serviceID,
 		ControlPlaneID:      cpID,
 		KonnectEntityStatus: konnectEntityStatus(id),
@@ -96,7 +97,7 @@ func updateKongKeySetStatusWithProgrammed(
 	obj *configurationv1alpha1.KongKeySet,
 	id, cpID string,
 ) {
-	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 		ControlPlaneID:      cpID,
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}
@@ -115,7 +116,7 @@ func updateKongUpstreamStatusWithProgrammed(
 	id string,
 	cpID string,
 ) {
-	obj.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 		ControlPlaneID:      cpID,
 		KonnectEntityStatus: konnectEntityStatus(id),
 	}
@@ -126,8 +127,8 @@ func updateKongUpstreamStatusWithProgrammed(
 	require.NoError(t, cl.Status().Update(ctx, obj))
 }
 
-func konnectEntityStatus(id string) konnectv1alpha1.KonnectEntityStatus {
-	return konnectv1alpha1.KonnectEntityStatus{
+func konnectEntityStatus(id string) konnectv1alpha2.KonnectEntityStatus {
+	return konnectv1alpha2.KonnectEntityStatus{
 		ID:        id,
 		ServerURL: sdkmocks.SDKServerURL,
 		OrgID:     "org-id",

@@ -14,6 +14,7 @@ import (
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
@@ -98,7 +99,7 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 	// TODO: make this more generic.
 	if target, ok := any(ent).(*configurationv1alpha1.KongTarget); ok {
 		if target.Status.Konnect == nil {
-			target.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndUpstreamRefs{}
+			target.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndUpstreamRefs{}
 		}
 		target.Status.Konnect.UpstreamID = kongUpstream.GetKonnectID()
 	}

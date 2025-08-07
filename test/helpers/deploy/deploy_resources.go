@@ -274,8 +274,8 @@ func KonnectGatewayControlPlane(
 			Name: name,
 		},
 		Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
-			KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-				APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 					Name: apiAuth.Name,
 				},
 			},
@@ -402,8 +402,8 @@ func KonnectCloudGatewayNetwork(
 				"us-east-1a",
 			},
 			CidrBlock: "10.0.0.1/8",
-			KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-				APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 					Name: apiAuth.Name,
 				},
 			},
@@ -1210,7 +1210,7 @@ type ObjectSupportingKonnectConfiguration interface {
 
 // WithKonnectConfiguration returns an option function that sets the `KonnectConfiguration` in the object.
 func WithKonnectConfiguration[T ObjectSupportingKonnectConfiguration](
-	konnectConfiguration konnectv1alpha1.KonnectConfiguration,
+	konnectConfiguration konnectv1alpha2.KonnectConfiguration,
 ) ObjOption {
 	return func(obj client.Object) {
 		switch o := any(obj).(type) {

@@ -14,7 +14,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 
 	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
@@ -45,7 +45,7 @@ func TestCreateKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -111,7 +111,7 @@ func TestCreateKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -151,7 +151,7 @@ func TestCreateKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -217,9 +217,9 @@ func TestDeleteKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
 							},
 						},
@@ -249,9 +249,9 @@ func TestDeleteKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
 							},
 						},
@@ -283,9 +283,9 @@ func TestDeleteKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
 							},
 						},
@@ -346,9 +346,9 @@ func TestUpdateKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
 							},
 						},
@@ -395,9 +395,9 @@ func TestUpdateKongService(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "123456789",
 							},
 						},
@@ -465,7 +465,7 @@ func TestCreateAndUpdateKongService_KubernetesMetadataConsistency(t *testing.T) 
 			},
 		},
 		Status: configurationv1alpha1.KongServiceStatus{
-			Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 				ControlPlaneID: uuid.NewString(),
 			},
 		},

@@ -43,6 +43,8 @@
   requires reconciled secrets or configmaps to set the labels given in the flags
   to `true`.
   [#1982](https://github.com/Kong/kong-operator/pull/1982)
+- Implement conversion webhook for `KonnectGatewayControlPlane`.
+  [#2023](https://github.com/Kong/kong-operator/pull/2023)
 
 ### Fixed
 
