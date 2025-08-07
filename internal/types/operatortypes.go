@@ -39,6 +39,18 @@ type (
 
 	// ControllerState is an alias for the v2alpha1 ControllerState type.
 	ControllerState = operatorv2alpha1.ControllerState
+
+	// ControlPlaneDataPlaneSync is an alias for the v2alpha1 ControlPlaneDataPlaneSync type.
+	ControlPlaneDataPlaneSync = operatorv2alpha1.ControlPlaneDataPlaneSync
+
+	// ControlPlaneTranslationOptions is an alias for the v2alpha1 ControlPlaneTranslationOptions type.
+	ControlPlaneTranslationOptions = operatorv2alpha1.ControlPlaneTranslationOptions
+
+	// ControlPlaneFallbackConfiguration is an alias for the v2alpha1 ControlPlaneFallbackConfiguration type.
+	ControlPlaneFallbackConfiguration = operatorv2alpha1.ControlPlaneFallbackConfiguration
+
+	// ControlPlaneReverseSyncState is an alias for the v2alpha1 ControlPlaneReverseSyncState type.
+	ControlPlaneReverseSyncState = operatorv2alpha1.ControlPlaneReverseSyncState
 )
 
 type (
@@ -61,6 +73,26 @@ const (
 	ControlPlaneControllerStateEnabled = operatorv2alpha1.ControllerStateEnabled
 	// ControlPlaneControllerStateDisabled is an alias for the v2alpha1 ControlPlaneControllerStateDisabled type.
 	ControlPlaneControllerStateDisabled = operatorv2alpha1.ControllerStateDisabled
+
+	// ControlPlaneFallbackConfigurationStateEnabled is an alias for the v2alpha1 ControlPlaneFallbackConfigurationStateEnabled type.
+	ControlPlaneFallbackConfigurationStateEnabled = operatorv2alpha1.ControlPlaneFallbackConfigurationStateEnabled
+	// ControlPlaneFallbackConfigurationStateDisabled is an alias for the v2alpha1 ControlPlaneFallbackConfigurationStateDisabled type.
+	ControlPlaneFallbackConfigurationStateDisabled = operatorv2alpha1.ControlPlaneFallbackConfigurationStateDisabled
+
+	// ControlPlaneReverseSyncStateEnabled is an alias for the v2alpha1 ControlPlaneReverseSyncStateEnabled type.
+	ControlPlaneReverseSyncStateEnabled = operatorv2alpha1.ControlPlaneReverseSyncStateEnabled
+	// ControlPlaneReverseSyncStateDisabled is an alias for the v2alpha1 ControlPlaneReverseSyncStateDisabled type.
+	ControlPlaneReverseSyncStateDisabled = operatorv2alpha1.ControlPlaneReverseSyncStateDisabled
+
+	// ControlPlaneDrainSupportStateEnabled is an alias for the v2alpha1 ControlPlaneDrainSupportStateEnabled type.
+	ControlPlaneDrainSupportStateEnabled = operatorv2alpha1.ControlPlaneDrainSupportStateEnabled
+	// ControlPlaneDrainSupportStateDisabled is an alias for the v2alpha1 ControlPlaneDrainSupportStateDisabled type.
+	ControlPlaneDrainSupportStateDisabled = operatorv2alpha1.ControlPlaneDrainSupportStateDisabled
+
+	// ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled is an alias for the v2alpha1 ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled type.
+	ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled = operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled
+	// ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled is an alias for the v2alpha1 ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled type.
+	ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled = operatorv2alpha1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled
 )
 
 func ControlPlaneGVR() schema.GroupVersionResource {
