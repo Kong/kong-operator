@@ -2,7 +2,7 @@
 
 ## Table of Contents
 
-- [v2.0.0-alpha.2](#v200-alpha2)
+- [v2.0.0-alpha.3](#v200-alpha3)
 - [v1.6.2](#v162)
 - [v1.6.1](#v161)
 - [v1.6.0](#v160)
@@ -30,10 +30,32 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.0.0-alpha.3]
+
+> Release date: 2025-08-08
+
+> KGO becomes KO, which stands for Kong Operator - Kubernetes Gateway Operator and Kubernetes Ingress Controller
+> become a single product.
 
 ### Breaking Changes
 
+- `KonnectExtension` has been bumped to `v1alpha2` and the Control plane reference via plain `KonnectID`
+  has been removed. `Mirror` `GatewayControlPlane` resource is now the only way to reference remote
+  control planes in read-only.
+  [#1711](https://github.com/kong/kong-operator/pull/1711)
+  <!-- TODO: https://github.com/kong/kong-operator/issues/1732 -->
+- rename product from Kong Gateway Operator to Kong Operator.
+  [#1767](https://github.com/Kong/kong-operator/pull/1767)
+- Add --cluster-domain flag and set default to 'cluster.local'
+  This commit introduces a new --cluster-domain flag to the KO binary, which is now propagated to the ingress-controller.
+  The default value for the cluster domain is set to 'cluster.local', whereas previously it was an empty string ("").
+  This is a breaking change, as any code or configuration relying on the previous default will now use 'cluster.local'
+  unless explicitly overridden.
+  [#1870](https://github.com/Kong/kong-operator/pull/1870)
+- Introduce `ControlPlane` in version `v2alpha1`
+  - Usage of the last valid config for fallback configuration is enabled by default,
+    can be adjusted in the `spec.translation.fallbackConfiguration.useLastValidConfig` field.
+    [#1939](https://github.com/Kong/kong-operator/issues/1939)
 - `ControlPlane` `v2alpha1` has been replaced by `ControlPlane` `v2beta1`.
   `GatewayConfiguration` `v2alpha1` has been replaced by `GatewayConfiguration` `v2beta1`.
   [#2008](https://github.com/Kong/kong-operator/pull/2008)
@@ -57,6 +79,35 @@
 
 ### Added
 
+- Move implementation of ControlPlane Extensions mechanism and DataPlaneMetricsExtension from EE.
+  [#1583](https://github.com/kong/kong-operator/pull/1583)
+- Move implementation of certificate management for Konnect DPs from EE.
+  [#1590](https://github.com/kong/kong-operator/pull/1590)
+- `ControlPlane` status fields `controllers` and `featureGates` are filled in with
+  actual configured values based on the defaults and the `spec` fields.
+  [#1771](https://github.com/kong/kong-operator/pull/1771)
+- Added the following CLI flags to control operator's behavior:
+  - `--cache-sync-timeout` to control controller-runtime's time limit set to wait for syncing caches.
+    [#1818](https://github.com/kong/kong-operator/pull/1818)
+  - `--cache-sync-period` to control controller-runtime's cache sync period.
+    [#1846](https://github.com/kong/kong-operator/pull/1846)
+- Support the following configuration for running control plane managers in
+  the `ControlPlane` CRD:
+  - Specifying the delay to wait for Kubernetes object caches sync before
+    updating dataplanes by `spec.cache.initSyncDuration`
+    [#1858](https://github.com/Kong/kong-operator/pull/1858)
+  - Specifying the period and timeout of syncing Kong configuration to dataplanes
+    by `spec.dataplaneSync.interval` and `spec.dataplaneSync.timeout`
+    [#1886](https://github.com/Kong/kong-operator/pull/1886)
+  - Specifying the combined services from HTTPRoutes feature via
+    by `spec.translation.combinedServicesFromDifferentHTTPRoutes`
+    [#1934](https://github.com/Kong/kong-operator/pull/1934)
+  - Specifying the drain support by `spec.translation.drainSupport`
+    [#1940](https://github.com/Kong/kong-operator/pull/1940)
+- Introduce flags `--apiserver-host` for API, `--apiserver-qps` and
+  `--apiserver-burst` to control the QPS and burst (rate-limiting) for the
+  Kubernetes API server client.
+  [#1887](https://github.com/Kong/kong-operator/pull/1887)
 - Introduce the flag `--emit-kubernetes-events` to enable/disable the creation of
   Kubernetes events in the `ControlPlane`. The default value is `true`.
   [#1888](https://github.com/Kong/kong-operator/pull/1888)
@@ -92,78 +143,10 @@
   by introducing the `ExtensionProcessor` interface.
   This change enables KonnecExtensions for `ControlPlane v2alpha1`.
   [#1978](https://github.com/Kong/kong-operator/pull/1978)
-
-### Fixed
-
-- Fix the issue that invalid label value causing ingress controller fails to
-  store the license from Konnect into `Secret`.
-  [#1976](https://github.com/Kong/kong-operator/pull/1976)
-
-### Changes
-
 - `ControlPlane` provisioned conditions' reasons have been renamed to actually reflect
   the new operator architecture. `PodsReady` is now `Provisioned` and `PodsNotReady`
   is now `ProvisioningInProgress`.
   [#1985](https://github.com/Kong/kong-operator/pull/1985)
-
-## [v2.0.0-alpha.2]
-
-> Release date: 2025-07-23
-
-> KGO becomes KO, which stands for Kong Operator - Kubernetes Gateway Operator and Kubernetes Ingress Controller
-> become a single product.
-
-### Breaking Changes
-
-- `KonnectExtension` has been bumped to `v1alpha2` and the Control plane reference via plain `KonnectID`
-  has been removed. `Mirror` `GatewayControlPlane` resource is now the only way to reference remote
-  control planes in read-only.
-  [#1711](https://github.com/kong/kong-operator/pull/1711)
-  <!-- TODO: https://github.com/kong/kong-operator/issues/1732 -->
-- rename product from Kong Gateway Operator to Kong Operator.
-  [#1767](https://github.com/Kong/kong-operator/pull/1767)
-- Add --cluster-domain flag and set default to 'cluster.local'
-  This commit introduces a new --cluster-domain flag to the KO binary, which is now propagated to the ingress-controller.
-  The default value for the cluster domain is set to 'cluster.local', whereas previously it was an empty string ("").
-  This is a breaking change, as any code or configuration relying on the previous default will now use 'cluster.local'
-  unless explicitly overridden.
-  [#1870](https://github.com/Kong/kong-operator/pull/1870)
-- Introduce `ControlPlane` in version `v2alpha1`
-  - Usage of the last valid config for fallback configuration is enabled by default,
-    can be adjusted in the `spec.translation.fallbackConfiguration.useLastValidConfig` field.
-    [#1939](https://github.com/Kong/kong-operator/issues/1939)
-
-### Added
-
-- Move implementation of ControlPlane Extensions mechanism and DataPlaneMetricsExtension from EE.
-  [#1583](https://github.com/kong/kong-operator/pull/1583)
-- Move implementation of certificate management for Konnect DPs from EE.
-  [#1590](https://github.com/kong/kong-operator/pull/1590)
-- `ControlPlane` status fields `controllers` and `featureGates` are filled in with
-  actual configured values based on the defaults and the `spec` fields.
-  [#1771](https://github.com/kong/kong-operator/pull/1771)
-- Added the following CLI flags to control operator's behavior:
-  - `--cache-sync-timeout` to control controller-runtime's time limit set to wait for syncing caches.
-    [#1818](https://github.com/kong/kong-operator/pull/1818)
-  - `--cache-sync-period` to control controller-runtime's cache sync period.
-    [#1846](https://github.com/kong/kong-operator/pull/1846)
-- Support the following configuration for running control plane managers in
-  the `ControlPlane` CRD:
-  - Specifying the delay to wait for Kubernetes object caches sync before
-    updating dataplanes by `spec.cache.initSyncDuration`
-    [#1858](https://github.com/Kong/kong-operator/pull/1858)
-  - Specifying the period and timeout of syncing Kong configuration to dataplanes
-    by `spec.dataplaneSync.interval` and `spec.dataplaneSync.timeout`
-    [#1886](https://github.com/Kong/kong-operator/pull/1886)
-  - Specifying the combined services from HTTPRoutes feature via
-    by `spec.translation.combinedServicesFromDifferentHTTPRoutes`
-    [#1934](https://github.com/Kong/kong-operator/pull/1934)
-  - Specifying the drain support by `spec.translation.drainSupport`
-    [#1940](https://github.com/Kong/kong-operator/pull/1940)
-- Introduce flags `--apiserver-host` for API, `--apiserver-qps` and
-  `--apiserver-burst` to control the QPS and burst (rate-limiting) for the
-  Kubernetes API server client.
-  [#1887](https://github.com/Kong/kong-operator/pull/1887)
 
 ### Fixed
 
@@ -173,6 +156,9 @@
   re-created. When this happens, the `KonnectGatewayControlPlane` sees its Konnect ID changed, as well
   as the endpoints. All this data is constantly enforced into the `KonnectExtension` status.
   [#1684](https://github.com/kong/kong-operator/pull/1684)
+- Fix the issue that invalid label value causing ingress controller fails to
+  store the license from Konnect into `Secret`.
+  [#1976](https://github.com/Kong/kong-operator/pull/1976)
 
 ## [v1.6.2]
 
@@ -1286,7 +1272,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
-[v2.0.0-alpha.2]: https://github.com/Kong/kong-operator/compare/v1.6.2..v2.0.0-alpha.2
+[v2.0.0-alpha.3]: https://github.com/Kong/kong-operator/compare/v1.6.2..v2.0.0-alpha.3
 [v1.6.2]: https://github.com/Kong/kong-operator/compare/v1.6.1..v1.6.2
 [v1.6.1]: https://github.com/Kong/kong-operator/compare/v1.6.0..v1.6.1
 [v1.6.0]: https://github.com/Kong/kong-operator/compare/v1.5.1..v1.6.0
