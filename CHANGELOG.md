@@ -89,6 +89,10 @@
   by introducing the `ExtensionProcessor` interface.
   This change enables KonnecExtensions for `ControlPlane v2alpha1`.
   [#1978](https://github.com/Kong/kong-operator/pull/1978)
+- Add Konnect related configuration fields to `ControlPlane` spec, allowing fine-grained
+  control over Konnect integration settings including consumer synchronization, licensing
+  configuration, node refresh periods, and config upload periods.
+  [#2009](https://github.com/Kong/kong-operator/pull/2009)
 
 ### Fixed
 
