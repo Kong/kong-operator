@@ -181,7 +181,6 @@ func expectedDefaultCfg() manager.Config {
 		KonnectMaxConcurrentReconciles:          consts.DefaultKonnectMaxConcurrentReconciles,
 		ClusterDomain:                           ingressmgrconfig.DefaultClusterDomain,
 		EmitKubernetesEvents:                    true,
-		// TODO: https://github.com/Kong/kong-operator/issues/1986
-		ConversionWebhookEnabled: false,
+		ConversionWebhookEnabled:                true,
 	}
 }

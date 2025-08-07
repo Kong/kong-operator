@@ -84,6 +84,9 @@ func New(m metadata.Info) *CLI {
 
 	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information.")
 
+	// webhook and validation options
+	flagSet.BoolVar(&cfg.ConversionWebhookEnabled, "enable-conversion-webhook", true, "Enable the conversion webhook.")
+
 	loggerOpts := lo.ToPtr(*manager.DefaultConfig().LoggerOpts)
 	loggerOpts.BindFlags(flagSet)
 
