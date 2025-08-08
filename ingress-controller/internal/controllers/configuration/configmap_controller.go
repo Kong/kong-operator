@@ -2,13 +2,11 @@ package configuration
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -38,7 +36,6 @@ type CoreV1ConfigMapReconciler struct {
 	CacheSyncTimeout time.Duration
 
 	ReferenceIndexers ctrlref.CacheIndexers
-	LabelSelector     string
 }
 
 var _ controllers.Reconciler = &CoreV1ConfigMapReconciler{}
@@ -48,22 +45,6 @@ func (r *CoreV1ConfigMapReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	predicateFuncs := predicate.NewPredicateFuncs(r.shouldReconcileConfigMap)
 	// we should always try to delete configmaps in caches when they are deleted in cluster.
 	predicateFuncs.DeleteFunc = func(_ event.DeleteEvent) bool { return true }
-
-	var (
-		labelPredicate predicate.Predicate
-		labelSelector  metav1.LabelSelector
-		err            error
-	)
-	if r.LabelSelector != "" {
-		labelSelector = metav1.LabelSelector{
-			MatchLabels: map[string]string{r.LabelSelector: "true"},
-		}
-	}
-
-	labelPredicate, err = predicate.LabelSelectorPredicate(labelSelector)
-	if err != nil {
-		return fmt.Errorf("failed to create secret label selector predicate: %w", err)
-	}
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("CoreV1ConfigMap").
@@ -77,7 +58,6 @@ func (r *CoreV1ConfigMapReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(
 				predicate.Or(
 					predicateFuncs,
-					labelPredicate,
 				)),
 		).
 		Complete(r)

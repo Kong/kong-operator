@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
@@ -304,6 +305,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		)
 	}
 
+	log.Trace(logger, "validating ControlPlane's options with the reconciler's configuration")
+	if msg, ok := r.validateControlPlaneOptions(cp); !ok {
+		k8sutils.SetCondition(k8sutils.NewCondition(
+			kcfgcontrolplane.ConditionTypeProvisioned,
+			metav1.ConditionFalse,
+			// TODO: define dedicated condition reason (and maybe condition type) in kubernetes-configuration:
+			// https://github.com/Kong/kong-operator/issues/1999
+			kcfgconsts.ConditionReason("ControlPlaneOptionsInvalid"),
+			msg,
+		), cp)
+		return r.patchStatus(ctx, logger, cp)
+	}
+
 	var caSecret corev1.Secret
 	if err := r.Get(ctx, types.NamespacedName{
 		Namespace: r.ClusterCASecretNamespace,
@@ -499,10 +513,27 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	}
 
 	if r.SecretLabelSelector != "" {
-		cfgOpts = append(cfgOpts, WithSecretLabelSelector(r.SecretLabelSelector))
+		cfgOpts = append(cfgOpts, WithSecretLabelSelectorMatchLabel(r.SecretLabelSelector, "true"))
 	}
+	if cp.Spec.ObjectFilters != nil && cp.Spec.ObjectFilters.Secrets != nil {
+		for k, v := range cp.Spec.ObjectFilters.Secrets.MatchLabels {
+			if k == r.SecretLabelSelector {
+				return nil, fmt.Errorf("ControlPlane's secret label selector conficts with operator's secret label selector: %s", k)
+			}
+			cfgOpts = append(cfgOpts, WithSecretLabelSelectorMatchLabel(k, v))
+		}
+	}
+
 	if r.ConfigMapLabelSelector != "" {
-		cfgOpts = append(cfgOpts, WithConfigMapLabelSelector(r.ConfigMapLabelSelector))
+		cfgOpts = append(cfgOpts, WithConfigMapLabelSelectorMatchLabel(r.ConfigMapLabelSelector, "true"))
+	}
+	if cp.Spec.ObjectFilters != nil && cp.Spec.ObjectFilters.ConfigMaps != nil {
+		for k, v := range cp.Spec.ObjectFilters.ConfigMaps.MatchLabels {
+			if k == r.ConfigMapLabelSelector {
+				return nil, fmt.Errorf("ControlPlane's configMap label selector conficts with operator's configMap label selector: %s", k)
+			}
+			cfgOpts = append(cfgOpts, WithConfigMapLabelSelectorMatchLabel(k, v))
+		}
 	}
 
 	if dps := cp.Spec.DataPlaneSync; dps != nil {
@@ -654,4 +685,32 @@ func (r *Reconciler) handleScheduleInstanceOutcome(
 		return ctrl.Result{RequeueAfter: requeueAfterBoot}, nil
 	}
 	return ctrl.Result{}, err
+}
+
+// validateControlPlaneOptions checks if the ControlPlane's options are valid with the operator specific configuration.
+// It returns a boolean as the validation result and a string as the error message when the validation fails.
+// For example, it fails when the label selectors of `Secret` and `ConfigMap` in `spec.objectFilters` conflict with opertor's label selectors for them.
+func (r *Reconciler) validateControlPlaneOptions(cp *ControlPlane) (string, bool) {
+	if cp.Spec.ObjectFilters != nil {
+
+		if cp.Spec.ObjectFilters.Secrets != nil &&
+			cp.Spec.ObjectFilters.Secrets.MatchLabels != nil &&
+			r.SecretLabelSelector != "" {
+			_, hasLabel := cp.Spec.ObjectFilters.Secrets.MatchLabels[r.SecretLabelSelector]
+			if hasLabel {
+				return fmt.Sprintf("secret label selector in spec.objectFilter conflicts with operator's secret label filter '%s'", r.SecretLabelSelector), false
+			}
+		}
+
+		if cp.Spec.ObjectFilters.ConfigMaps != nil &&
+			cp.Spec.ObjectFilters.ConfigMaps.MatchLabels != nil &&
+			r.ConfigMapLabelSelector != "" {
+			_, hasLabel := cp.Spec.ObjectFilters.ConfigMaps.MatchLabels[r.ConfigMapLabelSelector]
+			if hasLabel {
+				return fmt.Sprintf("configMap label selector in spec.objectFilter conflicts with operator's configMap label filter '%s'", r.ConfigMapLabelSelector), false
+			}
+		}
+	}
+
+	return "", true
 }
