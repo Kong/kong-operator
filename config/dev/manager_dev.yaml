@@ -23,7 +23,6 @@ spec:
             - -zap-log-level=debug
             - -zap-devel=true
             - -enable-controller-kongplugininstallation
-            - -enable-validating-webhook
             - -enable-controller-konnect
             - -enable-controller-controlplaneextensions
           name: manager
