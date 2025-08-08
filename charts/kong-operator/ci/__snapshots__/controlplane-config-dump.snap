@@ -690,6 +690,20 @@ spec:
     protocol: TCP
     targetPort: 10256
   selector:
+    app.kubernetes.io/component: ko---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/component: ko
+  name: chartsnap-kong-operator-webhook
+  namespace: default
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: 9443
+  selector:
     app.kubernetes.io/component: ko
 ---
 # Source: kong-operator/templates/deployment.yaml
