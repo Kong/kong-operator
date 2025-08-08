@@ -11,7 +11,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 )
 
@@ -103,7 +103,7 @@ func TestKongKeyToKeyInput(t *testing.T) {
 					},
 				},
 				Status: configurationv1alpha1.KongKeyStatus{
-					Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndKeySetRef{
+					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndKeySetRef{
 						KeySetID: "key-set-id",
 					},
 				},

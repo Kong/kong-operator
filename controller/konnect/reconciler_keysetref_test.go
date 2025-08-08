@@ -76,8 +76,8 @@ func TestHandleKeySetRef(t *testing.T) {
 				},
 			},
 			Status: configurationv1alpha1.KongKeySetStatus{
-				Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-					KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+				Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+					KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 						ID: "key-set-id",
 					},
 					ControlPlaneID: "cp-id",
@@ -166,7 +166,7 @@ func TestHandleKeySetRef(t *testing.T) {
 					KeySetRef:       nil,
 				},
 				Status: configurationv1alpha1.KongKeyStatus{
-					Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndKeySetRef{
+					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndKeySetRef{
 						ControlPlaneID: "cp-id",
 					},
 				},
@@ -270,7 +270,7 @@ func TestHandleKeySetRef(t *testing.T) {
 					KeySetRef:       nil,
 				},
 				Status: configurationv1alpha1.KongKeyStatus{
-					Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndKeySetRef{
+					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndKeySetRef{
 						ControlPlaneID: "cp-id",
 						KeySetID:       "key-set-id",
 					},

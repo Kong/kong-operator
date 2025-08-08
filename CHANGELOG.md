@@ -30,6 +30,13 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Added
+
+- Implement conversion webhook for `KonnectGatewayControlPlane`.
+  [#2023](https://github.com/Kong/kong-operator/pull/2023)
+
 ## [v2.0.0-alpha.3]
 
 > Release date: 2025-08-08

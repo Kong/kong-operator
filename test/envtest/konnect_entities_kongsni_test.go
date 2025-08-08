@@ -16,6 +16,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect"
 	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
@@ -56,7 +57,7 @@ func TestKongSNI(t *testing.T) {
 		t.Log("Creating KongCertificate and setting it to Programmed")
 		createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp)
 		createdCert.Status = configurationv1alpha1.KongCertificateStatus{
-			Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 				KonnectEntityStatus: konnectEntityStatus("cert-12345"),
 				ControlPlaneID:      cp.Status.GetKonnectID(),
 			},
