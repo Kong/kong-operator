@@ -4,6 +4,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 func init() {
@@ -84,13 +86,13 @@ type KonnectCloudGatewayNetworkSpec struct {
 	State *sdkkonnectcomp.NetworkCreateState `json:"state"`
 
 	// +required
-	KonnectConfiguration KonnectConfiguration `json:"konnect"`
+	KonnectConfiguration konnectv1alpha2.KonnectConfiguration `json:"konnect"`
 }
 
 // KonnectCloudGatewayNetworkStatus defines the observed state of KonnectCloudGatewayNetwork.
 // +apireference:kgo:include
 type KonnectCloudGatewayNetworkStatus struct {
-	KonnectEntityStatus `json:",inline"`
+	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
 
 	// State is the current state of the network. Can be e.g. initializing, ready, terminating.
 	//
@@ -112,7 +114,7 @@ type KonnectCloudGatewayNetworkStatus struct {
 }
 
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
-func (c *KonnectCloudGatewayNetwork) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigurationRef {
+func (c *KonnectCloudGatewayNetwork) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.KonnectAPIAuthConfigurationRef {
 	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
 }
 

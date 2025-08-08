@@ -7,6 +7,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 func init() {
@@ -83,7 +84,7 @@ type KonnectGatewayControlPlaneSpec struct {
 	// KonnectConfiguration contains the Konnect configuration for the control plane.
 	//
 	// +optional
-	KonnectConfiguration KonnectConfiguration `json:"konnect,omitempty"`
+	KonnectConfiguration konnectv1alpha2.KonnectConfiguration `json:"konnect,omitempty"`
 }
 
 // MirrorSpec contains the Konnect Mirror configuration.
@@ -135,7 +136,7 @@ type CreateControlPlaneRequest struct {
 // KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayControlPlane.
 // +apireference:kgo:include
 type KonnectGatewayControlPlaneStatus struct {
-	KonnectEntityStatus `json:",inline"`
+	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
 
 	// Endpoints defines the Konnect endpoints for the control plane.
 	// They are required by the DataPlane to be properly configured in
@@ -182,7 +183,7 @@ func (c *KonnectGatewayControlPlane) SetKonnectLabels(labels map[string]string) 
 }
 
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
-func (c *KonnectGatewayControlPlane) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigurationRef {
+func (c *KonnectGatewayControlPlane) GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.KonnectAPIAuthConfigurationRef {
 	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
 }
 

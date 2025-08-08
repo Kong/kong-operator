@@ -17,6 +17,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 func init() {
@@ -102,7 +103,7 @@ type KonnectExtensionKonnectSpec struct {
 	// Configuration holds the information needed to set up the Konnect Configuration.
 	//
 	// +optional
-	Configuration *KonnectConfiguration `json:"configuration,omitempty"`
+	Configuration *konnectv1alpha2.KonnectConfiguration `json:"configuration,omitempty"`
 }
 
 // KonnectExtensionControlPlane is the configuration for the Konnect Control Plane.

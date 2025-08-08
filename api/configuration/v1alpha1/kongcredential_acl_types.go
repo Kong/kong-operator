@@ -21,7 +21,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 // KongCredentialACL is the schema for ACL credentials API which defines a ACL credential for consumers.
@@ -78,7 +78,7 @@ type KongCredentialACLAPISpec struct {
 type KongCredentialACLStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
-	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs `json:"konnect,omitempty"`
+	Konnect *konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs `json:"konnect,omitempty"`
 
 	// Conditions describe the status of the Konnect entity.
 	// +listType=map

@@ -22,7 +22,7 @@ package v1beta1
 
 import (
 	"github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -116,7 +116,7 @@ func (in *KongConsumerGroupStatus) DeepCopyInto(out *KongConsumerGroupStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
 		**out = **in
 	}
 	if in.Conditions != nil {

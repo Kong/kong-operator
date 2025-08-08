@@ -6,6 +6,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 func init() {
@@ -196,7 +197,7 @@ type ConfigurationDataPlaneGroupAutoscaleStatic struct {
 // KonnectCloudGatewayDataPlaneGroupConfigurationStatus defines the observed state of KonnectCloudGatewayDataPlaneGroupConfiguration.
 // +apireference:kgo:include
 type KonnectCloudGatewayDataPlaneGroupConfigurationStatus struct {
-	KonnectEntityStatusWithControlPlaneRef `json:",inline"`
+	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"`
 
 	// DataPlaneGroups is a list of deployed data-plane groups.
 	//

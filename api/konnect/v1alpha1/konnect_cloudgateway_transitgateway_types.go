@@ -6,6 +6,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 func init() {
@@ -182,7 +183,7 @@ type AzureVNETPeeringAttachmentConfig struct {
 
 // KonnectCloudGatewayTransitGatewayStatus defines the current state of KonnectCloudGatewayTransitGateway.
 type KonnectCloudGatewayTransitGatewayStatus struct {
-	KonnectEntityStatusWithNetworkRef `json:",inline"`
+	konnectv1alpha2.KonnectEntityStatusWithNetworkRef `json:",inline"`
 
 	// State is the state of the transit gateway on Konnect side.
 	//

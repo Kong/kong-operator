@@ -14,6 +14,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 func TestKonnectFuncs(t *testing.T) {
@@ -22,7 +23,7 @@ func TestKonnectFuncs(t *testing.T) {
 		GetTypeName() string
 		SetControlPlaneID(string)
 		GetControlPlaneID() string
-		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
+		GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus
 		GetConditions() []metav1.Condition
 		SetConditions([]metav1.Condition)
 	}
@@ -178,7 +179,7 @@ func TestKonnectFuncsStandAlone(t *testing.T) {
 	type KonnectEntity interface {
 		client.Object
 		GetTypeName() string
-		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
+		GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus
 		GetConditions() []metav1.Condition
 		SetConditions([]metav1.Condition)
 	}
@@ -189,7 +190,7 @@ func TestKonnectFuncsStandAlone(t *testing.T) {
 	}{
 		{
 			typeName: "KonnectGatewayControlPlane",
-			object:   &konnectv1alpha1.KonnectGatewayControlPlane{},
+			object:   &konnectv1alpha2.KonnectGatewayControlPlane{},
 		},
 	}
 
@@ -226,7 +227,7 @@ func TestKonnectFuncsNetworkRef(t *testing.T) {
 	type KonnectEntity interface {
 		client.Object
 		GetTypeName() string
-		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
+		GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus
 		GetConditions() []metav1.Condition
 		SetConditions([]metav1.Condition)
 		GetNetworkID() string

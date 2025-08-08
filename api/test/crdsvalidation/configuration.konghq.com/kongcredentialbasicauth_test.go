@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 )
 
@@ -30,7 +30,7 @@ func TestKongCredentialBasicAuth(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongCredentialBasicAuthStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{},
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs{},
 						Conditions: []metav1.Condition{
 							{
 								Type:               "Programmed",
@@ -60,7 +60,7 @@ func TestKongCredentialBasicAuth(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongCredentialBasicAuthStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{},
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs{},
 						Conditions: []metav1.Condition{
 							{
 								Type:               "Programmed",

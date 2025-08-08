@@ -11,7 +11,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 )
 
@@ -31,7 +31,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongCredentialJWTStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{},
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs{},
 						Conditions: []metav1.Condition{
 							{
 								Type:               "Programmed",
@@ -60,7 +60,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 					},
 					Status: configurationv1alpha1.KongCredentialJWTStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs{},
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs{},
 						Conditions: []metav1.Condition{
 							{
 								Type:               "Programmed",

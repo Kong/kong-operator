@@ -107,17 +107,6 @@ type KonnectAPIAuthConfigurationStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
-// KonnectAPIAuthConfigurationRef is a reference to a KonnectAPIAuthConfiguration resource.
-// +apireference:kgo:include
-type KonnectAPIAuthConfigurationRef struct {
-	// Name is the name of the KonnectAPIAuthConfiguration resource.
-	// +required
-	Name string `json:"name"`
-
-	// Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
-	// Namespace string `json:"namespace,omitempty"`
-}
-
 // KonnectAPIAuthConfigurationList contains a list of KonnectAPIAuthConfiguration resources.
 // +kubebuilder:object:root=true
 // +apireference:kgo:include

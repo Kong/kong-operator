@@ -1,4 +1,4 @@
-package v1alpha1
+package v1alpha2
 
 // KonnectEntityStatus represents the status of a Konnect entity.
 // +apireference:kgo:include

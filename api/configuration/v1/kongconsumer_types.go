@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnecv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 )
 
 // KongConsumer is the Schema for the kongconsumers API.
@@ -99,7 +99,7 @@ type KongConsumerStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
 	// +apireference:kic:exclude
-	Konnect *konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
+	Konnect *konnecv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
 
 	// Conditions describe the current conditions of the KongConsumer.
 	//

@@ -23,7 +23,7 @@ package v1alpha1
 import (
 	"github.com/Kong/sdk-konnect-go/models/components"
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	"github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -286,7 +286,7 @@ func (in *KongCACertificateStatus) DeepCopyInto(out *KongCACertificateStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -413,7 +413,7 @@ func (in *KongCertificateStatus) DeepCopyInto(out *KongCertificateStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -536,7 +536,7 @@ func (in *KongCredentialACLStatus) DeepCopyInto(out *KongCredentialACLStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -659,7 +659,7 @@ func (in *KongCredentialAPIKeyStatus) DeepCopyInto(out *KongCredentialAPIKeyStat
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -782,7 +782,7 @@ func (in *KongCredentialBasicAuthStatus) DeepCopyInto(out *KongCredentialBasicAu
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -920,7 +920,7 @@ func (in *KongCredentialHMACStatus) DeepCopyInto(out *KongCredentialHMACStatus) 
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -1063,7 +1063,7 @@ func (in *KongCredentialJWTStatus) DeepCopyInto(out *KongCredentialJWTStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -1287,7 +1287,7 @@ func (in *KongDataPlaneClientCertificateStatus) DeepCopyInto(out *KongDataPlaneC
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -1508,7 +1508,7 @@ func (in *KongKeySetStatus) DeepCopyInto(out *KongKeySetStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -1561,7 +1561,7 @@ func (in *KongKeyStatus) DeepCopyInto(out *KongKeyStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndKeySetRef)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndKeySetRef)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -1776,7 +1776,7 @@ func (in *KongPluginBindingStatus) DeepCopyInto(out *KongPluginBindingStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -2038,7 +2038,7 @@ func (in *KongRouteStatus) DeepCopyInto(out *KongRouteStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndServiceRefs)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -2161,7 +2161,7 @@ func (in *KongSNIStatus) DeepCopyInto(out *KongSNIStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndCertificateRefs)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -2338,7 +2338,7 @@ func (in *KongServiceStatus) DeepCopyInto(out *KongServiceStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -2461,7 +2461,7 @@ func (in *KongTargetStatus) DeepCopyInto(out *KongTargetStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndUpstreamRefs)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneAndUpstreamRefs)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -2668,7 +2668,7 @@ func (in *KongUpstreamStatus) DeepCopyInto(out *KongUpstreamStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
 		**out = **in
 	}
 	if in.Conditions != nil {
@@ -2780,7 +2780,7 @@ func (in *KongVaultStatus) DeepCopyInto(out *KongVaultStatus) {
 	*out = *in
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
-		*out = new(konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef)
+		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
 		**out = **in
 	}
 	if in.Conditions != nil {

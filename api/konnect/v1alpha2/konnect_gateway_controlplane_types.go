@@ -7,7 +7,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 )
 
 func init() {
@@ -88,7 +87,7 @@ type KonnectGatewayControlPlaneSpec struct {
 	// KonnectConfiguration contains the Konnect configuration for the control plane.
 	//
 	// +optional
-	KonnectConfiguration konnectv1alpha1.KonnectConfiguration `json:"konnect,omitempty"`
+	KonnectConfiguration KonnectConfiguration `json:"konnect,omitempty"`
 }
 
 // MirrorSpec contains the Konnect Mirror configuration.
@@ -127,7 +126,7 @@ type KonnectGatewayControlPlaneStatus struct {
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
-	konnectv1alpha1.KonnectEntityStatus `json:",inline"`
+	KonnectEntityStatus `json:",inline"`
 
 	// Endpoints defines the Konnect endpoints for the control plane.
 	// They are required by the DataPlane to be properly configured in
@@ -251,7 +250,7 @@ func (c *KonnectGatewayControlPlane) SetKonnectDescription(description *string) 
 }
 
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
-func (c *KonnectGatewayControlPlane) GetKonnectAPIAuthConfigurationRef() konnectv1alpha1.KonnectAPIAuthConfigurationRef {
+func (c *KonnectGatewayControlPlane) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigurationRef {
 	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
 }
 

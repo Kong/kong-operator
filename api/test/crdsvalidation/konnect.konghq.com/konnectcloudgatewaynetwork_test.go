@@ -8,6 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 )
 
@@ -53,8 +54,8 @@ func TestKonnectNetwork(t *testing.T) {
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayNetwork{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha1.KonnectCloudGatewayNetworkSpec{
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "test-konnect-api-auth-configuration",
 							},
 						},
@@ -94,8 +95,8 @@ func fieldMutabilityBasedOnProgrammedTest(
 			LastTransitionTime: metav1.Now(),
 		}
 		spec = konnectv1alpha1.KonnectCloudGatewayNetworkSpec{
-			KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-				APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 					Name: "test-konnect-api-auth-configuration",
 				},
 			},

@@ -11,7 +11,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 	common "github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 )
@@ -33,8 +32,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								Name: "cp-1",
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -55,8 +54,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								Name: "cp-1",
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -78,8 +77,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								Name: "cp-1",
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -101,8 +100,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								Name: "cp-1",
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -124,8 +123,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 							Name:        "cp-1",
 							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -155,8 +154,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 							Name:        "cp-1",
 							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -186,8 +185,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 							Name:        "cp-1",
 							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -222,8 +221,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 							Name:        "cp-1",
 							ClusterType: lo.ToPtr(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -255,8 +254,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								return labels
 							}(),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -279,8 +278,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								return labels
 							}(),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -300,8 +299,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								lo.RandomString(64, lo.AllCharset): "value",
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -321,8 +320,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								"": "value",
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -343,8 +342,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								"key": lo.RandomString(64, lo.AllCharset),
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -364,8 +363,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								"key": "",
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -385,8 +384,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								"k8s_key": "value",
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -406,8 +405,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								"kong_key": "value",
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -427,8 +426,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								"konnect_key": "value",
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -448,8 +447,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								"mesh_key": "value",
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -469,8 +468,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								"kic_key": "value",
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -490,8 +489,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								"insomnia_key": "value",
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -511,8 +510,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								"_key": "value",
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -549,8 +548,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -566,8 +565,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 							Name:        "cp-1",
 							ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup.ToPointer(),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -583,8 +582,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 							Name:        "cp-1",
 							ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane.ToPointer(),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -600,8 +599,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 							Name:        "cp-1",
 							ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -617,8 +616,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 							Name:        "cp-1",
 							ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeServerless.ToPointer(),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -635,8 +634,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 							Name:        "cp-1",
 							ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterType("CLUSTER_TYPE_CUSTOM").ToPointer(),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -652,8 +651,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -673,8 +672,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 							Name:        "cp-1",
 							ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlane.ToPointer(),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -695,8 +694,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 							ClusterType:  sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
 							CloudGateway: lo.ToPtr(true),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -714,8 +713,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 							ClusterType:  sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
 							CloudGateway: lo.ToPtr(false),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -732,8 +731,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 							Name:        "cp-1",
 							ClusterType: sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController.ToPointer(),
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -746,8 +745,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: nil,
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -791,8 +790,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -805,8 +804,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -825,8 +824,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								ID: commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967"),
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -844,8 +843,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								ID: commonv1alpha1.KonnectIDType("malformed-id"),
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -867,8 +866,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -887,8 +886,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 								ID: commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967"),
 							},
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -902,8 +901,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
@@ -920,8 +919,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
 						},
-						KonnectConfiguration: konnectv1alpha1.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha1.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
 								Name: "name-1",
 							},
 						},
