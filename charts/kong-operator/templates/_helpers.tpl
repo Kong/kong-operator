@@ -111,9 +111,10 @@ The dict maps raw env variable key to the suggested variable path.
 {{- end -}}
 
 {{- define "kong.volumes" -}}
-- name: {{ template "kong.fullname" . }}-certs-dir
-  emptyDir:
-    sizeLimit: {{ .Values.certsDir.sizeLimit }}
+- name: {{ template "kong.fullname" . }}-webhook-certs
+  secret:
+    defaultMode: 420
+    secretName: webhook-server-cert
 - name: {{ template "kong.fullname" . }}-pod-labels
   downwardAPI:
     items:
@@ -123,7 +124,7 @@ The dict maps raw env variable key to the suggested variable path.
 {{- end }}
 
 {{- define "kong.volumeMounts" -}}
-- name: {{ template "kong.fullname" . }}-certs-dir
+- name: {{ template "kong.fullname" . }}-webhook-certs
   mountPath: /tmp/k8s-webhook-server/serving-certs
 - name: {{ template "kong.fullname" . }}-pod-labels
   mountPath: /etc/podinfo
