@@ -63,32 +63,15 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.
 	}
 
 	// Add label selector for Secrets and ConfigMaps on the manager level.
-	if c.SecretLabelSelector != nil {
-		// TODO: move the code to build cache's ByObject options to common utils packages.
-		labelSelector := labels.NewSelector()
-		for k, v := range c.SecretLabelSelector {
-			labelReq, err := labels.NewRequirement(k, selection.Equals, []string{v})
-			if err != nil {
-				continue
-			}
-			labelSelector.Add(*labelReq)
-		}
+	if len(c.SecretLabelSelector) > 0 {
 		cacheOptions.ByObject[&corev1.Secret{}] = cache.ByObject{
-			Label: labelSelector,
+			Label: buildLabelSelector(c.SecretLabelSelector),
 		}
 	}
 
-	if c.ConfigMapLabelSelector != nil {
-		labelSelector := labels.NewSelector()
-		for k, v := range c.ConfigMapLabelSelector {
-			labelReq, err := labels.NewRequirement(k, selection.Equals, []string{v})
-			if err != nil {
-				continue
-			}
-			labelSelector.Add(*labelReq)
-		}
+	if len(c.ConfigMapLabelSelector) > 0 {
 		cacheOptions.ByObject[&corev1.ConfigMap{}] = cache.ByObject{
-			Label: labelSelector,
+			Label: buildLabelSelector(c.ConfigMapLabelSelector),
 		}
 	}
 
@@ -565,4 +548,19 @@ func setupKonnectConfigSynchronizerWithMgr(
 		return nil, fmt.Errorf("could not add Konnect config synchronizer to manager: %w", err)
 	}
 	return s, nil
+}
+
+// buildLabelSelector creates a `label.Selector` from specified match tabels
+// to build the cache options used in the manager's `ByObject` to filter objects (Secrets, ConfigMaps) by labels.
+// TODO: move the code to build cache's ByObject options to common utils packages.
+func buildLabelSelector(matchLabels map[string]string) labels.Selector {
+	s := labels.NewSelector()
+	for k, v := range matchLabels {
+		req, err := labels.NewRequirement(k, selection.Equals, []string{v})
+		if err != nil {
+			continue
+		}
+		s = s.Add(*req)
+	}
+	return s
 }
