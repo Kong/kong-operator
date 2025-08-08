@@ -379,9 +379,9 @@ func warnIfLegacyDevelopmentModeEnabled(log logr.Logger) {
 	}
 
 	replacingEnvVars := []string{
-		"GATEWAY_OPERATOR_ANONYMOUS_REPORTS",
-		"GATEWAY_OPERATOR_LOGGING_MODE",
-		"GATEWAY_OPERATOR_VALIDATE_IMAGES",
+		"KONG_OPERATOR_ANONYMOUS_REPORTS",
+		"KONG_OPERATOR_LOGGING_MODE",
+		"KONG_OPERATOR_VALIDATE_IMAGES",
 	}
 
 	for _, envVar := range legacyEnvVars {

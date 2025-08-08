@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"flag"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -15,6 +17,83 @@ import (
 	"github.com/kong/kong-operator/modules/manager/metadata"
 	"github.com/kong/kong-operator/pkg/consts"
 )
+
+func TestSetFlagFromEnvVar(t *testing.T) {
+	testCases := []struct {
+		name        string
+		flagName    string
+		flagVal     int
+		expectedVal int
+		envVars     map[string]string
+		shouldFail  bool
+	}{
+		{
+			name:     "set val from env var",
+			flagName: "test-env-var",
+			flagVal:  100,
+			envVars: map[string]string{
+				"KONG_OPERATOR_TEST_ENV_VAR": "200",
+			},
+			expectedVal: 200,
+		},
+		{
+			name:     "set val from deprecated env var",
+			flagName: "test-depenv-var",
+			flagVal:  100,
+			envVars: map[string]string{
+				"GATEWAY_OPERATOR_TEST_DEPENV_VAR": "200",
+			},
+			expectedVal: 200,
+		},
+		{
+			name:     "ignore val from deprecated env var",
+			flagName: "test-depenv-var-ignore",
+			flagVal:  100,
+			envVars: map[string]string{
+				"GATEWAY_OPERATOR_TEST_DEPENV_VAR_IGNORE": "200",
+				"KONG_OPERATOR_TEST_DEPENV_VAR_IGNORE":    "300",
+			},
+			expectedVal: 300,
+		},
+		{
+			name:     "panic on set with wrong val",
+			flagName: "test-panic-on-set",
+			envVars: map[string]string{
+				"KONG_OPERATOR_TEST_PANIC_ON_SET": "fail",
+			},
+			shouldFail: true,
+		},
+		{
+			name:     "panic on set with wrong val in deprecated env var",
+			flagName: "test-panic-on-set-deprecated-var",
+			envVars: map[string]string{
+				"GATEWAY_OPERATOR_TEST_PANIC_ON_SET_DEPRECATED_VAR": "panic",
+			},
+			shouldFail: true,
+		},
+	}
+	for _, tC := range testCases {
+		t.Run(tC.name, func(t *testing.T) {
+			for k, v := range tC.envVars {
+				t.Setenv(k, v)
+			}
+			defer func() {
+				if r := recover(); r != nil {
+					if !tC.shouldFail {
+						require.FailNow(t, fmt.Sprintf("test case failed but it shouldn't: %v", r))
+					}
+				}
+			}()
+			fs := flag.NewFlagSet("test", flag.ContinueOnError)
+			val := fs.Int(tC.flagName, tC.flagVal, "")
+			setFlagFromEnvVar(fs.Lookup(tC.flagName))
+			if tC.shouldFail {
+				require.FailNow(t, "test case should fail but it didn't")
+			}
+			require.Equal(t, tC.expectedVal, *val)
+		})
+	}
+}
 
 func TestParse(t *testing.T) {
 	testCases := []struct {
@@ -44,16 +123,16 @@ func TestParse(t *testing.T) {
 			name: "no command line arguments, logging mode is set to development, anonymous reports off",
 			args: []string{},
 			envVars: map[string]string{
-				"POD_NAMESPACE":                      "test",
-				"GATEWAY_OPERATOR_LOGGING_MODE":      "development",
-				"GATEWAY_OPERATOR_ANONYMOUS_REPORTS": "false",
+				"POD_NAMESPACE":                   "test",
+				"KONG_OPERATOR_LOGGING_MODE":      "development",
+				"KONG_OPERATOR_ANONYMOUS_REPORTS": "false",
 			},
 			expectedCfg: func() manager.Config {
 				cfg := expectedDefaultCfg()
 				cfg.LeaderElectionNamespace = "test"
 				cfg.ClusterCASecretNamespace = "test"
 				cfg.ControllerNamespace = "test"
-				// All the below config changes are the result of GATEWAY_OPERATOR_LOGGING_MODE=development.
+				// All the below config changes are the result of KONG_OPERATOR_LOGGING_MODE=development.
 				cfg.LoggingMode = logging.DevelopmentMode
 				loggerOpts := manager.DefaultConfig().LoggerOpts
 				loggerOpts.Development = true
@@ -69,8 +148,8 @@ func TestParse(t *testing.T) {
 				"--metrics-bind-address=:18080",
 			},
 			envVars: map[string]string{
-				"GATEWAY_OPERATOR_METRICS_BIND_ADDRESS":      ":28080",
-				"GATEWAY_OPERATOR_HEALTH_PROBE_BIND_ADDRESS": ":28081",
+				"KONG_OPERATOR_METRICS_BIND_ADDRESS":      ":28080",
+				"KONG_OPERATOR_HEALTH_PROBE_BIND_ADDRESS": ":28081",
 			},
 			expectedCfg: func() manager.Config {
 				cfg := expectedDefaultCfg()
@@ -122,6 +201,35 @@ func TestParse(t *testing.T) {
 			expectedCfg: func() manager.Config {
 				cfg := expectedDefaultCfg()
 				cfg.EmitKubernetesEvents = false
+				return cfg
+			},
+		},
+		{
+			name: "deprecated env vars are honored",
+			envVars: map[string]string{
+				"GATEWAY_OPERATOR_ANONYMOUS_REPORTS":         "false",
+				`GATEWAY_OPERATOR_HEALTH_PROBE_BIND_ADDRESS`: ":8090",
+				"GATEWAY_OPERATOR_APISERVER_BURST":           "500",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.AnonymousReports = false
+				cfg.ProbeAddr = ":8090"
+				cfg.APIServerBurst = 500
+				return cfg
+			},
+		},
+		{
+			name: "newer env vars take precedence over deprecated ones",
+			envVars: map[string]string{
+				"KONG_OPERATOR_APISERVER_BURST":    "200",
+				"GATEWAY_OPERATOR_APISERVER_BURST": "100",
+				"GATEWAY_OPERATOR_APISERVER_QPS":   "80",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.APIServerBurst = 200
+				cfg.APIServerQPS = 80
 				return cfg
 			},
 		},

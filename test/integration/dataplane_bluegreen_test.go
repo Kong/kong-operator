@@ -31,7 +31,7 @@ import (
 
 func TestDataPlaneBlueGreenRollout(t *testing.T) {
 	if !blueGreenController {
-		t.Skipf("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER not set, skipping")
+		t.Skipf("KONG_OPERATOR_BLUEGREEN_CONTROLLER not set, skipping")
 	}
 	const (
 		waitTime = time.Minute
@@ -242,7 +242,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 
 func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 	if !blueGreenController {
-		t.Skipf("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER not set, skipping")
+		t.Skipf("KONG_OPERATOR_BLUEGREEN_CONTROLLER not set, skipping")
 	}
 	const (
 		waitTime = time.Minute
@@ -341,7 +341,7 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 
 func TestDataPlaneBlueGreenResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T) {
 	if !blueGreenController {
-		t.Skipf("GATEWAY_OPERATOR_BLUEGREEN_CONTROLLER not set, skipping")
+		t.Skipf("KONG_OPERATOR_BLUEGREEN_CONTROLLER not set, skipping")
 	}
 	const (
 		waitTime = time.Minute

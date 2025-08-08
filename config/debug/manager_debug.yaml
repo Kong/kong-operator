@@ -36,7 +36,7 @@ spec:
             - -enable-controller-controlplaneextensions
           name: manager
           env:
-            - name: GATEWAY_OPERATOR_ANONYMOUS_REPORTS
+            - name: KONG_OPERATOR_ANONYMOUS_REPORTS
               value: "false"
           resources:
             limits:

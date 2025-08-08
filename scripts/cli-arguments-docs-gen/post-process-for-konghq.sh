@@ -29,14 +29,14 @@ using CLI flags.
 ## Environment variables
 
 Each flag defined in the table below can also be configured using
-an environment variable. The name of the environment variable is `GATEWAY_OPERATOR_`
+an environment variable. The name of the environment variable is `KONG_OPERATOR_`
 string followed by the name of flag in uppercase.
 
 For example, `--enable-gateway-controller` can be configured using the following
 environment variable:
 
 ```
-GATEWAY_OPERATOR_ENABLE_GATEWAY_CONTROLLER=false
+KONG_OPERATOR_ENABLE_GATEWAY_CONTROLLER=false
 ```
 
 It is recommended that all the configuration is done through environment variables
