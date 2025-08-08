@@ -64,14 +64,22 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.
 
 	// Add label selector for Secrets and ConfigMaps on the manager level.
 	if len(c.SecretLabelSelector) > 0 {
+		labelSelector, err := buildLabelSelector(c.SecretLabelSelector)
+		if err != nil {
+			logger.Error(err, "error happened in building label selectors for secrets")
+		}
 		cacheOptions.ByObject[&corev1.Secret{}] = cache.ByObject{
-			Label: buildLabelSelector(c.SecretLabelSelector),
+			Label: labelSelector,
 		}
 	}
 
 	if len(c.ConfigMapLabelSelector) > 0 {
+		labelSelector, err := buildLabelSelector(c.ConfigMapLabelSelector)
+		if err != nil {
+			logger.Error(err, "error happened in building label selectors for configMaps")
+		}
 		cacheOptions.ByObject[&corev1.ConfigMap{}] = cache.ByObject{
-			Label: buildLabelSelector(c.ConfigMapLabelSelector),
+			Label: labelSelector,
 		}
 	}
 
@@ -553,14 +561,16 @@ func setupKonnectConfigSynchronizerWithMgr(
 // buildLabelSelector creates a `label.Selector` from specified match tabels
 // to build the cache options used in the manager's `ByObject` to filter objects (Secrets, ConfigMaps) by labels.
 // TODO: move the code to build cache's ByObject options to common utils packages.
-func buildLabelSelector(matchLabels map[string]string) labels.Selector {
+func buildLabelSelector(matchLabels map[string]string) (labels.Selector, error) {
 	s := labels.NewSelector()
+	allErrs := []error{}
 	for k, v := range matchLabels {
 		req, err := labels.NewRequirement(k, selection.Equals, []string{v})
 		if err != nil {
+			allErrs = append(allErrs, err)
 			continue
 		}
 		s = s.Add(*req)
 	}
-	return s
+	return s, errors.Join(allErrs...)
 }
