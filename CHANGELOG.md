@@ -156,12 +156,6 @@
   to `true`.
   [#1982](https://github.com/Kong/kong-operator/pull/1982)
 
-### Fixed
-
-- Fix the issue that invalid label value causing ingress controller fails to
-  store the license from Konnect into `Secret`.
-  [#1976](https://github.com/Kong/kong-operator/pull/1976)
-
 ### Changes
 
 - `ControlPlane` provisioned conditions' reasons have been renamed to actually reflect

@@ -518,7 +518,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	if cp.Spec.ObjectFilters != nil && cp.Spec.ObjectFilters.Secrets != nil {
 		for k, v := range cp.Spec.ObjectFilters.Secrets.MatchLabels {
 			if k == r.SecretLabelSelector {
-				return nil, fmt.Errorf("ControlPlane's secret label selector confictts with the operator's secret label selector: %s", k)
+				return nil, fmt.Errorf("ControlPlane's secret label selector conficts with operator's secret label selector: %s", k)
 			}
 			cfgOpts = append(cfgOpts, WithSecretLabelSelectorMatchLabel(k, v))
 		}
@@ -530,7 +530,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	if cp.Spec.ObjectFilters != nil && cp.Spec.ObjectFilters.ConfigMaps != nil {
 		for k, v := range cp.Spec.ObjectFilters.ConfigMaps.MatchLabels {
 			if k == r.ConfigMapLabelSelector {
-				return nil, fmt.Errorf("ControlPlane's configMap label selector confictts with the operator's configMap label selector: %s", k)
+				return nil, fmt.Errorf("ControlPlane's configMap label selector conficts with operator's configMap label selector: %s", k)
 			}
 			cfgOpts = append(cfgOpts, WithConfigMapLabelSelectorMatchLabel(k, v))
 		}
@@ -687,8 +687,8 @@ func (r *Reconciler) handleScheduleInstanceOutcome(
 	return ctrl.Result{}, err
 }
 
-// validateControlPlaneOptions checks if the ControlPlane's options is valid with the operator specific configuration.
-// It returns a boolean as the validation results and a string as the error message when the validation fails.
+// validateControlPlaneOptions checks if the ControlPlane's options are valid with the operator specific configuration.
+// It returns a boolean as the validation result and a string as the error message when the validation fails.
 // For example, it fails when the label selectors of `Secret` and `ConfigMap` in `spec.objectFilters` conflict with opertor's label selectors for them.
 func (r *Reconciler) validateControlPlaneOptions(cp *ControlPlane) (string, bool) {
 	if cp.Spec.ObjectFilters != nil {

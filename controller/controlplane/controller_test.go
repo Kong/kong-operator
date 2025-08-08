@@ -223,8 +223,8 @@ func TestReconciler_Reconcile(t *testing.T) {
 				require.NoError(t, err)
 			},
 			// TODO: add a test case for invalid ControlPlane options after the error
-			// `failed updating ControlPlane's status : controlplanes.gateway-operator.konghq.com "test-controlplane" not found`
-			// is resolved. This maybe related to the API version `v1beta1` having the precedence over `v2alpha1`.
+			// `failed updating ControlPlane's status : controlplanes.gateway-operator.konghq.com "test-controlplane" not found` resolved.
+			// https://github.com/Kong/kong-operator/issues/2024
 		},
 	}
 
