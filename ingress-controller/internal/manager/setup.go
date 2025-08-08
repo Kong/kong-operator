@@ -54,7 +54,7 @@ import (
 // Controller Manager - Setup Utility Functions
 // -----------------------------------------------------------------------------
 
-func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.Config, dbmode dpconf.DBMode) ctrl.Options {
+func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.Config, dbmode dpconf.DBMode) (ctrl.Options, error) {
 	logger.Info("Building the manager runtime scheme and loading apis into the scheme")
 
 	cacheOptions := cache.Options{
@@ -66,7 +66,7 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.
 	if len(c.SecretLabelSelector) > 0 {
 		labelSelector, err := buildLabelSelector(c.SecretLabelSelector)
 		if err != nil {
-			logger.Error(err, "error happened in building label selectors for secrets")
+			return ctrl.Options{}, fmt.Errorf("faild to build secret label selector: %w", err)
 		}
 		cacheOptions.ByObject[&corev1.Secret{}] = cache.ByObject{
 			Label: labelSelector,
@@ -76,7 +76,7 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.
 	if len(c.ConfigMapLabelSelector) > 0 {
 		labelSelector, err := buildLabelSelector(c.ConfigMapLabelSelector)
 		if err != nil {
-			logger.Error(err, "error happened in building label selectors for configMaps")
+			return ctrl.Options{}, fmt.Errorf("faild to build configMap label selector: %w", err)
 		}
 		cacheOptions.ByObject[&corev1.ConfigMap{}] = cache.ByObject{
 			Label: labelSelector,
@@ -147,7 +147,7 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.
 		managerOpts.LeaderElectionNamespace = c.LeaderElectionNamespace
 	}
 
-	return managerOpts
+	return managerOpts, nil
 }
 
 func leaderElectionEnabled(logger logr.Logger, c managercfg.Config, dbmode dpconf.DBMode) bool {
