@@ -4,6 +4,7 @@ import (
 	"context"
 	"slices"
 
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 	admregv1 "k8s.io/api/admissionregistration/v1"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
@@ -365,6 +366,29 @@ func ListValidatingWebhookConfigurationsForOwner(
 	return slices.DeleteFunc(
 		cfgList.Items, func(vwc admregv1.ValidatingWebhookConfiguration) bool {
 			return !IsOwnedByRefUID(&vwc, uid)
+		},
+	), nil
+}
+
+func ListKongDataPlaneClientCertificateForOwner(
+	ctx context.Context,
+	c client.Client,
+	uid types.UID,
+	listOpts ...client.ListOption,
+) ([]configurationv1alpha1.KongDataPlaneClientCertificate, error) {
+	certList := &configurationv1alpha1.KongDataPlaneClientCertificateList{}
+	err := c.List(
+		ctx,
+		certList,
+		listOpts...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return slices.DeleteFunc(
+		certList.Items, func(cert configurationv1alpha1.KongDataPlaneClientCertificate) bool {
+			return !IsOwnedByRefUID(&cert, uid)
 		},
 	), nil
 }

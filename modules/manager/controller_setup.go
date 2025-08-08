@@ -586,6 +586,13 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			newKonnectPluginController[configurationv1.KongConsumer](controllerFactory),
 			newKonnectPluginController[configurationv1beta1.KongConsumerGroup](controllerFactory),
 		)
+			KonnectExtensionCertificateControllerName: {
+				Enabled: (c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled) && c.KonnectControllersEnabled,
+				Controller: &konnect.KonnectExtensionCertificateReconciler{
+					LoggingMode: c.LoggingMode,
+					Client:      mgr.GetClient(),
+				},
+			}
 
 		// Add controllers responsible for creating, updating and deleting Konnect entities
 		controllers = append(
