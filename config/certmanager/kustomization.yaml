@@ -5,6 +5,3 @@ resources:
 
 configurations:
 - kustomizeconfig.yaml
-
-namespace: kong-system
-

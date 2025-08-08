@@ -31,7 +31,7 @@ spec:
   selector:
     app.kubernetes.io/component: ko
 {{- end -}}
-{{- if .Values.enableConversionWebhook -}}
+{{- if .Values.conversionWebhook.enabled -}}
 ---
 apiVersion: v1
 kind: Service
