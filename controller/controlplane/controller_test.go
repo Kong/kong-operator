@@ -222,6 +222,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 				_, err := reconciler.Reconcile(ctx, controlplaneReq)
 				require.NoError(t, err)
 			},
+			// TODO: add a test case for invalid ControlPlane options after the error
+			// `failed updating ControlPlane's status : controlplanes.gateway-operator.konghq.com "test-controlplane" not found` resolved.
+			// https://github.com/Kong/kong-operator/issues/2024
 		},
 	}
 

@@ -474,23 +474,25 @@ func WithEmitKubernetesEvents(emit bool) managercfg.Opt {
 	}
 }
 
-// TODO: We need to support multiple label selectors for secrets/config maps in ingress controller managers
-// when we support specifying both operator level and per ControlPlane selectors:
-// https://github.com/Kong/kong-operator/issues/1863
-
-// WithSecretLabelSelector sets the label selector to filter ingested secrets.
-// When label selector is not empty, only the `Secret`s having the given label with value "true" are ingested.
-func WithSecretLabelSelector(labelSelector string) managercfg.Opt {
+// WithSecretLabelSelectorMatchLabel sets the label selector to filter ingested secrets.
+// It adds a filter that selects the secrets with label `key` with the value specified in `value`.
+func WithSecretLabelSelectorMatchLabel(key, value string) managercfg.Opt {
 	return func(c *managercfg.Config) {
-		c.SecretLabelSelector = labelSelector
+		if c.SecretLabelSelector == nil {
+			c.SecretLabelSelector = map[string]string{}
+		}
+		c.SecretLabelSelector[key] = value
 	}
 }
 
-// WithConfigMapLabelSelector sets the label selector to filter ingested config maps.
-// When label selector is not empty, only the `ConfigMap`s having the given label with value "true" are ingested.
-func WithConfigMapLabelSelector(labelSelector string) managercfg.Opt {
+// WithConfigMapLabelSelectorMatchLabel sets the label selector to filter ingested config maps.
+// It adds a filter that selects configmaps with label `key` with the value specified in `value`.
+func WithConfigMapLabelSelectorMatchLabel(key, value string) managercfg.Opt {
 	return func(c *managercfg.Config) {
-		c.ConfigMapLabelSelector = labelSelector
+		if c.ConfigMapLabelSelector == nil {
+			c.ConfigMapLabelSelector = map[string]string{}
+		}
+		c.ConfigMapLabelSelector[key] = value
 	}
 }
 
