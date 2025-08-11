@@ -44,6 +44,15 @@
   to `true`.
   [#1982](https://github.com/Kong/kong-operator/pull/1982)
 
+### Fixed
+
+- Do not check "Programmed" condition in status of `Gateway` listeners in
+  extracting certificates in controlplane's translation of Kong configuration.
+  This fixes the disappearance of certificates when deployment status of
+  `DataPlane` owned by the gateway (including deletion of pods, rolling update
+  of dataplane deployment, scaling of dataplane and so on).
+  [#2038](https://github.com/Kong/kong-operator/pull/2038)
+
 ## [v2.0.0-alpha.3]
 
 > Release date: 2025-08-08
