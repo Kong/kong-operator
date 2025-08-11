@@ -13,7 +13,7 @@ import (
 
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 
 	"github.com/kong/kong-operator/modules/manager/scheme"
@@ -48,7 +48,7 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 			},
 		},
 		Status: configurationv1alpha1.KongPluginBindingStatus{
-			Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 				ControlPlaneID: uuid.NewString(),
 			},
 		},
@@ -78,8 +78,8 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 				Namespace: "default",
 			},
 			Status: configurationv1alpha1.KongServiceStatus{
-				Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-					KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+				Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+					KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 						ID: "12345",
 					},
 				},
@@ -177,8 +177,8 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 						Namespace: "default",
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "service-id-123",
 							},
 						},
@@ -209,8 +209,8 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 						Namespace: "default",
 					},
 					Status: configurationv1alpha1.KongRouteStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs{
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndServiceRefs{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "route-id-123",
 							},
 						},
@@ -241,8 +241,8 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 						Namespace: "default",
 					},
 					Status: configurationv1.KongConsumerStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "consumer-id-123",
 							},
 						},
@@ -270,16 +270,16 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 				&configurationv1alpha1.KongService{
 					ObjectMeta: metav1.ObjectMeta{Name: "service-1"},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{ID: "service-id-123"},
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: "service-id-123"},
 						},
 					},
 				},
 				&configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{Name: "consumer-1"},
 					Status: configurationv1.KongConsumerStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{ID: "consumer-id-123"},
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: "consumer-id-123"},
 						},
 					},
 				},
@@ -327,8 +327,8 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 						Namespace: "default",
 					},
 					Status: configurationv1alpha1.KongServiceStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "service-id-123",
 							},
 						},

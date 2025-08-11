@@ -385,7 +385,7 @@ func deleteObjectAndWaitForDeletionFn(t *testing.T, obj client.Object) func() {
 func assertKonnectEntityProgrammed(
 	t assert.TestingT,
 	obj interface {
-		GetKonnectStatus() *konnectv1alpha1.KonnectEntityStatus
+		GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus
 		GetConditions() []metav1.Condition
 	},
 ) {

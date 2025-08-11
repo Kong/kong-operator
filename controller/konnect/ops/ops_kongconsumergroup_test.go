@@ -9,7 +9,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 )
 
@@ -29,7 +29,7 @@ func TestKongConsumerGroupToSDKConsumerGroupInput_Tags(t *testing.T) {
 			},
 		},
 		Status: configurationv1beta1.KongConsumerGroupStatus{
-			Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 				ControlPlaneID: uuid.NewString(),
 			},
 		},

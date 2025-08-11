@@ -51,8 +51,8 @@ var testKongCertOK = &configurationv1alpha1.KongCertificate{
 		},
 	},
 	Status: configurationv1alpha1.KongCertificateStatus{
-		Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-			KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
 			ControlPlaneID: "123456789",
@@ -125,8 +125,8 @@ var testKongCertificateControlPlaneRefNotFound = &configurationv1alpha1.KongCert
 		},
 	},
 	Status: configurationv1alpha1.KongCertificateStatus{
-		Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-			KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
 			ControlPlaneID: "123456789",
@@ -154,8 +154,8 @@ var testKongCertControlPlaneRefNotProgrammed = &configurationv1alpha1.KongCertif
 		},
 	},
 	Status: configurationv1alpha1.KongCertificateStatus{
-		Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-			KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
 			ControlPlaneID: "123456789",

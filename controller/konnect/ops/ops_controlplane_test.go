@@ -125,7 +125,7 @@ func TestCreateControlPlane(t *testing.T) {
 						},
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 							ID: cpID,
 						},
 						Conditions: []metav1.Condition{
@@ -201,7 +201,7 @@ func TestCreateControlPlane(t *testing.T) {
 						},
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 							ID: cpID,
 						},
 						Conditions: []metav1.Condition{
@@ -311,7 +311,7 @@ func TestDeleteControlPlane(t *testing.T) {
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 							ID: "12345",
 						},
 					},
@@ -345,7 +345,7 @@ func TestDeleteControlPlane(t *testing.T) {
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 							ID: "12345",
 						},
 					},
@@ -381,7 +381,7 @@ func TestDeleteControlPlane(t *testing.T) {
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 							ID: "12345",
 						},
 					},
@@ -443,7 +443,7 @@ func TestUpdateControlPlane(t *testing.T) {
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 							ID: "12345",
 						},
 					},
@@ -489,7 +489,7 @@ func TestUpdateControlPlane(t *testing.T) {
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 							ID: "12345",
 						},
 					},
@@ -535,7 +535,7 @@ func TestUpdateControlPlane(t *testing.T) {
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 							ID: "12345",
 						},
 					},
@@ -738,7 +738,7 @@ func TestSetGroupMembers(t *testing.T) {
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 							ID: "cp-12345",
 						},
 					},
@@ -846,7 +846,7 @@ func TestSetGroupMembers(t *testing.T) {
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 							ID: "cp-12345",
 						},
 					},
@@ -863,7 +863,7 @@ func TestSetGroupMembers(t *testing.T) {
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 							ID: "cp-12346",
 						},
 					},
@@ -931,7 +931,7 @@ func TestSetGroupMembers(t *testing.T) {
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 					},
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-						KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 							ID: "cp-12345",
 						},
 					},

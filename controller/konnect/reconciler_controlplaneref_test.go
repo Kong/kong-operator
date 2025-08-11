@@ -42,7 +42,7 @@ func TestHandleControlPlaneRef(t *testing.T) {
 				Name:      "cp-ok",
 			},
 			Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-				KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 					ID: "cp-12345",
 				},
 				Conditions: []metav1.Condition{
@@ -65,7 +65,7 @@ func TestHandleControlPlaneRef(t *testing.T) {
 				},
 			},
 			Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-				KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 					ID: "cp-group-12345",
 				},
 				Conditions: []metav1.Condition{
@@ -83,7 +83,7 @@ func TestHandleControlPlaneRef(t *testing.T) {
 				Name:      "cp-not-programmed",
 			},
 			Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
-				KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 					ID: "cp-12345",
 				},
 				Conditions: []metav1.Condition{

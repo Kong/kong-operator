@@ -20,7 +20,7 @@ import (
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect"
 	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
@@ -61,9 +61,9 @@ func TestKongConsumerCredential_ACL(t *testing.T) {
 			},
 		},
 	})
-	consumer.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+	consumer.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 		ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
-		KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+		KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 			ID:        consumerID,
 			ServerURL: cp.GetKonnectStatus().GetServerURL(),
 			OrgID:     cp.GetKonnectStatus().GetOrgID(),

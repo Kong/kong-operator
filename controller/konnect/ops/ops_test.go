@@ -324,7 +324,7 @@ func TestDelete(t *testing.T) {
 							Status: metav1.ConditionTrue,
 						},
 					},
-					KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+					KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 						ID: "12345",
 					},
 				},

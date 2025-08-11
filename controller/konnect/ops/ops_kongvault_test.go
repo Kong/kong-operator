@@ -15,7 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
 )
@@ -50,7 +50,7 @@ func TestCreateKongVault(t *testing.T) {
 						Prefix:  "aws-vault1",
 					},
 					Status: configurationv1alpha1.KongVaultStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -111,7 +111,7 @@ func TestCreateKongVault(t *testing.T) {
 						Prefix:  "aws-vault1",
 					},
 					Status: configurationv1alpha1.KongVaultStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -174,8 +174,8 @@ func TestUpdateKongVault(t *testing.T) {
 						Description: "test vault",
 					},
 					Status: configurationv1alpha1.KongVaultStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "12345",
 							},
 							ControlPlaneID: "123456789",
@@ -221,8 +221,8 @@ func TestUpdateKongVault(t *testing.T) {
 						Description: "test vault",
 					},
 					Status: configurationv1alpha1.KongVaultStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "12345",
 							},
 							ControlPlaneID: "123456789",
@@ -278,8 +278,8 @@ func TestDeleteKongVault(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{},
 					Status: configurationv1alpha1.KongVaultStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "12345",
 							},
 							ControlPlaneID: "123456789",
@@ -302,8 +302,8 @@ func TestDeleteKongVault(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{},
 					Status: configurationv1alpha1.KongVaultStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "12345",
 							},
 							ControlPlaneID: "123456789",
@@ -329,8 +329,8 @@ func TestDeleteKongVault(t *testing.T) {
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{},
 					Status: configurationv1alpha1.KongVaultStatus{
-						Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 								ID: "12345",
 							},
 							ControlPlaneID: "123456789",

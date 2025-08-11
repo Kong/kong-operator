@@ -14,6 +14,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
@@ -146,7 +147,7 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 	// have a ServiceRef, hence the type constraints in the reconciler can't be used.
 	if route, ok := any(ent).(*configurationv1alpha1.KongRoute); ok {
 		if route.Status.Konnect == nil {
-			route.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndServiceRefs{}
+			route.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndServiceRefs{}
 		}
 		route.Status.Konnect.ServiceID = kongSvc.Status.Konnect.GetKonnectID()
 	}

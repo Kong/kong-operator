@@ -49,8 +49,8 @@ var testKongServiceOK = &configurationv1alpha1.KongService{
 		},
 	},
 	Status: configurationv1alpha1.KongServiceStatus{
-		Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-			KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
 			ControlPlaneID: "123456789",
@@ -78,8 +78,8 @@ var testKongServiceWithCPRefUnprogrammed = &configurationv1alpha1.KongService{
 		},
 	},
 	Status: configurationv1alpha1.KongServiceStatus{
-		Konnect: &konnectv1alpha1.KonnectEntityStatusWithControlPlaneRef{
-			KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{
+		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "12345",
 			},
 			ControlPlaneID: "123456789",

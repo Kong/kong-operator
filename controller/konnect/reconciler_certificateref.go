@@ -15,6 +15,7 @@ import (
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
@@ -97,7 +98,7 @@ func handleKongCertificateRef[T constraints.SupportedKonnectEntityType, TEnt con
 	// TODO: make this more generic.
 	if sni, ok := any(ent).(*configurationv1alpha1.KongSNI); ok {
 		if sni.Status.Konnect == nil {
-			sni.Status.Konnect = &konnectv1alpha1.KonnectEntityStatusWithControlPlaneAndCertificateRefs{}
+			sni.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{}
 		}
 		sni.Status.Konnect.CertificateID = cert.GetKonnectID()
 	}
