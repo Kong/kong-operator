@@ -10,6 +10,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
+
 	"github.com/kong/kong-operator/controller/pkg/log"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	telemetryTypes "github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
@@ -537,11 +539,54 @@ func WithWatchNamespaces(watchNamespaces []string) managercfg.Opt {
 	}
 }
 
-// WithKonnectConfig sets the Konnect configuration for the manager.
-func WithKonnectConfig(konnectConfig *managercfg.KonnectConfig) managercfg.Opt {
+// WithKonnectOptions merges Konnect options from ControlPlane spec with the existing Konnect configuration.
+// Note: c.Konnect is a value field (type managercfg.KonnectConfig), not a pointer,
+// so it cannot be nil. When this option is applied via manager.NewConfig(...),
+// the base config (including c.Konnect) has already been populated with defaults
+// from CLI flag bindings. When used in isolation (e.g., unit tests that start
+// from an empty managercfg.Config{}), the zero-value c.Konnect is still safe to
+// modify and acts as the default baseline unless an existingKonnectConfig is provided.
+func WithKonnectOptions(konnectOptions *operatorv2beta1.ControlPlaneKonnectOptions, existingKonnectConfig *managercfg.KonnectConfig) managercfg.Opt {
 	return func(c *managercfg.Config) {
-		if konnectConfig != nil {
-			c.Konnect = *konnectConfig
+		// Start with existing config if provided
+		if existingKonnectConfig != nil {
+			c.Konnect = *existingKonnectConfig
+		}
+
+		// Apply ControlPlane Konnect options if specified
+		if konnectOptions == nil {
+			return
+		}
+
+		// Configure consumer synchronization
+		if konnectOptions.ConsumersSync != nil {
+			c.Konnect.ConsumersSyncDisabled = (*konnectOptions.ConsumersSync == operatorv2beta1.ControlPlaneKonnectConsumersSyncStateDisabled)
+		}
+
+		// Configure licensing
+		if licensing := konnectOptions.Licensing; licensing != nil {
+			if licensing.State != nil {
+				c.Konnect.LicenseSynchronizationEnabled = (*licensing.State == operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled)
+			}
+			if licensing.InitialPollingPeriod != nil {
+				c.Konnect.InitialLicensePollingPeriod = licensing.InitialPollingPeriod.Duration
+			}
+			if licensing.PollingPeriod != nil {
+				c.Konnect.LicensePollingPeriod = licensing.PollingPeriod.Duration
+			}
+			if licensing.StorageState != nil {
+				c.Konnect.LicenseStorageEnabled = (*licensing.StorageState == operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled)
+			}
+		}
+
+		// Configure node refresh period
+		if konnectOptions.NodeRefreshPeriod != nil {
+			c.Konnect.RefreshNodePeriod = konnectOptions.NodeRefreshPeriod.Duration
+		}
+
+		// Configure config upload period
+		if konnectOptions.ConfigUploadPeriod != nil {
+			c.Konnect.UploadConfigPeriod = konnectOptions.ConfigUploadPeriod.Duration
 		}
 	}
 }

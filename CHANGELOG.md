@@ -46,6 +46,10 @@
 - Add conversion webhook for `KonnectGatewayControlPlane` to support seamless conversion
   between old `v1alpha1` and new `v1alpha2` API versions.
   [#2023](https://github.com/Kong/kong-operator/pull/2023)
+- Add Konnect related configuration fields to `ControlPlane` spec, allowing fine-grained
+  control over Konnect integration settings including consumer synchronization, licensing
+  configuration, node refresh periods, and config upload periods.
+  [#2009](https://github.com/Kong/kong-operator/pull/2009)
 
 ### Fixed
 

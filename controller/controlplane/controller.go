@@ -509,7 +509,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		WithEmitKubernetesEvents(r.EmitKubernetesEvents),
 		WithTranslationOptions(cp.Spec.Translation),
 		WithWatchNamespaces(validatedWatchNamespaces),
-		WithKonnectConfig(konnectConfig),
+		WithKonnectOptions(cp.Spec.Konnect, konnectConfig),
 	}
 
 	if r.SecretLabelSelector != "" {
