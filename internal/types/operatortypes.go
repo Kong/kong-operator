@@ -37,8 +37,20 @@ type (
 	// ControlPlaneController is an alias for the v2beta1 ControlPlaneController type.
 	ControlPlaneController = operatorv2beta1.ControlPlaneController
 
-	// ControllerState is an alias for the v2beta1 ControllerState type.
+	// ControllerState is an alias for the v2alpha1 ControllerState type.
 	ControllerState = operatorv2beta1.ControllerState
+
+	// ControlPlaneDataPlaneSync is an alias for the v2alpha1 ControlPlaneDataPlaneSync type.
+	ControlPlaneDataPlaneSync = operatorv2beta1.ControlPlaneDataPlaneSync
+
+	// ControlPlaneTranslationOptions is an alias for the v2alpha1 ControlPlaneTranslationOptions type.
+	ControlPlaneTranslationOptions = operatorv2beta1.ControlPlaneTranslationOptions
+
+	// ControlPlaneFallbackConfiguration is an alias for the v2alpha1 ControlPlaneFallbackConfiguration type.
+	ControlPlaneFallbackConfiguration = operatorv2beta1.ControlPlaneFallbackConfiguration
+
+	// ControlPlaneReverseSyncState is an alias for the v2alpha1 ControlPlaneReverseSyncState type.
+	ControlPlaneReverseSyncState = operatorv2beta1.ControlPlaneReverseSyncState
 )
 
 type (
@@ -57,10 +69,30 @@ const (
 	// FeatureGateStateDisabled is an alias for the v2beta1 FeatureGateStateDisabled type.
 	FeatureGateStateDisabled = operatorv2beta1.FeatureGateStateDisabled
 
-	// ControlPlaneControllerStateEnabled is an alias for the v2beta1 ControlPlaneControllerStateEnabled type.
+	// ControlPlaneControllerStateEnabled is an alias for the v2alpha1 ControlPlaneControllerStateEnabled type.
 	ControlPlaneControllerStateEnabled = operatorv2beta1.ControllerStateEnabled
-	// ControlPlaneControllerStateDisabled is an alias for the v2beta1 ControlPlaneControllerStateDisabled type.
+	// ControlPlaneControllerStateDisabled is an alias for the v2alpha1 ControlPlaneControllerStateDisabled type.
 	ControlPlaneControllerStateDisabled = operatorv2beta1.ControllerStateDisabled
+
+	// ControlPlaneFallbackConfigurationStateEnabled is an alias for the v2alpha1 ControlPlaneFallbackConfigurationStateEnabled type.
+	ControlPlaneFallbackConfigurationStateEnabled = operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled
+	// ControlPlaneFallbackConfigurationStateDisabled is an alias for the v2alpha1 ControlPlaneFallbackConfigurationStateDisabled type.
+	ControlPlaneFallbackConfigurationStateDisabled = operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled
+
+	// ControlPlaneReverseSyncStateEnabled is an alias for the v2alpha1 ControlPlaneReverseSyncStateEnabled type.
+	ControlPlaneReverseSyncStateEnabled = operatorv2beta1.ControlPlaneReverseSyncStateEnabled
+	// ControlPlaneReverseSyncStateDisabled is an alias for the v2alpha1 ControlPlaneReverseSyncStateDisabled type.
+	ControlPlaneReverseSyncStateDisabled = operatorv2beta1.ControlPlaneReverseSyncStateDisabled
+
+	// ControlPlaneDrainSupportStateEnabled is an alias for the v2alpha1 ControlPlaneDrainSupportStateEnabled type.
+	ControlPlaneDrainSupportStateEnabled = operatorv2beta1.ControlPlaneDrainSupportStateEnabled
+	// ControlPlaneDrainSupportStateDisabled is an alias for the v2alpha1 ControlPlaneDrainSupportStateDisabled type.
+	ControlPlaneDrainSupportStateDisabled = operatorv2beta1.ControlPlaneDrainSupportStateDisabled
+
+	// ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled is an alias for the v2alpha1 ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled type.
+	ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled = operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled
+	// ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled is an alias for the v2alpha1 ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled type.
+	ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled = operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled
 )
 
 func ControlPlaneGVR() schema.GroupVersionResource {

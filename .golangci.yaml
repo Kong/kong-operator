@@ -63,7 +63,7 @@ linters:
         - pattern: ^.*operatorv1beta1.ControlPlane.*$
           msg: Please use v2beta1 ControlPlane (through github.com/kong/kong-operator/internal/types)
         # NOTE: When all references use the types package, this rule can use .* instead of listing types.
-        - pattern: ^.*operatorv2beta1.(ControlPlane|ControlPlaneStatus|ControlPlaneList|ControlPlaneSpec|ControlPlaneOptions|ControlPlaneDataPlaneTarget\w*)\b.*$
+        - pattern: ^.*operatorv2alpha1.ControlPlane.*$
           msg: Please use the types package to refer to the type (through github.com/kong/kong-operator/internal/types)
     gomodguard:
       blocked:

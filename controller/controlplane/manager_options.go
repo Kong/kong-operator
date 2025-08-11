@@ -10,8 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
-	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
-
 	"github.com/kong/kong-operator/controller/pkg/log"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	telemetryTypes "github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
@@ -137,13 +135,13 @@ func WithFeatureGates(logger logr.Logger, featureGates []gwtypes.ControlPlaneFea
 
 // WithReverseSync sets whether configuration is sent to Kong even
 // if the configuration checksum has not changed since previous update.
-func WithReverseSync(state *operatorv2beta1.ControlPlaneReverseSyncState) managercfg.Opt {
+func WithReverseSync(state *gwtypes.ControlPlaneReverseSyncState) managercfg.Opt {
 	return func(c *managercfg.Config) {
 		if state == nil {
 			return
 		}
 
-		c.EnableReverseSync = *state == operatorv2beta1.ControlPlaneReverseSyncStateEnabled
+		c.EnableReverseSync = *state == gwtypes.ControlPlaneReverseSyncStateEnabled
 	}
 }
 
@@ -456,7 +454,7 @@ func WithCacheSyncPeriod(period time.Duration) managercfg.Opt {
 }
 
 // WithDataPlaneSyncOptions sets the option to sync Kong configuration with managed dataplanes.
-func WithDataPlaneSyncOptions(syncOptions operatorv2beta1.ControlPlaneDataPlaneSync) managercfg.Opt {
+func WithDataPlaneSyncOptions(syncOptions gwtypes.ControlPlaneDataPlaneSync) managercfg.Opt {
 	return func(c *managercfg.Config) {
 		if syncOptions.Interval != nil {
 			c.ProxySyncInterval = syncOptions.Interval.Duration
@@ -497,7 +495,7 @@ func WithConfigMapLabelSelectorMatchLabel(key, value string) managercfg.Opt {
 }
 
 // WithTranslationOptions sets the translation options for the manager.
-func WithTranslationOptions(opts *operatorv2beta1.ControlPlaneTranslationOptions) managercfg.Opt {
+func WithTranslationOptions(opts *gwtypes.ControlPlaneTranslationOptions) managercfg.Opt {
 	return func(c *managercfg.Config) {
 		if opts == nil {
 			return
@@ -505,15 +503,15 @@ func WithTranslationOptions(opts *operatorv2beta1.ControlPlaneTranslationOptions
 
 		if opts.CombinedServicesFromDifferentHTTPRoutes != nil {
 			c.CombinedServicesFromDifferentHTTPRoutes = (*opts.CombinedServicesFromDifferentHTTPRoutes ==
-				operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled)
+				gwtypes.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled)
 		}
 		if fc := opts.FallbackConfiguration; fc != nil && fc.UseLastValidConfig != nil {
 			c.UseLastValidConfigForFallback = (*fc.UseLastValidConfig ==
-				operatorv2beta1.ControlPlaneFallbackConfigurationStateEnabled)
+				gwtypes.ControlPlaneFallbackConfigurationStateEnabled)
 		}
 
 		if opts.DrainSupport != nil {
-			c.EnableDrainSupport = *opts.DrainSupport == operatorv2beta1.ControlPlaneDrainSupportStateEnabled
+			c.EnableDrainSupport = *opts.DrainSupport == gwtypes.ControlPlaneDrainSupportStateEnabled
 		}
 	}
 }
