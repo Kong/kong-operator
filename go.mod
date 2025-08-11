@@ -40,7 +40,7 @@ require (
 	github.com/kong/kubernetes-configuration v1.4.1-0.20250708093327-e695c0e8302e
 	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.3.0.20250808121029-9899efdaf296
 	github.com/kong/kubernetes-telemetry v0.1.10
-	github.com/kong/kubernetes-testing-framework v0.47.3-0.20250806132524-715c7d56419d
+	github.com/kong/kubernetes-testing-framework v0.47.3
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
 	github.com/lithammer/dedent v1.1.0
@@ -76,7 +76,7 @@ require (
 	k8s.io/cli-runtime v0.33.3
 	k8s.io/client-go v0.33.3
 	k8s.io/component-base v0.33.3
-	k8s.io/kubectl v0.32.2
+	k8s.io/kubectl v0.33.3
 	k8s.io/kubernetes v1.33.3
 	oras.land/oras-go/v2 v2.6.0
 	sigs.k8s.io/controller-runtime v0.21.0
@@ -318,7 +318,7 @@ require (
 	k8s.io/utils v0.0.0-20241210054802-24370beab758 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2 // indirect
 	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
-	sigs.k8s.io/kind v0.27.0 // indirect
+	sigs.k8s.io/kind v0.29.0 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.7.0 // indirect
 )
