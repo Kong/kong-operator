@@ -1076,7 +1076,7 @@ func TestConfigMapLabelSelector(t *testing.T) {
 func TestWithKonnectOptions(t *testing.T) {
 	tests := []struct {
 		name                  string
-		konnectOptions        *operatorv2alpha1.ControlPlaneKonnectOptions
+		konnectOptions        *operatorv2beta1.ControlPlaneKonnectOptions
 		existingKonnectConfig *managercfg.KonnectConfig
 		expectedConfig        managercfg.KonnectConfig
 	}{
@@ -1094,9 +1094,9 @@ func TestWithKonnectOptions(t *testing.T) {
 		},
 		{
 			name: "should configure consumer sync disabled",
-			konnectOptions: &operatorv2alpha1.ControlPlaneKonnectOptions{
-				ConsumersSync: func() *operatorv2alpha1.ControlPlaneKonnectConsumersSyncState {
-					state := operatorv2alpha1.ControlPlaneKonnectConsumersSyncStateDisabled
+			konnectOptions: &operatorv2beta1.ControlPlaneKonnectOptions{
+				ConsumersSync: func() *operatorv2beta1.ControlPlaneKonnectConsumersSyncState {
+					state := operatorv2beta1.ControlPlaneKonnectConsumersSyncStateDisabled
 					return &state
 				}(),
 			},
@@ -1107,9 +1107,9 @@ func TestWithKonnectOptions(t *testing.T) {
 		},
 		{
 			name: "should configure consumer sync enabled",
-			konnectOptions: &operatorv2alpha1.ControlPlaneKonnectOptions{
-				ConsumersSync: func() *operatorv2alpha1.ControlPlaneKonnectConsumersSyncState {
-					state := operatorv2alpha1.ControlPlaneKonnectConsumersSyncStateEnabled
+			konnectOptions: &operatorv2beta1.ControlPlaneKonnectOptions{
+				ConsumersSync: func() *operatorv2beta1.ControlPlaneKonnectConsumersSyncState {
+					state := operatorv2beta1.ControlPlaneKonnectConsumersSyncStateEnabled
 					return &state
 				}(),
 			},
@@ -1120,16 +1120,16 @@ func TestWithKonnectOptions(t *testing.T) {
 		},
 		{
 			name: "should configure licensing options",
-			konnectOptions: &operatorv2alpha1.ControlPlaneKonnectOptions{
-				Licensing: &operatorv2alpha1.ControlPlaneKonnectLicensing{
-					State: func() *operatorv2alpha1.ControlPlaneKonnectLicensingState {
-						state := operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled
+			konnectOptions: &operatorv2beta1.ControlPlaneKonnectOptions{
+				Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
+					State: func() *operatorv2beta1.ControlPlaneKonnectLicensingState {
+						state := operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled
 						return &state
 					}(),
 					InitialPollingPeriod: &metav1.Duration{Duration: 5 * time.Minute},
 					PollingPeriod:        &metav1.Duration{Duration: 10 * time.Minute},
-					StorageState: func() *operatorv2alpha1.ControlPlaneKonnectLicensingState {
-						state := operatorv2alpha1.ControlPlaneKonnectLicensingStateEnabled
+					StorageState: func() *operatorv2beta1.ControlPlaneKonnectLicensingState {
+						state := operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled
 						return &state
 					}(),
 				},
@@ -1144,7 +1144,7 @@ func TestWithKonnectOptions(t *testing.T) {
 		},
 		{
 			name: "should configure node refresh and config upload periods",
-			konnectOptions: &operatorv2alpha1.ControlPlaneKonnectOptions{
+			konnectOptions: &operatorv2beta1.ControlPlaneKonnectOptions{
 				NodeRefreshPeriod:  &metav1.Duration{Duration: 15 * time.Second},
 				ConfigUploadPeriod: &metav1.Duration{Duration: 30 * time.Second},
 			},
@@ -1156,9 +1156,9 @@ func TestWithKonnectOptions(t *testing.T) {
 		},
 		{
 			name: "should merge with existing config",
-			konnectOptions: &operatorv2alpha1.ControlPlaneKonnectOptions{
-				ConsumersSync: func() *operatorv2alpha1.ControlPlaneKonnectConsumersSyncState {
-					state := operatorv2alpha1.ControlPlaneKonnectConsumersSyncStateDisabled
+			konnectOptions: &operatorv2beta1.ControlPlaneKonnectOptions{
+				ConsumersSync: func() *operatorv2beta1.ControlPlaneKonnectConsumersSyncState {
+					state := operatorv2beta1.ControlPlaneKonnectConsumersSyncStateDisabled
 					return &state
 				}(),
 			},
