@@ -61,7 +61,7 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 		}
 
 		for _, listener := range gateway.Spec.Listeners {
-			status, ok := statuses[listener.Name]
+			_, ok := statuses[listener.Name]
 			if !ok {
 				logger.V(logging.DebugLevel).Info("Listener missing status information",
 					"gateway", gateway.Name,
@@ -72,16 +72,9 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 				continue
 			}
 
-			// Check if listener is marked as programmed
-			if !util.CheckCondition(
-				status.Conditions,
-				util.ConditionType(gatewayapi.ListenerConditionProgrammed),
-				util.ConditionReason(gatewayapi.ListenerReasonProgrammed),
-				metav1.ConditionTrue,
-				gateway.Generation,
-			) {
-				continue
-			}
+			// We were checking if listener is marked as programmed when KIC reconciles "Unmanaged" gateways.
+			// But here we do not need to do the check because the gateways are always managed by Kong operator.
+			// Ref: https://github.com/Kong/kong-operator/issues/1769
 
 			if listener.TLS != nil {
 				if len(listener.TLS.CertificateRefs) > 0 {
