@@ -43,6 +43,7 @@ import (
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/internal/utils/index"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/pkg/consts"
@@ -424,9 +425,7 @@ func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, update
 		return ctrl.Result{}, err
 	}
 
-	if !k8sutils.ConditionsNeedsUpdate(current, updated) &&
-		reflect.DeepEqual(updated.Status.Controllers, current.Status.Controllers) &&
-		reflect.DeepEqual(updated.Status.FeatureGates, current.Status.FeatureGates) {
+	if controlPlaneStatusEqual(current, updated) {
 		return ctrl.Result{}, nil
 	}
 
@@ -572,17 +571,31 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		}
 	}
 
-	// If the ControlPlane is owned by a Gateway, we set the Gateway to be the only one to reconcile.
-	if owner, ok := lo.Find(cp.GetOwnerReferences(), func(owner metav1.OwnerReference) bool {
-		return strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) &&
-			owner.Kind == "Gateway"
-	}); ok {
-		cfgOpts = append(cfgOpts,
-			WithGatewayToReconcile(types.NamespacedName{
-				Namespace: cp.Namespace,
-				Name:      owner.Name,
-			}),
-		)
+	switch cp.Spec.DataPlane.Type {
+	case gwtypes.ControlPlaneDataPlaneTargetManagedByType:
+		// If the ControlPlane is owned by a Gateway, we set the Gateway to be the only one to reconcile.
+		owner, hasOwner := lo.Find(cp.GetOwnerReferences(), func(owner metav1.OwnerReference) bool {
+			return strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) &&
+				owner.Kind == "Gateway"
+		})
+
+		if hasOwner {
+			cfgOpts = append(cfgOpts,
+				WithGatewayToReconcile(types.NamespacedName{
+					Namespace: cp.Namespace,
+					Name:      owner.Name,
+				}),
+			)
+		} else {
+			return nil, fmt.Errorf(
+				"no Gateway owner but spec.dataplane.type set to %s",
+				gwtypes.ControlPlaneDataPlaneTargetManagedByType,
+			)
+		}
+
+	case gwtypes.ControlPlaneDataPlaneTargetRefType:
+		cfgOpts = append(cfgOpts, WithGatewayAPIControllersDisabled())
+
 	}
 
 	return cfgOpts, nil
@@ -713,4 +726,13 @@ func (r *Reconciler) validateControlPlaneOptions(cp *ControlPlane) (string, bool
 	}
 
 	return "", true
+}
+
+func controlPlaneStatusEqual(
+	a, b *ControlPlane,
+) bool {
+	return !k8sutils.ConditionsNeedsUpdate(a, b) &&
+		reflect.DeepEqual(b.Status.Controllers, a.Status.Controllers) &&
+		reflect.DeepEqual(b.Status.FeatureGates, a.Status.FeatureGates) &&
+		reflect.DeepEqual(b.Status.DataPlane, a.Status.DataPlane)
 }

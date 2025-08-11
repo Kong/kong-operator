@@ -44,8 +44,11 @@ func dataPlaneNameOnControlPlane(o client.Object) []string {
 	case gwtypes.ControlPlaneDataPlaneTargetRefType:
 		// Note: .Name is a pointer, enforced to be non nil at the CRD level.
 		return []string{controlPlane.Spec.DataPlane.Ref.Name}
-	// TODO(pmalek): implement DataPlane external URL type
-	// ref: https://github.com/kong/kong-operator/issues/1366
+	case gwtypes.ControlPlaneDataPlaneTargetManagedByType:
+		if controlPlane.Status.DataPlane == nil {
+			return []string{}
+		}
+		return []string{controlPlane.Status.DataPlane.Name}
 	default:
 		return []string{}
 	}

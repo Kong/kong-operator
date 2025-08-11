@@ -208,6 +208,20 @@ const (
 	ControllerNameGatewayAPIReferenceGrant = "GWAPI_REFERENCE_GRANT"
 )
 
+// WithGatewayAPIControllersDisabled disables all Gateway API controllers.
+func WithGatewayAPIControllersDisabled() managercfg.Opt {
+	return func(c *managercfg.Config) {
+		c.GatewayAPIGatewayController = false
+		c.GatewayAPIHTTPRouteController = false
+		c.GatewayAPIGRPCRouteController = false
+		c.GatewayAPIReferenceGrantController = false
+		c.GatewayAPIUDPRouteController = false
+		c.GatewayAPITCPRouteController = false
+		c.GatewayAPITLSRouteController = false
+		c.GatewayAPIBackendTLSRouteController = false
+	}
+}
+
 // WithControllers sets the controllers for the manager.
 func WithControllers(logger logr.Logger, controllers []gwtypes.ControlPlaneController) managercfg.Opt {
 	setOpt := func(b *bool, state gwtypes.ControllerState) {

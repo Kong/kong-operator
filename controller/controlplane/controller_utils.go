@@ -19,13 +19,14 @@ func GetDataPlaneForControlPlane(
 	c client.Client,
 	cp *ControlPlane,
 ) (*operatorv1beta1.DataPlane, error) {
+	var dp operatorv1beta1.DataPlane
+
 	switch cp.Spec.DataPlane.Type {
 	case gwtypes.ControlPlaneDataPlaneTargetRefType:
 		if cp.Spec.DataPlane.Ref == nil || cp.Spec.DataPlane.Ref.Name == "" {
 			return nil, fmt.Errorf("%w, controlplane = %s/%s", operatorerrors.ErrDataPlaneNotSet, cp.Namespace, cp.Name)
 		}
 
-		dp := operatorv1beta1.DataPlane{}
 		nn := types.NamespacedName{
 			Namespace: cp.Namespace,
 			Name:      cp.Spec.DataPlane.Ref.Name,
@@ -35,8 +36,19 @@ func GetDataPlaneForControlPlane(
 		}
 		return &dp, nil
 
-	// TODO(pmalek): implement DataPlane external URL type
-	// ref: https://github.com/kong/kong-operator/issues/1366
+	case gwtypes.ControlPlaneDataPlaneTargetManagedByType:
+		if cp.Status.DataPlane == nil {
+			return nil, fmt.Errorf("ControlPlane's DataPlane is not set")
+		}
+
+		nn := types.NamespacedName{
+			Namespace: cp.Namespace,
+			Name:      cp.Status.DataPlane.Name,
+		}
+		if err := c.Get(ctx, nn, &dp); err != nil {
+			return nil, err
+		}
+		return &dp, nil
 
 	default:
 		return nil, fmt.Errorf("unsupported ControlPlane's DataPlane type: %s", cp.Spec.DataPlane.Type)

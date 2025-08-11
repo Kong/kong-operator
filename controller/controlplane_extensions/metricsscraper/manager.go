@@ -291,9 +291,9 @@ func (msm *Manager) NotifyRemove(ctx context.Context, cp types.NamespacedName) {
 // that is associated with the given ControlPlane.
 // It returns true if the scraper was added.
 func (msm *Manager) Add(cp *gwtypes.ControlPlane, pipeline MetricsScrapePipeline) bool {
-	// TODO(pmalek): implement DataPlane external URL type
-	// ref: https://github.com/kong/kong-operator/issues/1366
-	if cp == nil || cp.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetRefType || cp.Spec.DataPlane.Ref == nil {
+	if cp == nil ||
+		((cp.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetRefType || cp.Spec.DataPlane.Ref == nil) &&
+			(cp.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetManagedByType)) {
 		return false
 	}
 
@@ -342,19 +342,30 @@ func (msm *Manager) enableMetricsScraperForControlPlanesDataPlane(
 	ctx context.Context,
 	controlplane *gwtypes.ControlPlane,
 ) error {
-	// TODO(pmalek): implement DataPlane external URL type
-	// ref: https://github.com/kong/kong-operator/issues/1366
-	if controlplane == nil || controlplane.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetRefType || controlplane.Spec.DataPlane.Ref == nil {
-		return fmt.Errorf("ControlPlane %s does not have a valid, supported DataPlane target", controlplane.Name)
+	if controlplane == nil ||
+		((controlplane.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetRefType || controlplane.Spec.DataPlane.Ref == nil) &&
+			(controlplane.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetManagedByType)) {
+		return fmt.Errorf("ControlPlane does not have a valid, supported DataPlane target")
 	}
 
-	var (
+	var dpNN types.NamespacedName
+	switch controlplane.Spec.DataPlane.Type {
+	case gwtypes.ControlPlaneDataPlaneTargetRefType:
 		dpNN = types.NamespacedName{
 			Name:      controlplane.Spec.DataPlane.Ref.Name,
 			Namespace: controlplane.Namespace,
 		}
-		dp operatorv1beta1.DataPlane
-	)
+	case gwtypes.ControlPlaneDataPlaneTargetManagedByType:
+		if controlplane.Status.DataPlane == nil {
+			return fmt.Errorf("ControlPlane's DataPlane is managed but it's not set in the status")
+		}
+		dpNN = types.NamespacedName{
+			Name:      controlplane.Status.DataPlane.Name,
+			Namespace: controlplane.Namespace,
+		}
+	}
+
+	var dp operatorv1beta1.DataPlane
 	if err := msm.client.Get(ctx, dpNN, &dp); err != nil {
 		return fmt.Errorf("failed to get DataPlane %s: %w", dpNN, err)
 	}

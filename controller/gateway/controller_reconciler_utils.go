@@ -87,10 +87,7 @@ func (r *Reconciler) createControlPlane(
 		},
 		Spec: gwtypes.ControlPlaneSpec{
 			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-				Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-					Name: dataplaneName,
-				},
+				Type: gwtypes.ControlPlaneDataPlaneTargetManagedByType,
 			},
 		},
 	}
@@ -102,7 +99,14 @@ func (r *Reconciler) createControlPlane(
 
 	k8sutils.SetOwnerForObject(controlplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(controlplane)
-	return r.Create(ctx, controlplane)
+	if err := r.Create(ctx, controlplane); err != nil {
+		return err
+	}
+	old := controlplane.DeepCopy()
+	controlplane.Status.DataPlane = &gwtypes.ControlPlaneDataPlaneStatus{
+		Name: dataplaneName,
+	}
+	return r.Status().Patch(ctx, controlplane, client.MergeFrom(old))
 }
 
 func (r *Reconciler) getGatewayAddresses(

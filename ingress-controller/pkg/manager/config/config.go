@@ -109,10 +109,14 @@ type Config struct {
 	KongCustomEntityEnabled       bool
 
 	// Gateway API toggling.
-	GatewayAPIGatewayController        bool
-	GatewayAPIHTTPRouteController      bool
-	GatewayAPIReferenceGrantController bool
-	GatewayAPIGRPCRouteController      bool
+	GatewayAPIGatewayController         bool
+	GatewayAPIHTTPRouteController       bool
+	GatewayAPIReferenceGrantController  bool
+	GatewayAPIGRPCRouteController       bool
+	GatewayAPIUDPRouteController        bool
+	GatewayAPITCPRouteController        bool
+	GatewayAPITLSRouteController        bool
+	GatewayAPIBackendTLSRouteController bool
 
 	// GatewayToReconcile specifies the Gateway to be reconciled.
 	GatewayToReconcile OptionalNamespacedName
