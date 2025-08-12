@@ -65,6 +65,7 @@ type ControlPlaneList struct {
 // ControlPlaneSpec defines the desired state of ControlPlane
 //
 // +apireference:kgo:include
+// +kubebuilder:validation:XValidation:message="When dataplane target is of type 'ref' the ingressClass must be set",rule="self.dataplane.type != 'ref' || has(self.ingressClass)"
 type ControlPlaneSpec struct {
 	// DataPlane designates the target data plane to configure.
 	//
@@ -461,6 +462,12 @@ type ControlPlaneStatus struct {
 	// +kubebuilder:default={{type: "Provisioned", status: "Unknown", reason:"NotReconciled", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
+	// DataPlane describes the status of the DataPlane that the ControlPlane is
+	// responsible for configuring.
+	//
+	// +optional
+	DataPlane *ControlPlaneDataPlaneStatus `json:"dataPlane,omitempty"`
+
 	// FeatureGates is a list of effective feature gates for this ControlPlane.
 	//
 	// +optional
@@ -476,6 +483,16 @@ type ControlPlaneStatus struct {
 	// +listMapKey=name
 	// +kubebuilder:validation:MaxItems=32
 	Controllers []ControlPlaneController `json:"controllers,omitempty"`
+}
+
+// ControlPlaneDataPlaneStatus defines the status of the DataPlane that the
+// ControlPlane is responsible for configuring.
+type ControlPlaneDataPlaneStatus struct {
+	// Name is the name of the DataPlane.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
 }
 
 // GetConditions returns the ControlPlane Status Conditions

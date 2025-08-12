@@ -8,8 +8,7 @@ import "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 
 const (
 	// ConditionTypeProvisioned is a condition type indicating whether or
-	// not all Deployments (or Daemonsets) for the ControlPlane have been provisioned
-	// successfully.
+	// not the ControlPlane has been provisioned successfully.
 	ConditionTypeProvisioned consts.ConditionType = "Provisioned"
 
 	// ConditionTypeWatchNamespaceGrantValid is a condition type used to
@@ -37,6 +36,10 @@ const (
 	// ConditionReasonNoDataPlane is a reason which indicates that no DataPlane
 	// has been provisioned.
 	ConditionReasonNoDataPlane consts.ConditionReason = "NoDataPlane"
+
+	// ConditionReasonMissingOwner is a reason which indicates that a ControlPlane
+	// has no owner but its spec indicates that it should.
+	ConditionReasonMissingOwner consts.ConditionReason = "MissingOwner"
 
 	// ConditionReasonWatchNamespaceGrantInvalid is a reason which indicates that
 	// WatchNamespaceGrants are invalid or missing for the ControlPlane to be able
