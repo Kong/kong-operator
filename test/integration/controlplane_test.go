@@ -97,6 +97,9 @@ func TestControlPlaneEssentials(t *testing.T) {
 			Namespace:    namespace.Name,
 		},
 		Spec: gwtypes.ControlPlaneSpec{
+			ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+				IngressClass: lo.ToPtr("kong"),
+			},
 			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
 				Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
@@ -186,6 +189,7 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 				},
 			},
 			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+				IngressClass: lo.ToPtr("kong"),
 				WatchNamespaces: &operatorv2beta1.WatchNamespaces{
 					Type: operatorv2beta1.WatchNamespacesTypeList,
 					List: []string{
@@ -387,6 +391,9 @@ func TestControlPlaneUpdate(t *testing.T) {
 			Name:      controlplaneName.Name,
 		},
 		Spec: gwtypes.ControlPlaneSpec{
+			ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+				IngressClass: lo.ToPtr("kong"),
+			},
 			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
 				Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
@@ -424,28 +431,28 @@ func TestControlPlaneUpdate(t *testing.T) {
 		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 	)
 
-	t.Log("updating controlplane to enable the GatewayAPIReferenceGrant controller")
+	t.Log("updating controlplane to disable the Kong Consumer controller")
 	require.Eventually(t,
 		testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients,
 			func(cp *gwtypes.ControlPlane) {
 				cp.Spec.Controllers = append(cp.Spec.Controllers, gwtypes.ControlPlaneController{
-					Name:  controlplane.ControllerNameGatewayAPIReferenceGrant,
-					State: gwtypes.ControlPlaneControllerStateEnabled,
+					Name:  controlplane.ControllerNameKongConsumer,
+					State: gwtypes.ControlPlaneControllerStateDisabled,
 				})
 			},
 		),
 		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,
 	)
 
-	t.Log("verifying that the controlplane has the GatewayAPIReferenceGrant controller enabled (set in status field)")
+	t.Log("verifying that the controlplane has the Kong Consumer controller disabled (set in status field)")
 	require.EventuallyWithT(t,
 		func(t *assert.CollectT) {
 			cp, err := controlplaneClient.Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
 			require.NoError(t, err)
 
 			assert.Contains(t, cp.Status.Controllers, gwtypes.ControlPlaneController{
-				Name:  controlplane.ControllerNameGatewayAPIReferenceGrant,
-				State: gwtypes.ControlPlaneControllerStateEnabled,
+				Name:  controlplane.ControllerNameKongConsumer,
+				State: gwtypes.ControlPlaneControllerStateDisabled,
 			})
 		},
 		testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick,

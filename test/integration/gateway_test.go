@@ -35,8 +35,6 @@ import (
 )
 
 func TestGatewayEssentials(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -80,8 +78,9 @@ func TestGatewayEssentials(t *testing.T) {
 	require.Len(t, controlplanes, 1)
 	controlplane := controlplanes[0]
 
-	t.Log("verifying networkpolicies are created")
-	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	// NOTE: We're not verifying if the NetworkPolicies are created
+	// in integration tests.
+	// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
 
 	t.Log("verifying connectivity to the Gateway")
 	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
@@ -172,8 +171,9 @@ func TestGatewayEssentials(t *testing.T) {
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
-	t.Log("verifying networkpolicies are deleted")
-	require.Eventually(t, testutils.Not(testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients)), time.Minute, time.Second)
+	// NOTE: We're not verifying if the NetworkPolicies are created
+	// in integration tests.
+	// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
 
 	t.Log("verifying that gateway itself is deleted")
 	require.Eventually(t, testutils.GatewayNotExist(t, GetCtx(), gatewayNN, clients), time.Minute, time.Second)

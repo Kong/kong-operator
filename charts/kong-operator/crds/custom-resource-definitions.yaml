@@ -9327,7 +9327,9 @@ spec:
             - dataplane
             type: object
             x-kubernetes-validations:
-            - rule: self.dataplane.type != 'ref' || has(self.ingressClass)
+            - message: When dataplane target is of type 'ref' the ingressClass must
+                be set
+              rule: self.dataplane.type != 'ref' || has(self.ingressClass)
           status:
             description: Status is the status of the ControlPlane resource.
             properties:
@@ -9337,7 +9339,7 @@ spec:
                   message: Waiting for controller
                   reason: NotReconciled
                   status: Unknown
-                  type: Scheduled
+                  type: Provisioned
                 description: Conditions describe the current conditions of the Gateway.
                 items:
                   description: Condition contains details for one aspect of the current

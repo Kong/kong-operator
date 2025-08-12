@@ -113,10 +113,10 @@ type Config struct {
 	GatewayAPIHTTPRouteController       bool
 	GatewayAPIReferenceGrantController  bool
 	GatewayAPIGRPCRouteController       bool
-	GatewayAPIUDPRouteController        bool
+	GatewayAPIBackendTLSRouteController bool
 	GatewayAPITCPRouteController        bool
 	GatewayAPITLSRouteController        bool
-	GatewayAPIBackendTLSRouteController bool
+	GatewayAPIUDPRouteController        bool
 
 	// GatewayToReconcile specifies the Gateway to be reconciled.
 	GatewayToReconcile OptionalNamespacedName

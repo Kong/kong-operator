@@ -150,6 +150,10 @@ func (c *CLIConfig) bindFlagSet() {
 	flagSet.BoolVar(&c.GatewayAPIHTTPRouteController, "enable-controller-gwapi-httproute", true, "Enable the Gateway API HTTPRoute controller.")
 	flagSet.BoolVar(&c.GatewayAPIReferenceGrantController, "enable-controller-gwapi-reference-grant", true, "Enable the Gateway API ReferenceGrant controller.")
 	flagSet.BoolVar(&c.GatewayAPIGRPCRouteController, "enable-controller-gwapi-grpcroute", true, "Enable the Gateway API GRPCRoute controller.")
+	flagSet.BoolVar(&c.GatewayAPIBackendTLSRouteController, "enable-controller-gwapi-backend-tls-route", true, "Enable the Gateway API BackendTLSRoute controller.")
+	flagSet.BoolVar(&c.GatewayAPITCPRouteController, "enable-controller-gwapi-tcp-route", true, "Enable the Gateway API TCPRoute controller.")
+	flagSet.BoolVar(&c.GatewayAPIUDPRouteController, "enable-controller-gwapi-udp-route", true, "Enable the Gateway API UDPRoute controller.")
+	flagSet.BoolVar(&c.GatewayAPITLSRouteController, "enable-controller-gwapi-tls-route", true, "Enable the Gateway API TLSRoute controller.")
 	flagSet.Var(flags.NewValidatedValue(&c.GatewayToReconcile, namespacedNameFromFlagValue, nnTypeNameOverride), "gateway-to-reconcile",
 		`Gateway namespaced name in "namespace/name" format. Makes KIC reconcile only the specified Gateway.`)
 
