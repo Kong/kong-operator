@@ -147,7 +147,7 @@ func TestGetRouterFlavor(t *testing.T) {
 		{
 			name:           "GatewayConfiguration is nil",
 			gatewayConfig:  nil,
-			expectedFlavor: consts.RouterFlavorExpressions,
+			expectedFlavor: consts.RouterFlavorTraditionalCompatible,
 		},
 		{
 			name: "DataPlaneOptions is nil",
@@ -156,7 +156,7 @@ func TestGetRouterFlavor(t *testing.T) {
 					DataPlaneOptions: nil,
 				},
 			},
-			expectedFlavor: consts.RouterFlavorExpressions,
+			expectedFlavor: consts.RouterFlavorTraditionalCompatible,
 		},
 		{
 			name: "PodTemplateSpec is nil",
@@ -171,7 +171,7 @@ func TestGetRouterFlavor(t *testing.T) {
 					},
 				},
 			},
-			expectedFlavor: consts.RouterFlavorExpressions,
+			expectedFlavor: consts.RouterFlavorTraditionalCompatible,
 		},
 		{
 			name: "Container not found",
@@ -190,7 +190,7 @@ func TestGetRouterFlavor(t *testing.T) {
 					},
 				},
 			},
-			expectedFlavor: consts.RouterFlavorExpressions,
+			expectedFlavor: consts.RouterFlavorTraditionalCompatible,
 		},
 		{
 			name: "KONG_ROUTER_FLAVOR not found",
@@ -216,7 +216,7 @@ func TestGetRouterFlavor(t *testing.T) {
 					},
 				},
 			},
-			expectedFlavor: consts.RouterFlavorExpressions,
+			expectedFlavor: consts.RouterFlavorTraditionalCompatible,
 		},
 		{
 			name: "KONG_ROUTER_FLAVOR found",
