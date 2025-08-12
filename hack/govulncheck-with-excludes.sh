@@ -15,7 +15,12 @@ excludeVulns="$(jq -nc '[
   # Kubernetes GitRepo Volume Inadvertent Local Repository Access in k8s.io/kubernetes
   # We do not use the GitRepo volume type.
   # https://github.com/kubernetes/kubernetes/issues/130786
-  "GO-2025-3521"
+  "GO-2025-3521",
+
+  # Moby firewalld reload removes bridge network isolation in github.com/docker/docker
+  # https://pkg.go.dev/vuln/GO-2025-3829
+  # (aka CVE-2025-54410, GHSA-4vq8-7jfc-9cvp)
+  "GO-2025-3829"
 
 ]')"
 export excludeVulns
