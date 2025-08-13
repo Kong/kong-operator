@@ -58,8 +58,8 @@ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.18.0 h1:c/Cqfb0r+Yi+JtIEq73FWXVkRonBlf0CRNYc8Zttxdo=
 github.com/klauspost/compress v1.18.0/go.mod h1:2Pp+KzxcywXVXMr50+X0Q/Lsb43OQHYWRCY2AiWywWQ=
-github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.3.0.20250814120656-5fb4363e82b8 h1:HlXbTwzesRqoDQ2id4lmsFWfcmQsY12FeMZ9ToZ2YG4=
-github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.3.0.20250814120656-5fb4363e82b8/go.mod h1:2TcQhF9wnlAf6JYJIDoFKpKO12Hirn/PFr1uoBgGhGA=
+github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.3.0.20250815061942-d381cd7afca6 h1:kfe1rTu3dp3mmKjm0xb+Z2E9+17Vs76teNbSSh0Sp4M=
+github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.3.0.20250815061942-d381cd7afca6/go.mod h1:2TcQhF9wnlAf6JYJIDoFKpKO12Hirn/PFr1uoBgGhGA=
 github.com/kong/semver/v4 v4.0.1 h1:DIcNR8W3gfx0KabFBADPalxxsp+q/5COwIFkkhrFQ2Y=
 github.com/kong/semver/v4 v4.0.1/go.mod h1:LImQ0oT15pJvSns/hs2laLca2zcYoHu5EsSNY0J6/QA=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=

@@ -36,13 +36,21 @@ type ListenersConditionsAware interface {
 	SetListenersConditions([]gatewayv1.ListenerStatus)
 }
 
-// SetCondition sets a new condition to the provided resource
+// SetCondition sets a new condition to the provided resource.
 func SetCondition(condition metav1.Condition, resource ConditionsAware) {
 	conditions := resource.GetConditions()
 	newConditions := make([]metav1.Condition, 0, len(conditions))
 
 	var conditionFound bool
 	for i := range conditions {
+		// NOTICE:
+		// Skip "Scheduled" condition, it is condition type that was valid,
+		// when ControlPlane was a separate deployment. It's taken into
+		// account for compatibility reasons with v1beta1 (which sets it
+		// by default). Only ControlPlane uses it, so it can be here.
+		if conditions[i].Type == "Scheduled" {
+			continue
+		}
 		if conditions[i].Type != condition.Type {
 			newConditions = append(newConditions, conditions[i])
 		} else {
