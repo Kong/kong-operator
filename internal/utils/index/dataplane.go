@@ -1,7 +1,12 @@
 package index
 
 import (
+	"strings"
+
+	"github.com/samber/lo"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 )
@@ -10,12 +15,15 @@ const (
 	// KongPluginInstallationsIndex is the key to be used to access the .spec.pluginsToInstall indexed values,
 	// in a form of list of namespace/name strings.
 	KongPluginInstallationsIndex = "KongPluginInstallations"
+	// DataPlaneOnOwnerGatewayIndex is the key to index the DataPlanes based on the owner Gateways.
+	DataPlaneOnOwnerGatewayIndex = "DataPlaneOnOwnerGateway"
 )
 
 // DataPlaneFlags contains flags that control which indexes are created for the DataPlane object.
 type DataPlaneFlags struct {
 	KongPluginInstallationControllerEnabled bool
 	KonnectControllersEnabled               bool
+	GatewayAPIGatewayControllerEnabled      bool
 }
 
 func OptionsForDataPlane(flags DataPlaneFlags) []Option {
@@ -33,6 +41,13 @@ func OptionsForDataPlane(flags DataPlaneFlags) []Option {
 			Object:         &operatorv1beta1.DataPlane{},
 			Field:          KongPluginInstallationsIndex,
 			ExtractValueFn: kongPluginInstallationsOnDataPlane,
+		})
+	}
+	if flags.GatewayAPIGatewayControllerEnabled {
+		opts = append(opts, Option{
+			Object:         &operatorv1beta1.DataPlane{},
+			Field:          DataPlaneOnOwnerGatewayIndex,
+			ExtractValueFn: ownerGatewayOnDataPlane,
 		})
 	}
 
@@ -54,4 +69,20 @@ func kongPluginInstallationsOnDataPlane(o client.Object) []string {
 		result = append(result, kpi.Namespace+"/"+kpi.Name)
 	}
 	return result
+}
+
+func ownerGatewayOnDataPlane(o client.Object) []string {
+	dp, ok := o.(*operatorv1beta1.DataPlane)
+	if !ok {
+		return nil
+	}
+	ownerGateway, ok := lo.Find(dp.GetOwnerReferences(), func(ref metav1.OwnerReference) bool {
+		return ref.Kind == "Gateway" &&
+			strings.HasPrefix(ref.APIVersion, gatewayv1.GroupName)
+	})
+	if !ok {
+		return []string{}
+	}
+
+	return []string{dp.Namespace + "/" + ownerGateway.Name}
 }

@@ -78,7 +78,6 @@ func (r *Reconciler) createControlPlane(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *GatewayConfiguration,
-	dataplaneName string,
 ) error {
 	controlplane := &gwtypes.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
@@ -99,14 +98,7 @@ func (r *Reconciler) createControlPlane(
 
 	k8sutils.SetOwnerForObject(controlplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(controlplane)
-	if err := r.Create(ctx, controlplane); err != nil {
-		return err
-	}
-	old := controlplane.DeepCopy()
-	controlplane.Status.DataPlane = &gwtypes.ControlPlaneDataPlaneStatus{
-		Name: dataplaneName,
-	}
-	return r.Status().Patch(ctx, controlplane, client.MergeFrom(old))
+	return r.Create(ctx, controlplane)
 }
 
 func (r *Reconciler) getGatewayAddresses(
