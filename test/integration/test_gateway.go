@@ -84,7 +84,7 @@ func TestGatewayEssentials(t *testing.T) {
 	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying GatewayClass has supportedFeatures set")
-	requiredFeatures, err := gatewayapi.GetSupportedFeatures(consts.RouterFlavorExpressions)
+	requiredFeatures, err := gatewayapi.GetSupportedFeatures(consts.DefaultRouterFlavor)
 	require.NoError(t, err)
 	require.Eventually(t, testutils.GatewayClassHasSupportedFeatures(t, GetCtx(), string(gateway.Spec.GatewayClassName), clients, requiredFeatures.UnsortedList()...), testutils.SubresourceReadinessWait, time.Second)
 

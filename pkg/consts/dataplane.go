@@ -77,7 +77,8 @@ const (
 	// RouterFlavorExpressions is the expressions router flavor.
 	RouterFlavorExpressions RouterFlavor = "expressions"
 	// DefaultRouterFlavor is the default router flavor.
-	DefaultRouterFlavor = RouterFlavorExpressions
+	// https://developer.konghq.com/gateway/configuration/#router-flavor
+	DefaultRouterFlavor = RouterFlavorTraditionalCompatible
 )
 
 // -----------------------------------------------------------------------------

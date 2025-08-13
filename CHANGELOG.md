@@ -29,6 +29,16 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixed
+
+- Correctly assume default Kong router flavor is `traditional_compatible` when
+  `KONG_ROUTER_FLAVOR` is not set. This fixes incorrectly populated
+  `GatewayClass.status.supportedFeatures` when the default was assumed to be
+  `expressions`.
+  [#2043](https://github.com/Kong/kong-operator/pull/2043)
+
 ## [v1.6.2]
 
 > Release date: 2025-07-11
@@ -47,7 +57,7 @@
 ## Changed
 
 - Allowed the `kubectl rollout restart` operation for Deployment resources created via DataPlane CRD.
-  [#1660](hhttps://github.com/Kong/gateway-operator/pull/1660)
+  [#1660](https://github.com/Kong/gateway-operator/pull/1660)
 
 ## [v1.6.0]
 
