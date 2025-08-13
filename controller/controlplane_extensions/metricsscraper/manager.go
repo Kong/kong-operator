@@ -291,9 +291,17 @@ func (msm *Manager) NotifyRemove(ctx context.Context, cp types.NamespacedName) {
 // that is associated with the given ControlPlane.
 // It returns true if the scraper was added.
 func (msm *Manager) Add(cp *gwtypes.ControlPlane, pipeline MetricsScrapePipeline) bool {
-	if cp == nil ||
-		((cp.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetRefType || cp.Spec.DataPlane.Ref == nil) &&
-			(cp.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetManagedByType)) {
+	if cp == nil {
+		return false
+	}
+
+	switch dp := cp.Spec.DataPlane; dp.Type {
+	case gwtypes.ControlPlaneDataPlaneTargetRefType:
+		if dp.Ref == nil {
+			return false
+		}
+	case gwtypes.ControlPlaneDataPlaneTargetManagedByType:
+	default:
 		return false
 	}
 
