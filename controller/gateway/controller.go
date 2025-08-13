@@ -592,7 +592,7 @@ func (r *Reconciler) provisionControlPlane(
 		}
 		return nil
 	case count > 1:
-		err := fmt.Errorf("control plane deployments found: %d, expected: 1, requeing", count)
+		err := fmt.Errorf("control planes found: %d, expected: 1, requeing", count)
 		k8sutils.SetCondition(
 			createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
@@ -631,6 +631,20 @@ func (r *Reconciler) provisionControlPlane(
 			createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, kcfgdataplane.ResourceUpdatedMessage, gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
+	}
+
+	oldControlPlane := controlPlane.DeepCopy()
+	if controlPlane.Status.DataPlane == nil || controlPlane.Status.DataPlane.Name != dataplane.Name {
+		controlPlane.Status.DataPlane = &gwtypes.ControlPlaneDataPlaneStatus{
+			Name: dataplane.Name,
+		}
+	}
+	if err := r.Status().Patch(ctx, controlPlane, client.MergeFrom(oldControlPlane)); err != nil {
+		k8sutils.SetCondition(
+			createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, fmt.Sprintf("failed to patch control plane status: %v", err), gateway.Generation),
+			gatewayConditionsAndListenersAware(gateway),
+		)
+		return nil
 	}
 
 	log.Trace(logger, "waiting for controlplane readiness")

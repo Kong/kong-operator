@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -95,7 +96,16 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		Owns(&corev1.Secret{}).
 		Watches(
 			&operatorv1alpha1.WatchNamespaceGrant{},
-			handler.EnqueueRequestsFromMapFunc(r.listControlPlanesForWatchNamespaceGrants))
+			handler.EnqueueRequestsFromMapFunc(r.listControlPlanesForWatchNamespaceGrants)).
+		Watches(
+			&operatorv1beta1.DataPlane{},
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlane)).
+		// watch for changes in the DataPlane deployments, as we want to be aware of all
+		// the DataPlane pod changes (every time a new pod gets ready, the deployment
+		// status gets updated accordingly, leading to a reconciliation loop trigger)
+		Watches(
+			&appsv1.Deployment{},
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlaneDeployment))
 
 	if r.KonnectEnabled {
 		// Watch for changes in KonnectExtension objects that are referenced by ControlPlane objects.
@@ -356,6 +366,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			if err := r.scheduleInstance(ctx, logger, mgrID, mgrCfg); err != nil {
 				return r.handleScheduleInstanceOutcome(ctx, logger, cp, err)
 			}
+
 			r.ensureControlPlaneStatus(cp, mgrCfg)
 		}
 		return r.initStatusToWaitingToBecomeReady(ctx, logger, cp)
