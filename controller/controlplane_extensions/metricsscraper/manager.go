@@ -350,15 +350,17 @@ func (msm *Manager) enableMetricsScraperForControlPlanesDataPlane(
 	ctx context.Context,
 	controlplane *gwtypes.ControlPlane,
 ) error {
-	if controlplane == nil ||
-		((controlplane.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetRefType || controlplane.Spec.DataPlane.Ref == nil) &&
-			(controlplane.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetManagedByType)) {
+	if controlplane == nil {
 		return fmt.Errorf("ControlPlane does not have a valid, supported DataPlane target")
 	}
 
 	var dpNN types.NamespacedName
 	switch controlplane.Spec.DataPlane.Type {
 	case gwtypes.ControlPlaneDataPlaneTargetRefType:
+		if controlplane.Spec.DataPlane.Ref == nil {
+			return fmt.Errorf("ControlPlane with spec.dataplane.type=ref does not have a valid, does not have the DataPlane set")
+		}
+
 		dpNN = types.NamespacedName{
 			Name:      controlplane.Spec.DataPlane.Ref.Name,
 			Namespace: controlplane.Namespace,
@@ -371,6 +373,8 @@ func (msm *Manager) enableMetricsScraperForControlPlanesDataPlane(
 			Name:      controlplane.Status.DataPlane.Name,
 			Namespace: controlplane.Namespace,
 		}
+	default:
+		return fmt.Errorf("ControlPlane does not have a valid, supported DataPlane target")
 	}
 
 	var dp operatorv1beta1.DataPlane

@@ -236,7 +236,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return result, nil
 	}
 
-	log.Trace(logger, "retrieving connected dataplane")
+	log.Trace(logger, "retrieving connected DataPlane")
 	var (
 		dataplane operatorv1beta1.DataPlane
 		dpNN      = types.NamespacedName{
