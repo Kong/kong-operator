@@ -41,7 +41,7 @@ func IsProgrammed(gateway *gwtypes.Gateway) bool {
 // AreListenersProgrammed indicates whether or not all the provided Gateway
 // listeners were marked as Programmed by the controller.
 func AreListenersProgrammed(gateway *gwtypes.Gateway) bool {
-	return lo.ContainsBy(gateway.Spec.Listeners, func(listener gatewayv1.Listener) bool {
+	return lo.EveryBy(gateway.Spec.Listeners, func(listener gatewayv1.Listener) bool {
 		return lo.ContainsBy(gateway.Status.Listeners, func(listenerStatus gatewayv1.ListenerStatus) bool {
 			if listener.Name == listenerStatus.Name {
 				return lo.ContainsBy(listenerStatus.Conditions, func(condition metav1.Condition) bool {
