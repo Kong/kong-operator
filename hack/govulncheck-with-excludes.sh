@@ -20,7 +20,19 @@ excludeVulns="$(jq -nc '[
   # Moby firewalld reload removes bridge network isolation in github.com/docker/docker
   # https://pkg.go.dev/vuln/GO-2025-3829
   # (aka CVE-2025-54410, GHSA-4vq8-7jfc-9cvp)
-  "GO-2025-3829"
+  "GO-2025-3829",
+
+  # Kubernetes allows nodes to bypass dynamic resource allocation authorization checks in k8s.io/kubernetes
+  # Not applicable: this project is a controller and does not run or configure the affected DRA components.
+  # https://osv.dev/vulnerability/GO-2025-3774
+  # (aka CVE-2025-4563, GHSA-hj2p-8wj8-pfq4)
+  "GO-2025-3774",
+
+  # database/sql Rows Scan race on context cancellation
+  # Not applicable: this project does not use database/sql scanning; flagged only at package level transitively.
+  # https://osv.dev/vulnerability/GO-2025-3849
+  # (aka CVE-2025-47907)
+  "GO-2025-3849"
 
 ]')"
 export excludeVulns
