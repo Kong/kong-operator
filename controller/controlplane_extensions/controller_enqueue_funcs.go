@@ -285,18 +285,14 @@ func enqueueControlPlaneForDataPlane(
 
 			switch controlplane.Spec.DataPlane.Type {
 			case gwtypes.ControlPlaneDataPlaneTargetRefType:
-				if controlplane.Spec.DataPlane.Ref == nil {
-					continue
-				}
-				if controlplane.Spec.DataPlane.Ref.Name != dp.Name {
+				if controlplane.Spec.DataPlane.Ref == nil ||
+					controlplane.Spec.DataPlane.Ref.Name != dp.Name {
 					continue
 				}
 
 			case gwtypes.ControlPlaneDataPlaneTargetManagedByType:
-				if controlplane.Status.DataPlane == nil {
-					continue
-				}
-				if controlplane.Status.DataPlane.Name != dp.Name {
+				if controlplane.Status.DataPlane == nil ||
+					controlplane.Status.DataPlane.Name != dp.Name {
 					continue
 				}
 			default:
