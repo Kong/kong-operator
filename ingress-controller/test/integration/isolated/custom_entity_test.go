@@ -24,7 +24,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	"github.com/kong/kubernetes-configuration/pkg/clientset"
+	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
 	"github.com/kong/kong-operator/ingress-controller/test/integration/consts"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"

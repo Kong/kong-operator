@@ -27,9 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
@@ -1524,7 +1524,6 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 }
 
 func TestKongState_FillUpstreamOverrides(t *testing.T) {
-	t.Skip("Partially deprecated - KongIngress functionality removed")
 	const (
 		kongIngressName        = "kongIngress"
 		kongUpstreamPolicyName = "policy"
@@ -1545,18 +1544,11 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 		}
 	}
 
-	serviceAnnotatedWithKongUpstreamPolicyAndKongIngress := func() *corev1.Service {
-		s := serviceAnnotatedWithKongUpstreamPolicy()
-		s.Annotations[annotations.AnnotationPrefix+annotations.ConfigurationKey] = kongIngressName
-		return s
-	}
-
 	testCases := []struct {
 		name                 string
 		upstream             Upstream
 		kongVersion          semver.Version
 		kongUpstreamPolicies []*configurationv1beta1.KongUpstreamPolicy
-		kongIngresses        []*configurationv1.KongIngress
 		expectedUpstream     kong.Upstream
 		expectedFailures     []failures.ResourceFailure
 	}{
@@ -1618,77 +1610,6 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 					"failed fetching KongUpstreamPolicy: KongUpstreamPolicy default/policy not found",
 					serviceAnnotatedWithKongUpstreamPolicy(),
 				)),
-			},
-		},
-		{
-			name:        "KongUpstreamPolicy is applied even if KongIngress is not found",
-			kongVersion: defaultTestKongVersion,
-			upstream: Upstream{
-				Upstream: kong.Upstream{
-					Name: kong.String("foo-upstream"),
-				},
-				Service: Service{
-					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicyAndKongIngress()},
-				},
-			},
-			kongUpstreamPolicies: []*configurationv1beta1.KongUpstreamPolicy{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      kongUpstreamPolicyName,
-						Namespace: "default",
-					},
-					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("least-connections"),
-					},
-				},
-			},
-			expectedUpstream: kong.Upstream{
-				Name:      kong.String("foo-upstream"),
-				Algorithm: kong.String("least-connections"),
-			},
-			expectedFailures: []failures.ResourceFailure{
-				lo.Must(failures.NewResourceFailure(
-					"failed to get KongIngress: KongIngress kongIngress not found",
-					serviceAnnotatedWithKongUpstreamPolicyAndKongIngress(),
-				)),
-			},
-		},
-		{
-			name:        "KongUpstreamPolicy overwrites KongIngress",
-			kongVersion: defaultTestKongVersion,
-			upstream: Upstream{
-				Upstream: kong.Upstream{
-					Name: kong.String("foo-upstream"),
-				},
-				Service: Service{
-					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicyAndKongIngress()},
-				},
-			},
-			kongUpstreamPolicies: []*configurationv1beta1.KongUpstreamPolicy{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      kongUpstreamPolicyName,
-						Namespace: "default",
-					},
-					Spec: configurationv1beta1.KongUpstreamPolicySpec{
-						Algorithm: lo.ToPtr("least-connections"),
-					},
-				},
-			},
-			kongIngresses: []*configurationv1.KongIngress{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      kongIngressName,
-						Namespace: "default",
-					},
-					Upstream: &configurationv1.KongIngressUpstream{
-						Algorithm: lo.ToPtr("round-robin"),
-					},
-				},
-			},
-			expectedUpstream: kong.Upstream{
-				Name:      kong.String("foo-upstream"),
-				Algorithm: kong.String("least-connections"),
 			},
 		},
 		{

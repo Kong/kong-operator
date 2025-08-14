@@ -81,6 +81,9 @@ linters:
               recommendations:
                 - sigs.k8s.io/controller-runtime/pkg/log
                 - go.uber.org/zap/zapcore
+          - github.com/kong/kubernetes-configuration:
+              recommendations:
+                - github.com/kong/kubernetes-configuration/v2
     govet:
       disable:
         - fieldalignment
@@ -222,7 +225,6 @@ formatters:
       sections:
         - standard
         - default
-        - prefix(github.com/kong/kubernetes-configuration)
         - prefix(github.com/kong/kubernetes-configuration/v2)
         - prefix(github.com/kong/kong-operator)
       custom-order: true

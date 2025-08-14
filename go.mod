@@ -37,8 +37,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.24.3
 	github.com/kong/go-kong v0.67.0
-	github.com/kong/kubernetes-configuration v1.4.1-0.20250708093327-e695c0e8302e
-	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.3.0.20250812115635-86053d2151e0
+	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.3.0.20250814120656-5fb4363e82b8
 	github.com/kong/kubernetes-telemetry v0.1.10
 	github.com/kong/kubernetes-testing-framework v0.47.3
 	github.com/kong/semver/v4 v4.0.1
@@ -70,11 +69,11 @@ require (
 	google.golang.org/api v0.246.0
 	google.golang.org/grpc v1.74.2
 	google.golang.org/protobuf v1.36.7
-	k8s.io/api v0.33.3
-	k8s.io/apiextensions-apiserver v0.33.3
-	k8s.io/apimachinery v0.33.3
+	k8s.io/api v0.33.4
+	k8s.io/apiextensions-apiserver v0.33.4
+	k8s.io/apimachinery v0.33.4
 	k8s.io/cli-runtime v0.33.3
-	k8s.io/client-go v0.33.3
+	k8s.io/client-go v0.33.4
 	k8s.io/component-base v0.33.3
 	k8s.io/kubectl v0.33.3
 	k8s.io/kubernetes v1.33.3

@@ -8,9 +8,14 @@ import (
 	"runtime"
 
 	"github.com/samber/lo"
+
+	"github.com/kong/kong-operator/ingress-controller/test/consts"
 )
 
 const (
+	// kubernetesConfigurationModulePath is the kubernetes-configuration path used by the kustomize.
+	// It's different than the path used by Go mod related functions as these do change
+	// based on the major version of the module used whereas this one doesn't.
 	kubernetesConfigurationModulePath = "github.com/kong/kubernetes-configuration"
 	ingressControllerLocalPath        = "./ingress-controller/"
 )
@@ -20,7 +25,7 @@ var (
 	kongGatewayRBACsKustomize = initKongGatewayRBACsKustomizePath()
 	kongCRDsRBACsKustomize    = initKongCRDsRBACsKustomizePath()
 
-	kubernetesConfigurationModuleVersion = lo.Must(DependencyModuleVersionGit(kubernetesConfigurationModulePath))
+	kubernetesConfigurationModuleVersion = lo.Must(DependencyModuleVersionGit(consts.KubernetesConfigurationModulePath))
 	kongCRDsKustomize                    = initKongConfigurationCRDs()
 	kongIncubatorCRDsKustomize           = initKongIncubatorCRDsKustomizePath()
 )
