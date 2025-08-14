@@ -775,10 +775,10 @@ func (r *Reconciler) enforceDataPlaneNameInStatus(
 				cp.GetNamespace(), owner.Name, err,
 			)
 		}
-		if len(dataplaneList.Items) != 1 {
+		if l := len(dataplaneList.Items); l != 1 {
 			return "", op.Noop, fmt.Errorf(
-				"no DataPlanes owned by Gateway %s/%s",
-				cp.GetNamespace(), owner.Name,
+				"expected 1 but got %d DataPlanes owned by Gateway %s/%s",
+				l, cp.GetNamespace(), owner.Name,
 			)
 		}
 		dataplaneName = dataplaneList.Items[0].Name
