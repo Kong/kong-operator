@@ -291,9 +291,17 @@ func (msm *Manager) NotifyRemove(ctx context.Context, cp types.NamespacedName) {
 // that is associated with the given ControlPlane.
 // It returns true if the scraper was added.
 func (msm *Manager) Add(cp *gwtypes.ControlPlane, pipeline MetricsScrapePipeline) bool {
-	// TODO(pmalek): implement DataPlane external URL type
-	// ref: https://github.com/kong/kong-operator/issues/1366
-	if cp == nil || cp.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetRefType || cp.Spec.DataPlane.Ref == nil {
+	if cp == nil {
+		return false
+	}
+
+	switch dp := cp.Spec.DataPlane; dp.Type {
+	case gwtypes.ControlPlaneDataPlaneTargetRefType:
+		if dp.Ref == nil {
+			return false
+		}
+	case gwtypes.ControlPlaneDataPlaneTargetManagedByType:
+	default:
 		return false
 	}
 
@@ -342,19 +350,34 @@ func (msm *Manager) enableMetricsScraperForControlPlanesDataPlane(
 	ctx context.Context,
 	controlplane *gwtypes.ControlPlane,
 ) error {
-	// TODO(pmalek): implement DataPlane external URL type
-	// ref: https://github.com/kong/kong-operator/issues/1366
-	if controlplane == nil || controlplane.Spec.DataPlane.Type != gwtypes.ControlPlaneDataPlaneTargetRefType || controlplane.Spec.DataPlane.Ref == nil {
-		return fmt.Errorf("ControlPlane %s does not have a valid, supported DataPlane target", controlplane.Name)
+	if controlplane == nil {
+		return fmt.Errorf("ControlPlane does not have a valid, supported DataPlane target")
 	}
 
-	var (
+	var dpNN types.NamespacedName
+	switch controlplane.Spec.DataPlane.Type {
+	case gwtypes.ControlPlaneDataPlaneTargetRefType:
+		if controlplane.Spec.DataPlane.Ref == nil {
+			return fmt.Errorf("ControlPlane with spec.dataplane.type=ref does not have a valid DataPlane set")
+		}
+
 		dpNN = types.NamespacedName{
 			Name:      controlplane.Spec.DataPlane.Ref.Name,
 			Namespace: controlplane.Namespace,
 		}
-		dp operatorv1beta1.DataPlane
-	)
+	case gwtypes.ControlPlaneDataPlaneTargetManagedByType:
+		if controlplane.Status.DataPlane == nil {
+			return fmt.Errorf("ControlPlane's DataPlane is managed but it's not set in the status")
+		}
+		dpNN = types.NamespacedName{
+			Name:      controlplane.Status.DataPlane.Name,
+			Namespace: controlplane.Namespace,
+		}
+	default:
+		return fmt.Errorf("ControlPlane does not have a valid, supported DataPlane target")
+	}
+
+	var dp operatorv1beta1.DataPlane
 	if err := msm.client.Get(ctx, dpNN, &dp); err != nil {
 		return fmt.Errorf("failed to get DataPlane %s: %w", dpNN, err)
 	}

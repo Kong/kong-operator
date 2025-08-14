@@ -10,7 +10,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
@@ -19,8 +19,10 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
+	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/internal/utils/index"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -45,9 +47,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 		controlplaneReq          reconcile.Request
 		controlplane             *ControlPlane
 		dataplane                *operatorv1beta1.DataPlane
-		controlplaneSubResources []controllerruntimeclient.Object
-		dataplaneSubResources    []controllerruntimeclient.Object
-		dataplanePods            []controllerruntimeclient.Object
+		controlplaneSubResources []client.Object
+		dataplaneSubResources    []client.Object
+		dataplanePods            []client.Object
 		testBody                 func(t *testing.T, reconciler Reconciler, controlplane reconcile.Request)
 	}{
 		{
@@ -130,7 +132,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			dataplanePods: []controllerruntimeclient.Object{
+			dataplanePods: []client.Object{
 				&corev1.Pod{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "dataplane-pod",
@@ -145,7 +147,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			controlplaneSubResources: []controllerruntimeclient.Object{
+			controlplaneSubResources: []client.Object{
 				&corev1.ServiceAccount{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-tls-secret",
@@ -187,7 +189,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 					},
 				},
 			},
-			dataplaneSubResources: []controllerruntimeclient.Object{
+			dataplaneSubResources: []client.Object{
 				&corev1.Service{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-proxy-service",
@@ -233,7 +235,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			if tc.dataplane != nil {
 				k8sutils.SetOwnerForObject(tc.dataplane, tc.controlplane)
 			}
-			ObjectsToAdd := []controllerruntimeclient.Object{
+			ObjectsToAdd := []client.Object{
 				tc.controlplane,
 				tc.dataplane,
 				mtlsSecret,
@@ -265,6 +267,215 @@ func TestReconciler_Reconcile(t *testing.T) {
 			}
 
 			tc.testBody(t, reconciler, tc.controlplaneReq)
+		})
+	}
+}
+
+func TestReconciler_enforceDataPlaneNameInStatus(t *testing.T) {
+	testCases := []struct {
+		name              string
+		controlplane      *ControlPlane
+		dataplanes        *operatorv1beta1.DataPlaneList
+		expectedDataPlane string
+		expectedResult    op.Result
+		expectError       bool
+	}{
+		{
+			name: "ControlPlane with ref type DataPlane should set status",
+			controlplane: &ControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-controlplane",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
+				},
+				Spec: gwtypes.ControlPlaneSpec{
+					DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+						Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+						Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+							Name: "test-dataplane",
+						},
+					},
+				},
+			},
+			expectedDataPlane: "test-dataplane",
+			expectedResult:    op.Updated,
+			expectError:       false,
+		},
+		{
+			name: "ControlPlane with same DataPlane name should not update",
+			controlplane: &ControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-controlplane",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
+				},
+				Spec: gwtypes.ControlPlaneSpec{
+					DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+						Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+						Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+							Name: "test-dataplane",
+						},
+					},
+				},
+				Status: gwtypes.ControlPlaneStatus{
+					DataPlane: &gwtypes.ControlPlaneDataPlaneStatus{
+						Name: "test-dataplane",
+					},
+				},
+			},
+			expectedDataPlane: "test-dataplane",
+			expectedResult:    op.Noop,
+			expectError:       false,
+		},
+		{
+			name: "ControlPlane with same owner as DataPlane and managedByOwner does not get an update if already set",
+			controlplane: &ControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-controlplane",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.konghq.com/v1",
+							Kind:       "Gateway",
+							Name:       "test-gw",
+							UID:        types.UID("1234"),
+						},
+					},
+				},
+				Spec: gwtypes.ControlPlaneSpec{
+					DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+						Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+						Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+							Name: "test-dataplane",
+						},
+					},
+				},
+				Status: gwtypes.ControlPlaneStatus{
+					DataPlane: &gwtypes.ControlPlaneDataPlaneStatus{
+						Name: "test-dataplane",
+					},
+				},
+			},
+			dataplanes: &operatorv1beta1.DataPlaneList{
+				Items: []operatorv1beta1.DataPlane{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-dataplane",
+							Namespace: "test-namespace",
+							UID:       types.UID(uuid.NewString()),
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									APIVersion: "gateway.konghq.com/v1",
+									Kind:       "Gateway",
+									Name:       "test-gw",
+									UID:        types.UID("1234"),
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedDataPlane: "test-dataplane",
+			expectedResult:    op.Noop,
+			expectError:       false,
+		},
+		{
+			name: "ControlPlane with same owner as DataPlane and managedByOwner does get an update",
+			controlplane: &ControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-controlplane",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.konghq.com/v1",
+							Kind:       "Gateway",
+							Name:       "test-gw",
+							UID:        types.UID("1234"),
+						},
+					},
+				},
+				Spec: gwtypes.ControlPlaneSpec{
+					DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+						Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+						Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+							Name: "test-dataplane",
+						},
+					},
+				},
+			},
+			dataplanes: &operatorv1beta1.DataPlaneList{
+				Items: []operatorv1beta1.DataPlane{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "test-dataplane",
+							Namespace: "test-namespace",
+							UID:       types.UID(uuid.NewString()),
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									APIVersion: "gateway.konghq.com/v1",
+									Kind:       "Gateway",
+									Name:       "test-gw",
+									UID:        types.UID("1234"),
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedDataPlane: "test-dataplane",
+			expectedResult:    op.Updated,
+			expectError:       false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			builder := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(tc.controlplane).
+				WithStatusSubresource(tc.controlplane)
+			if tc.dataplanes != nil {
+				builder.
+					WithLists(tc.dataplanes).
+					WithIndex(
+						&operatorv1beta1.DataPlane{},
+						index.DataPlaneOnOwnerGatewayIndex,
+						index.OwnerGatewayOnDataPlane,
+					)
+			}
+
+			fakeClient := builder.Build()
+
+			r := Reconciler{
+				Client: fakeClient,
+			}
+
+			dataplaneName, result, err := r.enforceDataPlaneNameInStatus(t.Context(), tc.controlplane)
+
+			if tc.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tc.expectedDataPlane, dataplaneName)
+			require.Equal(t, tc.expectedResult, result)
+
+			if result == op.Updated {
+				// Verify the status was actually updated
+				updatedCP := &ControlPlane{}
+				require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(tc.controlplane), updatedCP))
+
+				if tc.expectedDataPlane == "" {
+					require.Nil(t, updatedCP.Status.DataPlane)
+				} else {
+					require.NotNil(t, updatedCP.Status.DataPlane)
+					require.Equal(t, tc.expectedDataPlane, updatedCP.Status.DataPlane.Name)
+				}
+			}
 		})
 	}
 }

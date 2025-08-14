@@ -31,6 +31,9 @@ type (
 	// ControlPlaneStatus is an alias for the v2beta1 ControlPlaneStatus type.
 	ControlPlaneStatus = operatorv2beta1.ControlPlaneStatus
 
+	// ControlPlaneDataPlaneStatus is an alias for the v2beta1 ControlPlaneDataPlaneStatus type.
+	ControlPlaneDataPlaneStatus = operatorv2beta1.ControlPlaneDataPlaneStatus
+
 	// ControlPlaneFeatureGate is an alias for the v2beta1 ControlPlaneFeatureGate type.
 	ControlPlaneFeatureGate = operatorv2beta1.ControlPlaneFeatureGate
 
@@ -63,6 +66,8 @@ type (
 const (
 	// ControlPlaneDataPlaneTargetRefType is an alias for the v2beta1 ControlPlaneDataPlaneTargetRefType type.
 	ControlPlaneDataPlaneTargetRefType = operatorv2beta1.ControlPlaneDataPlaneTargetRefType
+	// ControlPlaneDataPlaneTargetManagedByType is an alias for the v2beta1 ControlPlaneDataPlaneTargetManagedByType type.
+	ControlPlaneDataPlaneTargetManagedByType = operatorv2beta1.ControlPlaneDataPlaneTargetManagedByType
 
 	// FeatureGateStateEnabled is an alias for the v2beta1 FeatureGateStateEnabled type.
 	FeatureGateStateEnabled = operatorv2beta1.FeatureGateStateEnabled
