@@ -7,8 +7,8 @@ replace github.com/kong/kong-operator => ../../
 require (
 	github.com/kong/kong-operator v0.0.0-00010101000000-000000000000
 	github.com/samber/lo v1.51.0
-	k8s.io/api v0.33.3
-	k8s.io/apimachinery v0.33.3
+	k8s.io/api v0.33.4
+	k8s.io/apimachinery v0.33.4
 	sigs.k8s.io/gateway-api v1.3.0
 )
 
