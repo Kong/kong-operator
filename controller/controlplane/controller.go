@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -42,7 +43,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/internal/utils/index"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/pkg/consts"
@@ -94,7 +95,16 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		Owns(&corev1.Secret{}).
 		Watches(
 			&operatorv1alpha1.WatchNamespaceGrant{},
-			handler.EnqueueRequestsFromMapFunc(r.listControlPlanesForWatchNamespaceGrants))
+			handler.EnqueueRequestsFromMapFunc(r.listControlPlanesForWatchNamespaceGrants)).
+		Watches(
+			&operatorv1beta1.DataPlane{},
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlane)).
+		// Watch for changes in the DataPlane deployments, as we want to be aware of all
+		// the DataPlane pod changes (every time a new pod gets ready, the deployment
+		// status gets updated accordingly, leading to a reconciliation loop trigger).
+		Watches(
+			&appsv1.Deployment{},
+			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlaneDeployment))
 
 	if r.KonnectEnabled {
 		// Watch for changes in KonnectExtension objects that are referenced by ControlPlane objects.
@@ -206,6 +216,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil // no need to requeue, status update will requeue
 	}
 
+	// Set DataPlane in ControlPlane's status.
+	dataplaneName, res, err := r.enforceDataPlaneNameInStatus(ctx, cp)
+	if res != op.Noop || err != nil {
+		return ctrl.Result{}, err
+	}
+
 	log.Trace(logger, "applying extensions")
 	konnectExtensionProcessor := &extensionskonnect.ControlPlaneKonnectExtensionProcessor{}
 	stop, result, err := extensions.ApplyExtensions(ctx, r.Client, cp, r.KonnectEnabled, konnectExtensionProcessor)
@@ -220,33 +236,33 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return result, nil
 	}
 
-	log.Trace(logger, "retrieving connected dataplane")
-	dataplane, err := GetDataPlaneForControlPlane(ctx, r.Client, cp)
-	var dataplaneIngressServiceName, dataplaneAdminServiceName string
+	log.Trace(logger, "retrieving connected DataPlane")
+	var (
+		dataplane operatorv1beta1.DataPlane
+		dpNN      = types.NamespacedName{
+			Name:      dataplaneName,
+			Namespace: cp.Namespace,
+		}
+	)
+	if err := r.Get(ctx, dpNN, &dataplane); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to get DataPlane %s for ControlPlane: %w", dpNN, err)
+	}
+	dataplaneIngressServiceName, err := gatewayutils.GetDataPlaneServiceName(ctx, r.Client, &dataplane, consts.DataPlaneIngressServiceLabelValue)
 	if err != nil {
-		if !errors.Is(err, operatorerrors.ErrDataPlaneNotSet) {
-			return ctrl.Result{}, err
-		}
-		log.Debug(logger, "no existing dataplane for controlplane", "error", err)
+		log.Debug(logger, "no existing dataplane ingress service for controlplane", "error", err)
 		return ctrl.Result{}, err
-	} else {
-		dataplaneIngressServiceName, err = gatewayutils.GetDataPlaneServiceName(ctx, r.Client, dataplane, consts.DataPlaneIngressServiceLabelValue)
-		if err != nil {
-			log.Debug(logger, "no existing dataplane ingress service for controlplane", "error", err)
-			return ctrl.Result{}, err
-		}
+	}
 
-		dataplaneAdminServiceName, err = gatewayutils.GetDataPlaneServiceName(ctx, r.Client, dataplane, consts.DataPlaneAdminServiceLabelValue)
-		if err != nil {
-			log.Debug(logger, "no existing dataplane admin service for controlplane", "error", err)
-			return ctrl.Result{}, err
-		}
+	dataplaneAdminServiceName, err := gatewayutils.GetDataPlaneServiceName(ctx, r.Client, &dataplane, consts.DataPlaneAdminServiceLabelValue)
+	if err != nil {
+		log.Debug(logger, "no existing dataplane admin service for controlplane", "error", err)
+		return ctrl.Result{}, err
 	}
 
 	log.Trace(logger, "configuring ControlPlane resource")
 
 	log.Trace(logger, "validating ControlPlane's DataPlane status")
-	dataplaneIsSet, err := r.ensureDataPlaneStatus(cp, dataplane)
+	dataplaneIsSet, err := r.ensureDataPlaneStatus(cp, &dataplane)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure DataPlane status: %w", err)
 	}
@@ -355,6 +371,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			if err := r.scheduleInstance(ctx, logger, mgrID, mgrCfg); err != nil {
 				return r.handleScheduleInstanceOutcome(ctx, logger, cp, err)
 			}
+
 			r.ensureControlPlaneStatus(cp, mgrCfg)
 		}
 		return r.initStatusToWaitingToBecomeReady(ctx, logger, cp)
@@ -424,9 +441,7 @@ func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, update
 		return ctrl.Result{}, err
 	}
 
-	if !k8sutils.ConditionsNeedsUpdate(current, updated) &&
-		reflect.DeepEqual(updated.Status.Controllers, current.Status.Controllers) &&
-		reflect.DeepEqual(updated.Status.FeatureGates, current.Status.FeatureGates) {
+	if controlPlaneStatusEqual(current, updated) {
 		return ctrl.Result{}, nil
 	}
 
@@ -572,17 +587,31 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 		}
 	}
 
-	// If the ControlPlane is owned by a Gateway, we set the Gateway to be the only one to reconcile.
-	if owner, ok := lo.Find(cp.GetOwnerReferences(), func(owner metav1.OwnerReference) bool {
-		return strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) &&
-			owner.Kind == "Gateway"
-	}); ok {
-		cfgOpts = append(cfgOpts,
-			WithGatewayToReconcile(types.NamespacedName{
-				Namespace: cp.Namespace,
-				Name:      owner.Name,
-			}),
-		)
+	switch cp.Spec.DataPlane.Type {
+	case gwtypes.ControlPlaneDataPlaneTargetManagedByType:
+		// If the ControlPlane is owned by a Gateway, we set the Gateway to be the only one to reconcile.
+		owner, hasOwner := lo.Find(cp.GetOwnerReferences(), func(owner metav1.OwnerReference) bool {
+			return strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) &&
+				owner.Kind == "Gateway"
+		})
+
+		if hasOwner {
+			cfgOpts = append(cfgOpts,
+				WithGatewayToReconcile(types.NamespacedName{
+					Namespace: cp.Namespace,
+					Name:      owner.Name,
+				}),
+			)
+		} else {
+			return nil, fmt.Errorf(
+				"no Gateway owner but spec.dataplane.type set to %s",
+				gwtypes.ControlPlaneDataPlaneTargetManagedByType,
+			)
+		}
+
+	case gwtypes.ControlPlaneDataPlaneTargetRefType:
+		cfgOpts = append(cfgOpts, WithGatewayAPIControllersDisabled())
+
 	}
 
 	return cfgOpts, nil
@@ -713,4 +742,70 @@ func (r *Reconciler) validateControlPlaneOptions(cp *ControlPlane) (string, bool
 	}
 
 	return "", true
+}
+
+func (r *Reconciler) enforceDataPlaneNameInStatus(
+	ctx context.Context,
+	cp *gwtypes.ControlPlane,
+) (string, op.Result, error) {
+	var dataplaneName string
+	switch cp.Spec.DataPlane.Type {
+	case gwtypes.ControlPlaneDataPlaneTargetRefType:
+		dataplaneName = cp.Spec.DataPlane.Ref.Name
+	case gwtypes.ControlPlaneDataPlaneTargetManagedByType:
+		owner, hasOwner := lo.Find(cp.GetOwnerReferences(), func(owner metav1.OwnerReference) bool {
+			return strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) &&
+				owner.Kind == "Gateway"
+		})
+
+		if !hasOwner {
+			return "", op.Noop, fmt.Errorf(
+				"no Gateway owner but spec.dataplane.type set to %s",
+				gwtypes.ControlPlaneDataPlaneTargetManagedByType,
+			)
+		}
+
+		var dataplaneList operatorv1beta1.DataPlaneList
+		err := r.List(ctx, &dataplaneList, client.MatchingFields{
+			index.DataPlaneOnOwnerGatewayIndex: cp.Namespace + "/" + owner.Name,
+		})
+		if err != nil {
+			return "", op.Noop, fmt.Errorf(
+				"failed to find DataPlanes owned by Gateway %s/%s: %w",
+				cp.GetNamespace(), owner.Name, err,
+			)
+		}
+		if l := len(dataplaneList.Items); l != 1 {
+			return "", op.Noop, fmt.Errorf(
+				"expected 1 but got %d DataPlanes owned by Gateway %s/%s",
+				l, cp.GetNamespace(), owner.Name,
+			)
+		}
+		dataplaneName = dataplaneList.Items[0].Name
+	}
+
+	if (cp.Status.DataPlane != nil && dataplaneName == cp.Status.DataPlane.Name) ||
+		(cp.Status.DataPlane == nil && dataplaneName == "") {
+		return dataplaneName, op.Noop, nil
+	}
+	oldControlPlane := cp.DeepCopy()
+	cp.Status.DataPlane = &gwtypes.ControlPlaneDataPlaneStatus{
+		Name: dataplaneName,
+	}
+	if err := r.Status().Patch(ctx, cp, client.MergeFrom(oldControlPlane)); err != nil {
+		return "", op.Noop, fmt.Errorf(
+			"failed to patch ControlPlane status with DataPlane name %s: %w",
+			dataplaneName, err,
+		)
+	}
+	return dataplaneName, op.Updated, nil
+}
+
+func controlPlaneStatusEqual(
+	a, b *ControlPlane,
+) bool {
+	return !k8sutils.ConditionsNeedsUpdate(a, b) &&
+		reflect.DeepEqual(b.Status.Controllers, a.Status.Controllers) &&
+		reflect.DeepEqual(b.Status.FeatureGates, a.Status.FeatureGates) &&
+		reflect.DeepEqual(b.Status.DataPlane, a.Status.DataPlane)
 }

@@ -58,34 +58,39 @@ func (r *Reconciler) ensureDataPlaneStatus(
 	case gwtypes.ControlPlaneDataPlaneTargetRefType:
 		dataplaneIsSet = cp.Spec.DataPlane.Ref != nil && cp.Spec.DataPlane.Ref.Name == dataplane.Name
 
-		var newCondition metav1.Condition
-		if dataplaneIsSet {
-			newCondition = k8sutils.NewCondition(
-				kcfgcontrolplane.ConditionTypeProvisioned,
-				metav1.ConditionFalse,
-				kcfgcontrolplane.ConditionReasonProvisioningInProgress,
-				"DataPlane was set, ControlPlane resource is scheduled for provisioning",
-			)
-		} else {
-			newCondition = k8sutils.NewCondition(
-				kcfgcontrolplane.ConditionTypeProvisioned,
-				metav1.ConditionFalse,
-				kcfgcontrolplane.ConditionReasonNoDataPlane,
-				"DataPlane is not set",
-			)
-		}
-
-		condition, present := k8sutils.GetCondition(kcfgcontrolplane.ConditionTypeProvisioned, cp)
-		if !present || condition.Status != newCondition.Status || condition.Reason != newCondition.Reason {
-			k8sutils.SetCondition(newCondition, cp)
-		}
-		return dataplaneIsSet, nil
-
-	// TODO(pmalek): implement DataPlane URL type
+	case gwtypes.ControlPlaneDataPlaneTargetManagedByType:
+		dataplaneIsSet = cp.Status.DataPlane != nil && cp.Status.DataPlane.Name == dataplane.Name
 
 	default:
 		return false, fmt.Errorf("unsupported ControlPlane's DataPlane type: %s", cp.Spec.DataPlane.Type)
 	}
+
+	var newCondition metav1.Condition
+	if dataplaneIsSet {
+		newCondition = k8sutils.NewCondition(
+			kcfgcontrolplane.ConditionTypeProvisioned,
+			metav1.ConditionFalse,
+			kcfgcontrolplane.ConditionReasonProvisioningInProgress,
+			"DataPlane was set, ControlPlane resource is scheduled for provisioning",
+		)
+	} else {
+		newCondition = k8sutils.NewCondition(
+			kcfgcontrolplane.ConditionTypeProvisioned,
+			metav1.ConditionFalse,
+			kcfgcontrolplane.ConditionReasonNoDataPlane,
+			"DataPlane is not set",
+		)
+	}
+
+	condition, present := k8sutils.GetCondition(kcfgcontrolplane.ConditionTypeProvisioned, cp)
+	if !present || condition.Status != newCondition.Status || condition.Reason != newCondition.Reason {
+		k8sutils.SetCondition(newCondition, cp)
+	}
+	cp.Status.DataPlane = &gwtypes.ControlPlaneDataPlaneStatus{
+		Name: dataplane.Name,
+	}
+
+	return dataplaneIsSet, nil
 }
 
 // ensureAdminMTLSCertificateSecret ensures that a Secret is created with the certificate for mTLS

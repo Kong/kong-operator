@@ -78,7 +78,6 @@ func (r *Reconciler) createControlPlane(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *GatewayConfiguration,
-	dataplaneName string,
 ) error {
 	controlplane := &gwtypes.ControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
@@ -87,10 +86,7 @@ func (r *Reconciler) createControlPlane(
 		},
 		Spec: gwtypes.ControlPlaneSpec{
 			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-				Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-					Name: dataplaneName,
-				},
+				Type: gwtypes.ControlPlaneDataPlaneTargetManagedByType,
 			},
 		},
 	}

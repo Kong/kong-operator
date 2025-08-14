@@ -96,6 +96,10 @@ jobs:
       env:
         # Our .golangci.yaml has fix: true, but we don't want that in CI therefore the below override.
         GOLANGCI_LINT_FLAGS: "--fix=false"
+        # Add GITHUB_TOKEN env so that mise plugins can can access GitHub's API
+        # authenticated and thus not get rate-limited (which causes failures).
+        # Source ref: https://github.com/hypnoglow/asdf-golangci-lint/blob/f02f2ee73bd6d1bc4d69d6aad583cf05879fc9ea/bin/list-all#L10C12-L12
+        GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: make lint
 
     - name: run lint.actions
@@ -440,6 +444,10 @@ jobs:
       env:
         GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}.xml
         TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
+        # Add GITHUB_TOKEN env so that mise plugins can can access GitHub's API
+        # authenticated and thus not get rate-limited (which causes failures).
+        # Source ref: https://github.com/pirackr/asdf-telepresence/blob/c9eeab4d28b9851bb904c4c67239a118c8dd384d/bin/list-all#L7-L9
+        GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -497,6 +505,10 @@ jobs:
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: "${{ matrix.directory }}/integration-tests.xml"
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Add GITHUB_TOKEN env so that mise plugins can can access GitHub's API
+        # authenticated and thus not get rate-limited (which causes failures).
+        # Source ref: https://github.com/pirackr/asdf-telepresence/blob/c9eeab4d28b9851bb904c4c67239a118c8dd384d/bin/list-all#L7-L9
+        GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
 

@@ -576,7 +576,7 @@ func (r *Reconciler) provisionControlPlane(
 	switch {
 	case count == 0:
 		r.setControlPlaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name, "")
-		err := r.createControlPlane(ctx, gateway, gatewayConfig, dataplane.Name)
+		err := r.createControlPlane(ctx, gateway, gatewayConfig)
 		if err != nil {
 			log.Debug(logger, fmt.Sprintf("controlplane creation failed - error: %v", err))
 			k8sutils.SetCondition(
@@ -592,7 +592,7 @@ func (r *Reconciler) provisionControlPlane(
 		}
 		return nil
 	case count > 1:
-		err := fmt.Errorf("control plane deployments found: %d, expected: 1, requeing", count)
+		err := fmt.Errorf("ControlPlanes found: %d, expected: 1, requeing", count)
 		k8sutils.SetCondition(
 			createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),

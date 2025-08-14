@@ -379,7 +379,7 @@ func setupControllers(
 		// Gateway API Controllers - Alpha APIs
 		// ---------------------------------------------------------------------------
 		{
-			Enabled: featureGates.Enabled(managercfg.GatewayAlphaFeature),
+			Enabled: c.GatewayAPIUDPRouteController && featureGates.Enabled(managercfg.GatewayAlphaFeature),
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/UDPRoute"),
@@ -401,7 +401,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates.Enabled(managercfg.GatewayAlphaFeature),
+			Enabled: c.GatewayAPITCPRouteController && featureGates.Enabled(managercfg.GatewayAlphaFeature),
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/TCPRoute"),
@@ -423,7 +423,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates.Enabled(managercfg.GatewayAlphaFeature),
+			Enabled: c.GatewayAPITLSRouteController && featureGates.Enabled(managercfg.GatewayAlphaFeature),
 			Controller: &crds.DynamicCRDController{
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/TLSRoute"),
@@ -445,7 +445,7 @@ func setupControllers(
 			},
 		},
 		{
-			Enabled: featureGates.Enabled(managercfg.GatewayAlphaFeature) &&
+			Enabled: c.GatewayAPIBackendTLSRouteController && featureGates.Enabled(managercfg.GatewayAlphaFeature) &&
 				c.GatewayAPIGatewayController &&
 				c.GatewayAPIHTTPRouteController,
 			Controller: &crds.DynamicCRDController{
