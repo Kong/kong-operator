@@ -19,7 +19,6 @@ package v1beta1
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/conversion"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
@@ -166,16 +165,4 @@ func (c *ControlPlane) SetConditions(conditions []metav1.Condition) {
 // GetExtensions retrieves the ControlPlane Extensions
 func (c *ControlPlane) GetExtensions() []commonv1alpha1.ExtensionRef {
 	return c.Spec.Extensions
-}
-
-// ConvertTo converts from this version (v1beta1) to the Hub version.
-func (c *ControlPlane) ConvertTo(dstRaw conversion.Hub) error {
-	_ = dstRaw
-	panic("v1beta1 ControlPlane ConvertTo(...) is not implemented yet")
-}
-
-// ConvertFrom converts from the Hub version to this version (v1beta1).
-func (c *ControlPlane) ConvertFrom(srcRaw conversion.Hub) error {
-	_ = srcRaw
-	panic("v1beta1 ControlPlane ConvertFrom(...) is not implemented yet")
 }
