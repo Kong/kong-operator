@@ -24,9 +24,9 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
-	"github.com/kong/kong-operator/test/mocks/sdkmocks"
-	"github.com/kong/kong-operator/internal/metrics"
 	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/test/mocks/metricsmocks"
+	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 func TestCreateControlPlane(t *testing.T) {
@@ -646,7 +646,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 				ID: "12345",
 			},
 		}, nil)
-	_, err := Create(ctx, sdk.SDK, fakeClient, &metrics.MockRecorder{}, cp)
+	_, err := Create(ctx, sdk.SDK, fakeClient, &metricsmocks.MockRecorder{}, cp)
 	require.NoError(t, err)
 
 	t.Log("Triggering UpdateControlPlane with expected labels")
@@ -660,7 +660,7 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 				ID: "12345",
 			},
 		}, nil)
-	_, err = Update(ctx, sdk.SDK, 0, fakeClient, &metrics.MockRecorder{}, cp)
+	_, err = Update(ctx, sdk.SDK, 0, fakeClient, &metricsmocks.MockRecorder{}, cp)
 	require.NoError(t, err)
 }
 
