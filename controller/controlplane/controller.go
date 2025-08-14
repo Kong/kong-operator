@@ -785,7 +785,7 @@ func (r *Reconciler) enforceDataPlaneNameInStatus(
 	}
 
 	if (cp.Status.DataPlane != nil && dataplaneName == cp.Status.DataPlane.Name) ||
-		(cp.Status.DataPlane == nil || dataplaneName == "") {
+		(cp.Status.DataPlane == nil && dataplaneName == "") {
 		return dataplaneName, op.Noop, nil
 	}
 	oldControlPlane := cp.DeepCopy()

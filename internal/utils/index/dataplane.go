@@ -47,7 +47,7 @@ func OptionsForDataPlane(flags DataPlaneFlags) []Option {
 		opts = append(opts, Option{
 			Object:         &operatorv1beta1.DataPlane{},
 			Field:          DataPlaneOnOwnerGatewayIndex,
-			ExtractValueFn: ownerGatewayOnDataPlane,
+			ExtractValueFn: OwnerGatewayOnDataPlane,
 		})
 	}
 
@@ -71,7 +71,7 @@ func kongPluginInstallationsOnDataPlane(o client.Object) []string {
 	return result
 }
 
-func ownerGatewayOnDataPlane(o client.Object) []string {
+func OwnerGatewayOnDataPlane(o client.Object) []string {
 	dp, ok := o.(*operatorv1beta1.DataPlane)
 	if !ok {
 		return nil
