@@ -500,6 +500,15 @@ docker.build:
 docker.push:
 	docker push $(IMG):$(TAG)
 
+.PHONY: docker.run.openssf
+docker.run.openssf:
+	docker run --rm --env GITHUB_TOKEN=$(GITHUB_TOKEN) \
+		gcr.io/openssf/scorecard:stable \
+		--repo=$(REPO) \
+		--commit=$(COMMIT) \
+		--show-details \
+		--checks=Pinned-Dependencies,License,CI-Tests,Token-Permissions,Dangerous-Workflow,Security-Policy,Binary-Artifacts,Code-Review
+
 # ------------------------------------------------------------------------------
 # Testing
 # ------------------------------------------------------------------------------

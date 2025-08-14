@@ -66,10 +66,10 @@ jobs:
     - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
     # Ref: https://github.com/ossf/scorecard
     - run: |
-        docker run --rm --env GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} gcr.io/openssf/scorecard:stable \
-          --repo=github.com/${{ github.repository }} \
-          --commit ${{ github.sha }} \
-          --show-details
+        GITHUB_TOKEN=${{ secrets.GITHUB_TOKEN }} \
+          REPO=github.com/${{ github.repository }} \
+          COMMIT=${{ github.sha }} \
+          make docker.run.openssf
 
   lint:
     runs-on: ubuntu-latest
