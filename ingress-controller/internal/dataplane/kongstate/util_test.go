@@ -9,14 +9,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func TestDeprecated_GetKongIngressForServices(t *testing.T) {
-	t.Skip("KongIngress has been deprecated and removed")
-}
-
-func TestDeprecated_GetKongIngressFromObjectMeta(t *testing.T) {
-	t.Skip("KongIngress has been deprecated and removed")
-}
-
 func TestPrettyPrintServiceList(t *testing.T) {
 	for _, tt := range []struct {
 		name     string

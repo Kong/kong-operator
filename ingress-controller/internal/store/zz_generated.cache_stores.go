@@ -14,38 +14,38 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+	kongv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
 )
 
 // CacheStores stores cache.Store for all Kinds of k8s objects that
 // the Ingress Controller reads.
 type CacheStores struct {
-	IngressV1 cache.Store
-	IngressClassV1 cache.Store
-	Service cache.Store
-	Secret cache.Store
-	ConfigMap cache.Store
-	EndpointSlice cache.Store
-	HTTPRoute cache.Store
-	UDPRoute cache.Store
-	TCPRoute cache.Store
-	TLSRoute cache.Store
-	GRPCRoute cache.Store
-	ReferenceGrant cache.Store
-	Gateway cache.Store
-	BackendTLSPolicy cache.Store
-	Plugin cache.Store
-	ClusterPlugin cache.Store
-	Consumer cache.Store
-	ConsumerGroup cache.Store
-	KongUpstreamPolicy cache.Store
+	IngressV1                      cache.Store
+	IngressClassV1                 cache.Store
+	Service                        cache.Store
+	Secret                         cache.Store
+	ConfigMap                      cache.Store
+	EndpointSlice                  cache.Store
+	HTTPRoute                      cache.Store
+	UDPRoute                       cache.Store
+	TCPRoute                       cache.Store
+	TLSRoute                       cache.Store
+	GRPCRoute                      cache.Store
+	ReferenceGrant                 cache.Store
+	Gateway                        cache.Store
+	BackendTLSPolicy               cache.Store
+	Plugin                         cache.Store
+	ClusterPlugin                  cache.Store
+	Consumer                       cache.Store
+	ConsumerGroup                  cache.Store
+	KongUpstreamPolicy             cache.Store
 	IngressClassParametersV1alpha1 cache.Store
-	KongServiceFacade cache.Store
-	KongVault cache.Store
-	KongCustomEntity cache.Store
+	KongServiceFacade              cache.Store
+	KongVault                      cache.Store
+	KongCustomEntity               cache.Store
 
 	l *sync.RWMutex
 }
@@ -53,29 +53,29 @@ type CacheStores struct {
 // NewCacheStores is a convenience function for CacheStores to initialize all attributes with new cache stores.
 func NewCacheStores() CacheStores {
 	return CacheStores{
-		IngressV1: cache.NewStore(namespacedKeyFunc),
-		IngressClassV1: cache.NewStore(clusterWideKeyFunc),
-		Service: cache.NewStore(namespacedKeyFunc),
-		Secret: cache.NewStore(namespacedKeyFunc),
-		ConfigMap: cache.NewStore(namespacedKeyFunc),
-		EndpointSlice: cache.NewStore(namespacedKeyFunc),
-		HTTPRoute: cache.NewStore(namespacedKeyFunc),
-		UDPRoute: cache.NewStore(namespacedKeyFunc),
-		TCPRoute: cache.NewStore(namespacedKeyFunc),
-		TLSRoute: cache.NewStore(namespacedKeyFunc),
-		GRPCRoute: cache.NewStore(namespacedKeyFunc),
-		ReferenceGrant: cache.NewStore(namespacedKeyFunc),
-		Gateway: cache.NewStore(namespacedKeyFunc),
-		BackendTLSPolicy: cache.NewStore(namespacedKeyFunc),
-		Plugin: cache.NewStore(namespacedKeyFunc),
-		ClusterPlugin: cache.NewStore(clusterWideKeyFunc),
-		Consumer: cache.NewStore(namespacedKeyFunc),
-		ConsumerGroup: cache.NewStore(namespacedKeyFunc),
-		KongUpstreamPolicy: cache.NewStore(namespacedKeyFunc),
+		IngressV1:                      cache.NewStore(namespacedKeyFunc),
+		IngressClassV1:                 cache.NewStore(clusterWideKeyFunc),
+		Service:                        cache.NewStore(namespacedKeyFunc),
+		Secret:                         cache.NewStore(namespacedKeyFunc),
+		ConfigMap:                      cache.NewStore(namespacedKeyFunc),
+		EndpointSlice:                  cache.NewStore(namespacedKeyFunc),
+		HTTPRoute:                      cache.NewStore(namespacedKeyFunc),
+		UDPRoute:                       cache.NewStore(namespacedKeyFunc),
+		TCPRoute:                       cache.NewStore(namespacedKeyFunc),
+		TLSRoute:                       cache.NewStore(namespacedKeyFunc),
+		GRPCRoute:                      cache.NewStore(namespacedKeyFunc),
+		ReferenceGrant:                 cache.NewStore(namespacedKeyFunc),
+		Gateway:                        cache.NewStore(namespacedKeyFunc),
+		BackendTLSPolicy:               cache.NewStore(namespacedKeyFunc),
+		Plugin:                         cache.NewStore(namespacedKeyFunc),
+		ClusterPlugin:                  cache.NewStore(clusterWideKeyFunc),
+		Consumer:                       cache.NewStore(namespacedKeyFunc),
+		ConsumerGroup:                  cache.NewStore(namespacedKeyFunc),
+		KongUpstreamPolicy:             cache.NewStore(namespacedKeyFunc),
 		IngressClassParametersV1alpha1: cache.NewStore(namespacedKeyFunc),
-		KongServiceFacade: cache.NewStore(namespacedKeyFunc),
-		KongVault: cache.NewStore(clusterWideKeyFunc),
-		KongCustomEntity: cache.NewStore(namespacedKeyFunc),
+		KongServiceFacade:              cache.NewStore(namespacedKeyFunc),
+		KongVault:                      cache.NewStore(clusterWideKeyFunc),
+		KongCustomEntity:               cache.NewStore(namespacedKeyFunc),
 
 		l: &sync.RWMutex{},
 	}

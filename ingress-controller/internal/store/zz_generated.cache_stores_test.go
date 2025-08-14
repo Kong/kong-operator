@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	kongv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -15,8 +15,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/store"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
 )
 
 func TestCacheStores(t *testing.T) {
@@ -24,122 +24,120 @@ func TestCacheStores(t *testing.T) {
 		name          string
 		objectToStore client.Object
 	}{
-		
 		{
-			name: "Ingress",
+			name:          "Ingress",
 			objectToStore: &netv1.Ingress{},
 		},
-		
+
 		{
-			name: "IngressClass",
+			name:          "IngressClass",
 			objectToStore: &netv1.IngressClass{},
 		},
-		
+
 		{
-			name: "Service",
+			name:          "Service",
 			objectToStore: &corev1.Service{},
 		},
-		
+
 		{
-			name: "Secret",
+			name:          "Secret",
 			objectToStore: &corev1.Secret{},
 		},
-		
+
 		{
-			name: "ConfigMap",
+			name:          "ConfigMap",
 			objectToStore: &corev1.ConfigMap{},
 		},
-		
+
 		{
-			name: "EndpointSlice",
+			name:          "EndpointSlice",
 			objectToStore: &discoveryv1.EndpointSlice{},
 		},
-		
+
 		{
-			name: "HTTPRoute",
+			name:          "HTTPRoute",
 			objectToStore: &gatewayapi.HTTPRoute{},
 		},
-		
+
 		{
-			name: "UDPRoute",
+			name:          "UDPRoute",
 			objectToStore: &gatewayapi.UDPRoute{},
 		},
-		
+
 		{
-			name: "TCPRoute",
+			name:          "TCPRoute",
 			objectToStore: &gatewayapi.TCPRoute{},
 		},
-		
+
 		{
-			name: "TLSRoute",
+			name:          "TLSRoute",
 			objectToStore: &gatewayapi.TLSRoute{},
 		},
-		
+
 		{
-			name: "GRPCRoute",
+			name:          "GRPCRoute",
 			objectToStore: &gatewayapi.GRPCRoute{},
 		},
-		
+
 		{
-			name: "ReferenceGrant",
+			name:          "ReferenceGrant",
 			objectToStore: &gatewayapi.ReferenceGrant{},
 		},
-		
+
 		{
-			name: "Gateway",
+			name:          "Gateway",
 			objectToStore: &gatewayapi.Gateway{},
 		},
-		
+
 		{
-			name: "BackendTLSPolicy",
+			name:          "BackendTLSPolicy",
 			objectToStore: &gatewayapi.BackendTLSPolicy{},
 		},
-		
+
 		{
-			name: "KongPlugin",
+			name:          "KongPlugin",
 			objectToStore: &kongv1.KongPlugin{},
 		},
-		
+
 		{
-			name: "KongClusterPlugin",
+			name:          "KongClusterPlugin",
 			objectToStore: &kongv1.KongClusterPlugin{},
 		},
-		
+
 		{
-			name: "KongConsumer",
+			name:          "KongConsumer",
 			objectToStore: &kongv1.KongConsumer{},
 		},
-		
+
 		{
-			name: "KongConsumerGroup",
+			name:          "KongConsumerGroup",
 			objectToStore: &kongv1beta1.KongConsumerGroup{},
 		},
-		
+
 		{
-			name: "KongUpstreamPolicy",
+			name:          "KongUpstreamPolicy",
 			objectToStore: &kongv1beta1.KongUpstreamPolicy{},
 		},
-		
+
 		{
-			name: "IngressClassParameters",
+			name:          "IngressClassParameters",
 			objectToStore: &kongv1alpha1.IngressClassParameters{},
 		},
-		
+
 		{
-			name: "KongServiceFacade",
+			name:          "KongServiceFacade",
 			objectToStore: &incubatorv1alpha1.KongServiceFacade{},
 		},
-		
+
 		{
-			name: "KongVault",
+			name:          "KongVault",
 			objectToStore: &kongv1alpha1.KongVault{},
 		},
-		
+
 		{
-			name: "KongCustomEntity",
+			name:          "KongCustomEntity",
 			objectToStore: &kongv1alpha1.KongCustomEntity{},
 		},
-		
 	}
 
 	for _, tc := range testCases {
