@@ -358,7 +358,7 @@ func (msm *Manager) enableMetricsScraperForControlPlanesDataPlane(
 	switch controlplane.Spec.DataPlane.Type {
 	case gwtypes.ControlPlaneDataPlaneTargetRefType:
 		if controlplane.Spec.DataPlane.Ref == nil {
-			return fmt.Errorf("ControlPlane with spec.dataplane.type=ref does not have a valid, does not have the DataPlane set")
+			return fmt.Errorf("ControlPlane with spec.dataplane.type=ref does not have a valid DataPlane set")
 		}
 
 		dpNN = types.NamespacedName{

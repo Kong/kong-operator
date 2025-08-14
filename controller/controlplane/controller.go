@@ -99,9 +99,9 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		Watches(
 			&operatorv1beta1.DataPlane{},
 			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlane)).
-		// watch for changes in the DataPlane deployments, as we want to be aware of all
+		// Watch for changes in the DataPlane deployments, as we want to be aware of all
 		// the DataPlane pod changes (every time a new pod gets ready, the deployment
-		// status gets updated accordingly, leading to a reconciliation loop trigger)
+		// status gets updated accordingly, leading to a reconciliation loop trigger).
 		Watches(
 			&appsv1.Deployment{},
 			handler.EnqueueRequestsFromMapFunc(r.getControlPlanesFromDataPlaneDeployment))
@@ -216,7 +216,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil // no need to requeue, status update will requeue
 	}
 
-	// Set DataPlane in ControlPlane's status
+	// Set DataPlane in ControlPlane's status.
 	dataplaneName, res, err := r.enforceDataPlaneNameInStatus(ctx, cp)
 	if res != op.Noop || err != nil {
 		return ctrl.Result{}, err
@@ -792,8 +792,7 @@ func (r *Reconciler) enforceDataPlaneNameInStatus(
 	cp.Status.DataPlane = &gwtypes.ControlPlaneDataPlaneStatus{
 		Name: dataplaneName,
 	}
-	err := r.Status().Patch(ctx, cp, client.MergeFrom(oldControlPlane))
-	if err != nil {
+	if err := r.Status().Patch(ctx, cp, client.MergeFrom(oldControlPlane)); err != nil {
 		return "", op.Noop, fmt.Errorf(
 			"failed to patch ControlPlane status with DataPlane name %s: %w",
 			dataplaneName, err,
