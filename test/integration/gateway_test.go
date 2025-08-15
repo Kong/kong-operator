@@ -179,11 +179,9 @@ func TestGatewayEssentials(t *testing.T) {
 	require.Eventually(t, testutils.GatewayNotExist(t, GetCtx(), gatewayNN, clients), time.Minute, time.Second)
 }
 
-// TestGatewayMultiple checks essential Gateway behavior with multiple Gateways of the same class. Ensure DataPlanes
-// only serve routes attached to their Gateway.
+// TestGatewayMultiple checks essential Gateway behavior with multiple Gateways of the same class.
+// Ensure DataPlanes only serve routes attached to their Gateway.
 func TestGatewayMultiple(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 	gatewayV1Client := GetClients().GatewayClient.GatewayV1()
@@ -292,86 +290,49 @@ func TestGatewayMultiple(t *testing.T) {
 	_, err = GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(GetCtx(), service, metav1.CreateOptions{})
 	require.NoError(t, err)
 
-	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
-
+	t.Logf("creating httproutes to access deployment %s via kong", deployment.Name)
+	createRoute := func(httproute *gatewayv1.HTTPRoute) func(c *assert.CollectT) {
+		return func(c *assert.CollectT) {
+			result, err := gatewayV1Client.HTTPRoutes(namespace.Name).Create(GetCtx(), httproute, metav1.CreateOptions{})
+			require.NoErrorf(t, err, "failed to create HTTPRoute %s/%s", httproute.Namespace, httproute.Name)
+			cleaner.Add(result)
+		}
+	}
 	const pathOne = "/path-test-one"
 	httpRouteOne := createHTTPRoute(gatewayOne, service, pathOne)
-	require.EventuallyWithT(t,
-		func(c *assert.CollectT) {
-			result, err := gatewayV1Client.HTTPRoutes(namespace.Name).Create(GetCtx(), httpRouteOne, metav1.CreateOptions{})
-			if err != nil {
-				require.NoError(c, err, "failed to create HTTPRoute %s/%s", httpRouteOne.Namespace, httpRouteOne.Name)
-			}
-			cleaner.Add(result)
-		},
-		30*time.Second, time.Second,
-	)
-
+	require.EventuallyWithT(t, createRoute(httpRouteOne), 30*time.Second, time.Second)
 	const pathTwo = "/path-test-two"
 	httpRouteTwo := createHTTPRoute(gatewayTwo, service, pathTwo)
-	require.EventuallyWithT(t,
-		func(c *assert.CollectT) {
-			result, err := gatewayV1Client.HTTPRoutes(namespace.Name).Create(GetCtx(), httpRouteTwo, metav1.CreateOptions{})
-			if err != nil {
-				require.NoError(c, err, "failed to create HTTPRoute %s/%s", httpRouteTwo.Namespace, httpRouteTwo.Name)
-				return
-			}
-			cleaner.Add(result)
-		},
-		30*time.Second, time.Second,
-	)
+	require.EventuallyWithT(t, createRoute(httpRouteTwo), 30*time.Second, time.Second)
 
-	t.Log("verifying connectivity to the HTTPRoute")
+	t.Log("verifying connectivity to HTTPRoutes")
 
 	httpClient, err := helpers.CreateHTTPClient(nil, "")
 	require.NoError(t, err)
-	require.Eventually(t, func() bool {
-		url := fmt.Sprintf("http://%s%s", gatewayOneIPAddress, pathOne)
-		bad := fmt.Sprintf("http://%s%s", gatewayOneIPAddress, pathTwo)
-		req, err := http.NewRequestWithContext(GetCtx(), http.MethodGet, url, nil)
-		if err != nil {
-			return false
-		}
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			return false
-		}
-		defer resp.Body.Close()
-		badReq, err := http.NewRequestWithContext(GetCtx(), http.MethodGet, bad, nil)
-		if err != nil {
-			return false
-		}
-		badResp, err := httpClient.Do(badReq)
-		if err != nil {
-			return false
-		}
-		defer badResp.Body.Close()
-		return resp.StatusCode == http.StatusOK && badResp.StatusCode == http.StatusNotFound
-	}, time.Minute, time.Second)
 
-	require.Eventually(t, func() bool {
-		url := fmt.Sprintf("http://%s%s", gatewayTwoIPAddress, pathTwo)
-		bad := fmt.Sprintf("http://%s%s", gatewayTwoIPAddress, pathOne)
-		req, err := http.NewRequestWithContext(GetCtx(), http.MethodGet, url, nil)
-		if err != nil {
-			return false
+	checkPaths := func(gatewayIpAddress, goodPath, badPath string) func(t *assert.CollectT) {
+		return func(t *assert.CollectT) {
+			url := fmt.Sprintf("http://%s%s", gatewayIpAddress, goodPath)
+			bad := fmt.Sprintf("http://%s%s", gatewayIpAddress, badPath)
+
+			req, err := http.NewRequestWithContext(GetCtx(), http.MethodGet, url, nil)
+			require.NoError(t, err)
+			resp, err := httpClient.Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+			badReq, err := http.NewRequestWithContext(GetCtx(), http.MethodGet, bad, nil)
+			require.NoError(t, err)
+			badResp, err := httpClient.Do(badReq)
+			require.NoError(t, err)
+			defer badResp.Body.Close()
+			assert.Equal(t, http.StatusNotFound, badResp.StatusCode)
 		}
-		resp, err := httpClient.Do(req)
-		if err != nil {
-			return false
-		}
-		defer resp.Body.Close()
-		badReq, err := http.NewRequestWithContext(GetCtx(), http.MethodGet, bad, nil)
-		if err != nil {
-			return false
-		}
-		badResp, err := httpClient.Do(badReq)
-		if err != nil {
-			return false
-		}
-		defer badResp.Body.Close()
-		return resp.StatusCode == http.StatusOK && badResp.StatusCode == http.StatusNotFound
-	}, time.Minute, time.Second)
+	}
+
+	require.EventuallyWithT(t, checkPaths(gatewayOneIPAddress, pathOne, pathTwo), time.Minute, time.Second)
+	require.EventuallyWithT(t, checkPaths(gatewayTwoIPAddress, pathTwo, pathOne), time.Minute, time.Second)
 
 	t.Log("deleting Gateway resource")
 	require.NoError(t, gatewayV1Client.Gateways(namespace.Name).Delete(GetCtx(), gatewayOne.Name, metav1.DeleteOptions{}))
