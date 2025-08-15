@@ -1,7 +1,6 @@
 package metricsscraper
 
 import (
-	"context"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -14,15 +13,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+
+	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 )
-
-type mockAdminAPIAddressProvider struct {
-	addresses []string
-}
-
-func (m *mockAdminAPIAddressProvider) AdminAddressesForDP(ctx context.Context, dataplane *operatorv1beta1.DataPlane) ([]string, error) {
-	return m.addresses, nil
-}
 
 func kongMetricsServer(t *testing.T) *httptest.Server {
 	const metricsBody = `` +
@@ -121,8 +114,8 @@ func TestPrometheusMetricsScraper_Scrape(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			adminAPIMetricsServer := kongMetricsServer(t)
-			addressProvider := &mockAdminAPIAddressProvider{
-				addresses: []string{adminAPIMetricsServer.URL},
+			addressProvider := &metricsmocks.MockAdminAPIAddressProvider{
+				Addresses: []string{adminAPIMetricsServer.URL},
 			}
 
 			httpClient := http.DefaultClient

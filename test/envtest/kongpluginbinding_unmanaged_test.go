@@ -16,10 +16,10 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
 	"github.com/kong/kong-operator/controller/konnect"
-	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 func TestKongPluginBindingUnmanaged(t *testing.T) {

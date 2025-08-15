@@ -29,6 +29,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 )
 
 const (
@@ -101,7 +102,7 @@ func NewKonnectEntityReconciler[
 		Client:                  client,
 		SyncPeriod:              consts.DefaultKonnectSyncPeriod,
 		MaxConcurrentReconciles: consts.DefaultKonnectMaxConcurrentReconciles,
-		MetricRecorder:          &metrics.MockRecorder{},
+		MetricRecorder:          &metricsmocks.MockRecorder{},
 	}
 	for _, opt := range opts {
 		opt(r)

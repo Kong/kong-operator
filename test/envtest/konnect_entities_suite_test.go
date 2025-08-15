@@ -16,9 +16,9 @@ import (
 
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
-	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 // TestKonnectEntityReconcilers tests Konnect entity reconcilers. The test cases are run against a real Kubernetes API

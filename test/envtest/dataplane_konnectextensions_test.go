@@ -26,13 +26,13 @@ import (
 
 	"github.com/kong/kong-operator/controller/dataplane"
 	"github.com/kong/kong-operator/controller/konnect"
-	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 func TestDataPlaneKonnectExtension(t *testing.T) {

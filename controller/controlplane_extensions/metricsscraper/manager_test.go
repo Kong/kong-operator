@@ -22,6 +22,7 @@ import (
 
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 )
 
 type pair struct {
@@ -73,7 +74,7 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 								},
 							},
 							http.DefaultClient,
-							&mockAdminAPIAddressProvider{},
+							&metricsmocks.MockAdminAPIAddressProvider{},
 						),
 						MetricsEnricher: &metricsEnricher{},
 					},
@@ -118,7 +119,7 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 								},
 							},
 							http.DefaultClient,
-							&mockAdminAPIAddressProvider{},
+							&metricsmocks.MockAdminAPIAddressProvider{},
 						),
 						MetricsEnricher: &metricsEnricher{},
 					},
@@ -149,7 +150,7 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 								},
 							},
 							http.DefaultClient,
-							&mockAdminAPIAddressProvider{},
+							&metricsmocks.MockAdminAPIAddressProvider{},
 						),
 						MetricsEnricher: &metricsEnricher{},
 					},
@@ -194,7 +195,7 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 								},
 							},
 							http.DefaultClient,
-							&mockAdminAPIAddressProvider{},
+							&metricsmocks.MockAdminAPIAddressProvider{},
 						),
 						MetricsEnricher: &metricsEnricher{},
 					},
@@ -225,7 +226,7 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 								},
 							},
 							http.DefaultClient,
-							&mockAdminAPIAddressProvider{},
+							&metricsmocks.MockAdminAPIAddressProvider{},
 						),
 						MetricsEnricher: &metricsEnricher{},
 					},
@@ -309,7 +310,7 @@ func TestMetricsScrapeManager_RemoveForControlPlaneNN(t *testing.T) {
 								},
 							},
 							http.DefaultClient,
-							&mockAdminAPIAddressProvider{},
+							&metricsmocks.MockAdminAPIAddressProvider{},
 						),
 						MetricsEnricher: &metricsEnricher{},
 					},
@@ -340,7 +341,7 @@ func TestMetricsScrapeManager_RemoveForControlPlaneNN(t *testing.T) {
 								},
 							},
 							http.DefaultClient,
-							&mockAdminAPIAddressProvider{},
+							&metricsmocks.MockAdminAPIAddressProvider{},
 						),
 						MetricsEnricher: &metricsEnricher{},
 					},
