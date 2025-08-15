@@ -24,7 +24,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
@@ -321,14 +320,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		)
 	}
 
+	// Validate the control plane options against the configuration of the operator.
+	// If the control plane options are not valid with operator's settings
+	// (For example, the label selectors of secrets conflicts with operator's selector),
+	// The ControlPlane is marked invalid and the reconciliation stops.
 	log.Trace(logger, "validating ControlPlane's options with the reconciler's configuration")
-	if msg, ok := r.validateControlPlaneOptions(cp); !ok {
+	msg, ok := r.validateControlPlaneOptions(cp)
+	if ok {
 		k8sutils.SetCondition(k8sutils.NewCondition(
-			kcfgcontrolplane.ConditionTypeProvisioned,
+			kcfgcontrolplane.ConditionTypeOptionsValid,
+			metav1.ConditionTrue,
+			kcfgcontrolplane.ConditionReasonOptionsValid,
+			"Controller options are valid",
+		), cp)
+	} else {
+		k8sutils.SetCondition(k8sutils.NewCondition(
+			kcfgcontrolplane.ConditionTypeOptionsValid,
 			metav1.ConditionFalse,
-			// TODO: define dedicated condition reason (and maybe condition type) in kubernetes-configuration:
-			// https://github.com/Kong/kong-operator/issues/1999
-			kcfgconsts.ConditionReason("ControlPlaneOptionsInvalid"),
+			kcfgcontrolplane.ConditionReasonOptionsInvalid,
 			msg,
 		), cp)
 		return r.patchStatus(ctx, logger, cp)
