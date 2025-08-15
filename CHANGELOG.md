@@ -50,6 +50,10 @@
   control over Konnect integration settings including consumer synchronization, licensing
   configuration, node refresh periods, and config upload periods.
   [#2009](https://github.com/Kong/kong-operator/pull/2009)
+- Added `OptionsValid` condition to `ControlPlane`s' status. The status is set to
+  `True` if the `ControlPlane`'s options in its `spec` is valid and set to `False`
+  if the options are invalid against the operator's configuration.
+  [#2070](https://github.com/Kong/kong-operator/pull/2070)
 
 ### Fixed
 
