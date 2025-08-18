@@ -512,7 +512,7 @@ func (r *Reconciler) provisionDataPlane(
 
 	expectedDataPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, expectedDataPlaneOptions.Extensions)
 
-	if !dataplaneSpecDeepEqual(&dataplane.Spec.DataPlaneOptions, expectedDataPlaneOptions) {
+	if !dataPlaneSpecDeepEqual(&dataplane.Spec.DataPlaneOptions, expectedDataPlaneOptions) {
 		log.Trace(logger, "dataplane config is out of date")
 		oldDataPlane := dataplane.DeepCopy()
 		dataplane.Spec.DataPlaneOptions = *expectedDataPlaneOptions
@@ -611,7 +611,7 @@ func (r *Reconciler) provisionControlPlane(
 		expectedControlPlaneOptions = gatewayConfig.Spec.ControlPlaneOptions.ControlPlaneOptions
 	}
 
-	if !controlplaneSpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, &expectedControlPlaneOptions) {
+	if !controlPlaneSpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, &expectedControlPlaneOptions) {
 		log.Trace(logger, "controlplane config is out of date")
 		controlplaneOld := controlPlane.DeepCopy()
 		controlPlane.Spec.ControlPlaneOptions = expectedControlPlaneOptions
@@ -700,7 +700,7 @@ func (r *Reconciler) patchStatus(ctx context.Context, gateway, oldGateway *gwtyp
 	return r.Client.Status().Patch(ctx, gateway, client.MergeFrom(oldGateway))
 }
 
-func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1beta1.DataPlaneOptions) bool {
+func dataPlaneSpecDeepEqual(spec1, spec2 *operatorv1beta1.DataPlaneOptions) bool {
 	// TODO: Doesn't take .Rollout field into account.
 	return deploymentOptionsDeepEqual(&spec1.Deployment.DeploymentOptions, &spec2.Deployment.DeploymentOptions) &&
 		compare.NetworkOptionsDeepEqual(&spec1.Network, &spec2.Network) &&
@@ -708,7 +708,7 @@ func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1beta1.DataPlaneOptions) bool
 		reflect.DeepEqual(spec1.Extensions, spec2.Extensions)
 }
 
-func controlplaneSpecDeepEqual(spec1, spec2 *gwtypes.ControlPlaneOptions) bool {
+func controlPlaneSpecDeepEqual(spec1, spec2 *gwtypes.ControlPlaneOptions) bool {
 	return reflect.DeepEqual(spec1, spec2)
 }
 
