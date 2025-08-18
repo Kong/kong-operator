@@ -3,7 +3,7 @@ structname: Mock{{ .InterfaceName }}
 pkgname: sdkmocks
 template: testify
 # NOTE: We write mocks to a non test file so that other packages can also use them.
-filename: '{{base .InterfaceFile }}'
+filename: 'zz_generated.{{base .InterfaceFile }}'
 force-file-write: true
 packages:
   github.com/kong/kong-operator/controller/konnect/ops/sdk:
