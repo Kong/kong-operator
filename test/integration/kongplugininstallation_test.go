@@ -33,7 +33,7 @@ import (
 )
 
 func TestKongPluginInstallationEssentials(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1367")
+	t.Parallel()
 
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 	t.Log("this test accesses container registries on public internet")
