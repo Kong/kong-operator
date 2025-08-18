@@ -19,6 +19,7 @@ package v1beta1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 )
@@ -49,6 +50,7 @@ type GatewayConfiguration struct {
 // +apireference:kgo:include
 // +kubebuilder:validation:XValidation:message="KonnectExtension must be set at the Gateway level",rule="has(self.dataPlaneOptions) && has(self.dataPlaneOptions.extensions) ? self.dataPlaneOptions.extensions.all(e, (e.group != 'konnect.konghq.com' && e.group != 'gateway-operator.konghq.com') || e.kind != 'KonnectExtension') : true"
 // +kubebuilder:validation:XValidation:message="KonnectExtension must be set at the Gateway level",rule="has(self.controlPlaneOptions) && has(self.controlPlaneOptions.extensions) ? self.controlPlaneOptions.extensions.all(e, (e.group != 'konnect.konghq.com' && e.group != 'gateway-operator.konghq.com') || e.kind != 'KonnectExtension') : true"
+// +kubebuilder:validation:XValidation:message="Can only specify listener's NodePort when the type of service for dataplane to receive ingress traffic ('spec.dataPlaneOptions.network.services.ingress') is NodePort or LoadBalancer",rule="(has(self.dataPlaneOptions) && has(self.dataPlaneOptions.network) && has(self.dataPlaneOptions.network.services) &&  has(self.dataPlaneOptions.network.services.ingress) && (self.dataPlaneOptions.network.services.ingress.type == 'LoadBalancer' || self.dataPlaneOptions.network.services.ingress.type == 'NodePort')) ? true : (!has(self.listenersOptions) || self.listenersOptions.all(l,!has(l.nodePort)))"
 type GatewayConfigurationSpec struct {
 	// DataPlaneOptions is the specification for configuration
 	// overrides for DataPlane resources that will be created for the Gateway.
@@ -61,6 +63,16 @@ type GatewayConfigurationSpec struct {
 	//
 	// +optional
 	ControlPlaneOptions *ControlPlaneOptions `json:"controlPlaneOptions,omitempty"`
+
+	// ListenerOptions is the specification for configuration bound to specific listeners in the Gateway.
+	// It will override the default configuration of control plane or data plane for the specified listener.
+	// +kubebuilder:validation:MaxItems=64
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=64
+	// +kubebuilder:validation:XValidation:message="Listener name must be unique within the Gateway",rule="self.all(l1, self.exists_one(l2, l1.name == l2.name))"
+	// +kubebuilder:validation:XValidation:message="Nodeport must be unique within the Gateway if specified",rule="self.all(l1, !has(l1.nodePort) || self.exists_one(l2, l1.nodePort == l2.nodePort))"
+	ListenersOptions []GatewayConfigurationListenerOptions `json:"listenersOptions,omitempty"`
 
 	// Extensions provide additional or replacement features for the Gateway
 	// resource to influence or enhance functionality.
@@ -143,6 +155,39 @@ type GatewayConfigDataPlaneResources struct {
 // +apireference:kgo:include
 type GatewayConfigServiceOptions struct {
 	ServiceOptions `json:",inline"`
+}
+
+// GatewayConfigurationListenerOptions specifies configuration overrides of defaults on certain listener of the Gateway.
+// The name must match the name of a listener in the Gateway
+// and the options are applied to the configuration of the matching listener.
+// For example, if the option for listener "http" specified the nodeport number to 30080,
+// The ingress service will expose the nodeport 30080 for the "http" listener of the Gateway.
+// For listeners without an item in listener options of GatewayConfiguration, default configuration is used for it.
+// +apireference:kgo:include
+type GatewayConfigurationListenerOptions struct {
+	// Name is the name of the Listener.
+	//
+	// +required
+	Name gatewayv1.SectionName `json:"name"`
+
+	// The port on each node on which this service is exposed when type is
+	// NodePort or LoadBalancer. Usually assigned by the system. If a value is
+	// specified, in-range, and not in use it will be used, otherwise the
+	// operation will fail. If not specified, a port will be allocated if this
+	// Service requires one. If this field is specified when creating a
+	// Service which does not need it, creation will fail. This field will be
+	// wiped when updating a Service to no longer need it (e.g. changing type
+	// from NodePort to ClusterIP).
+	//
+	// More info: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+	//
+	// Can only be specified if type of the dataplane ingress service (specified in `spec.dataplaneOptions.network.services.ingress.type`)
+	// is NodePort or LoadBalancer.
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=65535
+	NodePort int32 `json:"nodePort"`
 }
 
 // GatewayConfigurationStatus defines the observed state of GatewayConfiguration

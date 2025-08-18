@@ -30,4 +30,9 @@ const (
 	// to express that more than one TLS secret has been set in the listener
 	// TLS configuration.
 	ListenerReasonTooManyTLSSecrets consts.ConditionReason = "TooManyTLSSecrets"
+
+	// ListenerReasonNoMatchingListener must be used with the ResolvedRefs condition
+	// to express that an item in listernOptions does not have a listener matching
+	// its name in the Gateway.
+	ListenerReasonNoMatchingListener consts.ConditionReason = "NoListenerWithMatchingName"
 )
