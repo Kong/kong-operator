@@ -32,7 +32,6 @@ import (
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
-	controlplanecontroller "github.com/kong/kong-operator/controller/pkg/controlplane"
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/op"
@@ -605,21 +604,17 @@ func (r *Reconciler) provisionControlPlane(
 	r.setControlPlaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name, controlPlane.Name)
 
 	log.Trace(logger, "ensuring controlplane config is up to date")
-	// compare deployment option of controlplane with controlplane deployment option of gatewayconfiguration.
-	// if not configured in gatewayconfiguration, compare deployment option of controlplane with an empty one.
-	expectedControlPlaneOptions := &gwtypes.ControlPlaneOptions{}
-	// TODO: https://github.com/kong/kong-operator/issues/1728
-	// if gatewayConfig.Spec.ControlPlaneOptions != nil {
-	//   expectedControlPlaneOptions = gatewayConfig.Spec.ControlPlaneOptions
-	// }
+	// compare options of controlplane with controlplane options of gatewayconfiguration.
+	// if not configured in gatewayconfiguration, compare options of controlplane with an empty one.
+	expectedControlPlaneOptions := gwtypes.ControlPlaneOptions{}
+	if gatewayConfig.Spec.ControlPlaneOptions != nil {
+		expectedControlPlaneOptions = gatewayConfig.Spec.ControlPlaneOptions.ControlPlaneOptions
+	}
 
-	// TODO: https://github.com/kong/kong-operator/issues/1361
-	// expectedControlPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, expectedControlPlaneOptions.Extensions)
-
-	if !controlplanecontroller.SpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, expectedControlPlaneOptions) {
+	if !controlplaneSpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, &expectedControlPlaneOptions) {
 		log.Trace(logger, "controlplane config is out of date")
 		controlplaneOld := controlPlane.DeepCopy()
-		controlPlane.Spec.ControlPlaneOptions = *expectedControlPlaneOptions
+		controlPlane.Spec.ControlPlaneOptions = expectedControlPlaneOptions
 		if err := r.Patch(ctx, controlPlane, client.MergeFrom(controlplaneOld)); err != nil {
 			k8sutils.SetCondition(
 				createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
@@ -711,6 +706,10 @@ func dataplaneSpecDeepEqual(spec1, spec2 *operatorv1beta1.DataPlaneOptions) bool
 		compare.NetworkOptionsDeepEqual(&spec1.Network, &spec2.Network) &&
 		compare.DataPlaneResourceOptionsDeepEqual(&spec1.Resources, &spec2.Resources) &&
 		reflect.DeepEqual(spec1.Extensions, spec2.Extensions)
+}
+
+func controlplaneSpecDeepEqual(spec1, spec2 *gwtypes.ControlPlaneOptions) bool {
+	return reflect.DeepEqual(spec1, spec2)
 }
 
 func deploymentOptionsDeepEqual(o1, o2 *operatorv1beta1.DeploymentOptions, envVarsToIgnore ...string) bool {

@@ -40,8 +40,6 @@ const (
 )
 
 func TestIngressEssentials(t *testing.T) {
-	t.Skip("skipping as this test requires changed after changes to ControlPlane API in v2beta1")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -148,7 +146,7 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
-	_, err = GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(GetCtx(), service, metav1.CreateOptions{})
+	service, err = GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(GetCtx(), service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(service)
 
@@ -165,10 +163,11 @@ func TestIngressEssentials(t *testing.T) {
 		func(c *assert.CollectT) {
 			err := clusters.DeployIngress(GetCtx(), GetEnv().Cluster(), namespace.Name, ingress)
 			require.NoError(c, err, "failed to deploy ingress in namespace %s", namespace.Name)
+			// Set the namespace so that the cleaner is happy
+			ingress.(client.Object).SetNamespace(namespace.Name)
 		},
 		testutils.DefaultIngressWait, testutils.WaitIngressTick,
 	)
-
 	cleaner.Add(ingress.(client.Object))
 
 	t.Log("waiting for updated ingress status to include IP")

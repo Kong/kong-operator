@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -14,6 +15,7 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
+	"github.com/kong/kong-operator/controller/controlplane"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
@@ -31,8 +33,6 @@ const (
 )
 
 func TestGatewayConfigurationEssentials(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -106,9 +106,16 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 					},
 				},
 			},
-
-			// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
-			// https://github.com/kong/kong-operator/issues/1728
+			ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
+				ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+					Controllers: []gwtypes.ControlPlaneController{
+						{
+							Name:  controlplane.ControllerNameIngress,
+							State: gwtypes.ControlPlaneControllerStateDisabled,
+						},
+					},
+				},
+			},
 		},
 	}
 	gatewayConfig, err = GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
@@ -189,8 +196,21 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 
 	t.Log("verifying that the ControlPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		// TODO(pmalek): adapt this test to the new ControlPlane v2beta1 API
-		return true
+		controlplanes, err := gatewayutils.ListControlPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
+		if err != nil {
+			return false
+		}
+		if len(controlplanes) != 1 {
+			return false
+		}
+		cp := controlplanes[0]
+
+		return lo.Contains(cp.Spec.Controllers,
+			gwtypes.ControlPlaneController{
+				Name:  controlplane.ControllerNameIngress,
+				State: gwtypes.ControlPlaneControllerStateDisabled,
+			},
+		)
 	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
 
 	t.Log("verifying that the DataPlane receives the configuration override")
@@ -215,12 +235,6 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 		}
 		return false
 	}, testutils.GatewayReadyTimeLimit, time.Second)
-
-	t.Log("verifying that the ControlPlane receives the configuration override")
-	require.Eventually(t, func() bool {
-		// TODO(pmalek): adapt this test to the new ControlPlane v2beta1 API
-		return true
-	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
 
 	t.Log("removing the GatewayConfiguration attachment")
 	require.Eventually(t, func() bool {
@@ -262,7 +276,20 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 
 	t.Log("verifying that the ControlPlane receives the configuration override")
 	require.Eventually(t, func() bool {
-		// TODO(pmalek): adapt this test to the new ControlPlane v2beta1 API
-		return true
+		controlplanes, err := gatewayutils.ListControlPlanesForGateway(GetCtx(), GetClients().MgrClient, gateway)
+		if err != nil {
+			return false
+		}
+		if len(controlplanes) != 1 {
+			return false
+		}
+		cp := controlplanes[0]
+
+		return !lo.Contains(cp.Spec.Controllers,
+			gwtypes.ControlPlaneController{
+				Name:  controlplane.ControllerNameIngress,
+				State: gwtypes.ControlPlaneControllerStateDisabled,
+			},
+		)
 	}, testutils.ControlPlaneSchedulingTimeLimit, time.Second)
 }

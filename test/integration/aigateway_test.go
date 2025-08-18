@@ -21,8 +21,6 @@ import (
 )
 
 func TestAIGatewayCreation(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
-
 	t.Parallel()
 
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
@@ -63,17 +61,14 @@ func TestAIGatewayCreation(t *testing.T) {
 					},
 				},
 			},
-
-			// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
-			// https://github.com/kong/kong-operator/issues/1728
 		},
 	}
 	gatewayConfiguration, err := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfiguration, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayConfiguration)
 
-	t.Log("deploying a GatewayClass resource, [", &gatewayConfiguration.Name, "]")
 	gatewayClass := helpers.MustGenerateGatewayClass(t)
+	t.Logf("deploying a GatewayClass resource, [%s]", gatewayClass.Name)
 	gatewayClass.Spec.ParametersRef = &gatewayv1.ParametersReference{
 		Group:     gatewayv1.Group("gateway-operator.konghq.com"),
 		Kind:      gatewayv1.Kind("GatewayConfiguration"),
@@ -85,7 +80,7 @@ func TestAIGatewayCreation(t *testing.T) {
 	cleaner.Add(gatewayClass)
 
 	credSecretName := uuid.New().String()
-	t.Log("creating null secret containing the required credentials, [", credSecretName, "]")
+	t.Logf("creating null secret containing the required credentials, [%s]", credSecretName)
 	credSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      credSecretName,
@@ -174,19 +169,23 @@ func TestAIGatewayCreation(t *testing.T) {
 	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayExpectedNN, clients)
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
-	t.Log("verifying that the DataPlane becomes Ready")
+	t.Logf("verifying that the DataPlane becomes Ready for Gateway [%s]", gateway.Name)
 	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 	dataplanes := testutils.MustListDataPlanesForGateway(t, GetCtx(), gateway, clients)
 	require.Len(t, dataplanes, 1)
 	dataplane := dataplanes[0]
 
-	t.Log("verifying that the ControlPlane becomes provisioned")
+	t.Logf("verifying that the ControlPlane becomes provisioned for Gateway [%s]", gateway.Name)
 	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 	controlplanes := testutils.MustListControlPlanesForGateway(t, GetCtx(), gateway, clients)
 	require.Len(t, controlplanes, 1)
 
-	t.Log("verifying networkpolicies are created")
-	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	t.Run("checking NetworkPolicies", func(t *testing.T) {
+		t.Skip("skipping as this requires adding network intercepts for integration tests: https://github.com/Kong/kong-operator/issues/2074")
+		// NOTE: We're not verifying if the NetworkPolicies are created
+		// in integration tests.
+		// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
+	})
 
 	t.Log("verifying connectivity to the Gateway")
 	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
