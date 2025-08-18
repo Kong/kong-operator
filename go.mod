@@ -76,7 +76,7 @@ require (
 	k8s.io/client-go v0.33.4
 	k8s.io/component-base v0.33.3
 	k8s.io/kubectl v0.33.3
-	k8s.io/kubernetes v1.33.3
+	k8s.io/kubernetes v1.33.4
 	oras.land/oras-go/v2 v2.6.0
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/e2e-framework v0.6.0
