@@ -22,7 +22,6 @@ COPY modules/ modules/
 COPY controller/ controller/
 COPY pkg/ pkg/
 COPY internal/ internal/
-COPY test/mocks test/mocks
 COPY Makefile Makefile
 COPY .git/ .git/
 

@@ -8,5 +8,4 @@ logo/
 *Dockerfile
 Dockerfile*
 test/
-!test/mocks/
 *.md
