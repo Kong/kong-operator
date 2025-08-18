@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
@@ -68,7 +69,8 @@ func testNewKonnectEntityReconciler[
 		factory := sdkmocks.NewMockSDKFactory(t)
 		sdk := factory.SDK
 
-		StartReconcilers(ctx, t, mgr, logs, konnect.NewKonnectEntityReconciler[T, TEnt](factory, logging.DevelopmentMode, cl))
+		StartReconcilers(ctx, t, mgr, logs, konnect.NewKonnectEntityReconciler[T, TEnt](factory, logging.DevelopmentMode, cl,
+			konnect.WithMetricRecorder[T, TEnt](&metricsmocks.MockRecorder{})))
 
 		const (
 			wait = time.Second

@@ -31,6 +31,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
@@ -47,9 +48,11 @@ func TestKongConsumer(t *testing.T) {
 	reconcilers := []Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[configurationv1.KongConsumer](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1.KongConsumer](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[configurationv1beta1.KongConsumerGroup](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1beta1.KongConsumerGroup](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKongCredentialSecretReconciler(logging.DevelopmentMode, mgr.GetClient(), mgr.GetScheme()),
 	}
@@ -572,21 +575,27 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 	reconcilers := []Reconciler{
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[configurationv1.KongConsumer](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1.KongConsumer](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialBasicAuth](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialBasicAuth](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialAPIKey](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialAPIKey](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialACL](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialACL](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialJWT](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialJWT](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialHMAC](&metricsmocks.MockRecorder{}),
 		),
 		konnect.NewKongCredentialSecretReconciler(logging.DevelopmentMode, mgr.GetClient(), mgr.GetScheme()),
 	}

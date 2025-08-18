@@ -24,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
@@ -40,6 +41,7 @@ func TestKongCertificate(t *testing.T) {
 	StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCertificate](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongCertificate](&metricsmocks.MockRecorder{}),
 		),
 	)
 

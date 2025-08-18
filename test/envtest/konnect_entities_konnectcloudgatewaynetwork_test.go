@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/test/helpers/deploy"
 	"github.com/kong/kong-operator/test/helpers/eventually"
+	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
@@ -37,6 +38,7 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 	StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.KonnectCloudGatewayNetwork](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[konnectv1alpha1.KonnectCloudGatewayNetwork](&metricsmocks.MockRecorder{}),
 		),
 	)
 

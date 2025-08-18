@@ -20,6 +20,7 @@ import (
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers/deploy"
 	"github.com/kong/kong-operator/test/helpers/eventually"
+	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
@@ -52,6 +53,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 	StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration](&metricsmocks.MockRecorder{}),
 		),
 	)
 
