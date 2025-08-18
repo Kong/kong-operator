@@ -292,9 +292,7 @@ func GetControlPlaneByID(
 	reqList := sdkkonnectops.ListControlPlanesRequest{
 		Filter: &sdkkonnectcomp.ControlPlaneFilterParameters{
 			ID: &sdkkonnectcomp.ID{
-				StringFieldEqualsFilter: &sdkkonnectcomp.StringFieldEqualsFilter{
-					Str: lo.ToPtr(id),
-				},
+				Eq: lo.ToPtr(id),
 			},
 		},
 	}

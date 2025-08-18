@@ -63,7 +63,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				ListControlPlanes(
 					mock.Anything,
 					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
-						return *r.Filter.ID.StringFieldEqualsFilter.Str == "12345"
+						return *r.Filter.ID.Eq == "12345"
 					}),
 				).
 				Return(
@@ -167,7 +167,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				ListControlPlanes(
 					mock.Anything,
 					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
-						return *r.Filter.ID.StringFieldEqualsFilter.Str == "12346"
+						return *r.Filter.ID.Eq == "12346"
 					}),
 				).
 				Return(
@@ -353,7 +353,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				ListControlPlanes(
 					mock.Anything,
 					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
-						return *r.Filter.ID.StringFieldEqualsFilter.Str == "123467"
+						return *r.Filter.ID.Eq == "123467"
 					}),
 				).
 				Return(
@@ -492,7 +492,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				ListControlPlanes(
 					mock.Anything,
 					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
-						return *r.Filter.ID.StringFieldEqualsFilter.Str == "123456"
+						return *r.Filter.ID.Eq == "123456"
 					}),
 				).
 				Return(
@@ -619,7 +619,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				ListControlPlanes(
 					mock.Anything,
 					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
-						return *r.Filter.ID.StringFieldEqualsFilter.Str == "group-123456"
+						return *r.Filter.ID.Eq == "group-123456"
 					}),
 				).
 				Return(
@@ -643,7 +643,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				ListControlPlanes(
 					mock.Anything,
 					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
-						return *r.Filter.ID.StringFieldEqualsFilter.Str == "123456"
+						return *r.Filter.ID.Eq == "123456"
 					}),
 				).
 				Return(
@@ -767,7 +767,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 				ListControlPlanes(
 					mock.Anything,
 					mock.MatchedBy(func(r sdkkonnectops.ListControlPlanesRequest) bool {
-						return *r.Filter.ID.StringFieldEqualsFilter.Str == "cpg-id"
+						return *r.Filter.ID.Eq == "cpg-id"
 					}),
 				).
 				Return(

@@ -195,6 +195,10 @@ func transitGatewaySpecToTransitGatewayInput(
 
 func extractKonnectIDFromTransitGatewayResponse(resp *sdkkonnectcomp.TransitGatewayResponse) string {
 	switch resp.Type {
+	case sdkkonnectcomp.TransitGatewayResponseTypeAwsResourceEndpointGatewayResponse:
+		return resp.AwsResourceEndpointGatewayResponse.ID
+	case sdkkonnectcomp.TransitGatewayResponseTypeGCPVPCPeeringGatewayResponse:
+		return resp.GCPVPCPeeringGatewayResponse.ID
 	case sdkkonnectcomp.TransitGatewayResponseTypeAwsTransitGatewayResponse:
 		return resp.AwsTransitGatewayResponse.ID
 	case sdkkonnectcomp.TransitGatewayResponseTypeAzureTransitGatewayResponse:
@@ -209,6 +213,10 @@ func extractKonnectIDFromTransitGatewayResponse(resp *sdkkonnectcomp.TransitGate
 
 func extractStateFromTransitGatewayResponse(resp *sdkkonnectcomp.TransitGatewayResponse) sdkkonnectcomp.TransitGatewayState {
 	switch resp.Type {
+	case sdkkonnectcomp.TransitGatewayResponseTypeGCPVPCPeeringGatewayResponse:
+		return resp.GCPVPCPeeringGatewayResponse.State
+	case sdkkonnectcomp.TransitGatewayResponseTypeAwsResourceEndpointGatewayResponse:
+		return resp.AwsResourceEndpointGatewayResponse.State
 	case sdkkonnectcomp.TransitGatewayResponseTypeAwsTransitGatewayResponse:
 		return resp.AwsTransitGatewayResponse.State
 	case sdkkonnectcomp.TransitGatewayResponseTypeAzureTransitGatewayResponse:
