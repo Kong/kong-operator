@@ -78,9 +78,12 @@ func TestGatewayEssentials(t *testing.T) {
 	require.Len(t, controlplanes, 1)
 	controlplane := controlplanes[0]
 
-	// NOTE: We're not verifying if the NetworkPolicies are created
-	// in integration tests.
-	// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
+	t.Run("checking NetworkPolicies", func(t *testing.T) {
+		t.Skip("skipping as this requires adding network intercepts for integration tests: https://github.com/Kong/kong-operator/issues/2074")
+		// NOTE: We're not verifying if the NetworkPolicies are created
+		// in integration tests.
+		// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
+	})
 
 	t.Log("verifying connectivity to the Gateway")
 	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
@@ -171,9 +174,12 @@ func TestGatewayEssentials(t *testing.T) {
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 
-	// NOTE: We're not verifying if the NetworkPolicies are created
-	// in integration tests.
-	// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
+	t.Run("checking NetworkPolicies", func(t *testing.T) {
+		t.Skip("skipping as this requires adding network intercepts for integration tests: https://github.com/Kong/kong-operator/issues/2074")
+		// NOTE: We're not verifying if the NetworkPolicies are created
+		// in integration tests.
+		// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
+	})
 
 	t.Log("verifying that gateway itself is deleted")
 	require.Eventually(t, testutils.GatewayNotExist(t, GetCtx(), gatewayNN, clients), time.Minute, time.Second)
@@ -456,9 +462,12 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 	t.Log("verifying that dataplane has 1 ready replica")
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneNN, clients, 1), time.Minute, time.Second)
 
-	// NOTE: We're not verifying if the NetworkPolicies are created
-	// in integration tests.
-	// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
+	t.Run("checking NetworkPolicies", func(t *testing.T) {
+		t.Skip("skipping as this requires adding network intercepts for integration tests: https://github.com/Kong/kong-operator/issues/2074")
+		// NOTE: We're not verifying if the NetworkPolicies are created
+		// in integration tests.
+		// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
+	})
 
 	t.Log("verifying connectivity to the Gateway")
 	require.Eventually(t, Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s:80", gatewayIPAddress)), testutils.SubresourceReadinessWait, time.Second)
@@ -589,7 +598,7 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 }
 
 func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
+	t.Skip("skipping as this requires adding network intercepts for integration tests: https://github.com/Kong/kong-operator/issues/2074")
 
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
@@ -652,7 +661,8 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	t.Log("verifying that the DataPlane's Pod Admin API is network restricted to ControlPlane Pods")
 	var expectLimitedAdminAPI networkPolicyIngressRuleDecorator
 	expectLimitedAdminAPI.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneAdminAPIPort)
-	// TODO: https://github.com/kong/kong-operator/issues/1700
+
+	// TODO: https://github.com/Kong/kong-operator/issues/2074
 	// Re-enable/adjust once the dataplane's admin API is network restricted to KO.
 	// expectLimitedAdminAPI.withPeerMatchLabels(
 	// 	map[string]string{"app": controlplane.Name},

@@ -19,15 +19,13 @@ import (
 )
 
 func TestGatewayConfigurationServiceName(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	// Create a custom service name
 	customServiceName := "custom-service-name-" + uuid.NewString()
 
-	t.Log("deploying a GatewayConfiguration resource with a custom service name")
+	t.Logf("deploying a GatewayConfiguration resource with a custom service name: %s", customServiceName)
 	gatewayConfig := &operatorv2beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
