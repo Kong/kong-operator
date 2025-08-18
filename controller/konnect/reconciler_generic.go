@@ -101,7 +101,7 @@ func NewKonnectEntityReconciler[
 		Client:                  client,
 		SyncPeriod:              consts.DefaultKonnectSyncPeriod,
 		MaxConcurrentReconciles: consts.DefaultKonnectMaxConcurrentReconciles,
-		MetricRecorder:          &metrics.MockRecorder{},
+		MetricRecorder:          nil,
 	}
 	for _, opt := range opts {
 		opt(r)

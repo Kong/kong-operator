@@ -21,9 +21,9 @@ import (
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/konnect/constraints"
-	sdkmocks "github.com/kong/kong-operator/controller/konnect/ops/sdk/mocks"
-	"github.com/kong/kong-operator/internal/metrics"
 	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/test/mocks/metricsmocks"
+	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 type createTestCase[
@@ -243,7 +243,7 @@ func testCreate[
 				sdk = tc.sdkFunc(t, sdk)
 			}
 
-			_, err := Create(t.Context(), sdk, fakeClient, &metrics.MockRecorder{}, tc.entity)
+			_, err := Create(t.Context(), sdk, fakeClient, &metricsmocks.MockRecorder{}, tc.entity)
 			if tc.expectedErrorContains != "" {
 				require.ErrorContains(t, err, tc.expectedErrorContains)
 			} else {
@@ -363,7 +363,7 @@ func testDelete[
 				sdk = tc.sdkFunc(t, sdk)
 			}
 
-			err := Delete(t.Context(), sdk, fakeClient, &metrics.MockRecorder{}, tc.entity)
+			err := Delete(t.Context(), sdk, fakeClient, &metricsmocks.MockRecorder{}, tc.entity)
 			if tc.expectedError != "" {
 				require.ErrorContains(t, err, tc.expectedError)
 				return

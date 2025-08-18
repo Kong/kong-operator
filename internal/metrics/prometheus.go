@@ -169,19 +169,3 @@ func init() {
 		ctrlmetrics.Registry.MustRegister(m)
 	}
 }
-
-// MockRecorder records operations for testing purposes.
-//
-// TODO: move all the mocks to a place inside `/test`:
-// https://github.com/kong/kong-operator/issues/955
-type MockRecorder struct{}
-
-var _ Recorder = &MockRecorder{}
-
-func (m *MockRecorder) RecordKonnectEntityOperationSuccess(
-	serverURL string, operationType KonnectEntityOperation, entityType string, duration time.Duration) {
-}
-
-func (m *MockRecorder) RecordKonnectEntityOperationFailure(
-	serverURL string, operationType KonnectEntityOperation, entityType string, duration time.Duration, statusCode int) {
-}
