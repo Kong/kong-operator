@@ -406,8 +406,6 @@ func createHTTPRoute(parentRef metav1.Object, svc metav1.Object, path string) *g
 }
 
 func TestGatewayWithMultipleListeners(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, env)
 
@@ -458,8 +456,9 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 	t.Log("verifying that dataplane has 1 ready replica")
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneNN, clients, 1), time.Minute, time.Second)
 
-	t.Log("verifying networkpolicies are created")
-	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, ctx, gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	// NOTE: We're not verifying if the NetworkPolicies are created
+	// in integration tests.
+	// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
 
 	t.Log("verifying connectivity to the Gateway")
 	require.Eventually(t, Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s:80", gatewayIPAddress)), testutils.SubresourceReadinessWait, time.Second)
@@ -467,8 +466,6 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 }
 
 func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
