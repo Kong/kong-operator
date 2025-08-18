@@ -29,6 +29,14 @@ spec:
           env:
             - name: KONG_OPERATOR_ANONYMOUS_REPORTS
               value: "false"
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
           resources:
             limits:
               cpu: 1000m

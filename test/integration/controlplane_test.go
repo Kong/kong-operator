@@ -97,8 +97,8 @@ func TestControlPlaneEssentials(t *testing.T) {
 			Namespace:    namespace.Name,
 		},
 		Spec: gwtypes.ControlPlaneSpec{
-			ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-				IngressClass: lo.ToPtr("kong"),
+			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+				IngressClass: lo.ToPtr(ingressClass),
 			},
 			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
@@ -189,7 +189,7 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 				},
 			},
 			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-				IngressClass: lo.ToPtr("kong"),
+				IngressClass: lo.ToPtr(ingressClass),
 				WatchNamespaces: &operatorv2beta1.WatchNamespaces{
 					Type: operatorv2beta1.WatchNamespacesTypeList,
 					List: []string{
@@ -391,8 +391,8 @@ func TestControlPlaneUpdate(t *testing.T) {
 			Name:      controlplaneName.Name,
 		},
 		Spec: gwtypes.ControlPlaneSpec{
-			ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-				IngressClass: lo.ToPtr("kong"),
+			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+				IngressClass: lo.ToPtr(ingressClass),
 			},
 			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
