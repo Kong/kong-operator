@@ -1,0 +1,74 @@
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: controller-manager-validations
+  annotations:
+    cert-manager.io/inject-ca-from: kong-system/gateway-operator-serving-cert
+webhooks:
+- admissionReviewVersions:
+  - v1beta1
+  clientConfig:
+    service:
+      namespace: kong-system
+      name: gateway-operator-webhook-service
+      port: 5443
+      # path: /validate
+  # NOTE: By default Kong's helm charts use Ignore for the failurePolicy
+  # e.g. https://github.com/Kong/charts/blob/fd9deb6ee34d9b9ac4ab4be2188d4564d0b655e5/charts/kong/values.yaml#L586
+  # but setting this to Fail here allows devs to see the errors sooner, during development.
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validations.kong.konghq.com
+  rules:
+  - apiGroups:
+    - configuration.konghq.com
+    apiVersions:
+    - '*'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - kongconsumers
+    - kongconsumergroups
+    - kongplugins
+    - kongclusterplugins
+    - kongingresses
+    - kongvaults
+    scope: '*'
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    # TODO: it tries to validate secret created by cert-manager, but KO is not ready to handle it.
+    # - secrets
+    - services
+    scope: '*'
+  - apiGroups:
+    - networking.k8s.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - ingresses
+    scope: '*'
+  - apiGroups:
+    - gateway.networking.k8s.io
+    apiVersions:
+    - v1alpha2
+    - v1beta1
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gateways
+    - httproutes
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10

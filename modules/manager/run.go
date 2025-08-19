@@ -45,6 +45,7 @@ import (
 
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
+	"github.com/kong/kong-operator/ingress-controller/validation2"
 	"github.com/kong/kong-operator/internal/telemetry"
 	"github.com/kong/kong-operator/internal/webhook/conversion"
 	"github.com/kong/kong-operator/modules/diagnostics"
@@ -335,6 +336,13 @@ func Run(
 		if err := conversion.SetupWebhooksWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to set up conversion webhook: %w", err)
 		}
+	}
+
+	// XXX:
+	if err := validation2.SetupAdmissionServer(
+		ctx, mgr, nil, nil,
+	); err != nil {
+		return fmt.Errorf("unable to set up admission server: %w", err)
 	}
 
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {

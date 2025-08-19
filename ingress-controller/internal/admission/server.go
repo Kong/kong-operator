@@ -24,13 +24,37 @@ var (
 )
 
 const (
-	DefaultAdmissionWebhookCertPath = "/admission-webhook/tls.crt"
-	DefaultAdmissionWebhookKeyPath  = "/admission-webhook/tls.key"
+	// https://github.com/kubernetes-sigs/controller-runtime/blob/3554729cfb3179c1a13f554b828d658d062dceb9/pkg/webhook/server.go#L81
+	DefaultAdmissionWebhookCertPath = "/tmp/k8s-webhook-server/serving-certs/tls.crt"
+	DefaultAdmissionWebhookKeyPath  = "/tmp/k8s-webhook-server/serving-certs/tls.key"
 )
 
 type Server struct {
 	s           *http.Server
 	certWatcher mo.Option[*certwatcher.CertWatcher]
+}
+
+func MakeTLSServer2(port int32, handler http.Handler) (*Server, error) {
+	const defaultHTTPReadHeaderTimeout = 10 * time.Second
+
+	watcher, err := certwatcher.New(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create CertWatcher: %w", err)
+	}
+
+	return &Server{
+		s: &http.Server{
+			Addr: fmt.Sprintf(":%d", port),
+			TLSConfig: &tls.Config{
+				MinVersion:     tls.VersionTLS12,
+				MaxVersion:     tls.VersionTLS13,
+				GetCertificate: watcher.GetCertificate,
+			},
+			Handler:           handler,
+			ReadHeaderTimeout: defaultHTTPReadHeaderTimeout,
+		},
+		certWatcher: mo.Some(watcher),
+	}, nil
 }
 
 func MakeTLSServer(config managercfg.AdmissionServerConfig, handler http.Handler) (*Server, error) {
@@ -55,7 +79,7 @@ func MakeTLSServer(config managercfg.AdmissionServerConfig, handler http.Handler
 func (s *Server) Start(ctx context.Context) error {
 	logger := ctrllog.FromContext(ctx)
 	go func() {
-		if err := s.s.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := s.s.ListenAndServeTLS(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error(err, "Failed to start admission server")
 		}
 	}()
@@ -75,6 +99,7 @@ func (s *Server) Start(ctx context.Context) error {
 	return s.s.Shutdown(ctx)
 }
 
+// TO REMOVE!!!
 func (s *Server) setupTLSConfig(sc managercfg.AdmissionServerConfig) (*tls.Config, error) {
 	var watcher *certwatcher.CertWatcher
 	var cert, key []byte
