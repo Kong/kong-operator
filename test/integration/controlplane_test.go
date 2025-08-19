@@ -120,6 +120,9 @@ func TestControlPlaneEssentials(t *testing.T) {
 	t.Log("verifying that the controlplane gets marked as provisioned")
 	require.Eventually(t, testutils.ControlPlaneIsProvisioned(t, GetCtx(), controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
+	t.Log("verifying that the controlplane gets marked as optionsValid")
+	require.Eventually(t, testutils.ControlPlaneIsOptionsValid(t, GetCtx(), controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
+
 	t.Run("webhook", func(t *testing.T) {
 		t.Skip("Skipping webhook tests for now, as they are not implemented yet for ControlPlane v2beta1, TODO: https://github.com/Kong/kong-operator/issues/1367")
 
