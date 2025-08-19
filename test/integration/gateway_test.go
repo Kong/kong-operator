@@ -525,11 +525,11 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 		expectedReplicasCount      int32
 	}{
 		{
-			name: "replicas=3",
+			name: "replicas=2",
 			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
-				Replicas: lo.ToPtr[int32](3),
+				Replicas: lo.ToPtr[int32](2),
 			},
-			expectedReplicasCount: 3,
+			expectedReplicasCount: 2,
 		},
 		{
 			name: "replicas=0",
@@ -539,11 +539,11 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 			expectedReplicasCount: 0,
 		},
 		{
-			name: "replicas=5",
+			name: "replicas=3",
 			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
-				Replicas: lo.ToPtr[int32](5),
+				Replicas: lo.ToPtr[int32](3),
 			},
-			expectedReplicasCount: 5,
+			expectedReplicasCount: 3,
 		},
 		{
 			name: "replicas=1",
@@ -553,16 +553,16 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 			expectedReplicasCount: 1,
 		},
 		{
-			name: "horizontal scaling with minReplicas=3",
+			name: "horizontal scaling with minReplicas=2",
 			dataplaneDeploymentOptions: operatorv1beta1.DeploymentOptions{
 				Scaling: &operatorv1beta1.Scaling{
 					HorizontalScaling: &operatorv1beta1.HorizontalScaling{
-						MinReplicas: lo.ToPtr[int32](3),
-						MaxReplicas: 5,
+						MinReplicas: lo.ToPtr[int32](2),
+						MaxReplicas: 4,
 					},
 				},
 			},
-			expectedReplicasCount: 3,
+			expectedReplicasCount: 2,
 		},
 	}
 	for _, tc := range testCases {
