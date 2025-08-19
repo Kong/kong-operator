@@ -5,6 +5,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -224,9 +225,202 @@ func TestReconciler_Reconcile(t *testing.T) {
 				_, err := reconciler.Reconcile(ctx, controlplaneReq)
 				require.NoError(t, err)
 			},
-			// TODO: add a test case for invalid ControlPlane options after the error
-			// `failed updating ControlPlane's status : controlplanes.gateway-operator.konghq.com "test-controlplane" not found` resolved.
-			// https://github.com/Kong/kong-operator/issues/2024
+		},
+		{
+			name: "secret label selector conflict",
+			controlplaneReq: reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: "test-namespace",
+					Name:      "test-controlplane",
+				},
+			},
+			controlplane: &ControlPlane{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
+					Kind:       "ControlPlane",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-controlplane",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
+					Finalizers: []string{
+						string(ControlPlaneFinalizerCleanupValidatingWebhookConfiguration),
+						string(ControlPlaneFinalizerCPInstanceTeardown),
+					},
+				},
+				Spec: gwtypes.ControlPlaneSpec{
+					DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+						Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+						Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+							Name: "test-dataplane",
+						},
+					},
+					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
+						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+							Type: operatorv2beta1.WatchNamespacesTypeAll,
+						},
+						ObjectFilters: &operatorv2beta1.ControlPlaneObjectFilters{
+							Secrets: &operatorv2beta1.ControlPlaneFilterForObjectType{
+								MatchLabels: map[string]string{
+									"some-key":        "some-value",
+									"conflicting-key": "another-value",
+								},
+							},
+						},
+					},
+				},
+				Status: gwtypes.ControlPlaneStatus{
+					DataPlane: &operatorv2beta1.ControlPlaneDataPlaneStatus{
+						Name: "test-dataplane",
+					},
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(kcfgcontrolplane.ConditionTypeProvisioned),
+							Status: metav1.ConditionTrue,
+						},
+						{
+							Type:   string(kcfgcontrolplane.ConditionTypeWatchNamespaceGrantValid),
+							Status: metav1.ConditionTrue,
+						},
+					},
+				},
+			},
+			dataplane: &operatorv1beta1.DataPlane{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
+					Kind:       "DataPlane",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-dataplane",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Containers: []corev1.Container{
+											{
+												Name:  consts.DataPlaneProxyContainerName,
+												Image: "kong:3.0",
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				Status: operatorv1beta1.DataPlaneStatus{
+					Conditions: []metav1.Condition{
+						{
+							Type:   string(kcfgdataplane.ReadyType),
+							Status: metav1.ConditionTrue,
+						},
+					},
+				},
+			},
+			dataplanePods: []client.Object{
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "dataplane-pod",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							"app": "test-dataplane",
+						},
+						CreationTimestamp: metav1.Now(),
+					},
+					Status: corev1.PodStatus{
+						PodIP: "1.2.3.4",
+					},
+				},
+			},
+			controlplaneSubResources: []client.Object{
+				&corev1.ServiceAccount{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-tls-secret",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							"app":                                "test-controlplane",
+							consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
+						},
+					},
+				},
+				&rbacv1.ClusterRole{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-serviceAccount",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							"app":                                "test-controlplane",
+							consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
+						},
+					},
+				},
+				&rbacv1.ClusterRoleBinding{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-clusterRole",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							"app":                                "test-controlplane",
+							consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
+						},
+					},
+				},
+				&corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-clusterRoleBin",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							"app":                                "test-controlplane",
+							consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
+						},
+					},
+				},
+			},
+			dataplaneSubResources: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-proxy-service",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: corev1.ClusterIPNone,
+					},
+				},
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-admin-service",
+						Namespace: "test-namespace",
+						Labels: map[string]string{
+							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+						},
+					},
+					Spec: corev1.ServiceSpec{
+						ClusterIP: corev1.ClusterIPNone,
+					},
+				},
+			},
+			testBody: func(t *testing.T, reconciler Reconciler, controlplaneReq reconcile.Request) {
+				ctx := t.Context()
+
+				reconciler.SecretLabelSelector = "conflicting-key"
+				// Since the finalizer and `status.dataplane` is filled,
+				// the reconcliliation loop should reach the step of validating control plane options.
+				_, err := reconciler.Reconcile(ctx, controlplaneReq)
+				require.NoError(t, err)
+				cp := &operatorv2beta1.ControlPlane{}
+				require.NoError(t, reconciler.Get(ctx, controlplaneReq.NamespacedName, cp))
+				require.Truef(t, lo.ContainsBy(cp.Status.Conditions, func(c metav1.Condition) bool {
+					return c.Type == string(kcfgcontrolplane.ConditionTypeOptionsValid) && c.Status == metav1.ConditionFalse
+				}), "OptionsValid condition should be False")
+			},
 		},
 	}
 
@@ -257,6 +451,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				NewClientBuilder().
 				WithScheme(scheme.Get()).
 				WithObjects(ObjectsToAdd...).
+				WithStatusSubresource(tc.controlplane).
 				Build()
 
 			reconciler := Reconciler{

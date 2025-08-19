@@ -145,6 +145,21 @@ func ControlPlaneIsProvisioned(t *testing.T, ctx context.Context, controlPlane t
 	}, clients.OperatorClient)
 }
 
+// ControlPlaneIsOptionsValid is a helper function for tests that returns a function
+// that can be used to check if a ControlPlane's options are valid.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func ControlPlaneIsOptionsValid(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *gwtypes.ControlPlane) bool {
+		for _, condition := range c.Status.Conditions {
+			if condition.Type == string(kcfgcontrolplane.ConditionTypeOptionsValid) &&
+				condition.Status == metav1.ConditionTrue {
+				return true
+			}
+		}
+		return false
+	}, clients.OperatorClient)
+}
+
 // ControlPlaneIsNotReady is a helper function for tests. It returns a function
 // that can be used to check if a ControlPlane is marked as not Ready.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
