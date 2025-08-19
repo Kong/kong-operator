@@ -21,7 +21,6 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
 	testhelpers "github.com/kong/kong-operator/ingress-controller/test/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 )
 
@@ -99,16 +98,12 @@ func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
 	defer cancel()
 
 	diagnosticsServerPort := testhelpers.GetFreePort(t)
-	webhookServerPort := testhelpers.GetFreePort(t)
-	webhookCert, webhookKey := certificate.MustGenerateCertPEMFormat(
-		certificate.WithDNSNames("localhost"),
-	)
+
 	ctx = ctrllog.IntoContext(ctx, testr.New(t))
 	t.Log("Running the manager")
 	m := SetupManager(ctx, t, manager.NewRandomID(), envcfg, AdminAPIOptFns(),
 		WithDefaultEnvTestsConfig(envcfg),
 		WithDiagnosticsServer(diagnosticsServerPort),
-		WithAdmissionWebhookEnabled(webhookKey, webhookCert, webhookServerPort),
 		WithTelemetry(ts.Endpoint(), 100*time.Millisecond),
 	)
 	go func() {

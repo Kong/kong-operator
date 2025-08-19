@@ -23,7 +23,7 @@ import (
 //
 // This works if the test runs against a KIND cluster, and does not work against cloud providers (like GKE).
 
-const AdmissionWebhookListenPort = 49023
+const AdmissionWebhookListenPort = 5433
 
 // GetAdmissionWebhookListenHost returns the host IP address depends on environment where the test is running.
 func GetAdmissionWebhookListenHost() string {

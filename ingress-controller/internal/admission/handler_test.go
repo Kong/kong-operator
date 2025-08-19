@@ -176,8 +176,8 @@ func TestHandleService(t *testing.T) {
 				},
 			}
 			handler := RequestHandler{
-				Validator: tt.validator,
-				Logger:    logr.Discard(),
+				validators: map[string]KongValidator{"test": tt.validator},
+				Logger:     logr.Discard(),
 			}
 
 			responseBuilder := NewResponseBuilder(k8stypes.UID(""))
@@ -358,11 +358,18 @@ func TestHandleSecret(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			logger := testr.NewWithOptions(t, testr.Options{Verbosity: logging.DebugLevel})
 			validator := KongFakeValidator{
-				Result:  tc.validatorOK,
-				Message: tc.validatorMessage,
-				Error:   tc.validatorError,
+				ReferenceIndexers: ctrlref.NewCacheIndexers(logger),
+				Result:            tc.validatorOK,
+				Message:           tc.validatorMessage,
+				Error:             tc.validatorError,
 			}
+			for _, obj := range tc.referrers {
+				err := validator.ReferenceIndexers.SetObjectReference(obj, tc.secret)
+				require.NoError(t, err)
+			}
+
 			raw, err := json.Marshal(tc.secret)
 			require.NoError(t, err)
 			request := admissionv1.AdmissionRequest{
@@ -373,17 +380,9 @@ func TestHandleSecret(t *testing.T) {
 				Operation: admissionv1.Update,
 			}
 
-			logger := testr.NewWithOptions(t, testr.Options{Verbosity: logging.DebugLevel})
-			referenceIndexer := ctrlref.NewCacheIndexers(logger)
-
 			handler := RequestHandler{
-				Validator:         validator,
-				Logger:            logger,
-				ReferenceIndexers: referenceIndexer,
-			}
-			for _, obj := range tc.referrers {
-				err := handler.ReferenceIndexers.SetObjectReference(obj, tc.secret)
-				require.NoError(t, err)
+				validators: map[string]KongValidator{"test": validator},
+				Logger:     logger,
 			}
 
 			responseBuilder := NewResponseBuilder(k8stypes.UID(""))

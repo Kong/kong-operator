@@ -96,9 +96,7 @@ func TestNewConfig(t *testing.T) {
 			GatewayToReconcile:                     managercfg.OptionalNamespacedName{},
 			SecretLabelSelector:                    nil,
 			ConfigMapLabelSelector:                 nil,
-			AdmissionServer: managercfg.AdmissionServerConfig{
-				ListenAddr: "off",
-			},
+
 			EnableProfiling:      false,
 			EnableConfigDumps:    false,
 			DumpSensitiveConfig:  false,
