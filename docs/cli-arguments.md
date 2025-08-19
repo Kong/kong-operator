@@ -117,6 +117,10 @@ rows:
     type: '`bool`'
     description: "Enable the Gateway API experimental features."
     default: '`false`'
+  - flag: '`--enable-validation-webhook`'
+    type: '`bool`'
+    description: "Enable the validation webhook."
+    default: '`true`'
   - flag: '`--enforce-config`'
     type: '`bool`'
     description: "Enforce the configuration on the generated cluster resources. If set to false, the operator will only enforce the configuration when the owner resource spec changes."

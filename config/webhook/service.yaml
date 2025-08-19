@@ -9,7 +9,12 @@ metadata:
 spec:
   ports:
     - port: 443
+      name: conversion
       protocol: TCP
       targetPort: 9443
+    - port: 5443
+      name: validation
+      protocol: TCP
+      targetPort: 5443
   selector:
     control-plane: controller-manager

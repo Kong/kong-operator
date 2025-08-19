@@ -232,10 +232,13 @@ func New(
 		return nil, fmt.Errorf("failed to create translator: %w", err)
 	}
 
-	setupLog.Info("Setting up admission server")
-	if err := m.setupAdmissionServer(ctx, referenceIndexers, translatorFeatureFlags, storer); err != nil {
-		return nil, err
-	}
+	//TODO: Per KIC instance
+	_ = referenceIndexers
+	_ = translatorFeatureFlags
+	_ = storer
+	_ = m.clientsManager
+
+	setupLog.Info("Registering admission validator")
 
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)
 	configurationChangeDetector := sendconfig.NewKongGatewayConfigurationChangeDetector(logger)

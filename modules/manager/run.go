@@ -45,6 +45,7 @@ import (
 
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
+	"github.com/kong/kong-operator/ingress-controller/validation"
 	"github.com/kong/kong-operator/internal/telemetry"
 	"github.com/kong/kong-operator/internal/webhook/conversion"
 	"github.com/kong/kong-operator/modules/diagnostics"
@@ -117,7 +118,8 @@ type Config struct {
 	KonnectControllersEnabled bool
 
 	// Webhook options.
-	ConversionWebhookEnabled bool
+	ConversionWebhookEnabled  bool
+	ValidationWebhookEnabled  bool
 }
 
 const (
@@ -152,6 +154,7 @@ func DefaultConfig() Config {
 		ControlPlaneControllerEnabled: true,
 		DataPlaneControllerEnabled:    true,
 		ConversionWebhookEnabled:      true,
+		ValidationWebhookEnabled:      true,
 	}
 }
 
@@ -334,6 +337,12 @@ func Run(
 	if cfg.ConversionWebhookEnabled {
 		if err := conversion.SetupWebhooksWithManager(mgr); err != nil {
 			return fmt.Errorf("unable to set up conversion webhook: %w", err)
+		}
+	}
+
+	if cfg.ValidationWebhookEnabled {
+		if err := validation.SetupAdmissionServer(ctx, mgr); err != nil {
+			return fmt.Errorf("unable to set up admission server: %w", err)
 		}
 	}
 
