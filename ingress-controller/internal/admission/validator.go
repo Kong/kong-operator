@@ -24,6 +24,7 @@ import (
 	ingressvalidation "github.com/kong/kong-operator/ingress-controller/internal/admission/validation/ingress"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	gatewaycontroller "github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
+	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
@@ -44,6 +45,10 @@ type KongValidator interface {
 	ValidateGateway(ctx context.Context, gateway gatewayapi.Gateway) (bool, string, error)
 	ValidateHTTPRoute(ctx context.Context, httproute gatewayapi.HTTPRoute) (bool, string, error)
 	ValidateIngress(ctx context.Context, ingress netv1.Ingress) (bool, string, error)
+
+	IngressClassMatcher(obj *metav1.ObjectMeta) bool
+	IngressV1ClassMatcher(ing *netv1.Ingress) bool
+	GetReferenceIndexers() ctrlref.CacheIndexers
 }
 
 // AdminAPIServicesProvider provides KongHTTPValidator with Kong Admin API services that are needed to perform
@@ -110,6 +115,10 @@ type KongHTTPValidator struct {
 	ManagerClient            client.Client
 	AdminAPIServicesProvider AdminAPIServicesProvider
 	TranslatorFeatures       translator.FeatureFlags
+	// ReferenceIndexers gets the resources (KongPlugin and KongClusterPlugin)
+	// referring the validated resource (Secret) to check the changes on
+	// referred Secret will produce invalid configuration of the plugins.
+	ReferenceIndexers ctrlref.CacheIndexers
 
 	ingressClassMatcher   func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool
 	ingressV1ClassMatcher func(*netv1.Ingress, annotations.ClassMatching) bool
@@ -126,6 +135,7 @@ func NewKongHTTPValidator(
 	servicesProvider AdminAPIServicesProvider,
 	translatorFeatures translator.FeatureFlags,
 	storer store.Storer,
+	referenceIndexer ctrlref.CacheIndexers,
 ) KongHTTPValidator {
 	return KongHTTPValidator{
 		Logger:                   logger,
@@ -135,10 +145,23 @@ func NewKongHTTPValidator(
 		ManagerClient:            managerClient,
 		AdminAPIServicesProvider: servicesProvider,
 		TranslatorFeatures:       translatorFeatures,
+		ReferenceIndexers:        referenceIndexer,
 
 		ingressClassMatcher:   annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
 		ingressV1ClassMatcher: annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
 	}
+}
+
+func (validator KongHTTPValidator) IngressClassMatcher(om *metav1.ObjectMeta) bool {
+	return validator.ingressClassMatcher(om, annotations.IngressClassKey, annotations.ExactClassMatch)
+}
+
+func (validator KongHTTPValidator) IngressV1ClassMatcher(ingress *netv1.Ingress) bool {
+	return validator.ingressV1ClassMatcher(ingress, annotations.ExactClassMatch)
+}
+
+func (validator KongHTTPValidator) GetReferenceIndexers() ctrlref.CacheIndexers {
+	return validator.ReferenceIndexers
 }
 
 // ValidateConsumer checks if consumer has a Username and a consumer with
@@ -150,11 +173,6 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	ctx context.Context,
 	consumer configurationv1.KongConsumer,
 ) (bool, string, error) {
-	// ignore consumers that are being managed by another controller
-	if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
-		return true, "", nil
-	}
-
 	errText, err := validator.ensureConsumerDoesNotExistInGateway(ctx, consumer.Username)
 	if err != nil || errText != "" {
 		return false, errText, err
@@ -228,11 +246,6 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 	ctx context.Context,
 	consumerGroup configurationv1beta1.KongConsumerGroup,
 ) (bool, string, error) {
-	// Ignore ConsumerGroups that are being managed by another controller.
-	if !validator.ingressClassMatcher(&consumerGroup.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
-		return true, "", nil
-	}
-
 	infoSvc, ok := validator.AdminAPIServicesProvider.GetInfoService()
 	if !ok {
 		return true, "", nil
@@ -456,12 +469,6 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 func (validator KongHTTPValidator) ValidateIngress(
 	ctx context.Context, ingress netv1.Ingress,
 ) (bool, string, error) {
-	// Ignore Ingresses that are being managed by another controller.
-	if !validator.ingressClassMatcher(&ingress.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) &&
-		!validator.ingressV1ClassMatcher(&ingress, annotations.ExactClassMatch) {
-		return true, "", nil
-	}
-
 	var routeValidator routeValidator = noOpRoutesValidator{}
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
 		routeValidator = routesSvc
@@ -480,10 +487,6 @@ func (noOpRoutesValidator) Validate(_ context.Context, _ *kong.Route) (bool, str
 }
 
 func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVault configurationv1alpha1.KongVault) (bool, string, error) {
-	// Ignore KongVaults that are being managed by another controller.
-	if !validator.ingressClassMatcher(&k8sKongVault.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
-		return true, "", nil
-	}
 	config, err := kongstate.RawConfigToConfiguration(k8sKongVault.Spec.Config.Raw)
 	if err != nil {
 		return false, fmt.Sprintf(ErrTextVaultConfigUnmarshalFailed, err), nil
@@ -617,18 +620,6 @@ func (m *managerClientConsumerGetter) ListAllConsumers(ctx context.Context) ([]c
 
 func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, entity configurationv1alpha1.KongCustomEntity) (bool, string, error) {
 	logger := validator.Logger.WithValues("namespace", entity.Namespace, "name", entity.Name, "kind", configurationv1alpha1.KongCustomEntityKind)
-	// If the spec.contollerName does not match the ingress class name,
-	// and the ingress class annotation does not match the ingress class name either,
-	// ignore it as it is not controlled by the controller.
-	if (!validator.ingressClassMatcher(&entity.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch)) &&
-		(!validator.ingressClassMatcher(&metav1.ObjectMeta{
-			Annotations: map[string]string{
-				annotations.IngressClassKey: entity.Spec.ControllerName,
-			},
-		}, annotations.IngressClassKey, annotations.ExactClassMatch)) {
-		return true, "", nil
-	}
-
 	fields, err := kongstate.RawConfigToConfiguration(entity.Spec.Fields.Raw)
 	if err != nil {
 		return false, fmt.Sprintf(ErrTextCustomEntityFieldsUnmarshalFailed, err), nil

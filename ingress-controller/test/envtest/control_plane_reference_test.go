@@ -20,8 +20,6 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
 	"github.com/kong/kong-operator/ingress-controller/test/helpers/conditions"
 )
 
@@ -40,11 +38,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 	ns := CreateNamespace(ctx, t, ctrlClient)
 
 	var (
-		webhookCert, webhookKey = certificate.MustGenerateCertPEMFormat(
-			certificate.WithDNSNames("localhost"),
-		)
-		admissionWebhookPort = helpers.GetFreePort(t)
-		kongContainer        = runKongEnterprise(ctx, t)
+		kongContainer = runKongEnterprise(ctx, t)
 	)
 
 	logs := RunManager(ctx, t, envcfg,
@@ -53,11 +47,9 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 		WithIngressClass(ingressClassName),
 		WithPublishService(ns.Name),
 		WithProxySyncInterval(100*time.Millisecond),
-		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
-	setupValidatingWebhookConfigurationForEnvTest(ctx, t, admissionWebhookPort, webhookCert, client.NewNamespacedClient(ctrlClient, ns.Name))
 
 	var (
 		kicCPRef = &commonv1alpha1.ControlPlaneRef{

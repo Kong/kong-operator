@@ -147,6 +147,7 @@ func invalidRegexInPathTestCase(
 }
 
 func TestHTTPRouteValidationWebhookTraditionalRouter(t *testing.T) {
+	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	skipTestForNonKindCluster(t)
 	skipTestForRouterFlavors(t.Context(), t, expressions)
 

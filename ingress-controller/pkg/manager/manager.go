@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/client-go/rest"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/admission"
 	"github.com/kong/kong-operator/ingress-controller/internal/clients"
 	managerinternal "github.com/kong/kong-operator/ingress-controller/internal/manager"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
@@ -107,4 +108,8 @@ func (m *Manager) GetClientsManager() *clients.AdminAPIClientsManager {
 // DiagnosticsHandler returns the diagnostics handler of the manager if available. Otherwise, it returns nil.
 func (m *Manager) DiagnosticsHandler() http.Handler {
 	return m.manager.DiagnosticsHandler()
+}
+
+func (m *Manager) KongValidator() admission.KongHTTPValidator {
+	return m.manager.KongValidator()
 }

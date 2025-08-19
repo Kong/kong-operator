@@ -3,3 +3,4 @@ kind: Kustomization
 
 resources:
 - dataplane_ports_validating_admission_policy.yaml
+- validating_webhook_configuration.yaml
