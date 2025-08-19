@@ -1,4 +1,4 @@
-package validation2
+package validation
 
 import (
 	"context"
@@ -39,7 +39,7 @@ func SetupAdmissionServer(
 		SupportRedirectPlugin:                   true,
 	}
 
-	srv, err := admission.MakeTLSServer2(5443, &admission.RequestHandler{
+	srv, err := admission.MakeTLSServer(5443, &admission.RequestHandler{
 		Validator: admission.NewKongHTTPValidator(
 			admissionLogger,
 			m.GetClient(),
