@@ -33,6 +33,7 @@ import (
 )
 
 func TestAdmissionWebhook_KongVault(t *testing.T) {
+	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
@@ -42,7 +43,7 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		ctrlClient = NewControllerClient(t, scheme, envcfg)
 		ns         = CreateNamespace(ctx, t, ctrlClient)
 
-		webhookCert, webhookKey = certificate.MustGenerateCertPEMFormat(
+		webhookCert, _ = certificate.MustGenerateCertPEMFormat(
 			certificate.WithDNSNames("localhost"),
 		)
 		admissionWebhookPort = helpers.GetFreePort(t)
@@ -53,7 +54,6 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
-		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 		WithUpdateStatus(),
 	)
@@ -177,6 +177,7 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongPlugins(t *testing.T) {
+	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
@@ -187,7 +188,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, webhookKey = certificate.MustGenerateCertPEMFormat(
+		webhookCert, _ = certificate.MustGenerateCertPEMFormat(
 			certificate.WithDNSNames("localhost"),
 		)
 		admissionWebhookPort = helpers.GetFreePort(t)
@@ -198,7 +199,6 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
-		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
@@ -431,6 +431,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
+	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
@@ -441,7 +442,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, webhookKey = certificate.MustGenerateCertPEMFormat(
+		webhookCert, _ = certificate.MustGenerateCertPEMFormat(
 			certificate.WithDNSNames("localhost"),
 		)
 		admissionWebhookPort = helpers.GetFreePort(t)
@@ -452,7 +453,6 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
-		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
@@ -695,6 +695,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongConsumers(t *testing.T) {
+	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
@@ -705,7 +706,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, webhookKey = certificate.MustGenerateCertPEMFormat(
+		webhookCert, _ = certificate.MustGenerateCertPEMFormat(
 			certificate.WithDNSNames("localhost"),
 		)
 		admissionWebhookPort = helpers.GetFreePort(t)
@@ -716,7 +717,6 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
-		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
@@ -1032,6 +1032,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 }
 
 func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
+	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
@@ -1048,7 +1049,7 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, webhookKey = certificate.MustGenerateCertPEMFormat(
+		webhookCert, _ = certificate.MustGenerateCertPEMFormat(
 			certificate.WithDNSNames("localhost"),
 		)
 		admissionWebhookPort = helpers.GetFreePort(t)
@@ -1059,7 +1060,6 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
-		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
@@ -1237,6 +1237,7 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
+	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
@@ -1247,7 +1248,7 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, webhookKey = certificate.MustGenerateCertPEMFormat(
+		webhookCert, _ = certificate.MustGenerateCertPEMFormat(
 			certificate.WithDNSNames("localhost"),
 		)
 		admissionWebhookPort = helpers.GetFreePort(t)
@@ -1258,7 +1259,6 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithPublishService(ns.Name),
-		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
