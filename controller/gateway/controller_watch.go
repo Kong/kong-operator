@@ -322,17 +322,3 @@ func (r *Reconciler) setDataPlaneGatewayConfigDefaults(gatewayConfig *GatewayCon
 		gatewayConfig.Spec.DataPlaneOptions = new(GatewayConfigDataPlaneOptions)
 	}
 }
-
-func (r *Reconciler) setControlPlaneGatewayConfigDefaults(
-	gateway *gwtypes.Gateway,
-	gatewayConfig *GatewayConfiguration,
-	dataplaneName,
-	dataplaneIngressServiceName,
-	dataplaneAdminServiceName,
-	controlPlaneName string,
-) {
-	// TODO(pmalek): add support for GatewayConfiguration v2 https://github.com/kong/kong-operator/issues/1728
-	// if gatewayConfig.Spec.ControlPlaneOptions == nil {
-	// Set defaults
-	// }
-}
