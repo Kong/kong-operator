@@ -367,7 +367,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			}
 
 			mgrCfg := managercfg.NewConfig(cfgOpts...)
-			mgrCfg.DisableRunningDiagnosticsServer = true
 
 			if err := r.scheduleInstance(ctx, logger, mgrID, mgrCfg); err != nil {
 				return r.handleScheduleInstanceOutcome(ctx, logger, cp, err)
@@ -392,7 +391,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		}
 
 		mgrCfg := managercfg.NewConfig(cfgOpts...)
-		mgrCfg.DisableRunningDiagnosticsServer = true
 
 		hashFromSpec, errSpec := managercfg.Hash(mgrCfg)
 		if errSpec != nil {
