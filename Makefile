@@ -500,6 +500,8 @@ docker.build:
 docker.push:
 	docker push $(IMG):$(TAG)
 
+# NOTE: Token-Permissions check has been disabled as it has been flaky on the CI.
+# TODO: https://github.com/Kong/kong-operator/issues/2089
 .PHONY: docker.run.openssf
 docker.run.openssf:
 	docker run --rm --env GITHUB_TOKEN=$(GITHUB_TOKEN) \
@@ -507,7 +509,7 @@ docker.run.openssf:
 		--repo=$(REPO) \
 		--commit=$(COMMIT) \
 		--show-details \
-		--checks=Pinned-Dependencies,License,CI-Tests,Token-Permissions,Dangerous-Workflow,Security-Policy,Binary-Artifacts,Code-Review
+		--checks=Pinned-Dependencies,License,CI-Tests,Dangerous-Workflow,Security-Policy,Binary-Artifacts,Code-Review
 
 # ------------------------------------------------------------------------------
 # Testing
