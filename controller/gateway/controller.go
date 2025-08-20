@@ -511,7 +511,7 @@ func (r *Reconciler) provisionDataPlane(
 		return nil, errWrap
 	}
 
-	expectedDataPlaneOptions.Extensions = extensions.MergeExtensionsForType(gatewayConfig.Spec.Extensions, expectedDataPlaneOptions.Extensions)
+	expectedDataPlaneOptions.Extensions = extensions.MergeExtensionsForDataPlane(gatewayConfig.Spec.Extensions, expectedDataPlaneOptions.Extensions)
 
 	if !dataPlaneSpecDeepEqual(&dataplane.Spec.DataPlaneOptions, expectedDataPlaneOptions) {
 		log.Trace(logger, "dataplane config is out of date")

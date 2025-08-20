@@ -1,8 +1,6 @@
 package extensions
 
 import (
-	"fmt"
-
 	"github.com/samber/lo"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
@@ -59,29 +57,17 @@ forLoop:
 	return append(newExtensions, extensions...)
 }
 
-// MergeExtensionsForType is a wrapper around MergeExtensions for places where
+// MergeExtensionsForDataPlane is a wrapper around MergeExtensions for places where
 // we do not have an actual object to work on.
-func MergeExtensionsForType[
-	extendable *operatorv1beta1.DataPlane,
-](
+func MergeExtensionsForDataPlane(
 	defaultExtensions, extensions []commonv1alpha1.ExtensionRef,
 ) []commonv1alpha1.ExtensionRef {
-	var obj extendable
-	switch any(obj).(type) {
-	case *operatorv1beta1.DataPlane:
-		dataplane := operatorv1beta1.DataPlane{
-			Spec: operatorv1beta1.DataPlaneSpec{
-				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
-					Extensions: extensions,
-				},
+	dataplane := operatorv1beta1.DataPlane{
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Extensions: extensions,
 			},
-		}
-		return MergeExtensions(defaultExtensions, &dataplane)
-	default:
-		panic(
-			fmt.Sprintf(
-				"MergeExtensionsForType: unsupported type %T, expected *operatorv1beta1.DataPlane or *gwtypes.ControlPlane", obj,
-			),
-		)
+		},
 	}
+	return MergeExtensions(defaultExtensions, &dataplane)
 }
