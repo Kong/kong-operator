@@ -25,7 +25,7 @@ import (
 // can be extended through extensions.
 type ExtendableT interface {
 	client.Object
-	withExtensions
+	Extendable
 	k8sutils.ConditionsAware
 
 	*operatorv1beta1.DataPlane |
@@ -33,7 +33,8 @@ type ExtendableT interface {
 		*operatorv2beta1.GatewayConfiguration
 }
 
-type withExtensions interface {
+// Extendable is an interface that provides access to the extensions of an object.
+type Extendable interface {
 	GetExtensions() []commonv1alpha1.ExtensionRef
 }
 
