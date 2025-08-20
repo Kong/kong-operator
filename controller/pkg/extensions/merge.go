@@ -14,9 +14,7 @@ import (
 // the user provides an extension that is also present in the default extensions,
 // the user's extension will be used.
 func MergeExtensions[
-	extendable interface {
-		GetExtensions() []commonv1alpha1.ExtensionRef
-	},
+	extendable Extendable,
 ](
 	defaultExtensions []commonv1alpha1.ExtensionRef,
 	extended extendable,
@@ -30,24 +28,21 @@ func MergeExtensions[
 			return ext.Group == dext.Group && ext.Kind == dext.Kind
 		}
 	}
-forLoop:
+
 	for _, dext := range defaultExtensions {
 		// Perform type specific checks for extensions.
 		// This is necessary to allow users to define extensions at the shared
 		// GatewayConfiguration level in the API and delegate the logic of merging
 		// them to the operator.
 
-		switch {
-		case dext.Group == operatorv1alpha1.SchemeGroupVersion.Group &&
-			dext.Kind == operatorv1alpha1.DataPlaneMetricsExtensionKind:
+		if dext.Group == operatorv1alpha1.SchemeGroupVersion.Group &&
+			dext.Kind == operatorv1alpha1.DataPlaneMetricsExtensionKind {
 
 			if _, ok := any(extended).(*operatorv1beta1.DataPlane); ok {
 				// Do not add the DataPlaneMetricsExtension to the DataPlane.
 				// That's a ControlPlane extension.
-				continue forLoop
+				continue
 			}
-
-		default:
 		}
 
 		if !lo.ContainsBy(extensions, extensionMatcher(dext)) {
