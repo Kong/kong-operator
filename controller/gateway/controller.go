@@ -26,6 +26,7 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	kcfggateway "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
@@ -358,7 +359,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
 	// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false.
-	controlplane := r.provisionControlPlane(ctx, logger, &gateway, gatewayConfig, dataplane, ingressServices[0], adminServices[0])
+	controlplane := r.provisionControlPlane(ctx, logger, &gateway, gatewayConfig)
 	// Set the ControlPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no ControlPlaneReady condition in the gateway
 	// * the new status is false and the previous status was true
@@ -510,7 +511,7 @@ func (r *Reconciler) provisionDataPlane(
 		return nil, errWrap
 	}
 
-	expectedDataPlaneOptions.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, expectedDataPlaneOptions.Extensions)
+	expectedDataPlaneOptions.Extensions = extensions.MergeExtensionsForDataPlane(gatewayConfig.Spec.Extensions, expectedDataPlaneOptions.Extensions)
 
 	if !dataPlaneSpecDeepEqual(&dataplane.Spec.DataPlaneOptions, expectedDataPlaneOptions) {
 		log.Trace(logger, "dataplane config is out of date")
@@ -552,9 +553,6 @@ func (r *Reconciler) provisionControlPlane(
 	logger logr.Logger,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *GatewayConfiguration,
-	dataplane *operatorv1beta1.DataPlane,
-	ingressService corev1.Service,
-	adminService corev1.Service,
 ) *gwtypes.ControlPlane {
 	logger = logger.WithName("controlplaneProvisioning")
 
@@ -574,7 +572,6 @@ func (r *Reconciler) provisionControlPlane(
 	count := len(controlplanes)
 	switch {
 	case count == 0:
-		r.setControlPlaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name, "")
 		err := r.createControlPlane(ctx, gateway, gatewayConfig)
 		if err != nil {
 			log.Debug(logger, fmt.Sprintf("controlplane creation failed - error: %v", err))
@@ -601,7 +598,6 @@ func (r *Reconciler) provisionControlPlane(
 
 	// If we continue, there is only one controlplane.
 	controlPlane = controlplanes[0].DeepCopy()
-	r.setControlPlaneGatewayConfigDefaults(gateway, gatewayConfig, dataplane.Name, ingressService.Name, adminService.Name, controlPlane.Name)
 
 	log.Trace(logger, "ensuring controlplane config is up to date")
 	// compare options of controlplane with controlplane options of gatewayconfiguration.
@@ -610,11 +606,17 @@ func (r *Reconciler) provisionControlPlane(
 	if gatewayConfig.Spec.ControlPlaneOptions != nil {
 		expectedControlPlaneOptions = gatewayConfig.Spec.ControlPlaneOptions.ControlPlaneOptions
 	}
+	expectedExtensions := []commonv1alpha1.ExtensionRef{}
+	if gatewayConfig.Spec.Extensions != nil {
+		expectedExtensions = gatewayConfig.Spec.Extensions
+	}
 
-	if !controlPlaneSpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, &expectedControlPlaneOptions) {
+	if !controlPlaneSpecDeepEqual(&controlPlane.Spec.ControlPlaneOptions, &expectedControlPlaneOptions) ||
+		reflect.DeepEqual(controlPlane.Spec.Extensions, expectedExtensions) {
 		log.Trace(logger, "controlplane config is out of date")
 		controlplaneOld := controlPlane.DeepCopy()
 		controlPlane.Spec.ControlPlaneOptions = expectedControlPlaneOptions
+		controlPlane.Spec.Extensions = expectedExtensions
 		if err := r.Patch(ctx, controlPlane, client.MergeFrom(controlplaneOld)); err != nil {
 			k8sutils.SetCondition(
 				createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),

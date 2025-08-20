@@ -23,7 +23,7 @@ import (
 )
 
 func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1608")
+	t.Parallel()
 
 	createExtensionRefWithoutNamespace := func(extRefName string) commonv1alpha1.ExtensionRef {
 		return commonv1alpha1.ExtensionRef{
@@ -41,8 +41,7 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 	)
 
 	ctx := GetCtx()
-	env := GetEnv()
-	namespace, cleaner := osshelpers.SetupTestEnv(t, ctx, env)
+	namespace, cleaner := osshelpers.SetupTestEnv(t, ctx, GetEnv())
 
 	clients := GetClients()
 	operatorClient := clients.OperatorClient
@@ -90,6 +89,7 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 	gatewayConfig := &operatorv2beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "gwconfig-",
+			Namespace:    namespace.Name,
 		},
 		Spec: operatorv2beta1.GatewayConfigurationSpec{
 			DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
@@ -114,9 +114,15 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 					},
 				},
 			},
-
-			// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
-			// https://github.com/kong/kong-operator/issues/1728
+			Extensions: []commonv1alpha1.ExtensionRef{
+				{
+					Kind:  "DataPlaneMetricsExtension",
+					Group: operatorv1alpha1.SchemeGroupVersion.Group,
+					NamespacedRef: commonv1alpha1.NamespacedRef{
+						Name: dbMetricExt1.Name,
+					},
+				},
+			},
 		},
 	}
 	gatewayConfig, err = operatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(ctx, gatewayConfig, metav1.CreateOptions{})

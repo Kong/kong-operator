@@ -63,7 +63,7 @@ func (r *Reconciler) createDataPlane(ctx context.Context,
 		return nil, err
 	}
 
-	dataplane.Spec.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, dataplane.Spec.Extensions)
+	dataplane.Spec.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, dataplane)
 
 	k8sutils.SetOwnerForObject(dataplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(dataplane)
@@ -94,7 +94,7 @@ func (r *Reconciler) createControlPlane(
 		controlplane.Spec.ControlPlaneOptions = gatewayConfig.Spec.ControlPlaneOptions.ControlPlaneOptions
 	}
 
-	controlplane.Spec.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, controlplane.Spec.Extensions)
+	controlplane.Spec.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, controlplane)
 
 	k8sutils.SetOwnerForObject(controlplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(controlplane)
