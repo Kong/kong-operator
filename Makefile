@@ -34,6 +34,12 @@ LDFLAGS_METADATA ?= \
 	-X $(REPO)/modules/manager/metadata.repo=$(REPO_INFO) \
 	-X $(REPO)/modules/manager/metadata.repoURL=$(REPO_URL)
 
+LDFLAGS_METADATA_KIC ?= \
+	-X $(REPO)/ingress-controller/pkg/metadata.Release=$(TAG) \
+	-X $(REPO)/ingress-controller/pkg/metadata.Commit=$(COMMIT) \
+	-X $(REPO)/ingress-controller/pkg/metadata.Repo=$(REPO_INFO) \
+	-X $(REPO)/ingress-controller/pkg/metadata.ProjectURL=$(REPO_URL)
+
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
 # ------------------------------------------------------------------------------
@@ -230,7 +236,7 @@ build.operator.debug:
 .PHONY: _build.operator
 _build.operator:
 	go build -o bin/manager $(GCFLAGS) \
-		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA) $(LDFLAGS_METADATA_KIC)" \
 		cmd/main.go
 
 .PHONY: build
@@ -582,7 +588,7 @@ _test.integration: gotestsum download.telepresence
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 	$(GOTESTSUM) -- $(GOTESTFLAGS) \
 	-timeout $(INTEGRATION_TEST_TIMEOUT) \
-	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
+	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA) $(LDFLAGS_METADATA_KIC)" \
 	-race \
 	-coverprofile=$(COVERPROFILE) \
 	./test/integration/...
@@ -605,7 +611,7 @@ _test.e2e: gotestsum
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-timeout $(E2E_TEST_TIMEOUT) \
-		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA) $(LDFLAGS_METADATA_KIC)" \
 		-race \
 		./test/e2e/...
 
@@ -624,7 +630,7 @@ _test.conformance: gotestsum download.telepresence
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-timeout $(CONFORMANCE_TEST_TIMEOUT) \
-		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
+		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA) $(LDFLAGS_METADATA_KIC)" \
 		-race \
 		-parallel $(PARALLEL) \
 		$(TEST_SUITE_PATH)

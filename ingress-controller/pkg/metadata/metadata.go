@@ -52,5 +52,5 @@ func projectNameFromRepo(repo string) string {
 }
 
 func UserAgent() string {
-	return "kong-ingress-controller/" + Release
+	return "kong-operator/" + Release
 }
