@@ -93,7 +93,7 @@ func (r *Reconciler) ensureDataPlaneAddressesStatus(
 // ConfigMap is created and mounted. The DataPlane manages its lifecycle. It returns a slice
 // of custom plugins that are intended to be used to generate a Deployment.
 func ensureMappedConfigMapToKongPluginInstallationForDataPlane(
-	ctx context.Context, logger logr.Logger, c client.Client, dataplane *operatorv1beta1.DataPlane,
+	ctx context.Context, logger logr.Logger, c client.Client, dataplane *operatorv1beta1.DataPlane, configMapLabelSelector string,
 ) (cps []customPlugin, requeue bool, err error) {
 	configMapsOwned, err := findCustomPluginConfigMapsOwnedByDataPlane(ctx, c, dataplane)
 	if err != nil {
@@ -109,7 +109,7 @@ func ensureMappedConfigMapToKongPluginInstallationForDataPlane(
 
 		var cp customPlugin
 		cp, requeue, err = populateDedicatedConfigMapForKongPluginInstallation(
-			ctx, logger, c, configMapsOwned, kpiNN, dataplane,
+			ctx, logger, c, configMapsOwned, kpiNN, dataplane, configMapLabelSelector,
 		)
 		if err != nil || requeue {
 			return nil, requeue, err
@@ -148,6 +148,7 @@ func populateDedicatedConfigMapForKongPluginInstallation(
 	cms []corev1.ConfigMap,
 	kpiNN types.NamespacedName,
 	dataplane *operatorv1beta1.DataPlane,
+	configMapLabelSelector string,
 ) (cp customPlugin, requeue bool, err error) {
 	kpi, ready, err := verifyKPIReadinessForDataPlane(ctx, logger, c, dataplane, kpiNN)
 	if err != nil {
@@ -178,6 +179,7 @@ func populateDedicatedConfigMapForKongPluginInstallation(
 		log.Trace(logger, "Create new ConfigMap for KongPluginInstallation")
 		cm.GenerateName = dataplane.Name + "-"
 		cm.Namespace = dataplane.Namespace
+		k8sresources.SetLabel(&cm, configMapLabelSelector, "true")
 		k8sutils.SetOwnerForObject(&cm, dataplane)
 		k8sresources.LabelObjectAsDataPlaneManaged(&cm)
 		k8sresources.AnnotateConfigMapWithKongPluginInstallation(&cm, kpi)

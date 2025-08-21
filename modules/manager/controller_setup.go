@@ -427,6 +427,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				SecretLabelSelector:      c.SecretLabelSelector,
+				ConfigMapLabelSelector:   c.ConfigMapLabelSelector,
 				DefaultImage:             consts.DefaultDataPlaneImage,
 				KonnectEnabled:           c.KonnectControllersEnabled,
 				EnforceConfig:            c.EnforceConfig,
@@ -451,6 +452,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 					ClusterCAKeyConfig:       clusterCAKeyConfig,
 					SecretLabelSelector:      c.SecretLabelSelector,
+					ConfigMapLabelSelector:   c.ConfigMapLabelSelector,
 					DefaultImage:             consts.DefaultDataPlaneImage,
 					KonnectEnabled:           c.KonnectControllersEnabled,
 					EnforceConfig:            c.EnforceConfig,
@@ -504,10 +506,11 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.KongPluginInstallationControllerEnabled,
 			Controller: &kongplugininstallation.Reconciler{
-				CacheSyncTimeout: c.CacheSyncTimeout,
-				Client:           mgr.GetClient(),
-				Scheme:           mgr.GetScheme(),
-				LoggingMode:      c.LoggingMode,
+				CacheSyncTimeout:       c.CacheSyncTimeout,
+				Client:                 mgr.GetClient(),
+				Scheme:                 mgr.GetScheme(),
+				LoggingMode:            c.LoggingMode,
+				ConfigMapLabelSelector: c.ConfigMapLabelSelector,
 			},
 		},
 		// ControlPlaneExtensions controller

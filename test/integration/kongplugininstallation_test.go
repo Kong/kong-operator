@@ -28,12 +28,13 @@ import (
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 
+	"github.com/kong/kong-operator/modules/manager/config"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test/helpers"
 )
 
 func TestKongPluginInstallationEssentials(t *testing.T) {
-	t.Skip("skipping as this test requires changed in the GatewayConfiguration API: https://github.com/kong/kong-operator/issues/1367")
+	t.Parallel()
 
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 	t.Log("this test accesses container registries on public internet")
@@ -128,9 +129,8 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 		namespaceForSecret := createRandomNamespace(t)
 		kpiPrivate, err = GetClients().OperatorClient.GatewayOperatorV1alpha1().KongPluginInstallations(kpiPrivateNN.Namespace).Get(GetCtx(), kpiPrivateNN.Name, metav1.GetOptions{})
 		require.NoError(t, err)
-		const kindSecret = gatewayv1.Kind("Secret")
 		secretRef := gatewayv1.SecretObjectReference{
-			Kind:      lo.ToPtr(kindSecret),
+			Kind:      lo.ToPtr(gatewayv1.Kind("Secret")),
 			Namespace: lo.ToPtr(gatewayv1.Namespace(namespaceForSecret)),
 			Name:      "kong-plugin-image-registry-credentials",
 		}
@@ -156,7 +156,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 			Spec: gatewayv1beta1.ReferenceGrantSpec{
 				To: []gatewayv1beta1.ReferenceGrantTo{
 					{
-						Kind: kindSecret,
+						Kind: gatewayv1.Kind("Secret"),
 						Name: lo.ToPtr(secretRef.Name),
 					},
 				},
@@ -186,6 +186,9 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 		secret := corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: string(secretRef.Name),
+				Labels: map[string]string{
+					config.DefaultSecretLabelSelector: "true",
+				},
 			},
 			Type: corev1.SecretTypeDockerConfigJson,
 			StringData: map[string]string{

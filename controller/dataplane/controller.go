@@ -42,11 +42,14 @@ type Reconciler struct {
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
 	SecretLabelSelector      string
-	DefaultImage             string
-	KonnectEnabled           bool
-	EnforceConfig            bool
-	LoggingMode              logging.Mode
-	ValidateDataPlaneImage   bool
+	// ConfigMapLabelSelector is the label selector configured at the oprator level.
+	// When not empty, it is used as the config map label selector of all reconcilers.
+	ConfigMapLabelSelector string
+	DefaultImage           string
+	KonnectEnabled         bool
+	EnforceConfig          bool
+	LoggingMode            logging.Mode
+	ValidateDataPlaneImage bool
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -195,7 +198,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "ensuring generation of deployment configuration for KongPluginInstallations configured for DataPlane")
-	kpisForDeployment, requeue, err := ensureMappedConfigMapToKongPluginInstallationForDataPlane(ctx, logger, r.Client, dataplane)
+	kpisForDeployment, requeue, err := ensureMappedConfigMapToKongPluginInstallationForDataPlane(ctx, logger, r.Client, dataplane, r.ConfigMapLabelSelector)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("cannot ensure KongPluginInstallation for DataPlane: %w", err)
 	}
