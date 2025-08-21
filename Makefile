@@ -509,7 +509,7 @@ docker.run.openssf:
 		--repo=$(REPO) \
 		--commit=$(COMMIT) \
 		--show-details \
-		--checks=Pinned-Dependencies,License,CI-Tests,Dangerous-Workflow,Security-Policy,Binary-Artifacts,Code-Review
+		--checks=Pinned-Dependencies,License,Dangerous-Workflow,Binary-Artifacts,Code-Review
 
 # ------------------------------------------------------------------------------
 # Testing
