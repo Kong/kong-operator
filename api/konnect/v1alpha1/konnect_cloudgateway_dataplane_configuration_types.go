@@ -25,6 +25,7 @@ func init() {
 // +kubebuilder:printcolumn:name="ID",description="Konnect ID",type=string,JSONPath=`.status.id`
 // +kubebuilder:printcolumn:name="ControlPlaneID",description="ControlPlane ID",type=string,JSONPath=`.status.controlPlaneID`
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +apireference:kgo:include
 // +kong:channels=gateway-operator
 type KonnectCloudGatewayDataPlaneGroupConfiguration struct {

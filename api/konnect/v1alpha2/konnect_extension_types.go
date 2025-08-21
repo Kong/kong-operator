@@ -41,6 +41,7 @@ const (
 // +kubebuilder:object:generate=true
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is Ready to be used",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.konnect.controlPlane.ref == self.spec.konnect.controlPlane.ref", message="spec.konnect.controlPlane.ref is immutable."
 // +apireference:kgo:include
 // +kong:channels=gateway-operator
