@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	prefix      = "kic"
+	prefix      = "ko-ingress-controller"
 	SignalStart = prefix + "-start"
 	SignalPing  = prefix + "-ping"
 )

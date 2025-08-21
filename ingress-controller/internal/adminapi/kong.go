@@ -18,7 +18,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/versions"
 	ingresserrors "github.com/kong/kong-operator/ingress-controller/pkg/errors"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/pkg/metadata"
+	"github.com/kong/kong-operator/modules/manager/metadata"
 )
 
 type KongGatewayUnsupportedVersionError struct {
@@ -41,7 +41,7 @@ func NewKongAPIClient(adminURL string, kongAdminAPIConfig managercfg.AdminAPICli
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
 	}
-	client.UserAgent = metadata.UserAgent()
+	client.UserAgent = metadata.Metadata().UserAgent()
 	return client, nil
 }
 

@@ -9,7 +9,7 @@ import (
 
 	"github.com/kong/kong-operator/ingress-controller/internal/konnect/nodes"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/pkg/metadata"
+	"github.com/kong/kong-operator/modules/manager/metadata"
 )
 
 type mockNodesServer struct {
@@ -23,7 +23,7 @@ func newMockNodesServer(t *testing.T) *mockNodesServer {
 }
 
 func (m *mockNodesServer) ServeHTTP(_ http.ResponseWriter, r *http.Request) {
-	require.Equal(m.t, metadata.UserAgent(), r.Header.Get("User-Agent"))
+	require.Equal(m.t, metadata.Metadata().UserAgent(), r.Header.Get("User-Agent"))
 }
 
 func TestNodesClientUserAgent(t *testing.T) {

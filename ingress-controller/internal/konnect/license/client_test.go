@@ -14,7 +14,7 @@ import (
 	konnectlicense "github.com/kong/kong-operator/ingress-controller/internal/konnect/license"
 	"github.com/kong/kong-operator/ingress-controller/internal/license"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/pkg/metadata"
+	"github.com/kong/kong-operator/modules/manager/metadata"
 )
 
 type mockKonnectLicenseServer struct {
@@ -32,7 +32,7 @@ func newMockKonnectLicenseServer(t *testing.T, response []byte, statusCode int) 
 }
 
 func (m *mockKonnectLicenseServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	require.Equal(m.t, metadata.UserAgent(), r.Header.Get("User-Agent"))
+	require.Equal(m.t, metadata.Metadata().UserAgent(), r.Header.Get("User-Agent"))
 	w.WriteHeader(m.statusCode)
 	_, _ = w.Write(m.response)
 }

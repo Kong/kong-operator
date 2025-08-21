@@ -293,7 +293,7 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 	// non-OpenShift clusters. output for non-OpenShift clusters should not include an OpenShift version.
 	expectedReport := fmt.Sprintf(
 		"<14>"+
-			"signal=kic-ping;"+
+			"signal=ko-ingress-controller-ping;"+
 			"db=off;"+
 			"feature-fallbackconfiguration=false;"+
 			"feature-fillids=true;"+
