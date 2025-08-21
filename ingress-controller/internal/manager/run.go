@@ -46,7 +46,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
 	"github.com/kong/kong-operator/ingress-controller/internal/versions"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/pkg/metadata"
+	"github.com/kong/kong-operator/modules/manager/metadata"
 )
 
 // -----------------------------------------------------------------------------
@@ -98,7 +98,7 @@ func New(
 	}
 	diagnosticsClient := m.setupDiagnostics(ctx, c)
 	setupLog := logger.WithName("setup")
-	setupLog.Info("Starting controller manager", "release", metadata.Release, "repo", metadata.Repo, "commit", metadata.Commit)
+	setupLog.Info("Starting controller manager", "release", metadata.Metadata().Release, "repo", metadata.Metadata().Repo, "commit", metadata.Metadata().Commit)
 	setupLog.Info("The ingress class name has been set", "value", c.IngressClassName)
 
 	gateway.SetControllerName(gatewayapi.GatewayController(c.GatewayAPIControllerName))
@@ -430,7 +430,7 @@ func setupKonnectNodeAgentWithMgr(
 	}
 	agent := konnect.NewNodeAgent(
 		resolveControllerHostnameForKonnect(logger),
-		metadata.UserAgent(),
+		metadata.Metadata().UserAgent(),
 		c.Konnect.RefreshNodePeriod,
 		logger,
 		konnectNodesAPIClient,

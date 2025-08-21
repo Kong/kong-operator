@@ -6,7 +6,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/ingress-controller/pkg/metadata"
+	"github.com/kong/kong-operator/modules/manager/metadata"
 )
 
 // GetKubeconfig returns a Kubernetes REST config object based on the configuration.
@@ -26,7 +26,7 @@ func GetKubeconfig(c managercfg.Config) (*rest.Config, error) {
 	}
 
 	// Set the user agent so it's possible to identify the controller in the API server logs.
-	config.UserAgent = metadata.UserAgent()
+	config.UserAgent = metadata.Metadata().UserAgent()
 
 	// Configure K8s client rate-limiting.
 	config.QPS = float32(c.APIServerQPS)

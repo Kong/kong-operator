@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/konnect/sdk"
-	"github.com/kong/kong-operator/ingress-controller/pkg/metadata"
+	"github.com/kong/kong-operator/modules/manager/metadata"
 )
 
 type mockControlPlanesServer struct {
@@ -26,11 +26,11 @@ func newMockControlPlanesServer(t *testing.T) *mockControlPlanesServer {
 func (m *mockControlPlanesServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
-		require.Equal(m.t, metadata.UserAgent(), r.Header.Get("User-Agent"))
+		require.Equal(m.t, metadata.Metadata().UserAgent(), r.Header.Get("User-Agent"))
 		w.WriteHeader(http.StatusCreated)
 
 	case http.MethodDelete:
-		require.Equal(m.t, metadata.UserAgent(), r.Header.Get("User-Agent"))
+		require.Equal(m.t, metadata.Metadata().UserAgent(), r.Header.Get("User-Agent"))
 
 	}
 }

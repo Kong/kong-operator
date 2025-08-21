@@ -17,8 +17,8 @@ import (
 	"sigs.k8s.io/yaml"
 
 	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
-	"github.com/kong/kong-operator/ingress-controller/pkg/metadata"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
+	"github.com/kong/kong-operator/modules/manager/metadata"
 )
 
 var skippedTestsForTraditionalRoutes = []string{
@@ -107,12 +107,12 @@ func TestGatewayConformance(t *testing.T) {
 		suite.GatewayGRPCConformanceProfileName,
 	)
 	opts.Implementation = conformancev1.Implementation{
-		Organization: metadata.Organization,
-		Project:      metadata.ProjectName,
-		URL:          metadata.ProjectURL,
-		Version:      metadata.Release,
+		Organization: metadata.Metadata().Organization,
+		Project:      metadata.Metadata().ProjectName,
+		URL:          metadata.Metadata().RepoURL,
+		Version:      metadata.Metadata().Release,
 		Contact: []string{
-			path.Join(metadata.ProjectURL, "/issues/new/choose"),
+			path.Join(metadata.Metadata().RepoURL, "/issues/new/choose"),
 		},
 	}
 	cSuite, err := suite.NewConformanceTestSuite(opts)

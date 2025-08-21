@@ -11,8 +11,8 @@ import (
 
 	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/manager/kongconfig"
-	"github.com/kong/kong-operator/ingress-controller/pkg/metadata"
 	"github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
+	"github.com/kong/kong-operator/modules/manager/metadata"
 )
 
 // GatewayClientsProvider is an interface that provides clients for the currently discovered Gateway instances.
@@ -82,7 +82,7 @@ func SetupAnonymousReports(
 	}
 
 	fixedPayload := types.Payload{
-		"v":  metadata.Release,
+		"v":  metadata.Metadata().Release,
 		"kv": kongVersion,
 		"db": kongDB,
 		"rf": routerFlavor,

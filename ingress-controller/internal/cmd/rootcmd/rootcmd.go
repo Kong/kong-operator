@@ -9,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/cmd/rootcmd/config"
-	"github.com/kong/kong-operator/ingress-controller/pkg/metadata"
+	"github.com/kong/kong-operator/modules/manager/metadata"
 )
 
 // Execute is the entry point to the controller manager.
@@ -50,9 +50,9 @@ func GetVersionCmd() *cobra.Command {
 				Commit  string `json:"commit"`
 			}
 			out, err := json.Marshal(Version{
-				Release: metadata.Release,
-				Repo:    metadata.Repo,
-				Commit:  metadata.Commit,
+				Release: metadata.Metadata().Release,
+				Repo:    metadata.Metadata().Repo,
+				Commit:  metadata.Metadata().Commit,
 			})
 			if err != nil {
 				return fmt.Errorf("failed to print version information: %w", err)
