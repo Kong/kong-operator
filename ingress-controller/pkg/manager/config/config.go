@@ -69,7 +69,7 @@ type Config struct {
 	// KubeRestConfig takes precedence over any fields related to what it configures,
 	// such as APIServerHost, APIServerQPS, etc. It's intended to be used when the controller
 	// is run as a part of Kong Operator. It bypass the mechanism of constructing this config.
-	KubeRestConfig *rest.Config
+	KubeRestConfig *rest.Config `json:"-"`
 
 	// Kubernetes configurations
 	KubeconfigPath           string
@@ -159,7 +159,7 @@ type Config struct {
 	Konnect KonnectConfig
 
 	// AnonymousReportsFixedPayloadCustomizer allows customization of anonymous telemetry reports sent by the controller.
-	AnonymousReportsFixedPayloadCustomizer types.PayloadCustomizer
+	AnonymousReportsFixedPayloadCustomizer types.PayloadCustomizer `json:"-"`
 	// Override default telemetry settings (e.g. for testing). They aren't exposed in the CLI.
 	SplunkEndpoint                   string
 	SplunkEndpointInsecureSkipVerify bool
