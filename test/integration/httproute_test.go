@@ -17,6 +17,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 
+	"github.com/kong/kong-operator/modules/manager/config"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/certificate"
@@ -118,8 +119,6 @@ func TestHTTPRoute(t *testing.T) {
 }
 
 func TestHTTPRouteWithTLS(t *testing.T) {
-	t.Skip("skipping as this test requires changed after changes to ControlPlane API in v2beta1")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -152,6 +151,9 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: namespace.Name,
 			Name:      host,
+			Labels: map[string]string{
+				config.DefaultSecretLabelSelector: "true",
+			},
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
