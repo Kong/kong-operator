@@ -128,15 +128,15 @@ const (
 func setFlagFromEnvVar(f *flag.Flag) {
 	envVarFlagName := strings.ToUpper(strings.ReplaceAll(f.Name, "-", "_"))
 
+	envKey := envVarFlagPrefix + envVarFlagName
 	deprecatedEnvKey := envDeprecatedVarFlagPrefix + envVarFlagName
 	if envValue, envSet := os.LookupEnv(deprecatedEnvKey); envSet {
-		fmt.Printf("WARN: %q env variable is deprecated, please use %q instead\n", deprecatedEnvKey, deprecatedEnvKey)
+		fmt.Printf("WARN: %q env variable is deprecated, please use %q instead\n", deprecatedEnvKey, envKey)
 		if err := f.Value.Set(envValue); err != nil {
 			panic(fmt.Errorf("environment binding failed for variable %s: %w", deprecatedEnvKey, err))
 		}
 	}
 
-	envKey := envVarFlagPrefix + envVarFlagName
 	if envValue, envSet := os.LookupEnv(envKey); envSet {
 		if err := f.Value.Set(envValue); err != nil {
 			panic(fmt.Errorf("environment binding failed for variable %s: %w", envKey, err))
