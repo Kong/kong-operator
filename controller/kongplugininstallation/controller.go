@@ -43,6 +43,9 @@ type Reconciler struct {
 	CacheSyncTimeout time.Duration
 	Scheme           *runtime.Scheme
 	LoggingMode      logging.Mode
+	// ConfigMapLabelSelector is the label selector configured at the oprator level.
+	// When not empty, it is used as the config map label selector of all reconcilers.
+	ConfigMapLabelSelector string
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -174,6 +177,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		} else {
 			cm.GenerateName = kpi.Name + "-"
 		}
+		k8sresources.SetLabel(&cm, r.ConfigMapLabelSelector, "true")
 		k8sresources.LabelObjectAsKongPluginInstallationManaged(&cm)
 		k8sresources.AnnotateConfigMapWithKongPluginInstallation(&cm, kpi)
 		cm.Namespace = kpi.Namespace
