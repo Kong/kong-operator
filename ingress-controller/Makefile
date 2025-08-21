@@ -28,12 +28,6 @@ ifeq (Darwin,$(shell uname -s))
 LDFLAGS_COMMON ?= -extldflags=-Wl,-ld_classic
 endif
 
-LDFLAGS_METADATA ?= \
-	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/metadata.Release=$(TAG) \
-	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/metadata.Commit=$(COMMIT) \
-	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/metadata.Repo=$(REPO_INFO) \
-	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/metadata.ProjectURL=$(REPO_URL)
-
 # ------------------------------------------------------------------------------
 # Configuration - Tooling
 # ------------------------------------------------------------------------------
@@ -191,7 +185,6 @@ _build.fips:
 .PHONY: _build.template
 _build.template:
 	go build -o bin/manager \
-		-ldflags "-s -w $(LDFLAGS_METADATA)" \
 		${MAIN}
 
 .PHONY: _build.debug
@@ -203,7 +196,6 @@ _build.template.debug:
 	go build -o bin/manager-debug \
 		-trimpath \
 		-gcflags=all="-N -l" \
-		-ldflags "$(LDFLAGS_METADATA)" \
 		${MAIN}
 
 .PHONY: fmt
@@ -388,7 +380,7 @@ test.conformance: _check.container.environment go-junit-report
 		TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
 		GOFLAGS="-tags=conformance_tests" \
 		go test \
-		-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS_METADATA)" \
+		-ldflags "$(LDFLAGS_COMMON)" \
 		-v \
 		-race $(GOTESTFLAGS) \
 		-timeout $(INTEGRATION_TEST_TIMEOUT) \
