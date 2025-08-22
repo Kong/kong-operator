@@ -1,14 +1,23 @@
 package config_test
 
 import (
+	"encoding/json"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/rest"
 
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
 )
+
+func TestConfigJSONMarshal(t *testing.T) {
+	_, err := json.Marshal(managercfg.Config{
+		KubeRestConfig: &rest.Config{},
+	})
+	require.NoError(t, err)
+}
 
 func TestConfigResolve(t *testing.T) {
 	t.Run("Admin Token Path", func(t *testing.T) {
