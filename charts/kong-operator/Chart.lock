@@ -8,5 +8,8 @@ dependencies:
 - name: gwapi-experimental-crds
   repository: ""
   version: 1.3.0
-digest: sha256:9c547c49b1dac72fdb9c1dcdad272950ea19950cba321122a0d3aff7ee3159a8
-generated: "2025-05-20T13:33:04.789053+02:00"
+- name: ko-crds
+  repository: ""
+  version: 1.0.0
+digest: sha256:1d4c421a46207809afa3bead910a73277aa6461270113f9f5743b7e6822d13b0
+generated: "2025-08-24T16:07:03.640226+02:00"

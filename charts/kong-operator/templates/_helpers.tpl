@@ -17,6 +17,12 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- default (printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-") .Values.fullnameOverride -}}
 {{- end -}}
 
+# kong.webhookServiceName is used in different subcharts and name has to match
+# hence only variadic part of this name is .Release.Name.
+{{- define "kong.webhookServiceName" -}}
+{{- default (printf "%s-kong-operator-webhook" .Release.Name | trunc 63 | trimSuffix "-") -}}
+{{- end -}}
+
 {{/*
 Create the name of the service account to use
 */}}
@@ -114,7 +120,7 @@ The dict maps raw env variable key to the suggested variable path.
 - name: {{ template "kong.fullname" . }}-webhook-certs
   secret:
     defaultMode: 420
-    secretName: webhook-server-cert
+    secretName: {{ template "kong.webhookServiceName" . }}-server-cert
 - name: {{ template "kong.fullname" . }}-pod-labels
   downwardAPI:
     items:

@@ -13,6 +13,8 @@ appVersion: "2.0.0-alpha.3"
 annotations:
   artifacthub.io/prerelease: "true"
 dependencies:
+  - name: ko-crds
+    version: 1.0.0
   - name: kic-crds
     version: 1.2.0
     condition: kic-crds.enabled
