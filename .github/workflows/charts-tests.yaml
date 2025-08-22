@@ -156,11 +156,11 @@ jobs:
           CHART_NAME: ${{ matrix.chart-name }}
         run: ./scripts/charts-test-env.sh
 
-      - name: Install Kong charts CRDs
-        run: kubectl apply -f ./charts/kong-operator/crds --server-side
-
       - name: Install Gateway API CRDs
         run: make install.gateway-api-crds
+      
+      - name: Install cert-manager
+        run: make install.helm.cert-manager
 
       - name: Run chart-testing (install)
         run: |

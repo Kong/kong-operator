@@ -371,8 +371,8 @@ KUBERNETES_CONFIGURATION_PACKAGE_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNE
 manifests: manifests.conversion-webhook manifests.versions manifests.crds manifests.role manifests.charts ## Generate ClusterRole and CustomResourceDefinition objects.
 
 .PHONY: manifests.conversion-webhook
-manifests.conversion-webhook:
-	go run hack/generators/conversion-webhook/main.go
+manifests.conversion-webhook: kustomize
+	KUSTOMIZE_BIN=$(KUSTOMIZE) go run hack/generators/conversion-webhook/main.go
 
 .PHONY: manifests.crds
 manifests.crds: controller-gen ## Generate CustomResourceDefinition objects.
@@ -419,8 +419,7 @@ manifests.charts.kong-operator.role: manifests.role
 
 .PHONY: manifests.charts.kong-operator.crds.operator
 manifests.charts.kong-operator.crds.operator: kustomize ensure.go.pkg.downloaded.kubernetes-configuration
-	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_PACKAGE_PATH)/config/crd/gateway-operator > \
-		$(KONG_OPERATOR_CHART_DIR)/crds/custom-resource-definitions.yaml
+	$(MAKE) manifests.conversion-webhook
 
 .PHONY: manifests.charts.kong-operator.crds.kic
 manifests.charts.kong-operator.crds.kic: kustomize ensure.go.pkg.downloaded.kubernetes-configuration
@@ -469,7 +468,10 @@ KONG_OPERATOR_CHART_YAML_PATH = $(KONG_OPERATOR_CHART_DIR)/Chart.yaml
 manifests.charts.kong-operator.chart.yaml: yq
 	@echo "Generating $(KONG_OPERATOR_CHART_YAML_PATH)"
 	@$(YQ) eval \
-		'.dependencies = [ {"name":"kic-crds","version":"1.2.0","condition":"kic-crds.enabled"}]' \
+		'.dependencies = [ {"name":"ko-crds","version":"1.0.0","condition":"ko-crds.enabled"}]' \
+		-i $(KONG_OPERATOR_CHART_YAML_PATH)
+	@$(YQ) eval \
+		'.dependencies += [ {"name":"kic-crds","version":"1.2.0","condition":"kic-crds.enabled"}]' \
 		-i $(KONG_OPERATOR_CHART_YAML_PATH)
 	@$(YQ) eval \
 		'.dependencies += [ {"name":"gwapi-standard-crds","version":"$(GATEWAY_API_VERSION:v%=%)","condition":"gwapi-standard-crds.enabled"}]' \
