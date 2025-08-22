@@ -2,7 +2,6 @@ package v1beta1_test
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 	"time"
 
@@ -10,28 +9,11 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 )
-
-type dummyHub struct{}
-
-func (d *dummyHub) Hub() {}
-
-func (d *dummyHub) GetObjectKind() schema.ObjectKind { return schema.EmptyObjectKind }
-func (d *dummyHub) DeepCopyObject() runtime.Object   { return &dummyHub{} }
-
-func testConversionError(t *testing.T, testFunc func() error, expectedMsgFormat string) {
-	t.Helper()
-	err := testFunc()
-	require.Error(t, err)
-	expectedMsg := fmt.Sprintf(expectedMsgFormat, &dummyHub{})
-	require.EqualError(t, err, expectedMsg)
-}
 
 func TestControlPlane_ConvertTo(t *testing.T) {
 	t.Run("error: wrong hub type", func(t *testing.T) {

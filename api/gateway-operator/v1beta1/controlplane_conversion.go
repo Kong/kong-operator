@@ -41,6 +41,7 @@ const (
 	envControllerEnableKonnectLicensingStorage           = "CONTROLLER_KONNECT_LICENSE_STORAGE_ENABLED"
 	envControllerKonnectNodeRefreshPeriod                = "CONTROLLER_KONNECT_REFRESH_NODE_PERIOD"
 	envControllerKonnectConfigUploadPeriod               = "CONTROLLER_KONNECT_UPLOAD_CONFIG_PERIOD"
+	envControllerIngressClass                            = "CONTROLLER_INGRESS_CLASS"
 
 	// Environment variable prefix for controller enable/disable. After the prefix is here the name of a controller.
 	// It matches format of what is in the new ControlPlane.
@@ -66,8 +67,61 @@ func (c *ControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 
 	dst.ObjectMeta = c.ObjectMeta
 
+	if err := c.Spec.convertTo(&dst.Spec.ControlPlaneOptions, c.Spec.IngressClass); err != nil {
+		return err
+	}
+	dst.Spec.Extensions = c.Spec.Extensions
+
+	if dp := lo.FromPtr(c.Spec.DataPlane); dp != "" {
+		dst.Spec.DataPlane = operatorv2beta1.ControlPlaneDataPlaneTarget{
+			Type: operatorv2beta1.ControlPlaneDataPlaneTargetRefType,
+			Ref: &operatorv2beta1.ControlPlaneDataPlaneTargetRef{
+				Name: dp,
+			},
+		}
+	} else {
+		dst.Spec.DataPlane = operatorv2beta1.ControlPlaneDataPlaneTarget{
+			Type: operatorv2beta1.ControlPlaneDataPlaneTargetManagedByType,
+		}
+	}
+
+	dst.Status = operatorv2beta1.ControlPlaneStatus{
+		Conditions: c.Status.Conditions,
+	}
+
+	return nil
+}
+
+// ConvertFrom converts from the Hub version to this version (v1beta1).
+func (c *ControlPlane) ConvertFrom(srcRaw conversion.Hub) error {
+	src, ok := srcRaw.(*operatorv2beta1.ControlPlane)
+	if !ok {
+		return fmt.Errorf(errWrongConvertFromControlPlane, srcRaw)
+	}
+
+	c.ObjectMeta = src.ObjectMeta
+
+	c.Spec.IngressClass = src.Spec.IngressClass
+	c.Spec.Extensions = src.Spec.Extensions
+	if src.Spec.DataPlane.Type == operatorv2beta1.ControlPlaneDataPlaneTargetRefType && src.Spec.DataPlane.Ref != nil {
+		c.Spec.DataPlane = &src.Spec.DataPlane.Ref.Name
+	}
+
+	c.Spec.convertFrom(src.Spec.ControlPlaneOptions)
+
+	c.Status = ControlPlaneStatus{
+		Conditions: src.Status.Conditions,
+	}
+
+	return nil
+}
+
+func (c *ControlPlaneOptions) convertTo(dst *operatorv2beta1.ControlPlaneOptions, ingressClass *string) error {
+	if c == nil {
+		return nil
+	}
 	var containerEnvVars []corev1.EnvVar
-	if pts := c.Spec.Deployment.PodTemplateSpec; pts != nil && len(pts.Spec.Containers) > 0 {
+	if pts := c.Deployment.PodTemplateSpec; pts != nil && len(pts.Spec.Containers) > 0 {
 		if pts.Spec.Containers[0].EnvFrom != nil {
 			return errors.New(errEnvFromOnContainerLevel)
 		}
@@ -83,7 +137,7 @@ func (c *ControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 		return err
 	}
 
-	nn := lo.FromPtr(c.Spec.WatchNamespaces)
+	nn := lo.FromPtr(c.WatchNamespaces)
 	reverseSync, err := parseEnvForToggle[operatorv2beta1.ControlPlaneReverseSyncState](envControllerEnableReverseSync, containerEnvVars)
 	if err != nil {
 		return err
@@ -171,8 +225,8 @@ func (c *ControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 		return err
 	}
 
-	dst.Spec.ControlPlaneOptions = operatorv2beta1.ControlPlaneOptions{
-		IngressClass: c.Spec.IngressClass,
+	*dst = operatorv2beta1.ControlPlaneOptions{
+		IngressClass: ingressClass,
 
 		WatchNamespaces: lo.ToPtr(operatorv2beta1.WatchNamespaces{
 			Type: operatorv2beta1.WatchNamespacesType(nn.Type),
@@ -206,65 +260,33 @@ func (c *ControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 			ConfigUploadPeriod: configUploadPeriod,
 		},
 	}
-	dst.Spec.Extensions = c.Spec.Extensions
-
-	if dp := lo.FromPtr(c.Spec.DataPlane); dp != "" {
-		dst.Spec.DataPlane = operatorv2beta1.ControlPlaneDataPlaneTarget{
-			Type: operatorv2beta1.ControlPlaneDataPlaneTargetRefType,
-			Ref: &operatorv2beta1.ControlPlaneDataPlaneTargetRef{
-				Name: dp,
-			},
-		}
-	} else {
-		dst.Spec.DataPlane = operatorv2beta1.ControlPlaneDataPlaneTarget{
-			Type: operatorv2beta1.ControlPlaneDataPlaneTargetManagedByType,
-		}
-	}
-
-	dst.Status = operatorv2beta1.ControlPlaneStatus{
-		Conditions: c.Status.Conditions,
-	}
-
 	return nil
 }
 
-// ConvertFrom converts from the Hub version to this version (v1beta1).
-func (c *ControlPlane) ConvertFrom(srcRaw conversion.Hub) error {
-	src, ok := srcRaw.(*operatorv2beta1.ControlPlane)
-	if !ok {
-		return fmt.Errorf(errWrongConvertFromControlPlane, srcRaw)
+func (c *ControlPlaneOptions) convertFrom(src operatorv2beta1.ControlPlaneOptions, opts ...func(*[]corev1.EnvVar)) {
+	if c == nil {
+		return
 	}
-
-	c.ObjectMeta = src.ObjectMeta
-
-	c.Spec.IngressClass = src.Spec.IngressClass
-	if src.Spec.WatchNamespaces != nil {
-		c.Spec.WatchNamespaces = lo.ToPtr(WatchNamespaces{
-			Type: WatchNamespacesType(src.Spec.WatchNamespaces.Type),
-			List: src.Spec.WatchNamespaces.List,
+	if src.WatchNamespaces != nil {
+		c.WatchNamespaces = lo.ToPtr(WatchNamespaces{
+			Type: WatchNamespacesType(src.WatchNamespaces.Type),
+			List: src.WatchNamespaces.List,
 		})
 	}
-	c.Spec.Extensions = src.Spec.Extensions
-	if src.Spec.DataPlane.Type == operatorv2beta1.ControlPlaneDataPlaneTargetRefType && src.Spec.DataPlane.Ref != nil {
-		c.Spec.DataPlane = &src.Spec.DataPlane.Ref.Name
-	}
-
-	c.Spec.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{
+	c.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{
 					Name: "controller",
-					Env:  buildContainerEnvVars(src.Spec.ControlPlaneOptions),
+					Env:  buildContainerEnvVars(src),
 				},
 			},
 		},
 	}
 
-	c.Status = ControlPlaneStatus{
-		Conditions: src.Status.Conditions,
+	for _, opt := range opts {
+		opt(&c.Deployment.PodTemplateSpec.Spec.Containers[0].Env)
 	}
-
-	return nil
 }
 
 func featureGatesFromEnvVar(envs []corev1.EnvVar) ([]operatorv2beta1.ControlPlaneFeatureGate, error) {
@@ -362,6 +384,16 @@ func envVarsFromCPControllersFormat(controllers []operatorv2beta1.ControlPlaneCo
 	return envVars
 }
 
+func ingressClassFormatFromEnvVars(envs []corev1.EnvVar) *string {
+	ingressClassEnv, found := lo.Find(envs, func(env corev1.EnvVar) bool {
+		return env.Name == envControllerIngressClass
+	})
+	if !found {
+		return nil
+	}
+	return lo.ToPtr(ingressClassEnv.Value)
+}
+
 func cpControllersFormatFromEnvVars(envs []corev1.EnvVar) ([]operatorv2beta1.ControlPlaneController, error) {
 	controllersEnvs := lo.Filter(envs, func(env corev1.EnvVar, _ int) bool {
 		return strings.HasPrefix(env.Name, envControllerPrefix)
@@ -446,20 +478,38 @@ func parseEnvForDuration(key string, envVars []corev1.EnvVar) (*metav1.Duration,
 }
 
 // buildContainerEnvVars builds the complete set of environment variables from ControlPlaneOptions.
-func buildContainerEnvVars(opts operatorv2beta1.ControlPlaneOptions) []corev1.EnvVar {
+func buildContainerEnvVars(cpOpts operatorv2beta1.ControlPlaneOptions, opts ...func([]corev1.EnvVar) []corev1.EnvVar) []corev1.EnvVar {
 	var envVars []corev1.EnvVar
 
-	envVars = append(envVars, envVarFromFeatureGates(opts.FeatureGates)...)
-	envVars = append(envVars, envVarsFromCPControllersFormat(opts.Controllers)...)
+	envVars = append(envVars, envVarFromFeatureGates(cpOpts.FeatureGates)...)
+	envVars = append(envVars, envVarsFromCPControllersFormat(cpOpts.Controllers)...)
 
-	envVars = append(envVars, envVarFromDataPlaneSync(opts.DataPlaneSync)...)
-	envVars = append(envVars, envVarFromGatewayDiscovery(opts.GatewayDiscovery)...)
-	envVars = append(envVars, envVarFromCache(opts.Cache)...)
-	envVars = append(envVars, envVarFromTranslation(opts.Translation)...)
-	envVars = append(envVars, envVarFromConfigDump(opts.ConfigDump)...)
-	envVars = append(envVars, envVarFromKonnect(opts.Konnect)...)
+	envVars = append(envVars, envVarFromDataPlaneSync(cpOpts.DataPlaneSync)...)
+	envVars = append(envVars, envVarFromGatewayDiscovery(cpOpts.GatewayDiscovery)...)
+	envVars = append(envVars, envVarFromCache(cpOpts.Cache)...)
+	envVars = append(envVars, envVarFromTranslation(cpOpts.Translation)...)
+	envVars = append(envVars, envVarFromConfigDump(cpOpts.ConfigDump)...)
+	envVars = append(envVars, envVarFromKonnect(cpOpts.Konnect)...)
+
+	for _, opt := range opts {
+		envVars = opt(envVars)
+	}
 
 	return envVars
+}
+
+// envVarFromIngressClass converts IngressClass options to environment variables.
+func envVarFromIngressClass(ingressClass *string) []corev1.EnvVar {
+	if ingressClass == nil {
+		return nil
+	}
+
+	return []corev1.EnvVar{
+		{
+			Name:  envControllerIngressClass,
+			Value: *ingressClass,
+		},
+	}
 }
 
 // envVarFromDataPlaneSync converts DataPlaneSync options to environment variables.

@@ -86,7 +86,8 @@ type HorizontalScaling struct {
 // +apireference:kgo:include
 type Rollout struct {
 	// Strategy contains the deployment strategy for rollout.
-	// +optional
+	//
+	// +required
 	Strategy RolloutStrategy `json:"strategy"`
 }
 
@@ -95,23 +96,25 @@ type Rollout struct {
 type RolloutStrategy struct {
 	// BlueGreen holds the options specific for Blue Green Deployments.
 	//
-	// +optional
-	BlueGreen *BlueGreenStrategy `json:"blueGreen,omitempty"`
+	// +required
+	BlueGreen BlueGreenStrategy `json:"blueGreen"`
 }
 
 // BlueGreenStrategy defines the Blue Green deployment strategy.
 // +apireference:kgo:include
 type BlueGreenStrategy struct {
 	// Promotion defines how the operator handles promotion of resources.
+	//
 	// +optional
-	Promotion Promotion `json:"promotion"`
+	// +kubebuilder:default={"strategy":"BreakBeforePromotion"}
+	Promotion *Promotion `json:"promotion,omitempty"`
 
 	// Resources controls what happens to operator managed resources during or
 	// after a rollout.
 	//
 	// +optional
 	// +kubebuilder:default={"plan":{"deployment":"ScaleDownOnPromotionScaleUpOnRollout"}}
-	Resources RolloutResources `json:"resources,omitempty"`
+	Resources *RolloutResources `json:"resources,omitempty"`
 }
 
 // Promotion is a type that contains fields that define how the operator handles
@@ -128,7 +131,7 @@ type Promotion struct {
 	// +kubebuilder:validation:Enum=BreakBeforePromotion
 	// +kubebuilder:default=BreakBeforePromotion
 	// +optional
-	Strategy PromotionStrategy `json:"strategy"`
+	Strategy *PromotionStrategy `json:"strategy,omitempty"`
 }
 
 // PromotionStrategy is the type of promotion strategy consts.
