@@ -29,14 +29,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	configurationclient "github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
 	"github.com/kong/kong-operator/internal/versions"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test"
 	"github.com/kong/kong-operator/test/helpers"
@@ -213,12 +211,12 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 			o.DestWriter = io.Discard
 		}))
 	})
-	clients.MgrClient, err = client.New(env.Cluster().Config(), client.Options{})
+	clients.MgrClient, err = client.New(env.Cluster().Config(),
+		client.Options{
+			Scheme: scheme.Get(),
+		},
+	)
 	require.NoError(t, err)
-
-	require.NoError(t, gatewayv1.Install(clients.MgrClient.Scheme()))
-	require.NoError(t, operatorv1alpha1.AddToScheme(clients.MgrClient.Scheme()))
-	require.NoError(t, operatorv1beta1.AddToScheme(clients.MgrClient.Scheme()))
 
 	if opt.InstallViaKustomize {
 		t.Logf("deploying Gateway APIs CRDs from %s", testutils.GatewayExperimentalCRDsKustomizeURL)
