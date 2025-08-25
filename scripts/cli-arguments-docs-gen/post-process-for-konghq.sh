@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # This script adapts auto-generated cli-arguments.md to the requirements of
-# docs.konghq.com:
-#   - adds a title section
+# developer.konghq.com:
+#   - adds the front matter
 #   - adds a section explaining how environment variables are mapped onto flags
 #   - turns vale linter off for the generated part
 
@@ -11,42 +11,52 @@ set -o nounset
 set -o pipefail
 
 SCRIPT_ROOT="$(dirname "${BASH_SOURCE[0]}")/../.."
-CRD_REF_DOC="${SCRIPT_ROOT}/docs/cli-arguments.md"
-if [[ $# != 1 ]]; then
-	echo "Usage: $0 <output-file>"
-	exit 1
-fi
 POST_PROCESSED_DOC="${1}"
+SOURCE_DOC="${2:-${SCRIPT_ROOT}/docs/cli-arguments.md}"
 
 # Add a title and turn the vale linter off
 echo '---
-title: CLI Arguments
+title: "{{site.operator_product_name}} configuration options"
+short_title: Configuration options
+description: Learn about the various settings and configurations of the operator which can be tweaked using CLI flags.
+content_type: reference
+layout: reference
+
+breadcrumbs:
+  - /operator/
+  - index: operator
+    group: Reference
+
+products:
+  - operator
+
+works_on:
+  - on-prem
+  - konnect
 ---
 
-Learn about the various settings and configurations of the controller can be tweaked
-using CLI flags.
+Configuration options allow you to customize the behavior of {{ site.operator_product_name }} to meet your needs.
 
-## Environment variables
+The default configuration will work for most users. These options are provided for advanced users.
 
-Each flag defined in the table below can also be configured using
-an environment variable. The name of the environment variable is `KONG_OPERATOR_`
-string followed by the name of flag in uppercase.
+## Using environment variables
 
-For example, `--enable-gateway-controller` can be configured using the following
-environment variable:
+Each flag defined in the following table can also be configured using an environment variable.
+The name of the environment variable is `KONG_OPERATOR_` string followed by the name of flag in uppercase.
+
+For example, `--secret-label-selector` can be configured using the following environment variable:
 
 ```
-KONG_OPERATOR_ENABLE_GATEWAY_CONTROLLER=false
+KONG_OPERATOR_SECRET_LABEL_SELECTOR=mylabel
 ```
 
-It is recommended that all the configuration is done through environment variables
-and not CLI flags.
+We recommend configuring all settings through environment variables and not CLI flags.
 
 <!-- vale off -->
 ' > "${POST_PROCESSED_DOC}"
 
 # Add the generated doc content
-cat "${CRD_REF_DOC}" >> "${POST_PROCESSED_DOC}"
+cat "${SOURCE_DOC}" >> "${POST_PROCESSED_DOC}"
 
 # Turn the linter back on. Add a newline first, otherwise parsing breaks.
 echo "" >> "${POST_PROCESSED_DOC}"
