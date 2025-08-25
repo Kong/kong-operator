@@ -8,7 +8,6 @@ import (
 	"github.com/spf13/pflag"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/admission"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
@@ -161,20 +160,6 @@ func (c *CLIConfig) bindFlagSet() {
 	flagSet.BoolVar(&c.KongVaultEnabled, "enable-controller-kong-vault", true, "Enable the KongVault controller.")
 	flagSet.BoolVar(&c.KongLicenseEnabled, "enable-controller-kong-license", true, "Enable the KongLicense controller.")
 	flagSet.BoolVar(&c.KongCustomEntityEnabled, "enable-controller-kong-custom-entity", true, "Enable the KongCustomEntity controller.")
-
-	// Admission Webhook server config
-	flagSet.StringVar(&c.AdmissionServer.ListenAddr, "admission-webhook-listen", "off",
-		`The address to start admission controller on (ip:port). Setting it to 'off' disables the admission controller.`)
-	flagSet.StringVar(&c.AdmissionServer.CertPath, "admission-webhook-cert-file", "",
-		`Admission server PEM certificate file path. `+
-			fmt.Sprintf(`If both this and the cert value is unset, defaults to %s. `, admission.DefaultAdmissionWebhookCertPath)+`Mutually exclusive with --admission-webhook-cert.`)
-	flagSet.StringVar(&c.AdmissionServer.KeyPath, "admission-webhook-key-file", "",
-		`Admission server PEM private key file path. `+
-			fmt.Sprintf(`If both this and the key value is unset, defaults to %s. `, admission.DefaultAdmissionWebhookKeyPath)+`Mutually exclusive with --admission-webhook-key.`)
-	flagSet.StringVar(&c.AdmissionServer.Cert, "admission-webhook-cert", "",
-		`Admission server PEM certificate value. Mutually exclusive with --admission-webhook-cert-file.`)
-	flagSet.StringVar(&c.AdmissionServer.Key, "admission-webhook-key", "",
-		`Admission server PEM private key value. Mutually exclusive with --admission-webhook-key-file.`)
 
 	// Diagnostics
 	flagSet.BoolVar(&c.EnableProfiling, "profiling", false, fmt.Sprintf("Enable profiling via web interface host:%v/debug/pprof/.", consts.DiagnosticsPort))

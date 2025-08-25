@@ -232,11 +232,6 @@ func New(
 		return nil, fmt.Errorf("failed to create translator: %w", err)
 	}
 
-	setupLog.Info("Setting up admission server")
-	if err := m.setupAdmissionServer(ctx, referenceIndexers, translatorFeatureFlags, storer); err != nil {
-		return nil, err
-	}
-
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)
 	configurationChangeDetector := sendconfig.NewKongGatewayConfigurationChangeDetector(logger)
 	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs, c.KongWorkspace)

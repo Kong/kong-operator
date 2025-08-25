@@ -16,7 +16,7 @@ import (
 	"path/filepath"
 )
 
-//go:embed *
+//go:embed **/*.yaml
 var configYAMLs embed.FS
 
 // DumpKustomizeConfigToTempDir saves kustomize (directory ./config from KO OSS repository)
