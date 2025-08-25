@@ -38,6 +38,9 @@
   `GatewayClass.status.supportedFeatures` when the default was assumed to be
   `expressions`.
   [#2043](https://github.com/Kong/kong-operator/pull/2043)
+- Support setting exposed nodeport of the dataplane service for `Gateway`s by
+  `nodePort` field in `spec.listenersOptions`.
+  [#2058](https://github.com/Kong/kong-operator/pull/2058)
 
 ## [v1.6.2]
 

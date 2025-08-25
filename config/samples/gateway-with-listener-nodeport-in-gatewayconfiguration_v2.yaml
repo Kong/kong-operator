@@ -1,0 +1,49 @@
+kind: GatewayConfiguration
+apiVersion: gateway-operator.konghq.com/v2beta1
+metadata:
+  name: kong-v2beta1
+  namespace: default
+spec:
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            # renovate: datasource=docker versioning=docker
+            image: kong/kong-gateway:3.11
+            readinessProbe:
+              initialDelaySeconds: 1
+              periodSeconds: 1
+    network:
+      services:
+        ingress:
+          type: NodePort
+  listenersOptions:
+  # Configure the ingress service to expose nodeport 30080 for the `http` listener.
+  - name: http
+    nodePort: 30080
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: kong-v2beta1
+spec:
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: kong-v2beta1
+    namespace: default
+---
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: kong-v2beta1
+  namespace: default
+spec:
+  gatewayClassName: kong-v2beta1
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
