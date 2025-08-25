@@ -103,6 +103,7 @@ certsDir:
 # enable configuration dump for control planes.
 enableControlplaneConfigDump: false
 controlplaneConfigDumpPort: 10256
-conversionWebhook:
-  # Enable the conversion webhook for the operator
-  enabled: true
+global:
+  conversionWebhook:
+    # Enable the conversion webhook for the operator.
+    enabled: true

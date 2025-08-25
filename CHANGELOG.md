@@ -32,6 +32,9 @@
 
 ## Unreleased
 
+- Support for `cert-manager` certificate provisioning for webhooks in Helm Chart.
+  [#2122](https://github.com/Kong/kong-operator/pull/2122)
+
 ### Added
 
 - Support specifying labels to filter watched `Secret`s and `ConfigMap`s of

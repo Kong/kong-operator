@@ -13,8 +13,8 @@ spec:
     webhook:
       clientConfig:
         service:
-          namespace: kong-system
           name: gateway-operator-webhook-service
+          namespace: kong-system
           path: /convert
       conversionReviewVersions:
       - v1
@@ -32,8 +32,8 @@ spec:
     webhook:
       clientConfig:
         service:
-          namespace: kong-system
           name: gateway-operator-webhook-service
+          namespace: kong-system
           path: /convert
       conversionReviewVersions:
       - v1
@@ -51,8 +51,8 @@ spec:
     webhook:
       clientConfig:
         service:
-          namespace: kong-system
           name: gateway-operator-webhook-service
+          namespace: kong-system
           path: /convert
       conversionReviewVersions:
       - v1
