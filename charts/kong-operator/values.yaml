@@ -33,8 +33,7 @@ podLabels: {}
 podAnnotations: {}
 # Install KIC's CRDs
 kic-crds:
-  #XXX: DISABLED BECAUSE OF CRD KONGCONSUMERGROUPS DUPLICATION!!! TO RESOLVE!!!
-  enabled: false
+  enabled: true
 # Install Gateway API standard CRDs
 gwapi-standard-crds:
   enabled: true
