@@ -131,7 +131,6 @@ func WithDiagnosticsServer(port int) func(cfg *managercfg.Config) {
 func WithDiagnosticsWithoutServer() func(cfg *managercfg.Config) {
 	return func(cfg *managercfg.Config) {
 		cfg.EnableConfigDumps = true
-		cfg.DisableRunningDiagnosticsServer = true
 	}
 }
 

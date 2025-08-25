@@ -61,7 +61,6 @@ type Manager struct {
 	cfg                  managercfg.Config
 	m                    manager.Manager
 	synchronizer         *dataplane.Synchronizer
-	diagnosticsServer    mo.Option[diagnostics.Server]
 	diagnosticsCollector mo.Option[*diagnostics.Collector]
 	diagnosticsHandler   mo.Option[*diagnostics.HTTPHandler]
 	admissionServer      mo.Option[*admission.Server]
@@ -477,22 +476,12 @@ func (m *Manager) setupDiagnostics(
 		return mo.None[diagnostics.Client]()
 	}
 
-	var serverOpts []diagnostics.ServerOption
 	// If config dumps are enabled, we need to create a diagnostics collector, setup an HTTP handler exposing its
 	// diagnostics, and pass it to the server options so it's plugged in.
 	if c.EnableConfigDumps {
 		diagnosticsCollector := diagnostics.NewCollector(logger, c)
 		m.diagnosticsCollector = mo.Some(diagnosticsCollector)
 		m.diagnosticsHandler = mo.Some(diagnostics.NewConfigDiagnosticsHTTPHandler(diagnosticsCollector, c.DumpSensitiveConfig))
-		serverOpts = append(serverOpts, diagnostics.WithConfigDiagnostics(m.diagnosticsHandler.MustGet()))
-	}
-
-	if !c.DisableRunningDiagnosticsServer {
-		m.diagnosticsServer = mo.Some(diagnostics.NewServer(logger, diagnostics.ServerConfig{
-			ProfilingEnabled:    c.EnableProfiling,
-			DumpSensitiveConfig: c.DumpSensitiveConfig,
-			ListenerPort:        c.DiagnosticServerPort,
-		}, serverOpts...))
 	}
 
 	// If diagnosticsCollector is set, it means that config dumps are enabled and we should return a diagnostics.Client.
@@ -508,15 +497,6 @@ func (m *Manager) setupDiagnostics(
 func (m *Manager) Run(ctx context.Context) error {
 	logger := ctrl.LoggerFrom(ctx)
 	logger.Info("Starting manager")
-
-	if ds, ok := m.diagnosticsServer.Get(); ok {
-		go func() {
-			logger.Info("Starting diagnostics server")
-			if err := ds.Listen(ctx); err != nil {
-				logger.Error(err, "Diagnostics server exited")
-			}
-		}()
-	}
 
 	if dc, ok := m.diagnosticsCollector.Get(); ok {
 		go func() {

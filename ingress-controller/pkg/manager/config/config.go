@@ -135,9 +135,6 @@ type Config struct {
 	EnableConfigDumps    bool
 	DumpSensitiveConfig  bool
 	DiagnosticServerPort int
-	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/7285
-	// instead of this toggle, move the server out of the internal.Manager
-	DisableRunningDiagnosticsServer bool
 
 	// EnableDrainSupport controls whether to include terminating endpoints in Kong upstreams
 	// with weight=0 for graceful connection draining
