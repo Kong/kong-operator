@@ -69,6 +69,15 @@ func eventuallyAssertSDKExpectations(
 	t.Helper()
 	t.Logf("Checking %T SDK expectations", sdk)
 
+	// TODO: After bumping testify to 1.11.0 in https://github.com/Kong/kong-operator/pull/2126
+	// The behavior of eventual checks changes to make the first assertion immediately rather
+	// than waiting the tick interval.
+	// This broke tests. Select below makes sure that we retain the old behavior here.
+	select {
+	case <-t.Context().Done():
+	case <-time.After(tickTime):
+	}
+
 	require.EventuallyWithT(t,
 		func(c *assert.CollectT) {
 			// We're not passing t to AssertExpectations to prevent failing the test
