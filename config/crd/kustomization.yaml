@@ -2,7 +2,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - https://github.com/kong/kubernetes-configuration/config/crd/gateway-operator?ref=f27a734206e6c4ad5c6eca6c7a773b5b1a2be3a6 # Version is auto-updated by the generating script.
+  - https://github.com/kong/kubernetes-configuration/config/crd/gateway-operator?ref=b251b455dd2a018266ab737ce7fbbb56e0212660 # Version is auto-updated by the generating script.
 
 patches:
   - path: patches/zz_generated_conversion_webhook.yaml

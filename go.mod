@@ -37,7 +37,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.26.0
 	github.com/kong/go-kong v0.67.0
-	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.3.0.20250822094046-f27a734206e6
+	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.3.0.20250826101737-b251b455dd2a
 	github.com/kong/kubernetes-telemetry v0.1.10
 	github.com/kong/kubernetes-testing-framework v0.47.3
 	github.com/kong/semver/v4 v4.0.1
@@ -56,7 +56,7 @@ require (
 	github.com/sourcegraph/conc v0.3.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.7
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	github.com/testcontainers/testcontainers-go v0.38.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.38.0
 	github.com/tidwall/gjson v1.18.0
