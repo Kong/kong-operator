@@ -344,7 +344,7 @@ func waitForOperatorDeployment(
 				// - helm https://github.com/Kong/charts/blob/4968b34ae7c252ab056b37cc137eaeb7a071e101/charts/gateway-operator/templates/deployment.yaml#L5-L6
 				//
 				// As long as kustomize is used for tests let's use this label selector.
-				LabelSelector: "app.kubernetes.io/name=gateway-operator",
+				LabelSelector: "app.kubernetes.io/name=kong-operator",
 			}
 			deploymentList, err := k8sClient.AppsV1().Deployments(ns).List(ctx, listOpts)
 			if err != nil {
@@ -376,7 +376,7 @@ func logOperatorPodLogs(t *testing.T, ctx context.Context, k8sClient *kubernetes
 	t.Helper()
 
 	pods, err := k8sClient.CoreV1().Pods(ns).List(ctx, metav1.ListOptions{
-		LabelSelector: "app.kubernetes.io/name=gateway-operator",
+		LabelSelector: "app.kubernetes.io/name=kong-operator",
 	})
 	if err != nil {
 		t.Logf("Failed to list operator pods in namespace %s: %v", ns, err)
