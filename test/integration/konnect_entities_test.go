@@ -362,6 +362,7 @@ func KonnectEntitiesTestCase(t *testing.T, params konnectEntitiesTestCaseParams)
 		require.NoError(t, err)
 
 		assertKonnectEntityProgrammed(t, ksni)
+		require.NotNil(t, ksni.Status.Konnect)
 		assert.Equal(t, kcert.GetKonnectID(), ksni.Status.Konnect.CertificateID)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 }
