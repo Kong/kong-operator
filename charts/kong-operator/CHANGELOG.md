@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Fix config dump service and template issue.
+
 ## 0.0.4
 
 ### Changes
