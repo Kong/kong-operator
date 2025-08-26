@@ -47,12 +47,12 @@ func NewDummyConverter(cl client.Client) *dummyConverter {
 	}
 }
 
-// SetRootObject implements ObjectConverter.
+// SetRootObject implements APIConverter.
 func (d *dummyConverter) SetRootObject(obj corev1.Service) {
 	d.service = obj
 }
 
-// LoadStore implements ObjectConverter.
+// LoadStore implements APIConverter.
 func (d *dummyConverter) LoadStore(ctx context.Context) error {
 	// List only the HTTPRoutes the the same namespace as the service.
 	// Do not consider cross-namespace refs in the dummy implementation.
@@ -84,7 +84,7 @@ func (d *dummyConverter) LoadStore(ctx context.Context) error {
 	return nil
 }
 
-// Translate implements ObjectConverter.
+// Translate implements APIConverter.
 func (d *dummyConverter) Translate() error {
 	for _, r := range d.store.httpBackendRefs {
 		serviceName := fmt.Sprintf("%s-%d", d.service.Name, *r.Port)
