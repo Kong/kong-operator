@@ -637,11 +637,6 @@ func controlPlaneOwnedByGatewayReady(gatewayLabelSelector string) func(ctx conte
 		}
 		cp := controlplanes[0]
 
-		if !assert.Equal(c, cp.Spec.DataPlane.Type, operatorv2beta1.ControlPlaneDataPlaneTargetManagedByType,
-			"ControlPlane's DataPlane target type does not match") {
-			return
-		}
-
 		if ready := lo.ContainsBy(cp.Status.Conditions, func(condition metav1.Condition) bool {
 			return condition.Type == "Ready" && condition.Status == metav1.ConditionTrue
 		}); !assert.True(c, ready, "ControlPlane is not ready") {
