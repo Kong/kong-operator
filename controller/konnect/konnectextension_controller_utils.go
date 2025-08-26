@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -17,13 +18,14 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/gateway-operator/controller/konnect/ops"
+	sdkops "github.com/kong/gateway-operator/controller/konnect/ops/sdk"
 	extensionserrors "github.com/kong/gateway-operator/controller/pkg/extensions/errors"
+	"github.com/kong/gateway-operator/controller/pkg/log"
 	"github.com/kong/gateway-operator/controller/pkg/op"
 	"github.com/kong/gateway-operator/controller/pkg/patch"
 	"github.com/kong/gateway-operator/controller/pkg/secrets"
-	"github.com/kong/gateway-operator/internal/utils/index"
 	"github.com/kong/gateway-operator/pkg/consts"
-	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
@@ -31,59 +33,20 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/api/konnect/v1alpha1"
 )
 
-// getGatewayKonnectControlPlane retrieves the Konnect Control Plane from K8s cluster
-// based on the provided KonnectExtension specification.
+// getKonnectControlPlane retrieves the Konnect Control Plane based on the provided KonnectExtension specification.
 // It supports two types of ControlPlaneRef: KonnectNamespacedRef and KonnectID.
 //
 // Returns:
 // - cp: The retrieved Konnect Control Plane.
 // - res: The result of the controller reconciliation.
 // - err: An error if the retrieval fails.
-func (r *KonnectExtensionReconciler) getGatewayKonnectControlPlane(
+func (r *KonnectExtensionReconciler) getKonnectControlPlane(
 	ctx context.Context,
+	logger logr.Logger,
+	sdk sdkops.ControlPlaneSDK,
 	ext konnectv1alpha1.KonnectExtension,
 	dependingConditions ...metav1.Condition,
-) (cp *konnectv1alpha1.KonnectGatewayControlPlane, res ctrl.Result, err error) {
-	// Get respective KonnectGatewayControlPlane from K8s cluster.
-	var errGetFromK8s error
-	switch ext.Spec.Konnect.ControlPlane.Ref.Type {
-	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
-		// TODO: get namespace from cpRef.Namespace when allowed to reference CP from another namespace.
-		cpNN := client.ObjectKey{
-			Name:      ext.Spec.Konnect.ControlPlane.Ref.KonnectNamespacedRef.Name,
-			Namespace: ext.Namespace,
-		}
-		kgcp := &konnectv1alpha1.KonnectGatewayControlPlane{}
-		// Set the controlPlaneRefValidCond to false in case the KonnectGatewayControlPlane is not found.
-		if err := r.Get(ctx, cpNN, kgcp); err != nil {
-			if k8serrors.IsNotFound(err) {
-				errGetFromK8s = err
-			} else {
-				return nil, ctrl.Result{}, err
-			}
-		}
-		cp = kgcp
-	case commonv1alpha1.ControlPlaneRefKonnectID:
-		kgcpList := &konnectv1alpha1.KonnectGatewayControlPlaneList{}
-		if err := r.List(ctx, kgcpList, client.InNamespace(ext.Namespace), client.MatchingFields{
-			index.IndexFieldKonnectGatewayControlPlaneOnKonnectID: string(*ext.Spec.Konnect.ControlPlane.Ref.KonnectID),
-		}); err != nil {
-			return nil, ctrl.Result{}, err
-		}
-		kgcps := kgcpList.Items
-		switch l := len(kgcps); l {
-		case 0:
-			errGetFromK8s = k8serrors.NewNotFound(
-				konnectv1alpha1.Resource("KonnectGatewayControlPlane"),
-				fmt.Sprintf("with KonnectID %s in namespace %s",
-					*ext.Spec.Konnect.ControlPlane.Ref.KonnectID, ext.Namespace,
-				),
-			)
-		default:
-			cp = &kgcps[0]
-		}
-	}
-
+) (cp *sdkkonnectcomp.ControlPlane, res ctrl.Result, err error) {
 	controlPlaneRefValidCond := metav1.Condition{
 		Type:    konnectv1alpha1.ControlPlaneRefValidConditionType,
 		Status:  metav1.ConditionTrue,
@@ -91,11 +54,18 @@ func (r *KonnectExtensionReconciler) getGatewayKonnectControlPlane(
 		Message: "ControlPlaneRef is valid",
 	}
 
-	// Check if the KonnectGatewayControlPlane has been found.
-	if errGetFromK8s != nil {
+	konnectCPID, res, err := r.getKonnectControlPlaneID(ctx, ext, dependingConditions...)
+	if err != nil || !res.IsZero() {
+		return nil, res, err
+	}
+
+	// get the Konnect Control Plane from Konnect
+	konnectCP, err := ops.GetControlPlaneByID(ctx, sdk, konnectCPID)
+	// set the controlPlaneRefValidCond to false in case the Control Plane is not found in Konnect
+	if err != nil {
 		controlPlaneRefValidCond.Status = metav1.ConditionFalse
 		controlPlaneRefValidCond.Reason = konnectv1alpha1.ControlPlaneRefReasonInvalid
-		controlPlaneRefValidCond.Message = errGetFromK8s.Error()
+		controlPlaneRefValidCond.Message = err.Error()
 		if res, _, errPatch := patch.StatusWithConditions(
 			ctx,
 			r.Client,
@@ -104,26 +74,13 @@ func (r *KonnectExtensionReconciler) getGatewayKonnectControlPlane(
 		); errPatch != nil || !res.IsZero() {
 			return nil, res, errPatch
 		}
-		return nil, ctrl.Result{}, errGetFromK8s
+		log.Debug(logger, "ControlPlane retrieval failed in Konnect")
+		// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
+		// if the syncPeriod is set to zero, the controller won't requeue.
+		return nil, ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, nil
 	}
 
-	// Set the controlPlaneRefValidCond to false in case the KonnectGatewayControlPlane is not programmed yet.
-	if !k8sutils.HasConditionTrue(konnectv1alpha1.KonnectEntityProgrammedConditionType, cp) {
-		controlPlaneRefValidCond.Status = metav1.ConditionFalse
-		controlPlaneRefValidCond.Reason = konnectv1alpha1.ControlPlaneRefReasonInvalid
-		controlPlaneRefValidCond.Message = fmt.Sprintf("Konnect control plane %s/%s not programmed yet", cp.Name, cp.Namespace)
-		if res, _, errPatch := patch.StatusWithConditions(
-			ctx,
-			r.Client,
-			&ext,
-			append(dependingConditions, controlPlaneRefValidCond)...,
-		); errPatch != nil || !res.IsZero() {
-			return nil, res, errPatch
-		}
-		return nil, ctrl.Result{}, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed
-	}
-
-	// Set the controlPlaneRefValidCond to true in case the ControlPlane is configured properly.
+	// set the controlPlaneRefValidCond to true in case the Control Plane is found in Konnect
 	if res, _, errPatch := patch.StatusWithConditions(
 		ctx,
 		r.Client,
@@ -133,7 +90,79 @@ func (r *KonnectExtensionReconciler) getGatewayKonnectControlPlane(
 		return nil, res, errPatch
 	}
 
-	return cp, ctrl.Result{}, nil
+	return konnectCP, ctrl.Result{}, err
+}
+
+func (r *KonnectExtensionReconciler) getKonnectControlPlaneID(
+	ctx context.Context,
+	ext konnectv1alpha1.KonnectExtension,
+	dependingConditions ...metav1.Condition,
+) (id string, res ctrl.Result, err error) {
+	var (
+		konnectCPID string
+		// init the controlPlaneRefValidCond with the assumption that the ControlPlaneRef is valid
+		controlPlaneRefValidCond = metav1.Condition{
+			Type:    konnectv1alpha1.ControlPlaneRefValidConditionType,
+			Status:  metav1.ConditionTrue,
+			Reason:  konnectv1alpha1.ControlPlaneRefReasonValid,
+			Message: "ControlPlaneRef is valid",
+		}
+	)
+
+	switch ext.Spec.Konnect.ControlPlane.Ref.Type {
+	case commonv1alpha1.ControlPlaneRefKonnectNamespacedRef:
+		// in case the ControlPlaneRef is a KonnectNamespacedRef, we fetch the KonnectGatewayControlPlane
+		// and get the KonnectID from `status.konnectID`.
+		cpRef := ext.Spec.Konnect.ControlPlane.Ref.KonnectNamespacedRef
+		cpNamepace := ext.Namespace
+		// TODO: get namespace from cpRef.Namespace when allowed to reference CP from another namespace.
+		kgcp := &konnectv1alpha1.KonnectGatewayControlPlane{}
+		err := r.Get(ctx, client.ObjectKey{
+			Namespace: cpNamepace,
+			Name:      cpRef.Name,
+		}, kgcp)
+
+		// set the controlPlaneRefValidCond to false in case the KonnectGatewayControlPlane is not found
+		if err != nil {
+			controlPlaneRefValidCond.Status = metav1.ConditionFalse
+			controlPlaneRefValidCond.Reason = konnectv1alpha1.ControlPlaneRefReasonInvalid
+			controlPlaneRefValidCond.Message = err.Error()
+			if res, _, errPatch := patch.StatusWithConditions(
+				ctx,
+				r.Client,
+				&ext,
+				append(dependingConditions, controlPlaneRefValidCond)...,
+			); errPatch != nil || !res.IsZero() {
+				return "", res, errPatch
+			}
+			return "", ctrl.Result{}, err
+		}
+
+		// set the controlPlaneRefValidCond to false in case the KonnectGatewayControlPlane is not programmed yet
+		if !lo.ContainsBy(kgcp.Status.Conditions, func(cond metav1.Condition) bool {
+			return cond.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+				cond.Status == metav1.ConditionTrue
+		}) {
+			controlPlaneRefValidCond.Status = metav1.ConditionFalse
+			controlPlaneRefValidCond.Reason = konnectv1alpha1.ControlPlaneRefReasonInvalid
+			controlPlaneRefValidCond.Message = fmt.Sprintf("Konnect control plane %s/%s not programmed yet", cpNamepace, cpRef.Name)
+			if res, _, errPatch := patch.StatusWithConditions(
+				ctx,
+				r.Client,
+				&ext,
+				append(dependingConditions, controlPlaneRefValidCond)...,
+			); errPatch != nil || !res.IsZero() {
+				return "", res, errPatch
+			}
+			return "", ctrl.Result{}, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed
+		}
+		konnectCPID = kgcp.GetKonnectID()
+	case commonv1alpha1.ControlPlaneRefKonnectID:
+		// in case the ControlPlaneRef is a KonnectID, we use it directly.
+		konnectCPID = string(*ext.Spec.Konnect.ControlPlane.Ref.KonnectID)
+	}
+
+	return konnectCPID, ctrl.Result{}, nil
 }
 
 // ensureExtendablesReferencesInStatus ensures that the KonnectExtension references to DataPlane and ControlPlane are up-to-date.
@@ -288,8 +317,7 @@ func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, e
 
 func konnectClusterTypeToCRDClusterType(clusterType sdkkonnectcomp.ControlPlaneClusterType) konnectv1alpha1.KonnectExtensionClusterType {
 	switch clusterType {
-	// When it's not specified by the caller (left empty) in Konnect it's set to CLUSTER_TYPE_CONTROL_PLANE.
-	case sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane, "":
+	case sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane:
 		return konnectv1alpha1.ClusterTypeControlPlane
 	case sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeK8SIngressController:
 		return konnectv1alpha1.ClusterTypeK8sIngressController
