@@ -681,7 +681,7 @@ kind: Service
 metadata:
   labels:
     app.kubernetes.io/component: ko
-  name: chartsnap-kong-operator-webhook
+  name: kong-operator-webhook
   namespace: default
 spec:
   ports:
@@ -808,8 +808,8 @@ metadata:
   namespace: default
 spec:
   dnsNames:
-  - SERVICE_NAME.SERVICE_NAMESPACE.svc
-  - SERVICE_NAME.SERVICE_NAMESPACE.svc.cluster.local
+  - chartsnap-kong-operator.default.svc
+  - chartsnap-kong-operator.default.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: selfsigned-issuer
@@ -826,8 +826,8 @@ metadata:
   namespace: default
 spec:
   dnsNames:
-  - SERVICE_NAME.SERVICE_NAMESPACE.svc
-  - SERVICE_NAME.SERVICE_NAMESPACE.svc.cluster.local
+  - kong-operator-webhook.default.svc
+  - kong-operator-webhook.default.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: selfsigned-issuer
