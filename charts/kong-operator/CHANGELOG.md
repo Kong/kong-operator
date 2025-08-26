@@ -5,6 +5,7 @@
 ### Fixes
 
 - Fix config dump service and template issue.
+  [#2129](https://github.com/Kong/kong-operator/pull/2129)
 
 ## 0.0.4
 
