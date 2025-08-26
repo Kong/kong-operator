@@ -9,8 +9,8 @@ metadata:
   namespace:  {{ template "kong.namespace" . }}
 spec:
   dnsNames:
-  - SERVICE_NAME.SERVICE_NAMESPACE.svc
-  - SERVICE_NAME.SERVICE_NAMESPACE.svc.cluster.local
+  - {{ template "kong.fullname" . }}.{{ template "kong.namespace" . }}.svc
+  - {{ template "kong.fullname" . }}.{{ template "kong.namespace" . }}.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: selfsigned-issuer
@@ -26,8 +26,8 @@ metadata:
   namespace:  {{ template "kong.namespace" . }}
 spec:
   dnsNames:
-  - SERVICE_NAME.SERVICE_NAMESPACE.svc
-  - SERVICE_NAME.SERVICE_NAMESPACE.svc.cluster.local
+  - kong-operator-webhook.{{ template "kong.namespace" . }}.svc
+  - kong-operator-webhook.{{ template "kong.namespace" . }}.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: selfsigned-issuer

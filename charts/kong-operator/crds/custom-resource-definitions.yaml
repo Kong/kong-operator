@@ -539,6 +539,7 @@ metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: gateway-operator
     kubernetes-configuration.konghq.com/version: v2.0.0-alpha.3
+    cert-manager.io/inject-ca-from: kong-system/serving-cert
   name: controlplanes.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -552,6 +553,19 @@ spec:
     - kocp
     singular: controlplane
   scope: Namespaced
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: kong-operator-webhook
+          namespace: kong-system
+          path: /convert
+          port: 443
+        caBundle: ""
+      conversionReviewVersions:
+      - v1
+      - v1beta1
   versions:
   - additionalPrinterColumns:
     - description: The Resource is ready
@@ -19190,6 +19204,7 @@ metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: gateway-operator
     kubernetes-configuration.konghq.com/version: v2.0.0-alpha.3
+    cert-manager.io/inject-ca-from: kong-system/serving-cert
   name: gatewayconfigurations.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -19203,6 +19218,19 @@ spec:
     - kogc
     singular: gatewayconfiguration
   scope: Namespaced
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: kong-operator-webhook
+          namespace: kong-system
+          path: /convert
+          port: 443
+        caBundle: ""
+      conversionReviewVersions:
+      - v1
+      - v1beta1
   versions:
   - deprecated: true
     deprecationWarning: GatewayConfiguration v1beta1 has been deprecated in favor
@@ -54718,6 +54746,7 @@ metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: gateway-operator
     kubernetes-configuration.konghq.com/version: v2.0.0-alpha.3
+    cert-manager.io/inject-ca-from: kong-system/serving-cert
   name: konnectgatewaycontrolplanes.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -54730,6 +54759,19 @@ spec:
     plural: konnectgatewaycontrolplanes
     singular: konnectgatewaycontrolplane
   scope: Namespaced
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: kong-operator-webhook
+          namespace: kong-system
+          path: /convert
+          port: 443
+        caBundle: ""
+      conversionReviewVersions:
+      - v1
+      - v1beta1
   versions:
   - additionalPrinterColumns:
     - description: The Resource is Programmed on Konnect

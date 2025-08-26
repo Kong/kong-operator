@@ -38,7 +38,7 @@ kind: Service
 metadata:
   labels:
     app.kubernetes.io/component: ko
-  name: {{ template "kong.fullname" . }}-webhook
+  name: kong-operator-webhook
   namespace:  {{ template "kong.namespace" . }}
 spec:
   ports:
