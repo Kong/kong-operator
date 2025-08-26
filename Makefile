@@ -346,8 +346,10 @@ generate.kic-webhook-config: kustomize kic-webhook-config-generator
 
 .PHONY: generate.cli-arguments-docs
 generate.cli-arguments-docs:
-# Use ./scripts/cli-arguments-docs-gen/post-process-for-konghq.sh to postprocess the output for docs.konghq.com
 	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments.md
+	$(PROJECT_DIR)/scripts/cli-arguments-docs-gen/post-process-for-konghq.sh \
+		$(PROJECT_DIR)/docs/cli-arguments-for-developer-konghq-com.md \
+		$(PROJECT_DIR)/docs/cli-arguments.md
 
 # ------------------------------------------------------------------------------
 # Build - Manifests
