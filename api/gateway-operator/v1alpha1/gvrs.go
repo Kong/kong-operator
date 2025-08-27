@@ -19,12 +19,3 @@ func KongPluginInstallationGVR() schema.GroupVersionResource {
 		Resource: "kongplugininstallations",
 	}
 }
-
-// KonnectExtensionGVR returns current package KonnectExtension GVR.
-func KonnectExtensionGVR() schema.GroupVersionResource {
-	return schema.GroupVersionResource{
-		Group:    SchemeGroupVersion.Group,
-		Version:  SchemeGroupVersion.Version,
-		Resource: "konnectextensions",
-	}
-}

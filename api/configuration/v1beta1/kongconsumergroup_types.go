@@ -36,9 +36,8 @@ import (
 // +kubebuilder:validation:XValidation:rule="(!has(oldSelf.spec) || !has(oldSelf.spec.controlPlaneRef)) || has(self.spec.controlPlaneRef)", message="controlPlaneRef is required once set"
 // +kubebuilder:validation:XValidation:rule="(!has(self.spec) || !has(self.spec.controlPlaneRef) || !has(self.spec.controlPlaneRef.konnectNamespacedRef)) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)", message="spec.controlPlaneRef cannot specify namespace for namespaced resource"
 // +kubebuilder:validation:XValidation:rule="(!has(oldSelf.spec) || !has(oldSelf.spec.controlPlaneRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
-// +apireference:kic:include
 // +apireference:kgo:include
-// +kong:channels=ingress-controller;gateway-operator
+// +kong:channels=gateway-operator
 type KongConsumerGroup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -51,7 +50,6 @@ type KongConsumerGroup struct {
 }
 
 // KongConsumerGroupSpec defines the desired state of KongConsumerGroup.
-// +apireference:kic:include
 type KongConsumerGroupSpec struct {
 	// Name is the name of the ConsumerGroup in Kong.
 	Name string `json:"name,omitempty"`
@@ -67,7 +65,6 @@ type KongConsumerGroupSpec struct {
 
 // KongConsumerGroupList contains a list of KongConsumerGroups.
 // +kubebuilder:object:root=true
-// +apireference:kic:include
 type KongConsumerGroupList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -75,7 +72,6 @@ type KongConsumerGroupList struct {
 }
 
 // KongConsumerGroupStatus represents the current status of the KongConsumerGroup resource.
-// +apireference:kic:include
 type KongConsumerGroupStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional

@@ -38,9 +38,8 @@ import (
 // +kubebuilder:validation:XValidation:rule="!(has(self.config) && has(self.configFrom))", message="Using both config and configFrom fields is not allowed."
 // +kubebuilder:validation:XValidation:rule="!(has(self.configFrom) && has(self.configPatches))", message="Using both configFrom and configPatches fields is not allowed."
 // +kubebuilder:validation:XValidation:rule="self.plugin == oldSelf.plugin", message="The plugin field is immutable"
-// +apireference:kgo:include
 // +apireference:kic:include
-// +kong:channels=ingress-controller;gateway-operator
+// +kong:channels=gateway-operator
 type KongPlugin struct {
 	metav1.TypeMeta `json:",inline"`
 	// Setting a `global` label to `true` will apply the plugin to every request proxied by the Kong.
@@ -109,7 +108,6 @@ type KongPlugin struct {
 
 // KongPluginList contains a list of KongPlugin.
 // +kubebuilder:object:root=true
-// +apireference:kgo:include
 // +apireference:kic:include
 type KongPluginList struct {
 	metav1.TypeMeta `json:",inline"`
@@ -118,7 +116,6 @@ type KongPluginList struct {
 }
 
 // KongPluginStatus represents the current status of the KongPlugin resource.
-// +apireference:kgo:include
 // +apireference:kic:include
 type KongPluginStatus struct {
 	// Conditions describe the current conditions of the KongPluginStatus.

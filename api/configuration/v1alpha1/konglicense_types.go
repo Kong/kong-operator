@@ -18,7 +18,7 @@ import (
 // +apireference:kic:include
 // +apireference:kgo:include
 // +apireference:kic:include
-// +kong:channels=ingress-controller;gateway-operator
+// +kong:channels=gateway-operator
 type KongLicense struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

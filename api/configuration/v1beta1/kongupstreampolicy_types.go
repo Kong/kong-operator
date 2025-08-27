@@ -53,8 +53,7 @@ func init() {
 // +kubebuilder:validation:XValidation:rule="has(self.spec.stickySessions) ? (has(self.spec.hashOn) && has(self.spec.hashOn.input) && self.spec.hashOn.input == 'none' && !has(self.spec.hashOn.cookie) && !has(self.spec.hashOn.cookiePath) && !has(self.spec.hashOn.header) && !has(self.spec.hashOn.uriCapture) && !has(self.spec.hashOn.queryArg)) : true", message="When spec.stickySessions is set, spec.hashOn.input must be set to 'none' (no other hash_on fields allowed)."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.stickySessions) ? has(self.spec.stickySessions.cookie) : true", message="spec.stickySessions.cookie is required when spec.stickySessions is set."
 // +kubebuilder:validation:XValidation:rule="has(self.spec.stickySessions) ? (has(self.spec.algorithm) && self.spec.algorithm == \"sticky-sessions\") : true", message="spec.algorithm must be set to 'sticky-sessions' when spec.stickySessions is set."
-// +apireference:kic:include
-// +kong:channels=ingress-controller
+// +kong:channels=gateway-operator
 type KongUpstreamPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -68,7 +67,6 @@ type KongUpstreamPolicy struct {
 
 // KongUpstreamPolicyList contains a list of KongUpstreamPolicy.
 // +kubebuilder:object:root=true
-// +apireference:kic:include
 type KongUpstreamPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -76,7 +74,6 @@ type KongUpstreamPolicyList struct {
 }
 
 // KongUpstreamPolicySpec contains the specification for KongUpstreamPolicy.
-// +apireference:kic:include
 type KongUpstreamPolicySpec struct {
 	// Algorithm is the load balancing algorithm to use.
 	// Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency", "sticky-sessions"
@@ -113,13 +110,10 @@ type KongUpstreamPolicySpec struct {
 // Use "none" to disable hashing, it is required for sticky sessions.
 //
 // +kubebuilder:validation:Enum=ip;consumer;path;none
-// +apireference:kic:include
 type HashInput string
 
 // KongUpstreamHash defines how to calculate hash for consistent-hashing load balancing algorithm.
 // Only one of the fields must be set.
-//
-// +apireference:kic:include
 type KongUpstreamHash struct {
 	// Input allows using one of the predefined inputs (ip, consumer, path, none).
 	// Set this to `none` if you want to use sticky sessions.
@@ -157,7 +151,6 @@ type KongUpstreamHash struct {
 // KongUpstreamStickySessions defines the sticky session configuration for Kong upstream.
 // Sticky sessions ensure that requests from the same client are routed to the same backend target.
 // This is achieved using cookies and requires Kong Enterprise Gateway.
-// +apireference:kic:include
 type KongUpstreamStickySessions struct {
 	// Cookie is the name of the cookie to use for sticky sessions.
 	// Kong will generate this cookie if it doesn't exist in the request.
@@ -174,7 +167,6 @@ type KongUpstreamStickySessions struct {
 }
 
 // KongUpstreamHealthcheck represents a health-check config of an Upstream in Kong.
-// +apireference:kic:include
 type KongUpstreamHealthcheck struct {
 	// Active configures active health check probing.
 	Active *KongUpstreamActiveHealthcheck `json:"active,omitempty"`
@@ -188,7 +180,6 @@ type KongUpstreamHealthcheck struct {
 }
 
 // KongUpstreamActiveHealthcheck configures active health check probing.
-// +apireference:kic:include
 type KongUpstreamActiveHealthcheck struct {
 	// Type determines whether to perform active health checks using HTTP or HTTPS, or just attempt a TCP connection.
 	// Accepted values are "http", "https", "tcp", "grpc", "grpcs".
@@ -225,7 +216,6 @@ type KongUpstreamActiveHealthcheck struct {
 
 // KongUpstreamPassiveHealthcheck configures passive checks around
 // passive health checks.
-// +apireference:kic:include
 type KongUpstreamPassiveHealthcheck struct {
 	// Type determines whether to perform passive health checks interpreting HTTP/HTTPS statuses,
 	// or just check for TCP connection success.
@@ -243,11 +233,9 @@ type KongUpstreamPassiveHealthcheck struct {
 // HTTPStatus is an HTTP status code.
 // +kubebuilder:validation:Minimum=100
 // +kubebuilder:validation:Maximum=599
-// +apireference:kic:include
 type HTTPStatus int
 
 // KongUpstreamHealthcheckHealthy configures thresholds and HTTP status codes to mark targets healthy for an upstream.
-// +apireference:kic:include
 type KongUpstreamHealthcheckHealthy struct {
 	// HTTPStatuses is a list of HTTP status codes that Kong considers a success.
 	HTTPStatuses []HTTPStatus `json:"httpStatuses,omitempty"`
@@ -262,7 +250,6 @@ type KongUpstreamHealthcheckHealthy struct {
 }
 
 // KongUpstreamHealthcheckUnhealthy configures thresholds and HTTP status codes to mark targets unhealthy.
-// +apireference:kic:include
 type KongUpstreamHealthcheckUnhealthy struct {
 	// HTTPFailures is the number of failures to consider a target unhealthy.
 	// +kubebuilder:validation:Minimum=0

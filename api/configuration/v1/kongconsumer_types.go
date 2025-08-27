@@ -39,8 +39,7 @@ import (
 // +kubebuilder:validation:XValidation:rule="(!has(self.spec) || !has(self.spec.controlPlaneRef) || !has(self.spec.controlPlaneRef.konnectNamespacedRef)) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)", message="spec.controlPlaneRef cannot specify namespace for namespaced resource"
 // +kubebuilder:validation:XValidation:rule="(!has(self.spec) || !has(self.spec.controlPlaneRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef", message="spec.controlPlaneRef is immutable when an entity is already Programmed"
 // +apireference:kgo:include
-// +apireference:kic:include
-// +kong:channels=ingress-controller;gateway-operator
+// +kong:channels=gateway-operator
 type KongConsumer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -71,7 +70,6 @@ type KongConsumer struct {
 
 // KongConsumerSpec defines the specification of the KongConsumer.
 // +apireference:kgo:include
-// +apireference:kic:include
 type KongConsumerSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this Consumer is associated with.
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
@@ -85,7 +83,6 @@ type KongConsumerSpec struct {
 // KongConsumerList contains a list of KongConsumer.
 // +kubebuilder:object:root=true
 // +apireference:kgo:include
-// +apireference:kic:include
 type KongConsumerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -94,7 +91,6 @@ type KongConsumerList struct {
 
 // KongConsumerStatus represents the current status of the KongConsumer resource.
 // +apireference:kgo:include
-// +apireference:kic:include
 type KongConsumerStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
