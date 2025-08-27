@@ -13,6 +13,7 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
+	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
 )
 
@@ -27,6 +28,8 @@ func WithGatewayAPI(t *testing.T, s *k8sruntime.Scheme) {
 
 // WithKong registers the Kong types with the scheme.
 func WithKong(t *testing.T, s *k8sruntime.Scheme) {
+	// TODO: It will be simplified with https://github.com/Kong/kong-operator/issues/1960.
+	require.NoError(t, operatorv1alpha1.AddToScheme(s))
 	require.NoError(t, configurationv1.AddToScheme(s))
 	require.NoError(t, configurationv1beta1.AddToScheme(s))
 	require.NoError(t, configurationv1alpha1.AddToScheme(s))

@@ -23,7 +23,13 @@ func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 		return err
 	}
 
+	// TODO: It will be simplified with https://github.com/Kong/kong-operator/issues/1960.
 	fmt.Printf("INFO: deploying Kong CRDs to cluster\n")
+	// Argument --server-side is used here, because otherwise content of applied configuration exceed
+	// allowed length for annotations, something to consider is to have this option enabled by default.
+	if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongKOCRDsKustomize, "--server-side"); err != nil {
+		return err
+	}
 	if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongCRDsKustomize); err != nil {
 		return err
 	}

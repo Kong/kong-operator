@@ -154,12 +154,14 @@ func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) 
 	kconfBasePath := filepath.Join(build.Default.GOPATH, "pkg", "mod")
 	kconfBasePath = filepath.Join(append([]string{kconfBasePath}, split...)...)
 	kconfBasePath += "@" + kconfVersion
+	// TODO: It will be simplified with https://github.com/Kong/kong-operator/issues/1960.
 	kongCRDPath := filepath.Join(kconfBasePath, "config", "crd", "ingress-controller")
+	kongKGOCRDPath := filepath.Join(kconfBasePath, "config", "crd", "gateway-operator")
 	kongIncubatorCRDPath := filepath.Join(kconfBasePath, "config", "crd", "ingress-controller-incubator")
 
 	_, err = envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme:             scheme,
-		Paths:              []string{kongCRDPath, kongIncubatorCRDPath},
+		Paths:              []string{kongCRDPath, kongKGOCRDPath, kongIncubatorCRDPath},
 		ErrorIfPathMissing: true,
 	})
 	require.NoError(t, err)
