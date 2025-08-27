@@ -171,14 +171,6 @@ func WithKongAdminURLs(urls ...string) func(cfg *managercfg.Config) {
 	}
 }
 
-func WithAdmissionWebhookEnabled(key, cert []byte, port int) func(cfg *managercfg.Config) {
-	return func(cfg *managercfg.Config) {
-		cfg.AdmissionServer.ListenAddr = fmt.Sprintf(":%d", port)
-		cfg.AdmissionServer.Key = string(key)
-		cfg.AdmissionServer.Cert = string(cert)
-	}
-}
-
 func WithMetricsAddr(addr string) func(cfg *managercfg.Config) {
 	return func(cfg *managercfg.Config) {
 		cfg.MetricsAddr = addr

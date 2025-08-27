@@ -127,9 +127,6 @@ type Config struct {
 	// ConfigMapLabelSelector specifies the label which will be used to limit the ingestion of configmaps. Only those that have this label set to "true" will be ingested.
 	ConfigMapLabelSelector map[string]string
 
-	// Admission Webhook server config
-	AdmissionServer AdmissionServerConfig
-
 	// Diagnostics and performance
 	EnableProfiling      bool
 	EnableConfigDumps    bool

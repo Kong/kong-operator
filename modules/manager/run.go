@@ -118,8 +118,8 @@ type Config struct {
 	KonnectControllersEnabled bool
 
 	// Webhook options.
-	ConversionWebhookEnabled  bool
-	ValidationWebhookEnabled  bool
+	ConversionWebhookEnabled bool
+	ValidationWebhookEnabled bool
 }
 
 const (

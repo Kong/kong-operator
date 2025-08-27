@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"testing"
@@ -21,12 +22,14 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/e2e-framework/klient/conf"
 	"sigs.k8s.io/e2e-framework/pkg/env"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/admission"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 	"github.com/kong/kong-operator/ingress-controller/test"
@@ -434,6 +437,15 @@ func startControllerManager(
 
 	t.Logf("starting the controller manager")
 	cert, key := certificate.GetKongSystemSelfSignedCerts()
+	require.NoError(t, os.MkdirAll(filepath.Dir(admission.DefaultAdmissionWebhookCertPath), 0755))
+	require.NoError(t, os.WriteFile(admission.DefaultAdmissionWebhookCertPath, cert, 0600))
+	require.NoError(t, os.MkdirAll(filepath.Dir(admission.DefaultAdmissionWebhookKeyPath), 0755))
+	require.NoError(t, os.WriteFile(admission.DefaultAdmissionWebhookKeyPath, key, 0600))
+	t.Cleanup(func() {
+		require.NoError(t, os.Remove(admission.DefaultAdmissionWebhookCertPath))
+		require.NoError(t, os.Remove(admission.DefaultAdmissionWebhookKeyPath))
+	})
+
 	metricsPort := testhelpers.GetFreePort(t)
 	healthProbePort := testhelpers.GetFreePort(t)
 	ingressClass := setupCfg.ingressClassName
@@ -445,9 +457,6 @@ func startControllerManager(
 		fmt.Sprintf("--health-probe-bind-address=localhost:%d", healthProbePort),
 		fmt.Sprintf("--metrics-bind-address=localhost:%d", metricsPort),
 		fmt.Sprintf("--ingress-class=%s", ingressClass),
-		fmt.Sprintf("--admission-webhook-cert=%s", cert),
-		fmt.Sprintf("--admission-webhook-key=%s", key),
-		fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
 		"--anonymous-reports=false",
 		"--log-level=trace",
 		"--dump-config=true",

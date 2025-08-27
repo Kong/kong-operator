@@ -21,10 +21,14 @@ var (
 	codecs = serializer.NewCodecFactory(scheme)
 )
 
+// To match paths used in Helm Chart and expected by conversion webhook from internal/webhook/conversion/webhook.go.
+// Source for those paths is:
+// https://github.com/kubernetes-sigs/controller-runtime/blob/3554729cfb3179c1a13f554b828d658d062dceb9/pkg/webhook/server.go#L81
 const (
-	// https://github.com/kubernetes-sigs/controller-runtime/blob/3554729cfb3179c1a13f554b828d658d062dceb9/pkg/webhook/server.go#L81
-	defaultAdmissionWebhookCertPath = "/tmp/k8s-webhook-server/serving-certs/tls.crt"
-	defaultAdmissionWebhookKeyPath  = "/tmp/k8s-webhook-server/serving-certs/tls.key"
+	// DefaultAdmissionWebhookCertPath is the default path to the any (validation, conversion) webhook server TLS certificate.
+	DefaultAdmissionWebhookCertPath = "/tmp/k8s-webhook-server/serving-certs/tls.crt"
+	// DefaultAdmissionWebhookKeyPath is the default path to the any (validation, conversion) webhook server TLS key.
+	DefaultAdmissionWebhookKeyPath = "/tmp/k8s-webhook-server/serving-certs/tls.key"
 )
 
 type Server struct {
@@ -35,7 +39,7 @@ type Server struct {
 func MakeTLSServer(port int32, handler http.Handler) (*Server, error) {
 	const defaultHTTPReadHeaderTimeout = 10 * time.Second
 
-	watcher, err := certwatcher.New(defaultAdmissionWebhookCertPath, defaultAdmissionWebhookKeyPath)
+	watcher, err := certwatcher.New(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CertWatcher: %w", err)
 	}
@@ -59,7 +63,7 @@ func MakeTLSServer(port int32, handler http.Handler) (*Server, error) {
 func (s *Server) Start(ctx context.Context) error {
 	logger := ctrllog.FromContext(ctx)
 	go func() {
-		if err := s.s.ListenAndServeTLS(defaultAdmissionWebhookCertPath, defaultAdmissionWebhookKeyPath); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := s.s.ListenAndServeTLS(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error(err, "Failed to start admission server")
 		}
 	}()
