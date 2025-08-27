@@ -514,7 +514,7 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 	testCases := []struct {
 		name             string
 		listeners        []gwtypes.Listener
-		listenersOptions []operatorv2beta1.GatewayConfigurationListenerOptions
+		listenersOptions []operatorv1beta1.GatewayConfigurationListenerOptions
 		expectedPorts    []operatorv1beta1.DataPlaneServicePort
 		expectedError    error
 	}{
@@ -585,7 +585,7 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					Port:     gatewayv1.PortNumber(443),
 				},
 			},
-			listenersOptions: []operatorv2beta1.GatewayConfigurationListenerOptions{
+			listenersOptions: []operatorv1beta1.GatewayConfigurationListenerOptions{
 				{
 					Name:     "http",
 					NodePort: int32(30080),
@@ -619,7 +619,7 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					Port:     gatewayv1.PortNumber(443),
 				},
 			},
-			listenersOptions: []operatorv2beta1.GatewayConfigurationListenerOptions{
+			listenersOptions: []operatorv1beta1.GatewayConfigurationListenerOptions{
 				{
 					Name:     "http-1",
 					NodePort: int32(30080),

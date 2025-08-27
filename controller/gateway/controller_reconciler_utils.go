@@ -835,7 +835,7 @@ func (g *gatewayConditionsAndListenersAwareT) setProgrammed() {
 func setDataPlaneIngressServicePorts(
 	opts *operatorv1beta1.DataPlaneOptions,
 	listeners []gatewayv1.Listener,
-	listenersOpts []operatorv2beta1.GatewayConfigurationListenerOptions,
+	listenersOpts []operatorv1beta1.GatewayConfigurationListenerOptions,
 ) error {
 
 	// Check if all the names in GatewayConfiguration's spec.listenersOptions matches a listener in Gateway.
@@ -885,7 +885,7 @@ func setDataPlaneIngressServicePorts(
 		}
 
 		// Update the service port by GatewayConfiguration's spec.listenersOptions if there is a matching item by listener name.
-		if listenerOpt, found := lo.Find(listenersOpts, func(listenerOpts operatorv2beta1.GatewayConfigurationListenerOptions) bool {
+		if listenerOpt, found := lo.Find(listenersOpts, func(listenerOpts operatorv1beta1.GatewayConfigurationListenerOptions) bool {
 			return listenerOpts.Name == l.Name
 		}); found {
 			port.NodePort = listenerOpt.NodePort
