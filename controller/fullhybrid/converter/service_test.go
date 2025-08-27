@@ -19,7 +19,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
-func TestDummyTranslation(t *testing.T) {
+func TestServiceTranslation(t *testing.T) {
 	testCases := []struct {
 		name           string
 		service        corev1.Service
@@ -223,11 +223,11 @@ func TestDummyTranslation(t *testing.T) {
 				WithObjects(tc.httpRoutes...).
 				Build()
 
-			dummyConverter := NewDummyConverter(cl)
-			dummyConverter.SetRootObject(&tc.service)
+			serviceConverter := newServiceConverter(&tc.service, cl)
 
 			for _, svc := range tc.expectedOutput {
-				require.NoError(t, dummyConverter.setMetadata(svc.(*configurationv1alpha1.KongService)))
+				hashSpec := utils.Hash(svc)
+				require.NoError(t, utils.SetMetadata(&tc.service, svc.(*configurationv1alpha1.KongService), hashSpec))
 			}
 			expectedUnstructured := make([]unstructured.Unstructured, len(tc.expectedOutput))
 			for i, obj := range tc.expectedOutput {
@@ -236,9 +236,8 @@ func TestDummyTranslation(t *testing.T) {
 				expectedUnstructured[i] = u
 			}
 
-			require.NoError(t, dummyConverter.LoadInputStore(context.Background()))
-			require.NoError(t, dummyConverter.Translate())
-			require.ElementsMatch(t, expectedUnstructured, dummyConverter.GetOutputStore(context.Background()))
+			require.NoError(t, serviceConverter.Translate())
+			require.ElementsMatch(t, expectedUnstructured, serviceConverter.GetOutputStore(context.Background()))
 		})
 	}
 }
