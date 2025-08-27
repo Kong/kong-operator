@@ -330,7 +330,7 @@ func TestHelmUpgrade(t *testing.T) {
 			if len(tag) > 8 {
 				tagInReleaseName = tag[:8]
 			}
-			releaseName := strings.ReplaceAll(fmt.Sprintf("kgo-%s-to-%s", tc.fromVersion, tagInReleaseName), ".", "-")
+			releaseName := strings.ReplaceAll(fmt.Sprintf("ko-%s-to-%s", tc.fromVersion, tagInReleaseName), ".", "-")
 			if strings.Contains(tc.fromVersion, "nightly") {
 				koImageRepository = koImageRepositoryNightly
 			}
