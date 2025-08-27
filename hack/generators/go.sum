@@ -58,8 +58,8 @@ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.18.0 h1:c/Cqfb0r+Yi+JtIEq73FWXVkRonBlf0CRNYc8Zttxdo=
 github.com/klauspost/compress v1.18.0/go.mod h1:2Pp+KzxcywXVXMr50+X0Q/Lsb43OQHYWRCY2AiWywWQ=
-github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.3.0.20250822094046-f27a734206e6 h1:dqxj5b/mRKs34DcRKkS+rBz303LWyv7+89VvGdXx9EQ=
-github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.3.0.20250822094046-f27a734206e6/go.mod h1:2TcQhF9wnlAf6JYJIDoFKpKO12Hirn/PFr1uoBgGhGA=
+github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.3.0.20250827101239-3b7dade3c5bf h1:uAnJaWoWRwcuIidbW6sbgAFJZNTeEnKcYQnyo3BM+mQ=
+github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.3.0.20250827101239-3b7dade3c5bf/go.mod h1:ydQ/dHFNrsc2QojF5ECvJ10zU4jmtR1KQT11aV9QNA4=
 github.com/kong/semver/v4 v4.0.1 h1:DIcNR8W3gfx0KabFBADPalxxsp+q/5COwIFkkhrFQ2Y=
 github.com/kong/semver/v4 v4.0.1/go.mod h1:LImQ0oT15pJvSns/hs2laLca2zcYoHu5EsSNY0J6/QA=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
@@ -104,8 +104,8 @@ github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+
 github.com/stretchr/objx v0.5.2 h1:xuMeJ0Sdp5ZMRXx/aWO6RZxdr3beISkG5/G/aIRr3pY=
 github.com/stretchr/objx v0.5.2/go.mod h1:FRsXN1f5AsAjCGJKqEizvkpNtU+EGNCLh3NxZ/8L+MA=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
-github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOfJA=
-github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
+github.com/stretchr/testify v1.11.0 h1:ib4sjIrwZKxE5u/Japgo/7SJV3PvgjGiRNAvTVGqQl8=
+github.com/stretchr/testify v1.11.0/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/x448/float16 v0.8.4 h1:qLwI1I70+NjRFUR3zs1JPUCgaCXSh3SW62uAKT1mSBM=
 github.com/x448/float16 v0.8.4/go.mod h1:14CWIYCyZA/cWjXOioeEpHeN/83MdbZDRQHoFcYsOfg=
 github.com/yuin/goldmark v1.1.27/go.mod h1:3hX8gzYuyVAZsxl0MRgGTJEmQBFcNTphYh9decYSb74=

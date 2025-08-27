@@ -28,6 +28,7 @@ var (
 	kubernetesConfigurationModuleVersion = lo.Must(DependencyModuleVersionGit(consts.KubernetesConfigurationModulePath))
 	kongCRDsKustomize                    = initKongConfigurationCRDs()
 	kongIncubatorCRDsKustomize           = initKongIncubatorCRDsKustomizePath()
+	kongKOCRDsKustomize                  = initKongOperatorConfigurationCRDs()
 )
 
 func initKongIncubatorCRDsKustomizePath() string {
@@ -54,6 +55,10 @@ func initKongCRDsRBACsKustomizePath() string {
 
 func initKongConfigurationCRDs() string {
 	return fmt.Sprintf("%s/config/crd/ingress-controller?ref=%s", kubernetesConfigurationModulePath, kubernetesConfigurationModuleVersion)
+}
+
+func initKongOperatorConfigurationCRDs() string {
+	return fmt.Sprintf("%s/config/crd/gateway-operator?ref=%s", kubernetesConfigurationModulePath, kubernetesConfigurationModuleVersion)
 }
 
 func ensureDirExists(dir string) {
