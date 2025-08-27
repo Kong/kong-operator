@@ -54,6 +54,9 @@
   `True` if the `ControlPlane`'s options in its `spec` is valid and set to `False`
   if the options are invalid against the operator's configuration.
   [#2070](https://github.com/Kong/kong-operator/pull/2070)
+- Added `APIConversion` interface to bootstrap Gateway API support in Konnect hybrid
+  mode.
+  [#2134](https://github.com/Kong/kong-operator/pull/2134)
 
 ### Fixed
 
