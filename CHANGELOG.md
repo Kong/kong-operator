@@ -2,7 +2,7 @@
 
 ## Table of Contents
 
-- [v2.0.0-alpha.3](#v200-alpha3)
+- [v2.0.0-alpha.4](#v200-alpha4)
 - [v1.6.2](#v162)
 - [v1.6.1](#v161)
 - [v1.6.0](#v160)
@@ -30,57 +30,10 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
 
-- Support for `cert-manager` certificate provisioning for webhooks in Helm Chart.
-  [#2122](https://github.com/Kong/kong-operator/pull/2122)
+## [v2.0.0-alpha.4]
 
-### Added
-
-- Support specifying labels to filter watched `Secret`s and `ConfigMap`s of
-  each `ControlPlane` by `spec.objectFilters.secrets.matchLabels` and
-  `spec.objectFilters.configMaps.matchLabels`. Only secrets or configmaps that
-  have the labels matching the specified labels in spec are reconciled.
-  If Kong operator has also flags `--secret-label-selector` or
-  `--config-map-label-selector` set, the controller for each `ControlPlane` also
-  requires reconciled secrets or configmaps to set the labels given in the flags
-  to `true`.
-  [#1982](https://github.com/Kong/kong-operator/pull/1982)
-- Add conversion webhook for `KonnectGatewayControlPlane` to support seamless conversion
-  between old `v1alpha1` and new `v1alpha2` API versions.
-  [#2023](https://github.com/Kong/kong-operator/pull/2023)
-- Add Konnect related configuration fields to `ControlPlane` spec, allowing fine-grained
-  control over Konnect integration settings including consumer synchronization, licensing
-  configuration, node refresh periods, and config upload periods.
-  [#2009](https://github.com/Kong/kong-operator/pull/2009)
-- Added `OptionsValid` condition to `ControlPlane`s' status. The status is set to
-  `True` if the `ControlPlane`'s options in its `spec` is valid and set to `False`
-  if the options are invalid against the operator's configuration.
-  [#2070](https://github.com/Kong/kong-operator/pull/2070)
-- Added `APIConversion` interface to bootstrap Gateway API support in Konnect hybrid
-  mode.
-  [#2134](https://github.com/Kong/kong-operator/pull/2134)
-
-### Fixed
-
-- Do not check "Programmed" condition in status of `Gateway` listeners in
-  extracting certificates in controlplane's translation of Kong configuration.
-  This fixes the disappearance of certificates when deployment status of
-  `DataPlane` owned by the gateway (including deletion of pods, rolling update
-  of dataplane deployment, scaling of dataplane and so on).
-  [#2038](https://github.com/Kong/kong-operator/pull/2038)
-- Correctly assume default Kong router flavor is `traditional_compatible` when
-  `KONG_ROUTER_FLAVOR` is not set. This fixes incorrectly populated
-  `GatewayClass.status.supportedFeatures` when the default was assumed to be
-  `expressions`.
-  [#2043](https://github.com/Kong/kong-operator/pull/2043)
-- Support setting exposed nodeport of the dataplane service for `Gateway`s by
-  `nodePort` field in `spec.listenersOptions`.
-  [#2058](https://github.com/Kong/kong-operator/pull/2058)
-
-## [v2.0.0-alpha.3]
-
-> Release date: 2025-08-08
+> Release date: 2025-08-27
 
 > KGO becomes KO, which stands for Kong Operator - Kubernetes Gateway Operator and Kubernetes Ingress Controller
 > become a single product.
@@ -130,6 +83,31 @@
 
 ### Added
 
+- Support for `cert-manager` certificate provisioning for webhooks in Helm Chart.
+  [#2122](https://github.com/Kong/kong-operator/pull/2122)
+- Support specifying labels to filter watched `Secret`s and `ConfigMap`s of
+  each `ControlPlane` by `spec.objectFilters.secrets.matchLabels` and
+  `spec.objectFilters.configMaps.matchLabels`. Only secrets or configmaps that
+  have the labels matching the specified labels in spec are reconciled.
+  If Kong operator has also flags `--secret-label-selector` or
+  `--config-map-label-selector` set, the controller for each `ControlPlane` also
+  requires reconciled secrets or configmaps to set the labels given in the flags
+  to `true`.
+  [#1982](https://github.com/Kong/kong-operator/pull/1982)
+- Add conversion webhook for `KonnectGatewayControlPlane` to support seamless conversion
+  between old `v1alpha1` and new `v1alpha2` API versions.
+  [#2023](https://github.com/Kong/kong-operator/pull/2023)
+- Add Konnect related configuration fields to `ControlPlane` spec, allowing fine-grained
+  control over Konnect integration settings including consumer synchronization, licensing
+  configuration, node refresh periods, and config upload periods.
+  [#2009](https://github.com/Kong/kong-operator/pull/2009)
+- Added `OptionsValid` condition to `ControlPlane`s' status. The status is set to
+  `True` if the `ControlPlane`'s options in its `spec` is valid and set to `False`
+  if the options are invalid against the operator's configuration.
+  [#2070](https://github.com/Kong/kong-operator/pull/2070)
+- Added `APIConversion` interface to bootstrap Gateway API support in Konnect hybrid
+  mode.
+  [#2134](https://github.com/Kong/kong-operator/pull/2134)
 - Move implementation of ControlPlane Extensions mechanism and DataPlaneMetricsExtension from EE.
   [#1583](https://github.com/kong/kong-operator/pull/1583)
 - Move implementation of certificate management for Konnect DPs from EE.
@@ -204,6 +182,20 @@
 
 ### Fixed
 
+- Do not check "Programmed" condition in status of `Gateway` listeners in
+  extracting certificates in controlplane's translation of Kong configuration.
+  This fixes the disappearance of certificates when deployment status of
+  `DataPlane` owned by the gateway (including deletion of pods, rolling update
+  of dataplane deployment, scaling of dataplane and so on).
+  [#2038](https://github.com/Kong/kong-operator/pull/2038)
+- Correctly assume default Kong router flavor is `traditional_compatible` when
+  `KONG_ROUTER_FLAVOR` is not set. This fixes incorrectly populated
+  `GatewayClass.status.supportedFeatures` when the default was assumed to be
+  `expressions`.
+  [#2043](https://github.com/Kong/kong-operator/pull/2043)
+- Support setting exposed nodeport of the dataplane service for `Gateway`s by
+  `nodePort` field in `spec.listenersOptions`.
+  [#2058](https://github.com/Kong/kong-operator/pull/2058)
 - Fixed lack of `instance_name` and `protocols` reconciliation for `KongPluginBinding` when reconciling against Konnect.
   [#1681](https://github.com/kong/kong-operator/pull/1681)
 - The `KonnectExtension` status is kept updated when the `KonnectGatewayControlPlane` is deleted and
@@ -1326,7 +1318,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
-[v2.0.0-alpha.3]: https://github.com/Kong/kong-operator/compare/v1.6.2..v2.0.0-alpha.3
+[v2.0.0-alpha.4]: https://github.com/Kong/kong-operator/compare/v1.6.2..v2.0.0-alpha.4
 [v1.6.2]: https://github.com/Kong/kong-operator/compare/v1.6.1..v1.6.2
 [v1.6.1]: https://github.com/Kong/kong-operator/compare/v1.6.0..v1.6.1
 [v1.6.0]: https://github.com/Kong/kong-operator/compare/v1.5.1..v1.6.0
