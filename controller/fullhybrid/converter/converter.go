@@ -4,36 +4,37 @@ import (
 	"context"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kong-operator/controller/fullhybrid/utils"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
-// APIConverter is an interface that groups the methods needed to convert a
-// Kubernetes API object into Kong configuration objects.
+// APIConverter defines an interface for converting and managing Kubernetes API objects
+// of a generic type t that satisfies the RootObject constraint.
 type APIConverter[t RootObject] interface {
-	RootLoader[t]
-	StoreLoader
-	Translator
+	// GetRootObject returns the current root object of type t.
+	GetRootObject() t
+	// SetRootObject sets the root object to the provided value of type t.
+	SetRootObject(obj t)
+	// LoadStore loads and initializes any required internal store or cache, using the provided context.
+	LoadStore(ctx context.Context) error
+	// Translate performs the conversion or translation logic for the root object, returning an error if the process fails.
+	Translate() error
+	// GetStore returns a slice of unstructured.Unstructured objects representing the current state of the store, using the provided context.
+	GetStore(ctx context.Context) []unstructured.Unstructured
+	// Reduct returns a slice of utils.ReductFunc functions that can be applied to the given unstructured.Unstructured object for reduction.
+	Reduct(obj unstructured.Unstructured) []utils.ReductFunc
+	// ListExistingObjects lists all existing unstructured.Unstructured objects relevant to the converter, using the provided context, and returns them along with any error encountered.
+	ListExistingObjects(ctx context.Context) ([]unstructured.Unstructured, error)
 }
 
 // RootObject is an interface that represents all resource types that can be loaded
 // as root by the APIConverter.
 type RootObject interface {
-	corev1.Service |
-		gwtypes.HTTPRoute
-}
+	*corev1.Service |
+		*gwtypes.HTTPRoute
 
-// RootLoader is an interface that defines methods for setting the root object.
-type RootLoader[t RootObject] interface {
-	SetRootObject(obj t)
-}
-
-// StoreLoader is an interface that defines methods for loading the store.
-type StoreLoader interface {
-	LoadStore(ctx context.Context) error
-}
-
-// Translator is an interface that defines methods for translating the loaded store into the desired output.
-type Translator interface {
-	Translate() error
+	client.Object
 }
