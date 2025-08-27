@@ -31,11 +31,11 @@ rows:
     default: '`100`'
   - flag: '`--cache-sync-period`'
     type: '`string`'
-    description: "Determine the minimum frequency at which watched resources are reconciled. By default or for 0s value, it falls back to controller-runtime's default."
+    description: "Sets the minimum frequency for reconciling watched resources. Defaults to the controller-runtime value if unspecified or set to 0s."
     default: '`0s`'
   - flag: '`--cache-sync-timeout`'
     type: '`string`'
-    description: "The time limit set to wait for syncing controllers' caches. Defaults to 0 to fall back to default from controller-runtime."
+    description: "Sets the time limit for syncing controller caches. Defaults to the controller-runtime value if set to `0`."
     default: '`0s`'
   - flag: '`--cluster-ca-key-size`'
     type: '`string`'
@@ -47,11 +47,11 @@ rows:
     default: '`ecdsa`'
   - flag: '`--cluster-ca-secret`'
     type: '`string`'
-    description: "Name of the Secret containing the cluster CA certificate."
+    description: "Specifies the Secret name that contains the cluster CA certificate."
     default: '`kong-operator-ca`'
   - flag: '`--cluster-ca-secret-namespace`'
     type: '`string`'
-    description: "Name of the namespace for Secret containing the cluster CA certificate."
+    description: "Specifies the namespace of the Secret that contains the cluster CA certificate."
     default: ""
   - flag: '`--cluster-domain`'
     type: '`string`'
@@ -63,7 +63,7 @@ rows:
     default: '`konghq.com/configmap`'
   - flag: '`--controller-name`'
     type: '`string`'
-    description: "Controller name to use if other than the default, only needed for multi-tenancy."
+    description: "Custom controller name, required only in multi-tenant setups."
     default: ""
   - flag: '`--controlplane-config-dump-bind-address`'
     type: '`string`'

@@ -50,14 +50,14 @@ func New(m metadata.Info) *CLI {
 	flagSet.BoolVar(&cfg.EnforceConfig, "enforce-config", true,
 		"Enforce the configuration on the generated cluster resources. If set to false, the operator will only enforce the configuration when the owner resource spec changes.")
 
-	flagSet.StringVar(&cfg.ControllerName, "controller-name", "", "Controller name to use if other than the default, only needed for multi-tenancy.")
-	flagSet.StringVar(&cfg.ClusterCASecretName, "cluster-ca-secret", "kong-operator-ca", "Name of the Secret containing the cluster CA certificate.")
-	flagSet.StringVar(&deferCfg.ClusterCASecretNamespace, "cluster-ca-secret-namespace", "", "Name of the namespace for Secret containing the cluster CA certificate.")
+	flagSet.StringVar(&cfg.ControllerName, "controller-name", "", "Custom controller name, required only in multi-tenant setups.")
+	flagSet.StringVar(&cfg.ClusterCASecretName, "cluster-ca-secret", "kong-operator-ca", "Specifies the Secret name that contains the cluster CA certificate.")
+	flagSet.StringVar(&deferCfg.ClusterCASecretNamespace, "cluster-ca-secret-namespace", "", "Specifies the namespace of the Secret that contains the cluster CA certificate.")
 	flagSet.Var(&cfg.ClusterCAKeyType, "cluster-ca-key-type", "Type of the key used for the cluster CA certificate (possible values: ecdsa, rsa). Default: ecdsa.")
 	flagSet.IntVar(&cfg.ClusterCAKeySize, "cluster-ca-key-size", mgrconfig.DefaultClusterCAKeySize, "Size (in bits) of the key used for the cluster CA certificate. Only used for RSA keys.")
-	flagSet.DurationVar(&cfg.CacheSyncTimeout, "cache-sync-timeout", 0, "The time limit set to wait for syncing controllers' caches. Defaults to 0 to fall back to default from controller-runtime.")
+	flagSet.DurationVar(&cfg.CacheSyncTimeout, "cache-sync-timeout", 0, "Sets the time limit for syncing controller caches. Defaults to the controller-runtime value if set to `0`.")
 	flagSet.StringVar(&cfg.ClusterDomain, "cluster-domain", ingressmgrconfig.DefaultClusterDomain, "The cluster domain. This is used e.g. in generating addresses for upstream services.")
-	flagSet.DurationVar(&cfg.CacheSyncPeriod, "cache-sync-period", 0, "Determine the minimum frequency at which watched resources are reconciled. By default or for 0s value, it falls back to controller-runtime's default.")
+	flagSet.DurationVar(&cfg.CacheSyncPeriod, "cache-sync-period", 0, "Sets the minimum frequency for reconciling watched resources. Defaults to the controller-runtime value if unspecified or set to 0s.")
 	flagSet.BoolVar(&cfg.EmitKubernetesEvents, "emit-kubernetes-events", ingressmgrconfig.DefaultEmitKubernetesEvents, "Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects.")
 	flagSet.Var(newValidatedValue(&cfg.WatchNamespaces, manager.NewWatchNamespaces), "watch-namespaces", "Comma-separated list of namespaces to watch. If empty (default), all namespaces are watched.")
 
