@@ -117,8 +117,10 @@ global:
     # If it's disabled, deprecated CRDs won't be installed and can't be applied.
     enabled: true
     certManager:
-      # Enable cert-manager integration. Setting this to true will generate
-      # cert-manager's Certificate and Issuer objects for the conversion webhook Service.
+      # Enable cert-manager integration.
+      # This requires to have cert-manager installed in the cluster.
+      # Setting this to true will generate cert-manager's Certificate and Issuer
+      # objects for the conversion webhook Service.
       # If disabled, this chart will generate a self-signed certificate and inject
       # it into CRDs' conversion webhook caBundle.
       # It is recommended to enable cert-manager integration for production use.
