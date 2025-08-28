@@ -468,7 +468,7 @@ KONG_OPERATOR_CHART_YAML_PATH = $(KONG_OPERATOR_CHART_DIR)/Chart.yaml
 manifests.charts.kong-operator.chart.yaml: yq
 	@echo "Generating $(KONG_OPERATOR_CHART_YAML_PATH)"
 	@$(YQ) eval \
-		'.dependencies = [ {"name":"ko-crds","version":"1.0.0","condition":"ko-crds.enabled"}]' \
+		'.dependencies = [ {"name":"ko-crds","version":"1.0.0"}]' \
 		-i $(KONG_OPERATOR_CHART_YAML_PATH)
 	@$(YQ) eval \
 		'.dependencies += [ {"name":"kic-crds","version":"1.2.0","condition":"kic-crds.enabled"}]' \

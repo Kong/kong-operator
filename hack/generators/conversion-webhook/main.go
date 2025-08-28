@@ -62,6 +62,7 @@ func main() {
 	}
 	crdContent := out.String()
 
+	crdContent = wrapInIfEnabled(crdContent)
 	crdContent = wrapCertAnnotations(crdContent)
 	crdContent = wrapWebhookConfig(crdContent)
 	crdContent = wrapDeprecatedVersions(crdContent)
@@ -82,6 +83,10 @@ func main() {
 		}
 	}
 	fmt.Println("Successfully finished")
+}
+
+func wrapInIfEnabled(v string) string {
+	return fmt.Sprintf("{{- if .Values.enabled }}\n%s\n{{- end }}", v)
 }
 
 const (
