@@ -86,7 +86,7 @@ func main() {
 }
 
 func wrapInIfEnabled(v string) string {
-	return fmt.Sprintf("{{- if .Values.enabled }}\n%s\n{{- end }}", v)
+	return fmt.Sprintf("{{- if .Values.enabled }}\n%s\n{{- end }}\n", v)
 }
 
 const (
