@@ -715,8 +715,7 @@ spec:
       containers:
       - name: manager
         env:
-        # NOTICE: For now use deprecated GATEWAY_OPERATOR_ prefix, change it during releasing the next KO rc.
-        - name: GATEWAY_OPERATOR_ENABLE_CONVERSION_WEBHOOK
+        - name: KONG_OPERATOR_ENABLE_CONVERSION_WEBHOOK
           value: "false"
         - name: KONG_OPERATOR_HEALTH_PROBE_BIND_ADDRESS
           value: ":8081"
