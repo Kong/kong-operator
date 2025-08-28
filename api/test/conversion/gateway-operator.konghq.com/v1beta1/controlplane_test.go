@@ -27,6 +27,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 		name                 string
 		spec                 operatorv1beta1.ControlPlaneSpec
 		expectsDataPlane     bool
+		expectedIngressClass *string
 		expectedFeatureGates []operatorv2beta1.ControlPlaneFeatureGate
 		expectedControllers  []operatorv2beta1.ControlPlaneController
 		expectedError        error
@@ -76,9 +77,9 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 						},
 					},
 				},
-				IngressClass: lo.ToPtr("kong"),
 			},
-			expectsDataPlane: true,
+			expectedIngressClass: lo.ToPtr("kong"),
+			expectsDataPlane:     true,
 			expectedFeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
 				{Name: "GatewayAlpha", State: operatorv2beta1.FeatureGateStateEnabled},
 				{Name: "ExperimentalFeature", State: operatorv2beta1.FeatureGateStateDisabled},
@@ -190,9 +191,10 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 						List: []string{"namespace1", "namespace2"},
 					},
 				},
-				IngressClass: lo.ToPtr("kong"),
+				IngressClass: lo.ToPtr("test"),
 			},
-			expectsDataPlane: false,
+			expectedIngressClass: lo.ToPtr("test"),
+			expectsDataPlane:     false,
 		},
 		{
 			name: "With own namespace watching",
@@ -203,7 +205,8 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 					},
 				},
 			},
-			expectsDataPlane: false,
+			expectedIngressClass: lo.ToPtr("kong"),
+			expectsDataPlane:     false,
 		},
 	}
 
@@ -246,7 +249,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 				require.Nil(t, dst.Spec.DataPlane.Ref)
 			}
 
-			require.Equal(t, tc.spec.IngressClass, dst.Spec.IngressClass)
+			require.Equal(t, tc.expectedIngressClass, dst.Spec.IngressClass)
 
 			if tc.spec.WatchNamespaces != nil {
 				require.NotNil(t, dst.Spec.WatchNamespaces)

@@ -67,7 +67,10 @@ func (c *ControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 
 	dst.ObjectMeta = c.ObjectMeta
 
-	if err := c.Spec.convertTo(&dst.Spec.ControlPlaneOptions, c.Spec.IngressClass); err != nil {
+	// Setting IngressClass wasn't required in v1beta1, but for v2beta1 it is,
+	// thus fill with a default value to make it work without hassle.
+	class := lo.FromPtrOr(c.Spec.IngressClass, "kong")
+	if err := c.Spec.convertTo(&dst.Spec.ControlPlaneOptions, &class); err != nil {
 		return err
 	}
 	dst.Spec.Extensions = c.Spec.Extensions
