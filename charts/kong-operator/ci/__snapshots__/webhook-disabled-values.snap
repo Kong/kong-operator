@@ -683,7 +683,7 @@ kind: Deployment
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-0.0.4
+    helm.sh/chart: kong-operator-0.0.5
     app.kubernetes.io/instance: "chartsnap"
     app.kubernetes.io/version: "2.0.0-alpha.4"
     app.kubernetes.io/component: ko
@@ -705,7 +705,7 @@ spec:
       labels:
         control-plane: controller-manager
         app.kubernetes.io/name: kong-operator
-        helm.sh/chart: kong-operator-0.0.4
+        helm.sh/chart: kong-operator-0.0.5
         app.kubernetes.io/instance: "chartsnap"
         app.kubernetes.io/version: "2.0.0-alpha.4"
         app.kubernetes.io/component: ko
@@ -715,8 +715,7 @@ spec:
       containers:
       - name: manager
         env:
-        # NOTICE: For now use deprecated GATEWAY_OPERATOR_ prefix, change it during releasing the next KO rc.
-        - name: GATEWAY_OPERATOR_ENABLE_CONVERSION_WEBHOOK
+        - name: KONG_OPERATOR_ENABLE_CONVERSION_WEBHOOK
           value: "false"
         - name: KONG_OPERATOR_HEALTH_PROBE_BIND_ADDRESS
           value: ":8081"

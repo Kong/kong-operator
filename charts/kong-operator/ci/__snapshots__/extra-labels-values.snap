@@ -699,7 +699,7 @@ kind: Deployment
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-0.0.4
+    helm.sh/chart: kong-operator-0.0.5
     app.kubernetes.io/instance: "chartsnap"
     app.kubernetes.io/version: "2.0.0-alpha.4"
     a: "b"
@@ -722,7 +722,7 @@ spec:
       labels:
         control-plane: controller-manager
         app.kubernetes.io/name: kong-operator
-        helm.sh/chart: kong-operator-0.0.4
+        helm.sh/chart: kong-operator-0.0.5
         app.kubernetes.io/instance: "chartsnap"
         app.kubernetes.io/version: "2.0.0-alpha.4"
         a: "b"
@@ -806,7 +806,7 @@ kind: Certificate
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-0.0.4
+    helm.sh/chart: kong-operator-0.0.5
     app.kubernetes.io/instance: "chartsnap"
     app.kubernetes.io/version: "2.0.0-alpha.4"
     a: "b"
@@ -828,7 +828,7 @@ kind: Certificate
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-0.0.4
+    helm.sh/chart: kong-operator-0.0.5
     app.kubernetes.io/instance: "chartsnap"
     app.kubernetes.io/version: "2.0.0-alpha.4"
     a: "b"
@@ -850,7 +850,7 @@ kind: Issuer
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-0.0.4
+    helm.sh/chart: kong-operator-0.0.5
     app.kubernetes.io/instance: "chartsnap"
     app.kubernetes.io/version: "2.0.0-alpha.4"
     a: "b"
