@@ -53148,23 +53148,6 @@ subjects:
   name: controller-manager
   namespace: default
 ---
-# Source: kong-operator/templates/rbac-resources.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    control-plane: controller-manager
-  name: chartsnap-kong-operator-metrics-service
-  namespace: default
-spec:
-  ports:
-  - name: https
-    port: 8443
-    protocol: TCP
-    targetPort: metrics
-  selector:
-    control-plane: controller-manager
----
 # Source: kong-operator/templates/services.yaml
 apiVersion: v1
 kind: Service
@@ -53196,6 +53179,25 @@ spec:
     protocol: TCP
     targetPort: 9443
   selector:
+    app.kubernetes.io/component: ko
+---
+# Source: kong-operator/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+    app.kubernetes.io/component: ko
+  name: chartsnap-kong-operator-metrics-service
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: metrics
+  selector:
+    control-plane: controller-manager
     app.kubernetes.io/component: ko
 ---
 # Source: kong-operator/templates/deployment.yaml
@@ -53300,27 +53302,6 @@ spec:
           - path: labels
             fieldRef:
               fieldPath: metadata.labels
----
-# Source: kong-operator/templates/certs-cert-manager.yaml
-apiVersion: cert-manager.io/v1
-kind: Certificate
-metadata:
-  labels:
-    app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-0.0.6
-    app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.0.0-alpha.5"
-    app.kubernetes.io/component: ko
-  name: chartsnap-kong-operator-webhook-metrics-certs
-  namespace: default
-spec:
-  dnsNames:
-  - chartsnap-kong-operator-webhook.default.svc
-  - chartsnap-kong-operator-webhook.default.svc.cluster.local
-  issuerRef:
-    kind: Issuer
-    name: chartsnap-kong-operator-webhook-selfsigned-issuer
-  secretName: chartsnap-kong-operator-webhook-metrics-server-cert
 ---
 # Source: kong-operator/templates/certs-cert-manager.yaml
 apiVersion: cert-manager.io/v1

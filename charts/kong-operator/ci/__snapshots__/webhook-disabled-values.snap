@@ -27996,23 +27996,6 @@ subjects:
   name: controller-manager
   namespace: default
 ---
-# Source: kong-operator/templates/rbac-resources.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    control-plane: controller-manager
-  name: chartsnap-kong-operator-metrics-service
-  namespace: default
-spec:
-  ports:
-  - name: https
-    port: 8443
-    protocol: TCP
-    targetPort: metrics
-  selector:
-    control-plane: controller-manager
----
 # Source: kong-operator/templates/services.yaml
 apiVersion: v1
 kind: Service
@@ -28028,6 +28011,25 @@ spec:
     protocol: TCP
     targetPort: https
   selector:
+    app.kubernetes.io/component: ko
+---
+# Source: kong-operator/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+    app.kubernetes.io/component: ko
+  name: chartsnap-kong-operator-metrics-service
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: metrics
+  selector:
+    control-plane: controller-manager
     app.kubernetes.io/component: ko
 ---
 # Source: kong-operator/templates/deployment.yaml
