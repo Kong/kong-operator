@@ -230,7 +230,6 @@ func wrapWebhookConfig(content string) string {
 			),
 		),
 	)
-	os.WriteFile("/tmp/webhook-config.yaml", []byte(s), 0o644)
 	return s
 }
 
