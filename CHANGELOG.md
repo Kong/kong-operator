@@ -30,6 +30,13 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixed
+
+- Fixed a missing watch in `GatewayClass` reconciler for related `GatewayConfiguration` resources.
+  [#2161](https://github.com/Kong/kong-operator/pull/2161)
+
 ## [v2.0.0-alpha.5]
 
 > Release date: 2025-09-01
