@@ -139,7 +139,6 @@ func TestHelmUpgrade(t *testing.T) {
 		},
 		{
 			name:             "upgrade from latest minor to current",
-			skip:             "",
 			fromVersion:      "2.0.0-alpha.4", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release.
@@ -214,7 +213,6 @@ func TestHelmUpgrade(t *testing.T) {
 		},
 		{
 			name:             "upgrade from nightly to current",
-			skip:             "",
 			fromVersion:      "nightly",
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release.
