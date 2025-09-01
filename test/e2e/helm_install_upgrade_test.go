@@ -10,6 +10,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/kr/pretty"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -33,7 +34,7 @@ import (
 
 func TestHelmUpgrade(t *testing.T) {
 	const (
-		// Rel: https://github.com/Kong/charts/tree/main/charts/gateway-operator
+		// Rel: https://github.com/Kong/charts/tree/main/charts/kong-operator
 		chart = "kong/kong-operator"
 
 		waitTime = 3 * time.Minute
@@ -65,9 +66,9 @@ func TestHelmUpgrade(t *testing.T) {
 	}{
 		{
 			name:        "upgrade from one before latest to latest minor",
-			skip:        "Two versions are needed to upgrade from, but currently only one exists (https://github.com/kong/kong-operator/issues/1716)",
-			fromVersion: "2.0.0-alpha.1", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator@only-patch
-			toVersion:   "2.0.0-alpha.1", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
+			skip:        "No minor versions before 2.0.0 to upgrade from. Will be re-enabled after KO 2.1 release (https://github.com/Kong/kong-operator/issues/2158).",
+			fromVersion: "", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator@only-patch
+			toVersion:   "", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
 			objectsToDeploy: []client.Object{
 				&operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -129,21 +130,20 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 				{
-					Name: "Cluster wide resources owned by the ControlPlane get the proper set of labels",
+					Name: "ControlPlane is ready",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						clusterWideResourcesAreProperlyManaged("gw-upgrade-onebeforelatestminor-latestminor=true")(ctx, c, cl.MgrClient)
+						controlPlaneOwnedByGatewayReady("gw-upgrade-onebeforelatestminor-latestminor=true")(ctx, c, cl.MgrClient)
 					},
 				},
 			},
 		},
 		{
 			name:             "upgrade from latest minor to current",
-			skip:             "ControlPlane assertions have to be adjusted to KIC as a library approach (https://github.com/kong/kong-operator/issues/1188)",
-			fromVersion:      "2.0.0-alpha.1", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
+			fromVersion:      "2.0.0-alpha.4", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release.
 			// It's needed for the chart to properly render semver-conditional templates.
-			upgradeToEffectiveSemver: "2.0.0-alpha.1",
+			upgradeToEffectiveSemver: "2.0.0",
 			objectsToDeploy: []client.Object{
 				&operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -204,21 +204,20 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 				{
-					Name: "Cluster wide resources owned by the ControlPlane get the proper set of labels",
+					Name: "ControlPlane is ready",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						clusterWideResourcesAreProperlyManaged("gw-upgrade-latestminor-current=true")(ctx, c, cl.MgrClient)
+						controlPlaneOwnedByGatewayReady("gw-upgrade-latestminor-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 			},
 		},
 		{
 			name:             "upgrade from nightly to current",
-			skip:             "ControlPlane assertions have to be adjusted to KIC as a library approach (https://github.com/kong/kong-operator/issues/1188)",
 			fromVersion:      "nightly",
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release.
 			// It's needed for the chart to properly render semver-conditional templates.
-			upgradeToEffectiveSemver: "2.0.0-alpha.1",
+			upgradeToEffectiveSemver: "2.0.0",
 			objectsToDeploy: []client.Object{
 				&operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -279,9 +278,9 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 				},
 				{
-					Name: "Cluster wide resources owned by the ControlPlane get the proper set of labels",
+					Name: "ControlPlane is ready",
 					Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-						clusterWideResourcesAreProperlyManaged("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
+						controlPlaneOwnedByGatewayReady("gw-upgrade-nightly-to-current=true")(ctx, c, cl.MgrClient)
 					},
 				},
 			},
@@ -329,7 +328,7 @@ func TestHelmUpgrade(t *testing.T) {
 			if len(tag) > 8 {
 				tagInReleaseName = tag[:8]
 			}
-			releaseName := strings.ReplaceAll(fmt.Sprintf("kgo-%s-to-%s", tc.fromVersion, tagInReleaseName), ".", "-")
+			releaseName := strings.ReplaceAll(fmt.Sprintf("ko-%s-to-%s", tc.fromVersion, tagInReleaseName), ".", "-")
 			if strings.Contains(tc.fromVersion, "nightly") {
 				koImageRepository = koImageRepositoryNightly
 			}
@@ -341,6 +340,8 @@ func TestHelmUpgrade(t *testing.T) {
 				// Disable leader election and anonymous reports for tests.
 				"no_leader_election": "true",
 				"anonymous_reports":  "false",
+				// Do not keep CRDs to make sure CRDs can be installed in the installations other than the first one.
+				"ko-crds.keep": "false",
 			}
 
 			if tc.upgradeToEffectiveSemver != "" {
@@ -618,7 +619,8 @@ func listDataPlaneDeploymentsForGateway(
 	)
 }
 
-func clusterWideResourcesAreProperlyManaged(gatewayLabelSelector string) func(ctx context.Context, c *assert.CollectT, cl client.Client) {
+// controlPlaneOwnedByGatewayReady is the predicate that asserts the ControlPlane owned by the gateway is ready.
+func controlPlaneOwnedByGatewayReady(gatewayLabelSelector string) func(ctx context.Context, c *assert.CollectT, cl client.Client) {
 	return func(ctx context.Context, c *assert.CollectT, cl client.Client) {
 		gw := getGatewayByLabelSelector(gatewayLabelSelector, ctx, c, cl)
 		if !assert.NotNil(c, gw) {
@@ -633,34 +635,12 @@ func clusterWideResourcesAreProperlyManaged(gatewayLabelSelector string) func(ct
 		if !assert.Len(c, controlplanes, 1) {
 			return
 		}
-		cp := &controlplanes[0]
+		cp := controlplanes[0]
 
-		managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
-
-		clusterRoles, err := k8sutils.ListClusterRoles(
-			ctx,
-			cl,
-			client.MatchingLabels(managedByLabelSet),
-		)
-		require.NoError(c, err)
-		assert.Len(c, clusterRoles, 1)
-
-		clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
-			ctx,
-			cl,
-			client.MatchingLabels(managedByLabelSet),
-		)
-		require.NoError(c, err)
-
-		assert.Len(c, clusterRoleBindings, 1)
-
-		validatingWebhookConfigurations, err := k8sutils.ListValidatingWebhookConfigurations(
-			ctx,
-			cl,
-			client.MatchingLabels(managedByLabelSet),
-		)
-		require.NoError(c, err)
-
-		assert.Len(c, validatingWebhookConfigurations, 1)
+		if ready := lo.ContainsBy(cp.Status.Conditions, func(condition metav1.Condition) bool {
+			return condition.Type == "Ready" && condition.Status == metav1.ConditionTrue
+		}); !assert.True(c, ready, "ControlPlane is not ready") {
+			return
+		}
 	}
 }
