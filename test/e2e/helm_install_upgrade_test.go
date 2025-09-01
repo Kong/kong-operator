@@ -342,6 +342,8 @@ func TestHelmUpgrade(t *testing.T) {
 				// Disable leader election and anonymous reports for tests.
 				"no_leader_election": "true",
 				"anonymous_reports":  "false",
+				// Do not keep CRDs to make sure CRDs can be installed in the installations other than the first one.
+				"ko-crds.keep": "false",
 			}
 
 			if tc.upgradeToEffectiveSemver != "" {
