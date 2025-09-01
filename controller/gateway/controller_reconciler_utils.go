@@ -57,7 +57,7 @@ func (r *Reconciler) createDataPlane(ctx context.Context,
 		dataplane.Spec.DataPlaneOptions = *gatewayConfigDataPlaneOptionsToDataPlaneOptions(gatewayConfig.Namespace, *gatewayConfig.Spec.DataPlaneOptions)
 	}
 	setDataPlaneOptionsDefaults(&dataplane.Spec.DataPlaneOptions, r.DefaultDataPlaneImage)
-	if err := setDataPlaneIngressServicePorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners); err != nil {
+	if err := setDataPlaneIngressServicePorts(&dataplane.Spec.DataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions); err != nil {
 		return nil, err
 	}
 
@@ -832,7 +832,21 @@ func (g *gatewayConditionsAndListenersAwareT) setProgrammed() {
 	}
 }
 
-func setDataPlaneIngressServicePorts(opts *operatorv1beta1.DataPlaneOptions, listeners []gatewayv1.Listener) error {
+func setDataPlaneIngressServicePorts(
+	opts *operatorv1beta1.DataPlaneOptions,
+	listeners []gatewayv1.Listener,
+	listenersOpts []operatorv1beta1.GatewayConfigurationListenerOptions,
+) error {
+
+	// Check if all the names in GatewayConfiguration's spec.listenersOptions matches a listener in Gateway.
+	for i, listenerOpts := range listenersOpts {
+		if !lo.ContainsBy(listeners, func(l gatewayv1.Listener) bool {
+			return l.Name == listenerOpts.Name
+		}) {
+			return fmt.Errorf("GatewayConfiguration.spec.listenersOptions[%d]: name '%s' not in gateway's listeners", i, listenerOpts.Name)
+		}
+	}
+
 	if len(listeners) == 0 {
 		return nil
 	}
@@ -869,6 +883,14 @@ func setDataPlaneIngressServicePorts(opts *operatorv1beta1.DataPlaneOptions, lis
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
 			continue
 		}
+
+		// Update the service port by GatewayConfiguration's spec.listenersOptions if there is a matching item by listener name.
+		if listenerOpt, found := lo.Find(listenersOpts, func(listenerOpts operatorv1beta1.GatewayConfigurationListenerOptions) bool {
+			return listenerOpts.Name == l.Name
+		}); found {
+			port.NodePort = listenerOpt.NodePort
+		}
+
 		opts.Network.Services.Ingress.Ports = append(opts.Network.Services.Ingress.Ports, port)
 	}
 	return errs

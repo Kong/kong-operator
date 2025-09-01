@@ -19,7 +19,7 @@ require (
 	github.com/google/go-containerregistry v0.20.3
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v0.48.2
-	github.com/kong/kubernetes-configuration v1.4.0
+	github.com/kong/kubernetes-configuration v1.4.3
 	github.com/kong/kubernetes-telemetry v0.1.9
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/kong/semver/v4 v4.0.1
@@ -224,7 +224,7 @@ require (
 	golang.org/x/term v0.31.0 // indirect
 	golang.org/x/text v0.24.0 // indirect
 	golang.org/x/time v0.10.0 // indirect
-	golang.org/x/tools v0.30.0 // indirect
+	golang.org/x/tools v0.32.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/api v0.206.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250212204824-5a70512c5d8b // indirect
@@ -268,12 +268,12 @@ replace (
 	k8s.io/component-base => k8s.io/component-base v0.33.0
 	k8s.io/component-helpers => k8s.io/component-helpers v0.33.0
 	k8s.io/controller-manager => k8s.io/controller-manager v0.33.0
-	k8s.io/cri-api => k8s.io/cri-api v0.33.3
+	k8s.io/cri-api => k8s.io/cri-api v0.33.4
 	k8s.io/cri-client => k8s.io/cri-client v0.33.0
 	k8s.io/csi-translation-lib => k8s.io/csi-translation-lib v0.33.0
 	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.33.0
 	k8s.io/endpointslice => k8s.io/endpointslice v0.33.0
-	k8s.io/externaljwt => k8s.io/externaljwt v0.33.3
+	k8s.io/externaljwt => k8s.io/externaljwt v0.33.4
 	k8s.io/kms => k8s.io/kms v0.33.0
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.33.0
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.33.0
