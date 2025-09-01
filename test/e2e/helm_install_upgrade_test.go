@@ -66,9 +66,9 @@ func TestHelmUpgrade(t *testing.T) {
 	}{
 		{
 			name:        "upgrade from one before latest to latest minor",
-			skip:        "No minor versions before 2.0.0",
-			fromVersion: "2.0.0-alpha.3", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator@only-patch
-			toVersion:   "2.0.0-alpha.4", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
+			skip:        "No minor versions before 2.0.0 to upgrade from. Will be re-enabled after KO 2.1 release (https://github.com/Kong/kong-operator/issues/2158).",
+			fromVersion: "", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator@only-patch
+			toVersion:   "", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
 			objectsToDeploy: []client.Object{
 				&operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
