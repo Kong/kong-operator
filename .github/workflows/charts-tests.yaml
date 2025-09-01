@@ -146,6 +146,10 @@ jobs:
           python-version: "3.13"
 
       - uses: helm/chart-testing-action@0d28d3144d3a25ea2cc349d6e59901c4ff469b3b # v2.7.0
+        with:
+          # Specify version to get https://github.com/helm/chart-testing/pull/721
+          # --wait flag to helm uninstall
+          version: "3.13.0"
 
       - name: Run chart-testing (lint)
         run: ct lint --target-branch main --check-version-increment=false
@@ -166,7 +170,7 @@ jobs:
         run: |
           kubectl create ns kong-test
           make install.helm.cert-manager
-          ct install --target-branch main --charts charts/${{ matrix.chart-name}} --namespace kong-test
+          make test.charts.ct.install CHART_NAME=${{ matrix.chart-name}}
           # No need to delete the ns the cluster is scrapped after the job anyway.
 
   golden-tests:

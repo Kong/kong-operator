@@ -62,6 +62,7 @@ func main() {
 	}
 	crdContent := out.String()
 
+	crdContent = wrapInIfEnabled(crdContent)
 	crdContent = wrapCertAnnotations(crdContent)
 	crdContent = wrapWebhookConfig(crdContent)
 	crdContent = wrapDeprecatedVersions(crdContent)
@@ -75,7 +76,7 @@ func main() {
 	}
 	defer fileCRDs.Close()
 
-	for _, content := range []string{autoGenerationComment, crdContent} {
+	for _, content := range []string{autoGenerationComment, selfSignedCertSecretTemplate, crdContent} {
 		if _, err := fileCRDs.WriteString(content); err != nil {
 			fmt.Printf("Failed to write to %s: %v\n", chartCRDsFilePath, err)
 			os.Exit(1)
@@ -83,6 +84,65 @@ func main() {
 	}
 	fmt.Println("Successfully finished")
 }
+
+func wrapInIfEnabled(v string) string {
+	return fmt.Sprintf("{{- if .Values.enabled }}\n%s\n{{- end }}\n", v)
+}
+
+const (
+	// selfSignedCertSecretTemplate contains the template for the self-signed
+	// certificate secret.
+	// This allows users to not require cert-manager for certificates management.
+	// It is embedded in manifest file containing CRD definitions because it's not
+	// possible to place that in a separate file, and use the lookup function
+	// (for the Secret) in the CRD definition file due to the Secret not being
+	// applied yet at that time.
+	// Helm hooks and their priority do not seem to help here either.
+	selfSignedCertSecretTemplate = `
+{{ $name := ( include "kong.webhookCertSecretName" .) }}
+{{ $secret := (lookup "v1" "Secret" .Release.Namespace $name) }}
+{{ $serviceName := (include "kong.webhookServiceName" .) }}
+{{ $namespace := (include "kong.namespace" .) }}
+{{ $domainName := ( printf "%s.%s.svc" $serviceName $namespace ) }}
+{{ $domainNameClusterLocal := ( printf "%s.%s.svc.cluster.local" $serviceName $namespace ) }}
+{{ $dnsNames := list ($domainName) ($domainNameClusterLocal) }}
+
+{{ $ca := genCA "" 3650 }}
+{{ $cert := genSignedCert $domainName nil $dnsNames 3650 $ca }}
+{{ $certCert := $cert.Cert }}
+{{ $certKey := $cert.Key }}
+{{ $caCert := $ca.Cert }}
+{{ if $secret }}
+{{ $certCert = (index $secret.data "tls.crt" ) | b64dec }}
+{{ $certKey = (index $secret.data "tls.key" ) | b64dec }}
+{{ $caCert = (index $secret.data "ca.crt" ) | b64dec }}
+{{- end }}
+
+{{- if .Values.global.conversionWebhook.enabled }}
+{{- if ( not .Values.global.conversionWebhook.certManager.enabled ) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    {{- include "kong.metaLabels" . | nindent 4 }}
+    app.kubernetes.io/component: ko
+  annotations:
+    dnsNames: {{ join "," $dnsNames | quote }}
+  name: {{ $name }}
+  namespace: {{ template "kong.namespace" . }}
+type: kubernetes.io/tls
+stringData:
+  ca.crt: |
+    {{ $caCert | nindent 4 }}
+  tls.crt: |
+    {{ $certCert | nindent 4 }}
+  tls.key: |
+    {{ $certKey | nindent 4 }}
+{{- end }}
+{{- end }}
+---
+`
+)
 
 const (
 	configurationTemplate = `  conversion:
@@ -92,7 +152,7 @@ const (
         service:
           name: %s
           namespace: %s
-          path: /convert
+          path: /convert%s
       conversionReviewVersions:
       - v1`
 	annotationTemplate = `    cert-manager.io/inject-ca-from: %s/%s`
@@ -119,10 +179,15 @@ func configurationForKustomize() string {
 		configurationTemplate,
 		"gateway-operator-webhook-service",
 		"kong-system",
+		"",
 	)
 }
 
-func ifForChart(v string) string {
+func ifForChartCertManagerAnnotation(v string) string {
+	return fmt.Sprintf("{{ if .Values.global.conversionWebhook.enabled }}\n{{ if .Values.global.conversionWebhook.certManager.enabled }}\n%s\n{{ end }}\n{{ end }}", v)
+}
+
+func ifForChartConversionSpec(v string) string {
 	return fmt.Sprintf("{{ if .Values.global.conversionWebhook.enabled }}\n%s\n{{ end }}", v)
 }
 
@@ -146,7 +211,7 @@ func wrapCertAnnotations(content string) string {
 	return strings.ReplaceAll(
 		content,
 		annotationForKustomize(),
-		ifForChart(
+		ifForChartCertManagerAnnotation(
 			annotationForChart(),
 		),
 	)
@@ -154,17 +219,23 @@ func wrapCertAnnotations(content string) string {
 
 // wrapWebhookConfig replaces the webhook configuration with the chart-compatible version.
 func wrapWebhookConfig(content string) string {
-	return strings.ReplaceAll(
+	s := strings.ReplaceAll(
 		content,
 		configurationForKustomize(),
-		ifForChart(
+		ifForChartConversionSpec(
 			fmt.Sprintf(
 				configurationTemplate,
 				`{{ template "kong.webhookServiceName" . }}`,
 				`{{ template "kong.namespace" . }}`,
+				`
+{{if not .Values.global.conversionWebhook.certManager.enabled }}
+        caBundle: |
+          {{ $caCert | b64enc }}
+{{ end }}`,
 			),
 		),
 	)
+	return s
 }
 
 func ifHelmResourcePolicyKeepAnnotation(content string) string {
@@ -176,8 +247,10 @@ func ifHelmResourcePolicyKeepAnnotation(content string) string {
 	)
 }
 
-const listVersionPatternToStartWith = `  - `
-const deprecatedPatternToContain = `deprecated: true`
+const (
+	listVersionPatternToStartWith = `  - `
+	deprecatedPatternToContain    = `deprecated: true`
+)
 
 // wrapDeprecatedVersions processes the CRD YAML content and wraps deprecated version entries
 // with Helm template conditionals.

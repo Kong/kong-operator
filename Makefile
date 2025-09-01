@@ -468,7 +468,7 @@ KONG_OPERATOR_CHART_YAML_PATH = $(KONG_OPERATOR_CHART_DIR)/Chart.yaml
 manifests.charts.kong-operator.chart.yaml: yq
 	@echo "Generating $(KONG_OPERATOR_CHART_YAML_PATH)"
 	@$(YQ) eval \
-		'.dependencies = [ {"name":"ko-crds","version":"1.0.0","condition":"ko-crds.enabled"}]' \
+		'.dependencies = [ {"name":"ko-crds","version":"1.0.0"}]' \
 		-i $(KONG_OPERATOR_CHART_YAML_PATH)
 	@$(YQ) eval \
 		'.dependencies += [ {"name":"kic-crds","version":"1.2.0","condition":"kic-crds.enabled"}]' \
@@ -681,6 +681,26 @@ test.charts.golden:
 .PHONY: test.charts.golden.update
 test.charts.golden.update:
 	@ $(MAKE) _chartsnap CHART=kong-operator CHARTSNAP_ARGS="-u"
+
+.PHONY: test.charts.ct.install
+test.charts.ct.install:
+# NOTE: We add ko-crds.keep=false below because allowing the chart to manage CRDs
+# and keep them around after helm uninstall would yield ownership issues.
+# Error: INSTALLATION FAILED: Unable to continue with install: CustomResourceDefinition "aigateways.gateway-operator.konghq.com" in namespace ""
+# exists and cannot be imported into the current release: invalid ownership metadata; annotation validation error: key "meta.helm.sh/release-name"
+# must equal "kong-operator-h39gau9scc": current value is "kong-operator-tiptva339m"
+#
+# NOTE: We add the --wait below to ensure that we wait for all objects to get removed
+# for each release. Without this, some objects like CRDs can still be around
+# when another test helm release is being installed and the above mentioned
+# ownership error will be returned.
+	ct install --target-branch main \
+		--debug \
+		--helm-extra-set-args "--set=ko-crds.keep=false" \
+		--helm-extra-args "--wait" \
+		--helm-extra-args "--timeout=1m" \
+		--charts charts/$(CHART_NAME) \
+		--namespace kong-test
 
 # Defining multi-line strings to echo: https://stackoverflow.com/a/649462/7958339
 define GOLDEN_TEST_FAILURE_MSG
