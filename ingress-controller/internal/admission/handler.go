@@ -31,15 +31,45 @@ const (
 // RequestHandler is an HTTP server that can validate Kong Ingress Controllers'
 // Custom Resources using Kubernetes Admission Webhooks.
 type RequestHandler struct {
-	// Validator validates the entities that the k8s API-server asks
-	// it the server to validate.
 	Validator KongValidator
+
+	// validators validate the entities that the k8s API-server asks
+	// it the server to validate.
+	validators map[string]KongValidator
 	// ReferenceIndexers gets the resources (KongPlugin and KongClusterPlugin)
 	// referring the validated resource (Secret) to check the changes on
 	// referred Secret will produce invalid configuration of the plugins.
 	ReferenceIndexers ctrlref.CacheIndexers
 
 	Logger logr.Logger
+}
+
+func (h *RequestHandler) dispatchValidation(obj metav1.ObjectMeta) (KongValidator, bool) {
+	var (
+		validator KongValidator
+		ok        bool
+	)
+	for _, v := range h.validators {
+		_ = v
+		// if v.IngressClassMatcher()(&obj) {
+		// 	validator = v
+		// 	ok = true
+		// 	break
+		// }
+	}
+	return validator, ok
+}
+
+func (h *RequestHandler) RegisterValidator(id string, validator KongValidator) {
+	fmt.Printf(">>> Registering validator for id %s\n", id)
+	if h.validators == nil {
+		h.validators = make(map[string]KongValidator)
+	}
+	h.validators[id] = validator
+}
+
+func (h *RequestHandler) UnregisterValidator(id string) {
+	delete(h.validators, id)
 }
 
 // ServeHTTP parses AdmissionReview requests and responds back
@@ -180,10 +210,15 @@ func (h RequestHandler) handleKongConsumer(
 	if err != nil {
 		return nil, err
 	}
+	// ignore consumers that are not having corresponding controller
+	v, ok := h.dispatchValidation(consumer.ObjectMeta)
+	if !ok {
+		return responseBuilder.Allowed(true).Build(), nil
+	}
 
 	switch request.Operation {
 	case admissionv1.Create:
-		ok, msg, err := h.Validator.ValidateConsumer(ctx, consumer)
+		ok, msg, err := v.ValidateConsumer(ctx, consumer)
 		if err != nil {
 			return nil, err
 		}
@@ -198,7 +233,7 @@ func (h RequestHandler) handleKongConsumer(
 		if consumer.Username == oldConsumer.Username {
 			return responseBuilder.Allowed(true).Build(), nil
 		}
-		ok, message, err := h.Validator.ValidateConsumer(ctx, consumer)
+		ok, message, err := v.ValidateConsumer(ctx, consumer)
 		if err != nil {
 			return nil, err
 		}
@@ -379,6 +414,7 @@ func (h RequestHandler) handleGateway(
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
+	fmt.Println(">>> Handling Gateway validation - h.Validator:", h.Validator)
 	gateway := gatewayapi.Gateway{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &gateway)
 	if err != nil {

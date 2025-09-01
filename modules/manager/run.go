@@ -341,9 +341,11 @@ func Run(
 	}
 
 	if cfg.ValidationWebhookEnabled {
-		if err := validation.SetupAdmissionServer(ctx, mgr); err != nil {
+		admissionReqHandler, err := validation.SetupAdmissionServer(ctx, mgr)
+		if err != nil {
 			return fmt.Errorf("unable to set up admission server: %w", err)
 		}
+		multiinstance.WithValidator(admissionReqHandler)(cpInstancesMgr)
 	}
 
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {

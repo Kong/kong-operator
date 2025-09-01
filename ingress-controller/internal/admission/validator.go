@@ -44,6 +44,9 @@ type KongValidator interface {
 	ValidateGateway(ctx context.Context, gateway gatewayapi.Gateway) (bool, string, error)
 	ValidateHTTPRoute(ctx context.Context, httproute gatewayapi.HTTPRoute) (bool, string, error)
 	ValidateIngress(ctx context.Context, ingress netv1.Ingress) (bool, string, error)
+
+	// IngressClassMatcher() func(*metav1.ObjectMeta) bool
+	// IngressV1ClassMatcher() func(*netv1.Ingress) bool
 }
 
 // AdminAPIServicesProvider provides KongHTTPValidator with Kong Admin API services that are needed to perform
@@ -140,6 +143,10 @@ func NewKongHTTPValidator(
 		ingressV1ClassMatcher: annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
 	}
 }
+
+// func (validator KongHTTPValidator) IngressClassMatcher() func(*metav1.ObjectMeta) bool {
+// 	return validator.ingressClassMatcher()
+// }
 
 // ValidateConsumer checks if consumer has a Username and a consumer with
 // the same username doesn't exist in Kong.
