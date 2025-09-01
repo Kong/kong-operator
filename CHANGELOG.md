@@ -2,7 +2,7 @@
 
 ## Table of Contents
 
-- [v2.0.0-alpha.4](#v200-alpha4)
+- [v2.0.0-alpha.5](#v200-alpha5)
 - [v1.6.2](#v162)
 - [v1.6.1](#v161)
 - [v1.6.0](#v160)
@@ -30,9 +30,9 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## [v2.0.0-alpha.4]
+## [v2.0.0-alpha.5]
 
-> Release date: 2025-08-27
+> Release date: 2025-09-01
 
 > KGO becomes KO, which stands for Kong Operator - Kubernetes Gateway Operator and Kubernetes Ingress Controller
 > become a single product.
@@ -1317,7 +1317,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
-[v2.0.0-alpha.4]: https://github.com/Kong/kong-operator/compare/v1.6.2..v2.0.0-alpha.4
+[v2.0.0-alpha.5]: https://github.com/Kong/kong-operator/compare/v1.6.2..v2.0.0-alpha.5
 [v1.6.2]: https://github.com/Kong/kong-operator/compare/v1.6.1..v1.6.2
 [v1.6.1]: https://github.com/Kong/kong-operator/compare/v1.6.0..v1.6.1
 [v1.6.0]: https://github.com/Kong/kong-operator/compare/v1.5.1..v1.6.0
