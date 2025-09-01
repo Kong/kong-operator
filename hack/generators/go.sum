@@ -1,5 +1,5 @@
-github.com/Kong/sdk-konnect-go v0.8.0 h1:/OS7q16MnhXH+kGBhgz1dZYb429E1mKAoCV0ZntEjfs=
-github.com/Kong/sdk-konnect-go v0.8.0/go.mod h1:lDQ6eNibkcSYhqZd+A4qhoLbNCrJGtvGOKttJFJX0OQ=
+github.com/Kong/sdk-konnect-go v0.9.1 h1:EjpbYVzjph4eTG5SRsR1nFl5ZVs036A9E11T29MqfXQ=
+github.com/Kong/sdk-konnect-go v0.9.1/go.mod h1:lDQ6eNibkcSYhqZd+A4qhoLbNCrJGtvGOKttJFJX0OQ=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/blang/semver/v4 v4.0.0 h1:1PFHFE6yCCTv8C1TeyNNarDzntLi7wMI5i/pzqYIsAM=
