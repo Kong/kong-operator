@@ -3,6 +3,6 @@
 # renovate: datasource=docker packageName=kindest/node depName=kindest/node@only-patch
 - v1.32.5
 # renovate: datasource=docker packageName=kindest/node depName=kindest/node@only-patch
-- v1.31.9
+- v1.31.12
 # renovate: datasource=docker packageName=kindest/node depName=kindest/node@only-patch
 - v1.30.13
