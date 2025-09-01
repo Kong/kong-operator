@@ -66,9 +66,9 @@ func TestHelmUpgrade(t *testing.T) {
 	}{
 		{
 			name:        "upgrade from one before latest to latest minor",
-			skip:        "No versions can be upgraded to 2.0.0-alpha.3 without breaking changes",
+			skip:        "No minor versions before 2.0.0",
 			fromVersion: "2.0.0-alpha.3", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator@only-patch
-			toVersion:   "2.0.0-alpha.3", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
+			toVersion:   "2.0.0-alpha.4", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
 			objectsToDeploy: []client.Object{
 				&operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: metav1.ObjectMeta{
@@ -140,7 +140,7 @@ func TestHelmUpgrade(t *testing.T) {
 		{
 			name:             "upgrade from latest minor to current",
 			skip:             "",
-			fromVersion:      "2.0.0-alpha.3", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
+			fromVersion:      "2.0.0-alpha.4", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release.
 			// It's needed for the chart to properly render semver-conditional templates.
