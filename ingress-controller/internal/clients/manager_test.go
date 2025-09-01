@@ -419,7 +419,11 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 	// Notify the first set of clients and make sure that the subscriber doesn't get notified as it was initial state.
 	m.Notify(ctx, firstClientsSet)
 	notificationsCountEventuallyEquals(0)
-	require.Equal(t, 1, readinessChecker.CallsCount(), "expected readiness check on non-empty set of clients")
+	require.Eventually(t,
+		func() bool { return readinessChecker.CallsCount() == 1 },
+		time.Second, time.Millisecond,
+		"expected readiness check on non-empty set of clients",
+	)
 	requireLastReadinessCheckCall(readinessCheckCall{
 		AlreadyCreatedURLs: []string{testURL1},
 		PendingURLs:        []string{},
@@ -481,7 +485,7 @@ func TestAdminAPIClientsManager_PeriodicReadinessReconciliation(t *testing.T) {
 	m.Run(ctx)
 	<-m.Running()
 
-	readinessCheckCallEventuallyMatches := func(expected readinessCheckCall) {
+	readinessCheckCallEventuallyMatches := func(t *testing.T, expected readinessCheckCall) {
 		require.Eventually(t, func() bool {
 			lastCall, wasCalledAtAll := readinessChecker.LastCall()
 			if !wasCalledAtAll {
@@ -497,29 +501,35 @@ func TestAdminAPIClientsManager_PeriodicReadinessReconciliation(t *testing.T) {
 	}
 
 	// Trigger the first readiness check.
+	t.Log("Triggering the first readiness check")
 	readinessTicker.Add(managercfg.DefaultDataPlanesReadinessReconciliationInterval)
-	readinessCheckCallEventuallyMatches(readinessCheckCall{
+	readinessCheckCallEventuallyMatches(t, readinessCheckCall{
 		AlreadyCreatedURLs: []string{testURL1},
 		PendingURLs:        []string{},
 	})
 	require.Equal(t, 1, readinessChecker.CallsCount())
 
+	t.Log("Triggering the second readiness check")
 	// Notify with a new client and check the readiness check call was made as expected.
 	m.Notify(ctx, []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1), testDiscoveredAdminAPI(testURL2)})
-	readinessCheckCallEventuallyMatches(readinessCheckCall{
+	readinessCheckCallEventuallyMatches(t, readinessCheckCall{
 		AlreadyCreatedURLs: []string{testURL1},
 		PendingURLs:        []string{testURL2},
 	})
 	require.Equal(t, 2, readinessChecker.CallsCount())
 
+	t.Log("Triggering the third readiness check")
 	// Trigger a next readiness check which will make testURL2 ready.
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{ClientsTurnedReady: intoTurnedReady(testURL2)})
 	readinessTicker.Add(managercfg.DefaultDataPlanesReadinessReconciliationInterval)
-	readinessCheckCallEventuallyMatches(readinessCheckCall{
+	readinessCheckCallEventuallyMatches(t, readinessCheckCall{
 		AlreadyCreatedURLs: []string{testURL1},
 		PendingURLs:        []string{testURL2},
 	})
-	require.Equal(t, 3, readinessChecker.CallsCount())
+	require.Eventually(t, func() bool {
+		return readinessChecker.CallsCount() == 3
+	}, time.Second, time.Millisecond)
+
 	require.True(t, lo.ContainsBy(m.GatewayClients(), func(c *adminapi.Client) bool {
 		return c.BaseRootURL() == testURL2
 	}), "expected to find the new client in the manager's clients list after it became ready")

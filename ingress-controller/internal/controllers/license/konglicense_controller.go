@@ -353,7 +353,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) setChosenLicense(l *configurationv1a
 func (r *KongV1Alpha1KongLicenseReconciler) getChosenLicense() *configurationv1alpha1.KongLicense {
 	r.chosenLicenseLock.RLock()
 	defer r.chosenLicenseLock.RUnlock()
-	return r.chosenLicense
+	return r.chosenLicense.DeepCopy()
 }
 
 func (r *KongV1Alpha1KongLicenseReconciler) repickLicenseOnDelete(ctx context.Context, deletedLicense *configurationv1alpha1.KongLicense) error {

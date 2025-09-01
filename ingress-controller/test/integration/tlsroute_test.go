@@ -295,21 +295,23 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("verifying that a Listener has the invalid ref status condition")
-	gateway, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	invalid := false
-	for _, status := range gateway.Status.Listeners {
-		if ok := util.CheckCondition(
-			status.Conditions,
-			util.ConditionType(gatewayapi.ListenerConditionResolvedRefs),
-			util.ConditionReason(gatewayapi.ListenerReasonRefNotPermitted),
-			metav1.ConditionFalse,
-			gateway.Generation,
-		); ok {
-			invalid = true
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		gateway, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		invalid := false
+		for _, status := range gateway.Status.Listeners {
+			if ok := util.CheckCondition(
+				status.Conditions,
+				util.ConditionType(gatewayapi.ListenerConditionResolvedRefs),
+				util.ConditionReason(gatewayapi.ListenerReasonRefNotPermitted),
+				metav1.ConditionFalse,
+				gateway.Generation,
+			); ok {
+				invalid = true
+			}
 		}
-	}
-	require.True(t, invalid)
+		require.True(t, invalid)
+	}, ingressWait, waitTick)
 
 	t.Log("verifying the certificate returns when using a ReferenceGrant with no name restrictions")
 	grant.Spec.To[0].Name = nil
