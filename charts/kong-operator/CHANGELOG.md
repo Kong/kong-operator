@@ -20,6 +20,8 @@ The operator deployment that has been installed as first, will handle the conver
 
 - Add support for helm generated self signed certs for conversion webhook
   [#2141](https://github.com/Kong/kong-operator/pull/2141)
+- Add support for cert-manager certificate generation for conversion webhook
+  [#2122](https://github.com/Kong/kong-operator/pull/2122)
 
 ## 0.0.5
 
