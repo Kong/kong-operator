@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.0.6
 
 ### ⚠️ **IMPORTANT NOTICE ABOUT MIGRATION WEBHOOKS:**
 
