@@ -22,7 +22,7 @@ const (
 	konnectControlPlanesLimit     = int64(100)
 	timeUntilControlPlaneOrphaned = time.Hour
 
-	testIDLabel = "konghq.com/test-id"
+	testIDLabel = "operator-test-id"
 )
 
 // cleanupKonnectControlPlanes deletes orphaned control planes created by the tests and their roles.
