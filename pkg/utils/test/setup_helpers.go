@@ -34,6 +34,8 @@ import (
 const (
 	// KubernetesConfigurationModuleName is the name of the module where we import and install Kong configuration CRDs from.
 	KubernetesConfigurationModuleName = "github.com/kong/kubernetes-configuration/v2"
+	// GatewayAPIModuleName is the name of the module where we import and install Gateway API CRDs from.
+	GatewayAPIModuleName = "sigs.k8s.io/gateway-api"
 )
 
 func noOpClose() error {

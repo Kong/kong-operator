@@ -29,13 +29,30 @@ import (
 func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.Config, *corev1.Namespace) {
 	t.Helper()
 
+	gwAPIVersion, err := testutil.ExtractModuleVersion(testutil.GatewayAPIModuleName)
+	require.NoError(t, err)
+	gwAPICRDPath := filepath.Join(
+		testutil.ConstructModulePath(testutil.GatewayAPIModuleName, gwAPIVersion),
+		"config", "crd", "standard",
+	)
+
+	kongConfVersion, err := testutil.ExtractModuleVersion(testutil.KubernetesConfigurationModuleName)
+	require.NoError(t, err)
+	kongCRDPath := filepath.Join(
+		testutil.ConstructModulePath(testutil.KubernetesConfigurationModuleName, kongConfVersion),
+		"config", "crd", "gateway-operator",
+	)
+
 	testEnv := &envtest.Environment{
 		ControlPlaneStopTimeout: time.Second * 60,
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{
-				// TODO: remove this when CRDs are moved (e.g. to kubernetes-configuration repository)
-				"../../config/crd/bases",
+				gwAPICRDPath,
+				kongCRDPath,
 			},
+			Scheme:             scheme,
+			ErrorIfPathMissing: true,
+			MaxTime:            30 * time.Second,
 		},
 	}
 
@@ -57,24 +74,6 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.
 			_ = testEnv.Stop()
 		}
 	}()
-
-	kongConfVersion, err := testutil.ExtractModuleVersion(testutil.KubernetesConfigurationModuleName)
-	require.NoError(t, err)
-
-	kongCRDPath := filepath.Join(
-		testutil.ConstructModulePath(testutil.KubernetesConfigurationModuleName, kongConfVersion),
-		"config", "crd", "gateway-operator",
-	)
-
-	// we do not deal with incubator resources here, so we only install base CRDs.
-	t.Logf("install Kong CRDs from path %s", kongCRDPath)
-	_, err = envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
-		Scheme:             scheme,
-		Paths:              []string{kongCRDPath},
-		ErrorIfPathMissing: true,
-		MaxTime:            30 * time.Second,
-	})
-	require.NoError(t, err)
 
 	config, err := clientcmd.BuildConfigFromFlags(cfg.Host, "")
 	require.NoError(t, err)
