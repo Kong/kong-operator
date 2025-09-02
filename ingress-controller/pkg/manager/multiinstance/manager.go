@@ -109,7 +109,7 @@ func (m *Manager) ScheduleInstance(in ManagerInstance) error {
 		return NewInstanceWithIDAlreadyScheduledError(in.ID())
 	}
 	if m.admissionReqHandler != nil {
-		m.admissionReqHandler.RegisterValidator(in.ID().String(), in.KongValidator())
+		m.admissionReqHandler.RegisterValidator(in.ID(), in.KongValidator())
 	}
 	// Keep track of the instance, but do not start it from here.
 	instance, err := newInstance(in, m.logger)
@@ -142,7 +142,7 @@ func (m *Manager) StopInstance(instanceID manager.ID) error {
 		m.diagnosticsExposer.UnregisterInstance(instanceID)
 	}
 	if m.admissionReqHandler != nil {
-		m.admissionReqHandler.UnregisterValidator(instanceID.String())
+		m.admissionReqHandler.UnregisterValidator(instanceID)
 	}
 
 	// Send a signal to the instance to stop and let the running goroutine handle the cleanup.

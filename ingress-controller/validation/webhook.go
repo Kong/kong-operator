@@ -12,15 +12,10 @@ import (
 func SetupAdmissionServer(
 	ctx context.Context,
 	m ctrl.Manager,
-	// clientsManager admission.GatewayClientsProvider,
-	// referenceIndexers ctrlref.CacheIndexers,
-	// translatorFeatures translator.FeatureFlags,
-	// storer store.Storer,
 ) (*admission.RequestHandler, error) {
 	admissionLogger := ctrl.LoggerFrom(ctx).WithName("admission-server")
 
 	admissionReqHandler := &admission.RequestHandler{
-		// ReferenceIndexers: ctrlref.CacheIndexers{}, ????
 		Logger: admissionLogger,
 	}
 	srv, err := admission.MakeTLSServer(5443, admissionReqHandler)

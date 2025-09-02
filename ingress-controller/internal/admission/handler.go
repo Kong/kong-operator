@@ -39,8 +39,20 @@ type RequestHandler struct {
 	Logger logr.Logger
 }
 
+// pickReferenceIndexers returns the first validator's reference indexers if exists.
+// Existing of a reference indexers is not guaranteed, so the second return boolean
+// value indicates it.
+func (h *RequestHandler) pickReferenceIndexers() (ctrlref.CacheIndexers, bool) {
+	if len(h.validators) > 0 {
+		return lo.Values(h.validators)[0].GetReferenceIndexers(), true
+	}
+	return ctrlref.CacheIndexers{}, false
+}
+
 // dispatchValidationNoMatcher returns the first validator if exists, without any matching.
-// There is no specific matching further so it's safe to do it this way, see
+// Existing of a reference indexers is not guaranteed, so the second return boolean value
+// indicates it.
+// There is no specific matching further so it's safe to do it this way, see related entities:
 // - h.handleKongPlugin -> ValidatePlugin
 // - h.handleKongClusterPlugin -> ValidateClusterPlugin
 // - h.handleSecret -> ValidateCredential
@@ -53,56 +65,42 @@ func (h *RequestHandler) dispatchValidationNoMatcher() (KongValidator, bool) {
 	return nil, false
 }
 
-func (h *RequestHandler) pickReferenceIndexers() (ctrlref.CacheIndexers, bool) {
-	if len(h.validators) > 0 {
-		return lo.Values(h.validators)[0].GetReferenceIndexers(), true
-	}
-	return ctrlref.CacheIndexers{}, false
-}
-
-// dispatchValidationIngressClassMatcher based on IngressClass
+// dispatchValidationIngressClassMatcher based on IngressClass returns the first validator if exists.
+// Existing of a reference indexers is not guaranteed, so the second return boolean value indicates it.
+// On that matching below entities rely:
 // - h.handleKongConsumer -> ValidateConsumer
 // - h.handleKongConsumerGroup -> ValidateConsumerGroup
 // - h.handleKongVault -> ValidateVault
 func (h *RequestHandler) dispatchValidationIngressClassMatcher(obj metav1.ObjectMeta) (KongValidator, bool) {
-	var (
-		validator KongValidator
-		ok        bool
-	)
-
 	for _, v := range h.validators {
 		if v.IngressClassMatcher(&obj) {
-			validator = v
-			ok = true
-			break
+			return v, true
 		}
 	}
-	return validator, ok
+	return nil, false
 }
 
-// h.handleIngress-> ValidateIngress (2 matchers)
+// dispatchValidationForIngress has a specific matching function for Ingress resources. It returns the
+// first validator if exists. Existing of a reference indexers is not guaranteed, so the second return
+// boolean value indicates it.
+// On that matching below entities rely:
+// - h.handleIngress-> ValidateIngress
 func (h *RequestHandler) dispatchValidationForIngress(ing netv1.Ingress) (KongValidator, bool) {
-	var (
-		validator KongValidator
-		ok        bool
-	)
 	for _, v := range h.validators {
 		if v.IngressClassMatcher(&ing.ObjectMeta) ||
 			v.IngressV1ClassMatcher(&ing) {
-			validator = v
-			ok = true
-			break
+			return v, true
 		}
 	}
-	return validator, ok
+	return nil, false
 }
 
-// h.handleKongCustomEntity -> ValidateCustomEntity
+// dispatchValidationForCustomEntity has a specific matching function for KongCustomEntity resources.
+// It returns the first validator if exists. Existing of a reference indexers is not guaranteed,
+// so the second return boolean value indicates it.
+// On that matching below entities rely:
+// - h.handleKongCustomEntity -> ValidateCustomEntity
 func (h *RequestHandler) dispatchValidationForCustomEntity(entity configurationv1alpha1.KongCustomEntity) (KongValidator, bool) {
-	var (
-		validator KongValidator
-		ok        bool
-	)
 	for _, v := range h.validators {
 		if v.IngressClassMatcher(&entity.ObjectMeta) ||
 			v.IngressClassMatcher(&metav1.ObjectMeta{
@@ -110,25 +108,33 @@ func (h *RequestHandler) dispatchValidationForCustomEntity(entity configurationv
 					annotations.IngressClassKey: entity.Spec.ControllerName,
 				},
 			}) {
-			validator = v
-			ok = true
-			break
+			return v, true
 		}
 	}
-	return validator, ok
+	return nil, false
 }
 
-// ---
+// mgrID is an interface that represents a manager ID.
+// manager.ID from ingress-controller/pkg/manager/id.go
+// is not used directly to avoid import cycle.
+type mgrID interface {
+	String() string
+}
 
-func (h *RequestHandler) RegisterValidator(id string, validator KongValidator) {
+// RegisterValidator adds a new validator to the request handler. An instance of
+// validator is created per KIC instance in KO.
+func (h *RequestHandler) RegisterValidator(id mgrID, validator KongValidator) {
 	if h.validators == nil {
 		h.validators = make(map[string]KongValidator)
 	}
-	h.validators[id] = validator
+	h.validators[id.String()] = validator
 }
 
-func (h *RequestHandler) UnregisterValidator(id string) {
-	delete(h.validators, id)
+// UnregisterValidator removes a validator from from the request handler.
+// An instance of validator is removed when a particular KIC instance
+// is removed from KO.
+func (h *RequestHandler) UnregisterValidator(id mgrID) {
+	delete(h.validators, id.String())
 }
 
 // ServeHTTP parses AdmissionReview requests and responds back
@@ -257,7 +263,6 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 }
 
 // +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongconsumers,versions=v1,name=kongconsumers.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
-
 func (h RequestHandler) handleKongConsumer(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
