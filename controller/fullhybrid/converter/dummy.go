@@ -111,26 +111,6 @@ func (d *dummyConverter) Translate() error {
 	return nil
 }
 
-// EnforceState implements APIConverter.
-func (d *dummyConverter) EnforceState(ctx context.Context) error {
-	kongServices := configurationv1alpha1.KongServiceList{}
-	if err := d.List(ctx, &kongServices, client.InNamespace(d.service.Namespace)); err != nil {
-		return err
-	}
-
-	for _, ks := range d.outputStore {
-		if !lo.ContainsBy(kongServices.Items, func(item configurationv1alpha1.KongService) bool {
-			return item.Name == ks.Name && item.Namespace == ks.Namespace
-		}) {
-			// If the KongService is not found, create it.
-			if err := d.Create(ctx, &ks); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 // GetStore implements APIConverter.
 func (d *dummyConverter) GetStore(ctx context.Context) []unstructured.Unstructured {
 	objects := make([]unstructured.Unstructured, 0, len(d.outputStore))
