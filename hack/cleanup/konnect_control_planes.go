@@ -36,13 +36,6 @@ func cleanupKonnectControlPlanes(ctx context.Context, log logr.Logger) error {
 		),
 		sdkkonnectgo.WithServerURL(test.KonnectServerURL()),
 	)
-	me, err := sdk.Me.GetUsersMe(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to get user info: %w", err)
-	}
-	if me.User == nil || me.User.ID == nil {
-		return errors.New("failed to get user info, user is nil")
-	}
 
 	orphanedCPs, err := findOrphanedControlPlanes(ctx, log, sdk.ControlPlanes)
 	if err != nil {
@@ -50,23 +43,6 @@ func cleanupKonnectControlPlanes(ctx context.Context, log logr.Logger) error {
 	}
 	if err := deleteControlPlanes(ctx, log, sdk.ControlPlanes, orphanedCPs); err != nil {
 		return fmt.Errorf("failed to delete control planes: %w", err)
-	}
-
-	userID := *me.User.ID
-
-	// We have to manually delete roles created for the control plane because Konnect doesn't do it automatically.
-	// If we don't do it, we will eventually hit a problem with Konnect APIs answering our requests with 504s
-	// because of a performance issue when there's too many roles for the account
-	// (see https://konghq.atlassian.net/browse/TPS-1319).
-	//
-	// We can drop this once the automated cleanup is implemented on Konnect side:
-	// https://konghq.atlassian.net/browse/TPS-1453.
-	rolesToDelete, err := findOrphanedRolesToDelete(ctx, log, sdk.Roles, orphanedCPs, userID)
-	if err != nil {
-		return fmt.Errorf("failed to list control plane roles to delete: %w", err)
-	}
-	if err := deleteRoles(ctx, log, sdk.Roles, *me.User.ID, rolesToDelete); err != nil {
-		return fmt.Errorf("failed to delete control plane roles: %w", err)
 	}
 
 	return nil
@@ -133,74 +109,5 @@ func deleteControlPlanes(
 			errs = append(errs, fmt.Errorf("failed to delete control plane %s: %w", cpID, err))
 		}
 	}
-	return errors.Join(errs...)
-}
-
-// findOrphanedRolesToDelete gets a list of roles that belong to the orphaned control planes.
-func findOrphanedRolesToDelete(
-	ctx context.Context,
-	log logr.Logger,
-	sdk *sdkkonnectgo.Roles,
-	orphanedCPsIDs []string,
-	userID string,
-) ([]string, error) {
-	if len(orphanedCPsIDs) < 1 {
-		log.Info("No control planes to clean up, skipping listing roles")
-		return nil, nil
-	}
-
-	resp, err := sdk.ListUserRoles(ctx, userID,
-		// NOTE: Sadly we can't do filtering here (yet?) because ListUserRolesQueryParamFilter
-		// can only match by exact name and we match against a list of orphaned control plane IDs.
-		&sdkkonnectops.ListUserRolesQueryParamFilter{},
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to list user roles: %w", err)
-	}
-
-	if resp == nil || resp.AssignedRoleCollection == nil {
-		return nil, errors.New("failed to list user roles, response is nil")
-	}
-
-	var rolesIDsToDelete []string
-	for _, role := range resp.AssignedRoleCollection.GetData() {
-		log.Info("User role", "id", role.ID, "entity_id", role.EntityID)
-		belongsToOrphanedControlPlane := lo.ContainsBy(orphanedCPsIDs, func(cpID string) bool {
-			if role.EntityID == nil {
-				return false
-			}
-			return cpID == *role.EntityID
-		})
-		if !belongsToOrphanedControlPlane {
-			continue
-		}
-		rolesIDsToDelete = append(rolesIDsToDelete, *role.ID)
-	}
-
-	return rolesIDsToDelete, nil
-}
-
-// deleteRoles deletes roles by their IDs.
-func deleteRoles(
-	ctx context.Context,
-	log logr.Logger,
-	sdk *sdkkonnectgo.Roles,
-	userID string,
-	rolesIDsToDelete []string,
-) error {
-	if len(rolesIDsToDelete) == 0 {
-		log.Info("No roles to delete")
-		return nil
-	}
-
-	var errs []error
-	for _, roleID := range rolesIDsToDelete {
-		log.Info("Deleting role", "id", roleID)
-		_, err := sdk.UsersRemoveRole(ctx, userID, roleID)
-		if err != nil {
-			errs = append(errs, fmt.Errorf("failed to delete role %s: %w", roleID, err))
-		}
-	}
-
 	return errors.Join(errs...)
 }
