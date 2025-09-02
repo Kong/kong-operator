@@ -110,7 +110,14 @@ certsDir:
 # enable configuration dump for control planes.
 enableControlplaneConfigDump: false
 controlplaneConfigDumpPort: 10256
+# Global options that configure the operator behavior.
 global:
+  # Options for controlling ValidatingAdmissionPolicy and ValidatingAdmissionPolicyBinding
+  # resources deployed by this chart.
+  validatingPolicies:
+    dataplanePorts:
+      # Enable validation for dataplane ports.
+      enabled: true
   # Enable conversion webhook for CRDs.
   # See note at https://github.com/Kong/kong-operator/blob/main/charts/kong-operator/CHANGELOG.md#%EF%B8%8F-important-notice-about-migration-webhooks
   # for more.
