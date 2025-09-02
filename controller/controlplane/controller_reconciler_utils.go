@@ -15,8 +15,8 @@ import (
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
 
+	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
 	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	gwtypes "github.com/kong/kong-operator/internal/types"

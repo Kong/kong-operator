@@ -12,9 +12,9 @@ import (
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
 	kcfgkonnect "github.com/kong/kubernetes-configuration/v2/api/konnect"
 
+	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
 	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
 	"github.com/kong/kong-operator/controller/pkg/patch"
 	gwtypes "github.com/kong/kong-operator/internal/types"

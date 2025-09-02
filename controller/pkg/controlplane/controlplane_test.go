@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
-
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 

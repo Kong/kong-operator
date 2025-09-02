@@ -19,4 +19,3 @@ func GatewayConfigurationGVR() schema.GroupVersionResource {
 		Resource: "gatewayconfigurations",
 	}
 }
-

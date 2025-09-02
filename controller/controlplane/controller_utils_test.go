@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
-
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )

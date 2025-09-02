@@ -11,7 +11,6 @@ import (
 	"k8s.io/client-go/rest"
 
 	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
-
 	"github.com/kong/kong-operator/controller/pkg/log"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	telemetryTypes "github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"

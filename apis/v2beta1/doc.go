@@ -19,4 +19,3 @@ limitations under the License.
 // +groupName=gateway-operator.konghq.com
 // +groupGoName=GatewayOperator
 package v2beta1
-

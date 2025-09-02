@@ -21,8 +21,9 @@ import (
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
+	kov2beta1 "github.com/kong/kong-operator/apis/v2beta1"
 	"github.com/kong/kong-operator/controller/controlplane"
 	"github.com/kong/kong-operator/controller/pkg/builder"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -193,8 +194,8 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 			},
 			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 				IngressClass: lo.ToPtr(ingressClass),
-				WatchNamespaces: &operatorv2beta1.WatchNamespaces{
-					Type: operatorv2beta1.WatchNamespacesTypeList,
+				WatchNamespaces: &kov2beta1.WatchNamespaces{
+					Type: kov2beta1.WatchNamespacesTypeList,
 					List: []string{
 						nsA.Name,
 						nsB.Name,
@@ -348,6 +349,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
+	cl := GetClients().MgrClient
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV2beta1().ControlPlanes(namespace.Name)
 
@@ -420,9 +422,8 @@ func TestControlPlaneUpdate(t *testing.T) {
 	)
 
 	t.Log("deploying controlplane resource")
-	cp, err = controlplaneClient.Create(GetCtx(), cp, metav1.CreateOptions{})
-	require.NoError(t, err)
-	cleaner.Add(cp)
+	require.NoError(t, cl.Create(GetCtx(), cp))
+	addToCleanup(t, cl, cp)
 
 	t.Log("verifying that the controlplane gets marked as provisioned")
 	require.Eventually(t, testutils.ControlPlaneIsProvisioned(t, GetCtx(), controlplaneName, clients),
@@ -437,10 +438,10 @@ func TestControlPlaneUpdate(t *testing.T) {
 	t.Log("updating controlplane to disable the Kong Consumer controller")
 	require.Eventually(t,
 		testutils.ControlPlaneUpdateEventually(t, GetCtx(), controlplaneName, clients,
-			func(cp *gwtypes.ControlPlane) {
-				cp.Spec.Controllers = append(cp.Spec.Controllers, gwtypes.ControlPlaneController{
+			func(cp *operatorv2beta1.ControlPlane) {
+				cp.Spec.Controllers = append(cp.Spec.Controllers, operatorv2beta1.ControlPlaneController{
 					Name:  controlplane.ControllerNameKongConsumer,
-					State: gwtypes.ControlPlaneControllerStateDisabled,
+					State: operatorv2beta1.ControllerStateDisabled,
 				})
 			},
 		),

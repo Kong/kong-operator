@@ -10,10 +10,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
+	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )

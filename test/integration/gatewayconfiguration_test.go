@@ -13,7 +13,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
 	"github.com/kong/kong-operator/controller/controlplane"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -107,11 +107,11 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 				},
 			},
 			ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
-				ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-					Controllers: []gwtypes.ControlPlaneController{
+				ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+					Controllers: []operatorv2beta1.ControlPlaneController{
 						{
 							Name:  controlplane.ControllerNameIngress,
-							State: gwtypes.ControlPlaneControllerStateDisabled,
+							State: operatorv2beta1.ControllerStateDisabled,
 						},
 					},
 				},

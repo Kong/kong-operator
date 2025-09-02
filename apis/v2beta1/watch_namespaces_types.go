@@ -37,4 +37,3 @@ const (
 	// object should be watched for resources.
 	WatchNamespacesTypeOwn WatchNamespacesType = "own"
 )
-

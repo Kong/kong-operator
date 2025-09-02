@@ -21,7 +21,6 @@ import (
 	"sigs.k8s.io/gateway-api/pkg/features"
 
 	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
-
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/metadata"
 	"github.com/kong/kong-operator/pkg/consts"

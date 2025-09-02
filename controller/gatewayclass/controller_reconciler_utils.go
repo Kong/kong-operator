@@ -14,8 +14,8 @@ import (
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
 
+	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayapipkg "github.com/kong/kong-operator/pkg/gatewayapi"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"

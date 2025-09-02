@@ -168,7 +168,7 @@ type RolloutResources struct {
 	//
 	// +optional
 	// +kubebuilder:default={"deployment":"ScaleDownOnPromotionScaleUpOnRollout"}
-	Plan RolloutResourcePlan `json:"plan,omitempty"`
+	Plan RolloutResourcePlan `json:"plan"`
 }
 
 // RolloutResourcePlan is a type that holds rollout resource plan related fields
@@ -318,4 +318,3 @@ type ServiceOptions struct {
 	// +kubebuilder:validation:Enum=Cluster;Local
 	ExternalTrafficPolicy corev1.ServiceExternalTrafficPolicy `json:"externalTrafficPolicy,omitempty"`
 }
-

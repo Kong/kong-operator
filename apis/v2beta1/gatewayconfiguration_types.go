@@ -42,15 +42,15 @@ func init() {
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 type GatewayConfiguration struct {
 	metav1.TypeMeta   `json:",inline"`
-	metav1.ObjectMeta `json:"metadata,omitempty"`
+	metav1.ObjectMeta `json:"metadata"`
 
 	// Spec defines the desired state of GatewayConfiguration.
-	Spec GatewayConfigurationSpec `json:"spec,omitempty"`
+	Spec GatewayConfigurationSpec `json:"spec"`
 
 	// Status defines the observed state of GatewayConfiguration.
 	//
 	// +optional
-	Status GatewayConfigurationStatus `json:"status,omitempty"`
+	Status GatewayConfigurationStatus `json:"status"`
 }
 
 // GatewayConfigurationSpec defines the desired state of GatewayConfiguration
@@ -177,7 +177,7 @@ type GatewayConfigDataPlaneResources struct {
 type PodDisruptionBudget struct {
 	// Spec defines the specification of the PodDisruptionBudget.
 	// Selector is managed by the controller and cannot be set by the user.
-	Spec PodDisruptionBudgetSpec `json:"spec,omitempty"`
+	Spec PodDisruptionBudgetSpec `json:"spec"`
 }
 
 // PodDisruptionBudgetSpec defines the specification of a PodDisruptionBudget.
@@ -294,7 +294,7 @@ type GatewayConfigurationStatus struct {
 // +kubebuilder:object:root=true
 type GatewayConfigurationList struct {
 	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
+	metav1.ListMeta `json:"metadata"`
 	Items           []GatewayConfiguration `json:"items"`
 }
 
@@ -315,4 +315,3 @@ func (g *GatewayConfiguration) GetExtensions() []commonv1alpha1.ExtensionRef {
 
 // Hub marks the GatewayConfiguration type as a hub type (storageversion) for conversion webhook.
 func (g *GatewayConfiguration) Hub() {}
-
