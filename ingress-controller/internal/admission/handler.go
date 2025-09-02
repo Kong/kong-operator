@@ -35,10 +35,6 @@ type RequestHandler struct {
 	// validators validate the entities that the k8s API-server asks
 	// it the server to validate.
 	validators map[string]KongValidator
-	// ReferenceIndexers gets the resources (KongPlugin and KongClusterPlugin)
-	// referring the validated resource (Secret) to check the changes on
-	// referred Secret will produce invalid configuration of the plugins.
-	ReferenceIndexers ctrlref.CacheIndexers
 
 	Logger logr.Logger
 }
@@ -55,6 +51,13 @@ func (h *RequestHandler) dispatchValidationNoMatcher() (KongValidator, bool) {
 		return lo.Values(h.validators)[0], true
 	}
 	return nil, false
+}
+
+func (h *RequestHandler) pickReferenceIndexers() (ctrlref.CacheIndexers, bool) {
+	if len(h.validators) > 0 {
+		return lo.Values(h.validators)[0].GetReferenceIndexers(), true
+	}
+	return ctrlref.CacheIndexers{}, false
 }
 
 // dispatchValidationIngressClassMatcher based on IngressClass
@@ -435,7 +438,11 @@ func (h RequestHandler) handleSecret(
 // checkReferrersOfSecret validates all referrers (KongPlugins and KongClusterPlugins) of the secret
 // and rejects the secret if it generates invalid configurations for any of the referrers.
 func (h RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *corev1.Secret) (bool, int, string, error) {
-	referrers, err := h.ReferenceIndexers.ListReferrerObjectsByReferent(secret)
+	ri, ok := h.pickReferenceIndexers()
+	if !ok {
+		return true, 0, "", nil
+	}
+	referrers, err := ri.ListReferrerObjectsByReferent(secret)
 	if err != nil {
 		return false, 0, "", fmt.Errorf("failed to list referrers of secret: %w", err)
 	}

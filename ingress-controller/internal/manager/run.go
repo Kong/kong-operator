@@ -293,6 +293,7 @@ func New(
 		admission.NewDefaultAdminAPIServicesProvider(m.clientsManager),
 		translatorFeatureFlags,
 		storer,
+		referenceIndexers,
 	)
 
 	setupLog.Info("Starting Enabled Controllers")

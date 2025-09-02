@@ -24,6 +24,7 @@ import (
 	ingressvalidation "github.com/kong/kong-operator/ingress-controller/internal/admission/validation/ingress"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	gatewaycontroller "github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
+	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
@@ -47,6 +48,7 @@ type KongValidator interface {
 
 	IngressClassMatcher(obj *metav1.ObjectMeta) bool
 	IngressV1ClassMatcher(ing *netv1.Ingress) bool
+	GetReferenceIndexers() ctrlref.CacheIndexers
 }
 
 // AdminAPIServicesProvider provides KongHTTPValidator with Kong Admin API services that are needed to perform
@@ -113,6 +115,10 @@ type KongHTTPValidator struct {
 	ManagerClient            client.Client
 	AdminAPIServicesProvider AdminAPIServicesProvider
 	TranslatorFeatures       translator.FeatureFlags
+	// ReferenceIndexers gets the resources (KongPlugin and KongClusterPlugin)
+	// referring the validated resource (Secret) to check the changes on
+	// referred Secret will produce invalid configuration of the plugins.
+	ReferenceIndexers ctrlref.CacheIndexers
 
 	ingressClassMatcher   func(*metav1.ObjectMeta, string, annotations.ClassMatching) bool
 	ingressV1ClassMatcher func(*netv1.Ingress, annotations.ClassMatching) bool
@@ -129,6 +135,7 @@ func NewKongHTTPValidator(
 	servicesProvider AdminAPIServicesProvider,
 	translatorFeatures translator.FeatureFlags,
 	storer store.Storer,
+	referenceIndexer ctrlref.CacheIndexers,
 ) KongHTTPValidator {
 	return KongHTTPValidator{
 		Logger:                   logger,
@@ -138,6 +145,7 @@ func NewKongHTTPValidator(
 		ManagerClient:            managerClient,
 		AdminAPIServicesProvider: servicesProvider,
 		TranslatorFeatures:       translatorFeatures,
+		ReferenceIndexers:        referenceIndexer,
 
 		ingressClassMatcher:   annotations.IngressClassValidatorFuncFromObjectMeta(ingressClass),
 		ingressV1ClassMatcher: annotations.IngressClassValidatorFuncFromV1Ingress(ingressClass),
@@ -150,6 +158,10 @@ func (validator KongHTTPValidator) IngressClassMatcher(om *metav1.ObjectMeta) bo
 
 func (validator KongHTTPValidator) IngressV1ClassMatcher(ingress *netv1.Ingress) bool {
 	return validator.ingressV1ClassMatcher(ingress, annotations.ExactClassMatch)
+}
+
+func (validator KongHTTPValidator) GetReferenceIndexers() ctrlref.CacheIndexers {
+	return validator.ReferenceIndexers
 }
 
 // ValidateConsumer checks if consumer has a Username and a consumer with
