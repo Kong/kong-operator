@@ -13,11 +13,6 @@ const (
 	GatewayClassOnGatewayConfigurationIndex = "GatewayClassOnGatewayConfiguration"
 )
 
-// GatewayClassFlags contains flags that control which indexes are created for the GatewayClass object.
-type GatewayClassFlags struct {
-	GatewayAPIGatewayControllerEnabled bool
-}
-
 func OptionsForGatewayClass() []Option {
 	return []Option{
 		{
