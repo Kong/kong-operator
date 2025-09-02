@@ -53280,7 +53280,11 @@ spec:
       containers:
       - name: manager
         env:
+        - name: KONG_OPERATOR_ANONYMOUS_REPORTS
+          value: "false"
         - name: KONG_OPERATOR_ENABLE_CONTROLLER_GATEWAY
+          value: "true"
+        - name: KONG_OPERATOR_NO_LEADER_ELECTION
           value: "true"
         - name: KONG_OPERATOR_CONTROLPLANE_CONFIG_DUMP_BIND_ADDRESS
           value: ":10256"

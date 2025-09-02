@@ -53269,6 +53269,8 @@ spec:
         env:
         - name: KONG_OPERATOR_ANONYMOUS_REPORTS
           value: "false"
+        - name: KONG_OPERATOR_NO_LEADER_ELECTION
+          value: "true"
         - name: KONG_OPERATOR_HEALTH_PROBE_BIND_ADDRESS
           value: ":8081"
         - name: KONG_OPERATOR_METRICS_BIND_ADDRESS

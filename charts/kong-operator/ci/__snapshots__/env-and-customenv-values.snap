@@ -53267,6 +53267,8 @@ spec:
           value: "false"
         - name: KONG_OPERATOR_ENABLE_CONTROLLER_GATEWAY
           value: "false"
+        - name: KONG_OPERATOR_NO_LEADER_ELECTION
+          value: "true"
         - name: TZ
           value: "Europe/Berlin"
         - name: KONG_OPERATOR_HEALTH_PROBE_BIND_ADDRESS
