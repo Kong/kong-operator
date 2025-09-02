@@ -35,19 +35,18 @@ webhooks:
     - kongingresses
     - kongvaults
     scope: '*'
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
     # TODO: it tries to validate secret created by cert-manager, but KO is not ready to handle it.
-    # https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector
-    # - secrets
-    - services
-    scope: '*'
+  # - apiGroups:
+  #   - ""
+  #   apiVersions:
+  #   - v1
+  #   operations:
+  #   - CREATE
+  #   - UPDATE
+  #   resources:
+  #   - secrets
+  #   - services
+  #   scope: '*'
   - apiGroups:
     - networking.k8s.io
     apiVersions:

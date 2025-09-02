@@ -382,7 +382,7 @@ func TestValidationWebhook(t *testing.T) {
 				res := httptest.NewRecorder()
 				server := RequestHandler{
 					validators: map[string]KongValidator{
-						"aa": tt.validator,
+						"test": tt.validator,
 					},
 					Logger: zapr.NewLogger(zap.NewNop()),
 				}

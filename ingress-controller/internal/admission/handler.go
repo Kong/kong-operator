@@ -33,7 +33,9 @@ const (
 // Custom Resources using Kubernetes Admission Webhooks.
 type RequestHandler struct {
 	// validators validate the entities that the k8s API-server asks
-	// it the server to validate.
+	// it the server to validate. Each instance is created per KIC
+	// instance run in KO. Dispatch methods are responsible for
+	// routing incoming requests to the appropriate validator.
 	validators map[string]KongValidator
 
 	Logger logr.Logger
