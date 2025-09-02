@@ -27,6 +27,7 @@ import (
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	extv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -42,7 +43,7 @@ func controlPlanePredicate(
 	t *testing.T,
 	ctx context.Context,
 	controlplaneName types.NamespacedName,
-	predicate func(controlplane *gwtypes.ControlPlane) bool,
+	predicate func(controlplane *extv2beta1.ControlPlane) bool,
 	operatorClient *clientset.Clientset,
 ) func() bool {
 	controlplaneClient := operatorClient.GatewayOperatorV2beta1().ControlPlanes(controlplaneName.Namespace)
@@ -90,7 +91,7 @@ func HPAPredicate(
 // that can be used to check if a ControlPlane was scheduled.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneIsScheduled(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, operatorClient *clientset.Clientset) func() bool {
-	return controlPlanePredicate(t, ctx, controlPlane, func(c *gwtypes.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *extv2beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(kcfgcontrolplane.ConditionTypeProvisioned) {
 				return true
@@ -118,7 +119,7 @@ func DataPlaneIsReady(t *testing.T, ctx context.Context, dataplane types.Namespa
 // that can be used to check if a ControlPlane detected unset dataplane.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneDetectedNoDataPlane(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlPlane, func(c *gwtypes.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *extv2beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(kcfgcontrolplane.ConditionTypeProvisioned) &&
 				condition.Status == metav1.ConditionFalse &&
@@ -134,7 +135,7 @@ func ControlPlaneDetectedNoDataPlane(t *testing.T, ctx context.Context, controlP
 // that can be used to check if a ControlPlane was provisioned.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneIsProvisioned(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlPlane, func(c *gwtypes.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *extv2beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(kcfgcontrolplane.ConditionTypeProvisioned) &&
 				condition.Status == metav1.ConditionTrue {
@@ -149,7 +150,7 @@ func ControlPlaneIsProvisioned(t *testing.T, ctx context.Context, controlPlane t
 // that can be used to check if a ControlPlane's options are valid.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneIsOptionsValid(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlPlane, func(c *gwtypes.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *extv2beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(kcfgcontrolplane.ConditionTypeOptionsValid) &&
 				condition.Status == metav1.ConditionTrue {
@@ -164,7 +165,7 @@ func ControlPlaneIsOptionsValid(t *testing.T, ctx context.Context, controlPlane 
 // that can be used to check if a ControlPlane is marked as not Ready.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneIsNotReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlplane, func(c *gwtypes.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlplane, func(c *extv2beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(kcfgdataplane.ReadyType) &&
 				condition.Status == metav1.ConditionFalse {
@@ -179,7 +180,7 @@ func ControlPlaneIsNotReady(t *testing.T, ctx context.Context, controlplane type
 // that can be used to check if a ControlPlane is marked as Ready.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneIsReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlplane, func(c *gwtypes.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlplane, func(c *extv2beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(kcfgdataplane.ReadyType) &&
 				condition.Status == metav1.ConditionTrue {
@@ -194,11 +195,20 @@ func ControlPlaneIsReady(t *testing.T, ctx context.Context, controlplane types.N
 // that can be used to check if a ControlPlane has an active deployment.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneHasActiveDeployment(t *testing.T, ctx context.Context, controlplaneName types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlplaneName, func(controlplane *gwtypes.ControlPlane) bool {
-		deployments := MustListControlPlaneDeployments(t, ctx, controlplane, clients)
-		return len(deployments) == 1 &&
-			*deployments[0].Spec.Replicas > 0 &&
-			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
+	return controlPlanePredicate(t, ctx, controlplaneName, func(controlplane *extv2beta1.ControlPlane) bool {
+		deployments, err := k8sutils.ListDeploymentsForOwner(
+			ctx,
+			clients.MgrClient,
+			controlplane.Namespace,
+			controlplane.UID,
+			client.MatchingLabels{
+				consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
+			},
+		)
+		if err != nil || len(deployments) != 1 {
+			return false
+		}
+		return *deployments[0].Spec.Replicas > 0 && deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
 	}, clients.OperatorClient)
 }
 
@@ -618,7 +628,7 @@ func HTTPRouteUpdateEventually(t *testing.T, ctx context.Context, httpRouteNN ty
 // ControlPlaneUpdateEventually is a helper function for tests that returns a function
 // that can be used to update the ControlPlane.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlaneUpdateEventually(t *testing.T, ctx context.Context, controlplaneNN types.NamespacedName, clients K8sClients, updateFunc func(*gwtypes.ControlPlane)) func() bool {
+func ControlPlaneUpdateEventually(t *testing.T, ctx context.Context, controlplaneNN types.NamespacedName, clients K8sClients, updateFunc func(*extv2beta1.ControlPlane)) func() bool {
 	return func() bool {
 		cl := clients.OperatorClient.GatewayOperatorV2beta1().ControlPlanes(controlplaneNN.Namespace)
 		cp, err := cl.Get(ctx, controlplaneNN.Name, metav1.GetOptions{})

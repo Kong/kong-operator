@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
-	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
 
 	"github.com/kong/kong-operator/controller/pkg/log"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"

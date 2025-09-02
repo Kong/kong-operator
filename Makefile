@@ -302,10 +302,35 @@ verify.generators: verify.repo generate verify.diff
 # Build - Generators
 # ------------------------------------------------------------------------------
 
+# API generation helpers scoped to v2beta1 in this repository.
+API_V2_DIR ?= apis/v2beta1
+KO_API_HEADER_FILE ?= hack/generators/boilerplate.go.txt
+
+# Generate deepcopy and other object boilerplate for apis/v2beta1 only.
+.PHONY: generate.api.v2beta1
+generate.api.v2beta1: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="$(KO_API_HEADER_FILE)" paths="./$(API_V2_DIR)/..."
+
+# Generate a typed clientset for apis/v2beta1 only.
+.PHONY: generate.clientsets.v2beta1
+generate.clientsets.v2beta1: client-gen
+	$(CLIENT_GEN) \
+		--go-header-file ./hack/generators/boilerplate.go.txt \
+		--clientset-name clientset \
+		--input-base '' \
+		--input $(REPO)/apis/v2beta1 \
+		--output-dir pkg/ \
+		--output-pkg $(REPO)/pkg/
+
+# Generate CRD YAMLs only from api/v2beta1 markers (optional).
+.PHONY: manifests.crds.v2beta1
+manifests.crds.v2beta1: controller-gen
+	$(CONTROLLER_GEN) paths="./$(API_V2_DIR)/..." $(CONTROLLER_GEN_CRD_OPTIONS) +output:crd:artifacts:config=$(CONFIG_CRD_BASE_PATH)
+
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.kic-webhook-config generate.mocks generate.cli-arguments-docs
+generate: generate.api.v2beta1 generate.clientsets.v2beta1 generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.kic-webhook-config generate.mocks generate.cli-arguments-docs
 
 .PHONY: generate.crd-kustomize
 generate.crd-kustomize:
