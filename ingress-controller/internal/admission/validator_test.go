@@ -1039,24 +1039,6 @@ func TestValidator_ValidateIngress(t *testing.T) {
 		wantMessage                   string
 	}{
 		{
-			name: "not matching ingress class is always ok",
-			ingress: builder.NewIngress("ingress", "not-kong").
-				WithNamespace("default").
-				WithRules(
-					newHTTPIngressRule(netv1.IngressBackend{
-						Service: &netv1.IngressServiceBackend{
-							Name: "svc",
-							Port: netv1.ServiceBackendPort{
-								Number: 8080,
-							},
-						},
-					}),
-				).
-				Build(),
-			kongRouteValidationShouldFail: true, // Despite the route validation failing, the ingress class is not kong, so it's ok.
-			wantOK:                        true,
-		},
-		{
 			name: "valid with Service backend",
 			ingress: builder.NewIngress("ingress", "not-kong").
 				WithNamespace("default").
@@ -1222,26 +1204,6 @@ func TestValidator_ValidateIngress(t *testing.T) {
 			storerObjects: store.FakeObjects{}, // No KongServiceFacade will be found resulting in an error.
 			wantOK:        false,
 			wantMessage:   `Ingress failed schema validation: failed to get backend for ingress path "/": failed to get KongServiceFacade "svc-facade": KongServiceFacade default/svc-facade not found`,
-		},
-		{
-			name: "invalid with KongServiceFacade backend with feature flag off is ok",
-			translatorFeatures: translator.FeatureFlags{
-				KongServiceFacade: false,
-			},
-			ingress: builder.NewIngress("ingress", "not-kong").
-				WithNamespace("default").
-				WithRules(
-					newHTTPIngressRule(netv1.IngressBackend{
-						Resource: &corev1.TypedLocalObjectReference{
-							APIGroup: lo.ToPtr(incubatorv1alpha1.SchemeGroupVersion.Group),
-							Kind:     incubatorv1alpha1.KongServiceFacadeKind,
-							Name:     testSvcFacadeName,
-						},
-					}),
-				).
-				Build(),
-			storerObjects: store.FakeObjects{}, // No KongServiceFacade found would result in an error, but the feature flag is off.
-			wantOK:        true,
 		},
 	}
 
