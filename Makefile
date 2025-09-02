@@ -380,8 +380,9 @@ manifests.crds: controller-gen ## Generate CustomResourceDefinition objects.
 
 .PHONY: manifests.role
 manifests.role: controller-gen
-	$(CONTROLLER_GEN) paths="$(CONTROLLER_GEN_PATHS)" \
-		rbac:roleName=manager-role \
+	$(CONTROLLER_GEN) \
+		paths="$(CONTROLLER_GEN_PATHS)" \
+		rbac:roleName="manager-role",headerFile="hack/generators/boilerplate_role.yaml" \
 		output:rbac:dir=$(CONFIG_RBAC_ROLE_DIR)
 
 # manifests.versions ensures that image versions are set in the manifests according to the current version.
