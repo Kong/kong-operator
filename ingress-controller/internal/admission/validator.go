@@ -173,11 +173,6 @@ func (validator KongHTTPValidator) ValidateConsumer(
 	ctx context.Context,
 	consumer configurationv1.KongConsumer,
 ) (bool, string, error) {
-	// ignore consumers that are being managed by another controller
-	if !validator.ingressClassMatcher(&consumer.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
-		return true, "", nil
-	}
-
 	errText, err := validator.ensureConsumerDoesNotExistInGateway(ctx, consumer.Username)
 	if err != nil || errText != "" {
 		return false, errText, err
@@ -251,11 +246,6 @@ func (validator KongHTTPValidator) ValidateConsumerGroup(
 	ctx context.Context,
 	consumerGroup configurationv1beta1.KongConsumerGroup,
 ) (bool, string, error) {
-	// Ignore ConsumerGroups that are being managed by another controller.
-	if !validator.ingressClassMatcher(&consumerGroup.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
-		return true, "", nil
-	}
-
 	infoSvc, ok := validator.AdminAPIServicesProvider.GetInfoService()
 	if !ok {
 		return true, "", nil
@@ -479,12 +469,6 @@ func (validator KongHTTPValidator) ValidateHTTPRoute(
 func (validator KongHTTPValidator) ValidateIngress(
 	ctx context.Context, ingress netv1.Ingress,
 ) (bool, string, error) {
-	// Ignore Ingresses that are being managed by another controller.
-	if !validator.ingressClassMatcher(&ingress.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) &&
-		!validator.ingressV1ClassMatcher(&ingress, annotations.ExactClassMatch) {
-		return true, "", nil
-	}
-
 	var routeValidator routeValidator = noOpRoutesValidator{}
 	if routesSvc, ok := validator.AdminAPIServicesProvider.GetRoutesService(); ok {
 		routeValidator = routesSvc
@@ -503,10 +487,6 @@ func (noOpRoutesValidator) Validate(_ context.Context, _ *kong.Route) (bool, str
 }
 
 func (validator KongHTTPValidator) ValidateVault(ctx context.Context, k8sKongVault configurationv1alpha1.KongVault) (bool, string, error) {
-	// Ignore KongVaults that are being managed by another controller.
-	if !validator.ingressClassMatcher(&k8sKongVault.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch) {
-		return true, "", nil
-	}
 	config, err := kongstate.RawConfigToConfiguration(k8sKongVault.Spec.Config.Raw)
 	if err != nil {
 		return false, fmt.Sprintf(ErrTextVaultConfigUnmarshalFailed, err), nil
@@ -640,18 +620,6 @@ func (m *managerClientConsumerGetter) ListAllConsumers(ctx context.Context) ([]c
 
 func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, entity configurationv1alpha1.KongCustomEntity) (bool, string, error) {
 	logger := validator.Logger.WithValues("namespace", entity.Namespace, "name", entity.Name, "kind", configurationv1alpha1.KongCustomEntityKind)
-	// If the spec.controllerName does not match the ingress class name,
-	// and the ingress class annotation does not match the ingress class name either,
-	// ignore it as it is not controlled by the controller.
-	if (!validator.ingressClassMatcher(&entity.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch)) &&
-		(!validator.ingressClassMatcher(&metav1.ObjectMeta{
-			Annotations: map[string]string{
-				annotations.IngressClassKey: entity.Spec.ControllerName,
-			},
-		}, annotations.IngressClassKey, annotations.ExactClassMatch)) {
-		return true, "", nil
-	}
-
 	fields, err := kongstate.RawConfigToConfiguration(entity.Spec.Fields.Raw)
 	if err != nil {
 		return false, fmt.Sprintf(ErrTextCustomEntityFieldsUnmarshalFailed, err), nil

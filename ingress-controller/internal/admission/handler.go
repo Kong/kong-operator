@@ -77,6 +77,7 @@ func (h *RequestHandler) dispatchValidationIngressClassMatcher(obj metav1.Object
 			return v, true
 		}
 	}
+	// Ignore object that are being not managed by any existing and running controller.
 	return nil, false
 }
 
@@ -92,6 +93,7 @@ func (h *RequestHandler) dispatchValidationForIngress(ing netv1.Ingress) (KongVa
 			return v, true
 		}
 	}
+	// Ignore Ingresses that are being managed by any existing and running controller.
 	return nil, false
 }
 
@@ -111,6 +113,9 @@ func (h *RequestHandler) dispatchValidationForCustomEntity(entity configurationv
 			return v, true
 		}
 	}
+	// If the spec.controllerName does not match the ingress class name,
+	// and the ingress class annotation does not match the ingress class name either,
+	// ignore it as it is not managed by any existing and running controller.
 	return nil, false
 }
 
