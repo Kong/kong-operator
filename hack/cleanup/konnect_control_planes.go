@@ -15,7 +15,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 
-	"github.com/kong/kong-operator/controller/konnect/ops"
 	"github.com/kong/kong-operator/test"
 )
 
@@ -23,7 +22,7 @@ const (
 	konnectControlPlanesLimit     = int64(100)
 	timeUntilControlPlaneOrphaned = time.Hour
 
-	kindKonnectGatewayControlPlane = "KonnectGatewayControlPlane"
+	testIDLabel = "konghq.com/test-id"
 )
 
 // cleanupKonnectControlPlanes deletes orphaned control planes created by the tests and their roles.
@@ -63,6 +62,8 @@ func findOrphanedControlPlanes(
 ) ([]string, error) {
 	response, err := c.ListControlPlanes(ctx, sdkkonnectops.ListControlPlanesRequest{
 		PageSize: lo.ToPtr(konnectControlPlanesLimit),
+		// Filter the control planes created in the KO integration tests by existence of label `konghq.com/test-id`
+		Labels: lo.ToPtr(testIDLabel),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list control planes: %w", err)
@@ -77,10 +78,6 @@ func findOrphanedControlPlanes(
 
 	var orphanedControlPlanes []string
 	for _, ControlPlane := range response.ListControlPlanesResponse.Data {
-		if ControlPlane.Labels[ops.KubernetesKindLabelKey] != kindKonnectGatewayControlPlane {
-			log.Info("Control plane was not created by KonnectGatewayControlPlane resource, skipping", "name", ControlPlane.Name)
-			continue
-		}
 		if ControlPlane.CreatedAt.IsZero() {
 			log.Info("Control plane has no creation timestamp, skipping", "name", ControlPlane.Name)
 			continue

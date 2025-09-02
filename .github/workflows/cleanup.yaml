@@ -2,7 +2,7 @@ name: cleanup
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
+    - cron: '8 */1 * * *' # Run once per hour
   workflow_dispatch: {}
 
 permissions:
