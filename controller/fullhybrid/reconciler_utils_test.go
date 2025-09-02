@@ -271,7 +271,7 @@ func TestHasOwnerRef(t *testing.T) {
 	})
 }
 
-func TestReduct(t *testing.T) {
+func TestReduce(t *testing.T) {
 	dummy := converter.NewDummyConverter(nil)
 	now := time.Now()
 
@@ -424,7 +424,7 @@ func TestReduct(t *testing.T) {
 			obj := unstructured.Unstructured{}
 			obj.SetKind(tc.kind)
 			var resourcesToDelete []string
-			for _, obj := range reductDuplicates(tc.kongServices, dummy.Reduct(obj)...) {
+			for _, obj := range reduceDuplicates(tc.kongServices, dummy.Reduce(obj)...) {
 				resourcesToDelete = append(resourcesToDelete, obj.GetName())
 			}
 			require.ElementsMatch(t, tc.expectedResourcesTodelete, resourcesToDelete)

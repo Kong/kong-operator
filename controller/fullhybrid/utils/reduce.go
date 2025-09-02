@@ -6,9 +6,9 @@ import (
 	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 )
 
-// ReductFunc defines a function type that takes a slice of unstructured.Unstructured objects
+// ReduceFunc defines a function type that takes a slice of unstructured.Unstructured objects
 // and returns a (possibly modified or filtered) slice of unstructured.Unstructured objects.
-type ReductFunc func([]unstructured.Unstructured) []unstructured.Unstructured
+type ReduceFunc func([]unstructured.Unstructured) []unstructured.Unstructured
 
 // KeepYoungest returns a new slice with all elements except the youngest (most recently created) object removed from the input slice.
 // If the input slice is empty, it returns nil.

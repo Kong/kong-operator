@@ -144,12 +144,12 @@ func (d *dummyConverter) GetStore(ctx context.Context) []unstructured.Unstructur
 	return objects
 }
 
-// Reduct implements APIConverter.
-func (d *dummyConverter) Reduct(obj unstructured.Unstructured) []utils.ReductFunc {
+// Reduce implements APIConverter.
+func (d *dummyConverter) Reduce(obj unstructured.Unstructured) []utils.ReduceFunc {
 	switch obj.GetKind() {
 	// Order here is key as the handlers are called sequentially.
 	case "KongService":
-		return []utils.ReductFunc{
+		return []utils.ReduceFunc{
 			utils.KeepProgrammed,
 			utils.KeepYoungest,
 		}

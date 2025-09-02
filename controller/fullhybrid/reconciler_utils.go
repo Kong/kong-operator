@@ -61,7 +61,7 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			resourcesToDelete = append(resourcesToDelete, v.resources...)
 		}
 		// mark for deletion all the resources with duplicates
-		reductDuplicates(v.resources, conv.Reduct(v.resources[0])...)
+		reduceDuplicates(v.resources, conv.Reduce(v.resources[0])...)
 	}
 
 	// delete all the resources marked for deletion
@@ -74,9 +74,9 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 	return false, nil
 }
 
-// reductDuplicates applies a series of reducer functions to a slice of unstructured resources,
+// reduceDuplicates applies a series of reducer functions to a slice of unstructured resources,
 // identifying and collecting duplicates for deletion. It returns a slice of resources that should be deleted.
-func reductDuplicates(resources []unstructured.Unstructured, fns ...utils.ReductFunc) []unstructured.Unstructured {
+func reduceDuplicates(resources []unstructured.Unstructured, fns ...utils.ReduceFunc) []unstructured.Unstructured {
 	resourcesToDelete := make([]unstructured.Unstructured, 0)
 	if len(resources) > 1 {
 		// we can safely assume that all the resources here share the same GVK, as
