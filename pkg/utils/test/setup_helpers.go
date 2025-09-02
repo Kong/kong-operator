@@ -33,6 +33,8 @@ import (
 const (
 	// KubernetesConfigurationModuleName is the name of the module where we import and install Kong configuration CRDs from.
 	KubernetesConfigurationModuleName = "github.com/kong/kubernetes-configuration"
+	// GatewayAPIModuleName is the name of the module where we import and install Gateway API CRDs from.
+	GatewayAPIModuleName = "sigs.k8s.io/gateway-api"
 )
 
 func noOpClose() error {
@@ -289,4 +291,13 @@ func waitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Cli
 		}
 	}
 	return nil
+}
+
+// ConstructModulePath constructs the module path for the given module name and version.
+// It accounts for v1+ modules which are stored in separate directories in the GOPATH.
+func ConstructModulePath(moduleName, version string) string {
+	modulePath := filepath.Join(build.Default.GOPATH, "pkg", "mod")
+	modulePath = filepath.Join(append([]string{modulePath}, strings.Split(moduleName, "/")...)...)
+	modulePath += "@" + version
+	return modulePath
 }

@@ -10,6 +10,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -18,6 +19,8 @@ import (
 	"github.com/kong/gateway-operator/internal/utils/gatewayclass"
 	"github.com/kong/gateway-operator/modules/manager/logging"
 	k8sutils "github.com/kong/gateway-operator/pkg/utils/kubernetes"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/api/gateway-operator/v1beta1"
 )
 
 // -----------------------------------------------------------------------------
@@ -37,6 +40,11 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&gatewayv1.GatewayClass{},
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatches))).
+		// watch for updates to GatewayConfigurations, if any configuration is
+		// referenced by a GatewayClass that matches our controller name then enqueue it.
+		Watches(
+			&operatorv1beta1.GatewayConfiguration{},
+			handler.EnqueueRequestsFromMapFunc(r.listGatewayClassesForGatewayConfig)).
 		Complete(r)
 }
 
