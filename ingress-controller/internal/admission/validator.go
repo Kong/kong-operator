@@ -45,8 +45,8 @@ type KongValidator interface {
 	ValidateHTTPRoute(ctx context.Context, httproute gatewayapi.HTTPRoute) (bool, string, error)
 	ValidateIngress(ctx context.Context, ingress netv1.Ingress) (bool, string, error)
 
-	// IngressClassMatcher() func(*metav1.ObjectMeta) bool
-	// IngressV1ClassMatcher() func(*netv1.Ingress) bool
+	IngressClassMatcher(obj *metav1.ObjectMeta) bool
+	IngressV1ClassMatcher(ing *netv1.Ingress) bool
 }
 
 // AdminAPIServicesProvider provides KongHTTPValidator with Kong Admin API services that are needed to perform
@@ -144,9 +144,13 @@ func NewKongHTTPValidator(
 	}
 }
 
-// func (validator KongHTTPValidator) IngressClassMatcher() func(*metav1.ObjectMeta) bool {
-// 	return validator.ingressClassMatcher()
-// }
+func (validator KongHTTPValidator) IngressClassMatcher(om *metav1.ObjectMeta) bool {
+	return validator.ingressClassMatcher(om, annotations.IngressClassKey, annotations.ExactClassMatch)
+}
+
+func (validator KongHTTPValidator) IngressV1ClassMatcher(ingress *netv1.Ingress) bool {
+	return validator.ingressV1ClassMatcher(ingress, annotations.ExactClassMatch)
+}
 
 // ValidateConsumer checks if consumer has a Username and a consumer with
 // the same username doesn't exist in Kong.
@@ -624,7 +628,7 @@ func (m *managerClientConsumerGetter) ListAllConsumers(ctx context.Context) ([]c
 
 func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, entity configurationv1alpha1.KongCustomEntity) (bool, string, error) {
 	logger := validator.Logger.WithValues("namespace", entity.Namespace, "name", entity.Name, "kind", configurationv1alpha1.KongCustomEntityKind)
-	// If the spec.contollerName does not match the ingress class name,
+	// If the spec.controllerName does not match the ingress class name,
 	// and the ingress class annotation does not match the ingress class name either,
 	// ignore it as it is not controlled by the controller.
 	if (!validator.ingressClassMatcher(&entity.ObjectMeta, annotations.IngressClassKey, annotations.ExactClassMatch)) &&

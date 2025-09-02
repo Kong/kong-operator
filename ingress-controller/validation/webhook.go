@@ -29,7 +29,6 @@ func SetupAdmissionServer(
 	}
 
 	go func() {
-		admissionLogger.Info(">>> Starting admission server")
 		if err := srv.Start(ctx); err != nil {
 			admissionLogger.Error(err, "Admission server exited")
 		}

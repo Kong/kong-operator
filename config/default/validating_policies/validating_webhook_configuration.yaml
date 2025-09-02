@@ -1,3 +1,4 @@
+# Handcrafted configuration.
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
@@ -12,7 +13,6 @@ webhooks:
       namespace: kong-system
       name: gateway-operator-webhook-service
       port: 5443
-      # path: /validate
   # NOTE: By default Kong's helm charts use Ignore for the failurePolicy
   # e.g. https://github.com/Kong/charts/blob/fd9deb6ee34d9b9ac4ab4be2188d4564d0b655e5/charts/kong/values.yaml#L586
   # but setting this to Fail here allows devs to see the errors sooner, during development.
@@ -44,6 +44,7 @@ webhooks:
     - UPDATE
     resources:
     # TODO: it tries to validate secret created by cert-manager, but KO is not ready to handle it.
+    # https://kubernetes.io/docs/reference/access-authn-authz/extensible-admission-controllers/#matching-requests-objectselector
     # - secrets
     - services
     scope: '*'

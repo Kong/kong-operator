@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	admissionv1 "k8s.io/api/admission/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -31,8 +32,6 @@ const (
 // RequestHandler is an HTTP server that can validate Kong Ingress Controllers'
 // Custom Resources using Kubernetes Admission Webhooks.
 type RequestHandler struct {
-	Validator KongValidator
-
 	// validators validate the entities that the k8s API-server asks
 	// it the server to validate.
 	validators map[string]KongValidator
@@ -44,24 +43,81 @@ type RequestHandler struct {
 	Logger logr.Logger
 }
 
-func (h *RequestHandler) dispatchValidation(obj metav1.ObjectMeta) (KongValidator, bool) {
+// dispatchValidationNoMatcher returns the first validator if exists, without any matching.
+// There is no specific matching further so it's safe to do it this way, see
+// - h.handleKongPlugin -> ValidatePlugin
+// - h.handleKongClusterPlugin -> ValidateClusterPlugin
+// - h.handleSecret -> ValidateCredential
+// - h.handleGateway -> ValidateGateway
+// - h.handleHTTPRoute -> ValidateHTTPRoute
+func (h *RequestHandler) dispatchValidationNoMatcher() (KongValidator, bool) {
+	if len(h.validators) > 0 {
+		return lo.Values(h.validators)[0], true
+	}
+	return nil, false
+}
+
+// dispatchValidationIngressClassMatcher based on IngressClass
+// - h.handleKongConsumer -> ValidateConsumer
+// - h.handleKongConsumerGroup -> ValidateConsumerGroup
+// - h.handleKongVault -> ValidateVault
+func (h *RequestHandler) dispatchValidationIngressClassMatcher(obj metav1.ObjectMeta) (KongValidator, bool) {
+	var (
+		validator KongValidator
+		ok        bool
+	)
+
+	for _, v := range h.validators {
+		if v.IngressClassMatcher(&obj) {
+			validator = v
+			ok = true
+			break
+		}
+	}
+	return validator, ok
+}
+
+// h.handleIngress-> ValidateIngress (2 matchers)
+func (h *RequestHandler) dispatchValidationForIngress(ing netv1.Ingress) (KongValidator, bool) {
 	var (
 		validator KongValidator
 		ok        bool
 	)
 	for _, v := range h.validators {
-		_ = v
-		// if v.IngressClassMatcher()(&obj) {
-		// 	validator = v
-		// 	ok = true
-		// 	break
-		// }
+		if v.IngressClassMatcher(&ing.ObjectMeta) ||
+			v.IngressV1ClassMatcher(&ing) {
+			validator = v
+			ok = true
+			break
+		}
 	}
 	return validator, ok
 }
 
+// h.handleKongCustomEntity -> ValidateCustomEntity
+func (h *RequestHandler) dispatchValidationForCustomEntity(entity configurationv1alpha1.KongCustomEntity) (KongValidator, bool) {
+	var (
+		validator KongValidator
+		ok        bool
+	)
+	for _, v := range h.validators {
+		if v.IngressClassMatcher(&entity.ObjectMeta) ||
+			v.IngressClassMatcher(&metav1.ObjectMeta{
+				Annotations: map[string]string{
+					annotations.IngressClassKey: entity.Spec.ControllerName,
+				},
+			}) {
+			validator = v
+			ok = true
+			break
+		}
+	}
+	return validator, ok
+}
+
+// ---
+
 func (h *RequestHandler) RegisterValidator(id string, validator KongValidator) {
-	fmt.Printf(">>> Registering validator for id %s\n", id)
 	if h.validators == nil {
 		h.validators = make(map[string]KongValidator)
 	}
@@ -211,7 +267,7 @@ func (h RequestHandler) handleKongConsumer(
 		return nil, err
 	}
 	// ignore consumers that are not having corresponding controller
-	v, ok := h.dispatchValidation(consumer.ObjectMeta)
+	v, ok := h.dispatchValidationIngressClassMatcher(consumer.ObjectMeta)
 	if !ok {
 		return responseBuilder.Allowed(true).Build(), nil
 	}
@@ -254,7 +310,11 @@ func (h RequestHandler) handleKongConsumerGroup(
 	if _, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &consumerGroup); err != nil {
 		return nil, err
 	}
-	ok, message, err := h.Validator.ValidateConsumerGroup(ctx, consumerGroup)
+	v, ok := h.dispatchValidationIngressClassMatcher(consumerGroup.ObjectMeta)
+	if !ok {
+		return responseBuilder.Allowed(true).Build(), nil
+	}
+	ok, message, err := v.ValidateConsumerGroup(ctx, consumerGroup)
 	if err != nil {
 		return nil, err
 	}
@@ -274,8 +334,12 @@ func (h RequestHandler) handleKongPlugin(
 	if err != nil {
 		return nil, err
 	}
+	v, ok := h.dispatchValidationNoMatcher()
+	if !ok {
+		return responseBuilder.Allowed(true).Build(), nil
+	}
 
-	ok, message, err := h.Validator.ValidatePlugin(ctx, plugin, nil)
+	ok, message, err := v.ValidatePlugin(ctx, plugin, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -295,8 +359,12 @@ func (h RequestHandler) handleKongClusterPlugin(
 	if err != nil {
 		return nil, err
 	}
+	v, ok := h.dispatchValidationNoMatcher()
+	if !ok {
+		return responseBuilder.Allowed(true).Build(), nil
+	}
 
-	ok, message, err := h.Validator.ValidateClusterPlugin(ctx, plugin, nil)
+	ok, message, err := v.ValidateClusterPlugin(ctx, plugin, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -319,13 +387,17 @@ func (h RequestHandler) handleSecret(
 	if err != nil {
 		return nil, err
 	}
+	v, ok := h.dispatchValidationNoMatcher()
+	if !ok {
+		return responseBuilder.Allowed(true).Build(), nil
+	}
 
 	switch request.Operation {
 	case admissionv1.Update, admissionv1.Create:
 		// credential secrets
 		// Run ValidateCredential if the secret has the `konghq.com/credential` label and its value is one of supported credential type.
 		if _, err := util.ExtractKongCredentialType(&secret); err == nil {
-			ok, message := h.Validator.ValidateCredential(ctx, secret)
+			ok, message := v.ValidateCredential(ctx, secret)
 			if !ok {
 				return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 			}
@@ -368,39 +440,44 @@ func (h RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *core
 		return false, 0, "", fmt.Errorf("failed to list referrers of secret: %w", err)
 	}
 
+	v, validatorAvailable := h.dispatchValidationNoMatcher()
 	count := 0
 	for _, obj := range referrers {
 		gvk := obj.GetObjectKind().GroupVersionKind()
 		if gvk.Group == configurationv1.GroupVersion.Group && gvk.Version == configurationv1.GroupVersion.Version && gvk.Kind == KindKongPlugin {
 			count++
 			plugin := obj.(*configurationv1.KongPlugin)
-			ok, message, err := h.Validator.ValidatePlugin(ctx, *plugin, []*corev1.Secret{secret})
-			if err != nil {
-				return false, count, "", fmt.Errorf("failed to run validation on KongPlugin %s/%s: %w",
-					plugin.Namespace, plugin.Name, err,
-				)
-			}
-			if !ok {
-				return false, count,
-					fmt.Sprintf("Change on secret will generate invalid configuration for KongPlugin %s/%s: %s",
-						plugin.Namespace, plugin.Name, message,
-					), nil
+			if validatorAvailable {
+				ok, message, err := v.ValidatePlugin(ctx, *plugin, []*corev1.Secret{secret})
+				if err != nil {
+					return false, count, "", fmt.Errorf("failed to run validation on KongPlugin %s/%s: %w",
+						plugin.Namespace, plugin.Name, err,
+					)
+				}
+				if !ok {
+					return false, count,
+						fmt.Sprintf("Change on secret will generate invalid configuration for KongPlugin %s/%s: %s",
+							plugin.Namespace, plugin.Name, message,
+						), nil
+				}
 			}
 		}
 		if gvk.Group == configurationv1.GroupVersion.Group && gvk.Version == configurationv1.GroupVersion.Version && gvk.Kind == KindKongClusterPlugin {
 			count++
 			plugin := obj.(*configurationv1.KongClusterPlugin)
-			ok, message, err := h.Validator.ValidateClusterPlugin(ctx, *plugin, []*corev1.Secret{secret})
-			if err != nil {
-				return false, count, "", fmt.Errorf("failed to run validation on KongClusterPlugin %s: %w",
-					plugin.Name, err,
-				)
-			}
-			if !ok {
-				return false, count,
-					fmt.Sprintf("Change on secret will generate invalid configuration for KongClusterPlugin %s: %s",
-						plugin.Name, message,
-					), nil
+			if validatorAvailable {
+				ok, message, err := v.ValidateClusterPlugin(ctx, *plugin, []*corev1.Secret{secret})
+				if err != nil {
+					return false, count, "", fmt.Errorf("failed to run validation on KongClusterPlugin %s: %w",
+						plugin.Name, err,
+					)
+				}
+				if !ok {
+					return false, count,
+						fmt.Sprintf("Change on secret will generate invalid configuration for KongClusterPlugin %s: %s",
+							plugin.Name, message,
+						), nil
+				}
 			}
 		}
 	}
@@ -414,13 +491,17 @@ func (h RequestHandler) handleGateway(
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
 ) (*admissionv1.AdmissionResponse, error) {
-	fmt.Println(">>> Handling Gateway validation - h.Validator:", h.Validator)
 	gateway := gatewayapi.Gateway{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &gateway)
 	if err != nil {
 		return nil, err
 	}
-	ok, message, err := h.Validator.ValidateGateway(ctx, gateway)
+	v, ok := h.dispatchValidationNoMatcher()
+	if !ok {
+		return responseBuilder.Allowed(true).Build(), nil
+	}
+
+	ok, message, err := v.ValidateGateway(ctx, gateway)
 	if err != nil {
 		return nil, err
 	}
@@ -440,7 +521,11 @@ func (h RequestHandler) handleHTTPRoute(
 	if err != nil {
 		return nil, err
 	}
-	ok, message, err := h.Validator.ValidateHTTPRoute(ctx, httproute)
+	v, ok := h.dispatchValidationNoMatcher()
+	if !ok {
+		return responseBuilder.Allowed(true).Build(), nil
+	}
+	ok, message, err := v.ValidateHTTPRoute(ctx, httproute)
 	if err != nil {
 		return nil, err
 	}
@@ -479,7 +564,11 @@ func (h RequestHandler) handleIngress(ctx context.Context, request admissionv1.A
 	if err != nil {
 		return nil, err
 	}
-	ok, message, err := h.Validator.ValidateIngress(ctx, ingress)
+	v, ok := h.dispatchValidationForIngress(ingress)
+	if !ok {
+		return responseBuilder.Allowed(true).Build(), nil
+	}
+	ok, message, err := v.ValidateIngress(ctx, ingress)
 	if err != nil {
 		return nil, err
 	}
@@ -495,7 +584,11 @@ func (h RequestHandler) handleKongVault(ctx context.Context, request admissionv1
 	if err != nil {
 		return nil, err
 	}
-	ok, message, err := h.Validator.ValidateVault(ctx, kongVault)
+	v, ok := h.dispatchValidationIngressClassMatcher(kongVault.ObjectMeta)
+	if !ok {
+		return responseBuilder.Allowed(true).Build(), nil
+	}
+	ok, message, err := v.ValidateVault(ctx, kongVault)
 	if err != nil {
 		return nil, err
 	}
@@ -507,13 +600,16 @@ func (h RequestHandler) handleKongVault(ctx context.Context, request admissionv1
 
 func (h RequestHandler) handleKongCustomEntity(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	kongCustomEntity := configurationv1alpha1.KongCustomEntity{}
-
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongCustomEntity)
 	if err != nil {
 		return nil, err
 	}
+	v, ok := h.dispatchValidationForCustomEntity(kongCustomEntity)
+	if !ok {
+		return responseBuilder.Allowed(true).Build(), nil
+	}
 
-	ok, message, err := h.Validator.ValidateCustomEntity(ctx, kongCustomEntity)
+	ok, message, err := v.ValidateCustomEntity(ctx, kongCustomEntity)
 	if err != nil {
 		return nil, err
 	}
