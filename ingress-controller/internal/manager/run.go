@@ -232,8 +232,6 @@ func New(
 		return nil, fmt.Errorf("failed to create translator: %w", err)
 	}
 
-	setupLog.Info("Registering admission validator")
-
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)
 	configurationChangeDetector := sendconfig.NewKongGatewayConfigurationChangeDetector(logger)
 	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs, c.KongWorkspace)
@@ -286,6 +284,7 @@ func New(
 		return nil, err
 	}
 
+	setupLog.Info("Registering admission validator")
 	m.kongValidator = admission.NewKongHTTPValidator(
 		logger,
 		NewTypeMetaSettingClient(mgr.GetClient()),
@@ -296,7 +295,7 @@ func New(
 		referenceIndexers,
 	)
 
-	setupLog.Info("Starting Enabled Controllers")
+	setupLog.Info("Starting enabled Controllers")
 	controllers := setupControllers(
 		ctx,
 		mgr,

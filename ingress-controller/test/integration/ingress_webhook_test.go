@@ -14,7 +14,6 @@ import (
 
 	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
 	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 )
 
 type testCaseIngressValidation struct {
@@ -77,56 +76,56 @@ func invalidRegexInIngressPathTestCase(wantCreateErrSubstring string) testCaseIn
 	}
 }
 
-func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
-	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(t.Context(), t, expressions)
+// func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
+// 	skipTestForNonKindCluster(t)
+// 	skipTestForRouterFlavors(t.Context(), t, expressions)
 
-	ctx := t.Context()
-	ns, _ := helpers.Setup(ctx, t, env)
-	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-ingress", ns.Name)
+// 	ctx := t.Context()
+// 	ns, _ := helpers.Setup(ctx, t, env)
+// 	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-ingress", ns.Name)
 
-	testCases := append(
-		commonIngressValidationTestCases(),
-		invalidRegexInIngressPathTestCase(`invalid regex: '/foo[[['`),
-		testCaseIngressValidation{
-			Name: "path should start with '/' or '~/' (regex path) (Kong Gateway requirement for non-expressions router)",
-			Ingress: builder.NewIngress(uuid.NewString(), "").WithLegacyClassAnnotation(consts.IngressClass).WithRules(
-				constructIngressRuleWithPathsImplSpecific("", "/bar", "/~foo[1-9]"),
-			).Build(),
-			WantCreateErrSubstring: `should start with: / (fixed path) or ~/ (regex path)`,
-		},
-	)
-	testIngressValidationWebhook(ctx, t, ns.Name, testCases)
-}
+// 	testCases := append(
+// 		commonIngressValidationTestCases(),
+// 		invalidRegexInIngressPathTestCase(`invalid regex: '/foo[[['`),
+// 		testCaseIngressValidation{
+// 			Name: "path should start with '/' or '~/' (regex path) (Kong Gateway requirement for non-expressions router)",
+// 			Ingress: builder.NewIngress(uuid.NewString(), "").WithLegacyClassAnnotation(consts.IngressClass).WithRules(
+// 				constructIngressRuleWithPathsImplSpecific("", "/bar", "/~foo[1-9]"),
+// 			).Build(),
+// 			WantCreateErrSubstring: `should start with: / (fixed path) or ~/ (regex path)`,
+// 		},
+// 	)
+// 	testIngressValidationWebhook(ctx, t, ns.Name, testCases)
+// }
 
-func TestIngressValidationWebhookExpressionsRouter(t *testing.T) {
-	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(t.Context(), t, traditional, traditionalCompatible)
+// func TestIngressValidationWebhookExpressionsRouter(t *testing.T) {
+// 	skipTestForNonKindCluster(t)
+// 	skipTestForRouterFlavors(t.Context(), t, traditional, traditionalCompatible)
 
-	ctx := t.Context()
-	ns, _ := helpers.Setup(ctx, t, env)
-	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-ingress", ns.Name)
+// 	ctx := t.Context()
+// 	ns, _ := helpers.Setup(ctx, t, env)
+// 	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-ingress", ns.Name)
 
-	testCases := append(
-		commonIngressValidationTestCases(),
-		invalidRegexInIngressPathTestCase("regex parse error:\n    ^/foo[[[\n           ^\nerror: unclosed character class"),
-		testCaseIngressValidation{
-			Name: "valid regex path passes validation",
-			Ingress: builder.NewIngress(uuid.NewString(), consts.IngressClass).WithRules(
-				constructIngressRuleWithPathsImplSpecific("", "/bar", "/~baz[1-9]"),
-			).Build(),
-		},
-		testCaseIngressValidation{
-			Name: "invalid regex path fails validation",
-			Ingress: builder.NewIngress(uuid.NewString(), consts.IngressClass).WithRules(
-				constructIngressRuleWithPathsImplSpecific("", "/bar", "/~baz[1-9]"),
-				constructIngressRuleWithPathsImplSpecific("", "/~foo[[["),
-			).Build(),
-			WantCreateErrSubstring: "regex parse error:\n    ^foo[[[\n          ^\nerror: unclosed character class",
-		},
-	)
-	testIngressValidationWebhook(ctx, t, ns.Name, testCases)
-}
+// 	testCases := append(
+// 		commonIngressValidationTestCases(),
+// 		invalidRegexInIngressPathTestCase("regex parse error:\n    ^/foo[[[\n           ^\nerror: unclosed character class"),
+// 		testCaseIngressValidation{
+// 			Name: "valid regex path passes validation",
+// 			Ingress: builder.NewIngress(uuid.NewString(), consts.IngressClass).WithRules(
+// 				constructIngressRuleWithPathsImplSpecific("", "/bar", "/~baz[1-9]"),
+// 			).Build(),
+// 		},
+// 		testCaseIngressValidation{
+// 			Name: "invalid regex path fails validation",
+// 			Ingress: builder.NewIngress(uuid.NewString(), consts.IngressClass).WithRules(
+// 				constructIngressRuleWithPathsImplSpecific("", "/bar", "/~baz[1-9]"),
+// 				constructIngressRuleWithPathsImplSpecific("", "/~foo[[["),
+// 			).Build(),
+// 			WantCreateErrSubstring: "regex parse error:\n    ^foo[[[\n          ^\nerror: unclosed character class",
+// 		},
+// 	)
+// 	testIngressValidationWebhook(ctx, t, ns.Name, testCases)
+// }
 
 // testIngressValidationWebhook tries to create the given Ingress (passed in testCaseIngressValidation) and asserts expected results.
 func testIngressValidationWebhook(

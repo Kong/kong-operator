@@ -110,7 +110,6 @@ func TestServeHTTPBasic(t *testing.T) {
 	assert := assert.New(t)
 	res := httptest.NewRecorder()
 	server := RequestHandler{
-		// Validator: KongFakeValidator{},
 		Logger: zapr.NewLogger(zap.NewNop()),
 	}
 	handler := http.HandlerFunc(server.ServeHTTP)

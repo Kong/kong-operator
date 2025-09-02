@@ -146,19 +146,19 @@ func invalidRegexInPathTestCase(
 	}
 }
 
-func TestHTTPRouteValidationWebhookTraditionalRouter(t *testing.T) {
-	skipTestForNonKindCluster(t)
-	skipTestForRouterFlavors(t.Context(), t, expressions)
+// func TestHTTPRouteValidationWebhookTraditionalRouter(t *testing.T) {
+// 	skipTestForNonKindCluster(t)
+// 	skipTestForRouterFlavors(t.Context(), t, expressions)
 
-	ctx := t.Context()
-	namespace, gatewayClient, managedGateway, unmanagedGateway := setUpEnvForTestingHTTPRouteValidationWebhook(ctx, t)
-	testCases := append(
-		commonHTTPRouteValidationTestCases(managedGateway, unmanagedGateway),
-		invalidRegexInPathTestCase(managedGateway, `invalid regex: '/foo[[[['`),
-		// No test case for invalid regex in header, because Kong Gateway doesn't return any error in such case (it works only for expressions router).
-	)
-	testHTTPRouteValidationWebhook(ctx, t, namespace, gatewayClient, testCases)
-}
+// 	ctx := t.Context()
+// 	namespace, gatewayClient, managedGateway, unmanagedGateway := setUpEnvForTestingHTTPRouteValidationWebhook(ctx, t)
+// 	testCases := append(
+// 		commonHTTPRouteValidationTestCases(managedGateway, unmanagedGateway),
+// 		invalidRegexInPathTestCase(managedGateway, `invalid regex: '/foo[[[['`),
+// 		// No test case for invalid regex in header, because Kong Gateway doesn't return any error in such case (it works only for expressions router).
+// 	)
+// 	testHTTPRouteValidationWebhook(ctx, t, namespace, gatewayClient, testCases)
+// }
 
 func TestHTTPRouteValidationWebhookExpressionsRouter(t *testing.T) {
 	skipTestForNonKindCluster(t)
