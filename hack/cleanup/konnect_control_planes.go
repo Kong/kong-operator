@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/url"
+	"strings"
 	"time"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
@@ -26,6 +28,11 @@ const (
 
 // cleanupKonnectControlPlanes deletes orphaned control planes created by the tests and their roles.
 func cleanupKonnectControlPlanes(ctx context.Context, log logr.Logger) error {
+	serverURL, err := canonicalizedServerURL()
+	if err != nil {
+		return fmt.Errorf("invalid server URL %s: %w", test.KonnectServerURL(), err)
+	}
+
 	// NOTE: The domain for global endpoints is overridden in cleanup.yaml workflow.
 	// See https://github.com/Kong/sdk-konnect-go/issues/20 for details
 	sdk := sdkkonnectgo.New(
@@ -34,7 +41,7 @@ func cleanupKonnectControlPlanes(ctx context.Context, log logr.Logger) error {
 				PersonalAccessToken: sdkkonnectgo.String(test.KonnectAccessToken()),
 			},
 		),
-		sdkkonnectgo.WithServerURL(test.KonnectServerURL()),
+		sdkkonnectgo.WithServerURL(serverURL),
 	)
 
 	orphanedCPs, err := findOrphanedControlPlanes(ctx, log, sdk.ControlPlanes)
@@ -110,4 +117,17 @@ func deleteControlPlanes(
 		}
 	}
 	return errors.Join(errs...)
+}
+
+// canonicalizedServerURL returns the canonicalized Konnect API server URL (starting with https://) from environment variable.
+func canonicalizedServerURL() (string, error) {
+	serverURL := test.KonnectServerURL()
+	serverURL = strings.TrimPrefix(serverURL, "http://")
+	serverURL = strings.TrimPrefix(serverURL, "https://")
+	serverURL = "https://" + serverURL
+
+	if _, err := url.Parse(serverURL); err != nil {
+		return "", err
+	}
+	return serverURL, nil
 }

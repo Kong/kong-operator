@@ -36,7 +36,7 @@ import (
 const (
 	cleanupModeKonnect = "konnect"
 
-	konnectAccessTokenVar = "KONG_TEST_KONNECT_ACCESS_TOKEN"
+	konnectAccessTokenVar = "KONG_TEST_KONNECT_ACCESS_TOKEN" //nolint:gosec
 	konnectServerURLVar   = "KONG_TEST_KONNECT_SERVER_URL"
 )
 
