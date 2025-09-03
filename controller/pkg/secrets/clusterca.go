@@ -10,6 +10,8 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/avast/retry-go/v4"
+	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -17,7 +19,7 @@ import (
 )
 
 // CreateClusterCACertificate creates a cluster CA certificate Secret.
-func CreateClusterCACertificate(ctx context.Context, cl client.Client, secretNN types.NamespacedName, secretLabels map[string]string, keyConfig KeyConfig) error {
+func CreateClusterCACertificate(ctx context.Context, logger logr.Logger, cl client.Client, secretNN types.NamespacedName, secretLabels map[string]string, keyConfig KeyConfig) error {
 	serial, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
 	if err != nil {
 		return err
@@ -64,5 +66,23 @@ func CreateClusterCACertificate(ctx context.Context, cl client.Client, secretNN 
 			"tls.key": string(pem.EncodeToMemory(pemBlock)),
 		},
 	}
-	return cl.Create(ctx, signedSecret)
+	if err := retry.Do(
+		func() error {
+			return cl.Create(ctx, signedSecret)
+		},
+		retry.Context(ctx),
+		retry.Attempts(0),
+		retry.MaxDelay(3*time.Second),
+		retry.DelayType(retry.BackOffDelay),
+		retry.LastErrorOnly(true),
+		retry.OnRetry(func(n uint, err error) {
+			logger.Info(
+				"failed to create CA cluster secret for MTLs communication with Kong Gateway, retrying...",
+				"error", err,
+			)
+		}),
+	); err != nil {
+		return err
+	}
+	return nil
 }

@@ -8,6 +8,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -109,7 +110,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 	mgr.GetCache().WaitForCacheSync(ctx)
 
 	t.Logf("Creating cluster CA secret")
-	require.NoError(t, secrets.CreateClusterCACertificate(ctx, cl, types.NamespacedName{
+	require.NoError(t, secrets.CreateClusterCACertificate(ctx, logr.Discard(), cl, types.NamespacedName{
 		Name:      clusterCASecretName,
 		Namespace: ns.Name,
 	}, map[string]string{
