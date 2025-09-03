@@ -169,6 +169,13 @@ func exitOnErr(err error) {
 func startControllerManager(metadata metadata.Info) <-chan struct{} {
 	cfg := testutils.DefaultControllerConfigForTests()
 
+	// Disable label selectors for secrets and configMaps to make the secrets and configMaps in the tests reconciled.
+	// The secrets (used as listener certificates) does not support adding labels to them,
+	// so we need to disable the label selector to get them reconciled:
+	// https://github.com/kubernetes-sigs/gateway-api/issues/4056
+	cfg.SecretLabelSelector = ""
+	cfg.ConfigMapLabelSelector = ""
+
 	startedChan := make(chan struct{})
 	go func() {
 		exitOnErr(manager.Run(cfg, scheme.Get(), manager.SetupControllers, startedChan, metadata))
