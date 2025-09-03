@@ -28018,6 +28018,23 @@ apiVersion: v1
 kind: Service
 metadata:
   labels:
+    app.kubernetes.io/component: ko
+  name: chartsnap-kong-operator-webhook
+  namespace: default
+spec:
+  ports:
+  - name: admission
+    port: 5443
+    protocol: TCP
+    targetPort: 5443
+  selector:
+    app.kubernetes.io/component: ko
+---
+# Source: kong-operator/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
     control-plane: controller-manager
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-metrics-service
@@ -28119,9 +28136,6 @@ spec:
           protocol: TCP
         - containerPort: 8080
           name: metrics
-          protocol: TCP
-        - containerPort: 9443
-          name: webhook-server
           protocol: TCP
         - containerPort: 5443
           name: admission

@@ -53200,9 +53200,14 @@ metadata:
   namespace: default
 spec:
   ports:
-  - port: 443
+  - name: conversion
+    port: 443
     protocol: TCP
     targetPort: 9443
+  - name: admission
+    port: 5443
+    protocol: TCP
+    targetPort: 5443
   selector:
     app.kubernetes.io/component: ko
 ---
