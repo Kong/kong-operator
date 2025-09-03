@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v1.6.3](#v163)
 - [v1.6.2](#v162)
 - [v1.6.1](#v161)
 - [v1.6.0](#v160)
@@ -29,10 +30,15 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v1.6.3]
+
+> Release date: 2025-09-03
 
 ### Fixed
 
+- Revert [#1436](https://github.com/Kong/kong-operator/pull/1436) to fix
+  referencing `KonnectExtension` by Konnect ID.
+  [#2155](https://github.com/Kong/kong-operator/pull/2155)
 - Correctly assume default Kong router flavor is `traditional_compatible` when
   `KONG_ROUTER_FLAVOR` is not set. This fixes incorrectly populated
   `GatewayClass.status.supportedFeatures` when the default was assumed to be
@@ -1154,6 +1160,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v1.6.3]: https://github.com/Kong/gateway-operator/compare/v1.6.2..v1.6.3
 [v1.6.2]: https://github.com/Kong/gateway-operator/compare/v1.6.1..v1.6.2
 [v1.6.1]: https://github.com/Kong/gateway-operator/compare/v1.6.0..v1.6.1
 [v1.6.0]: https://github.com/Kong/gateway-operator/compare/v1.5.1..v1.6.0
