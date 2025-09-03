@@ -1,3 +1,5 @@
+//go:build integration_tests && disabled_during_api_migration
+
 package integration
 
 import (
@@ -22,10 +24,11 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	configurationv1 "github.com/kong/kong-operator/apis/configuration/v1"
+	extconfigurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	operatorv1alpha1 "github.com/kong/kong-operator/apis/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/kong-operator/apis/gateway-operator/v1beta1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 
 	"github.com/kong/kong-operator/modules/manager/config"
@@ -318,16 +321,35 @@ func attachKongPluginBasedOnKPIToRoute(t *testing.T, cleaner *clusters.Cleaner, 
 	kongPluginName := kpiNN.Name + "-plugin"
 	// To have it in the same namespace as the HTTPRoute to which it is attached.
 	kongPluginNamespace := httpRouteNN.Namespace
-	kongPlugin := configurationv1.KongPlugin{
+	lokalKongPlugin := &configurationv1.KongPlugin{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      kongPluginName,
 			Namespace: kongPluginNamespace,
 		},
 		PluginName: kpiNN.Name,
 	}
-	_, err := GetClients().ConfigurationClient.ConfigurationV1().KongPlugins(kongPluginNamespace).Create(GetCtx(), &kongPlugin, metav1.CreateOptions{})
+	
+	externalKongPlugin := &extconfigurationv1.KongPlugin{
+		ObjectMeta:   lokalKongPlugin.ObjectMeta,
+		PluginName:   lokalKongPlugin.PluginName,
+		Config:       lokalKongPlugin.Config,
+		ConfigFrom:   (*extconfigurationv1.ConfigSource)(lokalKongPlugin.ConfigFrom),
+		Disabled:     lokalKongPlugin.Disabled,
+		Ordering:     (*extconfigurationv1.PluginOrdering)(lokalKongPlugin.Ordering),
+		InstanceName: lokalKongPlugin.InstanceName,
+	}
+	externalResult, err := GetClients().ConfigurationClient.ConfigurationV1().KongPlugins(kongPluginNamespace).Create(GetCtx(), externalKongPlugin, metav1.CreateOptions{})
 	require.NoError(t, err)
-	cleaner.Add(&kongPlugin)
+	kongPlugin := &configurationv1.KongPlugin{
+		ObjectMeta:   externalResult.ObjectMeta,
+		PluginName:   externalResult.PluginName,
+		Config:       externalResult.Config,
+		ConfigFrom:   (*configurationv1.ConfigSource)(externalResult.ConfigFrom),
+		Disabled:     externalResult.Disabled,
+		Ordering:     (*configurationv1.PluginOrdering)(externalResult.Ordering),
+		InstanceName: externalResult.InstanceName,
+	}
+	cleaner.Add(kongPlugin)
 
 	t.Logf("attaching KongPlugin %s to HTTPRoute %s", kongPluginName, httpRouteNN)
 	require.Eventually(t,

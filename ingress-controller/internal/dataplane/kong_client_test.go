@@ -29,8 +29,7 @@ import (
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-
+	configurationv1 "github.com/kong/kong-operator/apis/configuration/v1"
 	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/clients"

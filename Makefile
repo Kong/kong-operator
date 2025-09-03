@@ -307,6 +307,14 @@ API_V2_DIR ?= apis/v2beta1
 KO_API_HEADER_FILE ?= hack/generators/boilerplate.go.txt
 
 # Generate deepcopy and other object boilerplate for apis/v2beta1 only.
+.PHONY: generate.api.v1alpha1
+generate.api.v1alpha1: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="hack/generators/boilerplate.go.txt" paths="./apis/v1alpha1/..."
+
+.PHONY: generate.api.v1alpha2
+generate.api.v1alpha2: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="hack/generators/boilerplate.go.txt" paths="./apis/v1alpha2/..."
+
 .PHONY: generate.api.v2beta1
 generate.api.v2beta1: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="$(KO_API_HEADER_FILE)" paths="./$(API_V2_DIR)/..."
@@ -330,7 +338,11 @@ manifests.crds.v2beta1: controller-gen
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.api.v2beta1 generate.clientsets.v2beta1 generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.kic-webhook-config generate.mocks generate.cli-arguments-docs
+generate: generate.api.configuration generate.api.v1alpha1 generate.api.v1alpha2 generate.api.v2beta1 generate.clientsets.v2beta1 generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.kic-webhook-config generate.mocks generate.cli-arguments-docs
+
+.PHONY: generate.api.configuration
+generate.api.configuration: controller-gen
+	$(CONTROLLER_GEN) object:headerFile="hack/generators/boilerplate.go.txt" paths="./apis/configuration/..."
 
 .PHONY: generate.crd-kustomize
 generate.crd-kustomize:

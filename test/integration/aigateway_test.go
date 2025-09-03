@@ -11,9 +11,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
+	operatorv1alpha1 "github.com/kong/kong-operator/apis/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
@@ -149,7 +149,7 @@ func TestAIGatewayCreation(t *testing.T) {
 			},
 		},
 	}
-	aigateway, err = GetClients().OperatorClient.GatewayOperatorV1alpha1().AIGateways(namespace.Name).Create(GetCtx(), aigateway, metav1.CreateOptions{})
+	err = GetClients().MgrClient.Create(GetCtx(), aigateway)
 	require.NoError(t, err)
 	cleaner.Add(aigateway)
 

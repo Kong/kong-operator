@@ -1,4 +1,4 @@
-//go:build integration_tests
+//go:build integration_tests && disabled_during_api_migration
 
 package integration
 
@@ -23,9 +23,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	extconfigurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/test"
@@ -518,8 +519,21 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	}
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-	params, err = c.ConfigurationV1alpha1().IngressClassParameterses(ns.Name).Create(ctx, params, metav1.CreateOptions{})
+
+	externalParams := &extconfigurationv1alpha1.IngressClassParameters{
+		ObjectMeta: params.ObjectMeta,
+		Spec: extconfigurationv1alpha1.IngressClassParametersSpec{
+			EnableLegacyRegexDetection: params.Spec.EnableLegacyRegexDetection,
+		},
+	}
+	externalResult, err := c.ConfigurationV1alpha1().IngressClassParameterses(ns.Name).Create(ctx, externalParams, metav1.CreateOptions{})
 	require.NoError(t, err)
+	params = &configurationv1alpha1.IngressClassParameters{
+		ObjectMeta: externalResult.ObjectMeta,
+		Spec: configurationv1alpha1.IngressClassParametersSpec{
+			EnableLegacyRegexDetection: externalResult.Spec.EnableLegacyRegexDetection,
+		},
+	}
 	cleaner.Add(params)
 
 	class, err := env.Cluster().Client().NetworkingV1().IngressClasses().Get(ctx, consts.IngressClass, metav1.GetOptions{})

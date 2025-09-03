@@ -8,9 +8,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
+	operatorv1beta1 "github.com/kong/kong-operator/apis/gateway-operator/v1beta1"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"

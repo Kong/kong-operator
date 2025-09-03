@@ -21,11 +21,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
-
+	configurationv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
+	operatorv1beta1 "github.com/kong/kong-operator/apis/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/apis/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/apis/v1alpha2"
 	"github.com/kong/kong-operator/controller/konnect/ops"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/controller/konnect/server"

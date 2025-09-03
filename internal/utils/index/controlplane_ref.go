@@ -5,8 +5,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-
+	commonv1alpha1 "github.com/kong/kong-operator/apis/common/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
 )

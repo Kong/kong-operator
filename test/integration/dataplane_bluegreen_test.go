@@ -22,6 +22,7 @@ import (
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 
+	operatorv1beta1 "github.com/kong/kong-operator/apis/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
@@ -45,7 +46,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	dataplane := &operatorv1beta1.DataPlane{
+	localDataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dataplaneName.Namespace,
 			Name:      dataplaneName.Name,
@@ -53,10 +54,16 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 		Spec: testBlueGreenDataPlaneSpec(),
 	}
 
+	// Convert to external type for clientset creation
+	externalDataplane := convertToExternalDataPlane(localDataplane)
+
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 
-	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
+	externalResult, err := dataplaneClient.Create(GetCtx(), externalDataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
+
+	// Convert back to local type for test usage
+	dataplane := convertToLocalDataPlane(externalResult)
 	cleaner.Add(dataplane)
 
 	t.Log("verifying dataplane gets marked ready")
@@ -71,7 +78,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 			require.Eventually(t, testutils.DataPlaneHasService(t, GetCtx(), dataplaneName, clients, dataplaneAdminPreviewServiceLabels()), waitTime, tickTime)
 
 			t.Log("verifying that preview admin service has no active endpoints by default")
-			adminServices := testutils.MustListDataPlaneServices(t, GetCtx(), dataplane, GetClients().MgrClient, dataplaneAdminPreviewServiceLabels())
+			adminServices := testutils.MustListDataPlaneServices(t, GetCtx(), convertToExternalDataPlane(dataplane), GetClients().MgrClient, dataplaneAdminPreviewServiceLabels())
 			require.Len(t, adminServices, 1)
 			adminSvcNN := client.ObjectKeyFromObject(&adminServices[0])
 			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, GetCtx(), adminSvcNN, clients, 0), waitTime, tickTime,
@@ -83,7 +90,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 			require.Eventually(t, testutils.DataPlaneHasService(t, GetCtx(), dataplaneName, clients, dataplaneIngressPreviewServiceLabels()), waitTime, tickTime)
 
 			t.Log("verifying that preview ingress service has no active endpoints by default")
-			ingressServices := testutils.MustListDataPlaneServices(t, GetCtx(), dataplane, GetClients().MgrClient, dataplaneIngressPreviewServiceLabels())
+			ingressServices := testutils.MustListDataPlaneServices(t, GetCtx(), convertToExternalDataPlane(dataplane), GetClients().MgrClient, dataplaneIngressPreviewServiceLabels())
 			require.Len(t, ingressServices, 1)
 			ingressSvcNN := client.ObjectKeyFromObject(&ingressServices[0])
 			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, GetCtx(), ingressSvcNN, clients, 0), waitTime, tickTime,
@@ -104,7 +111,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 			require.Eventually(t, testutils.DataPlaneHasService(t, GetCtx(), dataplaneName, clients, dataplaneAdminPreviewServiceLabels()), waitTime, tickTime)
 
 			t.Log("verifying that preview admin service has an active endpoint")
-			adminServices := testutils.MustListDataPlaneServices(t, GetCtx(), dataplane, GetClients().MgrClient, dataplaneAdminPreviewServiceLabels())
+			adminServices := testutils.MustListDataPlaneServices(t, GetCtx(), convertToExternalDataPlane(dataplane), GetClients().MgrClient, dataplaneAdminPreviewServiceLabels())
 			require.Len(t, adminServices, 1)
 			adminSvcNN := client.ObjectKeyFromObject(&adminServices[0])
 			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, GetCtx(), adminSvcNN, clients, 1), waitTime, tickTime,
@@ -116,7 +123,7 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 			require.Eventually(t, testutils.DataPlaneHasService(t, GetCtx(), dataplaneName, clients, dataplaneIngressPreviewServiceLabels()), waitTime, tickTime)
 
 			t.Log("verifying that preview ingress service has an active endpoint")
-			ingressServices := testutils.MustListDataPlaneServices(t, GetCtx(), dataplane, GetClients().MgrClient, dataplaneIngressPreviewServiceLabels())
+			ingressServices := testutils.MustListDataPlaneServices(t, GetCtx(), convertToExternalDataPlane(dataplane), GetClients().MgrClient, dataplaneIngressPreviewServiceLabels())
 			require.Len(t, ingressServices, 1)
 			ingressSvcNN := client.ObjectKeyFromObject(&ingressServices[0])
 			require.Eventually(t, testutils.DataPlaneServiceHasNActiveEndpoints(t, GetCtx(), ingressSvcNN, clients, 1), waitTime, tickTime,
@@ -152,11 +159,18 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 				return false
 			}
 		}
-		isAwaitingPromotion := dataPlaneRolloutStatusConditionPredicate(&metav1.Condition{
+		localIsAwaitingPromotion := dataPlaneRolloutStatusConditionPredicate(&metav1.Condition{
 			Type:   string(kcfgdataplane.DataPlaneConditionTypeRolledOut),
 			Reason: string(kcfgdataplane.DataPlaneConditionReasonRolloutAwaitingPromotion),
 			Status: metav1.ConditionFalse,
 		})
+
+		// Convert local predicate to external predicate for testutils.DataPlanePredicate
+		isAwaitingPromotion := func(external *operatorv1beta1.DataPlane) bool {
+			local := convertToLocalDataPlane(external)
+			return localIsAwaitingPromotion(local)
+		}
+
 		require.Eventually(t,
 			testutils.DataPlanePredicate(t, GetCtx(), dataplaneName, isAwaitingPromotion, GetClients().OperatorClient),
 			waitTime, tickTime,
@@ -195,7 +209,8 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 		t.Run(fmt.Sprintf("%s annotation is cleared from DataPlane", operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey), func(t *testing.T) {
 			require.Eventually(t,
 				testutils.DataPlanePredicate(t, GetCtx(), dataplaneName,
-					func(dataplane *operatorv1beta1.DataPlane) bool {
+					func(external *operatorv1beta1.DataPlane) bool {
+						dataplane := convertToLocalDataPlane(external)
 						_, ok := dataplane.Annotations[operatorv1beta1.DataPlanePromoteWhenReadyAnnotationKey]
 						return !ok
 					},
@@ -232,7 +247,8 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 
 		t.Run("dataplane status rollout should be cleared", func(t *testing.T) {
 			require.Eventually(t,
-				testutils.DataPlanePredicate(t, GetCtx(), dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
+				testutils.DataPlanePredicate(t, GetCtx(), dataplaneName, func(external *operatorv1beta1.DataPlane) bool {
+					dataplane := convertToLocalDataPlane(external)
 					return dataplane.Status.RolloutStatus == nil
 				}, GetClients().OperatorClient),
 				waitTime, tickTime)
@@ -285,8 +301,13 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 
-	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
+	// Convert to external type for clientset creation
+	externalDataplane := convertToExternalDataPlane(dataplane)
+	externalResult, err := dataplaneClient.Create(GetCtx(), externalDataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
+
+	// Convert back to local type for test usage
+	dataplane = convertToLocalDataPlane(externalResult)
 	cleaner.Add(dataplane)
 
 	t.Logf("verifying DataPlane %s gets marked ready", dataplane.Name)
@@ -299,7 +320,7 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 
 	t.Logf("checking if DataPlane %s has an HPA", dataplane.Name)
 	var hpa autoscalingv2.HorizontalPodAutoscaler
-	require.Eventually(t, testutils.DataPlaneHasHPA(t, GetCtx(), dataplane, &hpa, clients),
+	require.Eventually(t, testutils.DataPlaneHasHPA(t, GetCtx(), convertToExternalDataPlane(dataplane), &hpa, clients),
 		waitTime, tickTime, "HPA should be created for DataPlane %s", dataplane.Name)
 	require.NotNil(t, hpa)
 	require.NotNil(t, hpa.Spec.MinReplicas)
@@ -361,8 +382,14 @@ func TestDataPlaneBlueGreenResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T) 
 	dataplaneName := client.ObjectKeyFromObject(dataplane)
 
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
-	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
+
+	// Convert to external type for clientset creation
+	externalDataplane := convertToExternalDataPlane(dataplane)
+	externalResult, err := dataplaneClient.Create(GetCtx(), externalDataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
+
+	// Convert back to local type for test usage
+	dataplane = convertToLocalDataPlane(externalResult)
 	cleaner.Add(dataplane)
 
 	t.Log("ensuring all live dependent resources are created")
@@ -558,4 +585,70 @@ func dataplaneLiveDeploymentLabels() client.MatchingLabels {
 		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
 	}
+}
+
+// convertToExternalDataPlane converts local DataPlane to external DataPlane for clientset operations
+func convertToExternalDataPlane(local *operatorv1beta1.DataPlane) *operatorv1beta1.DataPlane {
+	external := &operatorv1beta1.DataPlane{
+		ObjectMeta: local.ObjectMeta,
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: local.Spec.Deployment.PodTemplateSpec,
+					},
+				},
+			},
+		},
+	}
+
+	// Handle Rollout if present
+	if local.Spec.Deployment.Rollout != nil {
+		external.Spec.Deployment.Rollout = &operatorv1beta1.Rollout{
+			Strategy: operatorv1beta1.RolloutStrategy{},
+		}
+
+		if local.Spec.Deployment.Rollout.Strategy.BlueGreen != nil {
+			external.Spec.Deployment.Rollout.Strategy.BlueGreen = &operatorv1beta1.BlueGreenStrategy{
+				Promotion: operatorv1beta1.Promotion{
+					Strategy: operatorv1beta1.PromotionStrategy(local.Spec.Deployment.Rollout.Strategy.BlueGreen.Promotion.Strategy),
+				},
+			}
+		}
+	}
+
+	return external
+}
+
+// convertToLocalDataPlane converts external DataPlane back to local DataPlane
+func convertToLocalDataPlane(external *operatorv1beta1.DataPlane) *operatorv1beta1.DataPlane {
+	local := &operatorv1beta1.DataPlane{
+		ObjectMeta: external.ObjectMeta,
+		Spec: operatorv1beta1.DataPlaneSpec{
+			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: external.Spec.Deployment.PodTemplateSpec,
+					},
+				},
+			},
+		},
+	}
+
+	// Handle Rollout if present
+	if external.Spec.Deployment.Rollout != nil {
+		local.Spec.Deployment.Rollout = &operatorv1beta1.Rollout{
+			Strategy: operatorv1beta1.RolloutStrategy{},
+		}
+
+		if external.Spec.Deployment.Rollout.Strategy.BlueGreen != nil {
+			local.Spec.Deployment.Rollout.Strategy.BlueGreen = &operatorv1beta1.BlueGreenStrategy{
+				Promotion: operatorv1beta1.Promotion{
+					Strategy: operatorv1beta1.PromotionStrategy(external.Spec.Deployment.Rollout.Strategy.BlueGreen.Promotion.Strategy),
+				},
+			}
+		}
+	}
+
+	return local
 }

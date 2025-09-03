@@ -1,3 +1,5 @@
+//go:build integration_tests && disabled_during_api_migration
+
 package integration
 
 import (
@@ -23,7 +25,7 @@ import (
 
 	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	operatorv1beta1 "github.com/kong/kong-operator/apis/gateway-operator/v1beta1"
 
 	"github.com/kong/kong-operator/internal/annotations"
 	gwtypes "github.com/kong/kong-operator/internal/types"

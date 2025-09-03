@@ -24,9 +24,9 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
+	configurationv1 "github.com/kong/kong-operator/apis/configuration/v1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/consts"
@@ -276,7 +276,26 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 			Raw: []byte(fmt.Sprintf(`{"hour":%d,"policy":"local"}`, perHourRateLimit)),
 		},
 	}
-	rateLimiterPlugin, err = kongc.ConfigurationV1().KongPlugins(namespace.Name).Create(ctx, rateLimiterPlugin, metav1.CreateOptions{})
+	externalPlugin := &configurationv1.KongPlugin{
+		ObjectMeta:   rateLimiterPlugin.ObjectMeta,
+		PluginName:   rateLimiterPlugin.PluginName,
+		Config:       rateLimiterPlugin.Config,
+		ConfigFrom:   nil, // Simplified for testing
+		Disabled:     rateLimiterPlugin.Disabled,
+		Ordering:     rateLimiterPlugin.Ordering,
+		InstanceName: rateLimiterPlugin.InstanceName,
+	}
+	externalResult, err := kongc.ConfigurationV1().KongPlugins(namespace.Name).Create(ctx, externalPlugin, metav1.CreateOptions{})
+	require.NoError(t, err)
+	rateLimiterPlugin = &configurationv1.KongPlugin{
+		ObjectMeta:   externalResult.ObjectMeta,
+		PluginName:   externalResult.PluginName,
+		Config:       externalResult.Config,
+		ConfigFrom:   nil, // Simplified for testing
+		Disabled:     externalResult.Disabled,
+		Ordering:     externalResult.Ordering,
+		InstanceName: externalResult.InstanceName,
+	}
 	require.NoError(t, err)
 
 	t.Logf("enabling the rate-limiter plugin for deployment %s", deployment.Name)

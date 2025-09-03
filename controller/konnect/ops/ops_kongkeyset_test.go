@@ -8,8 +8,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
+
+	configurationv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
 )
 
 func TestKongKeySetToKeySetInput(t *testing.T) {

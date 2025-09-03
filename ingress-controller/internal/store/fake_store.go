@@ -21,11 +21,11 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
 
+	configurationv1 "github.com/kong/kong-operator/apis/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/apis/configuration/v1beta1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 )

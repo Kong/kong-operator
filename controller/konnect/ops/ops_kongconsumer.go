@@ -14,11 +14,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	kcfgkonnect "github.com/kong/kubernetes-configuration/v2/api/konnect"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 
+	configurationv1 "github.com/kong/kong-operator/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kong-operator/apis/configuration/v1beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/apis/v1alpha1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"

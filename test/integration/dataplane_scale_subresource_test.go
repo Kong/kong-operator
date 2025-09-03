@@ -14,8 +14,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-
+	operatorv1beta1 "github.com/kong/kong-operator/apis/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/pkg/consts"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test/helpers"
@@ -70,8 +69,14 @@ func TestDataPlaneScaleSubresource(t *testing.T) {
 	}
 
 	dataplaneClient := clients.OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
-	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
+
+	// Convert to external type for clientset creation
+	externalDataplane := convertToExternalDataPlane(dataplane)
+	externalResult, err := dataplaneClient.Create(GetCtx(), externalDataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
+
+	// Convert back to local type for test usage
+	dataplane = convertToLocalDataPlane(externalResult)
 	cleaner.Add(dataplane)
 
 	dataplaneName := client.ObjectKeyFromObject(dataplane)

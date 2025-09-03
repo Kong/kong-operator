@@ -9,9 +9,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 
+	operatorv1beta1 "github.com/kong/kong-operator/apis/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/test/envtest"
 	"github.com/kong/kong-operator/test/helpers/kustomize"

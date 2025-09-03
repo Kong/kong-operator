@@ -8,9 +8,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-
+	configurationv1 "github.com/kong/kong-operator/apis/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
 )

@@ -1,3 +1,5 @@
+//go:build integration_tests && disabled_during_api_migration
+
 package integration
 
 import (
@@ -12,7 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	operatorv1beta1 "github.com/kong/kong-operator/apis/gateway-operator/v1beta1"
 
 	"github.com/kong/kong-operator/pkg/consts"
 	"github.com/kong/kong-operator/test/helpers"

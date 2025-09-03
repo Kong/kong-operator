@@ -26,8 +26,8 @@ import (
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	kcfggateway "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/gateway"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 
+	operatorv1beta1 "github.com/kong/kong-operator/apis/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	"github.com/kong/kong-operator/controller/pkg/secrets"

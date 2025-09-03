@@ -9,8 +9,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
-
+	konnectv1alpha1 "github.com/kong/kong-operator/apis/v1alpha1"
 	"github.com/kong/kong-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )

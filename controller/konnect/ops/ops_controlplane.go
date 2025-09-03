@@ -13,10 +13,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
-
+	commonv1alpha1 "github.com/kong/kong-operator/apis/common/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/apis/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/apis/v1alpha2"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
 

@@ -12,8 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
-
+	configurationv1beta1 "github.com/kong/kong-operator/apis/configuration/v1beta1"
 	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"

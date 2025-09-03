@@ -16,8 +16,9 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	extoperatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 
+	operatorv1beta1 "github.com/kong/kong-operator/apis/gateway-operator/v1beta1"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"

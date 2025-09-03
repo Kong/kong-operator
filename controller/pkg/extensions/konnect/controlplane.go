@@ -10,8 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
-
+	konnectv1alpha2 "github.com/kong/kong-operator/apis/v1alpha2"
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	gwtypes "github.com/kong/kong-operator/internal/types"

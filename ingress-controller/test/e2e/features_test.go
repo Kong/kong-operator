@@ -28,9 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
+	configurationv1 "github.com/kong/kong-operator/apis/configuration/v1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
@@ -515,7 +515,16 @@ func TestDefaultIngressClass(t *testing.T) {
 	}
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
-	_, err = c.ConfigurationV1().KongClusterPlugins().Create(ctx, kongclusterplugin, metav1.CreateOptions{})
+	externalKCP := &configurationv1.KongClusterPlugin{
+		ObjectMeta:   kongclusterplugin.ObjectMeta,
+		PluginName:   kongclusterplugin.PluginName,
+		Config:       kongclusterplugin.Config,
+		ConfigFrom:   nil, // Simplified for testing
+		Disabled:     kongclusterplugin.Disabled,
+		Ordering:     kongclusterplugin.Ordering,
+		InstanceName: kongclusterplugin.InstanceName,
+	}
+	_, err = c.ConfigurationV1().KongClusterPlugins().Create(ctx, externalKCP, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Log("waiting for routes from Ingress to be operational")

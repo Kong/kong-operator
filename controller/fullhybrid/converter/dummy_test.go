@@ -11,8 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-
+	configurationv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/fullhybrid/converter"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/scheme"

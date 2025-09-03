@@ -26,12 +26,12 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
 	kcfggateway "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/gateway"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
+	commonv1alpha1 "github.com/kong/kong-operator/apis/common/v1alpha1"
+	operatorv1beta1 "github.com/kong/kong-operator/apis/gateway-operator/v1beta1"
+	konnectv1alpha2 "github.com/kong/kong-operator/apis/v1alpha2"
 	operatorv2beta1 "github.com/kong/kong-operator/apis/v2beta1"
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	"github.com/kong/kong-operator/controller/pkg/log"

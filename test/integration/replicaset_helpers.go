@@ -10,6 +10,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 
+	operatorv1beta1 "github.com/kong/kong-operator/apis/gateway-operator/v1beta1"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 )
 
@@ -31,7 +32,12 @@ func FindDataPlaneReplicaSetNewerThan(
 ) *appsv1.ReplicaSet {
 	t.Helper()
 
-	rsList, err := testutils.GetDataPlaneReplicaSets(ctx, cli, dp)
+	// Convert to external type since testutils expects the external type
+	extDP := &operatorv1beta1.DataPlane{
+		ObjectMeta: dp.ObjectMeta,
+		Spec:       operatorv1beta1.DataPlaneSpec{},
+	}
+	rsList, err := testutils.GetDataPlaneReplicaSets(ctx, cli, extDP)
 	if err != nil {
 		t.Logf("Error listing ReplicaSets: %v", err)
 		return nil

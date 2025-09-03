@@ -19,9 +19,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
 	"github.com/kong/kong-operator/ingress-controller/internal/admission/validation/consumers/credentials"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"

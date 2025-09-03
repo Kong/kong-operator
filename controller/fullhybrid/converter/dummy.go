@@ -9,8 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-
+	configurationv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
