@@ -28120,6 +28120,12 @@ spec:
         - containerPort: 8080
           name: metrics
           protocol: TCP
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP
+        - containerPort: 5443
+          name: admission
+          protocol: TCP
         volumeMounts:
         - name: chartsnap-kong-operator-pod-labels
           mountPath: /etc/podinfo
