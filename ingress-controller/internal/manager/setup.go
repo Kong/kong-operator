@@ -27,21 +27,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
-	"github.com/kong/kong-operator/ingress-controller/internal/admission"
 	"github.com/kong/kong-operator/ingress-controller/internal/clients"
 	ctrllicense "github.com/kong/kong-operator/ingress-controller/internal/controllers/license"
-	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
 	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/sendconfig"
-	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator"
 	"github.com/kong/kong-operator/ingress-controller/internal/k8s"
 	"github.com/kong/kong-operator/ingress-controller/internal/konnect"
 	konnectLicense "github.com/kong/kong-operator/ingress-controller/internal/konnect/license"
 	"github.com/kong/kong-operator/ingress-controller/internal/license"
 	"github.com/kong/kong-operator/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/ingress-controller/internal/metrics"
-	"github.com/kong/kong-operator/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/ingress-controller/internal/util/clock"
 	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
@@ -208,40 +204,6 @@ func setupDataplaneSynchronizer(
 	}
 
 	return dataplaneSynchronizer, nil
-}
-
-func (m *Manager) setupAdmissionServer(
-	ctx context.Context,
-	referenceIndexers ctrlref.CacheIndexers,
-	translatorFeatures translator.FeatureFlags,
-	storer store.Storer,
-) error {
-	admissionLogger := ctrl.LoggerFrom(ctx).WithName("admission-server")
-
-	if m.cfg.AdmissionServer.ListenAddr == "off" {
-		admissionLogger.Info("Admission webhook server disabled")
-		return nil
-	}
-
-	adminAPIServicesProvider := admission.NewDefaultAdminAPIServicesProvider(m.clientsManager)
-	srv, err := admission.MakeTLSServer(m.cfg.AdmissionServer, &admission.RequestHandler{
-		Validator: admission.NewKongHTTPValidator(
-			admissionLogger,
-			m.m.GetClient(),
-			m.cfg.IngressClassName,
-			adminAPIServicesProvider,
-			translatorFeatures,
-			storer,
-		),
-		ReferenceIndexers: referenceIndexers,
-		Logger:            admissionLogger,
-	})
-	if err != nil {
-		return err
-	}
-
-	m.admissionServer = mo.Some(srv)
-	return nil
 }
 
 // setupDataplaneAddressFinder returns a default and UDP address finder. These finders return the override addresses if

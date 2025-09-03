@@ -22,16 +22,20 @@ import (
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 
+	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 )
 
 var decoder = codecs.UniversalDeserializer()
 
 type KongFakeValidator struct {
-	Result  bool
-	Message string
-	Error   error
+	ReferenceIndexers ctrlref.CacheIndexers
+	Result            bool
+	Message           string
+	Error             error
 }
+
+var _ KongValidator = KongFakeValidator{}
 
 func (v KongFakeValidator) ValidateConsumer(
 	_ context.Context,
@@ -91,12 +95,22 @@ func (v KongFakeValidator) ValidateService(_ context.Context, _ corev1.Service) 
 	return v.Result, v.Message, v.Error
 }
 
+func (v KongFakeValidator) GetReferenceIndexers() ctrlref.CacheIndexers {
+	return v.ReferenceIndexers
+}
+
+func (v KongFakeValidator) IngressClassMatcher(obj *metav1.ObjectMeta) bool {
+	return true
+}
+func (v KongFakeValidator) IngressV1ClassMatcher(ing *netv1.Ingress) bool {
+	return true
+}
+
 func TestServeHTTPBasic(t *testing.T) {
 	assert := assert.New(t)
 	res := httptest.NewRecorder()
 	server := RequestHandler{
-		Validator: KongFakeValidator{},
-		Logger:    zapr.NewLogger(zap.NewNop()),
+		Logger: zapr.NewLogger(zap.NewNop()),
 	}
 	handler := http.HandlerFunc(server.ServeHTTP)
 
@@ -366,8 +380,10 @@ func TestValidationWebhook(t *testing.T) {
 				assert := assert.New(t)
 				res := httptest.NewRecorder()
 				server := RequestHandler{
-					Validator: tt.validator,
-					Logger:    zapr.NewLogger(zap.NewNop()),
+					validators: map[string]KongValidator{
+						"test": tt.validator,
+					},
+					Logger: zapr.NewLogger(zap.NewNop()),
 				}
 				handler := http.HandlerFunc(server.ServeHTTP)
 

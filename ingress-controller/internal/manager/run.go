@@ -64,10 +64,10 @@ type Manager struct {
 	diagnosticsServer    mo.Option[diagnostics.Server]
 	diagnosticsCollector mo.Option[*diagnostics.Collector]
 	diagnosticsHandler   mo.Option[*diagnostics.HTTPHandler]
-	admissionServer      mo.Option[*admission.Server]
 	kubeconfig           *rest.Config
 	clientsManager       *clients.AdminAPIClientsManager
 	licenseGetter        mo.Option[license.Getter]
+	kongValidator        admission.KongHTTPValidator
 }
 
 // New configures the controller manager call Start.
@@ -232,11 +232,6 @@ func New(
 		return nil, fmt.Errorf("failed to create translator: %w", err)
 	}
 
-	setupLog.Info("Setting up admission server")
-	if err := m.setupAdmissionServer(ctx, referenceIndexers, translatorFeatureFlags, storer); err != nil {
-		return nil, err
-	}
-
 	updateStrategyResolver := sendconfig.NewDefaultUpdateStrategyResolver(kongConfig, logger)
 	configurationChangeDetector := sendconfig.NewKongGatewayConfigurationChangeDetector(logger)
 	kongConfigFetcher := configfetcher.NewDefaultKongLastGoodConfigFetcher(translatorFeatureFlags.FillIDs, c.KongWorkspace)
@@ -289,7 +284,18 @@ func New(
 		return nil, err
 	}
 
-	setupLog.Info("Starting Enabled Controllers")
+	setupLog.Info("Registering admission validator")
+	m.kongValidator = admission.NewKongHTTPValidator(
+		logger,
+		NewTypeMetaSettingClient(mgr.GetClient()),
+		c.IngressClassName,
+		admission.NewDefaultAdminAPIServicesProvider(m.clientsManager),
+		translatorFeatureFlags,
+		storer,
+		referenceIndexers,
+	)
+
+	setupLog.Info("Starting enabled Controllers")
 	controllers := setupControllers(
 		ctx,
 		mgr,
@@ -532,15 +538,6 @@ func (m *Manager) Run(ctx context.Context) error {
 		m.clientsManager.Run(ctx)
 	}
 
-	if s, ok := m.admissionServer.Get(); ok {
-		go func() {
-			logger.Info("Starting admission server")
-			if err := s.Start(ctx); err != nil {
-				logger.Error(err, "Admission server exited")
-			}
-		}()
-	}
-
 	return m.m.Start(ctx)
 }
 
@@ -569,6 +566,10 @@ func (m *Manager) IsReady() error {
 	default:
 	}
 	return nil
+}
+
+func (m *Manager) KongValidator() admission.KongHTTPValidator {
+	return m.kongValidator
 }
 
 // DiagnosticsHandler returns the diagnostics HTTP handler if it's enabled in the configuration. Otherwise, it returns nil.

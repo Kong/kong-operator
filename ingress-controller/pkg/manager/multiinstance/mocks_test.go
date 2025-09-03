@@ -8,8 +8,10 @@ import (
 
 	"github.com/samber/lo"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/admission"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
 )
 
 // mockInstance is a mock implementation of multiinstance.ManagerInstance.
@@ -19,6 +21,8 @@ type mockInstance struct {
 	wasStarted         atomic.Bool
 	wasContextCanceled atomic.Bool
 }
+
+var _ multiinstance.ManagerInstance = &mockInstance{}
 
 // Config implements multiinstance.ManagerInstance.
 func (m *mockInstance) Config() managercfg.Config {
@@ -52,6 +56,10 @@ func (m *mockInstance) IsReady() error {
 
 func (m *mockInstance) DiagnosticsHandler() http.Handler {
 	return nil
+}
+
+func (m *mockInstance) KongValidator() admission.KongHTTPValidator {
+	return admission.KongHTTPValidator{}
 }
 
 // mockDiagnosticsExposer is a mock implementation of multiinstance.DiagnosticsExposer.
