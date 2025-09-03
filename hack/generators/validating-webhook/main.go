@@ -57,7 +57,7 @@ func main() {
 func wrapInIfEnabled(v string) string {
 	// NOTE: This values.yaml field path must match the one in
 	// https://github.com/Kong/kong-operator/blob/f981b357ff58dd71ff2f5eac1330f3f1693d2734/charts/kong-operator/values.yaml#L140
-	return fmt.Sprintf("{{- if .Values.global.validatingWebhook.enabled }}\n%s\n{{- end }}\n", v)
+	return fmt.Sprintf("{{- if .Values.global.webhooks.validating.enabled }}\n%s\n{{- end }}\n", v)
 }
 
 func templateNamespace(yaml string) string {

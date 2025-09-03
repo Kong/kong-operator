@@ -119,7 +119,7 @@ type Config struct {
 
 	// Webhook options.
 	ConversionWebhookEnabled bool
-	ValidationWebhookEnabled bool
+	ValidatingWebhookEnabled bool
 }
 
 const (
@@ -154,7 +154,7 @@ func DefaultConfig() Config {
 		ControlPlaneControllerEnabled: true,
 		DataPlaneControllerEnabled:    true,
 		ConversionWebhookEnabled:      true,
-		ValidationWebhookEnabled:      true,
+		ValidatingWebhookEnabled:      true,
 	}
 }
 
@@ -340,7 +340,7 @@ func Run(
 		}
 	}
 
-	if cfg.ValidationWebhookEnabled {
+	if cfg.ValidatingWebhookEnabled {
 		admissionReqHandler, err := validation.SetupAdmissionServer(ctx, mgr)
 		if err != nil {
 			return fmt.Errorf("unable to set up admission server: %w", err)

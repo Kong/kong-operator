@@ -53443,7 +53443,7 @@ metadata:
     app.kubernetes.io/version: "2.0.0-alpha.5"
     a: "b"
     app.kubernetes.io/component: ko
-  name: controller-manager-validations
+  name: controlplane-configuration-validations
 webhooks:
 - admissionReviewVersions:
   - v1

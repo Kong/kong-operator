@@ -86,7 +86,7 @@ func New(m metadata.Info) *CLI {
 
 	// webhook and validation options
 	flagSet.BoolVar(&cfg.ConversionWebhookEnabled, "enable-conversion-webhook", true, "Enable the conversion webhook.")
-	flagSet.BoolVar(&cfg.ValidationWebhookEnabled, "enable-validation-webhook", true, "Enable the validation webhook.")
+	flagSet.BoolVar(&cfg.ValidatingWebhookEnabled, "enable-validating-webhook", true, "Enable the validating webhook.")
 
 	loggerOpts := lo.ToPtr(*manager.DefaultConfig().LoggerOpts)
 	loggerOpts.BindFlags(flagSet)
