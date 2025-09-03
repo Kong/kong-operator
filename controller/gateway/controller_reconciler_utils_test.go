@@ -512,10 +512,11 @@ func TestSetAcceptedOnGateway(t *testing.T) {
 
 func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 	testCases := []struct {
-		name          string
-		listeners     []gwtypes.Listener
-		expectedPorts []operatorv1beta1.DataPlaneServicePort
-		expectedError error
+		name             string
+		listeners        []gwtypes.Listener
+		listenersOptions []operatorv1beta1.GatewayConfigurationListenerOptions
+		expectedPorts    []operatorv1beta1.DataPlaneServicePort
+		expectedError    error
 	}{
 		{
 			name: "no listeners",
@@ -570,11 +571,68 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 			},
 			expectedError: errors.New("listener 1 uses unsupported protocol UDP"),
 		},
+		{
+			name: "listener options sets nodeport",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gwtypes.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "https",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(443),
+				},
+			},
+			listenersOptions: []operatorv1beta1.GatewayConfigurationListenerOptions{
+				{
+					Name:     "http",
+					NodePort: int32(30080),
+				},
+			},
+			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
+				{
+					Name:       "http",
+					Port:       80,
+					TargetPort: intstr.FromInt(consts.DataPlaneProxyPort),
+					NodePort:   int32(30080),
+				},
+				{
+					Name:       "https",
+					Port:       443,
+					TargetPort: intstr.FromInt(consts.DataPlaneProxySSLPort),
+				},
+			},
+		},
+		{
+			name: "listener options' name does not match listener",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gwtypes.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "https",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(443),
+				},
+			},
+			listenersOptions: []operatorv1beta1.GatewayConfigurationListenerOptions{
+				{
+					Name:     "http-1",
+					NodePort: int32(30080),
+				},
+			},
+			expectedPorts: nil,
+			expectedError: errors.New("GatewayConfiguration.spec.listenersOptions[0]: name 'http-1' not in gateway's listeners"),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := setDataPlaneIngressServicePorts(&operatorv1beta1.DataPlaneOptions{}, tc.listeners)
+			err := setDataPlaneIngressServicePorts(&operatorv1beta1.DataPlaneOptions{}, tc.listeners, tc.listenersOptions)
 			if tc.expectedError == nil {
 				require.NoError(t, err)
 			} else {
