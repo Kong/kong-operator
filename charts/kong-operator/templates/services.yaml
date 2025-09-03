@@ -4,7 +4,7 @@ metadata:
   labels:
     app.kubernetes.io/component: ko
   name: {{ template "kong.fullname" . }}
-  namespace:  {{ template "kong.namespace" . }}
+  namespace: {{ template "kong.namespace" . }}
 spec:
   ports:
   - name: https
@@ -21,7 +21,7 @@ metadata:
   labels:
     app.kubernetes.io/component: ko
   name: {{ template "kong.fullname" . }}-config-dump
-  namespace:  {{ template "kong.namespace" . }}
+  namespace: {{ template "kong.namespace" . }}
 spec:
   ports:
   - name: config-dump
@@ -39,7 +39,7 @@ metadata:
   labels:
     app.kubernetes.io/component: ko
   name: {{ template "kong.webhookServiceName" . }}
-  namespace:  {{ template "kong.namespace" . }}
+  namespace: {{ template "kong.namespace" . }}
 spec:
   ports:
   - port: 443
@@ -48,3 +48,21 @@ spec:
   selector:
     app.kubernetes.io/component: ko
 {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+    app.kubernetes.io/component: ko
+  name: {{ template "kong.fullname" . }}-metrics-service
+  namespace: {{ template "kong.namespace" . }}
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: metrics
+  selector:
+    control-plane: controller-manager
+    app.kubernetes.io/component: ko
