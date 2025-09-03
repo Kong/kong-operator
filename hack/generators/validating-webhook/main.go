@@ -92,10 +92,10 @@ func templateLabels(yaml string) string {
 
 func templateInjectCAAnnotation(yaml string) string {
 	// Regex to match the specific annotation line
-	re := regexp.MustCompile(`cert-manager\.io/inject-ca-from:\s*[\w-]+/[\w-]+`)
+	re := regexp.MustCompile(`(?m)^(\s*)cert-manager\.io/inject-ca-from:\s*[\w-]+/[\w-]+`)
 
 	// Replacement with Helm template
-	replacement := `cert-manager.io/inject-ca-from: {{ template "kong.namespace" . }}/{{ template "kong.webhookServiceName" . }}-serving-cert`
+	replacement := `${1}cert-manager.io/inject-ca-from: {{ template "kong.namespace" . }}/{{ template "kong.webhookServiceName" . }}-serving-cert`
 
 	return re.ReplaceAllString(yaml, replacement)
 }
