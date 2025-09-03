@@ -36,6 +36,9 @@
 
 ### Fixed
 
+- Revert [#1436](https://github.com/Kong/kong-operator/pull/1436) to fix
+  referencing `KonnectExtension` by Konnect ID.
+  [#2155](https://github.com/Kong/kong-operator/pull/2155)
 - Correctly assume default Kong router flavor is `traditional_compatible` when
   `KONG_ROUTER_FLAVOR` is not set. This fixes incorrectly populated
   `GatewayClass.status.supportedFeatures` when the default was assumed to be
