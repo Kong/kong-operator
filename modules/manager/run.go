@@ -441,7 +441,7 @@ func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
 	if err := m.Client.Get(ctx, objectKey, &ca); err != nil {
 		if k8serrors.IsNotFound(err) {
 			m.Logger.Info(fmt.Sprintf("no CA certificate Secret %s found, generating CA certificate", objectKey))
-			return secrets.CreateClusterCACertificate(ctx, m.Client, objectKey, m.SecretLabels, m.KeyConfig)
+			return secrets.CreateClusterCACertificate(ctx, m.Logger, m.Client, objectKey, m.SecretLabels, m.KeyConfig)
 		}
 
 		return err

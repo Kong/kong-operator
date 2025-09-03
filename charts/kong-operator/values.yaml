@@ -135,3 +135,8 @@ global:
       # it into CRDs' conversion webhook caBundle.
       # It is recommended to enable cert-manager integration for production use.
       enabled: false
+  # Enable admission validating webhook for ControlPlane resources.
+  validatingWebhook:
+    # Enable the creation of ValidatingWebhookConfiguration for resources
+    # which will be consumed by the ControlPlane(s).
+    enabled: true
