@@ -1,3 +1,6 @@
 global:
   conversionWebhook:
     enabled: false
+env:
+  anonymous_reports: "false"
+  no_leader_election: "true"

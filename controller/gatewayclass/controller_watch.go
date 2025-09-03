@@ -2,14 +2,21 @@ package gatewayclass
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
 	"github.com/kong/kong-operator/internal/utils/gatewayclass"
+	"github.com/kong/kong-operator/internal/utils/index"
 )
 
 // -----------------------------------------------------------------------------
@@ -28,4 +35,52 @@ func (r *Reconciler) gatewayClassMatches(obj client.Object) bool {
 	}
 
 	return gatewayclass.DecorateGatewayClass(gwc).IsControlled()
+}
+
+// listGatewayClassesForGatewayConfig is a watch predicate which finds all GatewayClasses
+// that use a specific GatewayConfiguration.
+func (r *Reconciler) listGatewayClassesForGatewayConfig(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx)
+
+	gatewayConfig, ok := obj.(*operatorv2beta1.GatewayConfiguration)
+	if !ok {
+		logger.Error(
+			operatorerrors.ErrUnexpectedObject,
+			"failed to run map funcs",
+			"expected", "GatewayConfiguration", "found", reflect.TypeOf(obj),
+		)
+		return nil
+	}
+
+	var gatewayClassList gatewayv1.GatewayClassList
+	if err := r.List(ctx, &gatewayClassList, client.MatchingFields{
+		index.GatewayClassOnGatewayConfigurationIndex: client.ObjectKeyFromObject(gatewayConfig).String(),
+	}); err != nil {
+		ctrllog.FromContext(ctx).Error(
+			fmt.Errorf("unexpected error occurred while listing GatewayClass resources"),
+			"failed to run map funcs",
+			"error", err.Error(),
+		)
+		return nil
+	}
+
+	var recs []reconcile.Request
+	for _, gwc := range gatewayClassList.Items {
+		if gwc.Spec.ParametersRef == nil {
+			continue
+		}
+
+		params := gwc.Spec.ParametersRef
+		if string(params.Group) == operatorv1beta1.SchemeGroupVersion.Group &&
+			string(params.Kind) == "GatewayConfiguration" &&
+			params.Name == gatewayConfig.Name {
+			recs = append(recs, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name: gwc.Name,
+				},
+			})
+		}
+	}
+
+	return recs
 }

@@ -53173,23 +53173,6 @@ subjects:
   name: controller-manager
   namespace: default
 ---
-# Source: kong-operator/templates/rbac-resources.yaml
-apiVersion: v1
-kind: Service
-metadata:
-  labels:
-    control-plane: controller-manager
-  name: chartsnap-kong-operator-metrics-service
-  namespace: default
-spec:
-  ports:
-  - name: https
-    port: 8443
-    protocol: TCP
-    targetPort: metrics
-  selector:
-    control-plane: controller-manager
----
 # Source: kong-operator/templates/services.yaml
 apiVersion: v1
 kind: Service
@@ -53223,13 +53206,32 @@ spec:
   selector:
     app.kubernetes.io/component: ko
 ---
+# Source: kong-operator/templates/services.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    control-plane: controller-manager
+    app.kubernetes.io/component: ko
+  name: chartsnap-kong-operator-metrics-service
+  namespace: default
+spec:
+  ports:
+  - name: http
+    port: 8080
+    protocol: TCP
+    targetPort: metrics
+  selector:
+    control-plane: controller-manager
+    app.kubernetes.io/component: ko
+---
 # Source: kong-operator/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-0.0.5
+    helm.sh/chart: kong-operator-0.0.6
     app.kubernetes.io/instance: "chartsnap"
     app.kubernetes.io/version: "2.0.0-alpha.5"
     app.kubernetes.io/component: ko
@@ -53252,7 +53254,7 @@ spec:
       labels:
         control-plane: controller-manager
         app.kubernetes.io/name: kong-operator
-        helm.sh/chart: kong-operator-0.0.5
+        helm.sh/chart: kong-operator-0.0.6
         app.kubernetes.io/instance: "chartsnap"
         app.kubernetes.io/version: "2.0.0-alpha.5"
         app.kubernetes.io/component: ko
@@ -53264,6 +53266,8 @@ spec:
         env:
         - name: KONG_OPERATOR_ANONYMOUS_REPORTS
           value: "false"
+        - name: KONG_OPERATOR_NO_LEADER_ELECTION
+          value: "true"
         - name: KONG_OPERATOR_HEALTH_PROBE_BIND_ADDRESS
           value: ":8081"
         - name: KONG_OPERATOR_METRICS_BIND_ADDRESS

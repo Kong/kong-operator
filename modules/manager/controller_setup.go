@@ -94,6 +94,11 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			}),
 		)
 	}
+
+	if cfg.GatewayControllerEnabled {
+		indexOptions = append(indexOptions, index.OptionsForGatewayClass()...)
+	}
+
 	if cfg.KonnectControllersEnabled {
 		cl := mgr.GetClient()
 		indexOptions = slices.Concat(indexOptions,
