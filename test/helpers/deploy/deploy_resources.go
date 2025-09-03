@@ -311,13 +311,6 @@ func KonnectGatewayControlPlaneWithID(
 		},
 	}
 	cp.Status.ID = uuid.NewString()[:8]
-	cp.Status.Endpoints = &konnectv1alpha1.KonnectEndpoints{
-		ControlPlaneEndpoint: "cp.endpoint",
-		TelemetryEndpoint:    "tp.endpoint",
-	}
-	for _, opt := range opts {
-		opt(cp)
-	}
 	require.NoError(t, cl.Status().Update(ctx, cp))
 	return cp
 }
