@@ -416,7 +416,7 @@ ensure.go.pkg.downloaded.gateway-api:
 .PHONY: manifests.charts.kong-operator.role
 manifests.charts.kong-operator.role: manifests.role
 	cp $(CONFIG_RBAC_ROLE_DIR)/role.yaml $(KONG_OPERATOR_CHART_DIR)/templates/cluster-role.yaml
-	$(YQ) eval '.metadata.name = "{{ template \"kong.fullname\" . }}-manager-role"' -i $(KONG_OPERATOR_CHART_DIR)/templates/cluster-role.yaml
+	$(YQ) eval '.metadata.name = "{{ template \"kong.fullnamespacedname\" . }}-manager-role"' -i $(KONG_OPERATOR_CHART_DIR)/templates/cluster-role.yaml
 
 .PHONY: manifests.charts.kong-operator.crds.operator
 manifests.charts.kong-operator.crds.operator: kustomize ensure.go.pkg.downloaded.kubernetes-configuration
