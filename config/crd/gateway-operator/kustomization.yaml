@@ -1,0 +1,39 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - configuration.konghq.com_kongcacertificates.yaml
+  - configuration.konghq.com_kongcertificates.yaml
+  - configuration.konghq.com_kongconsumergroups.yaml
+  - configuration.konghq.com_kongconsumers.yaml
+  - configuration.konghq.com_kongcredentialacls.yaml
+  - configuration.konghq.com_kongcredentialapikeys.yaml
+  - configuration.konghq.com_kongcredentialbasicauths.yaml
+  - configuration.konghq.com_kongcredentialhmacs.yaml
+  - configuration.konghq.com_kongcredentialjwts.yaml
+  - configuration.konghq.com_kongdataplaneclientcertificates.yaml
+  - configuration.konghq.com_kongkeys.yaml
+  - configuration.konghq.com_kongkeysets.yaml
+  - configuration.konghq.com_konglicenses.yaml
+  - configuration.konghq.com_kongpluginbindings.yaml
+  - configuration.konghq.com_kongplugins.yaml
+  - configuration.konghq.com_kongroutes.yaml
+  - configuration.konghq.com_kongservices.yaml
+  - configuration.konghq.com_kongsnis.yaml
+  - configuration.konghq.com_kongtargets.yaml
+  - configuration.konghq.com_kongupstreampolicies.yaml
+  - configuration.konghq.com_kongupstreams.yaml
+  - configuration.konghq.com_kongvaults.yaml
+  - gateway-operator.konghq.com_aigateways.yaml
+  - gateway-operator.konghq.com_controlplanes.yaml
+  - gateway-operator.konghq.com_dataplanemetricsextensions.yaml
+  - gateway-operator.konghq.com_dataplanes.yaml
+  - gateway-operator.konghq.com_gatewayconfigurations.yaml
+  - gateway-operator.konghq.com_kongplugininstallations.yaml
+  - gateway-operator.konghq.com_watchnamespacegrants.yaml
+  - konnect.konghq.com_konnectapiauthconfigurations.yaml
+  - konnect.konghq.com_konnectcloudgatewaydataplanegroupconfigurations.yaml
+  - konnect.konghq.com_konnectcloudgatewaynetworks.yaml
+  - konnect.konghq.com_konnectcloudgatewaytransitgateways.yaml
+  - konnect.konghq.com_konnectextensions.yaml
+  - konnect.konghq.com_konnectgatewaycontrolplanes.yaml
