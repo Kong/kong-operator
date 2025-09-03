@@ -24,3 +24,5 @@ jobs:
         env:
           KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
           KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
+          # Ref: https://github.com/Kong/sdk-konnect-go/issues/20
+          KONG_CUSTOM_DOMAIN: konghq.tech

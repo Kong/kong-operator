@@ -28,8 +28,8 @@ import (
 const (
 	// TestIDLabel is the label key used to identify resources created by the test suite.
 	TestIDLabel = "konghq.com/test-id"
-	// KonnectTestIDLabel is the label key used to identify the entitiy in Konnect created by the test suite.
-	// Since the label cannot start with `kong`, we need another key.
+	// KonnectTestIDLabel is the label key added in the Konnect entity used to identify them created by the test suite.
+	// Since the label cannot start with `kong`, we use another key.
 	KonnectTestIDLabel = "operator-test-id"
 )
 
@@ -319,8 +319,9 @@ func KonnectGatewayControlPlaneTypeWithCloudGatewaysEnabled() ObjOption {
 	}
 }
 
-// KonnectGatewayControlPlaneLabel sets the label `key:value` in the KonnectGatewayControlPlane
-// to set the corresponding label in the created Konnect control plane.
+// KonnectGatewayControlPlaneLabel returns an ObjOption that adds the given label to the `spec.createControlPlaneRequest.labels`
+// of the KonnectGatewayControlPlane.
+// This adds the given label on the created control plane in Konnect (instead of the label in the k8s metadata).
 func KonnectGatewayControlPlaneLabel(key, value string) ObjOption {
 	return func(obj client.Object) {
 		cp, ok := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
