@@ -8,8 +8,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-
+	commonv1alpha1 "github.com/kong/kong-operator/apis/common/v1alpha1"
 	ctrlutils "github.com/kong/kong-operator/ingress-controller/internal/controllers/utils"
 )
 

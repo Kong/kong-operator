@@ -27,10 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
-
+	configurationv1 "github.com/kong/kong-operator/apis/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/apis/configuration/v1beta1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"

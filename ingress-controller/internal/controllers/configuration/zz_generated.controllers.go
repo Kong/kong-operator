@@ -46,9 +46,9 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
 	"github.com/kong/kong-operator/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
-	kongv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
+	kongv1 "github.com/kong/kong-operator/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kong-operator/apis/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
 )
 

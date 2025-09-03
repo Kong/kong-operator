@@ -52,6 +52,7 @@ COPY modules/ modules/
 COPY controller/ controller/
 COPY pkg/ pkg/
 COPY internal/ internal/
+COPY apis/ apis/
 COPY Makefile Makefile
 COPY .git/ .git/
 

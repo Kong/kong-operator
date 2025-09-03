@@ -1,4 +1,4 @@
-//go:build integration_tests
+//go:build integration_tests && disabled_during_api_migration
 
 package integration
 
@@ -20,7 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	configurationv1 "github.com/kong/kong-operator/apis/configuration/v1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"

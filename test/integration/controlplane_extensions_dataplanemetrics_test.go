@@ -12,10 +12,11 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
+	configurationv1 "github.com/kong/kong-operator/apis/configuration/v1"
+	operatorv1alpha1 "github.com/kong/kong-operator/apis/gateway-operator/v1alpha1"
 	"github.com/kong/kong-operator/pkg/consts"
 	osstestutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/pkg/vars"
@@ -63,7 +64,7 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 	t.Logf("service %s created", service.Name)
 	cleaner.Add(service)
 
-	dpMetricExt1 := &operatorv1alpha1.DataPlaneMetricsExtension{
+	localDpMetricExt1 := &operatorv1alpha1.DataPlaneMetricsExtension{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "dataplane-metrics-ext-",
 		},
@@ -80,8 +81,42 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 			},
 		},
 	}
-	dbMetricExt1, err := operatorClient.GatewayOperatorV1alpha1().DataPlaneMetricsExtensions(namespace.Name).Create(ctx, dpMetricExt1, metav1.CreateOptions{})
+
+	externalDpMetricExt1 := &operatorv1alpha1.DataPlaneMetricsExtension{
+		ObjectMeta: localDpMetricExt1.ObjectMeta,
+		Spec: operatorv1alpha1.DataPlaneMetricsExtensionSpec{
+			ServiceSelector: operatorv1alpha1.ServiceSelector{
+				MatchNames: []operatorv1alpha1.ServiceSelectorEntry{
+					{
+						Name: localDpMetricExt1.Spec.ServiceSelector.MatchNames[0].Name,
+					},
+				},
+			},
+			Config: operatorv1alpha1.MetricsConfig{
+				Latency: localDpMetricExt1.Spec.Config.Latency,
+			},
+		},
+	}
+
+	externalResult, err := operatorClient.GatewayOperatorV1alpha1().DataPlaneMetricsExtensions(namespace.Name).Create(ctx, externalDpMetricExt1, metav1.CreateOptions{})
 	require.NoError(t, err)
+
+	dbMetricExt1 := &operatorv1alpha1.DataPlaneMetricsExtension{
+		ObjectMeta: externalResult.ObjectMeta,
+		Spec: operatorv1alpha1.DataPlaneMetricsExtensionSpec{
+			ServiceSelector: operatorv1alpha1.ServiceSelector{
+				MatchNames: []operatorv1alpha1.ServiceSelectorEntry{
+					{
+						Name: externalResult.Spec.ServiceSelector.MatchNames[0].Name,
+					},
+				},
+			},
+			Config: operatorv1alpha1.MetricsConfig{
+				Latency: externalResult.Spec.Config.Latency,
+			},
+		},
+	}
+
 	t.Logf("DataPlaneMetricsExtension %s created", dbMetricExt1.Name)
 	cleaner.Add(dbMetricExt1)
 

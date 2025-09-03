@@ -8,8 +8,8 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	configurationv1 "github.com/kong/kong-operator/apis/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
 )

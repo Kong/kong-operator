@@ -8,10 +8,9 @@ import (
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
-
+	commonv1alpha1 "github.com/kong/kong-operator/apis/common/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/apis/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/apis/v1alpha2"
 	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )

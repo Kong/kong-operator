@@ -7,10 +7,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
-
+	configurationv1beta1 "github.com/kong/kong-operator/apis/configuration/v1beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/apis/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/apis/v1alpha2"
 	"github.com/kong/kong-operator/internal/utils/index"
 )
 

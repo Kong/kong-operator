@@ -10,11 +10,11 @@ import (
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 
+	configurationv1 "github.com/kong/kong-operator/apis/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/apis/configuration/v1beta1"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )

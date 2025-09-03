@@ -24,10 +24,10 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
 
+	configurationv1 "github.com/kong/kong-operator/apis/configuration/v1"
+	configurationv1beta1 "github.com/kong/kong-operator/apis/configuration/v1beta1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/kongstate"

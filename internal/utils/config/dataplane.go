@@ -9,7 +9,7 @@ import (
 
 	"github.com/kong/kong-operator/pkg/consts"
 
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
+	konnectv1alpha2 "github.com/kong/kong-operator/apis/v1alpha2"
 )
 
 // KongDefaults are the baseline Kong proxy configuration options needed for

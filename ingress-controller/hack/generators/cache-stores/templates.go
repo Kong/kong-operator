@@ -18,9 +18,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	kongv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
+	kongv1 "github.com/kong/kong-operator/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kong-operator/apis/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
 
 )
@@ -118,8 +118,8 @@ import (
 	"testing"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	kongv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	kongv1 "github.com/kong/kong-operator/apis/configuration/v1"
+	kongv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -127,7 +127,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/store"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
+	kongv1beta1 "github.com/kong/kong-operator/apis/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
 )
 

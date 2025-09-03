@@ -13,8 +13,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-
+	configurationv1alpha1 "github.com/kong/kong-operator/apis/configuration/v1alpha1"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/ingress-controller/internal/util/rels"

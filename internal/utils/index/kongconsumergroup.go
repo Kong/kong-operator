@@ -3,8 +3,9 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
+
+	configurationv1beta1 "github.com/kong/kong-operator/apis/configuration/v1beta1"
 )
 
 const (
