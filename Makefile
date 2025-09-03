@@ -701,6 +701,9 @@ test.charts.ct.install:
 # ownership error will be returned.
 	ct install --target-branch main \
 		--debug \
+		--helm-extra-set-args "--set=image.repository=docker.io/kong/nightly-kong-operator" \
+		--helm-extra-set-args "--set=image.tag=sha-67650b7-amd64" \
+		--helm-extra-set-args "--set=image.effectiveSemver=2.0.0" \
 		--helm-extra-set-args "--set=ko-crds.keep=false" \
 		--helm-extra-args "--wait" \
 		--helm-extra-args "--timeout=1m" \
