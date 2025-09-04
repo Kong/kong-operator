@@ -155,15 +155,20 @@ func TestOperatorLogs(t *testing.T) {
 
 	t.Logf("deploying %d Gateway resources", parallelGateways)
 	for i := range parallelGateways {
-		gatewayNN := types.NamespacedName{
-			Name:      uuid.NewString(),
-			Namespace: testNamespace.Name,
-		}
-		gateway := helpers.GenerateGateway(gatewayNN, gatewayClass)
-		gateway, err = clients.GatewayClient.GatewayV1().Gateways(testNamespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
-		require.NoError(t, err)
-		cleaner.Add(gateway)
-		t.Logf("deployed gateway#%d, name: %q", i, gateway.Name)
+		// Since we're deploying Gateway which is included in the validating webhook configuration
+		// by default we need to use require.EventuallyWithT to ensure we don't fail
+		// on the first error(s) from webhook.
+		require.EventuallyWithT(t, func(c *assert.CollectT) {
+			gatewayNN := types.NamespacedName{
+				Name:      uuid.NewString(),
+				Namespace: testNamespace.Name,
+			}
+			gateway := helpers.GenerateGateway(gatewayNN, gatewayClass)
+			gateway, err = clients.GatewayClient.GatewayV1().Gateways(testNamespace.Name).Create(ctx, gateway, metav1.CreateOptions{})
+			require.NoError(c, err)
+			cleaner.Add(gateway)
+			t.Logf("deployed gateway#%d, name: %q", i, gateway.Name)
+		}, concurrentGatewaysReadyTimeLimit, time.Second)
 	}
 
 	gateways, err := clients.GatewayClient.GatewayV1().Gateways(testNamespace.Name).List(ctx, metav1.ListOptions{})
