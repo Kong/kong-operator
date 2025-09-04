@@ -53348,26 +53348,28 @@ spec:
           name: admission
           protocol: TCP
         volumeMounts:
-        - name: chartsnap-kong-operator-webhook-certs
+        - name: webhook-certs
           mountPath: /tmp/k8s-webhook-server/serving-certs
-        - name: chartsnap-kong-operator-validating-webhook-certs
+          readOnly: true
+        - name: validating-webhook-certs
           mountPath: /tmp/k8s-webhook-server/serving-certs/validating-admission-webhook
-        - name: chartsnap-kong-operator-pod-labels
+          readOnly: true
+        - name: pod-labels
           mountPath: /etc/podinfo
       securityContext:
         runAsNonRoot: true
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
       volumes:
-      - name: chartsnap-kong-operator-webhook-certs
+      - name: webhook-certs
         secret:
           defaultMode: 420
           secretName: chartsnap-kong-operator-webhook-server-cert
-      - name: chartsnap-kong-operator-validating-webhook-certs
+      - name: validating-webhook-certs
         secret:
           defaultMode: 420
           secretName: chartsnap-kong-operator-webhook-validating-server-cert
-      - name: chartsnap-kong-operator-pod-labels
+      - name: pod-labels
         downwardAPI:
           items:
           - path: labels

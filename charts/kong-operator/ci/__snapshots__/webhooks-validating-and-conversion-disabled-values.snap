@@ -28123,14 +28123,14 @@ spec:
           name: metrics
           protocol: TCP
         volumeMounts:
-        - name: chartsnap-kong-operator-pod-labels
+        - name: pod-labels
           mountPath: /etc/podinfo
       securityContext:
         runAsNonRoot: true
       serviceAccountName: controller-manager
       terminationGracePeriodSeconds: 10
       volumes:
-      - name: chartsnap-kong-operator-pod-labels
+      - name: pod-labels
         downwardAPI:
           items:
           - path: labels
