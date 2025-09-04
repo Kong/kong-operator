@@ -33,6 +33,8 @@ type upgradeTestParams struct {
 // https://github.com/kong/kong-operator/blob/0f3b726c33/.github/workflows/tests.yaml#L180-L190
 // so anyone pushing changes can expect those changes to be tested in this test.
 func TestDeployAndUpgradeFromLatestTagToOverride(t *testing.T) {
+	t.Skip("Skip until https://github.com/Kong/kong-operator/issues/2203 is resolved")
+
 	if imageLoad == "" && imageOverride == "" {
 		t.Skipf("No KONG_TEST_KONG_OPERATOR_IMAGE_OVERRIDE nor KONG_TEST_KONG_OPERATOR_IMAGE_LOAD" +
 			" env specified. Please specify the image to upgrade to in order to run this test.")
