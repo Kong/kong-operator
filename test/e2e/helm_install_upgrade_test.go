@@ -28,7 +28,6 @@ import (
 	"github.com/kong/kong-operator/pkg/consts"
 	"github.com/kong/kong-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-	"github.com/kong/kong-operator/pkg/utils/test"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/pkg/vars"
 	"github.com/kong/kong-operator/test/helpers"
@@ -47,7 +46,7 @@ func TestHelmUpgrade(t *testing.T) {
 
 	var (
 		ctx      = t.Context()
-		chartDir = filepath.Join(test.ProjectRootPath(), "charts/kong-operator")
+		chartDir = filepath.Join(testutils.ProjectRootPath(), "charts/kong-operator")
 	)
 
 	// createEnvironment will queue up environment cleanup if necessary
