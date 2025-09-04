@@ -86,7 +86,6 @@ webhooks:
       - UPDATE
       resources:
       - secrets
-      # - services
       scope: '*'
   objectSelector:
     matchLabels:
