@@ -60,6 +60,8 @@ var (
 )
 
 func TestOperatorLogs(t *testing.T) {
+	t.Skip("Skip until https://github.com/Kong/kong-operator/issues/2208 is resolved")
+
 	ctx := t.Context()
 	if imageLoad == "" && imageOverride == "" {
 		t.Skipf("No KONG_TEST_KONG_OPERATOR_IMAGE_OVERRIDE nor KONG_TEST_KONG_OPERATOR_IMAGE_LOAD" +
