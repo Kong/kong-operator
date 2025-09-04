@@ -417,7 +417,7 @@ func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
 				Containers: []corev1.Container{
 					{
 						Name:  consts.DataPlaneProxyContainerName,
-						Image: helpers.GetDefaultDataPlaneEnterpriseImage(),
+						Image: helpers.GetDefaultDataPlaneImage(),
 						Env: []corev1.EnvVar{
 							{
 								Name:  "KONG_LOG_LEVEL",
