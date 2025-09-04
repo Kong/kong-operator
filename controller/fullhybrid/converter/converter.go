@@ -24,9 +24,9 @@ type APIConverter[t RootObject] interface {
 	Translate() error
 	// GetStore returns a slice of unstructured.Unstructured objects representing the current state of the store, using the provided context.
 	GetStore(ctx context.Context) []unstructured.Unstructured
-	// Reduce returns a slice of utils.ReduceFunc functions that can be applied to the given unstructured.Unstructured object for reduction.
+	// Reduce returns a slice of utils.ReduceFunc functions that can be applied to the given unstructured.Unstructured object to get a list of duplicates to be removed.
 	Reduce(obj unstructured.Unstructured) []utils.ReduceFunc
-	// ListExistingObjects lists all existing unstructured.Unstructured objects relevant to the converter, using the provided context, and returns them along with any error encountered.
+	// ListExistingObjects lists all existing unstructured.Unstructured objects of the destination API kind, using the provided context, and returns them along with any error encountered.
 	ListExistingObjects(ctx context.Context) ([]unstructured.Unstructured, error)
 }
 

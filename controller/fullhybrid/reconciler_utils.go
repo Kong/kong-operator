@@ -61,7 +61,7 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			resourcesToDelete = append(resourcesToDelete, v.resources...)
 		}
 		// mark for deletion all the resources with duplicates
-		reduceDuplicates(v.resources, conv.Reduce(v.resources[0])...)
+		resourcesToDelete = append(resourcesToDelete, reduceDuplicates(v.resources, conv.Reduce(v.resources[0])...)...)
 	}
 
 	// delete all the resources marked for deletion
