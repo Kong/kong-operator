@@ -37,6 +37,11 @@
 - Fixed a missing watch in `GatewayClass` reconciler for related `GatewayConfiguration` resources.
   [#2161](https://github.com/Kong/kong-operator/pull/2161)
 
+### Changes
+
+- Vendor gateway-operator CRDs locally and switch Kustomize to use the vendored source.
+  [#2195](https://github.com/Kong/kong-operator/pull/2195)
+
 ## [v2.0.0-alpha.5]
 
 > Release date: 2025-09-01
