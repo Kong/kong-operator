@@ -3,6 +3,8 @@ package e2e
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -26,6 +28,7 @@ import (
 	"github.com/kong/kong-operator/pkg/consts"
 	"github.com/kong/kong-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/pkg/utils/test"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/pkg/vars"
 	"github.com/kong/kong-operator/test/helpers"
@@ -33,13 +36,12 @@ import (
 )
 
 func TestHelmUpgrade(t *testing.T) {
-	const (
-		// Rel: https://github.com/Kong/charts/tree/main/charts/kong-operator
-		chart = "kong/kong-operator"
+	const waitTime = 3 * time.Minute
 
-		waitTime = 3 * time.Minute
+	var (
+		ctx      = t.Context()
+		chartDir = filepath.Join(test.ProjectRootPath(), "charts/kong-operator")
 	)
-	ctx := t.Context()
 
 	// createEnvironment will queue up environment cleanup if necessary
 	// and dumping diagnostics if the test fails.
@@ -367,8 +369,11 @@ func TestHelmUpgrade(t *testing.T) {
 				},
 			}
 
-			require.NoError(t, helm.AddRepoE(t, opts, "kong", "https://charts.konghq.com"))
-			require.NoError(t, helm.InstallE(t, opts, chart, releaseName))
+			dir, err := os.Getwd()
+			require.NoError(t, err)
+			t.Logf("dir: %s", dir)
+			t.Logf("Using Helm chart dir : %s", chartDir)
+			require.NoError(t, helm.InstallE(t, opts, chartDir, releaseName))
 			out, err := helm.RunHelmCommandAndGetOutputE(t, opts, "list")
 			require.NoError(t, err)
 			t.Logf("Helm list output after install:\n  %s", out)
@@ -386,7 +391,12 @@ func TestHelmUpgrade(t *testing.T) {
 			// Deploy the objects that should be present before the upgrade.
 			cl := client.NewNamespacedClient(e.Clients.MgrClient, e.Namespace.Name)
 			for _, obj := range tc.objectsToDeploy {
-				require.NoError(t, cl.Create(ctx, obj))
+				// NOTE: Create objects with eventually since we're deploying
+				// admission webhook and that can take a moment to become ready.
+				require.EventuallyWithT(t, func(t *assert.CollectT) {
+					obj := obj.DeepCopyObject().(client.Object)
+					require.NoError(t, cl.Create(ctx, obj))
+				}, waitTime, 500*time.Millisecond)
 				t.Cleanup(func() {
 					// Ensure that every object is properly deleted (the finalizer must
 					// be executed, it requires some time) before the Helm chart is uninstalled.
@@ -410,7 +420,7 @@ func TestHelmUpgrade(t *testing.T) {
 			opts.SetValues["image.tag"] = tag
 			opts.SetValues["image.repository"] = targetRepository
 
-			require.NoError(t, helm.UpgradeE(t, opts, chart, releaseName))
+			require.NoError(t, helm.UpgradeE(t, opts, chartDir, releaseName))
 			out, err = helm.RunHelmCommandAndGetOutputE(t, opts, "list")
 			require.NoError(t, err)
 			t.Logf("Helm list output after upgrade:\n  %s", out)

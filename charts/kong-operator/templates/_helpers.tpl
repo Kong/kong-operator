@@ -17,6 +17,10 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- default (printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-") .Values.fullnameOverride -}}
 {{- end -}}
 
+{{- define "kong.deploymentname" -}}
+{{- printf "%s-controller-manager" (include "kong.fullname" .) | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
 {{- define "kong.fullnamespacedname" -}}
 {{- $name := default .Chart.Name .Values.nameOverride -}}
 {{- default (printf "%s-%s-%s" .Release.Namespace .Release.Name $name | trunc 63 | trimSuffix "-") .Values.fullnameOverride -}}
@@ -142,19 +146,19 @@ The dict maps raw env variable key to the suggested variable path.
 {{- /* https://github.com/Kong/kong-operator/blob/e555dbc0b6e57beecbb72cf79018ef8fdbe11ffa/hack/generators/conversion-webhook/main.go#L88-L95 */ -}}
 {{ $kocrds := (index .Values "ko-crds") }}
 {{ if $kocrds.enabled }}
-- name: {{ template "kong.fullname" . }}-webhook-certs
+- name: webhook-certs
   secret:
     defaultMode: 420
     secretName: {{ template "kong.webhookCertSecretName" . }}
 {{ end }}
 {{ end }}
 {{ if .Values.global.webhooks.validating.enabled }}
-- name: {{ template "kong.fullname" . }}-validating-webhook-certs
+- name: validating-webhook-certs
   secret:
     defaultMode: 420
     secretName: {{ template "kong.webhookValidatingCertSecretName" . }}
 {{ end }}
-- name: {{ template "kong.fullname" . }}-pod-labels
+- name: pod-labels
   downwardAPI:
     items:
     - path: labels
@@ -169,15 +173,17 @@ The dict maps raw env variable key to the suggested variable path.
 {{- /* https://github.com/Kong/kong-operator/blob/e555dbc0b6e57beecbb72cf79018ef8fdbe11ffa/hack/generators/conversion-webhook/main.go#L88-L95 */ -}}
 {{ $kocrds := (index .Values "ko-crds") }}
 {{ if $kocrds.enabled }}
-- name: {{ template "kong.fullname" . }}-webhook-certs
+- name: webhook-certs
   mountPath: /tmp/k8s-webhook-server/serving-certs
+  readOnly: true
 {{ end }}
 {{ end }}
 {{ if .Values.global.webhooks.validating.enabled }}
-- name: {{ template "kong.fullname" . }}-validating-webhook-certs
+- name: validating-webhook-certs
   mountPath: /tmp/k8s-webhook-server/serving-certs/validating-admission-webhook
+  readOnly: true
 {{ end }}
-- name: {{ template "kong.fullname" . }}-pod-labels
+- name: pod-labels
   mountPath: /etc/podinfo
 {{- end }}
 
