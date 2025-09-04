@@ -99,7 +99,7 @@ const (
 	// decide an image tag fail.
 	DefaultDataPlaneTag = "3.11" // renovate: datasource=docker depName=kong/kong-gateway
 
-	// DefaultDataPlaneEnterpriseImage is the default enterprise container image that can be used if
+	// DefaultDataPlaneImage is the default container image that can be used if
 	// all other attempts to dynamically decide the default image fail.
 	DefaultDataPlaneImage = DefaultDataPlaneBaseEnterpriseImage + ":" + DefaultDataPlaneTag
 
