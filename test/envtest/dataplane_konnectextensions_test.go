@@ -189,8 +189,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		}), "expected KonnectExtension to have a ready condition, got: %+v", conditions)
 	}, waitTime, tickTime)
 
-	t.Logf("Waiting for Deployment to be created")
-	createdDeployment := &appsv1.Deployment{}
+	t.Logf("Waiting for Deployment to be created and verifying Deployment has KonnectExtension applied")
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		var deployments appsv1.DeploymentList
 		require.NoError(t, cl.List(ctx, &deployments,
@@ -201,11 +200,8 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		))
 
 		require.Len(t, deployments.Items, 1)
-		createdDeployment = &deployments.Items[0]
-	}, waitTime, tickTime)
+		createdDeployment := &deployments.Items[0]
 
-	t.Logf("Verifying Deployment has KonnectExtension applied")
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		dpContainer := k8sutils.GetPodContainerByName(&createdDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 		require.NotNil(t, dpContainer)
 		volumes := createdDeployment.Spec.Template.Spec.Volumes
