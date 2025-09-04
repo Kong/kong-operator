@@ -17,6 +17,11 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- default (printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-") .Values.fullnameOverride -}}
 {{- end -}}
 
+{{- define "kong.fullnamespacedname" -}}
+{{- $name := default .Chart.Name .Values.nameOverride -}}
+{{- default (printf "%s-%s-%s" .Release.Namespace .Release.Name $name | trunc 63 | trimSuffix "-") .Values.fullnameOverride -}}
+{{- end -}}
+
 # kong.webhookServiceName is used in different subcharts and name has to match
 # hence only variadic part of this name is .Release.Name.
 {{- define "kong.webhookServiceName" -}}
