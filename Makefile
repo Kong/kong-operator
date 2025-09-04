@@ -691,10 +691,11 @@ test.charts.ct.install:
 # ownership error will be returned.
 #
 # NOTE: Image pin is temporary until we get an image with
-# https://github.com/Kong/kong-operator/pull/2192
+# https://github.com/Kong/kong-operator/pull/2201
+
 	ct install --target-branch main \
 		--debug \
-		--helm-extra-set-args "--set=image.repository=docker.io/kong/nightly-kong-operator --set=image.tag=sha-67650b7-amd64 --set=image.effectiveSemver=2.0.0 --set=ko-crds.keep=false" \
+		--helm-extra-set-args "--set=image.repository=docker.io/kong/nightly-kong-operator --set=image.tag=sha-d735fd3-amd64 --set=image.effectiveSemver=2.0.0 --set=ko-crds.keep=false" \
 		--helm-extra-args "--wait" \
 		--helm-extra-args "--timeout=1m" \
 		--charts charts/$(CHART_NAME) \

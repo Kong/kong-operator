@@ -21,6 +21,8 @@ The operator deployment that has been installed as first, will handle the conver
 - Updated conversion webhook configuration to use `global.webhooks.conversion.enabled`.
   Add options for validating webhook configuration under `global.webhooks.validating`.
   Move cert-manager integration options under `global.webhooks.options.certManager`.
+- Add support for operator's validating admission webhook via `global.webhooks.validating`.
+  [#2201](https://github.com/Kong/kong-operator/pull/2201)
 
 ## 0.0.6
 
