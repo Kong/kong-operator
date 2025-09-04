@@ -27364,7 +27364,7 @@ spec:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: 'chartsnap-kong-operator-manager-role'
+  name: 'default-chartsnap-kong-operator-manager-role'
 rules:
 - apiGroups:
   - ""
@@ -27857,7 +27857,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   creationTimestamp: null
-  name: chartsnap-kong-operator-kong-mtls-secret-role
+  name: default-chartsnap-kong-operator-kong-mtls-secret-role
 rules:
 - apiGroups:
   - ""
@@ -27874,7 +27874,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: chartsnap-kong-operator-metrics-reader
+  name: default-chartsnap-kong-operator-metrics-reader
 rules:
 - nonResourceURLs:
   - /metrics
@@ -27885,7 +27885,7 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  name: chartsnap-kong-operator-proxy-role
+  name: default-chartsnap-kong-operator-proxy-role
 rules:
 - apiGroups:
   - authentication.k8s.io
@@ -27904,11 +27904,11 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: chartsnap-kong-operator-kong-mtls-secret-rolebinding
+  name: default-chartsnap-kong-operator-kong-mtls-secret-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: chartsnap-kong-operator-kong-mtls-secret-role
+  name: default-chartsnap-kong-operator-kong-mtls-secret-role
 subjects:
 - kind: ServiceAccount
   name: controller-manager
@@ -27918,11 +27918,11 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: chartsnap-kong-operator-manager-rolebinding
+  name: default-chartsnap-kong-operator-manager-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: chartsnap-kong-operator-manager-role
+  name: default-chartsnap-kong-operator-manager-role
 subjects:
 - kind: ServiceAccount
   name: controller-manager
@@ -27932,11 +27932,11 @@ subjects:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: chartsnap-kong-operator-proxy-rolebinding
+  name: default-chartsnap-kong-operator-proxy-rolebinding
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
-  name: chartsnap-kong-operator-proxy-role
+  name: default-chartsnap-kong-operator-proxy-role
 subjects:
 - kind: ServiceAccount
   name: controller-manager
