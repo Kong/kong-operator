@@ -64,11 +64,6 @@ mise-plugin-install: mise
 mise-install: mise
 	@$(MISE) install -q $(DEP_VER)
 
-KIC_WEBHOOKCONFIG_GENERATOR = $(PROJECT_DIR)/bin/kic-webhook-config-generator
-.PHONY: kic-webhook-config-generator
-kic-webhook-config-generator:
-	( cd ./hack/generators/kic/webhook-config-generator && go build -o $(KIC_WEBHOOKCONFIG_GENERATOR) . )
-
 export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
 
 # Do not store yq's version in .tools_versions.yaml as it is used to get tool versions.
@@ -305,7 +300,7 @@ verify.generators: verify.repo generate verify.diff
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.kic-webhook-config generate.mocks generate.cli-arguments-docs
+generate: generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.cli-arguments-docs
 
 .PHONY: generate.crd-kustomize
 generate.crd-kustomize:
@@ -338,11 +333,6 @@ generate.clientsets: client-gen
 .PHONY: generate.k8sio-gomod-replace
 generate.k8sio-gomod-replace:
 	./hack/update-k8sio-gomod-replace.sh
-
-.PHONY: generate.kic-webhook-config
-generate.kic-webhook-config: kustomize kic-webhook-config-generator
-	KUSTOMIZE=$(KUSTOMIZE) $(KIC_WEBHOOKCONFIG_GENERATOR)
-	go fmt ./pkg/utils/kubernetes/resources/...
 
 .PHONY: generate.cli-arguments-docs
 generate.cli-arguments-docs:

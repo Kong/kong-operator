@@ -43,14 +43,14 @@ func main() {
 		fmt.Printf("Failed to create %s: %v\n", chartCRDsFilePath, err)
 		os.Exit(1)
 	}
-	defer fileCRDs.Close()
-
 	for _, content := range []string{autoGenerationComment, crdContent} {
 		if _, err := fileCRDs.WriteString(content); err != nil {
 			fmt.Printf("Failed to write to %s: %v\n", chartCRDsFilePath, err)
 			os.Exit(1)
 		}
 	}
+	fileCRDs.Close()
+
 	fmt.Println("Successfully finished")
 }
 
