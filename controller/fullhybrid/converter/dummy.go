@@ -60,8 +60,8 @@ func (d *dummyConverter) SetRootObject(obj *corev1.Service) {
 	d.service = obj
 }
 
-// LoadStore implements APIConverter.
-func (d *dummyConverter) LoadStore(ctx context.Context) error {
+// LoadInputStore implements APIConverter.
+func (d *dummyConverter) LoadInputStore(ctx context.Context) error {
 	// List only the HTTPRoutes the the same namespace as the service.
 	// Do not consider cross-namespace refs in the dummy implementation.
 	httpRoutes := gwtypes.HTTPRouteList{}
@@ -111,8 +111,8 @@ func (d *dummyConverter) Translate() error {
 	return nil
 }
 
-// GetStore implements APIConverter.
-func (d *dummyConverter) GetStore(ctx context.Context) []unstructured.Unstructured {
+// GetOutputStore implements APIConverter.
+func (d *dummyConverter) GetOutputStore(ctx context.Context) []unstructured.Unstructured {
 	objects := make([]unstructured.Unstructured, 0, len(d.outputStore))
 	for _, ks := range d.outputStore {
 		unstr, err := utils.ToUnstructured(&ks)

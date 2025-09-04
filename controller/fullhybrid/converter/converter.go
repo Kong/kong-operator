@@ -18,12 +18,12 @@ type APIConverter[t RootObject] interface {
 	GetRootObject() t
 	// SetRootObject sets the root object to the provided value of type t.
 	SetRootObject(obj t)
-	// LoadStore loads and initializes any required internal store or cache, using the provided context.
-	LoadStore(ctx context.Context) error
+	// LoadInputStore loads and initializes any required internal store or cache, using the provided context.
+	LoadInputStore(ctx context.Context) error
 	// Translate performs the conversion or translation logic for the root object, returning an error if the process fails.
 	Translate() error
-	// GetStore returns a slice of unstructured.Unstructured objects representing the current state of the store, using the provided context.
-	GetStore(ctx context.Context) []unstructured.Unstructured
+	// GetOutputStore returns a slice of unstructured.Unstructured objects representing the current state of the store, using the provided context.
+	GetOutputStore(ctx context.Context) []unstructured.Unstructured
 	// Reduce returns a slice of utils.ReduceFunc functions that can be applied to the given unstructured.Unstructured object to get a list of duplicates to be removed.
 	Reduce(obj unstructured.Unstructured) []utils.ReduceFunc
 	// ListExistingObjects lists all existing unstructured.Unstructured objects of the destination API kind, using the provided context, and returns them along with any error encountered.

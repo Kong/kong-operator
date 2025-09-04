@@ -236,9 +236,9 @@ func TestDummyTranslation(t *testing.T) {
 				expectedUnstructured[i] = u
 			}
 
-			require.NoError(t, dummyConverter.LoadStore(context.Background()))
+			require.NoError(t, dummyConverter.LoadInputStore(context.Background()))
 			require.NoError(t, dummyConverter.Translate())
-			require.ElementsMatch(t, expectedUnstructured, dummyConverter.GetStore(context.Background()))
+			require.ElementsMatch(t, expectedUnstructured, dummyConverter.GetOutputStore(context.Background()))
 		})
 	}
 }

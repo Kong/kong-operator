@@ -26,7 +26,7 @@ type ownedResourcesWithHits struct {
 // resources for deletion, and returns whether a requeue is needed along with any error encountered.
 // The function is generic over types implementing converter.RootObject.
 func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client, conv converter.APIConverter[t]) (requeue bool, err error) {
-	store := conv.GetStore(ctx)
+	store := conv.GetOutputStore(ctx)
 	rootObject := conv.GetRootObject()
 
 	// Get the resources owned by the root object
