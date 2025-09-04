@@ -16,7 +16,7 @@ generate_kustomization_file() {
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 resources:
-  - gateway-operator
+  - kong-operator
 
 patches:
   - path: patches/zz_generated_conversion_webhook.yaml
