@@ -36,6 +36,13 @@ import (
 )
 
 func TestHelmUpgrade(t *testing.T) {
+	t.Skip(
+		"Skipping Helm upgrade test until we get images that contain the changes +",
+		"from https://github.com/Kong/kong-operator/pull/2201. "+
+			"That PR introduced a change in validating webhook certificates paths and "+
+			"Helm chart can only use 1 path for the certificates so it won't work for "+
+			"images before and after that change at the same time.",
+	)
 	const waitTime = 3 * time.Minute
 
 	var (
