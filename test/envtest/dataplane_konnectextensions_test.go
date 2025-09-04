@@ -8,6 +8,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -109,7 +110,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 	mgr.GetCache().WaitForCacheSync(ctx)
 
 	t.Logf("Creating cluster CA secret")
-	require.NoError(t, secrets.CreateClusterCACertificate(ctx, cl, types.NamespacedName{
+	require.NoError(t, secrets.CreateClusterCACertificate(ctx, logr.Discard(), cl, types.NamespacedName{
 		Name:      clusterCASecretName,
 		Namespace: ns.Name,
 	}, map[string]string{
@@ -188,8 +189,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		}), "expected KonnectExtension to have a ready condition, got: %+v", conditions)
 	}, waitTime, tickTime)
 
-	t.Logf("Waiting for Deployment to be created")
-	createdDeployment := &appsv1.Deployment{}
+	t.Logf("Waiting for Deployment to be created and verifying Deployment has KonnectExtension applied")
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		var deployments appsv1.DeploymentList
 		require.NoError(t, cl.List(ctx, &deployments,
@@ -200,11 +200,8 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		))
 
 		require.Len(t, deployments.Items, 1)
-		createdDeployment = &deployments.Items[0]
-	}, waitTime, tickTime)
+		createdDeployment := &deployments.Items[0]
 
-	t.Logf("Verifying Deployment has KonnectExtension applied")
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		dpContainer := k8sutils.GetPodContainerByName(&createdDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
 		require.NotNil(t, dpContainer)
 		volumes := createdDeployment.Spec.Template.Spec.Volumes

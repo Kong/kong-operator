@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-logr/logr"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/admission"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
@@ -26,6 +27,7 @@ type ManagerInstance interface {
 	Config() managercfg.Config
 	IsReady() error
 	DiagnosticsHandler() http.Handler
+	KongValidator() admission.KongHTTPValidator
 }
 
 // DiagnosticsExposer is an interface that represents an object that can expose diagnostics data of manager.Manager
@@ -46,10 +48,11 @@ type DiagnosticsExposer interface {
 type Manager struct {
 	logger logr.Logger
 
-	instances          map[manager.ID]*instance
-	instancesLock      sync.RWMutex
-	schedulingQueue    chan manager.ID
-	diagnosticsExposer DiagnosticsExposer
+	instances           map[manager.ID]*instance
+	instancesLock       sync.RWMutex
+	schedulingQueue     chan manager.ID
+	diagnosticsExposer  DiagnosticsExposer
+	admissionReqHandler *admission.RequestHandler
 }
 
 // ManagerOption is a functional option that can be used to configure a new multi-instance manager.
@@ -58,6 +61,12 @@ type ManagerOption func(*Manager)
 func WithDiagnosticsExposer(exposer DiagnosticsExposer) ManagerOption {
 	return func(m *Manager) {
 		m.diagnosticsExposer = exposer
+	}
+}
+
+func WithValidator(admissionReqHandler *admission.RequestHandler) ManagerOption {
+	return func(m *Manager) {
+		m.admissionReqHandler = admissionReqHandler
 	}
 }
 
@@ -99,7 +108,9 @@ func (m *Manager) ScheduleInstance(in ManagerInstance) error {
 	if _, exists := m.instances[in.ID()]; exists {
 		return NewInstanceWithIDAlreadyScheduledError(in.ID())
 	}
-
+	if m.admissionReqHandler != nil {
+		m.admissionReqHandler.RegisterValidator(in.ID(), in.KongValidator())
+	}
 	// Keep track of the instance, but do not start it from here.
 	instance, err := newInstance(in, m.logger)
 	if err != nil {
@@ -129,6 +140,9 @@ func (m *Manager) StopInstance(instanceID manager.ID) error {
 	// If diagnostics are enabled, unregister the instance from the diagnostics exposer.
 	if m.diagnosticsExposer != nil {
 		m.diagnosticsExposer.UnregisterInstance(instanceID)
+	}
+	if m.admissionReqHandler != nil {
+		m.admissionReqHandler.UnregisterValidator(instanceID)
 	}
 
 	// Send a signal to the instance to stop and let the running goroutine handle the cleanup.

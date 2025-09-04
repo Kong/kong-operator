@@ -8,14 +8,12 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/samber/mo"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/serializer"
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
-	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 var (
@@ -23,103 +21,62 @@ var (
 	codecs = serializer.NewCodecFactory(scheme)
 )
 
+// To match paths used in Helm Chart and expected by conversion webhook from internal/webhook/conversion/webhook.go.
+// Source for those paths is:
+// https://github.com/kubernetes-sigs/controller-runtime/blob/3554729cfb3179c1a13f554b828d658d062dceb9/pkg/webhook/server.go#L81
 const (
-	DefaultAdmissionWebhookCertPath = "/admission-webhook/tls.crt"
-	DefaultAdmissionWebhookKeyPath  = "/admission-webhook/tls.key"
+	// DefaultAdmissionWebhookCertPath is the default path to the any (validation, conversion) webhook server TLS certificate.
+	DefaultAdmissionWebhookCertPath = "/tmp/k8s-webhook-server/serving-certs/tls.crt"
+	// DefaultAdmissionWebhookKeyPath is the default path to the any (validation, conversion) webhook server TLS key.
+	DefaultAdmissionWebhookKeyPath = "/tmp/k8s-webhook-server/serving-certs/tls.key"
 )
 
 type Server struct {
 	s           *http.Server
-	certWatcher mo.Option[*certwatcher.CertWatcher]
+	certWatcher *certwatcher.CertWatcher
 }
 
-func MakeTLSServer(config managercfg.AdmissionServerConfig, handler http.Handler) (*Server, error) {
+func MakeTLSServer(port int32, handler http.Handler) (*Server, error) {
 	const defaultHTTPReadHeaderTimeout = 10 * time.Second
 
-	s := &Server{}
-	tlsConfig, err := s.setupTLSConfig(config)
+	watcher, err := certwatcher.New(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create CertWatcher: %w", err)
 	}
 
-	s.s = &http.Server{
-		Addr:              config.ListenAddr,
-		TLSConfig:         tlsConfig,
-		Handler:           handler,
-		ReadHeaderTimeout: defaultHTTPReadHeaderTimeout,
-	}
-	return s, nil
+	return &Server{
+		s: &http.Server{
+			Addr: fmt.Sprintf(":%d", port),
+			TLSConfig: &tls.Config{
+				MinVersion:     tls.VersionTLS12,
+				MaxVersion:     tls.VersionTLS13,
+				GetCertificate: watcher.GetCertificate,
+			},
+			Handler:           handler,
+			ReadHeaderTimeout: defaultHTTPReadHeaderTimeout,
+		},
+		certWatcher: watcher,
+	}, nil
 }
 
 // Start starts the admission server and blocks until the context is done.
 func (s *Server) Start(ctx context.Context) error {
 	logger := ctrllog.FromContext(ctx)
 	go func() {
-		if err := s.s.ListenAndServeTLS("", ""); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := s.s.ListenAndServeTLS(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error(err, "Failed to start admission server")
 		}
 	}()
 
-	if cw, ok := s.certWatcher.Get(); ok {
-		go func() {
-			if err := cw.Start(ctx); err != nil {
-				logger.Error(err, "Failed to start CertWatcher")
-			}
-		}()
-	}
+	go func() {
+		if err := s.certWatcher.Start(ctx); err != nil {
+			logger.Error(err, "Failed to start CertWatcher")
+		}
+	}()
 
 	<-ctx.Done()
 
 	ctx, cancel := context.WithTimeout(context.Background(), consts.DefaultGracefulShutdownTimeout) //nolint:contextcheck
 	defer cancel()
 	return s.s.Shutdown(ctx)
-}
-
-func (s *Server) setupTLSConfig(sc managercfg.AdmissionServerConfig) (*tls.Config, error) {
-	var watcher *certwatcher.CertWatcher
-	var cert, key []byte
-	switch {
-	// the caller provided certificates via the ENV (certwatcher can't be used here)
-	case sc.CertPath == "" && sc.KeyPath == "" && sc.Cert != "" && sc.Key != "":
-		cert, key = []byte(sc.Cert), []byte(sc.Key)
-		keyPair, err := tls.X509KeyPair(cert, key)
-		if err != nil {
-			return nil, fmt.Errorf("X509KeyPair error: %w", err)
-		}
-		return &tls.Config{
-			MinVersion:   tls.VersionTLS12,
-			MaxVersion:   tls.VersionTLS13,
-			Certificates: []tls.Certificate{keyPair},
-		}, nil
-
-	// the caller provided explicit file paths to the certs, enable certwatcher for these paths
-	case sc.CertPath != "" && sc.KeyPath != "" && sc.Cert == "" && sc.Key == "":
-		var err error
-		watcher, err = certwatcher.New(sc.CertPath, sc.KeyPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create CertWatcher: %w", err)
-		}
-
-	// the caller provided no certificate configuration, assume the default paths and enable certwatcher for them
-	case sc.CertPath == "" && sc.KeyPath == "" && sc.Cert == "" && sc.Key == "":
-		var err error
-		watcher, err = certwatcher.New(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create CertWatcher: %w", err)
-		}
-
-	default:
-		return nil, fmt.Errorf("either cert/key files OR cert/key values must be provided, or none")
-	}
-
-	// If we have a watcher, we need to keep it to run it later in Start() method.
-	if watcher != nil {
-		s.certWatcher = mo.Some(watcher)
-	}
-
-	return &tls.Config{
-		MinVersion:     tls.VersionTLS12,
-		MaxVersion:     tls.VersionTLS13,
-		GetCertificate: watcher.GetCertificate,
-	}, nil
 }

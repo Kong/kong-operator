@@ -45,6 +45,7 @@ import (
 
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
+	"github.com/kong/kong-operator/ingress-controller/validation"
 	"github.com/kong/kong-operator/internal/telemetry"
 	"github.com/kong/kong-operator/internal/webhook/conversion"
 	"github.com/kong/kong-operator/modules/diagnostics"
@@ -118,6 +119,7 @@ type Config struct {
 
 	// Webhook options.
 	ConversionWebhookEnabled bool
+	ValidatingWebhookEnabled bool
 }
 
 const (
@@ -152,6 +154,7 @@ func DefaultConfig() Config {
 		ControlPlaneControllerEnabled: true,
 		DataPlaneControllerEnabled:    true,
 		ConversionWebhookEnabled:      true,
+		ValidatingWebhookEnabled:      true,
 	}
 }
 
@@ -337,6 +340,14 @@ func Run(
 		}
 	}
 
+	if cfg.ValidatingWebhookEnabled {
+		admissionReqHandler, err := validation.SetupAdmissionServer(ctx, mgr)
+		if err != nil {
+			return fmt.Errorf("unable to set up admission server: %w", err)
+		}
+		multiinstance.WithValidator(admissionReqHandler)(cpInstancesMgr)
+	}
+
 	if err := mgr.AddReadyzCheck("readyz", healthz.Ping); err != nil {
 		return fmt.Errorf("unable to set up ready check: %w", err)
 	}
@@ -430,7 +441,7 @@ func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
 	if err := m.Client.Get(ctx, objectKey, &ca); err != nil {
 		if k8serrors.IsNotFound(err) {
 			m.Logger.Info(fmt.Sprintf("no CA certificate Secret %s found, generating CA certificate", objectKey))
-			return secrets.CreateClusterCACertificate(ctx, m.Client, objectKey, m.SecretLabels, m.KeyConfig)
+			return secrets.CreateClusterCACertificate(ctx, m.Logger, m.Client, objectKey, m.SecretLabels, m.KeyConfig)
 		}
 
 		return err

@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -21,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/admission"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 	"github.com/kong/kong-operator/ingress-controller/test"
@@ -176,11 +178,13 @@ func TestMain(m *testing.M) {
 
 		fmt.Println("INFO: starting the controller manager")
 		cert, key := certificate.GetKongSystemSelfSignedCerts()
+		helpers.ExitOnErr(ctx, os.MkdirAll(filepath.Dir(admission.DefaultAdmissionWebhookCertPath), 0755))
+		helpers.ExitOnErr(ctx, os.WriteFile(admission.DefaultAdmissionWebhookCertPath, cert, 0600))
+		helpers.ExitOnErr(ctx, os.MkdirAll(filepath.Dir(admission.DefaultAdmissionWebhookKeyPath), 0755))
+		helpers.ExitOnErr(ctx, os.WriteFile(admission.DefaultAdmissionWebhookKeyPath, key, 0600))
+
 		standardControllerArgs := []string{
 			fmt.Sprintf("--ingress-class=%s", consts.IngressClass),
-			fmt.Sprintf("--admission-webhook-cert=%s", cert),
-			fmt.Sprintf("--admission-webhook-key=%s", key),
-			fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
 			"--profiling",
 			"--dump-config",
 			"--dump-sensitive-config",
@@ -234,5 +238,7 @@ func TestMain(m *testing.M) {
 		ctx, cancel := context.WithTimeout(context.Background(), test.EnvironmentCleanupTimeout)
 		defer cancel()
 		helpers.ExitOnErr(ctx, helpers.RemoveCluster(ctx, env.Cluster()))
+		helpers.ExitOnErr(ctx, os.Remove(admission.DefaultAdmissionWebhookCertPath))
+		helpers.ExitOnErr(ctx, os.Remove(admission.DefaultAdmissionWebhookKeyPath))
 	}
 }

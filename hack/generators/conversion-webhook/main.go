@@ -7,9 +7,10 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/kong/kong-operator/internal/webhook/conversion"
 	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/kong/kong-operator/internal/webhook/conversion"
 )
 
 // Updates the file config/crd/patches/zz_generated_conversion_webhook.yaml
@@ -25,13 +26,10 @@ func main() {
 		fmt.Printf("Failed to create %s: %v\n", kustomizePatchFilePath, err)
 		os.Exit(1)
 	}
-	defer fileKustomizePatch.Close()
-
 	if _, err := fileKustomizePatch.WriteString(autoGenerationComment); err != nil {
 		fmt.Printf("Failed to write to %s: %v\n", kustomizePatchFilePath, err)
 		os.Exit(1)
 	}
-
 	for _, wh := range conversion.WebhooksToSetup {
 		if lo.IsEmpty(wh.GVR) {
 			fmt.Printf("GVR is empty for type %T, fix it in the code\n", wh.ForType)
@@ -43,6 +41,7 @@ func main() {
 			os.Exit(1)
 		}
 	}
+	fileKustomizePatch.Close()
 
 	const chartCRDsFilePath = "charts/kong-operator/charts/ko-crds/templates/ko-crds.yaml"
 	fmt.Println("Generating", chartCRDsFilePath)
@@ -74,14 +73,14 @@ func main() {
 		fmt.Printf("Failed to create %s: %v\n", chartCRDsFilePath, err)
 		os.Exit(1)
 	}
-	defer fileCRDs.Close()
-
-	for _, content := range []string{autoGenerationComment, selfSignedCertSecretTemplate, crdContent} {
+	for _, content := range []string{autoGenerationComment, selfSignedCertTemplate, crdContent} {
 		if _, err := fileCRDs.WriteString(content); err != nil {
 			fmt.Printf("Failed to write to %s: %v\n", chartCRDsFilePath, err)
 			os.Exit(1)
 		}
 	}
+	fileCRDs.Close()
+
 	fmt.Println("Successfully finished")
 }
 
@@ -90,7 +89,7 @@ func wrapInIfEnabled(v string) string {
 }
 
 const (
-	// selfSignedCertSecretTemplate contains the template for the self-signed
+	// selfSignedCertTemplate contains the template for the self-signed
 	// certificate secret.
 	// This allows users to not require cert-manager for certificates management.
 	// It is embedded in manifest file containing CRD definitions because it's not
@@ -98,7 +97,7 @@ const (
 	// (for the Secret) in the CRD definition file due to the Secret not being
 	// applied yet at that time.
 	// Helm hooks and their priority do not seem to help here either.
-	selfSignedCertSecretTemplate = `
+	selfSignedCertTemplate = `
 {{ $name := ( include "kong.webhookCertSecretName" .) }}
 {{ $secret := (lookup "v1" "Secret" .Release.Namespace $name) }}
 {{ $serviceName := (include "kong.webhookServiceName" .) }}
@@ -118,8 +117,8 @@ const (
 {{ $caCert = (index $secret.data "ca.crt" ) | b64dec }}
 {{- end }}
 
-{{- if .Values.global.conversionWebhook.enabled }}
-{{- if ( not .Values.global.conversionWebhook.certManager.enabled ) }}
+{{- if .Values.global.webhooks.conversion.enabled }}
+{{- if ( not .Values.global.webhooks.options.certManager.enabled ) }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -184,11 +183,11 @@ func configurationForKustomize() string {
 }
 
 func ifForChartCertManagerAnnotation(v string) string {
-	return fmt.Sprintf("{{ if .Values.global.conversionWebhook.enabled }}\n{{ if .Values.global.conversionWebhook.certManager.enabled }}\n%s\n{{ end }}\n{{ end }}", v)
+	return fmt.Sprintf("{{ if .Values.global.webhooks.conversion.enabled }}\n{{ if .Values.global.webhooks.options.certManager.enabled }}\n%s\n{{ end }}\n{{ end }}", v)
 }
 
 func ifForChartConversionSpec(v string) string {
-	return fmt.Sprintf("{{ if .Values.global.conversionWebhook.enabled }}\n%s\n{{ end }}", v)
+	return fmt.Sprintf("{{ if .Values.global.webhooks.conversion.enabled }}\n%s\n{{ end }}", v)
 }
 
 func fullKustomizePatchConfiguration(gr schema.GroupResource) string {
@@ -228,7 +227,7 @@ func wrapWebhookConfig(content string) string {
 				`{{ template "kong.webhookServiceName" . }}`,
 				`{{ template "kong.namespace" . }}`,
 				`
-{{if not .Values.global.conversionWebhook.certManager.enabled }}
+{{if not .Values.global.webhooks.options.certManager.enabled }}
         caBundle: |
           {{ $caCert | b64enc }}
 {{ end }}`,
@@ -274,7 +273,7 @@ func wrapDeprecatedVersions(content string) string {
 
 			// Add the opening template conditional (following the existing pattern).
 			if isDeprecated {
-				result = append(result, "{{ if .Values.global.conversionWebhook.enabled }}")
+				result = append(result, "{{ if .Values.global.webhooks.conversion.enabled }}")
 			}
 			// Add all lines of this version entry.
 			for j := i; j < versionEnd; j++ {

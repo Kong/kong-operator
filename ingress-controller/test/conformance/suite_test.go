@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -30,6 +31,7 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/admission"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
 	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
@@ -133,11 +135,17 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 
 	t.Log("starting the controller manager")
 	cert, key := certificate.GetKongSystemSelfSignedCerts()
+	require.NoError(t, os.MkdirAll(filepath.Dir(admission.DefaultAdmissionWebhookCertPath), 0755))
+	require.NoError(t, os.WriteFile(admission.DefaultAdmissionWebhookCertPath, cert, 0600))
+	require.NoError(t, os.MkdirAll(filepath.Dir(admission.DefaultAdmissionWebhookKeyPath), 0755))
+	require.NoError(t, os.WriteFile(admission.DefaultAdmissionWebhookKeyPath, key, 0600))
+	t.Cleanup(func() {
+		require.NoError(t, os.Remove(admission.DefaultAdmissionWebhookCertPath))
+		require.NoError(t, os.Remove(admission.DefaultAdmissionWebhookKeyPath))
+	})
+
 	args := []string{
 		"--ingress-class=kong-conformance-tests",
-		fmt.Sprintf("--admission-webhook-cert=%s", cert),
-		fmt.Sprintf("--admission-webhook-key=%s", key),
-		fmt.Sprintf("--admission-webhook-listen=%s:%d", testutils.GetAdmissionWebhookListenHost(), testutils.AdmissionWebhookListenPort),
 		"--profiling",
 		"--dump-config",
 		"--log-level=trace",

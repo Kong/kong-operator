@@ -64,11 +64,6 @@ mise-plugin-install: mise
 mise-install: mise
 	@$(MISE) install -q $(DEP_VER)
 
-KIC_WEBHOOKCONFIG_GENERATOR = $(PROJECT_DIR)/bin/kic-webhook-config-generator
-.PHONY: kic-webhook-config-generator
-kic-webhook-config-generator:
-	( cd ./hack/generators/kic/webhook-config-generator && go build -o $(KIC_WEBHOOKCONFIG_GENERATOR) . )
-
 export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
 
 # Do not store yq's version in .tools_versions.yaml as it is used to get tool versions.
@@ -305,7 +300,7 @@ verify.generators: verify.repo generate verify.diff
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.kic-webhook-config generate.mocks generate.cli-arguments-docs
+generate: generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.cli-arguments-docs
 
 .PHONY: generate.crd-kustomize
 generate.crd-kustomize:
@@ -339,11 +334,6 @@ generate.clientsets: client-gen
 generate.k8sio-gomod-replace:
 	./hack/update-k8sio-gomod-replace.sh
 
-.PHONY: generate.kic-webhook-config
-generate.kic-webhook-config: kustomize kic-webhook-config-generator
-	KUSTOMIZE=$(KUSTOMIZE) $(KIC_WEBHOOKCONFIG_GENERATOR)
-	go fmt ./pkg/utils/kubernetes/resources/...
-
 .PHONY: generate.cli-arguments-docs
 generate.cli-arguments-docs:
 	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments.md
@@ -368,11 +358,15 @@ KUBERNETES_CONFIGURATION_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(KUB
 KUBERNETES_CONFIGURATION_PACKAGE_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_PACKAGE)@$(KUBERNETES_CONFIGURATION_VERSION)
 
 .PHONY: manifests
-manifests: manifests.conversion-webhook manifests.versions manifests.crds manifests.role manifests.charts ## Generate ClusterRole and CustomResourceDefinition objects.
+manifests: manifests.conversion-webhook manifests.validating-webhook manifests.versions manifests.crds manifests.role manifests.charts ## Generate ClusterRole and CustomResourceDefinition objects.
 
 .PHONY: manifests.conversion-webhook
 manifests.conversion-webhook: kustomize
 	KUSTOMIZE_BIN=$(KUSTOMIZE) go run hack/generators/conversion-webhook/main.go
+
+.PHONY: manifests.validating-webhook
+manifests.validating-webhook: kustomize
+	KUSTOMIZE_BIN=$(KUSTOMIZE) go run hack/generators/validating-webhook/main.go
 
 .PHONY: manifests.crds
 manifests.crds: controller-gen ## Generate CustomResourceDefinition objects.
@@ -416,7 +410,7 @@ ensure.go.pkg.downloaded.gateway-api:
 .PHONY: manifests.charts.kong-operator.role
 manifests.charts.kong-operator.role: manifests.role
 	cp $(CONFIG_RBAC_ROLE_DIR)/role.yaml $(KONG_OPERATOR_CHART_DIR)/templates/cluster-role.yaml
-	$(YQ) eval '.metadata.name = "{{ template \"kong.fullname\" . }}-manager-role"' -i $(KONG_OPERATOR_CHART_DIR)/templates/cluster-role.yaml
+	$(YQ) eval '.metadata.name = "{{ template \"kong.fullnamespacedname\" . }}-manager-role"' -i $(KONG_OPERATOR_CHART_DIR)/templates/cluster-role.yaml
 
 .PHONY: manifests.charts.kong-operator.crds.operator
 manifests.charts.kong-operator.crds.operator: kustomize ensure.go.pkg.downloaded.kubernetes-configuration
@@ -695,9 +689,12 @@ test.charts.ct.install:
 # for each release. Without this, some objects like CRDs can still be around
 # when another test helm release is being installed and the above mentioned
 # ownership error will be returned.
+#
+# NOTE: Image pin is temporary until we get an image with
+# https://github.com/Kong/kong-operator/pull/2192
 	ct install --target-branch main \
 		--debug \
-		--helm-extra-set-args "--set=ko-crds.keep=false" \
+		--helm-extra-set-args "--set=image.repository=docker.io/kong/nightly-kong-operator --set=image.tag=sha-67650b7-amd64 --set=image.effectiveSemver=2.0.0 --set=ko-crds.keep=false" \
 		--helm-extra-args "--wait" \
 		--helm-extra-args "--timeout=1m" \
 		--charts charts/$(CHART_NAME) \
