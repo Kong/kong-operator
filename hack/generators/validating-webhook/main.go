@@ -43,7 +43,6 @@ func main() {
 		fmt.Printf("Failed to create %s: %v\n", chartCRDsFilePath, err)
 		os.Exit(1)
 	}
-	defer fileCRDs.Close()
 
 	for _, content := range []string{autoGenerationComment, selfSignedCertSecretTemplate, crdContent} {
 		if _, err := fileCRDs.WriteString(content); err != nil {
@@ -120,6 +119,8 @@ const (
 	// (for the Secret) in the CRD definition file due to the Secret not being
 	// applied yet at that time.
 	// Helm hooks and their priority do not seem to help here either.
+	//
+	//nolint:gosec
 	selfSignedCertSecretTemplate = `
 {{ $name := ( include "kong.webhookValidatingCertSecretName" .) }}
 {{ $secret := (lookup "v1" "Secret" .Release.Namespace $name) }}
