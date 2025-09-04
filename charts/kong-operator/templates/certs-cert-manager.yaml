@@ -1,5 +1,5 @@
-{{- if .Values.global.conversionWebhook.enabled }}
-{{- if .Values.global.conversionWebhook.certManager.enabled }}
+{{- if .Values.global.webhooks.conversion.enabled }}
+{{- if .Values.global.webhooks.options.certManager.enabled }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:

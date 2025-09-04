@@ -290,6 +290,6 @@ func expectedDefaultCfg() manager.Config {
 		ClusterDomain:                           ingressmgrconfig.DefaultClusterDomain,
 		EmitKubernetesEvents:                    true,
 		ConversionWebhookEnabled:                true,
-		ValidationWebhookEnabled:                true,
+		ValidatingWebhookEnabled:                true,
 	}
 }
