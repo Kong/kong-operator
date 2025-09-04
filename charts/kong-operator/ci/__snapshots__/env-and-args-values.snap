@@ -32,6 +32,29 @@ stringData:
   tls.key: |-
     ###DYNAMIC_FIELD###
 ---
+# Source: kong-operator/templates/certs-self-signed.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/name: kong-operator
+    helm.sh/chart: kong-operator-0.0.6
+    app.kubernetes.io/instance: "chartsnap"
+    app.kubernetes.io/version: "2.0.0-alpha.5"
+    app.kubernetes.io/component: ko
+  annotations:
+    dnsNames: "chartsnap-kong-operator-webhook.default.svc,chartsnap-kong-operator-webhook.default.svc.cluster.local"
+  name: chartsnap-kong-operator-webhook-validating-server-cert
+  namespace: default
+type: kubernetes.io/tls
+stringData:
+  ca.crt: |-
+    ###DYNAMIC_FIELD###
+  tls.crt: |-
+    ###DYNAMIC_FIELD###
+  tls.key: |-
+    ###DYNAMIC_FIELD###
+---
 # Source: kong-operator/charts/ko-crds/templates/ko-crds.yaml
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
@@ -53329,6 +53352,8 @@ spec:
         volumeMounts:
         - name: chartsnap-kong-operator-webhook-certs
           mountPath: /tmp/k8s-webhook-server/serving-certs
+        - name: chartsnap-kong-operator-validating-webhook-certs
+          mountPath: /tmp/k8s-webhook-server/serving-certs/validating-admission-webhook
         - name: chartsnap-kong-operator-pod-labels
           mountPath: /etc/podinfo
       securityContext:
@@ -53340,6 +53365,10 @@ spec:
         secret:
           defaultMode: 420
           secretName: chartsnap-kong-operator-webhook-server-cert
+      - name: chartsnap-kong-operator-validating-webhook-certs
+        secret:
+          defaultMode: 420
+          secretName: chartsnap-kong-operator-webhook-validating-server-cert
       - name: chartsnap-kong-operator-pod-labels
         downwardAPI:
           items:

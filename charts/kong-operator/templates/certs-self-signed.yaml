@@ -1,0 +1,41 @@
+{{ $name := ( include "kong.webhookValidatingCertSecretName" .) }}
+{{ $secret := (lookup "v1" "Secret" .Release.Namespace $name) }}
+{{ $serviceName := (include "kong.webhookServiceName" .) }}
+{{ $namespace := (include "kong.namespace" .) }}
+{{ $domainName := ( printf "%s.%s.svc" $serviceName $namespace ) }}
+{{ $domainNameClusterLocal := ( printf "%s.%s.svc.cluster.local" $serviceName $namespace ) }}
+{{ $dnsNames := list ($domainName) ($domainNameClusterLocal) }}
+
+{{ $ca := genCA "" 3650 }}
+{{ $cert := genSignedCert $domainName nil $dnsNames 3650 $ca }}
+{{ $certCert := $cert.Cert }}
+{{ $certKey := $cert.Key }}
+{{ $caCert := $ca.Cert }}
+{{ if $secret }}
+{{ $certCert = (index $secret.data "tls.crt" ) | b64dec }}
+{{ $certKey = (index $secret.data "tls.key" ) | b64dec }}
+{{ $caCert = (index $secret.data "ca.crt" ) | b64dec }}
+{{- end }}
+
+{{- if .Values.global.webhooks.validating.enabled }}
+{{- if ( not .Values.global.webhooks.options.certManager.enabled ) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    {{- include "kong.metaLabels" . | nindent 4 }}
+    app.kubernetes.io/component: ko
+  annotations:
+    dnsNames: {{ join "," $dnsNames | quote }}
+  name: {{ $name }}
+  namespace: {{ template "kong.namespace" . }}
+type: kubernetes.io/tls
+stringData:
+  ca.crt: |
+    {{ $caCert | nindent 4 }}
+  tls.crt: |
+    {{ $certCert | nindent 4 }}
+  tls.key: |
+    {{ $certKey | nindent 4 }}
+{{- end }}
+{{- end }}

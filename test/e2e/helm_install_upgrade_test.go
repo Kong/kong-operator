@@ -139,7 +139,7 @@ func TestHelmUpgrade(t *testing.T) {
 		},
 		{
 			name:             "upgrade from latest minor to current",
-			fromVersion:      "2.0.0-alpha.4", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
+			fromVersion:      "2.0.0-alpha.5", // renovate: datasource=docker packageName=kong/kong-operator depName=kong/kong-operator
 			upgradeToCurrent: true,
 			// This is the effective semver of a next release.
 			// It's needed for the chart to properly render semver-conditional templates.
@@ -360,6 +360,9 @@ func TestHelmUpgrade(t *testing.T) {
 					},
 					"upgrade": {
 						"--devel",
+					},
+					"uninstall": {
+						"--wait",
 					},
 				},
 			}
