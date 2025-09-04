@@ -118,8 +118,8 @@ const (
 {{ $caCert = (index $secret.data "ca.crt" ) | b64dec }}
 {{- end }}
 
-{{- if .Values.global.conversionWebhook.enabled }}
-{{- if ( not .Values.global.conversionWebhook.certManager.enabled ) }}
+{{- if .Values.global.webhooks.conversion.enabled }}
+{{- if ( not .Values.global.webhooks.options.certManager.enabled ) }}
 apiVersion: v1
 kind: Secret
 metadata:
@@ -184,11 +184,11 @@ func configurationForKustomize() string {
 }
 
 func ifForChartCertManagerAnnotation(v string) string {
-	return fmt.Sprintf("{{ if .Values.global.conversionWebhook.enabled }}\n{{ if .Values.global.conversionWebhook.certManager.enabled }}\n%s\n{{ end }}\n{{ end }}", v)
+	return fmt.Sprintf("{{ if .Values.global.webhooks.conversion.enabled }}\n{{ if .Values.global.webhooks.options.certManager.enabled }}\n%s\n{{ end }}\n{{ end }}", v)
 }
 
 func ifForChartConversionSpec(v string) string {
-	return fmt.Sprintf("{{ if .Values.global.conversionWebhook.enabled }}\n%s\n{{ end }}", v)
+	return fmt.Sprintf("{{ if .Values.global.webhooks.conversion.enabled }}\n%s\n{{ end }}", v)
 }
 
 func fullKustomizePatchConfiguration(gr schema.GroupResource) string {
@@ -228,7 +228,7 @@ func wrapWebhookConfig(content string) string {
 				`{{ template "kong.webhookServiceName" . }}`,
 				`{{ template "kong.namespace" . }}`,
 				`
-{{if not .Values.global.conversionWebhook.certManager.enabled }}
+{{if not .Values.global.webhooks.options.certManager.enabled }}
         caBundle: |
           {{ $caCert | b64enc }}
 {{ end }}`,
@@ -274,7 +274,7 @@ func wrapDeprecatedVersions(content string) string {
 
 			// Add the opening template conditional (following the existing pattern).
 			if isDeprecated {
-				result = append(result, "{{ if .Values.global.conversionWebhook.enabled }}")
+				result = append(result, "{{ if .Values.global.webhooks.conversion.enabled }}")
 			}
 			// Add all lines of this version entry.
 			for j := i; j < versionEnd; j++ {

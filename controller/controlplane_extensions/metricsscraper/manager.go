@@ -98,8 +98,7 @@ func (msm *Manager) initMTLSCerts(ctx context.Context) error {
 		},
 		retry.Context(ctx),
 		retry.Attempts(0),
-		retry.MaxDelay(time.Second),
-		retry.MaxJitter(500*time.Millisecond),
+		retry.MaxDelay(3*time.Second),
 		retry.DelayType(retry.BackOffDelay),
 		retry.LastErrorOnly(true),
 		retry.OnRetry(func(n uint, err error) {

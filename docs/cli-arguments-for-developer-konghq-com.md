@@ -158,7 +158,7 @@ rows:
     default: '`false`'
   - flag: '`--enable-validating-webhook`'
     type: '`bool`'
-    description: "Enable the validation webhook."
+    description: "Enable the validating webhook."
     default: '`true`'
   - flag: '`--enforce-config`'
     type: '`bool`'
