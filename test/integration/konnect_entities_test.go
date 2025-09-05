@@ -57,6 +57,7 @@ func TestKonnectEntities(t *testing.T) {
 
 	cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
 		deploy.WithTestIDLabel(testID),
+		deploy.KonnectGatewayControlPlaneLabel(deploy.KonnectTestIDLabel, testID),
 	)
 
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
