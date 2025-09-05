@@ -48,7 +48,7 @@ require (
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
 	github.com/prometheus/client_golang v1.23.0
 	github.com/prometheus/client_model v0.6.2
-	github.com/prometheus/common v0.66.0
+	github.com/prometheus/common v0.66.1
 	github.com/samber/lo v1.51.0
 	github.com/samber/mo v1.15.0
 	github.com/sethvargo/go-password v0.3.1
@@ -188,7 +188,6 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.15.0 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect
-	github.com/grafana/regexp v0.0.0-20240518133315-a468a5bfb3bc // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.25.1 // indirect
 	github.com/gruntwork-io/go-commons v0.8.0 // indirect
