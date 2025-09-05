@@ -91,6 +91,7 @@ jobs:
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
         install: false
+        version: 2025.9.0
 
     - name: run lint
       env:
@@ -121,6 +122,7 @@ jobs:
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
         install: false
+        version: 2025.9.0
 
     - name: run lint.markdownlint
       run: make lint.markdownlint
@@ -143,6 +145,7 @@ jobs:
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
         install: false
+        version: 2025.9.0
     - run: make govulncheck
 
   verify:
@@ -165,6 +168,7 @@ jobs:
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
         install: false
+        version: 2025.9.0
 
     - name: Verify manifests consistency
       run: make verify.manifests
@@ -205,6 +209,7 @@ jobs:
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
         install: false
+        version: 2025.9.0
 
     # We use install.all to install all CRDs and resources also the ones that are not bundled
     # in base kustomization (e.g. currently AIGateway) but which have samples defined.
@@ -249,6 +254,7 @@ jobs:
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
         install: false
+        version: 2025.9.0
 
     - name: Verify installing CRDs via kustomize works
       run: make install
@@ -309,6 +315,7 @@ jobs:
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
         install: false
+        version: 2025.9.0
 
     - name: run unit tests
       run: make test.unit
@@ -347,6 +354,7 @@ jobs:
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
         install: false
+        version: 2025.9.0
 
     - name: Run the crds validation tests
       run: make test.crds-validation
@@ -376,6 +384,7 @@ jobs:
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
         install: false
+        version: 2025.9.0
 
     - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master @ 20250107
       id: license
@@ -438,6 +447,7 @@ jobs:
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
         install: false
+        version: 2025.9.0
 
     - name: run conformance tests
       run: make test.conformance
@@ -496,6 +506,7 @@ jobs:
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
         install: false
+        version: 2025.9.0
 
     - name: run integration tests
       working-directory: ${{ matrix.directory }}
@@ -554,6 +565,7 @@ jobs:
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
         install: false
+        version: 2025.9.0
 
     - name: run integration tests
       run: make test.integration_bluegreen
@@ -611,6 +623,7 @@ jobs:
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
         install: false
+        version: 2025.9.0
 
     - name: run e2e tests
       run: make test.e2e

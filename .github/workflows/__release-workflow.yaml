@@ -154,6 +154,7 @@ jobs:
       - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
         with:
           install: false
+          version: 2025.9.0
 
       # This step is required to check if the OP Service Account Token is available and export a boolean output
       # to be used in the next step. It's because we cannot use a secret in a step's condition.
@@ -215,6 +216,7 @@ jobs:
       - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
         with:
           install: false
+          version: 2025.9.0
 
       # This step is required to check if the OP Service Account Token is available and export a boolean output
       # to be used in the next step. It's because we cannot use a secret in a step's condition.
@@ -304,6 +306,7 @@ jobs:
       - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
         with:
           install: false
+          version: 2025.9.0
 
       # Generated manifests are part of the release PR.
       - name: Generate manifests
