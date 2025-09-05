@@ -6,11 +6,15 @@ import (
 	"time"
 
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 
 	"github.com/kong/kong-operator/modules/manager/scheme"
@@ -30,6 +34,68 @@ const (
 var sharedEventuallyConfig = common.EventuallyConfig{
 	Timeout: 15 * time.Second,
 	Period:  100 * time.Millisecond,
+}
+
+type warningCollector struct {
+	warnings []string
+}
+
+func (w *warningCollector) HandleWarningHeader(code int, agent string, warning string) {
+	w.warnings = append(w.warnings, warning)
+}
+
+func TestKonnectValidationAdmissionPolicy(t *testing.T) {
+
+	var (
+		ctx              = t.Context()
+		scheme           = scheme.Get()
+		cfg, ns          = envtest.Setup(t, ctx, scheme)
+		commonObjectMeta = metav1.ObjectMeta{
+			GenerateName: "dp-",
+			Namespace:    ns.Name,
+		}
+	)
+
+	chartPath := path.Join(test.ProjectRootPath(), ChartPath)
+	templates := []string{
+		"templates/validation-policy-konnect.yaml",
+	}
+
+	apply.Template(t, cfg, chartPath, templates)
+	wc := &warningCollector{}
+	cfg.WarningHandler = wc
+
+	t.Run("static autoscale", func(t *testing.T) {
+		common.TestCasesGroup[*konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration]{
+			{
+				Name: "deprecate message with static autoscale type",
+				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
+					ObjectMeta: commonObjectMeta,
+					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
+						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
+							{
+								Provider: "aws",
+								Region:   "us-west-2",
+								NetworkRef: commonv1alpha1.ObjectRef{
+									Type:      commonv1alpha1.ObjectRefTypeKonnectID,
+									KonnectID: lo.ToPtr("kpat_ABCDEFGHILMNOPQRSTUVZabcdefghilmnopqrstuvz0123456"),
+								},
+								Autoscale: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
+									Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic,
+									Static: &konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleStatic{
+										InstanceType: "small",
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+	require.Len(t, wc.warnings, 1)
+	assert.Contains(t, wc.warnings[0], "Value \"static\" in spec.dataplane_groups.autoscale.type is deprecated, use \"automatic\" instead.", wc.warnings)
 }
 
 func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
