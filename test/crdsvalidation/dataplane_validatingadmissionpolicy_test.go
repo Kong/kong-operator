@@ -1,6 +1,7 @@
 package crdsvalidation
 
 import (
+	"path"
 	"testing"
 	"time"
 
@@ -13,13 +14,17 @@ import (
 	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 
 	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test/envtest"
-	"github.com/kong/kong-operator/test/helpers/kustomize"
+	"github.com/kong/kong-operator/test/helpers/apply"
 )
 
 const (
-	// KustomizePathValidatingPolicies is the path to the Kustomize directory containing the validation policies.
-	KustomizePathValidatingPolicies = "config/default/validating_policies/"
+	// ChartPath is the path relative to the project to the kong-operator chart
+	ChartPath = "charts/kong-operator"
+
+	// ValidationPolicy_ contain validation policies path relative to the kong-operator chart
+	ValidationPolicyDataplane = "templates/validation-policy-dataplane.yaml"
 )
 
 var sharedEventuallyConfig = common.EventuallyConfig{
@@ -40,7 +45,12 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 		}
 	)
 
-	kustomize.Apply(ctx, t, cfg, KustomizePathValidatingPolicies)
+	chartPath := path.Join(test.ProjectRootPath(), ChartPath)
+	templates := []string{
+		"templates/validation-policy-dataplane.yaml",
+	}
+
+	apply.Template(t, cfg, chartPath, templates)
 
 	t.Run("ports", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
