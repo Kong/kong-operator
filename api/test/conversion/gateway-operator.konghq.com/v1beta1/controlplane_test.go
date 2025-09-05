@@ -26,6 +26,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 	cases := []struct {
 		name                 string
 		spec                 operatorv1beta1.ControlPlaneSpec
+		objPatchFunc         func(obj *operatorv1beta1.ControlPlane)
 		expectsDataPlane     bool
 		expectedIngressClass *string
 		expectedFeatureGates []operatorv2beta1.ControlPlaneFeatureGate
@@ -197,6 +198,25 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 			expectsDataPlane:     false,
 		},
 		{
+			name: "With DataPlane ref but managed by Gateway",
+			spec: operatorv1beta1.ControlPlaneSpec{
+				ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
+					DataPlane: lo.ToPtr("test-dataplane"),
+				},
+			},
+			objPatchFunc: func(obj *operatorv1beta1.ControlPlane) {
+				obj.OwnerReferences = []metav1.OwnerReference{
+					{
+						APIVersion: "gateway.networking.k8s.io/v1",
+						Kind:       "Gateway",
+						Name:       "test-gateway",
+						UID:        "12345",
+					},
+				}
+			},
+			expectsDataPlane: false,
+		},
+		{
 			name: "With own namespace watching",
 			spec: operatorv1beta1.ControlPlaneSpec{
 				ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
@@ -227,6 +247,9 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 						},
 					},
 				},
+			}
+			if tc.objPatchFunc != nil {
+				tc.objPatchFunc(obj)
 			}
 
 			dst := &operatorv2beta1.ControlPlane{}

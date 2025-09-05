@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 )
@@ -67,24 +68,34 @@ func (c *ControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 
 	dst.ObjectMeta = c.ObjectMeta
 
+	isOwnedByGateway := lo.ContainsBy(c.GetOwnerReferences(), func(owner metav1.OwnerReference) bool {
+		return strings.HasPrefix(owner.APIVersion, gatewayv1.GroupName) &&
+			owner.Kind == "Gateway"
+	})
+
 	// Setting IngressClass wasn't required in v1beta1, but for v2beta1 it is,
+	// when ControlPlane is not managed by a Gateway,
 	// thus fill with a default value to make it work without hassle.
-	class := lo.FromPtrOr(c.Spec.IngressClass, "kong")
-	if err := c.Spec.convertTo(&dst.Spec.ControlPlaneOptions, &class); err != nil {
+	class := c.Spec.IngressClass
+	if !isOwnedByGateway && class == nil {
+		class = lo.ToPtr("kong")
+	}
+
+	if err := c.Spec.convertTo(&dst.Spec.ControlPlaneOptions, class); err != nil {
 		return err
 	}
 	dst.Spec.Extensions = c.Spec.Extensions
 
-	if dp := lo.FromPtr(c.Spec.DataPlane); dp != "" {
+	if dp := lo.FromPtr(c.Spec.DataPlane); dp == "" || isOwnedByGateway {
+		dst.Spec.DataPlane = operatorv2beta1.ControlPlaneDataPlaneTarget{
+			Type: operatorv2beta1.ControlPlaneDataPlaneTargetManagedByType,
+		}
+	} else {
 		dst.Spec.DataPlane = operatorv2beta1.ControlPlaneDataPlaneTarget{
 			Type: operatorv2beta1.ControlPlaneDataPlaneTargetRefType,
 			Ref: &operatorv2beta1.ControlPlaneDataPlaneTargetRef{
 				Name: dp,
 			},
-		}
-	} else {
-		dst.Spec.DataPlane = operatorv2beta1.ControlPlaneDataPlaneTarget{
-			Type: operatorv2beta1.ControlPlaneDataPlaneTargetManagedByType,
 		}
 	}
 
@@ -229,8 +240,6 @@ func (c *ControlPlaneOptions) convertTo(dst *operatorv2beta1.ControlPlaneOptions
 	}
 
 	*dst = operatorv2beta1.ControlPlaneOptions{
-		IngressClass: ingressClass,
-
 		WatchNamespaces: lo.ToPtr(operatorv2beta1.WatchNamespaces{
 			Type: operatorv2beta1.WatchNamespacesType(nn.Type),
 			List: nn.List,
@@ -262,6 +271,9 @@ func (c *ControlPlaneOptions) convertTo(dst *operatorv2beta1.ControlPlaneOptions
 			NodeRefreshPeriod:  nodeRefreshPeriod,
 			ConfigUploadPeriod: configUploadPeriod,
 		},
+	}
+	if ingressClass != nil {
+		dst.IngressClass = ingressClass
 	}
 	return nil
 }
