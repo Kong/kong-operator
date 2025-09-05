@@ -50,7 +50,7 @@ func ensureDataPlaneCertificate(
 	}
 	return secrets.EnsureCertificate(ctx,
 		dataplane,
-		fmt.Sprintf("%s.%s.svc", adminServiceNN.Name, adminServiceNN.Namespace),
+		fmt.Sprintf("*.%s.%s.svc", adminServiceNN.Name, adminServiceNN.Namespace),
 		clusterCASecretNN,
 		usages,
 		keyConfig,

@@ -70,7 +70,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 			want: sets.New(
 				DiscoveredAdminAPI{
 					Address:       "https://[fe80::cae2:65ff:fe7b:2852]:8444",
-					TLSServerName: "kong-admin.ns.svc",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Name: "pod-1", Namespace: namespaceName,
 					},
@@ -98,7 +98,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 			want: sets.New(
 				DiscoveredAdminAPI{
 					Address:       "https://10.0.0.1:8444",
-					TLSServerName: "kong-admin.ns.svc",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Name: "pod-1", Namespace: namespaceName,
 					},
@@ -127,7 +127,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 			want: sets.New(
 				DiscoveredAdminAPI{
 					Address:       "https://10.0.0.1:8444",
-					TLSServerName: "kong-admin.ns.svc",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Name: "pod-1", Namespace: namespaceName,
 					},
@@ -155,7 +155,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 			want: sets.New(
 				DiscoveredAdminAPI{
 					Address:       "https://10.0.0.1:8444",
-					TLSServerName: "kong-admin.ns.svc",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Name: "pod-1", Namespace: namespaceName,
 					},
@@ -257,7 +257,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 			want: sets.New(
 				DiscoveredAdminAPI{
 					Address:       "https://10.0.0.1:8444",
-					TLSServerName: "kong-admin.ns.svc",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Namespace: namespaceName,
 						Name:      "pod-1",
@@ -265,7 +265,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 				},
 				DiscoveredAdminAPI{
 					Address:       "https://10.0.1.1:8444",
-					TLSServerName: "kong-admin.ns.svc",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Namespace: namespaceName,
 						Name:      "pod-2",
@@ -353,7 +353,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 			want: sets.New(
 				DiscoveredAdminAPI{
 					Address:       "https://10.0.0.1:8443",
-					TLSServerName: "kong-admin.ns.svc",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Namespace: namespaceName,
 						Name:      "pod-1",
@@ -361,7 +361,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 				},
 				DiscoveredAdminAPI{
 					Address:       "https://10.0.0.1:8444",
-					TLSServerName: "kong-admin.ns.svc",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Namespace: namespaceName,
 						Name:      "pod-1",
@@ -524,7 +524,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 			want: sets.New(
 				DiscoveredAdminAPI{
 					Address:       "https://10.0.0.1:8444",
-					TLSServerName: "kong-admin.ns.svc",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Namespace: namespaceName,
 						Name:      "pod-1",
@@ -532,7 +532,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 				},
 				DiscoveredAdminAPI{
 					Address:       "https://9.0.0.1:8444",
-					TLSServerName: "kong-admin.ns.svc",
+					TLSServerName: "pod.kong-admin.ns.svc",
 					PodRef: k8stypes.NamespacedName{
 						Namespace: namespaceName,
 						Name:      "pod-2",
