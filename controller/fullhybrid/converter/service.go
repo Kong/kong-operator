@@ -9,8 +9,10 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
+	"github.com/kong/kong-operator/controller/fullhybrid/refs"
 	"github.com/kong/kong-operator/controller/fullhybrid/utils"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
@@ -36,7 +38,7 @@ type serviceConverter struct {
 
 type serviceStore struct {
 	httpBackendRefs       []gwtypes.HTTPBackendRef
-	konnectNamespacedRefs []configurationv1alpha1.KonnectNamespacedRef
+	konnectNamespacedRefs []commonv1alpha1.KonnectNamespacedRef
 }
 
 // NewServiceConverter returns a new instance of serviceConverter.
@@ -145,6 +147,15 @@ func (d *serviceConverter) loadInputStore(ctx context.Context) error {
 	}
 
 	for _, r := range httpRoutes.Items {
+		namespacedRefs, err := refs.GetNamespacedRefs(ctx, d.Client, &r)
+		if err != nil {
+			return err
+		}
+		// In case there is no ControlPlane reference, skip the resource.
+		if len(namespacedRefs) == 0 {
+			continue
+		}
+		d.store.konnectNamespacedRefs = append(d.store.konnectNamespacedRefs, namespacedRefs...)
 		for _, rule := range r.Spec.Rules {
 			if b, found := lo.Find(rule.BackendRefs, func(b gwtypes.HTTPBackendRef) bool {
 				namespace := d.service.Namespace
@@ -171,6 +182,7 @@ func (d *serviceConverter) loadInputStore(ctx context.Context) error {
 // Returns an error if metadata setting fails.
 func (d *serviceConverter) translate() error {
 	for _, r := range d.store.httpBackendRefs {
+		kongServices := make([]configurationv1alpha1.KongService, len(d.store.konnectNamespacedRefs))
 		kongService := configurationv1alpha1.KongService{
 			Spec: configurationv1alpha1.KongServiceSpec{
 				KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
@@ -179,11 +191,31 @@ func (d *serviceConverter) translate() error {
 				},
 			},
 		}
-		hashSpec := utils.Hash(d.service)
-		if err := utils.SetMetadata(d.service, &kongService, hashSpec); err != nil {
-			return err
+		for i, ref := range d.store.konnectNamespacedRefs {
+			kongServiceCopy := kongService.DeepCopy()
+			kongServiceCopy.Spec.ControlPlaneRef = &commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+					Name:      ref.Name,
+					Namespace: ref.Namespace,
+				},
+			}
+
+			if err := d.setMetadata(kongServiceCopy); err != nil {
+				return err
+			}
+			kongServices[i] = *kongServiceCopy
 		}
-		d.outputStore = append(d.outputStore, kongService)
+
+		d.outputStore = append(d.outputStore, kongServices...)
+	}
+	return nil
+}
+
+func (d *serviceConverter) setMetadata(kongService *configurationv1alpha1.KongService) error {
+	hashSpec := utils.Hash(kongService.Spec)
+	if err := utils.SetMetadata(d.service, kongService, hashSpec); err != nil {
+		return err
 	}
 	return nil
 }

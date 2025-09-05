@@ -674,9 +674,9 @@ func newKonnectPluginController[
 	}
 }
 
-func newGatewayAPIHybridController[t converter.RootObject](mgr ctrl.Manager) ControllerDef {
+func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager) ControllerDef {
 	return ControllerDef{
 		Enabled:    true,
-		Controller: fullhybrid.NewGatewayAPIHybridReconciler[t](mgr),
+		Controller: fullhybrid.NewGatewayAPIHybridReconciler[t, tPtr](mgr),
 	}
 }

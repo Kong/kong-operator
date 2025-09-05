@@ -10,27 +10,31 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-type GatewayAPIHybridReconciler[t converter.RootObject, u client.Object] struct {
+type GatewayAPIHybridReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]] struct {
 	client.Client
 }
 
-func NewGatewayAPIHybridReconciler[t converter.RootObject](mgr ctrl.Manager) *GatewayAPIHybridReconciler[t, client.Object] {
-	return &GatewayAPIHybridReconciler[t, client.Object]{
+func NewGatewayAPIHybridReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager) *GatewayAPIHybridReconciler[t, tPtr] {
+	return &GatewayAPIHybridReconciler[t, tPtr]{
 		Client: mgr.GetClient(),
 	}
 }
 
-func (r *GatewayAPIHybridReconciler[t, u]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	var obj u
+// SetupWithManager sets up the controller with the provided manager.
+// It registers the reconciler to watch and manage resources of type 'u'.
+func (r *GatewayAPIHybridReconciler[t, tPtr]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	var obj = any(new(t)).(tPtr)
 	return ctrl.NewControllerManagedBy(mgr).
 		For(obj).
 		Complete(r)
 }
 
-func (r *GatewayAPIHybridReconciler[t, u]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+// Reconcile reconciles the state of a custom resource by fetching the object,
+// converting it to the expected type, translating it, and enforcing its desired state.
+func (r *GatewayAPIHybridReconciler[t, tPtr]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 
-	var obj u
+	var obj tPtr
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}

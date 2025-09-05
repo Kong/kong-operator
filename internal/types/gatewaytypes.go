@@ -8,6 +8,7 @@ type (
 	Gateway                = gatewayv1.Gateway
 	GatewayList            = gatewayv1.GatewayList
 	GatewayClass           = gatewayv1.GatewayClass
+	GatewayClassSpec       = gatewayv1.GatewayClassSpec
 	GatewaySpec            = gatewayv1.GatewaySpec
 	GatewayStatusAddress   = gatewayv1.GatewayStatusAddress
 	Listener               = gatewayv1.Listener
@@ -29,6 +30,7 @@ type (
 	BackendRef             = gatewayv1.BackendRef
 	BackendObjectReference = gatewayv1.BackendObjectReference
 	HTTPBackendRef         = gatewayv1.HTTPBackendRef
+	ParametersReference    = gatewayv1.ParametersReference
 )
 
 var GroupVersion = gatewayv1.GroupVersion

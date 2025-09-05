@@ -34,6 +34,11 @@ type RootObject interface {
 		gwtypes.HTTPRoute
 }
 
+type RootObjectPtr[T RootObject] interface {
+	*T
+	client.Object
+}
+
 // NewConverter is a factory function that creates and returns an APIConverter instance
 // based on the type of the provided root object. It supports different types of root objects
 // and returns an error if the type is unsupported.
