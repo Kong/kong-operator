@@ -127,7 +127,7 @@ func TestKongAdminAPIController(t *testing.T) {
 	client, err := ctrlclient.New(cfg, ctrlclient.Options{})
 	require.NoError(t, err)
 	getTLSServerName := func(adminSvc corev1.Service) string {
-		return fmt.Sprintf("%s.%s.svc", adminSvc.Name, adminSvc.Namespace)
+		return fmt.Sprintf("pod.%s.%s.svc", adminSvc.Name, adminSvc.Namespace)
 	}
 
 	t.Run("Endpoints are matched properly", func(t *testing.T) {

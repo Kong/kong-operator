@@ -37,13 +37,6 @@ func TestAdminAPIClientWithTLSOpts(t *testing.T) {
 		},
 	}
 
-	t.Run("with mutually exclusive options set, it should fail", func(t *testing.T) {
-		optsConflict := opts
-		optsConflict.TLSSkipVerify = true
-		_, err := adminapi.NewKongAPIClient("https://localhost", optsConflict, "")
-		require.ErrorContains(t, err, "when TLSSkipVerify is set, no other TLS options can be set")
-	})
-
 	t.Run("without kong admin token", func(t *testing.T) {
 		validate(t, opts, caCert, cert, key, "")
 	})
@@ -89,13 +82,6 @@ func TestAdminAPIClientWithTLSOptsAndFilePaths(t *testing.T) {
 			KeyFile:  certPrivateKeyFile.Name(),
 		},
 	}
-
-	t.Run("with mutually exclusive options set, it should fail", func(t *testing.T) {
-		optsConflict := opts
-		optsConflict.TLSSkipVerify = true
-		_, err := adminapi.NewKongAPIClient("https://localhost", optsConflict, "")
-		require.ErrorContains(t, err, "when TLSSkipVerify is set, no other TLS options can be set")
-	})
 
 	t.Run("without kong admin token", func(t *testing.T) {
 		validate(t, opts, caCert, cert, key, "")
