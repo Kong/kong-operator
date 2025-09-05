@@ -89,6 +89,7 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 	// Create a Konnect control plane for the KonnectExtension to attach to.
 	cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
 		deploy.WithTestIDLabel(testID),
+		deploy.KonnectGatewayControlPlaneLabel(deploy.KonnectTestIDLabel, testID),
 	)
 
 	t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
@@ -126,6 +127,7 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 	cp = deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
 		deploy.WithTestIDLabel(testID),
 		deploy.WithName(cp.Name), // Reuse the same name to ensure the KonnectExtension is recreated with the same name.
+		deploy.KonnectGatewayControlPlaneLabel(deploy.KonnectTestIDLabel, testID),
 	)
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
 
@@ -192,6 +194,7 @@ func TestKonnectExtension(t *testing.T) {
 		// Create a Konnect control plane for the KonnectExtension to attach to.
 		cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
 			deploy.WithTestIDLabel(testID),
+			deploy.KonnectGatewayControlPlaneLabel(deploy.KonnectTestIDLabel, testID),
 		)
 		t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
 
