@@ -41,6 +41,8 @@
 
 - Vendor gateway-operator CRDs locally and switch Kustomize to use the vendored source.
   [#2195](https://github.com/Kong/kong-operator/pull/2195)
+- Relax deployment readiness check during rolling updates.
+  [#2223](https://github.com/Kong/kong-operator/pull/2223)
 
 ## [v2.0.0-alpha.5]
 
