@@ -79,9 +79,15 @@ func TestManager_Scheduling(t *testing.T) {
 		err := multiManager.IsInstanceReady(mockInstance2.ID())
 		require.NoError(t, err)
 
-		err = multiManager.IsInstanceReady(mockInstance1.ID())
-		require.Error(t, err)
-		require.IsType(t, multiinstance.InstanceNotFoundError{}, err)
+		// Deletion from the instance map happens asynchronously in manager
+		// so use require.EventuallyWithT to wait for the error to be returned.
+		// Otherwise it may happen that the error is not returned immediately
+		// because the information hasn't been sent on StopChannel yet.
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			err := multiManager.IsInstanceReady(mockInstance1.ID())
+			require.Error(t, err)
+			require.IsType(t, multiinstance.InstanceNotFoundError{}, err)
+		}, waitTime, tickTime)
 	})
 }
 
