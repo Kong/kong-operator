@@ -10,7 +10,8 @@ import (
 	"time"
 
 	prom "github.com/prometheus/client_model/go"
-	"github.com/prometheus/common/expfmt"
+	prometheusexpfmt "github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -101,7 +102,7 @@ func TestMetricsAreServed(t *testing.T) {
 }
 
 func extractAllMetrics(t *assert.CollectT, body io.Reader) []*prom.MetricFamily {
-	var parser expfmt.TextParser
+	parser := prometheusexpfmt.NewTextParser(model.LegacyValidation)
 	mf, err := parser.TextToMetricFamilies(body)
 	require.NoError(t, err)
 	return lo.Values(mf)
