@@ -6,15 +6,18 @@ import (
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
+	"github.com/kong/kong-operator/controller/fullhybrid/utils"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/pkg/consts"
 )
 
-var _ APIConverter[corev1.Service] = &dummyConverter{}
+var _ APIConverter[*corev1.Service] = &dummyConverter{}
 
 // dummyConverter is a concrete implementation of the APIConverter interface.
 // It can be seen as an oversimplified version of the Service converter that has the main
@@ -27,7 +30,7 @@ var _ APIConverter[corev1.Service] = &dummyConverter{}
 type dummyConverter struct {
 	client.Client
 
-	service     corev1.Service
+	service     *corev1.Service
 	store       dummyStore
 	outputStore []configurationv1alpha1.KongService
 }
@@ -47,13 +50,18 @@ func NewDummyConverter(cl client.Client) *dummyConverter {
 	}
 }
 
+// GetRootObject implements APIConverter.
+func (d *dummyConverter) GetRootObject() *corev1.Service {
+	return d.service
+}
+
 // SetRootObject implements APIConverter.
-func (d *dummyConverter) SetRootObject(obj corev1.Service) {
+func (d *dummyConverter) SetRootObject(obj *corev1.Service) {
 	d.service = obj
 }
 
-// LoadStore implements APIConverter.
-func (d *dummyConverter) LoadStore(ctx context.Context) error {
+// LoadInputStore implements APIConverter.
+func (d *dummyConverter) LoadInputStore(ctx context.Context) error {
 	// List only the HTTPRoutes the the same namespace as the service.
 	// Do not consider cross-namespace refs in the dummy implementation.
 	httpRoutes := gwtypes.HTTPRouteList{}
@@ -87,24 +95,93 @@ func (d *dummyConverter) LoadStore(ctx context.Context) error {
 // Translate implements APIConverter.
 func (d *dummyConverter) Translate() error {
 	for _, r := range d.store.httpBackendRefs {
-		serviceName := fmt.Sprintf("%s-%d", d.service.Name, *r.Port)
-		d.outputStore = append(d.outputStore, configurationv1alpha1.KongService{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceName,
-				Namespace: d.service.Namespace,
-			},
+		kongService := configurationv1alpha1.KongService{
 			Spec: configurationv1alpha1.KongServiceSpec{
 				KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-					Name: lo.ToPtr(serviceName),
+					Name: lo.ToPtr(d.service.Name + lo.Ternary(r.Port != nil, fmt.Sprintf("-%d", *r.Port), "")),
 					Port: int64(*r.Port),
 				},
 			},
-		})
+		}
+		if err := d.setMetadata(&kongService); err != nil {
+			return err
+		}
+		d.outputStore = append(d.outputStore, kongService)
 	}
 	return nil
 }
 
-// DumpOutputStore is an utility function to allow testing the dummy converter in isolation, without exposing internal state.
-func (d *dummyConverter) DumpOutputStore() []configurationv1alpha1.KongService {
-	return d.outputStore
+// GetOutputStore implements APIConverter.
+func (d *dummyConverter) GetOutputStore(ctx context.Context) []unstructured.Unstructured {
+	objects := make([]unstructured.Unstructured, 0, len(d.outputStore))
+	for _, ks := range d.outputStore {
+		unstr, err := utils.ToUnstructured(&ks)
+		if err != nil {
+			continue
+		}
+		objects = append(objects, unstr)
+	}
+	return objects
+}
+
+// Reduce implements APIConverter.
+func (d *dummyConverter) Reduce(obj unstructured.Unstructured) []utils.ReduceFunc {
+	switch obj.GetKind() {
+	// Order here is key as the handlers are called sequentially.
+	case "KongService":
+		return []utils.ReduceFunc{
+			utils.KeepProgrammed,
+			utils.KeepYoungest,
+		}
+	default:
+		return nil
+	}
+}
+
+// ListExistingObjects implements APIConverter.
+func (d *dummyConverter) ListExistingObjects(ctx context.Context) ([]unstructured.Unstructured, error) {
+	if d.service == nil {
+		return nil, nil
+	}
+
+	list := &configurationv1alpha1.KongServiceList{}
+	labels := map[string]string{
+		consts.GatewayOperatorManagedByLabel:          consts.ServiceManagedByLabel,
+		consts.GatewayOperatorManagedByNameLabel:      d.service.Name,
+		consts.GatewayOperatorManagedByNamespaceLabel: d.service.Namespace,
+	}
+	opts := []client.ListOption{
+		client.InNamespace(d.service.Namespace),
+		client.MatchingLabels(labels),
+	}
+	if err := d.List(ctx, list, opts...); err != nil {
+		return nil, err
+	}
+
+	unstructuredItems := make([]unstructured.Unstructured, 0, len(list.Items))
+	for _, item := range list.Items {
+		unstr, err := utils.ToUnstructured(&item)
+		if err != nil {
+			return nil, err
+		}
+		unstructuredItems = append(unstructuredItems, unstr)
+	}
+
+	return unstructuredItems, nil
+}
+
+// setMetadata sets the metadata for the given KongService.
+func (d *dummyConverter) setMetadata(kongService *configurationv1alpha1.KongService) error {
+	kongService.SetGenerateName(d.service.Name + "-")
+	kongService.SetNamespace(d.service.Namespace)
+
+	labels := map[string]string{
+		consts.GatewayOperatorManagedByLabel:          consts.ServiceManagedByLabel,
+		consts.GatewayOperatorManagedByNameLabel:      d.service.Name,
+		consts.GatewayOperatorManagedByNamespaceLabel: d.service.Namespace,
+		consts.GatewayOperatorHashSpecLabel:           utils.Hash(kongService.Spec),
+	}
+	kongService.SetLabels(labels)
+
+	return controllerutil.SetOwnerReference(d.service, kongService, d.Scheme(), controllerutil.WithBlockOwnerDeletion(true))
 }

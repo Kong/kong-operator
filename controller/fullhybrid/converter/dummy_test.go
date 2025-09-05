@@ -1,4 +1,4 @@
-package converter_test
+package converter
 
 import (
 	"context"
@@ -8,23 +8,23 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
-	"github.com/kong/kong-operator/controller/fullhybrid/converter"
+	"github.com/kong/kong-operator/controller/fullhybrid/utils"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
-func TestDummyConverter(t *testing.T) {
-
+func TestDummyTranslation(t *testing.T) {
 	testCases := []struct {
 		name           string
 		service        corev1.Service
 		httpRoutes     []client.Object
-		expectedOutput []configurationv1alpha1.KongService
+		expectedOutput []client.Object
 	}{
 		{
 			name: "service with no ports",
@@ -61,7 +61,7 @@ func TestDummyConverter(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: []configurationv1alpha1.KongService{},
+			expectedOutput: []client.Object{},
 		},
 		{
 			name: "service with matching port",
@@ -102,12 +102,8 @@ func TestDummyConverter(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: []configurationv1alpha1.KongService{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service-80",
-						Namespace: "default",
-					},
+			expectedOutput: []client.Object{
+				&configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 							Name: lo.ToPtr("test-service-80"),
@@ -197,12 +193,8 @@ func TestDummyConverter(t *testing.T) {
 					},
 				},
 			},
-			expectedOutput: []configurationv1alpha1.KongService{
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service-80",
-						Namespace: "default",
-					},
+			expectedOutput: []client.Object{
+				&configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 							Name: lo.ToPtr("test-service-80"),
@@ -210,11 +202,7 @@ func TestDummyConverter(t *testing.T) {
 						},
 					},
 				},
-				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service-443",
-						Namespace: "default",
-					},
+				&configurationv1alpha1.KongService{
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 							Name: lo.ToPtr("test-service-443"),
@@ -228,17 +216,29 @@ func TestDummyConverter(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+
 			cl := fake.NewClientBuilder().
 				WithScheme(scheme.Get()).
 				WithObjects(&tc.service).
 				WithObjects(tc.httpRoutes...).
 				Build()
 
-			dummyConverter := converter.NewDummyConverter(cl)
-			dummyConverter.SetRootObject(tc.service)
-			require.NoError(t, dummyConverter.LoadStore(context.Background()))
+			dummyConverter := NewDummyConverter(cl)
+			dummyConverter.SetRootObject(&tc.service)
+
+			for _, svc := range tc.expectedOutput {
+				require.NoError(t, dummyConverter.setMetadata(svc.(*configurationv1alpha1.KongService)))
+			}
+			expectedUnstructured := make([]unstructured.Unstructured, len(tc.expectedOutput))
+			for i, obj := range tc.expectedOutput {
+				u, err := utils.ToUnstructured(obj)
+				require.NoError(t, err)
+				expectedUnstructured[i] = u
+			}
+
+			require.NoError(t, dummyConverter.LoadInputStore(context.Background()))
 			require.NoError(t, dummyConverter.Translate())
-			require.EqualValues(t, tc.expectedOutput, dummyConverter.DumpOutputStore())
+			require.ElementsMatch(t, expectedUnstructured, dummyConverter.GetOutputStore(context.Background()))
 		})
 	}
 }
