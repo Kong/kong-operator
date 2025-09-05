@@ -28,6 +28,9 @@ import (
 const (
 	// TestIDLabel is the label key used to identify resources created by the test suite.
 	TestIDLabel = "konghq.com/test-id"
+	// KonnectTestIDLabel is the label key added in the Konnect entity used to identify them created by the test suite.
+	// Since the label cannot start with `kong`, we use another key.
+	KonnectTestIDLabel = "operator-test-id"
 )
 
 // ObjOption is a function that modifies a  client.Object.
@@ -313,6 +316,25 @@ func KonnectGatewayControlPlaneTypeWithCloudGatewaysEnabled() ObjOption {
 			panic(fmt.Errorf("%T does not implement KonnectGatewayControlPlane", obj))
 		}
 		cp.SetKonnectCloudGateway(lo.ToPtr(true))
+	}
+}
+
+// KonnectGatewayControlPlaneLabel returns an ObjOption that adds the given label to the `spec.createControlPlaneRequest.labels`
+// of the KonnectGatewayControlPlane.
+// This adds the given label on the created control plane in Konnect (instead of the label in the k8s metadata).
+func KonnectGatewayControlPlaneLabel(key, value string) ObjOption {
+	return func(obj client.Object) {
+		cp, ok := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
+		if !ok {
+			panic(fmt.Errorf("%T does not implement KonnectGatewayControlPlane", obj))
+		}
+		if cp.Spec.CreateControlPlaneRequest == nil {
+			cp.Spec.CreateControlPlaneRequest = &sdkkonnectcomp.CreateControlPlaneRequest{}
+		}
+		if cp.Spec.CreateControlPlaneRequest.Labels == nil {
+			cp.Spec.CreateControlPlaneRequest.Labels = map[string]string{}
+		}
+		cp.Spec.CreateControlPlaneRequest.Labels[key] = value
 	}
 }
 

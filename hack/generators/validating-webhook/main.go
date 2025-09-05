@@ -32,10 +32,10 @@ func main() {
 	}
 	crdContent := out.String()
 
-	crdContent = wrapInIfEnabled(crdContent)
+	crdContent = wrapInIfWebhookEnabled(crdContent)
 	crdContent = templateNamespace(crdContent)
 	crdContent = templateLabels(crdContent)
-	crdContent = templateInjectCAAnnotation(crdContent)
+	crdContent = templateInjectCAAnnotationForCertManager(crdContent)
 
 	var fileCRDs *os.File
 	fileCRDs, err := os.Create(chartCRDsFilePath)
@@ -43,7 +43,8 @@ func main() {
 		fmt.Printf("Failed to create %s: %v\n", chartCRDsFilePath, err)
 		os.Exit(1)
 	}
-	for _, content := range []string{autoGenerationComment, crdContent} {
+
+	for _, content := range []string{autoGenerationComment, selfSignedCertSecretTemplate, crdContent} {
 		if _, err := fileCRDs.WriteString(content); err != nil {
 			fmt.Printf("Failed to write to %s: %v\n", chartCRDsFilePath, err)
 			os.Exit(1)
@@ -54,7 +55,7 @@ func main() {
 	fmt.Println("Successfully finished")
 }
 
-func wrapInIfEnabled(v string) string {
+func wrapInIfWebhookEnabled(v string) string {
 	// NOTE: This values.yaml field path must match the one in
 	// https://github.com/Kong/kong-operator/blob/f981b357ff58dd71ff2f5eac1330f3f1693d2734/charts/kong-operator/values.yaml#L140
 	return fmt.Sprintf("{{- if .Values.global.webhooks.validating.enabled }}\n%s\n{{- end }}\n", v)
@@ -69,7 +70,11 @@ func templateNamespace(yaml string) string {
     service:
       name: {{ template "kong.webhookServiceName" . }}
       namespace: {{ template "kong.namespace" . }}
-      port: $1`
+      port: $1
+{{- if not .Values.global.webhooks.options.certManager.enabled }}
+    caBundle: |
+      {{ $$caCert | b64enc }}
+{{- end }}`
 
 	// Perform replacement
 	return re.ReplaceAllString(yaml, replacement)
@@ -90,12 +95,74 @@ func templateLabels(yaml string) string {
 	return re.ReplaceAllString(yaml, replacement)
 }
 
-func templateInjectCAAnnotation(yaml string) string {
-	// Regex to match the specific annotation line
-	re := regexp.MustCompile(`(?m)^(\s*)cert-manager\.io/inject-ca-from:\s*[\w-]+/[\w-]+`)
+func templateInjectCAAnnotationForCertManager(yaml string) string {
+	// Regex to match the annotations block containing cert-manager.io/inject-ca-from
+	re := regexp.MustCompile(`(?m)^  annotations:\n(?:    .*\n)+?  labels:`)
 
-	// Replacement with Helm template
-	replacement := `${1}cert-manager.io/inject-ca-from: {{ template "kong.namespace" . }}/{{ template "kong.webhookServiceName" . }}-serving-cert`
+	// Replacement block with Helm templating
+	replacement := `{{- if .Values.global.webhooks.options.certManager.enabled }}
+  annotations:
+    cert-manager.io/inject-ca-from: {{ template "kong.namespace" . }}/{{ template "kong.webhookServiceName" . }}-serving-cert
+    cert-manager.io/secret-template: '{ "labels": { "konghq.com/secret" : "true" } }'
+{{- end }}
+  labels:`
 
 	return re.ReplaceAllString(yaml, replacement)
 }
+
+const (
+	// selfSignedCertSecretTemplate contains the template for the self-signed
+	// certificate secret.
+	// This allows users to not require cert-manager for certificates management.
+	// It is embedded in manifest file containing CRD definitions because it's not
+	// possible to place that in a separate file, and use the lookup function
+	// (for the Secret) in the CRD definition file due to the Secret not being
+	// applied yet at that time.
+	// Helm hooks and their priority do not seem to help here either.
+	//
+	//nolint:gosec
+	selfSignedCertSecretTemplate = `
+{{ $name := ( include "kong.webhookValidatingCertSecretName" .) }}
+{{ $secret := (lookup "v1" "Secret" .Release.Namespace $name) }}
+{{ $serviceName := (include "kong.webhookServiceName" .) }}
+{{ $namespace := (include "kong.namespace" .) }}
+{{ $domainName := ( printf "%s.%s.svc" $serviceName $namespace ) }}
+{{ $domainNameClusterLocal := ( printf "%s.%s.svc.cluster.local" $serviceName $namespace ) }}
+{{ $dnsNames := list ($domainName) ($domainNameClusterLocal) }}
+
+{{ $ca := genCA "" 3650 }}
+{{ $cert := genSignedCert $domainName nil $dnsNames 3650 $ca }}
+{{ $certCert := $cert.Cert }}
+{{ $certKey := $cert.Key }}
+{{ $caCert := $ca.Cert }}
+{{ if $secret }}
+{{ $certCert = (index $secret.data "tls.crt" ) | b64dec }}
+{{ $certKey = (index $secret.data "tls.key" ) | b64dec }}
+{{ $caCert = (index $secret.data "ca.crt" ) | b64dec }}
+{{- end }}
+
+{{- if .Values.global.webhooks.validating.enabled }}
+{{- if ( not .Values.global.webhooks.options.certManager.enabled ) }}
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    {{- include "kong.metaLabels" . | nindent 4 }}
+    app.kubernetes.io/component: ko
+  annotations:
+    dnsNames: {{ join "," $dnsNames | quote }}
+  name: {{ $name }}
+  namespace: {{ template "kong.namespace" . }}
+type: kubernetes.io/tls
+stringData:
+  ca.crt: |
+    {{ $caCert | nindent 4 }}
+  tls.crt: |
+    {{ $certCert | nindent 4 }}
+  tls.key: |
+    {{ $certKey | nindent 4 }}
+{{- end }}
+{{- end }}
+---
+`
+)
