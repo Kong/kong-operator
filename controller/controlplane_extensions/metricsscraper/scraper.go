@@ -10,6 +10,7 @@ import (
 	"github.com/go-logr/logr"
 	prometheus "github.com/prometheus/client_model/go"
 	prometheusexpfmt "github.com/prometheus/common/expfmt"
+	"github.com/prometheus/common/model"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -104,7 +105,7 @@ func (p *PrometheusMetricsScraper) Scrape(ctx context.Context) (Metrics, error) 
 			return Metrics{}, fmt.Errorf("failed to scrape metrics from %s: %s: %s", u, resp.Status, string(b))
 		}
 
-		var parser prometheusexpfmt.TextParser
+		parser := prometheusexpfmt.NewTextParser(model.LegacyValidation)
 		metricFamilies, err := parser.TextToMetricFamilies(resp.Body)
 		if err != nil {
 			b, errBody := io.ReadAll(resp.Body)

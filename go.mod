@@ -12,7 +12,6 @@ require (
 	cloud.google.com/go/container v1.44.0
 	dario.cat/mergo v1.0.2
 	github.com/Kong/sdk-konnect-go v0.9.1
-	github.com/Masterminds/semver v1.5.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/blang/semver/v4 v4.0.0
