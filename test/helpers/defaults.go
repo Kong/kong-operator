@@ -33,13 +33,6 @@ func GetDefaultDataPlaneImage() string {
 	return _defaultDataPlaneImage
 }
 
-// GetDefaultDataPlaneEnterpriseImage returns the default data plane enterprise image.
-func GetDefaultDataPlaneEnterpriseImage() string {
-	_defaultDataPlaneImageLock.RLock()
-	defer _defaultDataPlaneImageLock.RUnlock()
-	return consts.DefaultDataPlaneEnterpriseImage
-}
-
 // SetDefaultDataPlaneImage sets the default data plane image.
 func SetDefaultDataPlaneImage(image string) {
 	_defaultDataPlaneImageLock.Lock()

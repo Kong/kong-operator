@@ -97,15 +97,11 @@ const (
 	// DefaultDataPlaneTag is the base container image tag that can be used
 	// by default for a DataPlane resource if all other attempts to dynamically
 	// decide an image tag fail.
-	DefaultDataPlaneTag = "3.9" // renovate: datasource=docker depName=kong
+	DefaultDataPlaneTag = "3.11" // renovate: datasource=docker depName=kong/kong-gateway
 
 	// DefaultDataPlaneImage is the default container image that can be used if
 	// all other attempts to dynamically decide the default image fail.
-	DefaultDataPlaneImage = DefaultDataPlaneBaseImage + ":" + DefaultDataPlaneTag
-
-	// DefaultDataPlaneEnterpriseImage is the default enterprise container image that can be used if
-	// all other attempts to dynamically decide the default image fail.
-	DefaultDataPlaneEnterpriseImage = DefaultDataPlaneBaseEnterpriseImage + ":" + DefaultDataPlaneTag
+	DefaultDataPlaneImage = DefaultDataPlaneBaseEnterpriseImage + ":" + DefaultDataPlaneTag
 
 	// ServiceSelectorOverrideAnnotation is used on the dataplane to override the Selector
 	// of both the admin and proxy services.
