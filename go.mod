@@ -46,7 +46,7 @@ require (
 	github.com/moul/pb v0.0.0-20220425114252-bca18df4138c
 	github.com/opencontainers/image-spec v1.1.1
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
-	github.com/prometheus/client_golang v1.23.0
+	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.66.1
 	github.com/samber/lo v1.51.0
