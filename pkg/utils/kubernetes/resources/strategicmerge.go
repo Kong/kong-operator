@@ -12,6 +12,17 @@ import (
 	"github.com/kong/kong-operator/pkg/consts"
 )
 
+// findVolume returns the corev1.Volume of the given name, inside a Pod
+func findVolume(name string, base *corev1.PodTemplateSpec) *corev1.Volume {
+	for _, vol := range base.Spec.Volumes {
+		if vol.Name == name {
+			return &vol
+		}
+	}
+
+	return nil
+}
+
 // StrategicMergePatchPodTemplateSpec adds patches to base using a strategic merge patch and
 // iterating by container name, failing on the first error
 func StrategicMergePatchPodTemplateSpec(base, patch *corev1.PodTemplateSpec) (*corev1.PodTemplateSpec, error) {
@@ -22,6 +33,18 @@ func StrategicMergePatchPodTemplateSpec(base, patch *corev1.PodTemplateSpec) (*c
 	baseBytes, err := json.Marshal(base)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal JSON for base %s: %w", base.Name, err)
+	}
+
+	// HACK: If the cluster cert or Admission WebHook Volume is present, push it into the front of the
+	//       patch's Volumes slice.
+	//       This avoids errors like "may not specify more than 1 volume type".
+	clusterCertVolume := findVolume(consts.ClusterCertificateVolume, base)
+	if clusterCertVolume != nil {
+		patch.Spec.Volumes = append([]corev1.Volume{*clusterCertVolume}, patch.Spec.Volumes...)
+	}
+	admissionWebhookVolume := findVolume(consts.ControlPlaneAdmissionWebhookVolumeName, base)
+	if admissionWebhookVolume != nil {
+		patch.Spec.Volumes = append([]corev1.Volume{*admissionWebhookVolume}, patch.Spec.Volumes...)
 	}
 
 	SetDefaultsPodTemplateSpec(patch)
