@@ -295,15 +295,16 @@ func listDataPlaneLiveServices(
 
 func isDeploymentReady(deploymentStatus appsv1.DeploymentStatus) (metav1.ConditionStatus, bool) {
 	// We check if the Deployment is not Ready.
-	// This is the case when status has replicas set to 0 or status.availableReplicas
-	// in status is less than status.replicas.
-	// The second condition takes into account the time when new version (ReplicaSet)
-	// is being rolled out by Deployment controller and there might be more available
-	// replicas than specified in spec.replicas but we don't consider it fully ready
-	// until it stabilized to be equal to status.replicas.
-	// If any of those conditions is specified we mark the DataPlane as not ready yet.
+	// The DataPlane is considered ready as long as there is at least one available replica,
+	// even during rolling updates. This relaxed readiness check prevents the DataPlane
+	// from being marked as not ready during Kong Operator upgrades, which could cause
+	// the gateway to lose its configuration when the operator's route cache is empty.
+	//
+	// During rolling updates, maintaining at least one available replica ensures
+	// continuity of service and prevents existing routes from being wiped clean
+	// from the dataplane while new replicas are being deployed.
 	if deploymentStatus.Replicas > 0 &&
-		deploymentStatus.AvailableReplicas == deploymentStatus.Replicas {
+		deploymentStatus.AvailableReplicas > 0 {
 		return metav1.ConditionTrue, true
 	} else {
 		return metav1.ConditionFalse, false
