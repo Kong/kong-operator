@@ -2,6 +2,8 @@ module github.com/kong/kong-operator
 
 go 1.24.6
 
+replace github.com/kong/kubernetes-configuration/v2 => ./
+
 require (
 	cloud.google.com/go/container v1.44.0
 	dario.cat/mergo v1.0.2
