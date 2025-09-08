@@ -8,6 +8,8 @@ go 1.24.6
 // This retraction is to prevent it from being used and from breaking builds of dependent projects.
 retract v1.2.2
 
+replace github.com/kong/kubernetes-configuration/v2 => ./
+
 require (
 	cloud.google.com/go/container v1.44.0
 	dario.cat/mergo v1.0.2
