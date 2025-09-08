@@ -827,6 +827,13 @@ func controlPlaneStatusEqual(
 		reflect.DeepEqual(b.Status.DataPlane, a.Status.DataPlane)
 }
 
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=deletecollection
+// +kubebuilder:rbac:groups=networking.k8s.io,resources=networkpolicies,verbs=deletecollection
+// +kubebuilder:rbac:groups=core,resources=services,verbs=deletecollection
+// +kubebuilder:rbac:groups=admissionregistration.k8s.io,resources=validatingwebhookconfigurations,verbs=deletecollection
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterroles,verbs=deletecollection
+// +kubebuilder:rbac:groups=rbac.authorization.k8s.io,resources=clusterrolebindings,verbs=deletecollection
+
 // cleanupOldManagedResources cleans up resources that were managed by
 // older versions of the Kong Gateway Operator. This includes Deployments,
 // Services, NetworkPolicies, ValidatingWebhookConfigurations, ClusterRoles,
