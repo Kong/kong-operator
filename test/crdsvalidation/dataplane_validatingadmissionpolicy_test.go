@@ -5,12 +5,18 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/zapr"
 	"github.com/samber/lo"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	ctrl "sigs.k8s.io/controller-runtime"
 
+	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
 
 	"github.com/kong/kong-operator/modules/manager/scheme"
@@ -25,11 +31,72 @@ const (
 
 	// ValidationPolicy_ contain validation policies path relative to the kong-operator chart
 	ValidationPolicyDataplane = "templates/validation-policy-dataplane.yaml"
+	ValidationPolicyKonnect   = "templates/validation-policy-konnect.yaml"
 )
 
 var sharedEventuallyConfig = common.EventuallyConfig{
 	Timeout: 15 * time.Second,
 	Period:  100 * time.Millisecond,
+}
+
+func TestKonnectValidationAdmissionPolicy(t *testing.T) {
+
+	var (
+		ctx              = t.Context()
+		scheme           = scheme.Get()
+		cfg, ns          = envtest.Setup(t, ctx, scheme)
+		commonObjectMeta = metav1.ObjectMeta{
+			GenerateName: "dp-",
+			Namespace:    ns.Name,
+		}
+	)
+
+	logger := zapr.NewLogger(zap.New(zapcore.NewNopCore()))
+	// Prevents controller-runtime from logging
+	// [controller-runtime] log.SetLogger(...) was never called; logs will not be displayed.
+	ctrl.SetLogger(logger)
+
+	wc := &common.WarningCollector{}
+	cfg.WarningHandler = wc
+
+	chartPath := path.Join(test.ProjectRootPath(), ChartPath)
+	templates := []string{
+		ValidationPolicyKonnect,
+	}
+
+	apply.Template(t, cfg, chartPath, templates)
+
+	t.Run("static autoscale", func(t *testing.T) {
+		common.TestCasesGroup[*konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration]{
+			{
+				Name: "deprecate message with static autoscale type",
+				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
+					ObjectMeta: commonObjectMeta,
+					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
+						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
+							{
+								Provider: "aws",
+								Region:   "us-west-2",
+								NetworkRef: commonv1alpha1.ObjectRef{
+									Type:      commonv1alpha1.ObjectRefTypeKonnectID,
+									KonnectID: lo.ToPtr("kpat_ABCDEFGHILMNOPQRSTUVZabcdefghilmnopqrstuvz0123456"),
+								},
+								Autoscale: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
+									Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic,
+									Static: &konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleStatic{
+										InstanceType: "small",
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				WarningCollector:              wc,
+				ExpectedWarningMessage:        lo.ToPtr("Value \"static\" in spec.dataplane_groups.autoscale.type is deprecated, use \"automatic\" instead."),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
 }
 
 func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
