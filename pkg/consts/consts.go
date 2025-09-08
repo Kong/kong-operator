@@ -80,6 +80,12 @@ const (
 
 	// CertPurposeLabel indicates the purpose of a certificate.
 	CertPurposeLabel = OperatorLabelPrefix + "cert-purpose"
+
+	// ControlPlaneKGOCleanupAnnotation indicates that the clean up KGO related resources
+	// has been performed for this ControlPlane.
+	// NOTE: This will be removed together with the logic that performs the cleanup
+	// as part of https://github.com/Kong/kong-operator/issues/2228.
+	ControlPlaneKGOCleanupAnnotation = OperatorAnnotationPrefix + "kgo-cleanup"
 )
 
 // -----------------------------------------------------------------------------
