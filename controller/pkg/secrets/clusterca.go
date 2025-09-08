@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
+	"errors"
 	"math"
 	"math/big"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/avast/retry-go/v4"
 	"github.com/go-logr/logr"
 	v1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -68,7 +70,14 @@ func CreateClusterCACertificate(ctx context.Context, logger logr.Logger, cl clie
 	}
 	if err := retry.Do(
 		func() error {
-			return cl.Create(ctx, signedSecret)
+			err := cl.Create(ctx, signedSecret)
+			if errS := (&k8serrors.StatusError{}); errors.As(err, &errS) {
+				if errS.ErrStatus.Code == 409 && errS.ErrStatus.Reason == metav1.StatusReasonAlreadyExists {
+					// If it's a 409 status code then the Secret already exists.
+					return nil
+				}
+			}
+			return nil
 		},
 		retry.Context(ctx),
 		retry.Attempts(0),
