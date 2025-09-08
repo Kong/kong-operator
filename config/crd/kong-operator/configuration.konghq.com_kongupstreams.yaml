@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0-alpha.5
+    kubernetes-configuration.konghq.com/version: v2.0.0
   name: kongupstreams.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -181,7 +181,10 @@ spec:
                         type: integer
                       headers:
                         additionalProperties:
-                          type: string
+                          items:
+                            type: string
+                          type: array
+                        description: A map of header names to arrays of header values.
                         type: object
                       healthy:
                         properties:
@@ -200,8 +203,13 @@ spec:
                         - successes
                         type: object
                       http_path:
+                        description: A string representing a URL path, such as /path/to/resource.
+                          Must start with a forward slash (/) and must not contain
+                          empty segments (i.e., two consecutive forward slashes).
                         type: string
                       https_sni:
+                        description: A string representing an SNI (server name indication)
+                          value for TLS.
                         type: string
                       https_verify_certificate:
                         type: boolean
@@ -236,6 +244,7 @@ spec:
                     required:
                     - concurrency
                     - http_path
+                    - https_sni
                     - https_verify_certificate
                     - timeout
                     - type
