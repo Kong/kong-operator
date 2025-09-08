@@ -41,6 +41,8 @@
 
 - Vendor gateway-operator CRDs locally and switch Kustomize to use the vendored source.
   [#2195](https://github.com/Kong/kong-operator/pull/2195)
+- `kong/kong-gateway` v3.11 is the default proxy image.
+  [#2212](https://github.com/Kong/kong-operator/pull/2212)
 
 ## [v2.0.0-alpha.5]
 
