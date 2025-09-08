@@ -3,6 +3,8 @@ package common
 import (
 	"context"
 	"reflect"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -48,6 +50,29 @@ type EventuallyConfig struct {
 	Period time.Duration
 }
 
+// WarningCollector implements the rest.WarningHandler interface.
+type WarningCollector struct {
+	sync.Mutex
+	warnings []string
+}
+
+// HandleWarningHeader implements the rest.WarningHandler interface.
+func (wc *WarningCollector) HandleWarningHeader(_ int, _ string, warning string) {
+	wc.Lock()
+	defer wc.Unlock()
+	wc.warnings = append(wc.warnings, warning)
+}
+
+// GetWarnings returns the collected warnings.
+func (wc *WarningCollector) GetWarnings() []string {
+	wc.Lock()
+	defer wc.Unlock()
+	// Return a copy to avoid race conditions if the slice is modified elsewhere
+	warningsCopy := make([]string, len(wc.warnings))
+	copy(warningsCopy, wc.warnings)
+	return warningsCopy
+}
+
 // TestCase represents a test case for CRD validation.
 type TestCase[T client.Object] struct {
 	// Name is the name of the test case.
@@ -68,6 +93,13 @@ type TestCase[T client.Object] struct {
 
 	// ExpectedUpdateErrorMessage is the expected error message when updating the object.
 	ExpectedUpdateErrorMessage *string
+
+	// ExpectedWarningMessage is the expected warning message when creating the object. It requires WarningCollector to be set.
+	ExpectedWarningMessage *string
+
+	// WarningCollector collects warnings from the API server. It must implement the rest.WarningHandler interface and be set
+	// in the rest.Config used to create the client.
+	WarningCollector *WarningCollector
 
 	// Update is a function that updates the object in the test case after it's created.
 	// It can be used to verify CEL rules that verify the previous object's version against the new one.
@@ -94,6 +126,10 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 	// Run the test case.
 	t.Run(tc.Name, func(t *testing.T) {
 		require.NotNil(t, tc.TestObject, "TestObject is nil in test %s", tc.Name)
+
+		if tc.ExpectedWarningMessage != nil {
+			require.NotNil(t, tc.WarningCollector, "WarningCollector is nil in test %s", tc.Name)
+		}
 
 		t.Parallel()
 		ctx := context.Background()
@@ -126,6 +162,20 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 				err = cl.Create(ctx, toCreate)
 				if err == nil {
 					tCleanupObject(ctx, t, toCreate)
+				}
+
+				// Check for expected warning message
+				if tc.ExpectedWarningMessage != nil {
+					found := false
+					for _, w := range tc.WarningCollector.GetWarnings() {
+						if strings.Contains(w, *tc.ExpectedWarningMessage) {
+							found = true
+							break
+						}
+					}
+					if !assert.True(c, found, "Warning message not found: %s", *tc.ExpectedWarningMessage) {
+						return
+					}
 				}
 
 				// If the error message is expected, check if the error message contains the expected message and return.
@@ -168,6 +218,18 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 				// Update the object state and push the update to the server.
 				tc.Update(tc.TestObject)
 				err = cl.Update(ctx, tc.TestObject)
+				if tc.ExpectedWarningMessage != nil {
+					found := false
+					for _, w := range tc.WarningCollector.GetWarnings() {
+						if strings.Contains(w, *tc.ExpectedWarningMessage) {
+							found = true
+							break
+						}
+					}
+					if !assert.True(c, found, "Warning message not found: %s", *tc.ExpectedWarningMessage) {
+						return
+					}
+				}
 				// If the expected update error message is defined, check if the error message contains the expected message
 				// and return. Otherwise, expect no error.
 				if tc.ExpectedUpdateErrorMessage != nil {
