@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0-alpha.5
+    kubernetes-configuration.konghq.com/version: v2.0.0
   name: kongroutes.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -126,10 +126,17 @@ spec:
                 items:
                   properties:
                     ip:
+                      description: A string representing an IP address or CIDR block,
+                        such as 192.168.1.1 or 192.168.0.0/16.
                       type: string
                     port:
+                      description: An integer representing a port number between 0
+                        and 65535, inclusive.
                       format: int64
                       type: integer
+                  required:
+                  - ip
+                  - port
                   type: object
                 type: array
               headers:
@@ -191,6 +198,8 @@ spec:
                   HTTP requests are answered with an upgrade error. When set to only
                   `"http"`, HTTPS requests are answered with an error.
                 items:
+                  description: RouteJSONProtocols - A string representing a protocol,
+                    such as HTTP or HTTPS.
                   type: string
                 type: array
               regex_priority:
@@ -253,10 +262,17 @@ spec:
                 items:
                   properties:
                     ip:
+                      description: A string representing an IP address or CIDR block,
+                        such as 192.168.1.1 or 192.168.0.0/16.
                       type: string
                     port:
+                      description: An integer representing a port number between 0
+                        and 65535, inclusive.
                       format: int64
                       type: integer
+                  required:
+                  - ip
+                  - port
                   type: object
                 type: array
               strip_path:
