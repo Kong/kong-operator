@@ -22,7 +22,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test/envtest"
-	"github.com/kong/kong-operator/test/helpers/apply"
+	"github.com/kong/kong-operator/test/helpers/helm"
 )
 
 const (
@@ -64,7 +64,7 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 		ValidationPolicyKonnect,
 	}
 
-	apply.Template(t, cfg, chartPath, templates)
+	helm.ApplyTemplate(t, cfg, chartPath, templates)
 
 	t.Run("static autoscale", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration]{
@@ -117,7 +117,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 		"templates/validation-policy-dataplane.yaml",
 	}
 
-	apply.Template(t, cfg, chartPath, templates)
+	helm.ApplyTemplate(t, cfg, chartPath, templates)
 
 	t.Run("ports", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
