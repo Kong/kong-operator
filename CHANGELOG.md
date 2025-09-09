@@ -32,6 +32,11 @@
 
 ## Unreleased
 
+## Fixes
+
+- Fix incorrect error handling during cluster CA secret creation
+  [#2250](https://github.com/Kong/kong-operator/pull/2250)
+
 ## [v2.0.0]
 
 > Release date: 2025-09-09
