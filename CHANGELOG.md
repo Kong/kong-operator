@@ -2,7 +2,7 @@
 
 ## Table of Contents
 
-- [v2.0.0-alpha.5](#v200-alpha5)
+- [v2.0.0](#v200)
 - [v1.6.2](#v162)
 - [v1.6.1](#v161)
 - [v1.6.0](#v160)
@@ -32,24 +32,13 @@
 
 ## Unreleased
 
-### Fixed
+## [v2.0.0]
 
-- Fixed a missing watch in `GatewayClass` reconciler for related `GatewayConfiguration` resources.
-  [#2161](https://github.com/Kong/kong-operator/pull/2161)
+> Release date: 2025-09-09
 
-### Changes
-
-- Vendor gateway-operator CRDs locally and switch Kustomize to use the vendored source.
-  [#2195](https://github.com/Kong/kong-operator/pull/2195)
-- `kong/kong-gateway` v3.11 is the default proxy image.
-  [#2212](https://github.com/Kong/kong-operator/pull/2212)
-
-## [v2.0.0-alpha.5]
-
-> Release date: 2025-09-01
-
-> KGO becomes KO, which stands for Kong Operator - Kubernetes Gateway Operator and Kubernetes Ingress Controller
-> become a single product.
+> KGO becomes KO, which stands for Kong Operator. Kubernetes Gateway Operator and Kubernetes Ingress Controller
+> become a single product. Furthermore, Kong Operator provides all features that used to be reserved for the
+> Enterprise flavor of Kong Gateway Operator.
 
 ### Breaking Changes
 
@@ -57,13 +46,12 @@
   has been removed. `Mirror` `GatewayControlPlane` resource is now the only way to reference remote
   control planes in read-only.
   [#1711](https://github.com/kong/kong-operator/pull/1711)
-  <!-- TODO: https://github.com/kong/kong-operator/issues/1732 -->
-- rename product from Kong Gateway Operator to Kong Operator.
+- Rename product from Kong Gateway Operator to Kong Operator.
   [#1767](https://github.com/Kong/kong-operator/pull/1767)
-- Add --cluster-domain flag and set default to 'cluster.local'
-  This commit introduces a new --cluster-domain flag to the KO binary, which is now propagated to the ingress-controller.
-  The default value for the cluster domain is set to 'cluster.local', whereas previously it was an empty string ("").
-  This is a breaking change, as any code or configuration relying on the previous default will now use 'cluster.local'
+- Add `--cluster-domain` flag and set default to `'cluster.local'`
+  This commit introduces a new `--cluster-domain` flag to the KO binary, which is now propagated to the ingress-controller.
+  The default value for the cluster domain is set to `'cluster.local'`, whereas previously it was an empty string (`''`).
+  This is a breaking change, as any code or configuration relying on the previous default will now use `'cluster.local'`
   unless explicitly overridden.
   [#1870](https://github.com/Kong/kong-operator/pull/1870)
 - Introduce `ControlPlane` in version `v2alpha1`
@@ -85,12 +73,11 @@
   The `GatewayConfiguration` `v1beta1` is still available but has been marked as
   deprecated.
   [#1792](https://github.com/Kong/kong-operator/pull/1972)
-  <!-- https://github.com/Kong/kong-operator/issues/1944 -->
 - Removed `KongIngress`, `TCPIngress` and `UDPIngress` CRDs together with their controllers.
   For migration guidance from these resources to Gateway API, please refer to the
   [migration documentation](https://developer.konghq.com/kubernetes-ingress-controller/migrate/ingress-to-gateway/).
   [#1971](https://github.com/Kong/kong-operator/pull/1971)
-- Change env vars prefix from `GATEWAY_OPERATOR_` to `KONG_OPERATOR`.
+- Change env vars prefix from `GATEWAY_OPERATOR_` to `KONG_OPERATOR_`.
   `GATEWAY_OPERATOR_` prefixed env vars are still accepted but reported as deprecated.
   [#2004](https://github.com/Kong/kong-operator/pull/2004)
 
@@ -192,6 +179,10 @@
   the new operator architecture. `PodsReady` is now `Provisioned` and `PodsNotReady`
   is now `ProvisioningInProgress`.
   [#1985](https://github.com/Kong/kong-operator/pull/1985)
+- Vendor gateway-operator CRDs locally and switch Kustomize to use the vendored source.
+  [#2195](https://github.com/Kong/kong-operator/pull/2195)
+- `kong/kong-gateway` v3.11 is the default proxy image.
+  [#2212](https://github.com/Kong/kong-operator/pull/2212)
 
 ### Fixed
 
@@ -218,6 +209,8 @@
 - Fix the issue that invalid label value causing ingress controller fails to
   store the license from Konnect into `Secret`.
   [#1976](https://github.com/Kong/kong-operator/pull/1976)
+- Fixed a missing watch in `GatewayClass` reconciler for related `GatewayConfiguration` resources.
+  [#2161](https://github.com/Kong/kong-operator/pull/2161)
 
 ## [v1.6.2]
 
@@ -1331,7 +1324,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
-[v2.0.0-alpha.5]: https://github.com/Kong/kong-operator/compare/v1.6.2..v2.0.0-alpha.5
+[v2.0.0]: https://github.com/Kong/kong-operator/compare/v1.6.2..v2.0.0
 [v1.6.2]: https://github.com/Kong/kong-operator/compare/v1.6.1..v1.6.2
 [v1.6.1]: https://github.com/Kong/kong-operator/compare/v1.6.0..v1.6.1
 [v1.6.0]: https://github.com/Kong/kong-operator/compare/v1.5.1..v1.6.0
