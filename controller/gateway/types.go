@@ -14,6 +14,9 @@ type (
 	// GatewayConfiguration is an alias for the internally used GatewayConfiguration version type.
 	GatewayConfiguration = gwtypes.GatewayConfiguration
 
+	// GatewayConfigurationSpec is an alias for the internally used GatewayConfigurationSpec version type.
+	GatewayConfigurationSpec = gwtypes.GatewayConfigurationSpec
+
 	// GatewayConfigDataPlaneOptions is an alias for the internally used GatewayConfigDataPlaneOptions version type.
 	GatewayConfigDataPlaneOptions = gwtypes.GatewayConfigDataPlaneOptions
 )
