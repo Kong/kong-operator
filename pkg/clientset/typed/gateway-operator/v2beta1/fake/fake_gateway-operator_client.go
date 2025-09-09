@@ -19,7 +19,7 @@ limitations under the License.
 package fake
 
 import (
-	v2beta1 "github.com/kong/kubernetes-configuration/v2/pkg/clientset/typed/gateway-operator/v2beta1"
+	v2beta1 "github.com/kong/kong-operator/pkg/clientset/typed/gateway-operator/v2beta1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
