@@ -71,11 +71,15 @@ func CreateClusterCACertificate(ctx context.Context, logger logr.Logger, cl clie
 	if err := retry.Do(
 		func() error {
 			err := cl.Create(ctx, signedSecret)
-			if errS := (&k8serrors.StatusError{}); errors.As(err, &errS) {
-				if errS.ErrStatus.Code == 409 && errS.ErrStatus.Reason == metav1.StatusReasonAlreadyExists {
-					// If it's a 409 status code then the Secret already exists.
-					return nil
+			if err != nil {
+				if errS := (&k8serrors.StatusError{}); errors.As(err, &errS) {
+					if errS.ErrStatus.Code == 409 &&
+						errS.ErrStatus.Reason == metav1.StatusReasonAlreadyExists {
+						// If it's a 409 status code then the Secret already exists.
+						return nil
+					}
 				}
+				return err
 			}
 			return nil
 		},
