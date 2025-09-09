@@ -689,15 +689,12 @@ test.charts.ct.install:
 # for each release. Without this, some objects like CRDs can still be around
 # when another test helm release is being installed and the above mentioned
 # ownership error will be returned.
-#
-# NOTE: Image pin is temporary until we get an image with
-# https://github.com/Kong/kong-operator/pull/2201
 
 	ct install --target-branch main \
 		--debug \
-		--helm-extra-set-args "--set=image.repository=docker.io/kong/nightly-kong-operator --set=image.tag=sha-d735fd3-amd64 --set=image.effectiveSemver=2.0.0 --set=ko-crds.keep=false" \
+		--helm-extra-set-args "--set=ko-crds.keep=false" \
 		--helm-extra-args "--wait" \
-		--helm-extra-args "--timeout=1m" \
+		--helm-extra-args "--timeout=3m" \
 		--charts charts/$(CHART_NAME) \
 		--namespace kong-test
 
