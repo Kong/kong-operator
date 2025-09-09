@@ -194,6 +194,12 @@ func WithCacheSyncTimeout(d time.Duration) func(cfg *managercfg.Config) {
 	}
 }
 
+func WithInitCacheSyncDuration(d time.Duration) func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
+		cfg.InitCacheSyncDuration = d
+	}
+}
+
 func WithFeatureGate(name string, enabled bool) func(cfg *managercfg.Config) {
 	return func(cfg *managercfg.Config) {
 		cfg.FeatureGates[name] = enabled

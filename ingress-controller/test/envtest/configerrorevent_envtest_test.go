@@ -109,14 +109,18 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 	RunManager(ctx, t, restConfig,
 		AdminAPIOptFns(
 			mocks.WithConfigPostError(formatErrBody(t, ns.Name, ingress, service)),
+			mocks.WithVersion("3.12.0"),
 		),
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
 		WithKongUpstreamPolicyEnabled(),
 		WithProxySyncInterval(100*time.Millisecond),
+		// Add the init cache sync duration to prevent:
+		// Warning | KongConfigurationTranslationFailed | Service | httpbin | failed fetching KongUpstreamPolicy: KongUpstreamPolicy 800363bc-a654-497a-8467-061e56e22a8f/echo-drain-policy not found
+		WithInitCacheSyncDuration(2*time.Second),
 	)
 
-	const numberOfExpectedEvents = 13
+	const numberOfExpectedEvents = 12
 	collectedEvents := collectGeneratedEvents(
 		ctx, t, ctrlClient, ns, t.Name(), numberOfExpectedEvents,
 	)
@@ -134,9 +138,6 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^no grant found to referenced "n1:p1" plugin in the requested remote KongPlugin bind$`),
 		predicate(corev1.EventTypeWarning, dataplane.FallbackKongConfigurationApplyFailedEventReason, "Service", service.Name, `^invalid service:httpbin\.httpbin\.80: failed conditional validation given value of field 'protocol'$`),
 		predicate(corev1.EventTypeWarning, dataplane.FallbackKongConfigurationApplyFailedEventReason, "Pod", podName, `failed to apply fallback Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+: HTTP status 400 \(message: "failed posting new config to /config"\)`),
-		// TODO: Remove this event once we start using Kong Gateway >= 3.11.0, because sticky sessions type is supported there.
-		// Adjust also numberOfExpectedEvents constant above.
-		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^sticky sessions algorithm specified in KongUpstreamPolicy 'echo-drain-policy' is not supported with Kong Gateway versions < 3\.11\.0$`),
 	}
 
 	assertExpectedEvents(t, predicatesToCheck, collectedEvents)
