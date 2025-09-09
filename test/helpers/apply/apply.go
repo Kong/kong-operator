@@ -53,8 +53,6 @@ func Template(t *testing.T, cfg *rest.Config, chartPath string, templates []stri
 
 func templateRenderer(t *testing.T, chartPath string, templates []string, helmArgs ...string) string {
 	t.Helper()
-	t2 := &testing.T{}
-	t2.Log("\nT2\n")
 	releaseName := "ko"
 	valuesFile := path.Join(chartPath, "values.yaml")
 
