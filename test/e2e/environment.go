@@ -31,10 +31,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	configurationclient "github.com/kong/kubernetes-configuration/v2/pkg/clientset"
-
 	"github.com/kong/kong-operator/internal/versions"
 	"github.com/kong/kong-operator/modules/manager/scheme"
+	configurationclient "github.com/kong/kong-operator/pkg/clientset"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test"
 	"github.com/kong/kong-operator/test/helpers"

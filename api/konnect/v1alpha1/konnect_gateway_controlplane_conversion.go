@@ -3,12 +3,11 @@ package v1alpha1
 import (
 	"fmt"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
-	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 )
 
 const (
@@ -27,7 +26,7 @@ func (src *KonnectGatewayControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 	dst.ObjectMeta = src.ObjectMeta
 
 	// Convert the changed fields between v1alpha1 and v1alpha2.
-	dst.Spec.CreateControlPlaneRequest = createControlplaneRequestFromSpec(src.Spec)
+	dst.Spec.CreateControlPlaneRequest = createControlPlaneRequestFromSpec(src.Spec)
 
 	if src.Spec.Mirror != nil {
 		dst.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
@@ -74,9 +73,9 @@ func (dst *KonnectGatewayControlPlane) ConvertFrom(srcRaw conversion.Hub) error 
 	return nil
 }
 
-// createControlplaneRequestFromSpec converts a KonnectGatewayControlPlaneSpec to a CreateControlPlaneRequest
+// createControlPlaneRequestFromSpec converts a KonnectGatewayControlPlaneSpec to a CreateControlPlaneRequest
 // handling nil pointers and type conversions appropriately.
-func createControlplaneRequestFromSpec(spec KonnectGatewayControlPlaneSpec) *sdkkonnectcomp.CreateControlPlaneRequest {
+func createControlPlaneRequestFromSpec(spec KonnectGatewayControlPlaneSpec) *sdkkonnectcomp.CreateControlPlaneRequest {
 	// Only create the request if this is an Origin type (not Mirror)
 	if spec.Source != nil && *spec.Source == "Mirror" {
 		return nil

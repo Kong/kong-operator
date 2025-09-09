@@ -18,15 +18,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
-
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/internal/utils/index"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/pkg/metadata"
 	"github.com/kong/kong-operator/test/helpers/deploy"
 	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"

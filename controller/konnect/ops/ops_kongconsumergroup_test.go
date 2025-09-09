@@ -8,9 +8,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
-	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
+	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/pkg/metadata"
 )
 
 func TestKongConsumerGroupToSDKConsumerGroupInput_Tags(t *testing.T) {

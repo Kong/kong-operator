@@ -8,8 +8,6 @@ import (
 	"runtime"
 
 	"github.com/samber/lo"
-
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
 )
 
 const (
@@ -25,14 +23,16 @@ var (
 	kongGatewayRBACsKustomize = initKongGatewayRBACsKustomizePath()
 	kongCRDsRBACsKustomize    = initKongCRDsRBACsKustomizePath()
 
-	kubernetesConfigurationModuleVersion = lo.Must(DependencyModuleVersionGit(consts.KubernetesConfigurationModulePath))
+	kubernetesConfigurationModuleVersion = "" // unused; local paths are used instead of remote module refs
 	kongCRDsKustomize                    = initKongConfigurationCRDs()
 	kongIncubatorCRDsKustomize           = initKongIncubatorCRDsKustomizePath()
 	kongKOCRDsKustomize                  = initKongOperatorConfigurationCRDs()
 )
 
 func initKongIncubatorCRDsKustomizePath() string {
-	return fmt.Sprintf("%s/config/crd/ingress-controller-incubator?ref=%s", kubernetesConfigurationModulePath, kubernetesConfigurationModuleVersion)
+	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/crd/ingress-controller-incubator")
+	ensureDirExists(dir)
+	return dir
 }
 
 func initKongRBACsKustomizePath() string {
@@ -54,11 +54,15 @@ func initKongCRDsRBACsKustomizePath() string {
 }
 
 func initKongConfigurationCRDs() string {
-	return fmt.Sprintf("%s/config/crd/ingress-controller?ref=%s", kubernetesConfigurationModulePath, kubernetesConfigurationModuleVersion)
+	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/crd/ingress-controller")
+	ensureDirExists(dir)
+	return dir
 }
 
 func initKongOperatorConfigurationCRDs() string {
-	return fmt.Sprintf("%s/config/crd/gateway-operator?ref=%s", kubernetesConfigurationModulePath, kubernetesConfigurationModuleVersion)
+	dir := filepath.Join(lo.Must(getRepoRoot()), "config/crd/gateway-operator")
+	ensureDirExists(dir)
+	return dir
 }
 
 func ensureDirExists(dir string) {

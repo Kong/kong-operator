@@ -416,7 +416,7 @@ func objectWithNPluginsForBenchmark(n int) ObjectWithAnnotationsAndNamespace {
 	}
 
 	plugins := make([]string, 0, n)
-	for i := 0; i < n; i++ {
+	for i := range n {
 		plugins = append(plugins, "plugin"+strconv.Itoa(i))
 	}
 	obj.annotations[AnnotationKeyPlugins] = strings.Join(plugins, ",")
@@ -457,7 +457,7 @@ func benchmarkSlice[
 		obj := objectWithNPluginsForBenchmark(tc)
 
 		b.Run(fmt.Sprintf("%04d", tc), func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
+			for b.Loop() {
 				ret := f(obj)
 				consumeSlice(ret)
 			}

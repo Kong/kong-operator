@@ -9,8 +9,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/ingress-controller/internal/admission/validation"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator"

@@ -28,9 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
-
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
@@ -40,6 +38,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
+	"github.com/kong/kong-operator/pkg/clientset"
 )
 
 // -----------------------------------------------------------------------------

@@ -21,8 +21,8 @@ package v1alpha1
 import (
 	http "net/http"
 
-	gatewayoperatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
-	scheme "github.com/kong/kubernetes-configuration/v2/pkg/clientset/scheme"
+	gatewayoperatorv1alpha1 "github.com/kong/kong-operator/api/gateway-operator/v1alpha1"
+	scheme "github.com/kong/kong-operator/pkg/clientset/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

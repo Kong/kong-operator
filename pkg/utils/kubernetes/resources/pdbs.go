@@ -7,8 +7,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-
+	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
