@@ -353,9 +353,6 @@ CONFIG_CRD_DIR = $(CONFIG_DIR)/crd
 CONFIG_CRD_BASE_PATH = $(CONFIG_CRD_DIR)/bases
 CONFIG_RBAC_ROLE_DIR = $(CONFIG_DIR)/rbac/role
 
-KUBERNETES_CONFIGURATION_PACKAGE ?= github.com/kong/kubernetes-configuration/v2
-KUBERNETES_CONFIGURATION_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(KUBERNETES_CONFIGURATION_PACKAGE))
-KUBERNETES_CONFIGURATION_PACKAGE_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_PACKAGE)@$(KUBERNETES_CONFIGURATION_VERSION)
 
 .PHONY: manifests
 manifests: manifests.conversion-webhook manifests.validating-webhook manifests.versions manifests.crds manifests.role manifests.charts ## Generate ClusterRole and CustomResourceDefinition objects.
@@ -389,7 +386,6 @@ manifests.versions: kustomize yq
 .PHONY: manifests.charts
 manifests.charts:
 	@$(MAKE) manifests.charts.kong-operator.crds.operator
-	@$(MAKE) manifests.charts.kong-operator.crds.kic
 	@$(MAKE) manifests.charts.kong-operator.crds.gwapi-standard
 	@$(MAKE) manifests.charts.kong-operator.crds.gwapi-experimental
 	@$(MAKE) manifests.charts.kong-operator.chart.yaml
@@ -397,9 +393,6 @@ manifests.charts:
 
 KONG_OPERATOR_CHART_DIR = $(PROJECT_DIR)/charts/kong-operator
 
-.PHONY: ensure.go.pkg.downloaded.kubernetes-configuration
-ensure.go.pkg.downloaded.kubernetes-configuration:
-	@go mod download $(KUBERNETES_CONFIGURATION_PACKAGE)@$(KUBERNETES_CONFIGURATION_VERSION)
 
 .PHONY: ensure.go.pkg.downloaded.gateway-api
 ensure.go.pkg.downloaded.gateway-api:
@@ -413,13 +406,9 @@ manifests.charts.kong-operator.role: manifests.role
 	$(YQ) eval '.metadata.name = "{{ template \"kong.fullnamespacedname\" . }}-manager-role"' -i $(KONG_OPERATOR_CHART_DIR)/templates/cluster-role.yaml
 
 .PHONY: manifests.charts.kong-operator.crds.operator
-manifests.charts.kong-operator.crds.operator: kustomize ensure.go.pkg.downloaded.kubernetes-configuration
+manifests.charts.kong-operator.crds.operator: kustomize
 	$(MAKE) manifests.conversion-webhook
 
-.PHONY: manifests.charts.kong-operator.crds.kic
-manifests.charts.kong-operator.crds.kic: kustomize ensure.go.pkg.downloaded.kubernetes-configuration
-	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_PACKAGE_PATH)/config/crd/ingress-controller > \
-		$(KONG_OPERATOR_CHART_DIR)/charts/kic-crds/crds/kic-crds.yaml
 
 GATEWAY_API_STANDARD_CRDS_SUBCHART_CHART_YAML_PATH = $(KONG_OPERATOR_CHART_DIR)/charts/gwapi-standard-crds/Chart.yaml
 GATEWAY_API_STANDARD_CRDS_SUBCHART_MANIFEST_PATH = $(KONG_OPERATOR_CHART_DIR)/charts/gwapi-standard-crds/crds/gwapi-crds.yaml
@@ -882,19 +871,10 @@ uninstall.helm.cert-manager:
 install: install.helm.cert-manager manifests kustomize install.gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
 
-KUBERNETES_CONFIGURATION_PACKAGE_PATH = $(shell go env GOPATH)/pkg/mod/$(KUBERNETES_CONFIGURATION_PACKAGE)@$(KUBERNETES_CONFIGURATION_VERSION)
-KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH = $(KUBERNETES_CONFIGURATION_PACKAGE_PATH)/config/crd/gateway-operator
-KUBERNETES_CONFIGURATION_CRDS_CRDS_INGRESS_CONTROLLER_LOCAL_PATH = $(KUBERNETES_CONFIGURATION_PACKAGE_PATH)/config/crd/ingress-controller
 
 # Install kubernetes-configuration CRDs into the K8s cluster specified in ~/.kube/config.
-.PHONY: install.kubernetes-configuration-crds-operator
-install.kubernetes-configuration-crds-operator: kustomize ensure.go.pkg.downloaded.kubernetes-configuration
-	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH) | kubectl apply --server-side -f -
 
 # Install kubernetes-configuration ingress controller CRDs into the K8s cluster specified in ~/.kube/config.
-.PHONY: install.kubernetes-configuration-crds-ingress-controller
-install.kubernetes-configuration-crds-ingress-controller: kustomize ensure.go.pkg.downloaded.kubernetes-configuration
-	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_CRDS_CRDS_INGRESS_CONTROLLER_LOCAL_PATH) | kubectl apply --server-side -f -
 
 # Install RBACs from config/rbac into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.rbacs
@@ -903,7 +883,7 @@ install.rbacs: kustomize
 
 # Install standard and experimental CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.all
-install.all: install.helm.cert-manager manifests kustomize install.gateway-api-crds install.kubernetes-configuration-crds-operator install.kubernetes-configuration-crds-ingress-controller
+install.all: install.helm.cert-manager manifests kustomize install.gateway-api-crds
 	kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
 
 # Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
@@ -912,14 +892,11 @@ install.all: install.helm.cert-manager manifests kustomize install.gateway-api-c
 uninstall: manifests kustomize uninstall.gateway-api-crds uninstall.helm.cert-manager
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
-.PHONY: uninstall.kubernetes-configuration-crds
-uninstall.kubernetes-configuration-crds: kustomize
-	$(KUSTOMIZE) build $(KUBERNETES_CONFIGURATION_CRDS_CRDS_LOCAL_PATH) | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 # Uninstall standard and experimental CRDs from the K8s cluster specified in ~/.kube/config.
 # Call with ignore-not-found=true to ignore resource not found errors during deletion.
 .PHONY: uninstall.all
-uninstall.all: manifests kustomize uninstall.gateway-api-crds uninstall.kubernetes-configuration-crds uninstall.helm.cert-manager
+uninstall.all: manifests kustomize uninstall.gateway-api-crds uninstall.helm.cert-manager
 
 # Deploy controller to the K8s cluster specified in ~/.kube/config.
 # This will wait for operator's Deployment to get Available.
