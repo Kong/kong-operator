@@ -37,9 +37,10 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.
 	)
 
 	// Use local CRDs from the repository instead of external module
+	// Note: the local CRDs live under config/crd/kong-operator
 	kongCRDPath := filepath.Join(
 		testutil.ProjectRootPath(),
-		"config", "crd", "gateway-operator",
+		"config", "crd", "kong-operator",
 	)
 
 	testEnv := &envtest.Environment{
