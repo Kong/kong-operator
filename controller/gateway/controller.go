@@ -235,6 +235,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
+	hybridGateway, requeue, err := r.isGatewayHybrid(ctx, logger, gatewayConfig)
+	if requeue || err != nil {
+		return ctrl.Result{Requeue: true}, err
+	}
 	// Provision dataplane creates a dataplane and adds the DataPlaneReady=True
 	// condition to the Gateway status if the dataplane is ready. If not ready
 	// the status DataPlaneReady=False will be set instead.
@@ -357,41 +361,43 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
-	// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false.
-	controlplane := r.provisionControlPlane(ctx, logger, &gateway, gatewayConfig)
-	// Set the ControlPlaneReady Condition to False. This happens only if:
-	// * the new status is false and there was no ControlPlaneReady condition in the gateway
-	// * the new status is false and the previous status was true
-	if condition, found := k8sutils.GetCondition(kcfggateway.ControlPlaneReadyType, gwConditionAware); found && condition.Status != metav1.ConditionTrue {
-		if condition.Reason == string(kcfgdataplane.UnableToProvisionReason) {
-			log.Debug(logger, "unable to provision controlplane, requeueing")
-			return ctrl.Result{Requeue: true}, nil
-		}
-
-		conditionOld, foundOld := k8sutils.GetCondition(kcfggateway.ControlPlaneReadyType, oldGwConditionsAware)
-		if !foundOld || conditionOld.Status == metav1.ConditionTrue {
-			if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil {
-				return ctrl.Result{}, err
+	if !hybridGateway {
+		// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
+		// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false.
+		controlplane := r.provisionControlPlane(ctx, logger, &gateway, gatewayConfig)
+		// Set the ControlPlaneReady Condition to False. This happens only if:
+		// * the new status is false and there was no ControlPlaneReady condition in the gateway
+		// * the new status is false and the previous status was true
+		if condition, found := k8sutils.GetCondition(kcfggateway.ControlPlaneReadyType, gwConditionAware); found && condition.Status != metav1.ConditionTrue {
+			if condition.Reason == string(kcfgdataplane.UnableToProvisionReason) {
+				log.Debug(logger, "unable to provision controlplane, requeueing")
+				return ctrl.Result{Requeue: true}, nil
 			}
-			log.Debug(logger, "controlplane not ready yet")
-		}
-		return ctrl.Result{}, nil // requeue will be triggered by the update of the controlplane status
-	}
 
-	// if the controlplane wasn't ready before this reconciliation loop and now is ready, log this event
-	if !k8sutils.HasConditionTrue(kcfggateway.ControlPlaneReadyType, oldGwConditionsAware) {
-		log.Debug(logger, "controlplane is ready")
+			conditionOld, foundOld := k8sutils.GetCondition(kcfggateway.ControlPlaneReadyType, oldGwConditionsAware)
+			if !foundOld || conditionOld.Status == metav1.ConditionTrue {
+				if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil {
+					return ctrl.Result{}, err
+				}
+				log.Debug(logger, "controlplane not ready yet")
+			}
+			return ctrl.Result{}, nil // requeue will be triggered by the update of the controlplane status
+		}
+
+		// if the controlplane wasn't ready before this reconciliation loop and now is ready, log this event
+		if !k8sutils.HasConditionTrue(kcfggateway.ControlPlaneReadyType, oldGwConditionsAware) {
+			log.Debug(logger, "controlplane is ready")
+		}
+		// This should never happen as the controlplane at this point is always != nil.
+		// Nevertheless, this kind of check makes the Gateway controller bulletproof.
+		if controlplane == nil {
+			return ctrl.Result{}, errors.New("unexpected error, controlplane is nil. Returning to avoid panic")
+		}
 	}
 	// If the dataplane has not been marked as ready yet, return and wait for the next reconciliation loop.
 	if !k8sutils.HasConditionTrue(kcfggateway.DataPlaneReadyType, gwConditionAware) {
-		log.Debug(logger, "controlplane is ready, but dataplane is not ready yet")
+		log.Debug(logger, "dataplane is not ready yet")
 		return ctrl.Result{}, nil
-	}
-	// This should never happen as the controlplane at this point is always != nil.
-	// Nevertheless, this kind of check makes the Gateway controller bulletproof.
-	if controlplane == nil {
-		return ctrl.Result{}, errors.New("unexpected error, controlplane is nil. Returning to avoid panic")
 	}
 
 	// DataPlane NetworkPolicies
