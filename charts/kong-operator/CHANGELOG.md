@@ -1,5 +1,15 @@
 # Changelog
 
+## Unrealeased
+
+### Fixes
+
+- fix(controlplane): add missing POD_NAME env variable for controller pod reference
+  Previously, only POD_NAMESPACE was set, causing errors when resolving the controller's pod:
+  "unable to get POD information (missing POD_NAME or POD_NAMESPACE environment variable)"
+  This commit adds POD_NAME to ensure proper event attachment
+  [#2252](https://github.com/Kong/kong-operator/pull/2252)
+
 ## 0.0.7
 
 ### ⚠️ **IMPORTANT NOTICE ABOUT CONVERSION WEBHOOKS:**
