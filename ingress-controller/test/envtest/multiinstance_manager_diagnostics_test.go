@@ -1,8 +1,11 @@
 package envtest
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
+	"net/http/httputil"
 	"testing"
 	"time"
 
@@ -97,13 +100,25 @@ func TestMultiInstanceManager_Profiling(t *testing.T) {
 	require.NoError(t, multimgr.ScheduleInstance(m1))
 	require.NoError(t, multimgr.ScheduleInstance(m2))
 
-	t.Log("Profiling CPU usage for 5 seconds")
-	profileResp, err := http.Get(fmt.Sprintf("http://localhost:%d/debug/pprof/profile?seconds=5", diagPort))
+	const profilingDuration = 2 * time.Second
+	t.Logf("Profiling CPU usage for %s", profilingDuration)
+	url := fmt.Sprintf("http://localhost:%d/debug/pprof/profile?seconds=%d", diagPort, int(profilingDuration.Seconds()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	require.NoError(t, err, "failed to create profile request")
+	profileResp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err, "failed to get profile")
 	defer profileResp.Body.Close()
 
-	p, err := profile.Parse(profileResp.Body)
-	require.NoError(t, err, "failed to parse profile")
+	var buff bytes.Buffer
+	body := io.TeeReader(profileResp.Body, &buff)
+	p, err := profile.Parse(body)
+	if !assert.NoError(t, err, "failed to parse profile") {
+		profileResp.Body = io.NopCloser(bytes.NewReader(buff.Bytes()))
+		respDump, err := httputil.DumpResponse(profileResp, true)
+		require.NoError(t, err, "failed to dump response")
+		t.Logf("Profile response dump:\n%s", respDump)
+		return
+	}
 
 	requireProfileHasInstanceIDLabelSamples := func(t *testing.T, p *profile.Profile, expectedInstanceID manager.ID) {
 		samples := lo.Filter(p.Sample, func(s *profile.Sample, _ int) bool {
