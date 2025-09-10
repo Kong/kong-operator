@@ -2,6 +2,7 @@ package converter
 
 import (
 	"context"
+	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -16,10 +17,6 @@ import (
 type APIConverter[t RootObject] interface {
 	// GetRootObject returns the current root object of type t.
 	GetRootObject() t
-	// SetRootObject sets the root object to the provided value of type t.
-	SetRootObject(obj t)
-	// LoadInputStore loads and initializes any required internal store or cache, using the provided context.
-	LoadInputStore(ctx context.Context) error
 	// Translate performs the conversion or translation logic for the root object, returning an error if the process fails.
 	Translate() error
 	// GetOutputStore returns a slice of unstructured.Unstructured objects representing the current state of the store, using the provided context.
@@ -33,8 +30,27 @@ type APIConverter[t RootObject] interface {
 // RootObject is an interface that represents all resource types that can be loaded
 // as root by the APIConverter.
 type RootObject interface {
-	*corev1.Service |
-		*gwtypes.HTTPRoute
+	corev1.Service |
+		gwtypes.HTTPRoute
+}
 
+// RootObjectPtr is a generic interface that represents a pointer to a type T,
+// where T implements the RootObject interface. It also requires that the type
+// implements the client.Object interface, enabling Kubernetes client operations.
+type RootObjectPtr[T RootObject] interface {
+	*T
 	client.Object
+}
+
+// NewConverter is a factory function that creates and returns an APIConverter instance
+// based on the type of the provided root object. It supports different types of root objects
+// and returns an error if the type is unsupported.
+func NewConverter[t RootObject](obj t, cl client.Client) (APIConverter[t], error) {
+	switch o := any(obj).(type) {
+	// TODO: add other types here
+	case corev1.Service:
+		return newServiceConverter(&o, cl).(APIConverter[t]), nil
+	default:
+		return nil, fmt.Errorf("unsupported root object type: %T", obj)
+	}
 }

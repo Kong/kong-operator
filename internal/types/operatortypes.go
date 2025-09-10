@@ -59,6 +59,9 @@ type (
 type (
 	// GatewayConfiguration is an alias for the v2beta1 GatewayConfiguration type.
 	GatewayConfiguration = operatorv2beta1.GatewayConfiguration
+	// GatewayConfigurationSpec is an alias for the v2beta1 GatewayConfigurationSpec type.
+	GatewayConfigurationSpec = operatorv2beta1.GatewayConfigurationSpec
+
 	// GatewayConfigDataPlaneOptions is an alias for the v2beta1 GatewayConfigDataPlaneOptions type.
 	GatewayConfigDataPlaneOptions = operatorv2beta1.GatewayConfigDataPlaneOptions
 )
