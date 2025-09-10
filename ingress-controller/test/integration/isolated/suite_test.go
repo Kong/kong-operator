@@ -453,33 +453,16 @@ func startControllerManager(
 		ingressClass = envconf.RandomName("ingressclass", 16)
 	}
 
-	allControllerArgs := []string{
-		fmt.Sprintf("--health-probe-bind-address=localhost:%d", healthProbePort),
-		fmt.Sprintf("--metrics-bind-address=localhost:%d", metricsPort),
-		fmt.Sprintf("--ingress-class=%s", ingressClass),
-		"--anonymous-reports=false",
-		"--log-level=trace",
-		"--dump-config=true",
-		"--dump-sensitive-config=true",
-		fmt.Sprintf("--feature-gates=%s", featureGates),
-		// Use fixed election namespace `kong` because RBAC roles for leader election are in the namespace,
-		// so we create resources for leader election in the namespace to make sure that KIC can operate these resources.
-		fmt.Sprintf("--election-namespace=%s", consts.ControllerNamespace),
-		fmt.Sprintf("--watch-namespace=%s", kongAddon.Namespace()),
-	}
-
-	for _, opt := range setupCfg.controllerManagerOpts {
-		allControllerArgs = opt(allControllerArgs)
-	}
-
-	gracefulShutdownWithoutTimeoutOpt := func(c *managercfg.Config) {
-		// Set the GracefulShutdownTimeout to -1 to keep graceful shutdown enabled but disable the timeout.
-		// This prevents the errors:
-		// failed waiting for all runnables to end within grace period of 30s: context deadline exceeded
-		c.GracefulShutdownTimeout = lo.ToPtr(time.Duration(-1))
-	}
-
-	cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, cluster, kongAddon, allControllerArgs, gracefulShutdownWithoutTimeoutOpt)
+	cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, cluster, kongAddon, func(cfg *managercfg.Config) {
+		cfg.ProbeAddr = fmt.Sprintf("localhost:%d", healthProbePort)
+		cfg.MetricsAddr = fmt.Sprintf("localhost:%d", metricsPort)
+		cfg.IngressClassName = "kong-conformance-tests"
+		cfg.EnableProfiling = true
+		cfg.EnableConfigDumps = true
+		cfg.LogLevel = "trace"
+		cfg.AnonymousReports = false
+		cfg.GracefulShutdownTimeout = lo.ToPtr(time.Duration(-1))
+	})
 	t.Cleanup(func() { cancel() })
 	if !assert.NoError(t, err, "failed deploying controller manager") {
 		return ctx

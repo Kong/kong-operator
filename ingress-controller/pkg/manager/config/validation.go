@@ -33,7 +33,7 @@ func (c *Config) validateKonnect() error {
 	}
 
 	if c.KongAdminSvc.IsAbsent() {
-		return errors.New("--kong-admin-svc has to be set when using --konnect-sync-enabled")
+		return errors.New("KongAdminSvc has to be set when Konnect.ConfigSynchronizationEnabled is set to true")
 	}
 	if c.Konnect.Address == "" {
 		return errors.New("address not specified")
@@ -63,7 +63,7 @@ func (c *Config) validateKongAdminAPI() error {
 func (c *Config) validateFallbackConfiguration() error {
 	if !c.FeatureGates[FallbackConfigurationFeature] && c.UseLastValidConfigForFallback {
 		return fmt.Errorf(
-			"--use-last-valid-config-for-fallback or CONTROLLER_USE_LAST_VALID_CONFIG_FOR_FALLBACK can only be used with %s feature gate enabled",
+			"UseLastValidConfigForFallback can only be used with %s feature gate enabled",
 			FallbackConfigurationFeature,
 		)
 	}
@@ -77,11 +77,11 @@ func (c *Config) validateGatewayDiscovery() error {
 	}
 
 	if c.GatewayDiscoveryReadinessCheckInterval < MinDataPlanesReadinessReconciliationInterval {
-		return fmt.Errorf("Readiness check reconciliation interval cannot be less than %s",
+		return fmt.Errorf("readiness check reconciliation interval cannot be less than %s",
 			MinDataPlanesReadinessReconciliationInterval)
 	}
 	if c.GatewayDiscoveryReadinessCheckTimeout >= c.GatewayDiscoveryReadinessCheckInterval {
-		return fmt.Errorf("Readiness check timeout must be less than readiness check recociliation interval")
+		return fmt.Errorf("readiness check timeout must be less than readiness check reconciliation interval")
 	}
 	return nil
 }

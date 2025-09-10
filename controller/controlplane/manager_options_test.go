@@ -13,7 +13,6 @@ import (
 
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
 
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/internal/telemetry"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -920,10 +919,9 @@ func TestWithDataPlaneSyncOptions(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			cfg, err := manager.NewConfig(
+			cfg := managercfg.NewConfig(
 				WithDataPlaneSyncOptions(*tc.options),
 			)
-			require.NoError(t, err)
 			require.Equal(t, tc.expectedInterval, cfg.ProxySyncInterval)
 			require.Equal(t, tc.expectedTimeout, cfg.ProxySyncTimeout)
 		})

@@ -36,6 +36,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
 	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/consts"
 	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
@@ -128,8 +129,6 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 	require.NoError(t, gatewayv1.Install(client.Scheme()))
 	require.NoError(t, apiextensionsv1.AddToScheme(client.Scheme()))
 
-	featureGateFlag := fmt.Sprintf("--feature-gates=%s", consts.DefaultFeatureGates)
-
 	t.Log("Preparing the environment to run the controller manager")
 	require.NoError(t, testutils.PrepareClusterForRunningControllerManager(ctx, env.Cluster()))
 
@@ -144,15 +143,13 @@ func prepareEnvForGatewayConformanceTests(t *testing.T) (c client.Client, gatewa
 		require.NoError(t, os.Remove(admission.DefaultAdmissionWebhookKeyPath))
 	})
 
-	args := []string{
-		"--ingress-class=kong-conformance-tests",
-		"--profiling",
-		"--dump-config",
-		"--log-level=trace",
-		featureGateFlag,
-		"--anonymous-reports=false",
-	}
-	cancel, err := testutils.DeployControllerManagerForCluster(ctx, globalLogger, env.Cluster(), nil, args)
+	cancel, err := testutils.DeployControllerManagerForCluster(ctx, globalLogger, env.Cluster(), nil, func(cfg *managercfg.Config) {
+		cfg.IngressClassName = "kong-conformance-tests"
+		cfg.EnableProfiling = true
+		cfg.EnableConfigDumps = true
+		cfg.LogLevel = "trace"
+		cfg.AnonymousReports = false
+	})
 	require.NoError(t, err)
 	t.Cleanup(func() { cancel() })
 

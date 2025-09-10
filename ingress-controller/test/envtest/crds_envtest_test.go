@@ -22,6 +22,7 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 // TestGatewayAPIControllersMayBeDynamicallyStarted ensures that in case of missing CRDs installation in the
@@ -93,13 +94,12 @@ func TestNoKongCRDsInstalledIsFatal(t *testing.T) {
 	ctx, logger, _ := CreateTestLogger(ctx)
 	adminAPIServerURL := StartAdminAPIServerMock(t).URL
 
-	cfg, err := manager.NewConfig(
+	cfg := managercfg.NewConfig(
 		WithDefaultEnvTestsConfig(envcfg),
 		WithKongAdminURLs(adminAPIServerURL),
 		// Reducing the cache sync timeout to speed up the test.
 		WithCacheSyncTimeout(500*time.Millisecond),
 	)
-	require.NoError(t, err)
 
 	id, err := manager.NewID(t.Name())
 	require.NoError(t, err)

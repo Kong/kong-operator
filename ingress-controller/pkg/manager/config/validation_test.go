@@ -89,7 +89,7 @@ func TestConfigValidate(t *testing.T) {
 		t.Run("enabled with no gateway service discovery enabled", func(t *testing.T) {
 			c := validEnabled()
 			c.KongAdminSvc = managercfg.OptionalNamespacedName{}
-			require.ErrorContains(t, c.Validate(), "--kong-admin-svc has to be set when using --konnect-sync-enabled")
+			require.ErrorContains(t, c.Validate(), "invalid konnect configuration: KongAdminSvc has to be set when Konnect.ConfigSynchronizationEnabled is set to true")
 		})
 
 		t.Run("enabled with too small upload config period is rejected", func(t *testing.T) {
@@ -187,7 +187,7 @@ func TestConfigValidate(t *testing.T) {
 			c := managercfg.Config{
 				UseLastValidConfigForFallback: true,
 			}
-			require.ErrorContains(t, c.Validate(), "--use-last-valid-config-for-fallback or CONTROLLER_USE_LAST_VALID_CONFIG_FOR_FALLBACK can only be used with FallbackConfiguration feature gate enabled")
+			require.ErrorContains(t, c.Validate(), "UseLastValidConfigForFallback can only be used with FallbackConfiguration feature gate enabled")
 		})
 		t.Run("enabled with feature gate is accepted", func(t *testing.T) {
 			c := managercfg.Config{
@@ -223,13 +223,13 @@ func TestConfigValidate(t *testing.T) {
 			c := validEnabled()
 			c.GatewayDiscoveryReadinessCheckInterval = 2 * time.Second
 			c.GatewayDiscoveryReadinessCheckTimeout = time.Second
-			require.ErrorContains(t, c.Validate(), "Readiness check reconciliation interval cannot be less than 3s")
+			require.ErrorContains(t, c.Validate(), "readiness check reconciliation interval cannot be less than 3s")
 		})
 
 		t.Run("readiness check timeout must be less than reconciliation interval", func(t *testing.T) {
 			c := validEnabled()
 			c.GatewayDiscoveryReadinessCheckTimeout = managercfg.DefaultDataPlanesReadinessReconciliationInterval
-			require.ErrorContains(t, c.Validate(), "Readiness check timeout must be less than readiness check recociliation interval")
+			require.ErrorContains(t, c.Validate(), "readiness check timeout must be less than readiness check reconciliation interval")
 		})
 	})
 }
