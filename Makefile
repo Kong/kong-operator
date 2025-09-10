@@ -389,6 +389,7 @@ manifests.versions: kustomize yq
 .PHONY: manifests.charts
 manifests.charts:
 	@$(MAKE) manifests.charts.kong-operator.crds.operator
+	@$(MAKE) manifests.charts.kong-operator.crds.kic
 	@$(MAKE) manifests.charts.kong-operator.crds.gwapi-standard
 	@$(MAKE) manifests.charts.kong-operator.crds.gwapi-experimental
 	@$(MAKE) manifests.charts.kong-operator.chart.yaml
@@ -411,6 +412,11 @@ manifests.charts.kong-operator.role: manifests.role
 .PHONY: manifests.charts.kong-operator.crds.operator
 manifests.charts.kong-operator.crds.operator: kustomize
 	$(MAKE) manifests.conversion-webhook
+
+.PHONY: manifests.charts.kong-operator.crds.kic
+manifests.charts.kong-operator.crds.kic: kustomize
+	$(KUSTOMIZE) build ingress-controller/config/crd > \
+		$(KONG_OPERATOR_CHART_DIR)/charts/kic-crds/crds/kic-crds.yaml
 
 
 GATEWAY_API_STANDARD_CRDS_SUBCHART_CHART_YAML_PATH = $(KONG_OPERATOR_CHART_DIR)/charts/gwapi-standard-crds/Chart.yaml
