@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
@@ -28,8 +29,10 @@ import (
 	kcfggateway "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
+	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
 
 	"github.com/kong/kong-operator/controller/pkg/extensions"
+	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
@@ -536,6 +539,33 @@ func (r *Reconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gate
 	}
 
 	return deleted, errors.Join(errs...)
+}
+
+// isGatewayHybrid checks if the given GatewayConfiguration is in hybrid mode by inspecting its extensions.
+// It returns true if a KonnectExtension with ClusterTypeControlPlane is found, and a requeue flag if any extension status is not yet set.
+func (r *Reconciler) isGatewayHybrid(ctx context.Context, logger logr.Logger, gatewayConfiguration *GatewayConfiguration) (isHybrid bool, requeue bool, err error) {
+	for _, ext := range gatewayConfiguration.Spec.Extensions {
+		if ext.Group != konnectv1alpha2.SchemeGroupVersion.Group ||
+			ext.Kind != konnectv1alpha2.KonnectExtensionKind {
+			continue
+		}
+		namespacedName := types.NamespacedName{
+			Namespace: gatewayConfiguration.Namespace,
+			Name:      ext.Name,
+		}
+		var konnectExtension konnectv1alpha2.KonnectExtension
+		if err = r.Get(ctx, namespacedName, &konnectExtension); err != nil {
+			return false, false, err
+		}
+		if konnectExtension.Status.Konnect == nil {
+			log.Debug(logger, "konnect extension status not set yet, requeuing", "konnectExtension", namespacedName)
+			requeue = true
+		} else if konnectExtension.Status.Konnect.ClusterType == konnectv1alpha2.ClusterTypeControlPlane {
+			isHybrid = true
+		}
+		break
+	}
+	return isHybrid, requeue, nil
 }
 
 // -----------------------------------------------------------------------------
