@@ -17,6 +17,9 @@ import (
 // GetAPIVersionForObject provides the string of the full group and version for
 // the provided object, e.g. "apps/v1"
 func GetAPIVersionForObject(obj client.Object) string {
+	if obj.GetObjectKind().GroupVersionKind().Group == "" {
+		return obj.GetObjectKind().GroupVersionKind().Version
+	}
 	return fmt.Sprintf("%s/%s", obj.GetObjectKind().GroupVersionKind().Group, obj.GetObjectKind().GroupVersionKind().Version)
 }
 

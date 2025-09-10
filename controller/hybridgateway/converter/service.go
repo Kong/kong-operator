@@ -3,17 +3,21 @@ package converter
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
 
-	"github.com/kong/kong-operator/controller/fullhybrid/refs"
-	"github.com/kong/kong-operator/controller/fullhybrid/utils"
+	"github.com/kong/kong-operator/controller/hybridgateway/refs"
+	"github.com/kong/kong-operator/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/internal/utils/index"
 	"github.com/kong/kong-operator/pkg/consts"
@@ -32,28 +36,31 @@ var _ APIConverter[corev1.Service] = &serviceConverter{}
 type serviceConverter struct {
 	client.Client
 
-	service     *corev1.Service
-	store       serviceStore
-	outputStore []configurationv1alpha1.KongService
+	service         *corev1.Service
+	store           serviceStore
+	outputStore     []configurationv1alpha1.KongService
+	sharedStatusMap *route.SharedRouteStatusMap
 }
 
 type serviceStore struct {
-	httpBackendRefs       []gwtypes.HTTPBackendRef
-	konnectNamespacedRefs map[string]commonv1alpha1.KonnectNamespacedRef
+	httpBackendRefs       map[string][]gwtypes.HTTPBackendRef
+	konnectNamespacedRefs map[string]refs.GatewaysByNamespacedRef
+	gateways              map[string][]gwtypes.Gateway
 	hostnames             map[string]any
 }
 
 // NewServiceConverter returns a new instance of serviceConverter.
-func newServiceConverter(service *corev1.Service, cl client.Client) APIConverter[corev1.Service] {
+func newServiceConverter(service *corev1.Service, cl client.Client, sharedStatusMap *route.SharedRouteStatusMap) APIConverter[corev1.Service] {
 	return &serviceConverter{
 		Client: cl,
 		store: serviceStore{
-			httpBackendRefs:       []gwtypes.HTTPBackendRef{},
-			konnectNamespacedRefs: map[string]commonv1alpha1.KonnectNamespacedRef{},
+			httpBackendRefs:       map[string][]gwtypes.HTTPBackendRef{},
+			konnectNamespacedRefs: map[string]refs.GatewaysByNamespacedRef{},
 			hostnames:             map[string]any{},
 		},
-		outputStore: []configurationv1alpha1.KongService{},
-		service:     service,
+		outputStore:     []configurationv1alpha1.KongService{},
+		sharedStatusMap: sharedStatusMap,
+		service:         service,
 	}
 }
 
@@ -133,6 +140,59 @@ func (d *serviceConverter) ListExistingObjects(ctx context.Context) ([]unstructu
 	return unstructuredItems, nil
 }
 
+// UpdateSharedRouteStatus implements APIConverter.
+
+// UpdateSharedRouteStatus updates the shared status map with the count of "Programmed" services
+// for each unique combination of route and gateway, based on the provided list of unstructured
+// Kubernetes objects. It expects each object to have specific annotations indicating the route
+// and associated gateways. If required annotations are missing, it returns an error. The function
+// groups objects by route and gateway, filters those with a "Programmed" condition set to "True",
+// and updates the shared status accordingly.
+func (d *serviceConverter) UpdateSharedRouteStatus(objs []unstructured.Unstructured) error {
+	mappedObjects := map[string][]unstructured.Unstructured{}
+	for _, obj := range objs {
+		var routeKey, gatewaysNNs string
+		var gateways []string
+		var ok bool
+
+		routeKey, ok = obj.GetAnnotations()[consts.GatewayOperatorHybridRouteAnnotation]
+		if !ok {
+			return fmt.Errorf("missing route annotation on object %s/%s", obj.GetNamespace(), obj.GetName())
+		}
+
+		gatewaysNNs, ok = obj.GetAnnotations()[consts.GatewayOperatorHybridGatewaysAnnotation]
+		if !ok {
+			return fmt.Errorf("missing gateways annotation on object %s/%s", obj.GetNamespace(), obj.GetName())
+		}
+
+		gateways = strings.Split(gatewaysNNs, ",")
+		for _, gw := range gateways {
+			mappedObjects[routeKey+"|"+gw] = append(mappedObjects[routeKey+"|"+gw], obj)
+		}
+	}
+
+	for key, groupedObjs := range mappedObjects {
+		programmedObjs := lo.Filter(groupedObjs, func(obj unstructured.Unstructured, _ int) bool {
+			conditions, found, err := unstructured.NestedSlice(obj.Object, "status", "conditions")
+			if err != nil || !found {
+				return false
+			}
+			for _, c := range conditions {
+				condMap, ok := c.(map[string]any)
+				if !ok {
+					continue
+				}
+				if condMap["type"] == string(konnectv1alpha1.KonnectEntityProgrammedConditionType) && condMap["status"] == string(metav1.ConditionTrue) {
+					return true
+				}
+			}
+			return false
+		})
+		d.sharedStatusMap.UpdateProgrammedServices(*d.service, key, len(programmedObjs))
+	}
+	return nil
+}
+
 // -----------------------------------------------------------------------------
 // Private functions
 // -----------------------------------------------------------------------------
@@ -170,7 +230,7 @@ func (d *serviceConverter) loadInputStore(ctx context.Context) error {
 			continue
 		}
 		for _, ref := range namespacedRefs {
-			d.store.konnectNamespacedRefs[ref.Name+"/"+ref.Namespace] = ref
+			d.store.konnectNamespacedRefs[ref.Ref.Name+"/"+ref.Ref.Namespace] = ref
 		}
 		for _, rule := range r.Spec.Rules {
 			if b, found := lo.Find(rule.BackendRefs, func(b gwtypes.HTTPBackendRef) bool {
@@ -186,7 +246,11 @@ func (d *serviceConverter) loadInputStore(ctx context.Context) error {
 					containsPort
 
 			}); found {
-				d.store.httpBackendRefs = append(d.store.httpBackendRefs, b)
+				routeNN := r.Namespace + "/" + r.Name
+				if _, ok := d.store.httpBackendRefs[routeNN]; !ok {
+					d.store.httpBackendRefs[routeNN] = []gwtypes.HTTPBackendRef{}
+				}
+				d.store.httpBackendRefs[routeNN] = append(d.store.httpBackendRefs[routeNN], b)
 			}
 		}
 	}
@@ -197,30 +261,33 @@ func (d *serviceConverter) loadInputStore(ctx context.Context) error {
 // sets its metadata, and appends it to the output store.
 // Returns an error if metadata setting fails.
 func (d *serviceConverter) translate() error {
-	for _, r := range d.store.httpBackendRefs {
+	for routeNN, brefs := range d.store.httpBackendRefs {
 		kongServices := []configurationv1alpha1.KongService{}
-		for _, ref := range d.store.konnectNamespacedRefs {
-			for hostname := range d.store.hostnames {
-				kongService := configurationv1alpha1.KongService{
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Name: lo.ToPtr(d.service.Name + lo.Ternary(r.Port != nil, fmt.Sprintf("-%d", *r.Port), "")),
-							Port: int64(*r.Port),
-							Host: hostname,
-						},
-						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
-							Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-								Name: ref.Name,
+		for _, brefs := range brefs {
+			for _, ref := range d.store.konnectNamespacedRefs {
+				for hostname := range d.store.hostnames {
+					kongService := configurationv1alpha1.KongService{
+						Spec: configurationv1alpha1.KongServiceSpec{
+							KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+								Port: int64(*brefs.Port),
+								Host: hostname,
+							},
+							ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+								Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+									Name: ref.Ref.Name,
+								},
 							},
 						},
-					},
-				}
+					}
+					// Set all the fields that on the KongService spec, then compute the name based on the spec hash.
+					kongService.Spec.Name = lo.ToPtr(d.service.Namespace + "_" + d.service.Name + "-" + utils.Hash32(kongService.Spec))
 
-				if err := d.setMetadata(&kongService); err != nil {
-					return err
+					if err := d.setMetadata(&kongService, route.HTTPRouteKey+"|"+routeNN, utils.GatewaysSliceToAnnotation(ref.Gateways)); err != nil {
+						return err
+					}
+					kongServices = append(kongServices, kongService)
 				}
-				kongServices = append(kongServices, kongService)
 			}
 		}
 
@@ -229,9 +296,9 @@ func (d *serviceConverter) translate() error {
 	return nil
 }
 
-func (d *serviceConverter) setMetadata(kongService *configurationv1alpha1.KongService) error {
-	hashSpec := utils.Hash(kongService.Spec)
-	if err := utils.SetMetadata(d.service, kongService, hashSpec); err != nil {
+func (d *serviceConverter) setMetadata(kongService *configurationv1alpha1.KongService, routeAnnotation string, gatewaysAnnotation string) error {
+	hashSpec := utils.Hash64(kongService.Spec)
+	if err := utils.SetMetadata(d.service, kongService, hashSpec, routeAnnotation, gatewaysAnnotation); err != nil {
 		return err
 	}
 	return nil
@@ -239,6 +306,6 @@ func (d *serviceConverter) setMetadata(kongService *configurationv1alpha1.KongSe
 
 // HostnameIntersection computes the intersection of hostnames from the provided Gateways and HTTPRoute.
 func (d *serviceConverter) HostnameIntersection(gateways []gwtypes.Gateway, httpRoute gwtypes.HTTPRoute) []string {
-	// TODO(mlavacca): implement proper hostname intersection logic
+	// TODO(mlavacca): This is a placeholder implementation, implement proper hostname intersection logic
 	return []string{"api.kong-air.com"}
 }

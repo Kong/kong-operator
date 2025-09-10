@@ -33,8 +33,8 @@ func TestHash(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			hash1 := Hash(tt.obj1)
-			hash2 := Hash(tt.obj2)
+			hash1 := Hash64(tt.obj1)
+			hash2 := Hash64(tt.obj2)
 			if (hash1 == hash2) != tt.sameHash {
 				t.Errorf("Test %s: expected sameHash=%v, got hash1=%s, hash2=%s", tt.name, tt.sameHash, hash1, hash2)
 			}
