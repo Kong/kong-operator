@@ -29,9 +29,11 @@ const (
 	// ChartPath is the path relative to the project to the kong-operator chart
 	ChartPath = "charts/kong-operator"
 
-	// ValidationPolicy_ contain validation policies path relative to the kong-operator chart
+	// ValidationPolicyDataplane contains data plane validation policies path relative to the kong-operator chart
 	ValidationPolicyDataplane = "templates/validation-policy-dataplane.yaml"
-	ValidationPolicyKonnect   = "templates/validation-policy-konnect.yaml"
+
+	// ValidationPolicyKonnect contains konnect validation policies path relative to the kong-operator chart
+	ValidationPolicyKonnect = "templates/validation-policy-konnect.yaml"
 )
 
 var sharedEventuallyConfig = common.EventuallyConfig{
@@ -114,7 +116,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 
 	chartPath := path.Join(test.ProjectRootPath(), ChartPath)
 	templates := []string{
-		"templates/validation-policy-dataplane.yaml",
+		ValidationPolicyDataplane,
 	}
 
 	helm.ApplyTemplate(t, cfg, chartPath, templates)
