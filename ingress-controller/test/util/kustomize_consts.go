@@ -30,7 +30,7 @@ var (
 )
 
 func initKongIncubatorCRDsKustomizePath() string {
-	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/crd/ingress-controller-incubator")
+	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/crd/incubator")
 	ensureDirExists(dir)
 	return dir
 }
@@ -42,13 +42,13 @@ func initKongRBACsKustomizePath() string {
 }
 
 func initKongConfigurationCRDs() string {
-	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/crd/ingress-controller")
+	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/crd")
 	ensureDirExists(dir)
 	return dir
 }
 
 func initKongOperatorConfigurationCRDs() string {
-	dir := filepath.Join(lo.Must(getRepoRoot()), "config/crd/gateway-operator")
+	dir := filepath.Join(lo.Must(getRepoRoot()), "config/crd/kong-operator")
 	ensureDirExists(dir)
 	return dir
 }
