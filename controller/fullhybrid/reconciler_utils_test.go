@@ -167,8 +167,8 @@ func TestGetOwnedResources(t *testing.T) {
 				WithObjects(tc.existingObjects...).
 				Build()
 
-			conv := converter.NewDummyConverter(cl)
-			conv.SetRootObject(tc.owner)
+			conv, err := converter.NewConverter(*tc.owner, cl)
+			assert.NoError(t, err)
 			objects, err := conv.ListExistingObjects(context.Background())
 			assert.NoError(t, err)
 			resourceMap := mapOwnedResources(tc.owner, objects)
@@ -272,7 +272,8 @@ func TestHasOwnerRef(t *testing.T) {
 }
 
 func TestReduce(t *testing.T) {
-	dummy := converter.NewDummyConverter(nil)
+	serviceConverter, err := converter.NewConverter(corev1.Service{}, nil)
+	require.NoError(t, err)
 	now := time.Now()
 
 	testCases := []struct {
@@ -424,7 +425,7 @@ func TestReduce(t *testing.T) {
 			obj := unstructured.Unstructured{}
 			obj.SetKind(tc.kind)
 			var resourcesToDelete []string
-			for _, obj := range reduceDuplicates(tc.kongServices, dummy.Reduce(obj)...) {
+			for _, obj := range reduceDuplicates(tc.kongServices, serviceConverter.Reduce(obj)...) {
 				resourcesToDelete = append(resourcesToDelete, obj.GetName())
 			}
 			require.ElementsMatch(t, tc.expectedResourcesTodelete, resourcesToDelete)
