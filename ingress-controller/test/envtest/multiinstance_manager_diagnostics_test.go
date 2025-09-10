@@ -1,8 +1,11 @@
 package envtest
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net/http"
+	"net/http/httputil"
 	"testing"
 	"time"
 
@@ -96,20 +99,37 @@ func TestMultiInstanceManager_Profiling(t *testing.T) {
 	require.NoError(t, multimgr.ScheduleInstance(m1))
 	require.NoError(t, multimgr.ScheduleInstance(m2))
 
-	t.Log("Profiling CPU usage for 5 seconds")
-	profileResp, err := http.Get(fmt.Sprintf("http://localhost:%d/debug/pprof/profile?seconds=5", diagPort))
-	require.NoError(t, err, "failed to get profile")
-	defer profileResp.Body.Close()
+	const profilingDuration = 2 * time.Second
 
-	p, err := profile.Parse(profileResp.Body)
-	require.NoError(t, err, "failed to parse profile")
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		t.Logf("Profiling CPU usage for %s", profilingDuration)
+		url := fmt.Sprintf("http://localhost:%d/debug/pprof/profile?seconds=%d", diagPort, int(profilingDuration.Seconds()))
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+		require.NoError(c, err, "failed to create profile request")
+		profileResp, err := http.DefaultClient.Do(req)
+		require.NoError(c, err, "failed to get profile")
+		defer profileResp.Body.Close()
 
-	requireProfileHasInstanceIDLabelSamples := func(t *testing.T, p *profile.Profile, expectedInstanceID manager.ID) {
-		samples := lo.Filter(p.Sample, func(s *profile.Sample, _ int) bool {
-			return s.HasLabel("instanceID", expectedInstanceID.String())
-		})
-		require.NotEmpty(t, samples, "profile does not contain samples with instanceID label %q", expectedInstanceID)
-	}
-	requireProfileHasInstanceIDLabelSamples(t, p, m1.ID())
-	requireProfileHasInstanceIDLabelSamples(t, p, m2.ID())
+		var buff bytes.Buffer
+		body := io.TeeReader(profileResp.Body, &buff)
+		p, err := profile.Parse(body)
+		if !assert.NoError(c, err, "failed to parse profile") {
+			profileResp.Body = io.NopCloser(bytes.NewReader(buff.Bytes()))
+			respDump, err := httputil.DumpResponse(profileResp, true)
+			require.NoError(c, err, "failed to dump response")
+			t.Logf("Profile response dump:\n%s", respDump)
+			return
+		}
+
+		requireProfileHasInstanceIDLabelSamples := func(
+			t require.TestingT, p *profile.Profile, expectedInstanceID manager.ID,
+		) {
+			samples := lo.Filter(p.Sample, func(s *profile.Sample, _ int) bool {
+				return s.HasLabel("instanceID", expectedInstanceID.String())
+			})
+			require.NotEmpty(t, samples, "profile does not contain samples with instanceID label %q", expectedInstanceID)
+		}
+		requireProfileHasInstanceIDLabelSamples(c, p, m1.ID())
+		requireProfileHasInstanceIDLabelSamples(c, p, m2.ID())
+	}, 10*time.Second, 100*time.Millisecond)
 }
