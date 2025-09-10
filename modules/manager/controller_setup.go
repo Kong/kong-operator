@@ -30,6 +30,8 @@ import (
 	"github.com/kong/kong-operator/controller/controlplane_extensions"
 	"github.com/kong/kong-operator/controller/controlplane_extensions/metricsscraper"
 	"github.com/kong/kong-operator/controller/dataplane"
+	"github.com/kong/kong-operator/controller/fullhybrid"
+	"github.com/kong/kong-operator/controller/fullhybrid/converter"
 	"github.com/kong/kong-operator/controller/gateway"
 	"github.com/kong/kong-operator/controller/gatewayclass"
 	"github.com/kong/kong-operator/controller/kongplugininstallation"
@@ -126,6 +128,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForKonnectCloudGatewayNetwork(),
 			index.OptionsForKonnectExtension(),
 			index.OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
+			index.OptionsForHTTPRoute(),
 		)
 	}
 
@@ -623,6 +626,11 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			newKonnectEntityController[configurationv1alpha1.KongVault](controllerFactory),
 			newKonnectEntityController[configurationv1alpha1.KongSNI](controllerFactory),
 		)
+
+		controllers = append(controllers,
+			newGatewayAPIHybridController[corev1.Service](mgr),
+			// TODO: Add more Hybrid controllers here
+		)
 	}
 
 	return controllers, nil
@@ -664,5 +672,12 @@ func newKonnectPluginController[
 			f.loggingMode,
 			f.client,
 		),
+	}
+}
+
+func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager) ControllerDef {
+	return ControllerDef{
+		Enabled:    true,
+		Controller: fullhybrid.NewGatewayAPIHybridReconciler[t, tPtr](mgr),
 	}
 }

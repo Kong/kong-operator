@@ -21,6 +21,11 @@ type ownedResourcesWithHits struct {
 	hits      int
 }
 
+// Translate performs the full translation process using the provided APIConverter.
+func Translate[t converter.RootObject](conv converter.APIConverter[t], ctx context.Context) error {
+	return conv.Translate()
+}
+
 // EnforceState ensures that the actual state of resources in the cluster matches the desired state
 // defined by the provided APIConverter. It creates missing resources, marks obsolete or duplicate
 // resources for deletion, and returns whether a requeue is needed along with any error encountered.
@@ -29,14 +34,19 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 	store := conv.GetOutputStore(ctx)
 	rootObject := conv.GetRootObject()
 
-	// Get the resources owned by the root object
 	resources, err := conv.ListExistingObjects(ctx)
 	if err != nil {
 		return true, err
 	}
 
+	// Convert rootObject to client.Object using its pointer type
+	rootObjectPtr, ok := any(&rootObject).(client.Object)
+	if !ok {
+		return true, fmt.Errorf("failed to convert rootObject to client.Object")
+	}
+
 	// Create a map of the owned resources using the hash spec as index.
-	ownedResourceMap := mapOwnedResources(rootObject, resources)
+	ownedResourceMap := mapOwnedResources(rootObjectPtr, resources)
 	for _, expectedObject := range store {
 		expectedHash := expectedObject.GetLabels()[consts.GatewayOperatorHashSpecLabel]
 		existingObject, found := ownedResourceMap[expectedHash]
