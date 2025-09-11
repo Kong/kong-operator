@@ -30,6 +30,12 @@ import (
 	"github.com/kong/kong-operator/pkg/vars"
 )
 
+var skippedTestsShared = []string{
+	// TODO: https://github.com/Kong/kong-operator/issues/2215
+	// HTTPRouteWeight is flaky for some reason. 2215 tracks solving it.
+	tests.HTTPRouteWeight.ShortName,
+}
+
 var skippedTestsForExpressionsRouter = []string{}
 
 var skippedTestsForTraditionalCompatibleRouter = []string{
@@ -51,15 +57,15 @@ func TestGatewayConformance(t *testing.T) {
 	// traditional_compatible and expressions.
 	var (
 		config            ConformanceConfig
-		skippedTests      []string
+		skippedTests      = skippedTestsShared
 		supportedFeatures sets.Set[features.FeatureName]
 	)
 	switch rf := KongRouterFlavor(t); rf {
 	case consts.RouterFlavorTraditionalCompatible:
-		skippedTests = skippedTestsForTraditionalCompatibleRouter
+		skippedTests = append(skippedTests, skippedTestsForTraditionalCompatibleRouter...)
 		config.KongRouterFlavor = consts.RouterFlavorTraditionalCompatible
 	case consts.RouterFlavorExpressions:
-		skippedTests = skippedTestsForExpressionsRouter
+		skippedTests = append(skippedTests, skippedTestsForExpressionsRouter...)
 		config.KongRouterFlavor = consts.RouterFlavorExpressions
 	default:
 		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
