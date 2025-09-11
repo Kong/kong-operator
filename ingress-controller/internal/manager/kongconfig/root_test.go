@@ -15,7 +15,7 @@ func TestRoot(t *testing.T) {
 	var root Root
 	require.NoError(t, json.Unmarshal([]byte(dblessConfigJSON3_4_1), &root))
 	require.NoError(t, root.Validate(false))
-	require.EqualError(t, root.Validate(true), "--skip-ca-certificates is not available for use with DB-less Kong instances")
+	require.EqualError(t, root.Validate(true), "skipping ca certificates is not available for use with DB-less Kong instances")
 }
 
 func TestValidateRoots(t *testing.T) {

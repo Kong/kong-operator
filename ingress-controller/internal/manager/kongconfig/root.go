@@ -175,7 +175,7 @@ func validateDBMode(dbMode dpconf.DBMode, skipCACerts bool) error {
 	switch dbMode {
 	case "", dpconf.DBModeOff:
 		if skipCACerts {
-			return fmt.Errorf("--skip-ca-certificates is not available for use with DB-less Kong instances")
+			return fmt.Errorf("skipping ca certificates is not available for use with DB-less Kong instances")
 		}
 	case dpconf.DBModePostgres:
 		return nil

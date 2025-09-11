@@ -235,8 +235,7 @@ func SetupManager(
 		modifyCfgFns..., // Add the user-provided modifyCfgFns last so they can override the defaults.
 	)
 
-	cfg, err := manager.NewConfig(modifyCfgFns...)
-	require.NoError(t, err)
+	cfg := managercfg.NewConfig(modifyCfgFns...)
 
 	logger := ctrl.LoggerFrom(ctx)
 	mgr, err := manager.NewManager(ctx, mgrID, logger, cfg)

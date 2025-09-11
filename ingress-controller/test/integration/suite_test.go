@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"testing"
 
@@ -170,8 +169,27 @@ func TestMain(m *testing.M) {
 		fmt.Println("WARNING: caller indicated that they will manage their own controller")
 	} else {
 		fmt.Println("INFO: configuring feature gates")
-		featureGates := testenv.ControllerFeatureGates()
-		fmt.Printf("INFO: feature gates enabled: %s\n", featureGates)
+		featureGates := make(managercfg.FeatureGates)
+		for _, fg := range strings.Split(testenv.ControllerFeatureGates(), ",") {
+			fg = strings.TrimSpace(fg)
+			if fg == "" {
+				continue
+			}
+			fgParts := strings.Split(fg, "=")
+			if len(fgParts) != 2 {
+				helpers.ExitOnErrWithCode(ctx, fmt.Errorf("feature gate %q not in key=value format", fg), consts.ExitCodeIncompatibleOptions)
+			}
+			fgName, fgValue := fgParts[0], fgParts[1]
+			if _, ok := managercfg.GetFeatureGatesDefaults()[fgName]; !ok {
+				helpers.ExitOnErrWithCode(ctx, fmt.Errorf("unknown feature gate %q (see %s for available feature gates)", fgName, managercfg.DocsURL), consts.ExitCodeIncompatibleOptions)
+			}
+			if fgValue != "true" && fgValue != "false" {
+				helpers.ExitOnErrWithCode(ctx, fmt.Errorf("feature gate %q must be true or false, got %q", fgName, fgValue), consts.ExitCodeIncompatibleOptions)
+			}
+			featureGates[fgName] = fgValue == "true"
+		}
+
+		fmt.Printf("INFO: feature gates enabled: %v\n", featureGates)
 
 		fmt.Println("preparing the environment to run the controller manager")
 		helpers.ExitOnErr(ctx, testutils.PrepareClusterForRunningControllerManager(ctx, env.Cluster()))
@@ -183,23 +201,22 @@ func TestMain(m *testing.M) {
 		helpers.ExitOnErr(ctx, os.MkdirAll(filepath.Dir(admission.DefaultAdmissionWebhookKeyPath), 0755))
 		helpers.ExitOnErr(ctx, os.WriteFile(admission.DefaultAdmissionWebhookKeyPath, key, 0600))
 
-		standardControllerArgs := []string{
-			fmt.Sprintf("--ingress-class=%s", consts.IngressClass),
-			"--profiling",
-			"--dump-config",
-			"--dump-sensitive-config",
-			"--log-level=trace", // not used, as controller logger is configured separately
-			"--anonymous-reports=false",
-			fmt.Sprintf("--feature-gates=%s", featureGates),
-			fmt.Sprintf("--election-namespace=%s", kongAddon.Namespace()),
+		_ = extraControllerArgs
+		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, func(c *managercfg.Config) {
+			c.IngressClassName = consts.IngressClass
+			c.EnableProfiling = true
+			c.EnableConfigDumps = true
+			c.DumpSensitiveConfig = true
+			c.LogLevel = "trace" // not used, as controller logger is configured separately
+			c.AnonymousReports = false
+			c.FeatureGates = featureGates
+			c.LeaderElectionNamespace = kongAddon.Namespace()
 			// Leader election is irrelevant for single-instance tests. We should effectively always be the leader. However,
 			// controller-runtime operates an internal leadership deadline and will abort if it cannot update leadership
 			// within a certain number of seconds. Pausing certain segments manager in a debugger can exceed this deadline,
 			// so elections are disabled in integration tests for convenience.
-			fmt.Sprintf("--force-leader-election=%s", managercfg.LeaderElectionDisabled),
-		}
-		allControllerArgs := slices.Concat(standardControllerArgs, extraControllerArgs)
-		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, allControllerArgs)
+			c.LeaderElectionForce = managercfg.LeaderElectionDisabled
+		})
 		defer cancel()
 		helpers.ExitOnErr(ctx, err)
 	}

@@ -380,11 +380,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				return ctrl.Result{}, err
 			}
 
-			mgrCfg, err := manager.NewConfig(cfgOpts...)
-			if err != nil {
-				return ctrl.Result{}, fmt.Errorf("failed to create manager config: %w", err)
-			}
+			mgrCfg := managercfg.NewConfig(cfgOpts...)
 			mgrCfg.DisableRunningDiagnosticsServer = true
+
 			if err := r.scheduleInstance(ctx, logger, mgrID, mgrCfg); err != nil {
 				return r.handleScheduleInstanceOutcome(ctx, logger, cp, err)
 			}
@@ -407,11 +405,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, err
 		}
 
-		mgrCfg, err := manager.NewConfig(cfgOpts...)
-		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("failed to create manager config: %w", err)
-		}
+		mgrCfg := managercfg.NewConfig(cfgOpts...)
 		mgrCfg.DisableRunningDiagnosticsServer = true
+
 		hashFromSpec, errSpec := managercfg.Hash(mgrCfg)
 		if errSpec != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to hash ControlPlane config options: %w", errSpec)

@@ -26,7 +26,7 @@ import (
 
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/k8s"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 )
 
 func TestTelemetry(t *testing.T) {
@@ -39,10 +39,9 @@ func TestTelemetry(t *testing.T) {
 	t.Log("configuring envtest and creating K8s objects for telemetry test")
 	envcfg := Setup(t, scheme.Scheme)
 	// Let's have long duration due too rate limiter in K8s client.
-	cfg, err := manager.NewConfig(
+	cfg := managercfg.NewConfig(
 		WithDefaultEnvTestsConfig(envcfg),
 	)
-	require.NoError(t, err)
 	c, err := k8s.GetKubeconfig(cfg)
 	require.NoError(t, err)
 	createK8sObjectsForTelemetryTest(t.Context(), t, c)

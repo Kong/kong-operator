@@ -28,6 +28,7 @@ import (
 	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/consts"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
@@ -118,7 +119,9 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	t.Log("Preparing the environment to run the controller manager")
 	require.NoError(t, testutils.PrepareClusterForRunningControllerManager(ctx, env.Cluster()))
 	t.Log("starting the controller manager")
-	cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, []string{"--log-level=debug"})
+	cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, func(cfg *managercfg.Config) {
+		cfg.LogLevel = "debug"
+	})
 	require.NoError(t, err)
 	t.Cleanup(func() { cancel() })
 
