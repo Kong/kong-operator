@@ -5,6 +5,7 @@
 *.so
 *.dylib
 bin/*
+ingress-controller/bin/*
 *_debug_bin*
 main
 

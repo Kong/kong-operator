@@ -15,7 +15,7 @@ import (
 // Dependency manifest reader
 // -----------------------------------------------------------------------------
 
-const dependencyFilePath = "../../.github/test_dependencies.yaml"
+const dependencyFilePath = "../test_dependencies.yaml"
 
 // GetDependencyVersion returns the version of a dependency specified by the dependency tracker file given a YAML path.
 func GetDependencyVersion(path string) (string, error) {

@@ -12,9 +12,9 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test/kongintegration/containers"
 )
 
-// runKongEnterprise runs a Kong EE container using the version from `test_dependencies.yaml`.
+// runKongEnterprise runs a Kong EE container using the version from `./test/test_dependencies.yaml`.
 func runKongEnterprise(ctx context.Context, t *testing.T) containers.Kong {
-	// Get the Kong Gateway version to use for the test from `test_dependencies.yaml` file.
+	// Get the Kong Gateway version to use for the test from `./test/test_dependencies.yaml` file.
 	gatewayTag, err := testenv.GetDependencyVersion("envtests.kong-ee")
 	require.NoError(t, err)
 
