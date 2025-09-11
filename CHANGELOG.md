@@ -37,6 +37,15 @@
 - Fix incorrect error handling during cluster CA secret creation
   [#2250](https://github.com/Kong/kong-operator/pull/2250)
 
+### Added
+
+- Hybrid Gateway support: Gateway API objects bound to `Gateway`s programmed in Konnect
+  are converted into Konnect entities and used to configure the hybrid `DataPlane`.
+  [#2134](https://github.com/Kong/kong-operator/pull/2134)
+  [#2143](https://github.com/Kong/kong-operator/pull/2143)
+  [#2177](https://github.com/Kong/kong-operator/pull/2177)
+  [#2260](https://github.com/Kong/kong-operator/pull/2260)
+
 ### Changed
 
 - For Hybrid `Gateway`s the operator does not run the `ControlPlane` anymore, as

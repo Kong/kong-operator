@@ -1,16 +1,17 @@
-package fullhybrid
+package hybridgateway
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/controller/fullhybrid/converter"
-	"github.com/kong/kong-operator/controller/fullhybrid/utils"
+	"github.com/kong/kong-operator/controller/hybridgateway/converter"
+	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
@@ -30,19 +31,19 @@ func Translate[t converter.RootObject](conv converter.APIConverter[t], ctx conte
 // defined by the provided APIConverter. It creates missing resources, marks obsolete or duplicate
 // resources for deletion, and returns whether a requeue is needed along with any error encountered.
 // The function is generic over types implementing converter.RootObject.
-func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client, conv converter.APIConverter[t]) (requeue bool, err error) {
+func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (requeue bool, stop bool, err error) {
 	store := conv.GetOutputStore(ctx)
 	rootObject := conv.GetRootObject()
 
 	resources, err := conv.ListExistingObjects(ctx)
 	if err != nil {
-		return true, err
+		return false, false, err
 	}
 
 	// Convert rootObject to client.Object using its pointer type
 	rootObjectPtr, ok := any(&rootObject).(client.Object)
 	if !ok {
-		return true, fmt.Errorf("failed to convert rootObject to client.Object")
+		return false, false, fmt.Errorf("failed to convert rootObject to client.Object")
 	}
 
 	// Create a map of the owned resources using the hash spec as index.
@@ -54,14 +55,15 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			existingObject.hits++
 		} else {
 			if err := cl.Create(ctx, &expectedObject); err != nil {
-				return true, err
+				return false, false, err
 			}
+			return false, true, nil
 		}
 
 		// TODO: ensure the spec is up to date. This print is meant
 		// to act as a placeholder for the actual update logic.
 		// https://github.com/Kong/kong-operator/issues/2171
-		fmt.Println(existingObject)
+		logger.Info("TODO: ensure the spec is up to date for", "name", expectedObject.GetName())
 	}
 
 	resourcesToDelete := make([]unstructured.Unstructured, 0)
@@ -77,11 +79,18 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 	// delete all the resources marked for deletion
 	for _, resource := range resourcesToDelete {
 		if err := cl.Delete(ctx, &resource); err != nil {
-			return true, err
+			return false, false, err
 		}
 	}
+	if stop {
+		return false, true, nil
+	}
 
-	return false, nil
+	if err := conv.UpdateSharedRouteStatus(resources); err != nil {
+		return false, false, err
+	}
+
+	return false, false, nil
 }
 
 // reduceDuplicates applies a series of reducer functions to a slice of unstructured resources,

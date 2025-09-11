@@ -1,4 +1,4 @@
-package fullhybrid
+package hybridgateway
 
 import (
 	"context"
@@ -16,8 +16,9 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
-	"github.com/kong/kong-operator/controller/fullhybrid/converter"
-	"github.com/kong/kong-operator/controller/fullhybrid/utils"
+	"github.com/kong/kong-operator/controller/hybridgateway/converter"
+	"github.com/kong/kong-operator/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -61,7 +62,7 @@ func TestGetOwnedResources(t *testing.T) {
 					},
 				},
 			},
-			expectedMapKeysWithLength: map[string]int{utils.Hash(configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{Host: "test-host"}}): 1},
+			expectedMapKeysWithLength: map[string]int{utils.Hash64(configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{Host: "test-host"}}): 1},
 		},
 		{
 			name:  "multiple owned resources with different specs",
@@ -91,8 +92,8 @@ func TestGetOwnedResources(t *testing.T) {
 				},
 			},
 			expectedMapKeysWithLength: map[string]int{
-				utils.Hash(configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{Host: "test-host-1"}}): 1,
-				utils.Hash(configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{Host: "test-host-2"}}): 1,
+				utils.Hash64(configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{Host: "test-host-1"}}): 1,
+				utils.Hash64(configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{Host: "test-host-2"}}): 1,
 			},
 		},
 		{
@@ -141,7 +142,7 @@ func TestGetOwnedResources(t *testing.T) {
 				},
 			},
 			expectedMapKeysWithLength: map[string]int{
-				utils.Hash(configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{Host: "same-host"}}): 2,
+				utils.Hash64(configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{Host: "same-host"}}): 2,
 			},
 		},
 	}
@@ -157,7 +158,7 @@ func TestGetOwnedResources(t *testing.T) {
 					consts.GatewayOperatorManagedByLabel:          consts.ServiceManagedByLabel,
 					consts.GatewayOperatorManagedByNameLabel:      tc.owner.Name,
 					consts.GatewayOperatorManagedByNamespaceLabel: tc.owner.Namespace,
-					consts.GatewayOperatorHashSpecLabel:           utils.Hash(kongService.Spec),
+					consts.GatewayOperatorHashSpecLabel:           utils.Hash64(kongService.Spec),
 				}
 				obj.SetLabels(labels)
 			}
@@ -166,8 +167,8 @@ func TestGetOwnedResources(t *testing.T) {
 				WithObjects(tc.owner).
 				WithObjects(tc.existingObjects...).
 				Build()
-
-			conv, err := converter.NewConverter(*tc.owner, cl)
+			sharedStatusMap := route.NewSharedStatusMap()
+			conv, err := converter.NewConverter(*tc.owner, cl, sharedStatusMap)
 			assert.NoError(t, err)
 			objects, err := conv.ListExistingObjects(context.Background())
 			assert.NoError(t, err)
@@ -272,7 +273,8 @@ func TestHasOwnerRef(t *testing.T) {
 }
 
 func TestReduce(t *testing.T) {
-	serviceConverter, err := converter.NewConverter(corev1.Service{}, nil)
+	sharedStatusMap := route.NewSharedStatusMap()
+	serviceConverter, err := converter.NewConverter(corev1.Service{}, nil, sharedStatusMap)
 	require.NoError(t, err)
 	now := time.Now()
 
