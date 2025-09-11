@@ -6,6 +6,7 @@ import (
 
 type (
 	Gateway                = gatewayv1.Gateway
+	GatewayController      = gatewayv1.GatewayController
 	GatewayList            = gatewayv1.GatewayList
 	GatewayClass           = gatewayv1.GatewayClass
 	GatewayClassSpec       = gatewayv1.GatewayClassSpec
@@ -16,6 +17,8 @@ type (
 	HTTPRouteSpec          = gatewayv1.HTTPRouteSpec
 	HTTPRouteRule          = gatewayv1.HTTPRouteRule
 	HTTPRouteList          = gatewayv1.HTTPRouteList
+	RouteParentStatus      = gatewayv1.RouteParentStatus
+	GRPCRoute              = gatewayv1.GRPCRoute
 	ParentReference        = gatewayv1.ParentReference
 	CommonRouteSpec        = gatewayv1.CommonRouteSpec
 	Kind                   = gatewayv1.Kind

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -13,8 +14,14 @@ import (
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
+// GatewaysByNamespacedRef associates a KonnectNamespacedRef with a list of Gateways.
+type GatewaysByNamespacedRef struct {
+	Ref      commonv1alpha1.KonnectNamespacedRef
+	Gateways []gwtypes.Gateway
+}
+
 // GetNamespacedRefs returns a slice of KonnectNamespacedRef for the given runtime.Object, based on its type.
-func GetNamespacedRefs(ctx context.Context, cl client.Client, obj runtime.Object) ([]commonv1alpha1.KonnectNamespacedRef, error) {
+func GetNamespacedRefs(ctx context.Context, cl client.Client, obj runtime.Object) (map[string]GatewaysByNamespacedRef, error) {
 	switch o := obj.(type) {
 	// TODO: add other types here
 	case *gwtypes.HTTPRoute:
@@ -25,10 +32,9 @@ func GetNamespacedRefs(ctx context.Context, cl client.Client, obj runtime.Object
 }
 
 // byHTTPRoute returns a slice of KonnectNamespacedRef associated with the given HTTPRoute, or an error if retrieval fails.
-func byHTTPRoute(ctx context.Context, cl client.Client, httpRoute gwtypes.HTTPRoute) ([]commonv1alpha1.KonnectNamespacedRef, error) {
-	namespacedRefs := []commonv1alpha1.KonnectNamespacedRef{}
+func byHTTPRoute(ctx context.Context, cl client.Client, httpRoute gwtypes.HTTPRoute) (map[string]GatewaysByNamespacedRef, error) {
+	namespacedRefs := map[string]GatewaysByNamespacedRef{}
 	gateways := GetGatewaysByHTTPRoute(ctx, cl, httpRoute)
-	// TODO: remove duplicates
 	for _, gw := range gateways {
 		ref, err := byGateway(ctx, cl, gw)
 		if err != nil {
@@ -37,7 +43,18 @@ func byHTTPRoute(ctx context.Context, cl client.Client, httpRoute gwtypes.HTTPRo
 		if ref == nil {
 			continue
 		}
-		namespacedRefs = append(namespacedRefs, *ref)
+		key := ref.Namespace + "/" + ref.Name
+		entry, exists := namespacedRefs[key]
+		if exists {
+			entry.Gateways = append(entry.Gateways, gw)
+			namespacedRefs[key] = entry
+			continue
+		}
+		entry = GatewaysByNamespacedRef{
+			Ref:      *ref,
+			Gateways: []gwtypes.Gateway{gw},
+		}
+		namespacedRefs[key] = entry
 	}
 	return namespacedRefs, nil
 }
@@ -91,10 +108,14 @@ func byKonnectExtension(ctx context.Context, cl client.Client, konnectExtension 
 	}
 
 	konnectGatewayControlPlane := konnectv1alpha2.KonnectGatewayControlPlane{}
-	if err := cl.Get(ctx, client.ObjectKey{
+	err := cl.Get(ctx, client.ObjectKey{
 		Name:      cpRef.KonnectNamespacedRef.Name,
 		Namespace: ns,
-	}, &konnectGatewayControlPlane); err != nil {
+	}, &konnectGatewayControlPlane)
+	if k8serrors.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
 		return nil, err
 	}
 
