@@ -10,6 +10,9 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
+	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
+	"github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
+	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
 	"github.com/kong/kong-operator/ingress-controller/pkg/telemetry/types"
 )
 
@@ -25,6 +28,149 @@ type OptionalNamespacedName = mo.Option[k8stypes.NamespacedName]
 
 // Opt is a function that modifies a Config.
 type Opt func(*Config)
+
+// NewConfig creates a new Config with default values set.
+func NewConfig(opts ...Opt) Config {
+	cfg := Config{
+		// Logging configurations
+		LogLevel:  "info",
+		LogFormat: "text",
+
+		// Kong high-level controller manager configurations
+		KongAdminAPIConfig: AdminAPIClientConfig{
+			TLSSkipVerify: false,
+			TLSServerName: "",
+			CACertPath:    "",
+			CACert:        "",
+			Headers:       nil,
+			TLSClient: TLSClientConfig{
+				CertFile: "",
+				KeyFile:  "",
+				Cert:     "",
+				Key:      "",
+			},
+		},
+		KongAdminInitializationRetries:    60,
+		KongAdminInitializationRetryDelay: time.Second,
+		KongAdminToken:                    "",
+		KongAdminTokenPath:                "",
+		KongWorkspace:                     "",
+		AnonymousReports:                  true,
+		EnableReverseSync:                 false,
+		UseLastValidConfigForFallback:     false,
+		SyncPeriod:                        10 * time.Hour,
+		SkipCACertificates:                false,
+		CacheSyncTimeout:                  2 * time.Minute,
+
+		// Kong Admin API configuration
+		KongAdminURLs:                          []string{"http://localhost:8001"},
+		KongAdminSvc:                           mo.None[k8stypes.NamespacedName](),
+		KongAdminSvcPortNames:                  []string{"admin-tls", "kong-admin-tls"},
+		GatewayDiscoveryReadinessCheckInterval: DefaultDataPlanesReadinessReconciliationInterval,
+		GatewayDiscoveryReadinessCheckTimeout:  DefaultDataPlanesReadinessCheckTimeout,
+
+		// Kong Proxy and Proxy Cache configurations
+		APIServerQPS:          100,
+		APIServerBurst:        300,
+		MetricsAccessFilter:   MetricsAccessFilterOff,
+		ProbeAddr:             fmt.Sprintf(":%d", consts.HealthzPort),
+		ProxySyncInterval:     3 * time.Second,  // dataplane.DefaultSyncInterval
+		InitCacheSyncDuration: 5 * time.Second,  // dataplane.DefaultCacheSyncWaitDuration
+		ProxySyncTimeout:      30 * time.Second, // dataplane.DefaultTimeout
+
+		// Kubernetes configurations
+		GatewayAPIControllerName: "konghq.com/kic-gateway-controller",
+		KubeconfigPath:           "",
+		IngressClassName:         annotations.DefaultIngressClass,
+		LeaderElectionID:         "5b374a9e.konghq.com",
+		LeaderElectionNamespace:  "",
+		LeaderElectionForce:      "",
+		FilterTags:               []string{"managed-by-ingress-controller"},
+		Concurrency:              10,
+		WatchNamespaces:          nil,
+		EmitKubernetesEvents:     true,
+		ClusterDomain:            DefaultClusterDomain,
+
+		// Ingress status
+		PublishService:              mo.None[k8stypes.NamespacedName](),
+		PublishStatusAddress:        []string{},
+		PublishServiceUDP:           mo.None[k8stypes.NamespacedName](),
+		PublishStatusAddressUDP:     []string{},
+		UpdateStatus:                true,
+		UpdateStatusQueueBufferSize: status.DefaultBufferSize,
+
+		// Kubernetes API toggling - all enabled by default
+		IngressNetV1Enabled:                 true,
+		IngressClassNetV1Enabled:            true,
+		IngressClassParametersEnabled:       true,
+		KongClusterPluginEnabled:            true,
+		KongPluginEnabled:                   true,
+		KongConsumerEnabled:                 true,
+		ServiceEnabled:                      true,
+		KongUpstreamPolicyEnabled:           true,
+		GatewayAPIGatewayController:         true,
+		GatewayAPIHTTPRouteController:       true,
+		GatewayAPIReferenceGrantController:  true,
+		GatewayAPIGRPCRouteController:       true,
+		GatewayAPIBackendTLSRouteController: true,
+		GatewayAPITCPRouteController:        true,
+		GatewayAPIUDPRouteController:        true,
+		GatewayAPITLSRouteController:        true,
+		GatewayToReconcile:                  mo.None[k8stypes.NamespacedName](),
+		KongServiceFacadeEnabled:            true,
+		KongVaultEnabled:                    true,
+		KongLicenseEnabled:                  true,
+		KongCustomEntityEnabled:             true,
+
+		// Diagnostics
+		EnableProfiling:      false,
+		EnableConfigDumps:    false,
+		DumpSensitiveConfig:  false,
+		DiagnosticServerPort: consts.DiagnosticsPort,
+
+		// Drain support
+		EnableDrainSupport: consts.DefaultEnableDrainSupport,
+
+		// Combined services from different HTTPRoutes
+		CombinedServicesFromDifferentHTTPRoutes: false,
+
+		// Feature Gates - empty map by default
+		FeatureGates: GetFeatureGatesDefaults(),
+
+		// SIGTERM or SIGINT signal delay
+		TermDelay: 0,
+
+		// Konnect - all disabled by default
+		Konnect: KonnectConfig{
+			ConfigSynchronizationEnabled:  false,
+			LicenseSynchronizationEnabled: false,
+			LicenseStorageEnabled:         true,
+			InitialLicensePollingPeriod:   time.Minute,    // license.DefaultInitialPollingPeriod,
+			LicensePollingPeriod:          12 * time.Hour, // license.DefaultPollingPeriod
+			ControlPlaneID:                "",
+			Address:                       "https://us.kic.api.konghq.com",
+			TLSClient: TLSClientConfig{
+				Cert:     "",
+				CertFile: "",
+				Key:      "",
+				KeyFile:  "",
+			},
+			UploadConfigPeriod:    DefaultKonnectConfigUploadPeriod,
+			RefreshNodePeriod:     60 * time.Second, // konnect.DefaultRefreshNodePeriod
+			ConsumersSyncDisabled: false,
+		},
+
+		// Telemetry settings - defaults
+		SplunkEndpoint:                   "",
+		SplunkEndpointInsecureSkipVerify: false,
+		TelemetryPeriod:                  time.Hour,
+	}
+
+	for _, opt := range opts {
+		opt(&cfg)
+	}
+	return cfg
+}
 
 // Config is the configuration for the Kong Ingress Controller.
 type Config struct {

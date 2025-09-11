@@ -8,11 +8,12 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/cmd/rootcmd/config"
 	"github.com/kong/kong-operator/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
@@ -76,7 +77,6 @@ func DeployControllerManagerForCluster(
 	logger logr.Logger,
 	cluster clusters.Cluster,
 	kongAddon *ktfkong.Addon,
-	additionalFlags []string,
 	opts ...managercfg.Opt,
 ) (func(), error) {
 	if kongAddon == nil {
@@ -106,42 +106,39 @@ func DeployControllerManagerForCluster(
 	}
 
 	// render all controller manager flag options
-	controllerManagerFlags := []string{
-		fmt.Sprintf("--kong-admin-url=%s", proxyAdminURL),
-		fmt.Sprintf("--kubeconfig=%s", kubeconfig.Name()),
-		"--election-id=integrationtests.konghq.com",
-		"--log-format=text",
-		fmt.Sprintf("--publish-service=%s/ingress-controller-kong-proxy", kongAddon.Namespace()),
-		fmt.Sprintf("--publish-service-udp=%s/ingress-controller-kong-udp-proxy", kongAddon.Namespace()),
-	}
-	controllerManagerFlags = append(controllerManagerFlags, additionalFlags...)
+	// Create configuration directly instead of parsing CLI flags
+	cfg := managercfg.NewConfig()
+	// Apply configuration that was previously set via CLI flags
+	cfg.KongAdminURLs = []string{proxyAdminURL.String()}
+	cfg.KubeconfigPath = kubeconfig.Name()
+	cfg.LeaderElectionID = "integrationtests.konghq.com"
+	cfg.LogFormat = "text"
+	cfg.PublishService = mo.Some(k8stypes.NamespacedName{
+		Namespace: kongAddon.Namespace(),
+		Name:      "ingress-controller-kong-proxy",
+	})
+	cfg.PublishServiceUDP = mo.Some(k8stypes.NamespacedName{
+		Namespace: kongAddon.Namespace(),
+		Name:      "ingress-controller-kong-udp-proxy",
+	})
+	cfg.Impersonate = "system:serviceaccount:kong:kong-serviceaccount"
 
-	clicfg := config.NewCLIConfig()
-	clicfg.Impersonate = "system:serviceaccount:kong:kong-serviceaccount"
-
-	// parsing the controller configuration flags
-	// TODO(czeslavo): we may switch to using managercfg.Config directly instead of relying on CLI flags here.
-	flags := clicfg.FlagSet()
-	if err := flags.Parse(controllerManagerFlags); err != nil {
-		os.Remove(kubeconfig.Name())
-		return nil, fmt.Errorf("failed to parse manager flags: %w", err)
-	}
-
+	// Apply additional configuration from opts
 	for _, opt := range opts {
-		opt(clicfg.Config)
+		opt(&cfg)
 	}
 
 	ctx, cancel := context.WithCancel(ctx)
 	// run the controller in the background
 	go func() {
 		defer os.Remove(kubeconfig.Name())
-		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager for Cluster %s with Configuration: %+v\n", cluster.Name(), clicfg)
+		fmt.Fprintf(os.Stderr, "INFO: Starting Controller Manager for Cluster %s with Configuration: %+v\n", cluster.Name(), cfg)
 		mid, err := manager.NewID("kic-" + cluster.Name())
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: Problems with creating Manager ID: %s\n", err)
 			os.Exit(1)
 		}
-		m, err := manager.NewManager(ctx, mid, logger, *clicfg.Config)
+		m, err := manager.NewManager(ctx, mid, logger, cfg)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "ERROR: Problems with set up of Controller Manager: %s\n", err)
 			os.Exit(1)
