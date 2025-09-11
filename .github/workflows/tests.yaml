@@ -199,8 +199,22 @@ jobs:
       with:
         go-version-file: go.mod
 
+    - name: pick kind version from .github/supported_k8s_node_versions.yaml
+      id: kind-version
+      run: |
+        (
+          echo 'version<<EOF'
+          yq eval -r -o=json '.[0]' .github/supported_k8s_node_versions.yaml
+          echo 'EOF'
+        ) >> "${GITHUB_OUTPUT}"
+
     - name: Create k8s KinD Cluster
       uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
+      with:
+        # NOTE: default is 0.29.0 https://github.com/helm/kind-action/blob/a1b0e391336a6ee6713a0583f8c6240d70863de3/kind.sh#L21
+        # so bump this manually
+        version: v0.30.0
+        node_image: kindest/node:${{ steps.kind-version.outputs.version }}
 
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
@@ -241,10 +255,23 @@ jobs:
     - name: build docker image
       run: make docker.build
 
+    - name: pick kind version from .github/supported_k8s_node_versions.yaml
+      id: kind-version
+      run: |
+        (
+          echo 'version<<EOF'
+          yq eval -r -o=json '.[0]' .github/supported_k8s_node_versions.yaml
+          echo 'EOF'
+        ) >> "${GITHUB_OUTPUT}"
+
     - name: Create k8s KinD Cluster
       uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
       with:
         cluster_name: ${{ env.CLUSTER_NAME }}
+        # NOTE: default is 0.29.0 https://github.com/helm/kind-action/blob/a1b0e391336a6ee6713a0583f8c6240d70863de3/kind.sh#L21
+        # so bump this manually
+        version: v0.30.0
+        node_image: kindest/node:${{ steps.kind-version.outputs.version }}
 
     - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
       with:
