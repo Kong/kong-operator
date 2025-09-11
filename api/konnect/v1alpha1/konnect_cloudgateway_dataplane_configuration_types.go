@@ -48,6 +48,7 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationSpec struct {
 	// Version specifies the desired Kong Gateway version.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Version string `json:"version"`
 
 	// DataplaneGroups is a list of desired data-plane groups that describe where
@@ -92,6 +93,7 @@ type KonnectConfigurationDataPlaneGroup struct {
 	// Region for cloud provider region.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Region string `json:"region"`
 
 	// NetworkRef is the reference to the network that this data-plane group will be deployed on.
@@ -198,25 +200,27 @@ type ConfigurationDataPlaneGroupAutoscaleStatic struct {
 // KonnectCloudGatewayDataPlaneGroupConfigurationStatus defines the observed state of KonnectCloudGatewayDataPlaneGroupConfiguration.
 // +apireference:kgo:include
 type KonnectCloudGatewayDataPlaneGroupConfigurationStatus struct {
-	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"`
-
-	// DataPlaneGroups is a list of deployed data-plane groups.
-	//
-	// +optional
-	DataPlaneGroups []KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup `json:"dataplane_groups,omitempty"`
-
 	// Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.
 	//
 	// Known condition types are:
 	//
 	// * "Programmed"
 	//
+	// +optional
 	// +listType=map
 	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
+	// DataPlaneGroups is a list of deployed data-plane groups.
+	//
 	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	DataPlaneGroups []KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup `json:"dataplane_groups,omitempty"`
+
+	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"`
 }
 
 // KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup defines the observed state of a deployed data-plane group.
@@ -224,11 +228,13 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup struct {
 	// ID is the ID of the deployed data-plane group.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	ID string `json:"id"`
 
 	// CloudGatewayNetworkID is the ID of the cloud gateway network.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	CloudGatewayNetworkID string `json:"cloud_gateway_network_id"`
 
 	// Name of cloud provider.
@@ -239,6 +245,7 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup struct {
 	// Region ID for cloud provider region.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Region string `json:"region"`
 
 	// PrivateIPAddresses is a list of private IP addresses of the internal load balancer that proxies traffic to this data-plane group.
@@ -254,6 +261,7 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup struct {
 	// State is the current state of the data plane group. Can be e.g. initializing, ready, terminating.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	State string `json:"state"`
 }
 

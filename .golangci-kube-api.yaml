@@ -71,3 +71,33 @@ linters:
           - kubeapilinter
         path: api/konnect/v1alpha1/.*
         text: "conditions: Conditions field must be the first field in the struct"
+
+      # TODO: remove this.
+      - linters:
+          - kubeapilinter
+        path: api/.*
+        text: "requiredfields: field .* should have the omitempty tag."
+
+      # TODO: remove this.
+      - linters:
+          - kubeapilinter
+        path: api/.*
+        text: "requiredfields: field .* does not allow the zero value. It must have the omitzero tag."
+
+      # TODO: remove this.
+      - linters:
+          - kubeapilinter
+        path: api/konnect/(v1alpha1|v1alpha2)/.*
+        text: 'requiredfields: field .* has a valid zero value .* but the validation is not complete'
+
+      # TODO: remove this.
+      - linters:
+          - kubeapilinter
+        path: api/gateway-operator/v2beta1/shared_types.go
+        text: 'requiredfields: field .* has a valid zero value .* but the validation is not complete'
+
+      # TODO: remove this.
+      - linters:
+          - kubeapilinter
+        path: api/gateway-operator/v2beta1/shared_types.go
+        text: 'requiredfields: field Strategy has a valid zero value .* and should be a pointer.'

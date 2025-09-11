@@ -136,15 +136,6 @@ type CreateControlPlaneRequest struct {
 // KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayControlPlane.
 // +apireference:kgo:include
 type KonnectGatewayControlPlaneStatus struct {
-	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
-
-	// Endpoints defines the Konnect endpoints for the control plane.
-	// They are required by the DataPlane to be properly configured in
-	// Konnect and connect to the control plane.
-	//
-	// +optional
-	Endpoints *KonnectEndpoints `json:"konnectEndpoints,omitempty"`
-
 	// Conditions describe the current conditions of the KonnectGatewayControlPlane.
 	//
 	// Known condition types are:
@@ -153,10 +144,21 @@ type KonnectGatewayControlPlaneStatus struct {
 	//
 	// +listType=map
 	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
+	// Endpoints defines the Konnect endpoints for the control plane.
+	// They are required by the DataPlane to be properly configured in
+	// Konnect and connect to the control plane.
+	//
+	// +optional
+	Endpoints *KonnectEndpoints `json:"konnectEndpoints,omitempty"`
+
+	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
 }
 
 // KonnectEndpoints defines the Konnect endpoints for the control plane.
@@ -164,11 +166,13 @@ type KonnectEndpoints struct {
 	// TelemetryEndpoint is the endpoint for telemetry.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	TelemetryEndpoint string `json:"telemetry"`
 
 	// ControlPlaneEndpoint is the endpoint for the control plane.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	ControlPlaneEndpoint string `json:"controlPlane"`
 }
 

@@ -85,6 +85,7 @@ type KonnectIDType string
 type KonnectNamespacedRef struct {
 	// Name is the name of the Konnect Control Plane.
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
 	// TODO: Implement cross namespace references:

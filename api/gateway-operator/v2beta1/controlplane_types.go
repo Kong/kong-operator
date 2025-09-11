@@ -300,6 +300,7 @@ type ControlPlaneDataPlaneTargetRef struct {
 	// Ref is the name of the DataPlane to configure.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 }
 

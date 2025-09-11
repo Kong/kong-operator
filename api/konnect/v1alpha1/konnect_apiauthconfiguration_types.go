@@ -77,6 +77,7 @@ type KonnectAPIAuthConfigurationSpec struct {
 	// Please refer to https://docs.konghq.com/konnect/network/ for the list of supported hostnames.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:XValidation:rule="size(self) > 0", message="Server URL is required"
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf", message="Server URL is immutable"
 	// +kubebuilder:validation:XValidation:rule="isURL(self) ? url(self).getScheme() == 'https' : true", message="Server URL must use HTTPs if specifying scheme"
@@ -87,6 +88,18 @@ type KonnectAPIAuthConfigurationSpec struct {
 // KonnectAPIAuthConfigurationStatus is the status of the KonnectAPIAuthConfiguration resource.
 // +apireference:kgo:include
 type KonnectAPIAuthConfigurationStatus struct {
+	// Conditions describe the status of the Konnect configuration.
+	//
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +patchStrategy=merge
+	// +patchMergeKey=type
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "Valid", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
 	// OrganizationID is the unique identifier of the organization in Konnect.
 	//
 	// +optional
@@ -96,15 +109,6 @@ type KonnectAPIAuthConfigurationStatus struct {
 	//
 	// +optional
 	ServerURL string `json:"serverURL,omitempty"`
-
-	// Conditions describe the status of the Konnect configuration.
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:MaxItems=8
-	// +kubebuilder:default={{type: "Valid", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // KonnectAPIAuthConfigurationList contains a list of KonnectAPIAuthConfiguration resources.
