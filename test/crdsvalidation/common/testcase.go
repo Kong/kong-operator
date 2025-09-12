@@ -72,6 +72,13 @@ type TestCase[T client.Object] struct {
 	// Update is a function that updates the object in the test case after it's created.
 	// It can be used to verify CEL rules that verify the previous object's version against the new one.
 	Update func(T)
+
+	// WarningCollector (optional) collects API server warnings emitted during operations.
+	// If set together with ExpectedWarningMessage, the test will assert that a warning containing the
+	// expected message substring was produced.
+	WarningCollector *WarningCollector
+	// ExpectedWarningMessage is the substring expected to be found in at least one collected warning.
+	ExpectedWarningMessage *string
 }
 
 // RunWithConfig runs the test case against the provided rest.Config's cluster.
@@ -135,6 +142,23 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 					}
 				} else {
 					if !assert.NoError(t, err) {
+						return
+					}
+				}
+
+				// If warnings are expected, verify at least one collected warning matches.
+				if tc.WarningCollector != nil && tc.ExpectedWarningMessage != nil {
+					msgs := tc.WarningCollector.Messages()
+					matched := false
+					for _, m := range msgs {
+						if assert.Contains(c, m, *tc.ExpectedWarningMessage) {
+							matched = true
+							break
+						}
+					}
+					if !matched {
+						// Fail the attempt, Eventually will allow a bit of time in case messages are delayed.
+						assert.Failf(c, "expected warning not found", "expected warning containing: %q, got: %#v", *tc.ExpectedWarningMessage, msgs)
 						return
 					}
 				}
