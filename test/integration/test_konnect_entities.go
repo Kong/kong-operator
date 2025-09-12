@@ -72,12 +72,12 @@ func TestKonnectEntities(t *testing.T) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 		require.NoError(t, err)
 		require.NotEmpty(t, cp.Status.Endpoints)
-		// Example: https://e7b5c7de43.us.cp0.konghq.tech - always it will include ".cp0.".
+		// Example: https://e7b5c7de43.us.cp.konghq.tech - always it will include ".cp.".
 		require.True(t, strings.HasPrefix(cp.Status.Endpoints.ControlPlaneEndpoint, "https://"), "must start with https://")
-		require.Contains(t, cp.Status.Endpoints.ControlPlaneEndpoint, ".cp0.", "must contain .cp0.")
-		// Example: https://e7b5c7de43.us.tp0.konghq.tech - always it will include ".tp0.".
+		require.Contains(t, cp.Status.Endpoints.ControlPlaneEndpoint, ".cp.", "must contain .cp.")
+		// Example: https://e7b5c7de43.us.tp.konghq.tech - always it will include ".tp.".
 		require.True(t, strings.HasPrefix(cp.Status.Endpoints.TelemetryEndpoint, "https://"), "must start with https://")
-		require.Contains(t, cp.Status.Endpoints.TelemetryEndpoint, ".tp0.", "must contain .tp0.")
+		require.Contains(t, cp.Status.Endpoints.TelemetryEndpoint, ".tp.", "must contain .tp.")
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	t.Run("with Origin ControlPlane", func(t *testing.T) {
