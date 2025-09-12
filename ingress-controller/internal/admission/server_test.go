@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/go-logr/zapr"
-	"github.com/lithammer/dedent"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -143,7 +142,7 @@ func TestValidationWebhook(t *testing.T) {
 			},
 			{
 				name: "validate kong consumer",
-				reqBody: dedent.Dedent(`
+				reqBody: `
 					{
 						"kind": "AdmissionReview",
 						"apiVersion": "` + apiVersion + `",
@@ -160,7 +159,7 @@ func TestValidationWebhook(t *testing.T) {
 							},
 						"operation": "CREATE"
 						}
-					}`),
+					}`,
 				validator:    KongFakeValidator{Result: true},
 				wantRespCode: http.StatusOK,
 				wantSuccessResponse: admissionv1.AdmissionResponse{
@@ -171,7 +170,7 @@ func TestValidationWebhook(t *testing.T) {
 			},
 			{
 				name: "validate kong consumer on username change",
-				reqBody: dedent.Dedent(`
+				reqBody: `
 					{
 						"kind": "AdmissionReview",
 						"apiVersion": "` + apiVersion + `",
@@ -195,7 +194,7 @@ func TestValidationWebhook(t *testing.T) {
 						"operation": "UPDATE"
 						}
 					}
-				`),
+				`,
 				validator:    KongFakeValidator{Result: true},
 				wantRespCode: http.StatusOK,
 				wantSuccessResponse: admissionv1.AdmissionResponse{
@@ -206,7 +205,7 @@ func TestValidationWebhook(t *testing.T) {
 			},
 			{
 				name: "validate kong consumer on equal update",
-				reqBody: dedent.Dedent(`
+				reqBody: `
 					{
 						"kind": "AdmissionReview",
 						"apiVersion": "` + apiVersion + `",
@@ -229,7 +228,7 @@ func TestValidationWebhook(t *testing.T) {
 							},
 						"operation": "UPDATE"
 						}
-					}`),
+					}`,
 				validator:    KongFakeValidator{Result: true},
 				wantRespCode: http.StatusOK,
 				wantSuccessResponse: admissionv1.AdmissionResponse{
@@ -240,7 +239,7 @@ func TestValidationWebhook(t *testing.T) {
 			},
 			{
 				name: "validate kong consumer invalid",
-				reqBody: dedent.Dedent(`
+				reqBody: `
 					{
 						"kind": "AdmissionReview",
 						"apiVersion": "` + apiVersion + `",
@@ -257,7 +256,7 @@ func TestValidationWebhook(t *testing.T) {
 							},
 						"operation": "CREATE"
 						}
-					}`),
+					}`,
 				validator:    KongFakeValidator{Result: false, Message: "consumer is not valid"},
 				wantRespCode: http.StatusOK,
 				wantSuccessResponse: admissionv1.AdmissionResponse{
@@ -271,7 +270,7 @@ func TestValidationWebhook(t *testing.T) {
 			},
 			{
 				name: "kong consumer validator error",
-				reqBody: dedent.Dedent(`
+				reqBody: `
 					{
 						"kind": "AdmissionReview",
 						"apiVersion": "` + apiVersion + `",
@@ -288,14 +287,14 @@ func TestValidationWebhook(t *testing.T) {
 							},
 						"operation": "CREATE"
 						}
-					}`),
+					}`,
 				validator:          KongFakeValidator{Error: errors.New("error making API call to kong")},
 				wantRespCode:       http.StatusInternalServerError,
 				wantFailureMessage: "error making API call to kong\n",
 			},
 			{
 				name: "kong consumer validator error on username change",
-				reqBody: dedent.Dedent(`
+				reqBody: `
 					{
 						"kind": "AdmissionReview",
 						"apiVersion": "` + apiVersion + `",
@@ -318,14 +317,14 @@ func TestValidationWebhook(t *testing.T) {
 							},
 						"operation": "UPDATE"
 						}
-					}`),
+					}`,
 				validator:          KongFakeValidator{Error: errors.New("error making API call to kong")},
 				wantRespCode:       http.StatusInternalServerError,
 				wantFailureMessage: "error making API call to kong\n",
 			},
 			{
 				name: "unknown resource",
-				reqBody: dedent.Dedent(`
+				reqBody: `
 					{
 						"kind": "AdmissionReview",
 						"apiVersion": "` + apiVersion + `",
@@ -342,14 +341,14 @@ func TestValidationWebhook(t *testing.T) {
 							},
 						"operation": "CREATE"
 						}
-					}`),
+					}`,
 				validator:          KongFakeValidator{Result: false, Message: "consumer is not valid"},
 				wantRespCode:       http.StatusInternalServerError,
 				wantFailureMessage: "unknown resource type to validate: configuration.konghq.com/v1 kongunknown\n",
 			},
 			{
 				name: "validate kong plugin",
-				reqBody: dedent.Dedent(`
+				reqBody: `
 					{
 						"kind": "AdmissionReview",
 						"apiVersion": "` + apiVersion + `",
@@ -365,7 +364,7 @@ func TestValidationWebhook(t *testing.T) {
 								"kind": "KongPlugin"
 							}
 						}
-					}`),
+					}`,
 				validator:    KongFakeValidator{Result: true},
 				wantRespCode: http.StatusOK,
 				wantSuccessResponse: admissionv1.AdmissionResponse{
@@ -376,7 +375,6 @@ func TestValidationWebhook(t *testing.T) {
 			},
 		} {
 			t.Run(fmt.Sprintf("%s/%s", apiVersion, tt.name), func(t *testing.T) {
-				// arrange
 				assert := assert.New(t)
 				res := httptest.NewRecorder()
 				server := RequestHandler{
@@ -387,12 +385,10 @@ func TestValidationWebhook(t *testing.T) {
 				}
 				handler := http.HandlerFunc(server.ServeHTTP)
 
-				// act
-				req, err := http.NewRequest("POST", "", bytes.NewBuffer([]byte(tt.reqBody)))
+				req, err := http.NewRequest(http.MethodPost, "", bytes.NewBufferString(tt.reqBody))
 				assert.NoError(err)
 				handler.ServeHTTP(res, req)
 
-				// assert
 				assert.Equal(tt.wantRespCode, res.Code)
 				if tt.wantRespCode == http.StatusOK {
 					var review admissionv1.AdmissionReview

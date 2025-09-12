@@ -260,7 +260,7 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	// Create the translator.
 	logger := zapr.NewLogger(zap.NewNop())
 	s := store.New(cacheStores, "kong", logger)
-	p, err := translator.NewTranslator(logger, s, "", semver.MustParse("3.9.1"), tc.featureFlags, fakeSchemaServiceProvier{},
+	p, err := translator.NewTranslator(logger, s, "", semver.MustParse("3.9.1"), tc.featureFlags, fakeSchemaServiceProvider{},
 		translator.Config{
 			ClusterDomain:      managercfg.DefaultClusterDomain,
 			EnableDrainSupport: consts.DefaultEnableDrainSupport,
@@ -372,11 +372,11 @@ func extractObjectsFromYAML(t *testing.T, filePath string) [][]byte {
 	})
 }
 
-// fakeSchemaServiceProvier is a stub implementation of the SchemaServiceProvider interface that returns an
+// fakeSchemaServiceProvider is a stub implementation of the SchemaServiceProvider interface that returns an
 // UnavailableSchemaService. It's used to avoid hitting the Kong Admin API during tests.
-type fakeSchemaServiceProvier struct{}
+type fakeSchemaServiceProvider struct{}
 
-func (p fakeSchemaServiceProvier) GetSchemaService() kong.AbstractSchemaService {
+func (p fakeSchemaServiceProvider) GetSchemaService() kong.AbstractSchemaService {
 	return fakeSchemaService{}
 }
 

@@ -2,12 +2,6 @@ module github.com/kong/kong-operator
 
 go 1.24.6
 
-// 1.2.2 was released on main branch with a breaking change that was not
-// intended to be released in 1.2.x:
-// https://github.com/kong/kong-operator/commit/3876430e09e61edce58bd8464989e33236bd1872
-// This retraction is to prevent it from being used and from breaking builds of dependent projects.
-retract v1.2.2
-
 require (
 	cloud.google.com/go/container v1.44.0
 	dario.cat/mergo v1.0.2
@@ -41,7 +35,6 @@ require (
 	github.com/kong/kubernetes-testing-framework v0.47.3
 	github.com/kong/semver/v4 v4.0.1
 	github.com/kr/pretty v0.3.1
-	github.com/lithammer/dedent v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/moul/pb v0.0.0-20220425114252-bca18df4138c
 	github.com/opencontainers/image-spec v1.1.1
