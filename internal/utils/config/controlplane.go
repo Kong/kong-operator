@@ -86,13 +86,13 @@ func KICInKonnectDefaults(konnectExtensionStatus konnectv1alpha1.KonnectExtensio
 }
 
 // buildKonnectAddress builds the Konnect address out of the control plane endpoint.
-// input: "https://7b46471d3b.us.tp0.konghq.tech:443"
+// input: "https://7b46471d3b.us..konghq.tech:443"
 // output: "https://us.kic.api.konghq.tech"
 func buildKonnectAddress(endpoint string) string {
 	portlessEndpoint := strings.TrimSuffix(endpoint, ":443")
 	addressSlice := strings.Split(portlessEndpoint, ".")
 	addressSlice = lo.Filter(addressSlice, func(_ string, i int) bool {
-		// remove 7b46471d3b and tp0
+		// remove 7b46471d3b and tp
 		if i == 0 || i == 2 {
 			return false
 		}
