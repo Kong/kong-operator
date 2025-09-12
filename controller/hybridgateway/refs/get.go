@@ -8,7 +8,6 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
