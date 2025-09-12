@@ -44,13 +44,13 @@ spec:
             - name: KONG_CLUSTER_MTLS
               value: pki
             - name: KONG_CLUSTER_CONTROL_PLANE
-              value: <YOUR_CP_ID>.cp0.konghq.tech:443
+              value: <YOUR_CP_ID>.cp.konghq.tech:443
             - name: KONG_CLUSTER_SERVER_NAME
-              value: <YOUR_CP_ID>.cp0.konghq.tech
+              value: <YOUR_CP_ID>.cp.konghq.tech
             - name: KONG_CLUSTER_TELEMETRY_ENDPOINT
-              value: <YOUR_CP_ID>.tp0.konghq.tech:443
+              value: <YOUR_CP_ID>.tp.konghq.tech:443
             - name: KONG_CLUSTER_TELEMETRY_SERVER_NAME
-              value: <YOUR_CP_ID>.tp0.konghq.tech
+              value: <YOUR_CP_ID>.tp.konghq.tech
             - name: KONG_CLUSTER_CERT
               value: /etc/secrets/kong-cluster-cert/tls.crt
             - name: KONG_CLUSTER_CERT_KEY

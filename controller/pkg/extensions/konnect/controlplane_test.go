@@ -30,17 +30,17 @@ func TestBuildKonnectAddress(t *testing.T) {
 	}{
 		{
 			name:     "standard endpoint",
-			endpoint: "https://7b46471d3b.us.tp0.konghq.tech:443",
+			endpoint: "https://7b46471d3b.us.tp.konghq.tech:443",
 			expected: "https://us.kic.api.konghq.tech",
 		},
 		{
 			name:     "different region",
-			endpoint: "https://abcd1234.eu.tp0.konghq.tech:443",
+			endpoint: "https://abcd1234.eu.tp.konghq.tech:443",
 			expected: "https://eu.kic.api.konghq.tech",
 		},
 		{
 			name:     "longer hostname",
-			endpoint: "https://abcd1234.us.tp0.konghq.foo.bar.tech:443",
+			endpoint: "https://abcd1234.us.tp.konghq.foo.bar.tech:443",
 			expected: "https://us.kic.api.konghq.foo.bar.tech",
 		},
 	}
@@ -330,8 +330,8 @@ func TestControlPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 				Konnect: &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
 					ControlPlaneID: controlPlaneID,
 					Endpoints: konnectv1alpha2.KonnectEndpoints{
-						ControlPlaneEndpoint: "7b46471d3b.us.tp0.konghq.tech:443",
-						TelemetryEndpoint:    "7b46471d3b.us.tp0.konghq.tech",
+						ControlPlaneEndpoint: "7b46471d3b.us.tp.konghq.tech:443",
+						TelemetryEndpoint:    "7b46471d3b.us.tp.konghq.tech",
 					},
 					ClusterType: konnectv1alpha2.ClusterTypeK8sIngressController,
 				},
