@@ -1,2 +1,4 @@
 **/zz_generated.*.go linguist-generated=true
 controller/konnect/ops/*_mock_test.go linguist-generated=true
+docs/api-reference.md linguist-generated=true
+ingress-controller/internal/dataplane/testdata/golden/**/*_golden.yaml linguist-generated=true
