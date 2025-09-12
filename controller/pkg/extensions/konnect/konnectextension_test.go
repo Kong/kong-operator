@@ -36,8 +36,8 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 		Konnect: &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
 			ControlPlaneID: "konnect-id",
 			Endpoints: konnectv1alpha2.KonnectEndpoints{
-				ControlPlaneEndpoint: "7078163243.us.cp0.konghq.com",
-				TelemetryEndpoint:    "7078163243.us.tp0.konghq.com",
+				ControlPlaneEndpoint: "7078163243.us.cp.konghq.com",
+				TelemetryEndpoint:    "7078163243.us.tp.konghq.com",
 			},
 			ClusterType: konnectv1alpha2.ClusterTypeControlPlane,
 		},
@@ -322,7 +322,7 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 				},
 				{
 					Name:  "KONG_CLUSTER_CONTROL_PLANE",
-					Value: "7078163243.us.cp0.konghq.com:443",
+					Value: "7078163243.us.cp.konghq.com:443",
 				},
 				{
 					Name:  "KONG_CLUSTER_DP_LABELS",
@@ -334,15 +334,15 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 				},
 				{
 					Name:  "KONG_CLUSTER_SERVER_NAME",
-					Value: "7078163243.us.cp0.konghq.com",
+					Value: "7078163243.us.cp.konghq.com",
 				},
 				{
 					Name:  "KONG_CLUSTER_TELEMETRY_ENDPOINT",
-					Value: "7078163243.us.tp0.konghq.com:443",
+					Value: "7078163243.us.tp.konghq.com:443",
 				},
 				{
 					Name:  "KONG_CLUSTER_TELEMETRY_SERVER_NAME",
-					Value: "7078163243.us.tp0.konghq.com",
+					Value: "7078163243.us.tp.konghq.com",
 				},
 				{
 					Name:  "KONG_KONNECT_MODE",

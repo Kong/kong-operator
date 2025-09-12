@@ -121,7 +121,7 @@ func kicInKonnectDefaults(ctx context.Context, cl client.Client, konnectExtensio
 }
 
 // buildKonnectAddress builds the Konnect address out of the control plane endpoint.
-// input: "https://7b46471d3b.us.tp0.konghq.tech:443"
+// input: "https://7b46471d3b.us.tp.konghq.tech:443"
 // output: "https://us.kic.api.konghq.tech"
 func buildKonnectAddress(endpoint string) string {
 	portlessEndpoint := strings.TrimSuffix(endpoint, ":443")
