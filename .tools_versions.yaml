@@ -13,7 +13,7 @@ skaffold: "2.16.1"
 # renovate: datasource=github-releases depName=go-delve/delve
 dlv: "1.25.2"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
-gotestsum: "1.12.3"
+gotestsum: "1.13.0"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
 crd-ref-docs: "0.2.0"
 # renovate: datasource=github-releases depName=vektra/mockery
