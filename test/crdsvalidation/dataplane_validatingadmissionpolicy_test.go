@@ -17,10 +17,9 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	"github.com/kong/kong-operator/test/crdsvalidation/common"
-
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/test/crdsvalidation/common"
 	"github.com/kong/kong-operator/test/envtest"
 	"github.com/kong/kong-operator/test/helpers/helm"
 )

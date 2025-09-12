@@ -18,17 +18,16 @@ import (
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	kcfgconsts "github.com/kong/kong-operator/api/common/consts"
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	kcfggateway "github.com/kong/kong-operator/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers"
-
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 )
 
 func TestParseKongProxyListenEnv(t *testing.T) {

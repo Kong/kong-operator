@@ -19,7 +19,9 @@ var CommonObjectMeta = metav1.ObjectMeta{
 // warnings were produced when creating or updating objects.
 //
 // The interface method signature is:
-//   HandleWarningHeader(code int, agent, message string)
+//
+//	HandleWarningHeader(code int, agent, message string)
+//
 // We only need to collect the message content for assertions.
 //
 // Note: this lives in a test-only helper package, so thread-safety is kept simple
