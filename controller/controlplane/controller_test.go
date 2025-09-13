@@ -15,11 +15,10 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
-	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
-
+	kcfgcontrolplane "github.com/kong/kong-operator/api/gateway-operator/controlplane"
+	kcfgdataplane "github.com/kong/kong-operator/api/gateway-operator/dataplane"
+	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
 	gwtypes "github.com/kong/kong-operator/internal/types"

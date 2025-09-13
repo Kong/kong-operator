@@ -8,8 +8,7 @@ import (
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 

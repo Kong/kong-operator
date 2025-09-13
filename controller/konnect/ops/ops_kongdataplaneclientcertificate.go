@@ -5,8 +5,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
 

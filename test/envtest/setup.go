@@ -36,11 +36,11 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.
 		"config", "crd", "standard",
 	)
 
-	kongConfVersion, err := testutil.ExtractModuleVersion(testutil.KubernetesConfigurationModuleName)
-	require.NoError(t, err)
+	// Use local CRDs from the repository instead of external module
+	// Note: the local CRDs live under config/crd/kong-operator
 	kongCRDPath := filepath.Join(
-		testutil.ConstructModulePath(testutil.KubernetesConfigurationModuleName, kongConfVersion),
-		"config", "crd", "gateway-operator",
+		testutil.ProjectRootPath(),
+		"config", "crd", "kong-operator",
 	)
 
 	testEnv := &envtest.Environment{
