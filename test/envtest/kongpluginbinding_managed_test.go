@@ -441,6 +441,19 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		routeID := uuid.NewString()
 		consumerID := uuid.NewString()
 
+		// Permissive CreatePlugin expectation: allow multiple invocations from concurrent reconciles.
+		sdk.PluginSDK.EXPECT().
+			CreatePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			Return(
+				&sdkkonnectops.CreatePluginResponse{
+					Plugin: &sdkkonnectcomp.Plugin{
+						ID: lo.ToPtr(uuid.NewString()),
+					},
+				},
+				nil,
+			).
+			Maybe()
+
 		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongService := deploy.KongService(t, ctx, clientNamespaced,
@@ -641,6 +654,19 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		serviceID := uuid.NewString()
 		routeID := uuid.NewString()
 		consumerGroupID := uuid.NewString()
+
+		// Permissive CreatePlugin expectation: allow multiple invocations from concurrent reconciles.
+		sdk.PluginSDK.EXPECT().
+			CreatePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			Return(
+				&sdkkonnectops.CreatePluginResponse{
+					Plugin: &sdkkonnectcomp.Plugin{
+						ID: lo.ToPtr(uuid.NewString()),
+					},
+				},
+				nil,
+			).
+			Maybe()
 
 		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
