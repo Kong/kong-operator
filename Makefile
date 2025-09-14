@@ -663,11 +663,12 @@ _test.kongintegration: gotestsum
 		./ingress-controller/test/kongintegration
 
 .PHONY: test.samples
-test.samples:
+test.samples: kustomize
 	@echo "Ensuring CRDs installed for samples"
-	@kubectl apply -f charts/kong-operator/charts/ko-crds/templates/ko-crds.yaml
-	@kubectl apply -f charts/kong-operator/charts/kic-crds/crds/kic-crds.yaml
-	@kubectl apply -f charts/kong-operator/charts/gwapi-standard-crds/crds/gwapi-crds.yaml || true
+	# Apply operator CRDs using kustomize (Helm templates cannot be applied directly by kubectl).
+	@$(KUSTOMIZE) build config/crd | kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f -
+	@kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f charts/kong-operator/charts/kic-crds/crds/kic-crds.yaml
+	@kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f charts/kong-operator/charts/gwapi-standard-crds/crds/gwapi-crds.yaml || true
 	@kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
 	@cd config/samples/ && find . -not -name "kustomization.*" -type f | sort | xargs -I{} bash -c "echo;echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
 
