@@ -105,6 +105,10 @@ golangci-lint: mise yq ## Download golangci-lint locally if necessary.
 
 MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
 MODERNIZE = $(PROJECT_DIR)/bin/modernize
+# Flags for modernize analyzer. Disable the "omitzero" category to avoid
+# warnings about `omitempty` on nested struct fields, which we intentionally
+# keep for compatibility with upstream expectations.
+MODERNIZE_FLAGS ?= -category=-omitzero
 .PHONY: modernize
 modernize: yq
 	GOBIN=$(PROJECT_DIR)/bin go install -v \
@@ -251,7 +255,7 @@ lint.golangci-lint: golangci-lint
 
 .PHONY: lint.modernize
 lint.modernize: modernize
-	$(MODERNIZE) ./...
+	$(MODERNIZE) $(MODERNIZE_FLAGS) ./...
 
 .PHONY: lint.charts
 lint.charts: download.kube-linter
@@ -660,6 +664,11 @@ _test.kongintegration: gotestsum
 
 .PHONY: test.samples
 test.samples:
+	@echo "Ensuring CRDs installed for samples"
+	@kubectl apply -f charts/kong-operator/charts/ko-crds/templates/ko-crds.yaml
+	@kubectl apply -f charts/kong-operator/charts/kic-crds/crds/kic-crds.yaml
+	@kubectl apply -f charts/kong-operator/charts/gwapi-standard-crds/crds/gwapi-crds.yaml || true
+	@kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
 	@cd config/samples/ && find . -not -name "kustomization.*" -type f | sort | xargs -I{} bash -c "echo;echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
 
 .PHONY: test.charts.golden
