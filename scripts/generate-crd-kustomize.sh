@@ -27,3 +27,12 @@ configurations:
 
 generate_kustomization_file \
   "${REPO_ROOT}/config/crd/kustomization.yaml"
+
+# Also generate a thin wrapper kustomization at config/crd/gateway-operator to satisfy tests
+mkdir -p "${REPO_ROOT}/config/crd/gateway-operator"
+cat > "${REPO_ROOT}/config/crd/gateway-operator/kustomization.yaml" <<EOF
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../kong-operator
+EOF

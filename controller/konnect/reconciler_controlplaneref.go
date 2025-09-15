@@ -12,8 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
-
+	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
 	"github.com/kong/kong-operator/controller/pkg/patch"

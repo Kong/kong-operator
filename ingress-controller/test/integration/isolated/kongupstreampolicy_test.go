@@ -20,15 +20,14 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
-	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
-
+	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kong-operator/api/incubator/v1alpha1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/testlabels"
+	"github.com/kong/kong-operator/pkg/clientset"
 )
 
 func TestKongUpstreamPolicyStatus(t *testing.T) {

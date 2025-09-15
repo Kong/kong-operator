@@ -8,14 +8,14 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
+	operatorv1alpha1 "github.com/kong/kong-operator/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 )
 
 // Get returns a scheme aware of all types the manager can interact with.

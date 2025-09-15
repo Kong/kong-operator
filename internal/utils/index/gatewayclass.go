@@ -4,7 +4,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 )
 
 const (
