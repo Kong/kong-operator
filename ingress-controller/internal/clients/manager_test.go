@@ -11,6 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
@@ -410,10 +411,12 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 			return true
 		}, time.Second, time.Millisecond, "expected to receive %d notifications", expectedCount)
 	}
-	requireLastReadinessCheckCall := func(expected readinessCheckCall) {
-		call, ok := readinessChecker.LastCall()
-		require.True(t, ok, "expected call to readiness checker")
-		require.Equal(t, expected, call)
+	requireLastReadinessCheckCall := func(t *testing.T, c *mockReadinessChecker, expected readinessCheckCall) {
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			call, ok := c.LastCall()
+			require.True(t, ok, "expected call to readiness checker")
+			require.Equal(t, expected, call)
+		}, time.Second, time.Millisecond)
 	}
 
 	// Notify the first set of clients and make sure that the subscriber doesn't get notified as it was initial state.
@@ -424,7 +427,7 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 		time.Second, time.Millisecond,
 		"expected readiness check on non-empty set of clients",
 	)
-	requireLastReadinessCheckCall(readinessCheckCall{
+	requireLastReadinessCheckCall(t, readinessChecker, readinessCheckCall{
 		AlreadyCreatedURLs: []string{testURL1},
 		PendingURLs:        []string{},
 	})
@@ -442,7 +445,7 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 	// Notify the second set of clients without making the new one ready and make sure that the subscriber gets no notification.
 	m.Notify(ctx, secondClientsSet)
 	notificationsCountEventuallyEquals(1)
-	requireLastReadinessCheckCall(readinessCheckCall{
+	requireLastReadinessCheckCall(t, readinessChecker, readinessCheckCall{
 		AlreadyCreatedURLs: []string{},
 		PendingURLs:        []string{testURL2},
 	})
@@ -452,7 +455,7 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{ClientsTurnedReady: intoTurnedReady(testURL2)})
 	m.Notify(ctx, secondClientsSet)
 	notificationsCountEventuallyEquals(2)
-	requireLastReadinessCheckCall(readinessCheckCall{
+	requireLastReadinessCheckCall(t, readinessChecker, readinessCheckCall{
 		AlreadyCreatedURLs: []string{},
 		PendingURLs:        []string{testURL2},
 	})
@@ -460,7 +463,7 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 
 	m.Notify(ctx, []adminapi.DiscoveredAdminAPI{firstClientsSet[0], secondClientsSet[0]})
 	notificationsCountEventuallyEquals(3)
-	requireLastReadinessCheckCall(readinessCheckCall{
+	requireLastReadinessCheckCall(t, readinessChecker, readinessCheckCall{
 		AlreadyCreatedURLs: []string{testURL2},
 		PendingURLs:        []string{testURL1},
 	})
