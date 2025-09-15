@@ -14,5 +14,5 @@ const (
 	IngressClass = "kongtests"
 
 	// ControllerNamespace is the Kubernetes namespace where the controller is deployed.
-	ControllerNamespace = "kong"
+	ControllerNamespace = "kong-system"
 )

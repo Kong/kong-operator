@@ -32,7 +32,7 @@ import (
 
 const (
 	// gatewayWaitTimeToVerifyScheduling is the amount of time to wait during testing to verify
-	// whether the sheduling of a new Gateway object has occurred.
+	// whether the scheduling of a new Gateway object has occurred.
 	gatewayWaitTimeToVerifyScheduling = time.Second * 30
 
 	// gatewayUpdateWaitTime is the amount of time to wait for updates to the Gateway, or to its
