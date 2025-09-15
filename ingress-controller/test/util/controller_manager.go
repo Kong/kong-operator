@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/test/consts"
+	"github.com/kong/kong-operator/pkg/utils/test"
 )
 
 // logOutput is a file to use for manager log output other than stderr.
@@ -121,7 +122,7 @@ func DeployControllerManagerForCluster(
 		Namespace: kongAddon.Namespace(),
 		Name:      "ingress-controller-kong-udp-proxy",
 	})
-	cfg.Impersonate = "system:serviceaccount:kong:kong-serviceaccount"
+	cfg.Impersonate = test.ServiceAccountToImpersonate
 
 	// Apply additional configuration from opts
 	for _, opt := range opts {
