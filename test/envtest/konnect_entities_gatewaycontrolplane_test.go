@@ -468,7 +468,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 						var cp konnectv1alpha2.KonnectGatewayControlPlane
 						require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Name: "cp-4"}, &cp))
 						// On conflict, we list cps by UID and check if there is already one created.
-						return r.Labels != nil && *r.Labels == ops.KubernetesUIDLabelKey+":"+string(cp.UID)
+						return r.FilterLabels != nil && *r.FilterLabels == ops.KubernetesUIDLabelKey+":"+string(cp.UID)
 					}),
 				).
 				Return(
@@ -595,7 +595,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 						var cp konnectv1alpha2.KonnectGatewayControlPlane
 						require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Name: "cp-group-1"}, &cp))
 						// On conflict, we list cps by UID and check if there is already one created.
-						return r.Labels != nil && *r.Labels == ops.KubernetesUIDLabelKey+":"+string(cp.UID)
+						return r.FilterLabels != nil && *r.FilterLabels == ops.KubernetesUIDLabelKey+":"+string(cp.UID)
 					}),
 				).
 				Return(

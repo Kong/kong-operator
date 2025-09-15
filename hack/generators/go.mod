@@ -11,7 +11,7 @@ require (
 )
 
 require (
-	github.com/Kong/sdk-konnect-go v0.9.1 // indirect
+	github.com/Kong/sdk-konnect-go v0.10.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
