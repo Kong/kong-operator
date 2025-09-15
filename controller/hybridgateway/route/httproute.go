@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,11 +72,16 @@ func (r *httpRouteStatusUpdater) ComputeStatus() {
 		gatewayKey := namespace + "/" + string(parentRef.Name)
 		routeKey := r.route.Namespace + "/" + r.route.Name
 		key := StatusMapKey(HTTPRouteKey, routeKey, gatewayKey)
-		var allProgrammed = true
+
+		var (
+			allProgrammed      = true
+			shouldSetCondition = true
+		)
 		for k := range backendRefs {
 			n, initiated := r.sharedStatusMap.GetProgrammedServices(key, k)
 			if !initiated {
 				// Don't touch the condition if the service controller hasn't processed this service yet.
+				shouldSetCondition = false
 				break
 			}
 			if n != 1 {
@@ -83,6 +89,11 @@ func (r *httpRouteStatusUpdater) ComputeStatus() {
 				break
 			}
 		}
+		// Skip setting condition if service controller hasn't been initiated.
+		if !shouldSetCondition {
+			continue
+		}
+
 		if !allProgrammed {
 			serviceProgrammedCondition.Status = metav1.ConditionFalse
 			serviceProgrammedCondition.Reason = ConditionReasonBackendsNotProgrammed
@@ -110,7 +121,7 @@ func (r *httpRouteStatusUpdater) EnforceStatus(ctx context.Context) (op.Result, 
 		var parentRefStatus gwtypes.RouteParentStatus
 		var index = -1
 		for i, parentStatus := range newRoute.Status.Parents {
-			if parentStatus.ParentRef.Name == parentRef.Name && ((parentStatus.ParentRef.Namespace == nil && parentRef.Namespace == nil) || *parentStatus.ParentRef.Namespace == *parentRef.Namespace) {
+			if parentStatus.ParentRef.Name == parentRef.Name && lo.FromPtr(parentStatus.ParentRef.Namespace) == lo.FromPtr(parentRef.Namespace) {
 				parentRefStatus = parentStatus
 				index = i
 				break
