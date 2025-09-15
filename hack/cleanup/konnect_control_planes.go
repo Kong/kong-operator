@@ -101,7 +101,7 @@ func findOrphanedControlPlanes(
 	response, err := c.ListControlPlanes(ctx, sdkkonnectops.ListControlPlanesRequest{
 		PageSize: lo.ToPtr(konnectControlPlanesLimit),
 		// Filter the control planes created in the KO integration tests by existence of label `konghq.com/test-id`
-		Labels: lo.ToPtr(testIDLabel),
+		FilterLabels: lo.ToPtr(testIDLabel),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list control planes: %w", err)
