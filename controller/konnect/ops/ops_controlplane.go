@@ -253,7 +253,7 @@ func getControlPlaneForUID(
 		// NOTE: only filter on object's UID.
 		// Other fields like name might have changed in the meantime but that's OK.
 		// Those will be enforced via subsequent updates.
-		Labels: lo.ToPtr(UIDLabelForObject(cp)),
+		FilterLabels: lo.ToPtr(UIDLabelForObject(cp)),
 	}
 
 	resp, err := sdk.ListControlPlanes(ctx, reqList)
