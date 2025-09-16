@@ -24,7 +24,6 @@ var (
 	kongRBACsKustomize = initKongRBACsKustomizePath()
 
 	kubernetesConfigurationModuleVersion = "" // unused; local paths are used instead of remote module refs
-	kongCRDsKustomize                    = initKongConfigurationCRDs()
 	kongIncubatorCRDsKustomize           = initKongIncubatorCRDsKustomizePath()
 	kongKOCRDsKustomize                  = initKongOperatorConfigurationCRDs()
 )
@@ -37,12 +36,6 @@ func initKongIncubatorCRDsKustomizePath() string {
 
 func initKongRBACsKustomizePath() string {
 	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/rbac/")
-	ensureDirExists(dir)
-	return dir
-}
-
-func initKongConfigurationCRDs() string {
-	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/crd")
 	ensureDirExists(dir)
 	return dir
 }
