@@ -461,9 +461,6 @@ manifests.charts.kong-operator.chart.yaml: yq
 		'.dependencies = [ {"name":"ko-crds","version":"1.0.0"}]' \
 		-i $(KONG_OPERATOR_CHART_YAML_PATH)
 	@$(YQ) eval \
-		'.dependencies += [ {"name":"kic-crds","version":"1.2.0","condition":"kic-crds.enabled"}]' \
-		-i $(KONG_OPERATOR_CHART_YAML_PATH)
-	@$(YQ) eval \
 		'.dependencies += [ {"name":"gwapi-standard-crds","version":"$(GATEWAY_API_VERSION:v%=%)","condition":"gwapi-standard-crds.enabled"}]' \
 		-i $(KONG_OPERATOR_CHART_YAML_PATH)
 	@$(YQ) eval \
