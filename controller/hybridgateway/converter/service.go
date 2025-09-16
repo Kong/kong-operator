@@ -202,7 +202,7 @@ func (d *serviceConverter) UpdateSharedRouteStatus(objs []unstructured.Unstructu
 // that match the service name, namespace, and port, and appends them to the store.
 // Returns an error if listing HTTPRoutes fails.
 func (d *serviceConverter) loadInputStore(ctx context.Context) error {
-	// List only the HTTPRoutes the the same namespace as the service.
+	// List only the HTTPRoutes belonging to the same namespace as the service.
 	// Do not consider cross-namespace refs in the service implementation.
 	httpRoutes := gwtypes.HTTPRouteList{}
 	err := d.List(ctx, &httpRoutes,
