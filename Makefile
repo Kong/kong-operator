@@ -309,6 +309,11 @@ API_DIR ?= api
 .PHONY: generate
 generate: generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.cli-arguments-docs
 
+.PHONY: generate.crds
+generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
+	@echo "Generate CRDs in version $(VERSION)"
+	VERSION=$(VERSION) go run ./scripts/crds-generator
+
 .PHONY: generate.crd-kustomize
 generate.crd-kustomize:
 	./scripts/generate-crd-kustomize.sh

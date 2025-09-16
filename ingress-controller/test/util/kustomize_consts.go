@@ -30,7 +30,7 @@ var (
 )
 
 func initKongIncubatorCRDsKustomizePath() string {
-	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/crd/incubator")
+	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/crd/ingress-controller-incubator")
 	ensureDirExists(dir)
 	return dir
 }
