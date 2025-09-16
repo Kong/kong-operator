@@ -393,7 +393,6 @@ manifests.versions: kustomize yq
 .PHONY: manifests.charts
 manifests.charts:
 	@$(MAKE) manifests.charts.kong-operator.crds.operator
-	@$(MAKE) manifests.charts.kong-operator.crds.kic
 	@$(MAKE) manifests.charts.kong-operator.crds.gwapi-standard
 	@$(MAKE) manifests.charts.kong-operator.crds.gwapi-experimental
 	@$(MAKE) manifests.charts.kong-operator.chart.yaml
@@ -416,12 +415,6 @@ manifests.charts.kong-operator.role: manifests.role
 .PHONY: manifests.charts.kong-operator.crds.operator
 manifests.charts.kong-operator.crds.operator: kustomize
 	$(MAKE) manifests.conversion-webhook
-
-.PHONY: manifests.charts.kong-operator.crds.kic
-manifests.charts.kong-operator.crds.kic: kustomize
-	$(KUSTOMIZE) build ingress-controller/config/crd > \
-		$(KONG_OPERATOR_CHART_DIR)/charts/kic-crds/crds/kic-crds.yaml
-
 
 GATEWAY_API_STANDARD_CRDS_SUBCHART_CHART_YAML_PATH = $(KONG_OPERATOR_CHART_DIR)/charts/gwapi-standard-crds/Chart.yaml
 GATEWAY_API_STANDARD_CRDS_SUBCHART_MANIFEST_PATH = $(KONG_OPERATOR_CHART_DIR)/charts/gwapi-standard-crds/crds/gwapi-crds.yaml
@@ -670,10 +663,10 @@ test.samples: kustomize
 	@echo "Ensuring CRDs installed for samples"
 	# Apply operator CRDs using kustomize (Helm templates cannot be applied directly by kubectl).
 	@$(KUSTOMIZE) build config/crd | kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f -
-	@kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f charts/kong-operator/charts/kic-crds/crds/kic-crds.yaml
 	@kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f charts/kong-operator/charts/gwapi-standard-crds/crds/gwapi-crds.yaml || true
 	@kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
-	@cd config/samples/ && find . -not -name "kustomization.*" -type f | sort | xargs -I{} bash -c "echo;echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
+	# Disable tests including GatewayConfiguration v1beta1 and ControlPlane v1beta1 temporarily because they need conversion webhooks: https://github.com/Kong/kong-operator/issues/1986
+	@cd config/samples/ && find . -not -name "kustomization.*" -not -name "zz_temp_disabled_*" -type f | sort | xargs -I{} bash -c "echo;echo {}; kubectl apply -f {} && kubectl delete -f {}" \;
 
 .PHONY: test.charts.golden
 test.charts.golden:

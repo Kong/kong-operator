@@ -46,7 +46,7 @@ spec:
               memory: 100Mi
 ---
 kind: GatewayConfiguration
-apiVersion: gateway-operator.konghq.com/v1beta1
+apiVersion: gateway-operator.konghq.com/v2beta1
 metadata:
   name: kong
   namespace: default
@@ -67,17 +67,6 @@ spec:
       - name: additional-custom-plugin
         namespace: additional
       - name: additional-custom-plugin-2
-  controlPlaneOptions:
-    deployment:
-      podTemplateSpec:
-        spec:
-          containers:
-            - name: controller
-              # renovate: datasource=docker versioning=docker
-              image: kong/kubernetes-ingress-controller:3.5.0
-              readinessProbe:
-                initialDelaySeconds: 1
-                periodSeconds: 1
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass

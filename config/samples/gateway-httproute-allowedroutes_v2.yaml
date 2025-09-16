@@ -59,7 +59,7 @@ spec:
               cpu: 10m
 ---
 kind: GatewayConfiguration
-apiVersion: gateway-operator.konghq.com/v1beta1
+apiVersion: gateway-operator.konghq.com/v2beta1
 metadata:
   name: kong
   namespace: default
@@ -72,17 +72,6 @@ spec:
           - name: proxy
             # renovate: datasource=docker versioning=docker
             image: kong:3.9
-            readinessProbe:
-              initialDelaySeconds: 1
-              periodSeconds: 1
-  controlPlaneOptions:
-    deployment:
-      podTemplateSpec:
-        spec:
-          containers:
-          - name: controller
-            # renovate: datasource=docker versioning=docker
-            image: kong/kubernetes-ingress-controller:3.5.0
             readinessProbe:
               initialDelaySeconds: 1
               periodSeconds: 1
