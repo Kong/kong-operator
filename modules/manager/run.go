@@ -45,7 +45,7 @@ import (
 
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
-	"github.com/kong/kong-operator/ingress-controller/validation"
+	"github.com/kong/kong-operator/ingress-controller/pkg/validation"
 	"github.com/kong/kong-operator/internal/telemetry"
 	"github.com/kong/kong-operator/internal/webhook/conversion"
 	"github.com/kong/kong-operator/modules/diagnostics"
