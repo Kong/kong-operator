@@ -54,9 +54,10 @@
 
 ## Fixes
 
-- Fix incorrect error handling during cluster CA secret creation
+- Fix incorrect error handling during cluster CA secret creation.
   [#2250](https://github.com/Kong/kong-operator/pull/2250)
-- DataPlane is now marked as ready when status.AvailableReplicas is at least equal to status.Replicas
+  [#2250](https://github.com/Kong/kong-operator/pull/2250)
+- `DataPlane` is now marked as ready when `status.AvailableReplicas` is at least equal to `status.Replicas`.
   [#2291](https://github.com/Kong/kong-operator/pull/2291)
 
 ## [v2.0.0]
