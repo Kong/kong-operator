@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.0.1](#v201)
 - [v2.0.0](#v200)
 - [v1.6.2](#v162)
 - [v1.6.1](#v161)
@@ -32,11 +33,6 @@
 
 ## Unreleased
 
-## Fixes
-
-- Fix incorrect error handling during cluster CA secret creation
-  [#2250](https://github.com/Kong/kong-operator/pull/2250)
-
 ### Added
 
 - Hybrid Gateway support: Gateway API objects bound to `Gateway`s programmed in Konnect
@@ -51,6 +47,18 @@
 - For Hybrid `Gateway`s the operator does not run the `ControlPlane` anymore, as
   the `DataPlane` is configured to use `Koko` as Konnect control plane.
   [#2253](https://github.com/Kong/kong-operator/pull/2253)
+
+## [v2.0.1]
+
+> Release date: 2025-09-17
+
+## Fixes
+
+- Fix incorrect error handling during cluster CA secret creation.
+  [#2250](https://github.com/Kong/kong-operator/pull/2250)
+  [#2250](https://github.com/Kong/kong-operator/pull/2250)
+- `DataPlane` is now marked as ready when `status.AvailableReplicas` is at least equal to `status.Replicas`.
+  [#2291](https://github.com/Kong/kong-operator/pull/2291)
 
 ## [v2.0.0]
 
@@ -1344,6 +1352,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.0.1]: https://github.com/Kong/kong-operator/compare/v2.0.0..v2.0.1
 [v2.0.0]: https://github.com/Kong/kong-operator/compare/v1.6.2..v2.0.0
 [v1.6.2]: https://github.com/Kong/kong-operator/compare/v1.6.1..v1.6.2
 [v1.6.1]: https://github.com/Kong/kong-operator/compare/v1.6.0..v1.6.1
