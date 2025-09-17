@@ -347,6 +347,7 @@ jobs:
           add-paths: |
             VERSION
             config
+            charts
           commit-message: "${{ env.MSG }}"
           committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
           author: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>
