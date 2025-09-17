@@ -4,8 +4,10 @@ kind: Kustomization
 resources:
   - kong-operator
 
-patches:
-  - path: patches/zz_generated_conversion_webhook.yaml
+patchesStrategicMerge:
+  - patches/zz_generated_conversion_webhook_controlplanes.yaml
+  - patches/zz_generated_conversion_webhook_gatewayconfigurations.yaml
+  - patches/zz_generated_conversion_webhook_konnectgatewaycontrolplanes.yaml
 
 configurations:
   - kustomizeconfig.yaml
