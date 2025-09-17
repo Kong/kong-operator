@@ -293,19 +293,18 @@ func listDataPlaneLiveServices(
 	)
 }
 
+// isDeploymentReady if the DataPlane's Deployment is ready.
+// It does not indicate if the rollout has completed, that is a DataPlane can indicate
+// that it's ready (e.g. all replicas are available) but not fully rolled out
+// (e.g. new spec has not completely rolled out).
 func isDeploymentReady(deploymentStatus appsv1.DeploymentStatus) (metav1.ConditionStatus, bool) {
 	// We check if the Deployment is not Ready.
 	// This is the case when status has replicas set to 0 or status.availableReplicas
 	// in status is less than status.replicas.
-	// The second condition takes into account the time when new version (ReplicaSet)
-	// is being rolled out by Deployment controller and there might be more available
-	// replicas than specified in spec.replicas but we don't consider it fully ready
-	// until it stabilized to be equal to status.replicas.
-	// If any of those conditions is specified we mark the DataPlane as not ready yet.
-	if deploymentStatus.Replicas > 0 &&
-		deploymentStatus.AvailableReplicas == deploymentStatus.Replicas {
-		return metav1.ConditionTrue, true
-	} else {
+	if deploymentStatus.Replicas == 0 ||
+		deploymentStatus.AvailableReplicas < deploymentStatus.Replicas {
 		return metav1.ConditionFalse, false
 	}
+
+	return metav1.ConditionTrue, true
 }
