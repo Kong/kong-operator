@@ -45,7 +45,6 @@ type serviceConverter struct {
 type serviceStore struct {
 	httpBackendRefs       map[string][]gwtypes.HTTPBackendRef
 	konnectNamespacedRefs map[string]refs.GatewaysByNamespacedRef
-	gateways              map[string][]gwtypes.Gateway
 	hostnames             map[string]any
 }
 
@@ -265,29 +264,27 @@ func (d *serviceConverter) translate() error {
 		kongServices := []configurationv1alpha1.KongService{}
 		for _, brefs := range brefs {
 			for _, ref := range d.store.konnectNamespacedRefs {
-				for hostname := range d.store.hostnames {
-					kongService := configurationv1alpha1.KongService{
-						Spec: configurationv1alpha1.KongServiceSpec{
-							KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-								Port: int64(*brefs.Port),
-								Host: hostname,
-							},
-							ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
-								Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-								KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-									Name: ref.Ref.Name,
-								},
+				kongService := configurationv1alpha1.KongService{
+					Spec: configurationv1alpha1.KongServiceSpec{
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							Port: int64(*brefs.Port),
+							Host: d.GetRootObject().Name + "." + d.GetRootObject().Namespace + ".svc.cluster.local",
+						},
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: ref.Ref.Name,
 							},
 						},
-					}
-					// Set all the fields that on the KongService spec, then compute the name based on the spec hash.
-					kongService.Spec.Name = lo.ToPtr(d.service.Namespace + "_" + d.service.Name + "-" + utils.Hash32(kongService.Spec))
-
-					if err := d.setMetadata(&kongService, route.HTTPRouteKey+"|"+routeNN, utils.GatewaysSliceToAnnotation(ref.Gateways)); err != nil {
-						return err
-					}
-					kongServices = append(kongServices, kongService)
+					},
 				}
+				// Set all the fields that on the KongService spec, then compute the name based on the spec hash.
+				kongService.Spec.Name = lo.ToPtr(d.service.Namespace + "_" + d.service.Name + "-" + utils.Hash32(kongService.Spec))
+
+				if err := d.setMetadata(&kongService, route.HTTPRouteKey+"|"+routeNN, utils.GatewaysSliceToAnnotation(ref.Gateways)); err != nil {
+					return err
+				}
+				kongServices = append(kongServices, kongService)
 			}
 		}
 
@@ -307,5 +304,5 @@ func (d *serviceConverter) setMetadata(kongService *configurationv1alpha1.KongSe
 // HostnameIntersection computes the intersection of hostnames from the provided Gateways and HTTPRoute.
 func (d *serviceConverter) HostnameIntersection(gateways []gwtypes.Gateway, httpRoute gwtypes.HTTPRoute) []string {
 	// TODO(mlavacca): This is a placeholder implementation, implement proper hostname intersection logic
-	return []string{"api.kong-air.com"}
+	return []string{httpRoute.Namespace}
 }
