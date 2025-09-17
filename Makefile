@@ -8,6 +8,9 @@ REPO_NAME ?= $(shell echo $(REPO) | cut -d / -f 3)
 REPO_INFO ?= $(shell git config --get remote.origin.url)
 TAG ?= $(shell git describe --tags)
 VERSION ?= $(shell cat VERSION)
+VERSION_MAJOR := $(word 1,$(subst ., ,$(VERSION)))
+VERSION_MINOR := $(word 2,$(subst ., ,$(VERSION)))
+VERSION_NO_PATCH := $(VERSION_MAJOR).$(VERSION_MINOR)
 
 ifndef COMMIT
   COMMIT := $(shell git rev-parse --short HEAD)
@@ -382,9 +385,9 @@ manifests.role: controller-gen
 # manifests.versions ensures that image versions are set in the manifests according to the current version.
 .PHONY: manifests.versions
 manifests.versions: kustomize yq
-	$(YQ) eval '.appVersion = "$(VERSION)"' -i charts/kong-operator/Chart.yaml
-	$(YQ) eval '.image.tag = "$(VERSION)"' -i charts/kong-operator/values.yaml
-	cd config/components/manager-image/ && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION)
+	$(YQ) eval '.appVersion = "$(VERSION_NO_PATCH)"' -i charts/kong-operator/Chart.yaml
+	$(YQ) eval '.image.tag = "$(VERSION_NO_PATCH)"' -i charts/kong-operator/values.yaml
+	cd config/components/manager-image/ && $(KUSTOMIZE) edit set image $(KUSTOMIZE_IMG_NAME)=$(IMG):$(VERSION_NO_PATCH)
 
 .PHONY: manifests.charts
 manifests.charts:

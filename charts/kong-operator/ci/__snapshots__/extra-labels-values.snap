@@ -42,7 +42,7 @@ metadata:
     app.kubernetes.io/name: kong-operator
     helm.sh/chart: kong-operator-1.0.0
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.0.0"
+    app.kubernetes.io/version: "2.0"
     a: "b"
     app.kubernetes.io/component: ko
   annotations:
@@ -53303,7 +53303,7 @@ metadata:
     app.kubernetes.io/name: kong-operator
     helm.sh/chart: kong-operator-1.0.0
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.0.0"
+    app.kubernetes.io/version: "2.0"
     a: "b"
     app.kubernetes.io/component: ko
   name: chartsnap-kong-operator-controller-manager
@@ -53326,11 +53326,11 @@ spec:
         app.kubernetes.io/name: kong-operator
         helm.sh/chart: kong-operator-1.0.0
         app.kubernetes.io/instance: "chartsnap"
-        app.kubernetes.io/version: "2.0.0"
+        app.kubernetes.io/version: "2.0"
         a: "b"
         app.kubernetes.io/component: ko
         app: chartsnap-kong-operator
-        version: "2.0.0"
+        version: "2.0"
     spec:
       containers:
       - name: manager
@@ -53351,7 +53351,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: "docker.io/kong/kong-operator:2.0.0"
+        image: "docker.io/kong/kong-operator:2.0"
         livenessProbe:
           httpGet:
             path: /healthz
@@ -53559,7 +53559,7 @@ metadata:
     app.kubernetes.io/name: kong-operator
     helm.sh/chart: kong-operator-1.0.0
     app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.0.0"
+    app.kubernetes.io/version: "2.0"
     a: "b"
     app.kubernetes.io/component: ko
   name: controlplane-configuration-validations
