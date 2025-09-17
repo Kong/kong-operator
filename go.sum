@@ -343,8 +343,8 @@ github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.18.0 h1:c/Cqfb0r+Yi+JtIEq73FWXVkRonBlf0CRNYc8Zttxdo=
 github.com/klauspost/compress v1.18.0/go.mod h1:2Pp+KzxcywXVXMr50+X0Q/Lsb43OQHYWRCY2AiWywWQ=
-github.com/kong/go-database-reconciler v1.26.0 h1:x074dbSwYbTaUVmrCbDy1z9dy2oWu/XTbpxFJ/YEccQ=
-github.com/kong/go-database-reconciler v1.26.0/go.mod h1:wq48xbXrcs1NCm7MlPhOIuYFjw66NR0zu+du+Br9q0I=
+github.com/kong/go-database-reconciler v1.27.1 h1:a5EyqQsY5BF2p964J2PQW9BMIMvTz30A2FInIAf1TcA=
+github.com/kong/go-database-reconciler v1.27.1/go.mod h1:6EnCqJqkYWwf9UjkiIKXCv29kapPFUBQ2+FVjR9ZslE=
 github.com/kong/go-kong v0.68.0 h1:rQrLYRKXD6/xf41GBXj9Ns+woAH9p6a4VvcXNMiPZPI=
 github.com/kong/go-kong v0.68.0/go.mod h1:J0vGB3wsZ2i99zly1zTRe3v7rOKpkhQZRwbcTFP76qM=
 github.com/kong/kubernetes-configuration/v2 v2.0.0 h1:dEi4UQcBqb/W1s/Vj8VU+L55OBJbe7fLcmyA3yUQoU4=
