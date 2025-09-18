@@ -28077,7 +28077,7 @@ kind: Deployment
 metadata:
   labels:
     app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.0.0
+    helm.sh/chart: kong-operator-1.0.1
     app.kubernetes.io/instance: "chartsnap"
     app.kubernetes.io/version: "2.0"
     app.kubernetes.io/component: ko
@@ -28099,7 +28099,7 @@ spec:
       labels:
         control-plane: controller-manager
         app.kubernetes.io/name: kong-operator
-        helm.sh/chart: kong-operator-1.0.0
+        helm.sh/chart: kong-operator-1.0.1
         app.kubernetes.io/instance: "chartsnap"
         app.kubernetes.io/version: "2.0"
         app.kubernetes.io/component: ko
@@ -28129,7 +28129,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: "docker.io/kong/kong-operator:2.0"
+        image: docker.io/kong/kong-operator:2.0
         livenessProbe:
           httpGet:
             path: /healthz
