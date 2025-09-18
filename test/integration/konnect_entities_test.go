@@ -74,6 +74,7 @@ func TestKonnectEntities(t *testing.T) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 		require.NoError(t, err)
 		require.NotEmpty(t, cp.Status.Endpoints)
+		// We will not test the domain name to prevent flakes when the URLs change in Konnect.
 		// Example: https://e7b5c7de43.us.cp.konghq.tech
 		require.True(t, strings.HasPrefix(cp.Status.Endpoints.ControlPlaneEndpoint, "https://"), "must start with https://")
 		// Example: https://e7b5c7de43.us.tp.konghq.tech
