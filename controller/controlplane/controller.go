@@ -134,10 +134,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	if err := r.cleanupOldManagedResources(ctx, cp); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to cleanup old managed resources: %w", err)
-	}
-
 	// The mgrID is used to identify the ControlPlane instance in the multi-instance manager.
 	// It is also used as UUID for the ControlPlane instance in Konnect. If changing the UUID format,
 	// ensure that it is compatible with the Konnect API.
@@ -148,6 +144,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	// controlplane is deleted, just run garbage collection for cluster wide resources.
 	if !cp.DeletionTimestamp.IsZero() {
+		// If the CP is deleted, ensure that we cleaned up all the old resources
+		// that were managed by older versions of the operator.
+		if err := r.cleanupOldManagedResources(ctx, cp); err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to cleanup old managed resources: %w", err)
+		}
+
 		// wait for termination grace period before cleaning up roles and bindings
 		if cp.DeletionTimestamp.After(metav1.Now().Time) {
 			log.Debug(logger, "control plane deletion still under grace period")
@@ -436,6 +438,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		log.Debug(logger, "unable to patch ControlPlane status", "error", err)
 		return ctrl.Result{}, err
 	}
+
+	// At this point, the ControlPlane instance is ready and its config matches the spec.
+	// We can now safely delete the old resources that are no longer managed
+	// by the ControlPlane instance.
+	if err := r.cleanupOldManagedResources(ctx, cp); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to cleanup old managed resources: %w", err)
+	}
+
 	if !result.IsZero() {
 		log.Debug(logger, "unable to patch ControlPlane status")
 		return result, nil
@@ -922,6 +932,11 @@ func (r *Reconciler) cleanupOldManagedResources(ctx context.Context, cp *Control
 	}
 
 	old := cp.DeepCopy()
+	// Cleanup finalizers that were used to manage the above resources.
+	controllerutil.RemoveFinalizer(cp, "gateway-operator.konghq.com/cleanup-clusterrole")
+	controllerutil.RemoveFinalizer(cp, "gateway-operator.konghq.com/cleanup-clusterrolebinding")
+	controllerutil.RemoveFinalizer(cp, "gateway-operator.konghq.com/cleanup-validatingwebhookconfiguration")
+
 	if cp.Annotations == nil {
 		cp.Annotations = map[string]string{}
 	}
