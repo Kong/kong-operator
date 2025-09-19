@@ -195,6 +195,16 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 				},
 			},
 		}
+	} else {
+		dataPlaneOptions.Network = operatorv1beta1.DataPlaneNetworkOptions{
+			Services: &operatorv1beta1.DataPlaneServices{
+				Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+					ServiceOptions: operatorv1beta1.ServiceOptions{
+						Type: corev1.ServiceTypeLoadBalancer,
+					},
+				},
+			},
+		}
 	}
 
 	return dataPlaneOptions
