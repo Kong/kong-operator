@@ -1,0 +1,146 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: additional
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo
+spec:
+  ports:
+    - protocol: TCP
+      name: http
+      port: 80
+      targetPort: http
+  selector:
+    app: echo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo
+  template:
+    metadata:
+      labels:
+        app: echo
+    spec:
+      containers:
+        - name: echo
+          image: registry.k8s.io/e2e-test-images/agnhost:2.40
+          command:
+            - /agnhost
+            - netexec
+            - --http-port=8080
+          ports:
+            - containerPort: 8080
+              name: http
+          resources:
+            limits:
+              cpu: 100m
+              memory: 100Mi
+---
+kind: GatewayConfiguration
+apiVersion: gateway-operator.konghq.com/v2beta1
+metadata:
+  name: kong
+  namespace: default
+spec:
+  dataPlaneOptions:
+    deployment:
+      replicas: 2
+      podTemplateSpec:
+        spec:
+          containers:
+            - name: proxy
+              # renovate: datasource=docker versioning=docker
+              image: kong:3.9
+              readinessProbe:
+                initialDelaySeconds: 1
+                periodSeconds: 1
+    pluginsToInstall:
+      - name: additional-custom-plugin
+        namespace: additional
+      - name: additional-custom-plugin-2
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: kong
+spec:
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: kong
+    namespace: default
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: kong
+  namespace: default
+spec:
+  gatewayClassName: kong
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httproute-echo
+  namespace: default
+  annotations:
+    konghq.com/strip-path: "true"
+    konghq.com/plugins: kong-custom-plugin,kong-custom-plugin-2
+spec:
+  parentRefs:
+    - name: kong
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /echo
+      backendRefs:
+        - name: echo
+          kind: Service
+          port: 80
+---
+# It adds header "myheader: this-is-extra-header" to the response.
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: kong-custom-plugin
+plugin: additional-custom-plugin
+config:
+  header_value: this-is-extra-header
+---
+kind: KongPluginInstallation
+apiVersion: gateway-operator.konghq.com/v1alpha1
+metadata:
+  name: additional-custom-plugin
+  namespace: additional
+spec:
+  # See https://docs.konghq.com/gateway-operator/latest/guides/plugin-distribution/#create-a-custom-plugin
+  image: kong/plugin-example:1.0.0
+---
+# It adds header "newheader: amazing" to the response.
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: kong-custom-plugin-2
+plugin: additional-custom-plugin-2
+---
+kind: KongPluginInstallation
+apiVersion: gateway-operator.konghq.com/v1alpha1
+metadata:
+  name: additional-custom-plugin-2
+spec:
+  image: northamerica-northeast1-docker.pkg.dev/k8s-team-playground/plugin-example/myheader-2

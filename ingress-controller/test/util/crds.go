@@ -30,9 +30,6 @@ func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 	if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongKOCRDsKustomize, "--server-side"); err != nil {
 		return err
 	}
-	if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongCRDsKustomize); err != nil {
-		return err
-	}
 	fmt.Printf("INFO: deploying Kong incubator CRDs to cluster\n")
 	if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongIncubatorCRDsKustomize); err != nil {
 		return err

@@ -4,8 +4,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
-
+	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 )
 

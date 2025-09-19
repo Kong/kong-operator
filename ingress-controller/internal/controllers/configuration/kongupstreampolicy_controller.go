@@ -21,9 +21,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
-
+	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kong-operator/api/incubator/v1alpha1"
 	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
 	ctrlutils "github.com/kong/kong-operator/ingress-controller/internal/controllers/utils"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"

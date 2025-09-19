@@ -22,9 +22,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 	"sigs.k8s.io/e2e-framework/pkg/features"
 
-	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
-	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
-
+	incubatorv1alpha1 "github.com/kong/kong-operator/api/incubator/v1alpha1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
 	"github.com/kong/kong-operator/ingress-controller/test"
@@ -33,6 +31,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test/integration/consts"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/testlabels"
+	"github.com/kong/kong-operator/pkg/clientset"
 )
 
 func TestIngressGRPC(t *testing.T) {

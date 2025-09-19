@@ -13,11 +13,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
-	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	kcfgkonnect "github.com/kong/kubernetes-configuration/v2/api/konnect"
-
+	kcfgconsts "github.com/kong/kong-operator/api/common/consts"
+	kcfgdataplane "github.com/kong/kong-operator/api/gateway-operator/dataplane"
+	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
+	kcfgkonnect "github.com/kong/kong-operator/api/konnect"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )

@@ -73,7 +73,7 @@ spec:
 # and owned by the AIGateway resource.
 #
 # See: https://github.com/kong/kong-operator/issues/1368
-apiVersion: gateway-operator.konghq.com/v1beta1
+apiVersion: gateway-operator.konghq.com/v2beta1
 kind: GatewayConfiguration
 metadata:
   name: kong-ai
@@ -94,13 +94,3 @@ spec:
               value: 0.0.0.0:8002
             - name: KONG_ADMIN_LISTEN
               value: 0.0.0.0:8001, 0.0.0.0:8444 ssl reuseport backlog=16384
-  controlPlaneOptions:
-    deployment:
-      podTemplateSpec:
-        spec:
-          containers:
-          - name: controller
-            image: kong/kubernetes-ingress-controller:3.1.5
-            env:
-            - name: CONTROLLER_LOG_LEVEL
-              value: debug

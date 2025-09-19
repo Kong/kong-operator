@@ -16,8 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-
+	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
@@ -116,12 +115,13 @@ func MustListNetworkPoliciesForGateway(t *testing.T, ctx context.Context, gatewa
 
 // MustListDataPlaneServices is a helper function for tests that
 // conveniently lists all proxy services managed by a given dataplane.
-func MustListDataPlaneServices(t *testing.T, ctx context.Context, dataplane *operatorv1beta1.DataPlane, mgrClient client.Client, matchingLabels client.MatchingLabels) []corev1.Service {
+// Accepts any Kubernetes object (local or external API type) that implements client.Object.
+func MustListDataPlaneServices(t *testing.T, ctx context.Context, dataplane client.Object, mgrClient client.Client, matchingLabels client.MatchingLabels) []corev1.Service {
 	services, err := k8sutils.ListServicesForOwner(
 		ctx,
 		mgrClient,
-		dataplane.Namespace,
-		dataplane.UID,
+		dataplane.GetNamespace(),
+		dataplane.GetUID(),
 		matchingLabels,
 	)
 	require.NoError(t, err)
@@ -130,12 +130,13 @@ func MustListDataPlaneServices(t *testing.T, ctx context.Context, dataplane *ope
 
 // MustListDataPlaneDeployments is a helper function for tests that
 // conveniently lists all deployments managed by a given dataplane.
-func MustListDataPlaneDeployments(t *testing.T, ctx context.Context, dataplane *operatorv1beta1.DataPlane, clients K8sClients, matchinglabels client.MatchingLabels) []appsv1.Deployment {
+// Accepts any Kubernetes object (local or external API type) that implements client.Object.
+func MustListDataPlaneDeployments(t *testing.T, ctx context.Context, dataplane client.Object, clients K8sClients, matchinglabels client.MatchingLabels) []appsv1.Deployment {
 	deployments, err := k8sutils.ListDeploymentsForOwner(
 		ctx,
 		clients.MgrClient,
-		dataplane.Namespace,
-		dataplane.UID,
+		dataplane.GetNamespace(),
+		dataplane.GetUID(),
 		matchinglabels,
 	)
 	require.NoError(t, err)
@@ -144,12 +145,13 @@ func MustListDataPlaneDeployments(t *testing.T, ctx context.Context, dataplane *
 
 // MustListDataPlaneHPAs is a helper function for tests that
 // conveniently lists all HPAs managed by a given dataplane.
-func MustListDataPlaneHPAs(t *testing.T, ctx context.Context, dataplane *operatorv1beta1.DataPlane, clients K8sClients, matchinglabels client.MatchingLabels) []autoscalingv2.HorizontalPodAutoscaler {
+// Accepts any Kubernetes object (local or external API type) that implements client.Object.
+func MustListDataPlaneHPAs(t *testing.T, ctx context.Context, dataplane client.Object, clients K8sClients, matchinglabels client.MatchingLabels) []autoscalingv2.HorizontalPodAutoscaler {
 	hpas, err := k8sutils.ListHPAsForOwner(
 		ctx,
 		clients.MgrClient,
-		dataplane.Namespace,
-		dataplane.UID,
+		dataplane.GetNamespace(),
+		dataplane.GetUID(),
 		matchinglabels,
 	)
 	require.NoError(t, err)
@@ -161,15 +163,15 @@ func MustListDataPlaneHPAs(t *testing.T, ctx context.Context, dataplane *operato
 func MustListDataPlanePodDisruptionBudgets(
 	t *testing.T,
 	ctx context.Context,
-	dataplane *operatorv1beta1.DataPlane,
+	dataplane client.Object,
 	clients K8sClients,
 	matchinglabels client.MatchingLabels,
 ) []policyv1.PodDisruptionBudget {
 	pdbs, err := k8sutils.ListPodDisruptionBudgetsForOwner(
 		ctx,
 		clients.MgrClient,
-		dataplane.Namespace,
-		dataplane.UID,
+		dataplane.GetNamespace(),
+		dataplane.GetUID(),
 		matchinglabels,
 	)
 	require.NoError(t, err)
@@ -190,9 +192,23 @@ func MustListServiceEndpointSlices(t *testing.T, ctx context.Context, serviceNam
 // MustListDataPlanesForGateway is a helper function for tests that
 // conveniently lists all dataplanes managed by a given gateway.
 func MustListDataPlanesForGateway(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) []operatorv1beta1.DataPlane {
-	dataplanes, err := gatewayutils.ListDataPlanesForGateway(ctx, clients.MgrClient, gateway)
-	require.NoError(t, err)
-	return dataplanes
+	// List DataPlanes using the controller-runtime client to ensure we work with
+	// the external API types expected by tests in this package.
+	dpList := &operatorv1beta1.DataPlaneList{}
+	require.NoError(t, clients.MgrClient.List(
+		ctx,
+		dpList,
+		client.InNamespace(gateway.Namespace),
+		client.MatchingLabels{consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue},
+	))
+
+	result := make([]operatorv1beta1.DataPlane, 0, len(dpList.Items))
+	for _, dp := range dpList.Items {
+		if k8sutils.IsOwnedByRefUID(&dp, gateway.UID) {
+			result = append(result, dp)
+		}
+	}
+	return result
 }
 
 // MustGetGateway is a helper function for tests that conveniently gets a gateway by name.

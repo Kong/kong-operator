@@ -1,0 +1,29 @@
+# TODO: Enable conversion webhooks for test suites:
+# https://github.com/Kong/kong-operator/issues/1986
+# apiVersion: gateway-operator.konghq.com/v1beta1
+# kind: ControlPlane
+# metadata:
+#   name: controlplane-example
+# spec:
+#   dataplane: dataplane-example
+#   gatewayClass: kong
+#   deployment:
+#     podTemplateSpec:
+#       metadata:
+#         labels:
+#           controlplane-pod-label: example
+#       spec:
+#         containers:
+#         - name: controller
+#           # renovate: datasource=docker versioning=docker
+#           image: kong/kubernetes-ingress-controller:3.5.0
+#           readinessProbe:
+#             initialDelaySeconds: 1
+#             periodSeconds: 3
+#           resources:
+#             requests:
+#               memory: "64Mi"
+#               cpu: "250m"
+#             limits:
+#               memory: "1024Mi"
+#               cpu: "1000m"

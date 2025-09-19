@@ -24,12 +24,12 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
-	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
-
+	kcfgcontrolplane "github.com/kong/kong-operator/api/gateway-operator/controlplane"
+	kcfgdataplane "github.com/kong/kong-operator/api/gateway-operator/dataplane"
+	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/pkg/clientset"
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -42,7 +42,7 @@ func controlPlanePredicate(
 	t *testing.T,
 	ctx context.Context,
 	controlplaneName types.NamespacedName,
-	predicate func(controlplane *gwtypes.ControlPlane) bool,
+	predicate func(controlplane *operatorv2beta1.ControlPlane) bool,
 	operatorClient *clientset.Clientset,
 ) func() bool {
 	controlplaneClient := operatorClient.GatewayOperatorV2beta1().ControlPlanes(controlplaneName.Namespace)
@@ -90,7 +90,7 @@ func HPAPredicate(
 // that can be used to check if a ControlPlane was scheduled.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneIsScheduled(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, operatorClient *clientset.Clientset) func() bool {
-	return controlPlanePredicate(t, ctx, controlPlane, func(c *gwtypes.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv2beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(kcfgcontrolplane.ConditionTypeProvisioned) {
 				return true
@@ -118,7 +118,7 @@ func DataPlaneIsReady(t *testing.T, ctx context.Context, dataplane types.Namespa
 // that can be used to check if a ControlPlane detected unset dataplane.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneDetectedNoDataPlane(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlPlane, func(c *gwtypes.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv2beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(kcfgcontrolplane.ConditionTypeProvisioned) &&
 				condition.Status == metav1.ConditionFalse &&
@@ -134,7 +134,7 @@ func ControlPlaneDetectedNoDataPlane(t *testing.T, ctx context.Context, controlP
 // that can be used to check if a ControlPlane was provisioned.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneIsProvisioned(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlPlane, func(c *gwtypes.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv2beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(kcfgcontrolplane.ConditionTypeProvisioned) &&
 				condition.Status == metav1.ConditionTrue {
@@ -149,7 +149,7 @@ func ControlPlaneIsProvisioned(t *testing.T, ctx context.Context, controlPlane t
 // that can be used to check if a ControlPlane's options are valid.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneIsOptionsValid(t *testing.T, ctx context.Context, controlPlane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlPlane, func(c *gwtypes.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlPlane, func(c *operatorv2beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(kcfgcontrolplane.ConditionTypeOptionsValid) &&
 				condition.Status == metav1.ConditionTrue {
@@ -164,7 +164,7 @@ func ControlPlaneIsOptionsValid(t *testing.T, ctx context.Context, controlPlane 
 // that can be used to check if a ControlPlane is marked as not Ready.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneIsNotReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlplane, func(c *gwtypes.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv2beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(kcfgdataplane.ReadyType) &&
 				condition.Status == metav1.ConditionFalse {
@@ -179,7 +179,7 @@ func ControlPlaneIsNotReady(t *testing.T, ctx context.Context, controlplane type
 // that can be used to check if a ControlPlane is marked as Ready.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneIsReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlplane, func(c *gwtypes.ControlPlane) bool {
+	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv2beta1.ControlPlane) bool {
 		for _, condition := range c.Status.Conditions {
 			if condition.Type == string(kcfgdataplane.ReadyType) &&
 				condition.Status == metav1.ConditionTrue {
@@ -194,8 +194,14 @@ func ControlPlaneIsReady(t *testing.T, ctx context.Context, controlplane types.N
 // that can be used to check if a ControlPlane has an active deployment.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneHasActiveDeployment(t *testing.T, ctx context.Context, controlplaneName types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlplaneName, func(controlplane *gwtypes.ControlPlane) bool {
-		deployments := MustListControlPlaneDeployments(t, ctx, controlplane, clients)
+	return controlPlanePredicate(t, ctx, controlplaneName, func(controlplane *operatorv2beta1.ControlPlane) bool {
+		// Fetch the local API object to interoperate with helpers expecting local types.
+		localCP := &gwtypes.ControlPlane{}
+		if err := clients.MgrClient.Get(ctx, controlplaneName, localCP); err != nil {
+			t.Logf("error getting controlplane via mgr client: %v", err)
+			return false
+		}
+		deployments := MustListControlPlaneDeployments(t, ctx, localCP, clients)
 		return len(deployments) == 1 &&
 			*deployments[0].Spec.Replicas > 0 &&
 			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
@@ -337,7 +343,13 @@ func DataPlaneHasActiveDeployment(
 	clients K8sClients,
 ) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneNN, func(dataplane *operatorv1beta1.DataPlane) bool {
-		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, matchingLabels)
+		// Fetch the local API object to interoperate with helpers expecting local types.
+		localDP := &operatorv1beta1.DataPlane{}
+		if err := clients.MgrClient.Get(ctx, dataplaneNN, localDP); err != nil {
+			t.Logf("error getting dataplane via mgr client: %v", err)
+			return false
+		}
+		deployments := MustListDataPlaneDeployments(t, ctx, localDP, clients, matchingLabels)
 		if len(deployments) == 1 &&
 			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas {
 			if ret != nil {
@@ -363,8 +375,14 @@ func DataPlaneHasHPA(
 	const dataplaneDeploymentAppLabel = "app"
 
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
-			dataplaneDeploymentAppLabel:          dataplane.Name,
+		// Fetch local API object to use with helpers expecting local types.
+		localDP := &operatorv1beta1.DataPlane{}
+		if err := clients.MgrClient.Get(ctx, dataplaneName, localDP); err != nil {
+			t.Logf("error getting dataplane via mgr client: %v", err)
+			return false
+		}
+		deployments := MustListDataPlaneDeployments(t, ctx, localDP, clients, client.MatchingLabels{
+			dataplaneDeploymentAppLabel:          localDP.Name,
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 			consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive, // Only live Deployment has an HPA.
 		})
@@ -372,8 +390,8 @@ func DataPlaneHasHPA(
 			return false
 		}
 
-		hpas := MustListDataPlaneHPAs(t, ctx, dataplane, clients, client.MatchingLabels{
-			dataplaneDeploymentAppLabel:          dataplane.Name,
+		hpas := MustListDataPlaneHPAs(t, ctx, localDP, clients, client.MatchingLabels{
+			dataplaneDeploymentAppLabel:          localDP.Name,
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		})
 		if len(hpas) != 1 {
@@ -408,7 +426,13 @@ func DataPlaneHasDeployment(
 	asserts ...func(appsv1.Deployment) bool,
 ) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, matchingLabels)
+		// Fetch the local API object to interoperate with helpers expecting local types.
+		localDP := &operatorv1beta1.DataPlane{}
+		if err := clients.MgrClient.Get(ctx, dataplaneName, localDP); err != nil {
+			t.Logf("error getting dataplane via mgr client: %v", err)
+			return false
+		}
+		deployments := MustListDataPlaneDeployments(t, ctx, localDP, clients, matchingLabels)
 		if len(deployments) != 1 {
 			return false
 		}
@@ -428,7 +452,12 @@ func DataPlaneHasDeployment(
 // DataPlaneHasNReadyPods checks if a DataPlane has at least N ready Pods.
 func DataPlaneHasNReadyPods(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients, n int32) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		deployments := MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
+		// Fetch the local API object to interoperate with helpers expecting local types.
+		localDP := &operatorv1beta1.DataPlane{}
+		if err := clients.MgrClient.Get(ctx, dataplaneName, localDP); err != nil {
+			return false
+		}
+		deployments := MustListDataPlaneDeployments(t, ctx, localDP, clients, client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		})
 		return len(deployments) == 1 &&
@@ -449,7 +478,12 @@ func DataPlaneHasService(
 	asserts ...func(corev1.Service) bool,
 ) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, matchingLabels)
+		// Fetch the local API object to interoperate with helpers expecting local types.
+		localDP := &operatorv1beta1.DataPlane{}
+		if err := clients.MgrClient.Get(ctx, dataplaneName, localDP); err != nil {
+			return false
+		}
+		services := MustListDataPlaneServices(t, ctx, localDP, clients.MgrClient, matchingLabels)
 		if len(services) != 1 {
 			return false
 		}
@@ -468,7 +502,11 @@ func DataPlaneHasService(
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, ret *corev1.Service, clients K8sClients, matchingLabels client.MatchingLabels) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, matchingLabels)
+		localDP := &operatorv1beta1.DataPlane{}
+		if err := clients.MgrClient.Get(ctx, dataplaneName, localDP); err != nil {
+			return false
+		}
+		services := MustListDataPlaneServices(t, ctx, localDP, clients.MgrClient, matchingLabels)
 		if len(services) == 1 {
 			if ret != nil {
 				*ret = services[0]
@@ -484,7 +522,11 @@ func DataPlaneHasActiveService(t *testing.T, ctx context.Context, dataplaneName 
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasActiveServiceWithName(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, ret *corev1.Service, clients K8sClients, matchingLabels client.MatchingLabels, name string) func() bool {
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, matchingLabels)
+		localDP := &operatorv1beta1.DataPlane{}
+		if err := clients.MgrClient.Get(ctx, dataplaneName, localDP); err != nil {
+			return false
+		}
+		services := MustListDataPlaneServices(t, ctx, localDP, clients.MgrClient, matchingLabels)
 		if len(services) == 1 && services[0].Name == name {
 			if ret != nil {
 				*ret = services[0]
@@ -519,8 +561,14 @@ func DataPlaneServiceHasNActiveEndpoints(t *testing.T, ctx context.Context, serv
 // - a list of addreses of its backing service in its .Addresses status field
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func DataPlaneHasServiceAndAddressesInStatus(t *testing.T, ctx context.Context, dataplaneName types.NamespacedName, clients K8sClients) func() bool {
-	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		services := MustListDataPlaneServices(t, ctx, dataplane, clients.MgrClient, client.MatchingLabels{
+	return DataPlanePredicate(t, ctx, dataplaneName, func(_ *operatorv1beta1.DataPlane) bool {
+		// Fetch the local API object for comparisons
+		localDP := &operatorv1beta1.DataPlane{}
+		if err := clients.MgrClient.Get(ctx, dataplaneName, localDP); err != nil {
+			t.Logf("error getting dataplane via mgr client: %v", err)
+			return false
+		}
+		services := MustListDataPlaneServices(t, ctx, localDP, clients.MgrClient, client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 			consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
 		})
@@ -528,9 +576,9 @@ func DataPlaneHasServiceAndAddressesInStatus(t *testing.T, ctx context.Context, 
 			return false
 		}
 		service := services[0]
-		if dataplane.Status.Service != service.Name {
+		if localDP.Status.Service != service.Name {
 			t.Logf("DataPlane %q: found %q as backing service, wanted %q",
-				dataplane.Name, dataplane.Status.Service, service.Name,
+				localDP.Name, localDP.Status.Service, service.Name,
 			)
 			return false
 		}
@@ -547,20 +595,20 @@ func DataPlaneHasServiceAndAddressesInStatus(t *testing.T, ctx context.Context, 
 		wanted = append(wanted, service.Spec.ClusterIPs...)
 
 		var addresses []string
-		for _, addr := range dataplane.Status.Addresses {
+		for _, addr := range localDP.Status.Addresses {
 			addresses = append(addresses, addr.Value)
 		}
 
 		if len(addresses) != len(wanted) {
 			t.Logf("DataPlane %q: found %d addresses %v, wanted %d %v",
-				dataplane.Name, len(addresses), addresses, len(wanted), wanted,
+				localDP.Name, len(addresses), addresses, len(wanted), wanted,
 			)
 			return false
 		}
 
 		if !cmp.Equal(addresses, wanted) {
 			t.Logf("DataPlane %q: found addresses %v, wanted %v",
-				dataplane.Name, addresses, wanted,
+				localDP.Name, addresses, wanted,
 			)
 			return false
 		}
@@ -620,17 +668,17 @@ func HTTPRouteUpdateEventually(t *testing.T, ctx context.Context, httpRouteNN ty
 // Should be used in conjunction with require.Eventually or assert.Eventually.
 func ControlPlaneUpdateEventually(t *testing.T, ctx context.Context, controlplaneNN types.NamespacedName, clients K8sClients, updateFunc func(*gwtypes.ControlPlane)) func() bool {
 	return func() bool {
-		cl := clients.OperatorClient.GatewayOperatorV2beta1().ControlPlanes(controlplaneNN.Namespace)
-		cp, err := cl.Get(ctx, controlplaneNN.Name, metav1.GetOptions{})
-		if err != nil {
+		// Use the controller-runtime client with the local API types to avoid
+		// type mismatches between external and internal representations.
+		cp := &gwtypes.ControlPlane{}
+		if err := clients.MgrClient.Get(ctx, controlplaneNN, cp); err != nil {
 			t.Logf("error getting controlplane: %v", err)
 			return false
 		}
 
 		updateFunc(cp)
 
-		_, err = cl.Update(ctx, cp, metav1.UpdateOptions{})
-		if err != nil {
+		if err := clients.MgrClient.Update(ctx, cp); err != nil {
 			t.Logf("error updating controlplane: %v", err)
 			return false
 		}
@@ -688,8 +736,13 @@ func DataPlaneHasPodDisruptionBudget(
 	const dataplaneDeploymentAppLabel = "app"
 
 	return DataPlanePredicate(t, ctx, dataplaneName, func(dataplane *operatorv1beta1.DataPlane) bool {
-		pdbs := MustListDataPlanePodDisruptionBudgets(t, ctx, dataplane, clients, client.MatchingLabels{
-			dataplaneDeploymentAppLabel:          dataplane.Name,
+		// Fetch the local API object to interoperate with helpers expecting local types.
+		localDP := &operatorv1beta1.DataPlane{}
+		if err := clients.MgrClient.Get(ctx, dataplaneName, localDP); err != nil {
+			return false
+		}
+		pdbs := MustListDataPlanePodDisruptionBudgets(t, ctx, localDP, clients, client.MatchingLabels{
+			dataplaneDeploymentAppLabel:          localDP.Name,
 			consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 		})
 		if len(pdbs) != 1 {
