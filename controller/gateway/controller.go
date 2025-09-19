@@ -35,7 +35,6 @@ import (
 
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/patch"
 	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
 	"github.com/kong/kong-operator/controller/pkg/watch"
@@ -368,12 +367,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// This solves the problem of intermittent failures due to incomplete configuration
 	// being sent to DataPlane.
 	gwConditionAware.setListenersStatus()
-	res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
+	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
 	if err != nil {
 		return ctrl.Result{}, err
-	}
-	if res != op.Noop {
-		return ctrl.Result{}, nil // gateway patch will trigger new reconciliation loop
 	}
 
 	if !hybridGateway {
@@ -441,12 +437,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	gwConditionAware.setProgrammed()
-	res, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
+	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
 	if err != nil {
 		return ctrl.Result{}, err
-	}
-	if res != op.Noop {
-		return ctrl.Result{}, nil // gateway patch will trigger new reconciliation loop
 	}
 
 	if k8sutils.IsProgrammed(gwConditionAware) && !k8sutils.IsProgrammed(oldGwConditionsAware) {

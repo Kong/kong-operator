@@ -661,8 +661,8 @@ func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus()
 				metav1.ConditionFalse,
 				kcfgconsts.ConditionReason(gatewayv1.GatewayReasonPending),
 				kcfgdataplane.DependenciesNotReadyMessage,
-				g.Generation),
-
+				g.Generation,
+			),
 			g,
 		)
 	}
