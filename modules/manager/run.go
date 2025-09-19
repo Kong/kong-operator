@@ -115,7 +115,8 @@ type Config struct {
 	ControlPlaneExtensionsControllerEnabled bool
 
 	// Controllers for Konnect APIs.
-	KonnectControllersEnabled bool
+	KonnectControllersEnabled       bool
+	KonnectHybridControllersEnabled bool
 
 	// Webhook options.
 	ConversionWebhookEnabled bool
