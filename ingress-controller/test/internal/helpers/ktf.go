@@ -50,6 +50,9 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 
 	if testenv.DBMode() == testenv.DBModePostgres {
 		kongbuilder = kongbuilder.WithPostgreSQL()
+		// Replace postgresql image to the image in the library/postgres since bitnami/postgresql repository is gone.
+		kongbuilder = kongbuilder.WithAdditionalValue("postgresql.image.repository", "postgres")
+		kongbuilder = kongbuilder.WithAdditionalValue("postgresql.image.tag", "13.22")
 	}
 
 	flavor := testenv.KongRouterFlavor()
@@ -98,6 +101,9 @@ func GenerateKongBuilderWithController() (*kong.Builder, error) {
 
 	if testenv.DBMode() == testenv.DBModePostgres {
 		kongbuilder = kongbuilder.WithPostgreSQL()
+		// Replace postgresql image to the image in the library/postgres since bitnami/postgresql repository is gone.
+		kongbuilder = kongbuilder.WithAdditionalValue("postgresql.image.repository", "postgres")
+		kongbuilder = kongbuilder.WithAdditionalValue("postgresql.image.tag", "13.22")
 	}
 
 	flavor := testenv.KongRouterFlavor()
