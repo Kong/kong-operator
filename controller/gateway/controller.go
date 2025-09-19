@@ -361,6 +361,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	// DataPlane and its Services are ready so we mark Gateway's listeners as Programmed.
+	// This allows the ControlPlane to not exclude configuration entities like
+	// HTTPRoutes that are attached to these listeners from the configuration sent
+	// to DataPlane.
+	// This solves the problem of intermittent failures due to incomplete configuration
+	// being sent to DataPlane.
+	gwConditionAware.setListenersStatus()
+	res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if res != op.Noop {
+		return ctrl.Result{}, nil // gateway patch will trigger new reconciliation loop
+	}
+
 	if !hybridGateway {
 		// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
 		// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false.
@@ -426,7 +441,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	gwConditionAware.setProgrammed()
-	res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
+	res, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
