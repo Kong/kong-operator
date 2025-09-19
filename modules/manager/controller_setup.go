@@ -32,9 +32,6 @@ import (
 	"github.com/kong/kong-operator/controller/dataplane"
 	"github.com/kong/kong-operator/controller/gateway"
 	"github.com/kong/kong-operator/controller/gatewayclass"
-	hybridgateway "github.com/kong/kong-operator/controller/hybridgateway"
-	"github.com/kong/kong-operator/controller/hybridgateway/converter"
-	"github.com/kong/kong-operator/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/controller/kongplugininstallation"
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
@@ -627,13 +624,6 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			newKonnectEntityController[configurationv1alpha1.KongVault](controllerFactory),
 			newKonnectEntityController[configurationv1alpha1.KongSNI](controllerFactory),
 		)
-
-		sharedStatusMap := route.NewSharedStatusMap()
-		controllers = append(controllers,
-			newGatewayAPIHybridController[corev1.Service](mgr, sharedStatusMap),
-			newRouteStatusController[gwtypes.HTTPRoute](mgr, sharedStatusMap),
-			// TODO: Add more Hybrid controllers here
-		)
 	}
 
 	return controllers, nil
@@ -675,19 +665,5 @@ func newKonnectPluginController[
 			f.loggingMode,
 			f.client,
 		),
-	}
-}
-
-func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, sharedStatusMap *route.SharedRouteStatusMap) ControllerDef {
-	return ControllerDef{
-		Enabled:    true,
-		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr, sharedStatusMap),
-	}
-}
-
-func newRouteStatusController[t route.RouteObject, tPtr route.RouteObjectPtr[t]](mgr ctrl.Manager, sharedStatusMap *route.SharedRouteStatusMap) ControllerDef {
-	return ControllerDef{
-		Enabled:    true,
-		Controller: hybridgateway.NewRouteStatusReconciler[t, tPtr](mgr, sharedStatusMap),
 	}
 }
