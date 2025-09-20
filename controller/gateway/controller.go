@@ -721,7 +721,8 @@ func dataPlaneSpecDeepEqual(spec1, spec2 *operatorv1beta1.DataPlaneOptions) bool
 	return deploymentOptionsDeepEqual(&spec1.Deployment.DeploymentOptions, &spec2.Deployment.DeploymentOptions) &&
 		compare.NetworkOptionsDeepEqual(&spec1.Network, &spec2.Network) &&
 		compare.DataPlaneResourceOptionsDeepEqual(&spec1.Resources, &spec2.Resources) &&
-		reflect.DeepEqual(spec1.Extensions, spec2.Extensions)
+		reflect.DeepEqual(spec1.Extensions, spec2.Extensions) &&
+		reflect.DeepEqual(spec1.PluginsToInstall, spec2.PluginsToInstall)
 }
 
 func controlPlaneSpecDeepEqual(spec1, spec2 *gwtypes.ControlPlaneOptions) bool {
