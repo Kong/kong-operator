@@ -1230,10 +1230,20 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 		expectedDataPlaneOpts *operatorv1beta1.DataPlaneOptions
 	}{
 		{
-			name:                  "empty options",
-			gatewayConfigNS:       "default",
-			opts:                  GatewayConfigDataPlaneOptions{},
-			expectedDataPlaneOpts: &operatorv1beta1.DataPlaneOptions{},
+			name:            "empty options",
+			gatewayConfigNS: "default",
+			opts:            GatewayConfigDataPlaneOptions{},
+			expectedDataPlaneOpts: &operatorv1beta1.DataPlaneOptions{
+				Network: operatorv1beta1.DataPlaneNetworkOptions{
+					Services: &operatorv1beta1.DataPlaneServices{
+						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+							ServiceOptions: operatorv1beta1.ServiceOptions{
+								Type: corev1.ServiceTypeLoadBalancer,
+							},
+						},
+					},
+				},
+			},
 		},
 		{
 			name:            "deployment options",
@@ -1267,6 +1277,15 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 						},
 					},
 				},
+				Network: operatorv1beta1.DataPlaneNetworkOptions{
+					Services: &operatorv1beta1.DataPlaneServices{
+						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+							ServiceOptions: operatorv1beta1.ServiceOptions{
+								Type: corev1.ServiceTypeLoadBalancer,
+							},
+						},
+					},
+				},
 			},
 		},
 		{
@@ -1284,6 +1303,15 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				},
 			},
 			expectedDataPlaneOpts: &operatorv1beta1.DataPlaneOptions{
+				Network: operatorv1beta1.DataPlaneNetworkOptions{
+					Services: &operatorv1beta1.DataPlaneServices{
+						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+							ServiceOptions: operatorv1beta1.ServiceOptions{
+								Type: corev1.ServiceTypeLoadBalancer,
+							},
+						},
+					},
+				},
 				PluginsToInstall: []operatorv1beta1.NamespacedName{
 					{
 						Name:      "plugin1",
@@ -1311,6 +1339,15 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				},
 			},
 			expectedDataPlaneOpts: &operatorv1beta1.DataPlaneOptions{
+				Network: operatorv1beta1.DataPlaneNetworkOptions{
+					Services: &operatorv1beta1.DataPlaneServices{
+						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+							ServiceOptions: operatorv1beta1.ServiceOptions{
+								Type: corev1.ServiceTypeLoadBalancer,
+							},
+						},
+					},
+				},
 				PluginsToInstall: []operatorv1beta1.NamespacedName{
 					{
 						Name:      "plugin1",
@@ -1368,6 +1405,15 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				},
 			},
 			expectedDataPlaneOpts: &operatorv1beta1.DataPlaneOptions{
+				Network: operatorv1beta1.DataPlaneNetworkOptions{
+					Services: &operatorv1beta1.DataPlaneServices{
+						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+							ServiceOptions: operatorv1beta1.ServiceOptions{
+								Type: corev1.ServiceTypeLoadBalancer,
+							},
+						},
+					},
+				},
 				Resources: operatorv1beta1.DataPlaneResources{
 					PodDisruptionBudget: &operatorv1beta1.PodDisruptionBudget{
 						Spec: operatorv1beta1.PodDisruptionBudgetSpec{
@@ -1924,7 +1970,6 @@ func TestIsGatewayHybrid(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-
 			var objs []client.Object
 			if !tc.konnectExtensionNotFound {
 				konnectExt := &konnectv1alpha2.KonnectExtension{

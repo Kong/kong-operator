@@ -49,6 +49,9 @@ func MergeExtensions[
 			newExtensions = append(newExtensions, dext)
 		}
 	}
+	if len(extensions) == 0 && len(newExtensions) == 0 {
+		return nil
+	}
 	return append(newExtensions, extensions...)
 }
 
