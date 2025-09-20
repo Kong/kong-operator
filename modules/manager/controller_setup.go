@@ -630,7 +630,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 
 		sharedStatusMap := route.NewSharedStatusMap()
 		controllers = append(controllers,
-			newGatewayAPIHybridController[corev1.Service](mgr, sharedStatusMap),
+			//newGatewayAPIHybridController[corev1.Service](mgr, sharedStatusMap),
+			newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, sharedStatusMap),
 			newRouteStatusController[gwtypes.HTTPRoute](mgr, sharedStatusMap),
 			// TODO: Add more Hybrid controllers here
 		)
