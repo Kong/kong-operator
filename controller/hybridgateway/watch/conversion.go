@@ -17,6 +17,8 @@ func FilterBy(cl client.Client, obj client.Object) (func(obj client.Object) bool
 	switch o := obj.(type) {
 	case *corev1.Service:
 		return filterByService(cl), nil
+	case *gwtypes.HTTPRoute:
+		return filterByHTTPRoute(cl), nil
 	default:
 		return nil, fmt.Errorf("unsupported object type during creation of predicates: %T", o)
 	}
@@ -53,6 +55,29 @@ func filterByService(cl client.Client) func(obj client.Object) bool {
 			if len(konnectGatewayControlPlaneRefs) > 0 {
 				return true
 			}
+		}
+		return false
+	}
+}
+
+func filterByHTTPRoute(cl client.Client) func(obj client.Object) bool {
+	return func(obj client.Object) bool {
+		httpRoute, ok := obj.(*gwtypes.HTTPRoute)
+		if !ok {
+			// In case of an error, enqueue the event and in case the error persists
+			// the reconciler will log it and act accordingly.
+			return true
+		}
+		ctx := context.Background()
+		konnectGatewayControlPlaneRefs, err := refs.GetNamespacedRefs(ctx, cl, httpRoute)
+		if err != nil {
+			// In case of an error, enqueue the event and in case the error persists
+			// the reconciler will log it and act accordingly.
+			return true
+		}
+		// in case the HTTPRoute needs to be configured in Konnect a Konnect Gateway ControlPlane should exist, we filter the service in
+		if len(konnectGatewayControlPlaneRefs) > 0 {
+			return true
 		}
 		return false
 	}

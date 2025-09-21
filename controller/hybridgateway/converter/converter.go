@@ -53,6 +53,8 @@ func NewConverter[t RootObject](obj t, cl client.Client, sharedStatusMap *route.
 	// TODO: add other types here
 	case corev1.Service:
 		return newServiceConverter(&o, cl, sharedStatusMap).(APIConverter[t]), nil
+	case gwtypes.HTTPRoute:
+		return newHTTPRouteConverter(&o, cl, sharedStatusMap).(APIConverter[t]), nil
 	default:
 		return nil, fmt.Errorf("unsupported root object type: %T", obj)
 	}
