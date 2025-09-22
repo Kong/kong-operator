@@ -366,7 +366,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// to DataPlane.
 	// This solves the problem of intermittent failures due to incomplete configuration
 	// being sent to DataPlane.
-	gwConditionAware.setListenersStatus()
+	gwConditionAware.setListenersStatus(metav1.ConditionTrue)
 	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -387,6 +387,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 			conditionOld, foundOld := k8sutils.GetCondition(kcfggateway.ControlPlaneReadyType, oldGwConditionsAware)
 			if !foundOld || conditionOld.Status == metav1.ConditionTrue {
+				gwConditionAware.setProgrammed(metav1.ConditionFalse)
 				if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil {
 					return ctrl.Result{}, err
 				}
@@ -436,7 +437,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			gatewayConditionsAndListenersAware(&gateway))
 	}
 
-	gwConditionAware.setProgrammed()
+	gwConditionAware.setProgrammed(metav1.ConditionTrue)
 	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
 	if err != nil {
 		return ctrl.Result{}, err

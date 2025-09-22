@@ -909,17 +909,17 @@ func (g *gatewayConditionsAndListenersAwareT) setConflicted() {
 // Gateway Programmed status to true.
 // It also sets the listeners Programmed condition by setting the underlying
 // Listener Programmed status to true.
-func (g *gatewayConditionsAndListenersAwareT) setProgrammed() {
+func (g *gatewayConditionsAndListenersAwareT) setProgrammed(listenersStatus metav1.ConditionStatus) {
 	k8sutils.SetProgrammed(g)
-	g.setListenersStatus()
+	g.setListenersStatus(listenersStatus)
 }
 
-func (g *gatewayConditionsAndListenersAwareT) setListenersStatus() {
+func (g *gatewayConditionsAndListenersAwareT) setListenersStatus(status metav1.ConditionStatus) {
 	for i := range g.Status.Listeners {
 		listener := &g.Status.Listeners[i]
 		programmedCondition := metav1.Condition{
 			Type:               string(gatewayv1.ListenerConditionProgrammed),
-			Status:             metav1.ConditionTrue,
+			Status:             status,
 			Reason:             string(gatewayv1.ListenerReasonProgrammed),
 			ObservedGeneration: g.GetGeneration(),
 			LastTransitionTime: metav1.Now(),
