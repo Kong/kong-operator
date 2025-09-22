@@ -232,7 +232,7 @@ func TestMergeExtensions(t *testing.T) {
 			name:              "both empty",
 			defaultExtensions: []commonv1alpha1.ExtensionRef{},
 			extendable:        &mockExtendable{extensions: []commonv1alpha1.ExtensionRef{}},
-			expected:          []commonv1alpha1.ExtensionRef{},
+			expected:          nil,
 		},
 		{
 			name: "nil user extensions",
@@ -391,7 +391,7 @@ func TestMergeExtensions(t *testing.T) {
 				},
 			},
 			extendable: &operatorv1beta1.DataPlane{},
-			expected:   []commonv1alpha1.ExtensionRef{},
+			expected:   nil,
 		},
 		{
 			name: "DataPlaneMetricsExtension is added to ControlPlane",
