@@ -35,7 +35,6 @@ import (
 
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	"github.com/kong/kong-operator/controller/pkg/log"
-	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/patch"
 	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
 	"github.com/kong/kong-operator/controller/pkg/watch"
@@ -361,6 +360,18 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{Requeue: true}, nil
 	}
 
+	// DataPlane and its Services are ready so we mark Gateway's listeners as Programmed.
+	// This allows the ControlPlane to not exclude configuration entities like
+	// HTTPRoutes that are attached to these listeners from the configuration sent
+	// to DataPlane.
+	// This solves the problem of intermittent failures due to incomplete configuration
+	// being sent to DataPlane.
+	gwConditionAware.setListenersStatus(metav1.ConditionTrue)
+	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if !hybridGateway {
 		// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
 		// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false.
@@ -376,6 +387,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 			conditionOld, foundOld := k8sutils.GetCondition(kcfggateway.ControlPlaneReadyType, oldGwConditionsAware)
 			if !foundOld || conditionOld.Status == metav1.ConditionTrue {
+				gwConditionAware.setProgrammed(metav1.ConditionFalse)
 				if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil {
 					return ctrl.Result{}, err
 				}
@@ -425,13 +437,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			gatewayConditionsAndListenersAware(&gateway))
 	}
 
-	gwConditionAware.setProgrammed()
-	res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
+	gwConditionAware.setProgrammed(metav1.ConditionTrue)
+	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
 	if err != nil {
 		return ctrl.Result{}, err
-	}
-	if res != op.Noop {
-		return ctrl.Result{}, nil // gateway patch will trigger new reconciliation loop
 	}
 
 	if k8sutils.IsProgrammed(gwConditionAware) && !k8sutils.IsProgrammed(oldGwConditionsAware) {
@@ -713,7 +722,8 @@ func dataPlaneSpecDeepEqual(spec1, spec2 *operatorv1beta1.DataPlaneOptions) bool
 	return deploymentOptionsDeepEqual(&spec1.Deployment.DeploymentOptions, &spec2.Deployment.DeploymentOptions) &&
 		compare.NetworkOptionsDeepEqual(&spec1.Network, &spec2.Network) &&
 		compare.DataPlaneResourceOptionsDeepEqual(&spec1.Resources, &spec2.Resources) &&
-		reflect.DeepEqual(spec1.Extensions, spec2.Extensions)
+		reflect.DeepEqual(spec1.Extensions, spec2.Extensions) &&
+		reflect.DeepEqual(spec1.PluginsToInstall, spec2.PluginsToInstall)
 }
 
 func controlPlaneSpecDeepEqual(spec1, spec2 *gwtypes.ControlPlaneOptions) bool {

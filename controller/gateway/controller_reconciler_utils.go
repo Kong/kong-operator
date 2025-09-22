@@ -195,6 +195,16 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 				},
 			},
 		}
+	} else {
+		dataPlaneOptions.Network = operatorv1beta1.DataPlaneNetworkOptions{
+			Services: &operatorv1beta1.DataPlaneServices{
+				Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+					ServiceOptions: operatorv1beta1.ServiceOptions{
+						Type: corev1.ServiceTypeLoadBalancer,
+					},
+				},
+			},
+		}
 	}
 
 	return dataPlaneOptions
@@ -644,14 +654,18 @@ func supportedRoutesByProtocol() map[gatewayv1.ProtocolType]map[gatewayv1.Kind]s
 // It also sets the listeners Programmed condition by setting the underlying
 // Listener Programmed status to false.
 func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus() {
-	k8sutils.SetCondition(
-		k8sutils.NewConditionWithGeneration(
-			kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed),
-			metav1.ConditionFalse,
-			kcfgconsts.ConditionReason(gatewayv1.GatewayReasonPending),
-			kcfgdataplane.DependenciesNotReadyMessage,
-			g.Generation),
-		g)
+	if !k8sutils.HasCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed), g) {
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(
+				kcfgconsts.ConditionType(gatewayv1.GatewayConditionProgrammed),
+				metav1.ConditionFalse,
+				kcfgconsts.ConditionReason(gatewayv1.GatewayReasonPending),
+				kcfgdataplane.DependenciesNotReadyMessage,
+				g.Generation,
+			),
+			g,
+		)
+	}
 	for i := range g.Spec.Listeners {
 		lStatus := listenerConditionsAware(&g.Status.Listeners[i])
 		cond, ok := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.ListenerConditionProgrammed), lStatus)
@@ -895,14 +909,17 @@ func (g *gatewayConditionsAndListenersAwareT) setConflicted() {
 // Gateway Programmed status to true.
 // It also sets the listeners Programmed condition by setting the underlying
 // Listener Programmed status to true.
-func (g *gatewayConditionsAndListenersAwareT) setProgrammed() {
+func (g *gatewayConditionsAndListenersAwareT) setProgrammed(listenersStatus metav1.ConditionStatus) {
 	k8sutils.SetProgrammed(g)
+	g.setListenersStatus(listenersStatus)
+}
 
+func (g *gatewayConditionsAndListenersAwareT) setListenersStatus(status metav1.ConditionStatus) {
 	for i := range g.Status.Listeners {
 		listener := &g.Status.Listeners[i]
 		programmedCondition := metav1.Condition{
 			Type:               string(gatewayv1.ListenerConditionProgrammed),
-			Status:             metav1.ConditionTrue,
+			Status:             status,
 			Reason:             string(gatewayv1.ListenerReasonProgrammed),
 			ObservedGeneration: g.GetGeneration(),
 			LastTransitionTime: metav1.Now(),
@@ -923,7 +940,6 @@ func setDataPlaneIngressServicePorts(
 	listeners []gatewayv1.Listener,
 	listenersOpts []operatorv2beta1.GatewayConfigurationListenerOptions,
 ) error {
-
 	// Check if all the names in GatewayConfiguration's spec.listenersOptions matches a listener in Gateway.
 	for i, listenerOpts := range listenersOpts {
 		if !lo.ContainsBy(listeners, func(l gatewayv1.Listener) bool {
