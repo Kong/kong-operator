@@ -3,18 +3,17 @@ package conformance
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"os"
 	"path"
 	"runtime/debug"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-cleanhttp"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/gateway-api/conformance/utils/flags"
 	gwapiv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
 	"github.com/kong/kong-operator/config"
@@ -27,13 +26,12 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// Testing Vars - Environment Overrideable
+// Testing Vars - Environment Overridable
 // -----------------------------------------------------------------------------
 
 var (
 	existingCluster      = os.Getenv("KONG_TEST_CLUSTER")
 	controllerManagerOut = os.Getenv("KONG_CONTROLLER_OUT")
-	skipClusterCleanup   bool
 )
 
 // -----------------------------------------------------------------------------
@@ -41,15 +39,9 @@ var (
 // -----------------------------------------------------------------------------
 
 var (
-	ctx    context.Context
-	cancel context.CancelFunc
-	env    environments.Environment
-
+	env     environments.Environment
+	ctx     context.Context
 	clients testutils.K8sClients
-
-	httpc = http.Client{
-		Timeout: time.Second * 10,
-	}
 )
 
 // -----------------------------------------------------------------------------
@@ -65,6 +57,7 @@ func TestMain(m *testing.M) {
 		}
 		os.Exit(code)
 	}()
+	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(context.Background())
 	defer cancel()
 
@@ -102,7 +95,7 @@ func TestMain(m *testing.M) {
 	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), path.Join(configPath, "/rbac/base")))
 	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), path.Join(configPath, "/rbac/role")))
 
-	// normally this is obtained from the downward API. the tests fake it.
+	// Normally this is obtained from the downward API. The tests fake it.
 	err = os.Setenv("POD_NAMESPACE", "kong-system")
 	exitOnErr(err)
 
@@ -122,11 +115,12 @@ func TestMain(m *testing.M) {
 	started := startControllerManager(metadata)
 	<-started
 
-	exitOnErr(testutils.BuildMTLSCredentials(ctx, clients.K8sClient, &httpc))
+	httpClient := cleanhttp.DefaultClient()
+	httpClient.Timeout = 10 * time.Second
+	exitOnErr(testutils.BuildMTLSCredentials(ctx, clients.K8sClient, httpClient))
 
 	fmt.Println("INFO: environment is ready, starting tests")
-	code = m.Run()
-	if code != 0 {
+	if code = m.Run(); code != 0 {
 		output, err := env.Cluster().DumpDiagnostics(ctx, "gateway_api_conformance")
 		if err != nil {
 			fmt.Printf("ERROR: conformance tests failed and failed to dump the diagnostics: %v\n", err)
@@ -134,16 +128,19 @@ func TestMain(m *testing.M) {
 			fmt.Printf("INFO: conformance tests failed, dumped diagnostics to %s\n", output)
 		}
 	}
+	fmt.Println("INFO: tests complete, cleaning up environment")
 
+	cleanupResources := !test.SkipCleanup()
+	fmt.Printf("INFO: clean up resources: %t\n", cleanupResources)
 	// If we set the shouldCleanup flag on the conformance suite we need to wait
 	// for the operator to handle Gateway finalizers.
 	// If we don't do it then we'll be left with Gateways that have a deleted
 	// timestamp and finalizers set but no operator running which could handle those.
-	if *flags.CleanupBaseResources {
+	if cleanupResources {
 		exitOnErr(waitForConformanceGatewaysToCleanup(ctx, clients.GatewayClient.GatewayV1()))
 	}
 
-	if !skipClusterCleanup && existingCluster == "" {
+	if existingCluster == "" && cleanupResources {
 		fmt.Println("INFO: cleaning up testing cluster and environment")
 		exitOnErr(env.Cleanup(ctx))
 	}
@@ -155,7 +152,7 @@ func TestMain(m *testing.M) {
 
 func exitOnErr(err error) {
 	if err != nil {
-		if !skipClusterCleanup && existingCluster == "" {
+		if existingCluster == "" {
 			if env != nil {
 				env.Cleanup(ctx) //nolint:errcheck
 			}
