@@ -399,7 +399,7 @@ jobs:
         uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.6
         if: steps.detect-changes.outputs.has_changes
         with:
-          path: docs
+          path: ${{ env.DOCS_REPO }}
           commit-message: "chore(deps): update ${{github.repository}} docs from repo source"
           signoff: true
           branch: chore/docs-sync-${{github.repository}}
