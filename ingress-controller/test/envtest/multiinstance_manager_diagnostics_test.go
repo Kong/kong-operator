@@ -12,11 +12,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kubernetes-configuration/v2/pkg/clientset/scheme"
-
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
 	"github.com/kong/kong-operator/ingress-controller/test/helpers"
+	"github.com/kong/kong-operator/pkg/clientset/scheme"
 )
 
 func TestMultiInstanceManagerDiagnostics(t *testing.T) {

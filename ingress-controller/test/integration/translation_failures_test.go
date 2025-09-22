@@ -20,9 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
-
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
@@ -31,6 +29,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test/consts"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 	testutils "github.com/kong/kong-operator/ingress-controller/test/util"
+	"github.com/kong/kong-operator/pkg/clientset"
 )
 
 const testTranslationFailuresObjectsPrefix = "translation-failures-"

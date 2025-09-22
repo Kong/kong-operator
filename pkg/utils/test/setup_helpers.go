@@ -25,10 +25,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	operatorclient "github.com/kong/kubernetes-configuration/v2/pkg/clientset"
-
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/modules/manager"
+	operatorclient "github.com/kong/kong-operator/pkg/clientset"
 )
 
 const (
@@ -242,28 +241,18 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 	return nil
 }
 
-// InstallKubernetesConfigurationCRDs installs the Kong CRDs from the `kong/kubernetes-configuration` module.
-// The version is extracted using ExtractModuleVersion from go.mod.
+// InstallKubernetesConfigurationCRDs installs the Kong CRDs from the local repository paths.
 func InstallKubernetesConfigurationCRDs(ctx context.Context, cluster clusters.Cluster) error {
-	// First extract version of `kong/kubernetes-configuration` module used.
-	kongCRDVersion, err := ExtractModuleVersion(KubernetesConfigurationModuleName)
-	if err != nil {
-		return fmt.Errorf("failed to extract Kong CRDs (%s) module's version: %w", KubernetesConfigurationModuleName, err)
-	}
-
 	kubectlFlags := []string{"--server-side", "-v5"}
 
-	// NOTE: this installs CRDs from https://github.com/Kong/kubernetes-configuration/tree/f1475e539fa92eb5318a8b0550c6012cfc945893/config/crd
-	kubernetesConfigurationCRDsDirs := []string{"gateway-operator", "ingress-controller"}
-	for _, crdDirName := range kubernetesConfigurationCRDsDirs {
-		// Install CRDs from the module found in `$GOPATH`.
-		kongCRDPath := filepath.Join(
-			ConstructModulePath(KubernetesConfigurationModuleName, kongCRDVersion),
-			"config", "crd", crdDirName,
-		)
-		fmt.Printf("INFO: deploying kubernetes-configuration CRDs: %s\n", kongCRDPath)
-		if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongCRDPath, kubectlFlags...); err != nil {
-			return fmt.Errorf("failed installing kubernetes-configurations (%s) CRDs: %w", kongCRDPath, err)
+	localCRDDirs := []string{
+		filepath.Join(ProjectRootPath(), "config", "crd", "gateway-operator"),
+		filepath.Join(ProjectRootPath(), "ingress-controller", "config", "crd", "ingress-controller"),
+	}
+	for _, crdPath := range localCRDDirs {
+		fmt.Printf("INFO: deploying local CRDs: %s\n", crdPath)
+		if err := clusters.KustomizeDeployForCluster(ctx, cluster, crdPath, kubectlFlags...); err != nil {
+			return fmt.Errorf("failed installing CRDs from %s: %w", crdPath, err)
 		}
 	}
 

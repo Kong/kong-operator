@@ -3,8 +3,7 @@ package controlplane
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
-
+	kcfgcontrolplane "github.com/kong/kong-operator/api/gateway-operator/controlplane"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 

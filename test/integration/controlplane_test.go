@@ -17,12 +17,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kcfgcontrolplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/controlplane"
-	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
-
+	kcfgcontrolplane "github.com/kong/kong-operator/api/gateway-operator/controlplane"
+	kcfgdataplane "github.com/kong/kong-operator/api/gateway-operator/dataplane"
+	gov1alpha1 "github.com/kong/kong-operator/api/gateway-operator/v1alpha1"
+	gov1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
+	gov2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	"github.com/kong/kong-operator/controller/controlplane"
 	"github.com/kong/kong-operator/controller/pkg/builder"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -33,10 +32,10 @@ import (
 	"github.com/kong/kong-operator/test/helpers"
 )
 
-var dataplaneSpec = operatorv1beta1.DataPlaneSpec{
-	DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
-		Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-			DeploymentOptions: operatorv1beta1.DeploymentOptions{
+var dataplaneSpec = gov1beta1.DataPlaneSpec{
+	DataPlaneOptions: gov1beta1.DataPlaneOptions{
+		Deployment: gov1beta1.DataPlaneDeploymentOptions{
+			DeploymentOptions: gov1beta1.DeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
@@ -64,7 +63,7 @@ func TestControlPlaneEssentials(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 	cl := GetClients().MgrClient
 
-	dataplane := &operatorv1beta1.DataPlane{
+	dataplane := &gov1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace:    namespace.Name,
 			GenerateName: "dp-essentials-",
@@ -193,8 +192,8 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 			},
 			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 				IngressClass: lo.ToPtr(ingressClass),
-				WatchNamespaces: &operatorv2beta1.WatchNamespaces{
-					Type: operatorv2beta1.WatchNamespacesTypeList,
+				WatchNamespaces: &gov2beta1.WatchNamespaces{
+					Type: gov2beta1.WatchNamespacesTypeList,
 					List: []string{
 						nsA.Name,
 						nsB.Name,
@@ -262,16 +261,16 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	)
 }
 
-func watchNamespaceGrantForNamespace(t *testing.T, cl client.Client, cp *gwtypes.ControlPlane, ns string) *operatorv1alpha1.WatchNamespaceGrant {
-	wng := &operatorv1alpha1.WatchNamespaceGrant{
+func watchNamespaceGrantForNamespace(t *testing.T, cl client.Client, cp *gwtypes.ControlPlane, ns string) *gov1alpha1.WatchNamespaceGrant {
+	wng := &gov1alpha1.WatchNamespaceGrant{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: ns + "-refgrant-",
 			Namespace:    ns,
 		},
-		Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
-			From: []operatorv1alpha1.WatchNamespaceGrantFrom{
+		Spec: gov1alpha1.WatchNamespaceGrantSpec{
+			From: []gov1alpha1.WatchNamespaceGrantFrom{
 				{
-					Group:     operatorv1beta1.SchemeGroupVersion.Group,
+					Group:     gov1beta1.SchemeGroupVersion.Group,
 					Kind:      "ControlPlane",
 					Namespace: cp.Namespace,
 				},
@@ -349,21 +348,20 @@ func TestControlPlaneUpdate(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
-	controlplaneClient := GetClients().OperatorClient.GatewayOperatorV2beta1().ControlPlanes(namespace.Name)
 
 	dataplaneName := types.NamespacedName{
 		Namespace: namespace.Name,
 		Name:      uuid.NewString(),
 	}
-	dataplane := &operatorv1beta1.DataPlane{
+	dataplane := &gov1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: dataplaneName.Namespace,
 			Name:      dataplaneName.Name,
 		},
-		Spec: operatorv1beta1.DataPlaneSpec{
-			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
-				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+		Spec: gov1beta1.DataPlaneSpec{
+			DataPlaneOptions: gov1beta1.DataPlaneOptions{
+				Deployment: gov1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: gov1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -420,8 +418,7 @@ func TestControlPlaneUpdate(t *testing.T) {
 	)
 
 	t.Log("deploying controlplane resource")
-	cp, err = controlplaneClient.Create(GetCtx(), cp, metav1.CreateOptions{})
-	require.NoError(t, err)
+	require.NoError(t, GetClients().MgrClient.Create(GetCtx(), cp))
 	cleaner.Add(cp)
 
 	t.Log("verifying that the controlplane gets marked as provisioned")
@@ -450,8 +447,8 @@ func TestControlPlaneUpdate(t *testing.T) {
 	t.Log("verifying that the controlplane has the Kong Consumer controller disabled (set in status field)")
 	require.EventuallyWithT(t,
 		func(t *assert.CollectT) {
-			cp, err := controlplaneClient.Get(GetCtx(), controlplaneName.Name, metav1.GetOptions{})
-			require.NoError(t, err)
+			var cp gwtypes.ControlPlane
+			require.NoError(t, GetClients().MgrClient.Get(GetCtx(), controlplaneName, &cp))
 
 			assert.Contains(t, cp.Status.Controllers, gwtypes.ControlPlaneController{
 				Name:  controlplane.ControllerNameKongConsumer,

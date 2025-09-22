@@ -22,9 +22,7 @@ import (
 	"sigs.k8s.io/e2e-framework/pkg/features"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
-
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
 	"github.com/kong/kong-operator/ingress-controller/internal/diagnostics"
@@ -33,6 +31,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test/integration/consts"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/testlabels"
+	"github.com/kong/kong-operator/pkg/clientset"
 )
 
 func TestHTTPRouteExample(t *testing.T) {

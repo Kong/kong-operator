@@ -11,10 +11,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
-
+	kcfgconsts "github.com/kong/kong-operator/api/common/consts"
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/konnect/ops"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
