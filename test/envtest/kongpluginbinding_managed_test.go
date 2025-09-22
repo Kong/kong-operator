@@ -18,15 +18,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
-
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/internal/utils/index"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/pkg/metadata"
 	"github.com/kong/kong-operator/test/helpers/deploy"
 	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
@@ -442,6 +441,19 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		routeID := uuid.NewString()
 		consumerID := uuid.NewString()
 
+		// Permissive CreatePlugin expectation: allow multiple invocations from concurrent reconciles.
+		sdk.PluginSDK.EXPECT().
+			CreatePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			Return(
+				&sdkkonnectops.CreatePluginResponse{
+					Plugin: &sdkkonnectcomp.Plugin{
+						ID: lo.ToPtr(uuid.NewString()),
+					},
+				},
+				nil,
+			).
+			Maybe()
+
 		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		kongService := deploy.KongService(t, ctx, clientNamespaced,
@@ -642,6 +654,19 @@ func TestKongPluginBindingManaged(t *testing.T) {
 		serviceID := uuid.NewString()
 		routeID := uuid.NewString()
 		consumerGroupID := uuid.NewString()
+
+		// Permissive CreatePlugin expectation: allow multiple invocations from concurrent reconciles.
+		sdk.PluginSDK.EXPECT().
+			CreatePlugin(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.Anything).
+			Return(
+				&sdkkonnectops.CreatePluginResponse{
+					Plugin: &sdkkonnectcomp.Plugin{
+						ID: lo.ToPtr(uuid.NewString()),
+					},
+				},
+				nil,
+			).
+			Maybe()
 
 		wKongPluginBinding := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))
 		wKongPlugin := setupWatch[configurationv1.KongPluginList](t, ctx, clientWithWatch, client.InNamespace(ns.Name))

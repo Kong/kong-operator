@@ -16,11 +16,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
-	kcfgdataplane "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/dataplane"
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-
+	kcfgconsts "github.com/kong/kong-operator/api/common/consts"
+	kcfgdataplane "github.com/kong/kong-operator/api/gateway-operator/dataplane"
+	operatorv1alpha1 "github.com/kong/kong-operator/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/controller/pkg/address"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/pkg/consts"

@@ -21,7 +21,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 )
 
 func init() {
@@ -300,7 +300,6 @@ type ControlPlaneDataPlaneTargetRef struct {
 	// Ref is the name of the DataPlane to configure.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 }
 

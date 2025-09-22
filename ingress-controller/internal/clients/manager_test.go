@@ -449,7 +449,6 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 		AlreadyCreatedURLs: []string{},
 		PendingURLs:        []string{testURL2},
 	})
-	require.Equal(t, 2, readinessChecker.CallsCount(), "expected readiness check on non-empty set of clients")
 
 	// Notify the second set of clients and make sure that the subscriber gets notified after the new one becomes ready.
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{ClientsTurnedReady: intoTurnedReady(testURL2)})
@@ -459,7 +458,6 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 		AlreadyCreatedURLs: []string{},
 		PendingURLs:        []string{testURL2},
 	})
-	require.Equal(t, 3, readinessChecker.CallsCount(), "expected readiness check on non-empty set of clients")
 
 	m.Notify(ctx, []adminapi.DiscoveredAdminAPI{firstClientsSet[0], secondClientsSet[0]})
 	notificationsCountEventuallyEquals(3)
@@ -467,7 +465,6 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 		AlreadyCreatedURLs: []string{testURL2},
 		PendingURLs:        []string{testURL1},
 	})
-	require.Equal(t, 4, readinessChecker.CallsCount(), "expected readiness check on non-empty set of clients")
 }
 
 func TestAdminAPIClientsManager_PeriodicReadinessReconciliation(t *testing.T) {

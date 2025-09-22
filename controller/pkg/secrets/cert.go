@@ -27,8 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-
+	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/modules/manager/logging"

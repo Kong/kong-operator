@@ -17,9 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
-
+	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kong-operator/api/incubator/v1alpha1"
 	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
 	gatewaycontroller "github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"

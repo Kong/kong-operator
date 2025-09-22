@@ -55,13 +55,11 @@ type HorizontalScaling struct {
 	// alpha feature gate HPAScaleToZero is enabled and at least one Object or External
 	// metric is configured.  Scaling is active as long as at least one metric value is
 	// available.
-	//
 	// +optional
 	MinReplicas *int32 `json:"minReplicas,omitempty" protobuf:"varint,2,opt,name=minReplicas"`
 
 	// maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up.
 	// It cannot be less that minReplicas.
-	//
 	// +required
 	MaxReplicas int32 `json:"maxReplicas" protobuf:"varint,3,opt,name=maxReplicas"`
 
@@ -73,7 +71,6 @@ type HorizontalScaling struct {
 	// increased, and vice-versa.  See the individual metric source types for
 	// more information about how each type of metric must respond.
 	// If not set, the default metric will be set to 80% average CPU utilization.
-	//
 	// +listType=atomic
 	// +optional
 	Metrics []autoscalingv2.MetricSpec `json:"metrics,omitempty" protobuf:"bytes,4,rep,name=metrics"`
@@ -81,7 +78,6 @@ type HorizontalScaling struct {
 	// behavior configures the scaling behavior of the target
 	// in both Up and Down directions (scaleUp and scaleDown fields respectively).
 	// If not set, the default HPAScalingRules for scale up and scale down are used.
-	//
 	// +optional
 	Behavior *autoscalingv2.HorizontalPodAutoscalerBehavior `json:"behavior,omitempty" protobuf:"bytes,5,opt,name=behavior"`
 }
@@ -253,7 +249,6 @@ type NamespacedName struct {
 	// Name is the name of the resource.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
 	// Namespace is the namespace of the resource.

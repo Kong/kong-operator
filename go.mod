@@ -2,6 +2,8 @@ module github.com/kong/kong-operator
 
 go 1.24.6
 
+replace github.com/kong/kubernetes-configuration/v2 => ./
+
 require (
 	cloud.google.com/go/container v1.44.0
 	dario.cat/mergo v1.0.2
@@ -30,7 +32,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.27.1
 	github.com/kong/go-kong v0.68.0
-	github.com/kong/kubernetes-configuration/v2 v2.0.0
+	github.com/kong/kubernetes-configuration/v2 v2.0.0-00010101000000-000000000000
 	github.com/kong/kubernetes-telemetry v0.1.10
 	github.com/kong/kubernetes-testing-framework v0.47.3
 	github.com/kong/semver/v4 v4.0.1
@@ -68,6 +70,7 @@ require (
 	k8s.io/kubernetes v1.33.4
 	oras.land/oras-go/v2 v2.6.0
 	sigs.k8s.io/controller-runtime v0.21.0
+	sigs.k8s.io/controller-tools v0.17.3
 	sigs.k8s.io/e2e-framework v0.6.0
 	sigs.k8s.io/gateway-api v1.3.0
 	sigs.k8s.io/kustomize/api v0.20.1
@@ -160,6 +163,7 @@ require (
 	github.com/go-openapi/jsonreference v0.21.0 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
 	github.com/go-sql-driver/mysql v1.8.1 // indirect
+	github.com/gobuffalo/flect v1.0.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/gonvenience/bunt v1.3.5 // indirect
@@ -293,6 +297,7 @@ require (
 	golang.org/x/text v0.28.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.36.0 // indirect
+	golang.org/x/tools/go/expect v0.1.0-deprecated // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250707201910-8d1bb00bc6a7 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250818200422-3122310a409c // indirect

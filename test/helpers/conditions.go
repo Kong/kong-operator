@@ -4,8 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
-
+	kcfgconsts "github.com/kong/kong-operator/api/common/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 

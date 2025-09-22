@@ -9,10 +9,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	operatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
-
+	operatorv1alpha1 "github.com/kong/kong-operator/api/gateway-operator/v1alpha1"
+	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 )

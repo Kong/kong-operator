@@ -8,8 +8,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
-
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 

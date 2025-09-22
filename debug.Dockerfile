@@ -51,6 +51,7 @@ COPY cmd/main.go cmd/main.go
 COPY modules/ modules/
 COPY controller/ controller/
 COPY pkg/ pkg/
+COPY api/ api/
 COPY internal/ internal/
 COPY Makefile Makefile
 COPY .git/ .git/

@@ -3,7 +3,7 @@ package utils
 import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 )
 
 // ReduceFunc defines a function type that takes a slice of unstructured.Unstructured objects

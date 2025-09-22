@@ -1,13 +1,12 @@
 package v1alpha1
 
 import (
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 )
 
 func init() {
@@ -136,20 +135,7 @@ type CreateControlPlaneRequest struct {
 // KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayControlPlane.
 // +apireference:kgo:include
 type KonnectGatewayControlPlaneStatus struct {
-	// Conditions describe the current conditions of the KonnectGatewayControlPlane.
-	//
-	// Known condition types are:
-	//
-	// * "Programmed"
-	//
-	// +listType=map
-	// +listMapKey=type
-	// +patchStrategy=merge
-	// +patchMergeKey=type
-	// +kubebuilder:validation:MaxItems=8
-	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
 
 	// Endpoints defines the Konnect endpoints for the control plane.
 	// They are required by the DataPlane to be properly configured in
@@ -158,7 +144,18 @@ type KonnectGatewayControlPlaneStatus struct {
 	// +optional
 	Endpoints *KonnectEndpoints `json:"konnectEndpoints,omitempty"`
 
-	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
+	// Conditions describe the current conditions of the KonnectGatewayControlPlane.
+	//
+	// Known condition types are:
+	//
+	// * "Programmed"
+	//
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // KonnectEndpoints defines the Konnect endpoints for the control plane.
@@ -166,13 +163,11 @@ type KonnectEndpoints struct {
 	// TelemetryEndpoint is the endpoint for telemetry.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	TelemetryEndpoint string `json:"telemetry"`
 
 	// ControlPlaneEndpoint is the endpoint for the control plane.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	ControlPlaneEndpoint string `json:"controlPlane"`
 }
 

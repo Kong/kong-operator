@@ -19,12 +19,11 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	konnect2 "github.com/kong/kubernetes-configuration/v2/api/konnect"
-	konnectv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
-
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
+	konnect2 "github.com/kong/kong-operator/api/konnect"
+	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/dataplane"
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/controller/pkg/secrets"

@@ -1,12 +1,11 @@
 package v1alpha1
 
 import (
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 )
 
 func init() {
@@ -154,12 +153,10 @@ type AwsTransitGatewayAttachmentConfig struct {
 	// TransitGatewayID is the AWS transit gateway ID to create attachment to.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	TransitGatewayID string `json:"transit_gateway_id"`
 	// RAMShareArn is the resource share ARN to verify request to create transit gateway attachment.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	RAMShareArn string `json:"ram_share_arn"`
 }
 
@@ -168,48 +165,42 @@ type AzureVNETPeeringAttachmentConfig struct {
 	// TenantID is the tenant ID for the Azure VNET Peering attachment.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	TenantID string `json:"tenant_id"`
 	// SubscriptionID is the subscription ID for the Azure VNET Peering attachment.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	SubscriptionID string `json:"subscription_id"`
 	// ResourceGroupName is the resource group name for the Azure VNET Peering attachment.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	ResourceGroupName string `json:"resource_group_name"`
 	// VnetName is the VNET Name for the Azure VNET Peering attachment.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	VnetName string `json:"vnet_name"`
 }
 
 // KonnectCloudGatewayTransitGatewayStatus defines the current state of KonnectCloudGatewayTransitGateway.
 type KonnectCloudGatewayTransitGatewayStatus struct {
-	// Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.
-	//
-	// Known condition types are:
-	//
-	// * "Programmed"
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +patchStrategy=merge
-	// +patchMergeKey=type
-	// +kubebuilder:validation:MaxItems=8
-	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
-
 	konnectv1alpha2.KonnectEntityStatusWithNetworkRef `json:",inline"`
 
 	// State is the state of the transit gateway on Konnect side.
 	//
 	// +optional
 	State sdkkonnectcomp.TransitGatewayState `json:"state,omitempty"`
+
+	// Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.
+	//
+	// Known condition types are:
+	//
+	// * "Programmed"
+	//
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // KonnectCloudGatewayTransitGatewayList contains a list of KonnectCloudGatewayTransitGateway.

@@ -12,10 +12,9 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/pkg/features"
 
-	kcfgconsts "github.com/kong/kubernetes-configuration/v2/api/common/consts"
-	operatorv1beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v1beta1"
-	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
-
+	kcfgconsts "github.com/kong/kong-operator/api/common/consts"
+	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayapipkg "github.com/kong/kong-operator/pkg/gatewayapi"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"

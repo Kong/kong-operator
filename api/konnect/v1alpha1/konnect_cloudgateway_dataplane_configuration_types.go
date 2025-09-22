@@ -1,12 +1,11 @@
 package v1alpha1
 
 import (
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 )
 
 func init() {
@@ -48,7 +47,6 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationSpec struct {
 	// Version specifies the desired Kong Gateway version.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	Version string `json:"version"`
 
 	// DataplaneGroups is a list of desired data-plane groups that describe where
@@ -93,7 +91,6 @@ type KonnectConfigurationDataPlaneGroup struct {
 	// Region for cloud provider region.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	Region string `json:"region"`
 
 	// NetworkRef is the reference to the network that this data-plane group will be deployed on.
@@ -200,27 +197,25 @@ type ConfigurationDataPlaneGroupAutoscaleStatic struct {
 // KonnectCloudGatewayDataPlaneGroupConfigurationStatus defines the observed state of KonnectCloudGatewayDataPlaneGroupConfiguration.
 // +apireference:kgo:include
 type KonnectCloudGatewayDataPlaneGroupConfigurationStatus struct {
-	// Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.
-	//
-	// Known condition types are:
-	//
-	// * "Programmed"
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +patchStrategy=merge
-	// +patchMergeKey=type
-	// +kubebuilder:validation:MaxItems=8
-	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"`
 
 	// DataPlaneGroups is a list of deployed data-plane groups.
 	//
 	// +optional
 	DataPlaneGroups []KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup `json:"dataplane_groups,omitempty"`
 
-	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"`
+	// Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.
+	//
+	// Known condition types are:
+	//
+	// * "Programmed"
+	//
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup defines the observed state of a deployed data-plane group.
@@ -228,13 +223,11 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup struct {
 	// ID is the ID of the deployed data-plane group.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	ID string `json:"id"`
 
 	// CloudGatewayNetworkID is the ID of the cloud gateway network.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	CloudGatewayNetworkID string `json:"cloud_gateway_network_id"`
 
 	// Name of cloud provider.
@@ -245,7 +238,6 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup struct {
 	// Region ID for cloud provider region.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	Region string `json:"region"`
 
 	// PrivateIPAddresses is a list of private IP addresses of the internal load balancer that proxies traffic to this data-plane group.
@@ -261,7 +253,6 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup struct {
 	// State is the current state of the data plane group. Can be e.g. initializing, ready, terminating.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	State string `json:"state"`
 }
 

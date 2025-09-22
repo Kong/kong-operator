@@ -16,8 +16,8 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 )
 
 func init() {
@@ -179,22 +179,11 @@ type SecretRef struct {
 	// Name is the name of the Secret containing the Konnect Control Plane's cluster certificate.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 }
 
 // KonnectExtensionStatus defines the observed state of KonnectExtension.
 type KonnectExtensionStatus struct {
-	// Conditions describe the current conditions of the KonnectExtensionStatus.
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +patchStrategy=merge
-	// +patchMergeKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
-
 	// DataPlaneRefs is the array  of DataPlane references this is associated with.
 	// A new reference is set by the operator when this extension is associated with
 	// a DataPlane through its extensions spec.
@@ -220,6 +209,15 @@ type KonnectExtensionStatus struct {
 	//
 	// +optional
 	Konnect *KonnectExtensionControlPlaneStatus `json:"konnect,omitempty"`
+
+	// Conditions describe the current conditions of the KonnectExtensionStatus.
+	// Known condition types are:
+	//
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // KonnectExtensionClusterType is the type of the Konnect Control Plane.
@@ -237,7 +235,6 @@ type KonnectExtensionControlPlaneStatus struct {
 	// ControlPlaneID is the Konnect ID of the ControlPlane this KonnectExtension is associated with.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	ControlPlaneID string `json:"controlPlaneID"`
 
 	// ClusterType is the type of the Konnect Control Plane.

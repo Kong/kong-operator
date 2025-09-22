@@ -1,11 +1,10 @@
 package v1alpha1
 
 import (
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 )
 
 func init() {
@@ -56,19 +55,16 @@ type KonnectCloudGatewayNetworkSpec struct {
 	// Specifies the name of the network on Konnect.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
 	// Specifies the provider Account ID.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	CloudGatewayProviderAccountID string `json:"cloud_gateway_provider_account_id"`
 
 	// Region ID for cloud provider region.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	Region string `json:"region"`
 
 	// List of availability zones that the network is attached to.
@@ -81,7 +77,6 @@ type KonnectCloudGatewayNetworkSpec struct {
 	// CIDR block configuration for the network.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	CidrBlock string `json:"cidr_block"`
 
 	// Initial state for creating a network.
@@ -96,27 +91,25 @@ type KonnectCloudGatewayNetworkSpec struct {
 // KonnectCloudGatewayNetworkStatus defines the observed state of KonnectCloudGatewayNetwork.
 // +apireference:kgo:include
 type KonnectCloudGatewayNetworkStatus struct {
-	// Conditions describe the current conditions of the KonnectCloudGatewayNetwork.
-	//
-	// Known condition types are:
-	//
-	// * "Programmed"
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +patchStrategy=merge
-	// +patchMergeKey=type
-	// +kubebuilder:validation:MaxItems=8
-	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
 
 	// State is the current state of the network. Can be e.g. initializing, ready, terminating.
 	//
 	// +optional
 	State string `json:"state,omitempty"`
 
-	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
+	// Conditions describe the current conditions of the KonnectCloudGatewayNetwork.
+	//
+	// Known condition types are:
+	//
+	// * "Programmed"
+	//
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	// +optional
+	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.

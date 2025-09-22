@@ -1,12 +1,11 @@
 package v1alpha2
 
 import (
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 )
 
 func init() {
@@ -128,13 +127,6 @@ type KonnectGatewayControlPlaneStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 
 	KonnectEntityStatus `json:",inline"`
-
-	// ClusterType is the cluster type of the Konnect control plane.
-	// When the KonnectGatewayControlPlane is attached to a control plane in Konnect,
-	// ClusterType is filled with the cluster type of the control plane.
-	//
-	// +optional
-	ClusterType sdkkonnectcomp.ControlPlaneClusterType `json:"clusterType,omitempty"`
 
 	// Endpoints defines the Konnect endpoints for the control plane.
 	// They are required by the DataPlane to be properly configured in

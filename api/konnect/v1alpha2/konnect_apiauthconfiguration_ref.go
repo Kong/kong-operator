@@ -4,8 +4,6 @@ package v1alpha2
 // +apireference:kgo:include
 type KonnectAPIAuthConfigurationRef struct {
 	// Name is the name of the KonnectAPIAuthConfiguration resource.
-	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 }
