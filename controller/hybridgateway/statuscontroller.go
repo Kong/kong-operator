@@ -10,6 +10,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/op"
 )
 
@@ -30,7 +31,7 @@ func NewRouteStatusReconciler[t route.RouteObject, tPtr route.RouteObjectPtr[t]]
 
 // SetupWithManager registers the reconciler with the controller manager for the specific route type.
 func (r *RouteStatusReconciler[t, tPtr]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	var obj = any(new(t)).(tPtr)
+	obj := any(new(t)).(tPtr)
 	return ctrl.NewControllerManagedBy(mgr).
 		For(obj).
 		Complete(r)
@@ -51,7 +52,8 @@ func (r *RouteStatusReconciler[t, tPtr]) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, fmt.Errorf("failed to convert object of type %T to route object type %T", obj, routeObj)
 	}
 
-	logger.Info("Reconciling Object", "Group", obj.GetObjectKind().GroupVersionKind().Group, "Kind", obj.GetObjectKind().GroupVersionKind().Kind, "namespace", (obj).GetNamespace(), "name", (obj).GetName())
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	log.Debug(logger, "Reconciling object", "Group", gvk.Group, "Kind", gvk.Kind)
 
 	statusUpdater, err := route.NewRouteStatusUpdater(routeObj, r.Client, logger, r.sharedStatusMap)
 	if err != nil {

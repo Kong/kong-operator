@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/converter"
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/controller/hybridgateway/watch"
+	"github.com/kong/kong-operator/controller/pkg/log"
 )
 
 // HybridGatewayReconciler is a generic reconciler for handling Gateway API resources
@@ -36,7 +37,7 @@ func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjec
 // SetupWithManager sets up the controller with the provided manager.
 // It registers the reconciler to watch and manage resources of type 'u'.
 func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
-	var obj = any(new(t)).(tPtr)
+	obj := any(new(t)).(tPtr)
 	filter, err := watch.FilterBy(r.Client, obj)
 	if err != nil {
 		return err
@@ -62,7 +63,8 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, fmt.Errorf("failed to convert object of type %T to route object type %T", obj, rootObj)
 	}
 
-	logger.Info("Reconciling Object", "Group", obj.GetObjectKind().GroupVersionKind().Group, "Kind", obj.GetObjectKind().GroupVersionKind().Kind, "namespace", (obj).GetNamespace(), "name", (obj).GetName())
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	log.Debug(logger, "Reconciling object", "Group", gvk.Group, "Kind", gvk.Kind)
 
 	conv, err := converter.NewConverter(rootObj, r.Client, r.sharedStatusMap)
 	if err != nil {

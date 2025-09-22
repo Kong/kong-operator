@@ -105,6 +105,10 @@ rows:
     type: '`bool`'
     description: "Enable the Konnect controllers."
     default: '`false`'
+  - flag: '`--enable-controller-konnect-hybrid`'
+    type: '`bool`'
+    description: "Enable the Konnect Hybrid controllers."
+    default: '`false`'
   - flag: '`--enable-controlplane-config-dump`'
     type: '`bool`'
     description: "Enable the server to dump generated Kong configuration from ControlPlanes. Only effective when ControlPlane controller is enabled."

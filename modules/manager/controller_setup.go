@@ -627,12 +627,14 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			newKonnectEntityController[configurationv1alpha1.KongSNI](controllerFactory),
 		)
 
-		sharedStatusMap := route.NewSharedStatusMap()
-		controllers = append(controllers,
-			newGatewayAPIHybridController[corev1.Service](mgr, sharedStatusMap),
-			newRouteStatusController[gwtypes.HTTPRoute](mgr, sharedStatusMap),
-			// TODO: Add more Hybrid controllers here
-		)
+		if c.KonnectHybridControllersEnabled {
+			sharedStatusMap := route.NewSharedStatusMap()
+			controllers = append(controllers,
+				newGatewayAPIHybridController[corev1.Service](mgr, sharedStatusMap),
+				newRouteStatusController[gwtypes.HTTPRoute](mgr, sharedStatusMap),
+				// TODO: Add more Hybrid controllers here
+			)
+		}
 	}
 
 	return controllers, nil
