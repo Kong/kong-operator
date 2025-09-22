@@ -53,7 +53,7 @@
 
 > Release date: 2025-09-22
 
-## Fixes
+### Fixes
 
 - Cleanup old objects when new `ControlPlane` is ready.
   Remove old finalizers from `ControlPlane` when cleanup is done.
@@ -66,7 +66,7 @@
 
 > Release date: 2025-09-17
 
-## Fixes
+### Fixes
 
 - Fix incorrect error handling during cluster CA secret creation.
   [#2250](https://github.com/Kong/kong-operator/pull/2250)
