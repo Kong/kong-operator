@@ -42,6 +42,9 @@
   [#2143](https://github.com/Kong/kong-operator/pull/2143)
   [#2177](https://github.com/Kong/kong-operator/pull/2177)
   [#2260](https://github.com/Kong/kong-operator/pull/2260)
+- Add comprehensive HTTPRoute reconciliation that translates Gateway API
+  HTTPRoutes into Kong-specific resources for hybrid gateway deployments.
+  [#2308](https://github.com/Kong/kong-operator/pull/2308)
 
 ### Changed
 

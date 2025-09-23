@@ -17,6 +17,7 @@ type (
 	HTTPRouteSpec          = gatewayv1.HTTPRouteSpec
 	HTTPRouteRule          = gatewayv1.HTTPRouteRule
 	HTTPRouteList          = gatewayv1.HTTPRouteList
+	HTTPRouteMatch         = gatewayv1.HTTPRouteMatch
 	RouteParentStatus      = gatewayv1.RouteParentStatus
 	GRPCRoute              = gatewayv1.GRPCRoute
 	ParentReference        = gatewayv1.ParentReference

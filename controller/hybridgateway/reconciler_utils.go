@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,9 +56,11 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			existingObject.hits++
 		} else {
 			if err := cl.Create(ctx, &expectedObject); err != nil {
-				return false, false, err
+				if errors.IsAlreadyExists(err) {
+					continue
+				}
 			}
-			return false, true, nil
+			continue
 		}
 
 		// TODO: ensure the spec is up to date. This print is meant

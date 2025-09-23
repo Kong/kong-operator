@@ -5,6 +5,8 @@ const (
 	// by the Service controller.
 	ServiceManagedByLabel = "service"
 
+	HTTPRouteManagedByLabel = "httproute"
+
 	// HashSpecValueLabel is the label's suffix used to indicate the hash of an object's spec.
 	HashSpecValueLabel = "hash-spec"
 
