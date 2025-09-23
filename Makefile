@@ -886,9 +886,6 @@ install: install.helm.cert-manager manifests kustomize install.gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
 
 
-# Install kubernetes-configuration CRDs into the K8s cluster specified in ~/.kube/config.
-
-# Install kubernetes-configuration ingress controller CRDs into the K8s cluster specified in ~/.kube/config.
 
 # Install RBACs from config/rbac into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.rbacs
