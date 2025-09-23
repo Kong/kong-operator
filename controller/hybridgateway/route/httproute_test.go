@@ -102,7 +102,7 @@ func TestHTTPRouteStatusUpdater(t *testing.T) {
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
-								{Name: "test-gateway"}, // This has nil Namespace.
+								{Name: "test-gateway"},
 							},
 						},
 						Rules: []gwtypes.HTTPRouteRule{
@@ -125,7 +125,7 @@ func TestHTTPRouteStatusUpdater(t *testing.T) {
 					{
 						ParentRef: gwtypes.ParentReference{
 							Name:      "test-gateway",
-							Namespace: &someNamespace, // Non-nil namespace.
+							Namespace: &someNamespace,
 						},
 						ControllerName: gwtypes.GatewayController("kong.konghq.com/kong-operator"),
 						Conditions:     []metav1.Condition{},

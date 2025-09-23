@@ -15,15 +15,21 @@ import (
 func GetGatewaysByHTTPRoute(ctx context.Context, cl client.Client, r gwtypes.HTTPRoute) []gwtypes.Gateway {
 	gatewayRefs := []gwtypes.Gateway{}
 	for _, ref := range r.Spec.ParentRefs {
+		var namespace string
 		if ref.Group == nil || *ref.Group != "gateway.networking.k8s.io" {
 			continue
 		}
 		if ref.Kind == nil || *ref.Kind != "Gateway" {
 			continue
 		}
+		if ref.Namespace != nil && *ref.Namespace != "" {
+			namespace = string(*ref.Namespace)
+		} else {
+			namespace = r.Namespace
+		}
 		gw := &gwtypes.Gateway{}
 		err := cl.Get(ctx, client.ObjectKey{
-			Namespace: r.Namespace,
+			Namespace: namespace,
 			Name:      string(ref.Name),
 		}, gw)
 		if err != nil {

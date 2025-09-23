@@ -3,6 +3,7 @@ package refs
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -28,6 +29,44 @@ func GetNamespacedRefs(ctx context.Context, cl client.Client, obj runtime.Object
 	default:
 		return nil, nil
 	}
+}
+
+// GetControlPlaneRefByParentRef retrieves the control plane reference for a given parent reference.
+func GetControlPlaneRefByParentRef(ctx context.Context, cl client.Client, route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference) (*commonv1alpha1.ControlPlaneRef, error) {
+	var namespace string
+	if pRef.Group == nil || *pRef.Group != "gateway.networking.k8s.io" {
+		return nil, nil
+	}
+	if pRef.Kind == nil || *pRef.Kind != "Gateway" {
+		return nil, nil
+	}
+
+	if pRef.Namespace == nil || *pRef.Namespace == "" {
+		namespace = route.Namespace
+	} else {
+		namespace = string(*pRef.Namespace)
+	}
+
+	gw := &gwtypes.Gateway{}
+	err := cl.Get(ctx, client.ObjectKey{
+		Namespace: namespace,
+		Name:      string(pRef.Name),
+	}, gw)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get ControlPlaneRef for ParentRef %+v in route %q: %w", pRef, client.ObjectKeyFromObject(route), err)
+	}
+
+	konnectNamespacedRef, err := byGateway(ctx, cl, *gw)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get ControlPlaneRef for ParentRef %+v in route %q: %w", pRef, client.ObjectKeyFromObject(route), err)
+	}
+
+	konnectNamespacedRef.Namespace = ""
+
+	return &commonv1alpha1.ControlPlaneRef{
+		Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: konnectNamespacedRef,
+	}, nil
 }
 
 // byHTTPRoute returns a slice of KonnectNamespacedRef associated with the given HTTPRoute, or an error if retrieval fails.
