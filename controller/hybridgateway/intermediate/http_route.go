@@ -42,12 +42,18 @@ type ParentReference struct {
 	ParentReference gwtypes.ParentReference
 }
 
+// Hostnames represents a collection of hostnames associated with an HTTPRoute.
+type Hostnames struct {
+	Name
+	Hostnames []string
+}
+
 // HTTPRouteRepresentation provides an intermediate representation of an HTTPRoute resource.
 // It organizes HTTPRoute data into a structured format that facilitates conversion to Kong entities.
 // This representation includes rules, hostnames, control plane references, parent references, and routing options.
 type HTTPRouteRepresentation struct {
 	Rules            map[string]Rule
-	Hostnames        map[string][]string
+	Hostnames        map[string]Hostnames
 	ControlPlaneRefs map[string]ControlPlaneRef
 	ParentRefs       map[string]ParentReference
 	StripPath        bool
@@ -58,7 +64,7 @@ type HTTPRouteRepresentation struct {
 func NewHTTPRouteRepresentation(route *gwtypes.HTTPRoute) *HTTPRouteRepresentation {
 	repr := HTTPRouteRepresentation{
 		Rules:            map[string]Rule{},
-		Hostnames:        map[string][]string{},
+		Hostnames:        map[string]Hostnames{},
 		ControlPlaneRefs: map[string]ControlPlaneRef{},
 		ParentRefs:       map[string]ParentReference{},
 		StripPath:        metadata.ExtractStripPath(route.Annotations),
@@ -172,12 +178,37 @@ func (t *HTTPRouteRepresentation) GetParentRefByName(name Name) *gwtypes.ParentR
 	}
 
 	// Since the name for the parentRef is in the format prefix.<namespace>.<name>[.<parentRefIndex>]
-	// we make sure that when we receive a name from a different resource for which we want to get the parentRef we
-	// remove the unneeded indexes.
+	// while all the other resources have one more index (to identify different rules) remove the last
+	// index before the lookup.
 	name.indexes = name.indexes[:1]
 
 	if pRef, ok := t.ParentRefs[name.String()]; ok {
 		return &pRef.ParentReference
+	}
+	return nil
+}
+
+// AddHostnames adds a hostname to the HTTPRoute representation.
+func (t *HTTPRouteRepresentation) AddHostnames(hostnames Hostnames) {
+	if t.Hostnames == nil {
+		t.Hostnames = make(map[string]Hostnames)
+	}
+	t.Hostnames[hostnames.String()] = hostnames
+}
+
+// GetHostnamesByName retrieves hostnames by name from the HTTPRoute representation.
+// Returns nil if no hostnames are found with the given name.
+func (t *HTTPRouteRepresentation) GetHostnamesByName(name Name) *Hostnames {
+	if t.Hostnames == nil {
+		return nil
+	}
+
+	// Since the name for the Hostnames is in the format prefix.<namespace>.<name>[.<parentRefIndex>]
+	// while all the other resources have one more index (to identify different rules) remove the last
+	// index before the lookup.
+	name.indexes = name.indexes[:1]
+	if h, ok := t.Hostnames[name.String()]; ok {
+		return &h
 	}
 	return nil
 }
