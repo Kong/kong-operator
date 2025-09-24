@@ -20,7 +20,6 @@ func (obj *KonnectGatewayControlPlane) GetKonnectID() string {
 func (obj *KonnectGatewayControlPlane) SetKonnectID(id string) {
 	obj.Status.ID = id
 }
-
 // GetTypeName returns the KonnectGatewayControlPlane Kind name
 func (obj KonnectGatewayControlPlane) GetTypeName() string {
 	return "KonnectGatewayControlPlane"

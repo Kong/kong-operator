@@ -307,7 +307,7 @@ verify.generators: verify.repo generate verify.diff
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.cli-arguments-docs
+generate: generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.cli-arguments-docs generate.deepcopy generate.apitypes-funcs generate.docs
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -321,6 +321,21 @@ generate.crd-kustomize:
 .PHONY: generate.api
 generate.api: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/generators/boilerplate.go.txt" paths="./$(API_DIR)/..."
+
+# Alias for consistency with kubernetes-configuration naming
+.PHONY: generate.deepcopy
+generate.deepcopy: generate.api
+
+.PHONY: generate.apitypes-funcs
+generate.apitypes-funcs:
+	go run ./scripts/apitypes-funcs
+
+.PHONY: generate.docs
+generate.docs: generate.apidocs
+
+.PHONY: generate.apidocs
+generate.apidocs: crd-ref-docs
+	./scripts/apidocs-gen/generate.sh $(CRD_REF_DOCS)
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 .PHONY: generate.clientsets

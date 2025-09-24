@@ -2,7 +2,6 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 )
 
@@ -22,7 +21,6 @@ func (obj *KonnectGatewayControlPlane) GetKonnectID() string {
 func (obj *KonnectGatewayControlPlane) SetKonnectID(id string) {
 	obj.Status.ID = id
 }
-
 // GetTypeName returns the KonnectGatewayControlPlane Kind name
 func (obj KonnectGatewayControlPlane) GetTypeName() string {
 	return "KonnectGatewayControlPlane"
@@ -67,7 +65,6 @@ func (obj *KonnectCloudGatewayNetwork) GetKonnectID() string {
 func (obj *KonnectCloudGatewayNetwork) SetKonnectID(id string) {
 	obj.Status.ID = id
 }
-
 // GetTypeName returns the KonnectCloudGatewayNetwork Kind name
 func (obj KonnectCloudGatewayNetwork) GetTypeName() string {
 	return "KonnectCloudGatewayNetwork"
