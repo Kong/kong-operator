@@ -33,15 +33,17 @@ func ensureControlPlane(
 	case commonv1alpha1.EntitySourceOrigin:
 		return createControlPlane(ctx, sdk, sdkGroups, cl, cp)
 	case commonv1alpha1.EntitySourceMirror:
-		if _, err := GetControlPlaneByID(
+		resp, err := GetControlPlaneByID(
 			ctx,
 			sdk,
 			// not nilness is ensured by CEL rules
 			string(cp.Spec.Mirror.Konnect.ID),
-		); err != nil {
+		)
+		if err != nil {
 			return err
 		}
 		cp.SetKonnectID(string(cp.Spec.Mirror.Konnect.ID))
+		cp.Status.ClusterType = resp.Config.ClusterType
 		return nil
 	default:
 		// This should never happen, as the source type is validated by CEL rules.
@@ -75,6 +77,7 @@ func createControlPlane(
 	// At this point, the ControlPlane has been created in Konnect.
 	id := resp.ControlPlane.ID
 	cp.SetKonnectID(id)
+	cp.Status.ClusterType = resp.ControlPlane.Config.ClusterType
 
 	if err := setGroupMembers(ctx, cl, cp, id, sdkGroups); err != nil {
 		// If we failed to set group membership, we should return a specific error with a reason
