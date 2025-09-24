@@ -307,7 +307,7 @@ verify.generators: verify.repo generate verify.diff
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.cli-arguments-docs generate.deepcopy generate.apitypes-funcs generate.docs
+generate: generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.cli-arguments-docs generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix generate.format
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -336,6 +336,16 @@ generate.docs: generate.apidocs
 .PHONY: generate.apidocs
 generate.apidocs: crd-ref-docs
 	./scripts/apidocs-gen/generate.sh $(CRD_REF_DOCS)
+
+# Apply same auto-fixes as golangci-lint to keep generate and lint consistent
+.PHONY: generate.lint-fix
+generate.lint-fix: golangci-lint
+	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) --fix
+
+# Ensure generated code matches linters' expectations (run modernize like in lint)
+.PHONY: generate.format
+generate.format: modernize
+	$(MODERNIZE) $(MODERNIZE_FLAGS) ./...
 
 # this will generate the custom typed clients needed for end-users implementing logic in Go to use our API types.
 .PHONY: generate.clientsets
