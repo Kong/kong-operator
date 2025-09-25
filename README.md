@@ -110,10 +110,9 @@ Whenever you add a new CRD:
 * Ensure that it is included in project's [`PROJECT`](./PROJECT) file. This is necessary for creation of
   a bundle for external hubs like [Operator Hub's community operators][community-operators].
 * Annotate the CRD and any new type it depends on with the right markers to make sure it will be included
-  in the generated documentation. See [available markers][available-markers].
+  in the generated documentation. See the markers used in scripts/crds-generator for reference.
 
 [community-operators]: https://github.com/k8s-operatorhub/community-operators/
-[available-markers]: https://github.com/Kong/kubernetes-configuration/blob/main/README.md#available-custom-markers
 
 ## Seeking Help
 
