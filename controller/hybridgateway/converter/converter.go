@@ -6,6 +6,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
@@ -16,6 +17,8 @@ import (
 // APIConverter defines an interface for converting and managing Kubernetes API objects
 // of a generic type t that satisfies the RootObject constraint.
 type APIConverter[t RootObject] interface {
+	// GetExpectedGVKs returns the list of GroupVersionKinds for resources expected to be created by this converter.
+	GetExpectedGVKs() []schema.GroupVersionKind
 	// Translate performs the conversion or translation logic for the root object, returning an error if the process fails.
 	Translate() error
 	// GetRootObject returns the current root object of type t.

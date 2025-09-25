@@ -3,7 +3,6 @@ package hybridgateway
 import (
 	"context"
 	"fmt"
-	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -42,18 +41,25 @@ func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context,
 	if err != nil {
 		return err
 	}
-	return ctrl.NewControllerManagedBy(mgr).
+	builder := ctrl.NewControllerManagedBy(mgr).
 		For(obj).
-		WithEventFilter(predicate.NewPredicateFuncs(filter)).
-		Complete(r)
+		WithEventFilter(predicate.NewPredicateFuncs(filter))
+
+	// Add watches for owned resources.
+	for _, owned := range watch.Owns(obj) {
+		builder = builder.Owns(owned)
+	}
+
+	return builder.Complete(r)
 }
 
 // Reconcile reconciles the state of a custom resource by fetching the object,
 // converting it to the expected type, translating it, and enforcing its desired state.
 func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := ctrllog.FromContext(ctx)
-
 	var obj tPtr = new(t)
+
+	logger := ctrllog.FromContext(ctx).WithName("HybridGateway")
+
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
@@ -75,16 +81,14 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 
-	requeue, stop, err := EnforceState(ctx, r.Client, logger, conv)
+	requeue, _, err := EnforceState(ctx, r.Client, logger, conv)
 	if err != nil || requeue {
 		return ctrl.Result{Requeue: true}, err
 	}
-	if stop {
-		// TODO: workaround for not having watches in place yet
-		// This requeue should be ensured by watches on the owned resources
-		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+
+	if err := CleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv); err != nil {
+		return ctrl.Result{}, err
 	}
 
-	// TODO: workaround for not having watches in place yet
-	return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+	return ctrl.Result{}, nil
 }
