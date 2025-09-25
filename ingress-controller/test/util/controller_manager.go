@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
@@ -123,6 +124,9 @@ func DeployControllerManagerForCluster(
 		Name:      "ingress-controller-kong-udp-proxy",
 	})
 	cfg.Impersonate = test.ServiceAccountToImpersonate
+	// Increase Admin API init tolerance for CI: Kong can take longer to be ready.
+	cfg.KongAdminInitializationRetries = 180
+	cfg.KongAdminInitializationRetryDelay = time.Second
 
 	// Apply additional configuration from opts
 	for _, opt := range opts {
