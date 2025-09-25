@@ -21,7 +21,7 @@ func TestSetByObjectFor(t *testing.T) {
 		require.NoError(t, err)
 
 		// Verify the label selector was set correctly.
-		expectedReq, err := labels.NewRequirement(selector, selection.Equals, []string{"true"})
+		expectedReq, err := labels.NewRequirement(selector, selection.In, []string{"true", "internal"})
 		require.NoError(t, err)
 		expectedSelector := labels.NewSelector().Add(*expectedReq)
 
@@ -58,7 +58,7 @@ func TestSetByObjectFor(t *testing.T) {
 		require.Contains(t, byObject, &configMap)
 
 		// Verify the label selector was set correctly
-		expectedReq, err := labels.NewRequirement(selector, selection.Equals, []string{"true"})
+		expectedReq, err := labels.NewRequirement(selector, selection.In, []string{"true", "internal"})
 		require.NoError(t, err)
 		expectedSelector := labels.NewSelector().Add(*expectedReq)
 
@@ -117,11 +117,11 @@ func TestSetByObjectFor(t *testing.T) {
 		require.Contains(t, byObject, (&corev1.ConfigMap{}))
 
 		// Verify each has the correct selector
-		secretReq, err := labels.NewRequirement(secretSelector, selection.Equals, []string{"true"})
+		secretReq, err := labels.NewRequirement(secretSelector, selection.In, []string{"true", "internal"})
 		require.NoError(t, err)
 		secretExpectedSelector := labels.NewSelector().Add(*secretReq)
 
-		configMapReq, err := labels.NewRequirement(configMapSelector, selection.Equals, []string{"true"})
+		configMapReq, err := labels.NewRequirement(configMapSelector, selection.In, []string{"true", "internal"})
 		require.NoError(t, err)
 		configMapExpectedSelector := labels.NewSelector().Add(*configMapReq)
 
