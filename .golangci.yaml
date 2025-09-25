@@ -81,9 +81,6 @@ linters:
               recommendations:
                 - sigs.k8s.io/controller-runtime/pkg/log
                 - go.uber.org/zap/zapcore
-          - github.com/kong/kubernetes-configuration:
-              recommendations:
-                - github.com/kong/kubernetes-configuration/v2
     govet:
       disable:
         - fieldalignment
@@ -101,16 +98,6 @@ linters:
           alias: gateway${1}
         - pkg: sigs.k8s.io/controller-runtime/pkg/log
           alias: ctrllog
-        - pkg: github.com/kong/kubernetes-configuration/v2/api/common/(v[\w\d]+)
-          alias: common${1}
-        - pkg: github.com/kong/kubernetes-configuration/v2/api/gateway-operator/(v[\w\d]+)
-          alias: operator${1}
-        - pkg: github.com/kong/kubernetes-configuration/v2/api/configuration/(v[\w\d]+)
-          alias: configuration${1}
-        - pkg: github.com/kong/kubernetes-configuration/v2/api/incubator/(v[\w\d]+)
-          alias: incubator${1}
-        - pkg: github.com/kong/kubernetes-configuration/v2/api/konnect/(v[\w\d]+)
-          alias: konnect${1}
         - pkg: github.com/Kong/sdk-konnect-go/models/components
           alias: sdkkonnectcomp
         - pkg: github.com/Kong/sdk-konnect-go/models/operations
@@ -225,7 +212,6 @@ formatters:
       sections:
         - standard
         - default
-        - prefix(github.com/kong/kubernetes-configuration/v2)
         - prefix(github.com/kong/kong-operator)
       custom-order: true
   exclusions:
