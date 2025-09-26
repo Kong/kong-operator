@@ -69,6 +69,34 @@ func GetControlPlaneRefByParentRef(ctx context.Context, cl client.Client, route 
 	}, nil
 }
 
+// GetListenersByParentRef retrieves the listeners for a given parent reference.
+func GetListenersByParentRef(ctx context.Context, cl client.Client, route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference) ([]gwtypes.Listener, error) {
+	var namespace string
+	if pRef.Group == nil || *pRef.Group != "gateway.networking.k8s.io" {
+		return nil, nil
+	}
+	if pRef.Kind == nil || *pRef.Kind != "Gateway" {
+		return nil, nil
+	}
+
+	if pRef.Namespace == nil || *pRef.Namespace == "" {
+		namespace = route.Namespace
+	} else {
+		namespace = string(*pRef.Namespace)
+	}
+
+	gw := &gwtypes.Gateway{}
+	err := cl.Get(ctx, client.ObjectKey{
+		Namespace: namespace,
+		Name:      string(pRef.Name),
+	}, gw)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get Listeners for ParentRef %+v in route %q: %w", pRef, client.ObjectKeyFromObject(route), err)
+	}
+
+	return gw.Spec.Listeners, nil
+}
+
 // byHTTPRoute returns a slice of KonnectNamespacedRef associated with the given HTTPRoute, or an error if retrieval fails.
 func byHTTPRoute(ctx context.Context, cl client.Client, httpRoute gwtypes.HTTPRoute) (map[string]GatewaysByNamespacedRef, error) {
 	namespacedRefs := map[string]GatewaysByNamespacedRef{}
