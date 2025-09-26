@@ -45,6 +45,8 @@
 - Add comprehensive HTTPRoute reconciliation that translates Gateway API
   HTTPRoutes into Kong-specific resources for hybrid gateway deployments.
   [#2308](https://github.com/Kong/kong-operator/pull/2308)
+- Hybrid Gateway: add support to HTTPRoute hostnames translation
+  [#2346](https://github.com/Kong/kong-operator/pull/2346)
 
 ### Changed
 

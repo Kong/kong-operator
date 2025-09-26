@@ -2,6 +2,7 @@ package converter
 
 import (
 	"context"
+	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -116,12 +117,19 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 	if err := c.addControlPlaneRefs(ctx); err != nil {
 		return err
 	}
+	if err := c.addHostnames(ctx); err != nil {
+		return err
+	}
 
 	// Generate kong services, upstream and targets.
 	for _, val := range c.ir.Rules {
 		// Get the controlPlaneRef for the given Rule.
 		cpr := c.ir.GetControlPlaneRefByName(val.Name)
 		if cpr == nil {
+			continue
+		}
+		hostnames := c.ir.GetHostnamesByName(val.Name)
+		if hostnames == nil {
 			continue
 		}
 		name := val.String()
@@ -190,6 +198,7 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 				WithLabels(c.route).
 				WithAnnotations(c.route, c.ir.GetParentRefByName(match.Name)).
 				WithSpecName(routeName).
+				WithHosts(hostnames.Hostnames).
 				WithStripPath(c.ir.StripPath).
 				WithKongService(serviceName).
 				WithHTTPRouteMatch(match.Match).
@@ -220,4 +229,87 @@ func (c *httpRouteConverter) addControlPlaneRefs(ctx context.Context) error {
 		})
 	}
 	return nil
+}
+
+// addHostnames adds hostnames to the intermediate representation based on the HTTPRoute's ParentRefs
+// and their associated Gateways and Listeners. If there is no intersection between the HTTPRoute's hostnames
+// and the Listener's hostname, no Hostnames entry is added. If all hostnames are accepted, an entry with an
+// empty hostname list is added.
+func (c *httpRouteConverter) addHostnames(ctx context.Context) error {
+
+	for i, pRef := range c.route.Spec.ParentRefs {
+		var err error
+		var listeners []gwtypes.Listener
+		hosts := []string{}
+		hostnamesName := intermediate.NameFromHTTPRoute(c.route, "", i)
+		if listeners, err = refs.GetListenersByParentRef(ctx, c.Client, c.route, pRef); err != nil {
+			return err
+		}
+		for _, listener := range listeners {
+			// Check section reference if present
+			if pRef.SectionName != nil {
+				sectionName := string(*pRef.SectionName)
+				if string(listener.Name) != sectionName {
+					// This listener doesn't match the section reference, skip it
+					continue
+				}
+			}
+
+			// If the listener has no hostname, it means it accepts all hostnames.
+			// In this case, we add all hostnames from the HTTPRoute.
+			if listener.Hostname == nil || *listener.Hostname == "" {
+				for _, hostname := range c.route.Spec.Hostnames {
+					hosts = append(hosts, string(hostname))
+				}
+				break
+			}
+
+			// Handle wildcard hostnames - get intersection
+			for _, hostname := range c.route.Spec.Hostnames {
+				routeHostname := string(hostname)
+				if intersection := hostnameIntersection(string(*listener.Hostname), routeHostname); intersection != "" {
+					hosts = append(hosts, intersection)
+				}
+			}
+		}
+		if len(hosts) > 0 {
+			c.ir.AddHostnames(intermediate.Hostnames{
+				Name:      hostnamesName,
+				Hostnames: hosts,
+			})
+		}
+	}
+	return nil
+}
+
+// hostnameIntersection returns the intersection of listener and route hostnames.
+// Returns the most specific hostname that satisfies both constraints, or an empty string if
+// there is no intersection.
+func hostnameIntersection(listenerHostname, routeHostname string) string {
+	// Exact match - return the common hostname
+	if listenerHostname == routeHostname {
+		return routeHostname
+	}
+
+	// Listener is wildcard (*.example.com), route is specific (api.example.com)
+	if strings.HasPrefix(listenerHostname, "*.") {
+		wildcardDomain := listenerHostname[1:] // Remove "*"
+
+		// Route hostname must end with the wildcard domain
+		if strings.HasSuffix(routeHostname, wildcardDomain) {
+			return routeHostname // Return the more specific route hostname
+		}
+	}
+
+	// Route is wildcard (*.example.com), listener is specific (api.example.com)
+	if strings.HasPrefix(routeHostname, "*.") {
+		wildcardDomain := routeHostname[1:] // Remove "*"
+
+		// Listener hostname must end with the wildcard domain
+		if strings.HasSuffix(listenerHostname, wildcardDomain) {
+			return listenerHostname // Return the more specific listener hostname
+		}
+	}
+
+	return "" // No intersection
 }
