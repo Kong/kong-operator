@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
@@ -26,6 +27,7 @@ type httpRouteConverter struct {
 	outputStore     []client.Object
 	sharedStatusMap *route.SharedRouteStatusMap
 	ir              *intermediate.HTTPRouteRepresentation
+	expectedGVKs    []schema.GroupVersionKind
 }
 
 // NewHTTPRouteConverter returns a new instance of httpRouteConverter.
@@ -36,6 +38,12 @@ func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client, share
 		sharedStatusMap: sharedStatusMap,
 		route:           httpRoute,
 		ir:              intermediate.NewHTTPRouteRepresentation(httpRoute),
+		expectedGVKs: []schema.GroupVersionKind{
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongRoute"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongService"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongUpstream"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongTarget"},
+		},
 	}
 }
 
@@ -60,6 +68,11 @@ func (c *httpRouteConverter) GetOutputStore(ctx context.Context) []unstructured.
 		objects = append(objects, unstr)
 	}
 	return objects
+}
+
+// GetExpectedGVKs returns the list of GroupVersionKinds that this converter expects to manage for HTTPRoute resources.
+func (c *httpRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind {
+	return c.expectedGVKs
 }
 
 // Reduce implements APIConverter.

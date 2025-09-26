@@ -100,7 +100,7 @@ func (b *KongTargetBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongTargetBuild
 		return b
 	}
 
-	err := controllerutil.SetOwnerReference(owner, &b.target, scheme.Get(), controllerutil.WithBlockOwnerDeletion(true))
+	err := controllerutil.SetControllerReference(owner, &b.target, scheme.Get(), controllerutil.WithBlockOwnerDeletion(true))
 	if err != nil {
 		b.errors = append(b.errors, fmt.Errorf("failed to set owner reference: %w", err))
 	}

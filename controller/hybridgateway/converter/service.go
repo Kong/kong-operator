@@ -9,6 +9,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
@@ -78,6 +79,11 @@ func (d *serviceConverter) Translate() error {
 		return err
 	}
 	return d.translate()
+}
+
+// GetExpectedGVKs returns the list of GroupVersionKinds that this converter expects to manage for Service resources.
+func (d *serviceConverter) GetExpectedGVKs() []schema.GroupVersionKind {
+	return []schema.GroupVersionKind{}
 }
 
 // GetOutputStore implements APIConverter.

@@ -20,13 +20,16 @@ func TestBuildLabels(t *testing.T) {
 		{
 			name: "basic HTTPRoute",
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "HTTPRoute",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "test-namespace",
 				},
 			},
 			expected: map[string]string{
-				consts.GatewayOperatorManagedByLabel:          consts.HTTPRouteManagedByLabel,
+				consts.GatewayOperatorManagedByLabel:          "HTTPRoute",
 				consts.GatewayOperatorManagedByNameLabel:      "test-route",
 				consts.GatewayOperatorManagedByNamespaceLabel: "test-namespace",
 			},
@@ -35,13 +38,16 @@ func TestBuildLabels(t *testing.T) {
 		{
 			name: "HTTPRoute with different name and namespace",
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "HTTPRoute",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "my-api-route",
 					Namespace: "production",
 				},
 			},
 			expected: map[string]string{
-				consts.GatewayOperatorManagedByLabel:          consts.HTTPRouteManagedByLabel,
+				consts.GatewayOperatorManagedByLabel:          "HTTPRoute",
 				consts.GatewayOperatorManagedByNameLabel:      "my-api-route",
 				consts.GatewayOperatorManagedByNamespaceLabel: "production",
 			},
@@ -50,13 +56,16 @@ func TestBuildLabels(t *testing.T) {
 		{
 			name: "HTTPRoute with empty name",
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "HTTPRoute",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "",
 					Namespace: "test-namespace",
 				},
 			},
 			expected: map[string]string{
-				consts.GatewayOperatorManagedByLabel:          consts.HTTPRouteManagedByLabel,
+				consts.GatewayOperatorManagedByLabel:          "HTTPRoute",
 				consts.GatewayOperatorManagedByNameLabel:      "",
 				consts.GatewayOperatorManagedByNamespaceLabel: "test-namespace",
 			},
@@ -65,13 +74,16 @@ func TestBuildLabels(t *testing.T) {
 		{
 			name: "HTTPRoute with empty namespace",
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "HTTPRoute",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-route",
 					Namespace: "",
 				},
 			},
 			expected: map[string]string{
-				consts.GatewayOperatorManagedByLabel:          consts.HTTPRouteManagedByLabel,
+				consts.GatewayOperatorManagedByLabel:          "HTTPRoute",
 				consts.GatewayOperatorManagedByNameLabel:      "test-route",
 				consts.GatewayOperatorManagedByNamespaceLabel: "",
 			},
@@ -80,13 +92,16 @@ func TestBuildLabels(t *testing.T) {
 		{
 			name: "HTTPRoute with hyphenated names",
 			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: metav1.TypeMeta{
+					Kind: "HTTPRoute",
+				},
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "multi-word-route-name",
 					Namespace: "my-app-namespace",
 				},
 			},
 			expected: map[string]string{
-				consts.GatewayOperatorManagedByLabel:          consts.HTTPRouteManagedByLabel,
+				consts.GatewayOperatorManagedByLabel:          "HTTPRoute",
 				consts.GatewayOperatorManagedByNameLabel:      "multi-word-route-name",
 				consts.GatewayOperatorManagedByNamespaceLabel: "my-app-namespace",
 			},
@@ -104,6 +119,9 @@ func TestBuildLabels(t *testing.T) {
 
 func TestBuildLabelsConstants(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: metav1.TypeMeta{
+			Kind: "HTTPRoute",
+		},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-route",
 			Namespace: "test-namespace",
@@ -115,7 +133,7 @@ func TestBuildLabelsConstants(t *testing.T) {
 	t.Run("includes managed-by label", func(t *testing.T) {
 		managedBy, exists := result[consts.GatewayOperatorManagedByLabel]
 		assert.True(t, exists, "should include managed-by label")
-		assert.Equal(t, consts.HTTPRouteManagedByLabel, managedBy, "should use correct managed-by value")
+		assert.Equal(t, "HTTPRoute", managedBy, "should use correct managed-by value")
 	})
 
 	t.Run("includes name label", func(t *testing.T) {

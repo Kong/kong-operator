@@ -5,163 +5,178 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/controller/hybridgateway/converter"
+	"github.com/kong/kong-operator/controller/hybridgateway/managedfields"
+	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
-	"github.com/kong/kong-operator/pkg/consts"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
-// ownedResourcesWithHits is a struct that holds an unstructured resource and the number of times it has been accessed.
-type ownedResourcesWithHits struct {
-	resources []unstructured.Unstructured
-	hits      int
-}
+const (
+	// FieldManager is the field manager name used for server-side apply operations
+	FieldManager = "gateway-operator"
+)
 
 // Translate performs the full translation process using the provided APIConverter.
 func Translate[t converter.RootObject](conv converter.APIConverter[t], ctx context.Context) error {
 	return conv.Translate()
 }
 
-// EnforceState ensures that the actual state of resources in the cluster matches the desired state
-// defined by the provided APIConverter. It creates missing resources, marks obsolete or duplicate
-// resources for deletion, and returns whether a requeue is needed along with any error encountered.
-// The function is generic over types implementing converter.RootObject.
+// EnforceState ensures that the desired state of Kubernetes resources, as provided by the APIConverter,
+// is reflected in the cluster. It attempts to create or update resources using server-side apply and
+// structured merge. The function returns requeue and stop flags to control reconciliation flow, and an error
+// for any unrecoverable or transient issues. Resources marked for deletion are skipped. Conflict errors
+// trigger a requeue for optimistic concurrency. All other errors are wrapped with resource kind and name for context.
 func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (requeue bool, stop bool, err error) {
-	store := conv.GetOutputStore(ctx)
-	rootObject := conv.GetRootObject()
-
-	resources, err := conv.ListExistingObjects(ctx)
-	if err != nil {
-		return false, false, err
+	// Get the desired state from the converter.
+	desiredObjects := conv.GetOutputStore(ctx)
+	if len(desiredObjects) == 0 {
+		logger.V(1).Info("No desired objects to enforce")
+		return false, false, nil
 	}
 
-	// Convert rootObject to client.Object using its pointer type
-	rootObjectPtr, ok := any(&rootObject).(client.Object)
-	if !ok {
-		return false, false, fmt.Errorf("failed to convert rootObject to client.Object")
-	}
+	for _, desired := range desiredObjects {
+		// Get the existing object by name from the API server.
+		existing := &unstructured.Unstructured{}
+		existing.SetGroupVersionKind(desired.GetObjectKind().GroupVersionKind())
 
-	// Create a map of the owned resources using the hash spec as index.
-	ownedResourceMap := mapOwnedResources(rootObjectPtr, resources)
-	for _, expectedObject := range store {
-		expectedHash := expectedObject.GetLabels()[consts.GatewayOperatorHashSpecLabel]
-		existingObject, found := ownedResourceMap[expectedHash]
-		if found {
-			existingObject.hits++
-		} else {
-			if err := cl.Create(ctx, &expectedObject); err != nil {
-				if errors.IsAlreadyExists(err) {
-					continue
+		err := cl.Get(ctx, client.ObjectKey{
+			Namespace: desired.GetNamespace(),
+			Name:      desired.GetName(),
+		}, existing)
+
+		namespacedNameDesired := client.ObjectKeyFromObject(&desired)
+		namespacedNameExisting := client.ObjectKeyFromObject(existing)
+
+		if err != nil {
+			if errors.IsNotFound(err) {
+				// Object doesn't exist, create it using server-side apply.
+				logger.V(1).Info("Creating new object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
+
+				// Set field manager for server-side apply
+				if err := cl.Patch(ctx, &desired, client.Apply, client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
+					if errors.IsConflict(err) {
+						return true, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+					}
+					return true, false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
+				continue
+			} else {
+				// Other error getting the object.
+				return true, false, fmt.Errorf("failed to get object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+			}
+		}
+
+		// Handle the case when resource are marked for deletion.
+		if !existing.GetDeletionTimestamp().IsZero() {
+			logger.V(1).Info("Existing object is marked for deletion, will not enforce state", "kind", existing.GetKind(), "obj", namespacedNameDesired)
+			continue
+		}
+
+		// Object exists, check if we need to update it.
+		managedFieldsObj, err := managedfields.ExtractAsUnstructured(existing, FieldManager, "")
+		if err != nil {
+			return true, false, fmt.Errorf("failed to extract managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
+		}
+		if managedFieldsObj == nil {
+			// No managed fields for our field manager, we should update.
+			logger.V(1).Info("No managed fields found for our field manager, will apply desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting)
+			if err := cl.Patch(ctx, &desired, client.Apply, client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
+				if errors.IsConflict(err) {
+					return true, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+				}
+				return true, false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 			}
 			continue
 		}
 
-		// TODO: ensure the spec is up to date. This print is meant
-		// to act as a placeholder for the actual update logic.
-		// https://github.com/Kong/kong-operator/issues/2171
-		logger.Info("TODO: ensure the spec is up to date for", "name", expectedObject.GetName())
-	}
-
-	resourcesToDelete := make([]unstructured.Unstructured, 0)
-	for _, v := range ownedResourceMap {
-		// mark for deletion all the resources with no hits.
-		if v.hits == 0 {
-			resourcesToDelete = append(resourcesToDelete, v.resources...)
+		// Convert desired resource to unstructured.
+		desiredU, err := utils.ToUnstructured(&desired, cl.Scheme())
+		if err != nil {
+			return true, false, fmt.Errorf("failed to convert to unstructured desired obj for kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 		}
-		// mark for deletion all the resources with duplicates
-		resourcesToDelete = append(resourcesToDelete, reduceDuplicates(v.resources, conv.Reduce(v.resources[0])...)...)
-	}
 
-	// delete all the resources marked for deletion
-	for _, resource := range resourcesToDelete {
-		if err := cl.Delete(ctx, &resource); err != nil {
-			return false, false, err
+		// Compare the two states.
+		compare, err := managedfields.Compare(managedFieldsObj, pruneDesiredObj(desiredU))
+		if err != nil {
+			return true, false, fmt.Errorf("failed to compare managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
 		}
-	}
-	if stop {
-		return false, true, nil
-	}
 
-	if err := conv.UpdateSharedRouteStatus(resources); err != nil {
-		return false, false, err
+		if compare.IsSame() {
+			logger.V(3).Info("No changes detected for obj", "kind", existing.GetKind(), "obj", namespacedNameExisting)
+		} else {
+			logger.Info("Changes detected for obj, applying desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting, "changes", compare.String())
+			// Changes detected, apply the desired state using server-side apply.
+			if err := cl.Patch(ctx, &desired, client.Apply, client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
+				if errors.IsConflict(err) {
+					return true, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+				}
+				return true, false, fmt.Errorf("failed to update object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+			}
+		}
 	}
 
 	return false, false, nil
 }
 
-// reduceDuplicates applies a series of reducer functions to a slice of unstructured resources,
-// identifying and collecting duplicates for deletion. It returns a slice of resources that should be deleted.
-func reduceDuplicates(resources []unstructured.Unstructured, fns ...utils.ReduceFunc) []unstructured.Unstructured {
-	resourcesToDelete := make([]unstructured.Unstructured, 0)
-	if len(resources) > 1 {
-		// we can safely assume that all the resources here share the same GVK, as
-		// they have the same spec hash. So, let's pass the first resource to the reducer as a placeholder.
-		for _, fn := range fns {
-			resourcesToDelete = append(resourcesToDelete, fn(resources)...)
-			resources = lo.Filter(resources, func(r unstructured.Unstructured, _ int) bool {
-				return !lo.ContainsBy(resourcesToDelete, func(item unstructured.Unstructured) bool {
-					return item.GetNamespace() == r.GetNamespace() && item.GetName() == r.GetName()
-				})
-			})
-		}
-	}
-	return resourcesToDelete
-}
+// CleanOrphanedResources deletes resources previously managed by the converter but no longer present in the desired output.
+func CleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr[t]](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) error {
+	desiredObjects := conv.GetOutputStore(ctx)
+	desiredSet := make(map[string]struct{})
+	expectedGVKs := conv.GetExpectedGVKs()
 
-// mapOwnedResources filters and groups a slice of unstructured Kubernetes resources by their owner reference and a specific hash label.
-// It returns a map where the key is the hash label and the value is a pointer to ownedResourcesWithHits containing the matching resources.
-func mapOwnedResources(owner client.Object, resources []unstructured.Unstructured) map[string]*ownedResourcesWithHits {
-	ownerRef := k8sutils.GenerateOwnerReferenceForObject(owner)
-	result := make(map[string]*ownedResourcesWithHits)
-	for _, r := range resources {
-		if !hasOwnerRef(r, ownerRef) {
-			continue
+	// Extract the root object for label selector.
+	rootObj := conv.GetRootObject()
+	var rootObjPtr tPtr
+	switch v := any(&rootObj).(type) {
+	case tPtr:
+		rootObjPtr = v
+	default:
+		return fmt.Errorf("failed to convert root object to pointer type: got %T, expected %T", &rootObj, rootObjPtr)
+	}
+
+	// Build a set of desired resource keys.
+	for _, obj := range desiredObjects {
+		key := fmt.Sprintf("%s/%s/%s", obj.GetNamespace(), obj.GetName(), obj.GetObjectKind().GroupVersionKind().String())
+		desiredSet[key] = struct{}{}
+	}
+
+	// For each expected GVK, list resources and delete orphans.
+	for _, gvk := range expectedGVKs {
+		list := &unstructured.UnstructuredList{}
+		list.SetGroupVersionKind(gvk)
+		selector := metadata.LabelSelectorForOwnedResources(rootObjPtr)
+
+		// List all resources of this GVK owned by the root object in the same namespace.
+		ns := rootObjPtr.GetNamespace()
+
+		if err := cl.List(ctx, list, selector, client.InNamespace(ns)); err != nil {
+			return fmt.Errorf("unable to list objects with gvk %s in namespace %s: %w", gvk.String(), ns, err)
 		}
-		labels := r.GetLabels()
-		hashLabel, ok := labels[consts.GatewayOperatorHashSpecLabel]
-		if len(labels) == 0 || !ok || hashLabel == "" {
-			continue
-		}
-		if result[hashLabel] == nil {
-			result[hashLabel] = &ownedResourcesWithHits{
-				resources: []unstructured.Unstructured{},
-				hits:      0,
+
+		for _, item := range list.Items {
+			key := fmt.Sprintf("%s/%s/%s", item.GetNamespace(), item.GetName(), gvk.String())
+			if _, found := desiredSet[key]; !found {
+				// Not in desired output, delete it.
+				logger.Info("Deleting orphaned resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+				if err := cl.Delete(ctx, &item); err != nil && !errors.IsNotFound(err) {
+					return fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
+				}
 			}
 		}
-		resources := result[hashLabel].resources
-		resources = append(resources, r)
-		result[hashLabel] = &ownedResourcesWithHits{
-			resources: resources,
-		}
 	}
-	return result
+	return nil
 }
 
-// hasOwnerRef checks if the given unstructured resource has an owner reference matching the specified OwnerReference.
-// Returns true if a matching owner reference is found, otherwise false.
-func hasOwnerRef(r unstructured.Unstructured, ownerRef metav1.OwnerReference) bool {
-	refs, found, err := unstructured.NestedSlice(r.Object, "metadata", "ownerReferences")
-	if !found || err != nil {
-		return false
-	}
-	for _, ref := range refs {
-		refMap, ok := ref.(map[string]any)
-		if !ok {
-			continue
-		}
-		if refMap["uid"] == string(ownerRef.UID) &&
-			refMap["kind"] == ownerRef.Kind &&
-			refMap["name"] == ownerRef.Name &&
-			refMap["apiVersion"] == ownerRef.APIVersion {
-			return true
-		}
-	}
-	return false
+// pruneDesiredObj removes fields that should not be compared when checking for differences.
+func pruneDesiredObj(obj unstructured.Unstructured) *unstructured.Unstructured {
+	u := obj.DeepCopy()
+	// Remove metadata fields such as name and namespace from the desired object that are not managed by the controller.
+	unstructured.RemoveNestedField(u.Object, "metadata", "name")
+	unstructured.RemoveNestedField(u.Object, "metadata", "namespace")
+	managedfields.PruneEmptyFields(u)
+	return u
 }

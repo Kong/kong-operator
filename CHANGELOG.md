@@ -47,6 +47,13 @@
   [#2308](https://github.com/Kong/kong-operator/pull/2308)
 - Hybrid Gateway: add support to HTTPRoute hostnames translation
   [#2346](https://github.com/Kong/kong-operator/pull/2346)
+  - Enforce state and cleanup for Kong entities
+  - Introduced managedfields package for structured merge diff, including compare, extract, prune, and schema utilities with comprehensive tests.
+  - Refactored builder and converter logic for KongRoute, KongService, KongTarget, KongUpstream, and HTTPRoute.
+  - Enhanced metadata labeling and reconciliation logic for HTTPRoute; added resource ownership tracking via watches.
+  - Added generated schema in zz_generated_schema.go for resource types.
+  - Improved and extended unit tests for hybridgateway components.
+  [2355](https://github.com/Kong/kong-operator/pull/2355)
 
 ### Changed
 
