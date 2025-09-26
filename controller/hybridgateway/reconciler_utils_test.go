@@ -3,433 +3,280 @@ package hybridgateway
 import (
 	"context"
 	"testing"
-	"time"
 
-	"github.com/samber/lo"
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/controller/hybridgateway/converter"
-	"github.com/kong/kong-operator/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
-	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/pkg/consts"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
-func TestGetOwnedResources(t *testing.T) {
-	sc := scheme.Get()
-	require.NoError(t, configurationv1alpha1.AddToScheme(sc))
+func newUnstructured(ns, name string, gvk schema.GroupVersionKind, labels map[string]string) unstructured.Unstructured {
+	u := unstructured.Unstructured{}
+	u.SetNamespace(ns)
+	u.SetName(name)
+	u.SetGroupVersionKind(gvk)
+	u.SetLabels(labels)
+	return u
+}
 
-	service := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Service",
-			APIVersion: "/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-kongservice",
-			Namespace: "test-namespace",
-			UID:       "12345",
-		},
-	}
-	testCases := []struct {
-		name                      string
-		owner                     *corev1.Service
-		existingObjects           []client.Object
-		hash                      string
-		expectedMapKeysWithLength map[string]int
+func TestPruneDesiredObj(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    map[string]any
+		wantMeta map[string]any
+		wantSpec map[string]any
 	}{
 		{
-			name:  "single owned resource",
-			owner: service,
-			existingObjects: []client.Object{
-				&configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "owned-resource-1",
-						Namespace: "test-namespace",
-					},
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Host: "test-host",
-						},
-					},
+			name: "removes name and namespace",
+			input: map[string]any{
+				"metadata": map[string]any{
+					"name":      "test-name",
+					"namespace": "test-namespace",
+					"labels":    map[string]any{"foo": "bar"},
 				},
+				"spec": map[string]any{"field": "value"},
 			},
-			expectedMapKeysWithLength: map[string]int{utils.Hash64(configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{Host: "test-host"}}): 1},
+			wantMeta: map[string]any{"labels": map[string]any{"foo": "bar"}},
+			wantSpec: map[string]any{"field": "value"},
 		},
 		{
-			name:  "multiple owned resources with different specs",
-			owner: service,
-			existingObjects: []client.Object{
-				&configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "owned-resource-1",
-						Namespace: "test-namespace",
-					},
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Host: "test-host-1",
-						},
-					},
-				},
-				&configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "owned-resource-2",
-						Namespace: "test-namespace",
-					},
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Host: "test-host-2",
-						},
-					},
-				},
+			name: "prunes empty metadata",
+			input: map[string]any{
+				"metadata": map[string]any{},
 			},
-			expectedMapKeysWithLength: map[string]int{
-				utils.Hash64(configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{Host: "test-host-1"}}): 1,
-				utils.Hash64(configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{Host: "test-host-2"}}): 1,
-			},
-		},
-		{
-			name:  "resource in different namespace is ignored",
-			owner: service,
-			existingObjects: []client.Object{
-				&configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "owned-resource-3",
-						Namespace: "other-namespace",
-					},
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Host: "test-host",
-						},
-					},
-				},
-			},
-			expectedMapKeysWithLength: map[string]int{},
-		},
-		{
-			name:  "multiple resources with identical specs",
-			owner: service,
-			existingObjects: []client.Object{
-				&configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "owned-resource-4a",
-						Namespace: "test-namespace",
-					},
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Host: "same-host",
-						},
-					},
-				},
-				&configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "owned-resource-4b",
-						Namespace: "test-namespace",
-					},
-					Spec: configurationv1alpha1.KongServiceSpec{
-						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
-							Host: "same-host",
-						},
-					},
-				},
-			},
-			expectedMapKeysWithLength: map[string]int{
-				utils.Hash64(configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{Host: "same-host"}}): 2,
-			},
+			wantMeta: nil,
+			wantSpec: nil,
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			for _, obj := range tc.existingObjects {
-				ownerRef := k8sutils.GenerateOwnerReferenceForObject(tc.owner)
-				obj.SetOwnerReferences([]metav1.OwnerReference{ownerRef})
-				kongService := configurationv1alpha1.KongService{}
-				assert.NoError(t, sc.Convert(obj, &kongService, nil))
-				labels := map[string]string{
-					consts.GatewayOperatorManagedByLabel:          consts.ServiceManagedByLabel,
-					consts.GatewayOperatorManagedByNameLabel:      tc.owner.Name,
-					consts.GatewayOperatorManagedByNamespaceLabel: tc.owner.Namespace,
-					consts.GatewayOperatorHashSpecLabel:           utils.Hash64(kongService.Spec),
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			obj := unstructured.Unstructured{Object: tt.input}
+			u := pruneDesiredObj(obj)
+			metadata, hasMeta := u.Object["metadata"]
+			if tt.wantMeta == nil {
+				assert.False(t, hasMeta, "metadata should be missing or nil")
+			} else {
+				metaMap, ok := metadata.(map[string]any)
+				assert.True(t, ok, "metadata should be a map")
+				assert.Equal(t, tt.wantMeta, metaMap)
+			}
+			if tt.wantSpec != nil {
+				assert.Equal(t, tt.wantSpec, u.Object["spec"])
+			} else {
+				_, hasSpec := u.Object["spec"]
+				assert.False(t, hasSpec)
+			}
+		})
+	}
+}
+
+func TestCleanOrphanedResources(t *testing.T) {
+	gvks := []schema.GroupVersionKind{
+		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"},
+		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"},
+	}
+	root := &gwtypes.HTTPRoute{}
+	root.SetName("httproute-owner")
+	root.SetNamespace("ns")
+	root.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1alpha2", Kind: "HTTPRoute"})
+	ownerLabels := metadata.BuildLabels(root)
+
+	tests := []struct {
+		name         string
+		desiredNames map[schema.GroupVersionKind][]string
+		orphanNames  map[schema.GroupVersionKind][]string
+		wantNames    map[schema.GroupVersionKind][]string
+		gvks         []schema.GroupVersionKind
+	}{
+		{
+			name:         "KongRoute orphans cleaned",
+			gvks:         []schema.GroupVersionKind{gvks[0]},
+			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
+			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {"route2"}},
+			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
+		},
+		{
+			name:         "KongService orphans cleaned",
+			gvks:         []schema.GroupVersionKind{gvks[1]},
+			desiredNames: map[schema.GroupVersionKind][]string{gvks[1]: {"service1"}},
+			orphanNames:  map[schema.GroupVersionKind][]string{gvks[1]: {"service2"}},
+			wantNames:    map[schema.GroupVersionKind][]string{gvks[1]: {"service1"}},
+		},
+		{
+			name:         "No orphans present",
+			gvks:         []schema.GroupVersionKind{gvks[0]},
+			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
+			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {}},
+			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
+		},
+		{
+			name:         "Multiple orphans and multiple desired resources",
+			gvks:         []schema.GroupVersionKind{gvks[0]},
+			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2", "route3"}},
+			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {"route4", "route5"}},
+			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2", "route3"}},
+		},
+		{
+			name:         "No desired, only orphans",
+			gvks:         []schema.GroupVersionKind{gvks[0]},
+			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {}},
+			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2"}},
+			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {}},
+		},
+		{
+			name:         "Desired and orphan have overlapping names",
+			gvks:         []schema.GroupVersionKind{gvks[0]},
+			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2"}},
+			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {"route2", "route3"}},
+			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2"}},
+		},
+		{
+			name:         "Orphans in different namespace are not deleted",
+			gvks:         []schema.GroupVersionKind{gvks[0]},
+			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
+			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {"route2"}},
+			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2"}}, // route2 is in a different namespace, should not be deleted
+		},
+		{
+			name:         "Orphan with label mismatch is not deleted",
+			gvks:         []schema.GroupVersionKind{gvks[0]},
+			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
+			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {"route2"}},
+			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2"}}, // route2 has wrong labels, should not be deleted
+		},
+		{
+			name: "Multiple GVKs in one test",
+			gvks: []schema.GroupVersionKind{gvks[0], gvks[1]},
+			desiredNames: map[schema.GroupVersionKind][]string{
+				gvks[0]: {"routeA"},
+				gvks[1]: {"serviceA"},
+			},
+			orphanNames: map[schema.GroupVersionKind][]string{
+				gvks[0]: {"routeB"},
+				gvks[1]: {"serviceB"},
+			},
+			wantNames: map[schema.GroupVersionKind][]string{
+				gvks[0]: {"routeA"},
+				gvks[1]: {"serviceA"},
+			},
+		},
+		{
+			name:         "No resources at all",
+			gvks:         []schema.GroupVersionKind{gvks[0]},
+			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {}},
+			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {}},
+			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {}},
+		},
+		{
+			name:         "Orphan with extra fields is deleted",
+			gvks:         []schema.GroupVersionKind{gvks[0]},
+			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
+			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {"route2"}},
+			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var desired, orphans []unstructured.Unstructured
+			for _, gvk := range tt.gvks {
+				desiredSet := make(map[string]struct{})
+				for _, name := range tt.desiredNames[gvk] {
+					desired = append(desired, newUnstructured("ns", name, gvk, ownerLabels))
+					desiredSet[name] = struct{}{}
 				}
-				obj.SetLabels(labels)
+				for _, name := range tt.orphanNames[gvk] {
+					ns := "ns"
+					labels := ownerLabels
+					extraFields := false
+					if tt.name == "Orphans in different namespace are not deleted" {
+						ns = "other-ns"
+					}
+					if tt.name == "Orphan with label mismatch is not deleted" {
+						labels = map[string]string{"unrelated": "true"}
+					}
+					if tt.name == "Orphan with extra fields is deleted" && name == "route2" {
+						extraFields = true
+					}
+					if _, exists := desiredSet[name]; !exists {
+						obj := newUnstructured(ns, name, gvk, labels)
+						if extraFields {
+							obj.SetAnnotations(map[string]string{"extra": "field"})
+						}
+						orphans = append(orphans, obj)
+					}
+				}
 			}
-			cl := fake.NewClientBuilder().
-				WithScheme(sc).
-				WithObjects(tc.owner).
-				WithObjects(tc.existingObjects...).
-				Build()
-			sharedStatusMap := route.NewSharedStatusMap()
-			conv, err := converter.NewConverter(*tc.owner, cl, sharedStatusMap)
+			var allObjs []client.Object
+			for i := range desired {
+				allObjs = append(allObjs, &desired[i])
+			}
+			for i := range orphans {
+				allObjs = append(allObjs, &orphans[i])
+			}
+			scheme := runtime.NewScheme()
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(allObjs...).Build()
+			fakeConv := &fakeHTTPRouteConverter{
+				desired: desired,
+				gvks:    tt.gvks,
+				root:    *root,
+			}
+			logger := logr.Discard()
+			err := CleanOrphanedResources(context.Background(), cl, logger, fakeConv)
 			assert.NoError(t, err)
-			objects, err := conv.ListExistingObjects(context.Background())
-			assert.NoError(t, err)
-			resourceMap := mapOwnedResources(tc.owner, objects)
-			require.ElementsMatch(t, lo.Keys(tc.expectedMapKeysWithLength), lo.Keys(resourceMap))
-			for n, objs := range resourceMap {
-				require.Equal(t, tc.expectedMapKeysWithLength[n], len(objs.resources))
+			for _, gvk := range tt.gvks {
+				list := &unstructured.UnstructuredList{}
+				list.SetGroupVersionKind(gvk)
+				err = cl.List(context.Background(), list)
+				assert.NoError(t, err)
+				var nsNames, otherNsNames []string
+				for _, item := range list.Items {
+					if item.GetNamespace() == "ns" {
+						nsNames = append(nsNames, item.GetName())
+					} else if item.GetNamespace() == "other-ns" {
+						otherNsNames = append(otherNsNames, item.GetName())
+					}
+				}
+				switch tt.name {
+				case "Orphans in different namespace are not deleted":
+					assert.ElementsMatch(t, tt.wantNames[gvk][:1], nsNames)
+					assert.ElementsMatch(t, tt.wantNames[gvk][1:], otherNsNames)
+				case "Orphan with label mismatch is not deleted":
+					assert.ElementsMatch(t, tt.wantNames[gvk], nsNames)
+				default:
+					assert.ElementsMatch(t, tt.wantNames[gvk], nsNames)
+				}
 			}
 		})
 	}
 }
 
-func TestHasOwnerRef(t *testing.T) {
-	ownerRef := metav1.OwnerReference{
-		APIVersion: "v1",
-		Kind:       "Service",
-		Name:       "test-owner",
-		UID:        "12345",
-	}
+// Minimal fake converter for HTTPRoute
 
-	makeUnstructuredWithOwnerRefs := func(ownerRefs []metav1.OwnerReference) unstructured.Unstructured {
-		obj := unstructured.Unstructured{}
-		obj.SetAPIVersion("v1")
-		obj.SetKind("Service")
-		obj.SetName("test-resource")
-		obj.SetNamespace("test-namespace")
-		refs := make([]map[string]any, len(ownerRefs))
-		for i, ref := range ownerRefs {
-			refs[i] = map[string]any{
-				"apiVersion": ref.APIVersion,
-				"kind":       ref.Kind,
-				"name":       ref.Name,
-				"uid":        string(ref.UID),
-			}
-		}
-		if len(refs) > 0 {
-			_ = unstructured.SetNestedSlice(obj.Object, lo.ToAnySlice(refs), "metadata", "ownerReferences")
-		}
-		return obj
-	}
-
-	t.Run("returns true when ownerRef matches", func(t *testing.T) {
-		u := makeUnstructuredWithOwnerRefs([]metav1.OwnerReference{ownerRef})
-		assert.True(t, hasOwnerRef(u, ownerRef))
-	})
-
-	t.Run("returns false when ownerRef does not match", func(t *testing.T) {
-		otherRef := metav1.OwnerReference{
-			APIVersion: "v1",
-			Kind:       "Service",
-			Name:       "other-owner",
-			UID:        "54321",
-		}
-		u := makeUnstructuredWithOwnerRefs([]metav1.OwnerReference{otherRef})
-		assert.False(t, hasOwnerRef(u, ownerRef))
-	})
-
-	t.Run("returns true when one of multiple ownerRefs matches", func(t *testing.T) {
-		otherRef := metav1.OwnerReference{
-			APIVersion: "v1",
-			Kind:       "Service",
-			Name:       "other-owner",
-			UID:        "54321",
-		}
-		u := makeUnstructuredWithOwnerRefs([]metav1.OwnerReference{otherRef, ownerRef})
-		assert.True(t, hasOwnerRef(u, ownerRef))
-	})
-
-	t.Run("returns false when no ownerReferences present", func(t *testing.T) {
-		u := unstructured.Unstructured{}
-		u.SetAPIVersion("v1")
-		u.SetKind("Service")
-		u.SetName("test-resource")
-		u.SetNamespace("test-namespace")
-		assert.False(t, hasOwnerRef(u, ownerRef))
-	})
-
-	t.Run("returns false when ownerReferences is not a slice", func(t *testing.T) {
-		u := unstructured.Unstructured{}
-		u.SetAPIVersion("v1")
-		u.SetKind("Service")
-		u.SetName("test-resource")
-		u.SetNamespace("test-namespace")
-		_ = unstructured.SetNestedField(u.Object, "not-a-slice", "metadata", "ownerReferences")
-		assert.False(t, hasOwnerRef(u, ownerRef))
-	})
-
-	t.Run("returns false when ownerReferences slice contains non-map entries", func(t *testing.T) {
-		u := unstructured.Unstructured{}
-		u.SetAPIVersion("v1")
-		u.SetKind("Service")
-		u.SetName("test-resource")
-		u.SetNamespace("test-namespace")
-		_ = unstructured.SetNestedSlice(u.Object, []any{"not-a-map"}, "metadata", "ownerReferences")
-		assert.False(t, hasOwnerRef(u, ownerRef))
-	})
-
-	t.Run("returns false when ownerReferences slice is empty", func(t *testing.T) {
-		u := makeUnstructuredWithOwnerRefs([]metav1.OwnerReference{})
-		assert.False(t, hasOwnerRef(u, ownerRef))
-	})
+type fakeHTTPRouteConverter struct {
+	desired []unstructured.Unstructured
+	gvks    []schema.GroupVersionKind
+	root    gwtypes.HTTPRoute
 }
 
-func TestReduce(t *testing.T) {
-	sharedStatusMap := route.NewSharedStatusMap()
-	serviceConverter, err := converter.NewConverter(corev1.Service{}, nil, sharedStatusMap)
-	require.NoError(t, err)
-	now := time.Now()
-
-	testCases := []struct {
-		name                      string
-		kind                      string
-		kongServices              []unstructured.Unstructured
-		expectedResourcesTodelete []string
-	}{
-		{
-			name: "all unprogrammed, keep youngest",
-			kind: "KongService",
-			kongServices: []unstructured.Unstructured{
-				func() unstructured.Unstructured {
-					usvc := unstructured.Unstructured{}
-					usvc.SetKind("KongService")
-					usvc.SetName("svc-1")
-					usvc.SetCreationTimestamp(metav1.Time{Time: now.Add(-10 * time.Minute)})
-					return usvc
-				}(),
-				func() unstructured.Unstructured {
-					usvc := unstructured.Unstructured{}
-					usvc.SetKind("KongService")
-					usvc.SetName("svc-2")
-					usvc.SetCreationTimestamp(metav1.Time{Time: now.Add(-5 * time.Minute)})
-					return usvc
-				}(),
-				func() unstructured.Unstructured {
-					usvc := unstructured.Unstructured{}
-					usvc.SetKind("KongService")
-					usvc.SetName("svc-3")
-					usvc.SetCreationTimestamp(metav1.Time{Time: now})
-					return usvc
-				}(),
-			},
-			expectedResourcesTodelete: []string{"svc-1", "svc-2"},
-		},
-		{
-			name: "all programmed, keep youngest programmed",
-			kind: "KongService",
-			kongServices: []unstructured.Unstructured{
-				func() unstructured.Unstructured {
-					usvc := unstructured.Unstructured{}
-					usvc.SetKind("KongService")
-					usvc.SetName("svc-1")
-					usvc.SetCreationTimestamp(metav1.Time{Time: now.Add(-10 * time.Minute)})
-					usvc.Object["status"] = map[string]any{
-						"conditions": []any{
-							map[string]any{
-								"type":   "Programmed",
-								"status": "True",
-							},
-						},
-					}
-					return usvc
-				}(),
-				func() unstructured.Unstructured {
-					usvc := unstructured.Unstructured{}
-					usvc.SetKind("KongService")
-					usvc.SetName("svc-2")
-					usvc.SetCreationTimestamp(metav1.Time{Time: now.Add(-5 * time.Minute)})
-					usvc.Object["status"] = map[string]any{
-						"conditions": []any{
-							map[string]any{
-								"type":   "Programmed",
-								"status": "True",
-							},
-						},
-					}
-					return usvc
-				}(),
-				func() unstructured.Unstructured {
-					usvc := unstructured.Unstructured{}
-					usvc.SetKind("KongService")
-					usvc.SetName("svc-3")
-					usvc.SetCreationTimestamp(metav1.Time{Time: now})
-					usvc.Object["status"] = map[string]any{
-						"conditions": []any{
-							map[string]any{
-								"type":   "Programmed",
-								"status": "True",
-							},
-						},
-					}
-					return usvc
-				}(),
-			},
-			expectedResourcesTodelete: []string{"svc-1", "svc-2"},
-		},
-		{
-			name: "single resource, nothing to delete",
-			kind: "KongService",
-			kongServices: []unstructured.Unstructured{
-				func() unstructured.Unstructured {
-					usvc := unstructured.Unstructured{}
-					usvc.SetKind("KongService")
-					usvc.SetName("svc-1")
-					usvc.SetCreationTimestamp(metav1.Time{Time: now})
-					return usvc
-				}(),
-			},
-			expectedResourcesTodelete: []string{},
-		},
-		{
-			name:                      "empty input, nothing to delete",
-			kind:                      "KongService",
-			kongServices:              []unstructured.Unstructured{},
-			expectedResourcesTodelete: []string{},
-		},
-		{
-			name: "mixed programmed and not programmed, keep youngest programmed",
-			kind: "KongService",
-			kongServices: []unstructured.Unstructured{
-				func() unstructured.Unstructured {
-					usvc := unstructured.Unstructured{}
-					usvc.SetKind("KongService")
-					usvc.SetName("svc-1")
-					usvc.SetCreationTimestamp(metav1.Time{Time: now.Add(-10 * time.Minute)})
-					return usvc
-				}(),
-				func() unstructured.Unstructured {
-					usvc := unstructured.Unstructured{}
-					usvc.SetKind("KongService")
-					usvc.SetName("svc-2")
-					usvc.SetCreationTimestamp(metav1.Time{Time: now.Add(-5 * time.Minute)})
-					usvc.Object["status"] = map[string]any{
-						"conditions": []any{
-							map[string]any{
-								"type":   "Programmed",
-								"status": "True",
-							},
-						},
-					}
-					return usvc
-				}(),
-				func() unstructured.Unstructured {
-					usvc := unstructured.Unstructured{}
-					usvc.SetKind("KongService")
-					usvc.SetName("svc-3")
-					usvc.SetCreationTimestamp(metav1.Time{Time: now})
-					return usvc
-				}(),
-			},
-			expectedResourcesTodelete: []string{"svc-1", "svc-3"},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			obj := unstructured.Unstructured{}
-			obj.SetKind(tc.kind)
-			var resourcesToDelete []string
-			for _, obj := range reduceDuplicates(tc.kongServices, serviceConverter.Reduce(obj)...) {
-				resourcesToDelete = append(resourcesToDelete, obj.GetName())
-			}
-			require.ElementsMatch(t, tc.expectedResourcesTodelete, resourcesToDelete)
-		})
-	}
+func (f *fakeHTTPRouteConverter) GetOutputStore(ctx context.Context) []unstructured.Unstructured {
+	return f.desired
+}
+func (f *fakeHTTPRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind              { return f.gvks }
+func (f *fakeHTTPRouteConverter) GetRootObject() gwtypes.HTTPRoute                        { return f.root }
+func (f *fakeHTTPRouteConverter) Translate() error                                        { return nil }
+func (f *fakeHTTPRouteConverter) Reduce(obj unstructured.Unstructured) []utils.ReduceFunc { return nil }
+func (f *fakeHTTPRouteConverter) ListExistingObjects(ctx context.Context) ([]unstructured.Unstructured, error) {
+	return nil, nil
+}
+func (f *fakeHTTPRouteConverter) UpdateSharedRouteStatus([]unstructured.Unstructured) error {
+	return nil
 }

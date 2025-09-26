@@ -72,7 +72,7 @@ func (b *KongUpstreamBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongUpstreamB
 		b.errors = append(b.errors, fmt.Errorf("owner cannot be nil"))
 		return b
 	}
-	if err := controllerutil.SetOwnerReference(owner, &b.upstream, scheme.Get(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
+	if err := controllerutil.SetControllerReference(owner, &b.upstream, scheme.Get(), controllerutil.WithBlockOwnerDeletion(true)); err != nil {
 		b.errors = append(b.errors, fmt.Errorf("failed to set owner reference: %w", err))
 	}
 	return b

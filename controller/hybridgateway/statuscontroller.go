@@ -3,7 +3,6 @@ package hybridgateway
 import (
 	"context"
 	"fmt"
-	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -71,5 +70,5 @@ func (r *RouteStatusReconciler[t, tPtr]) Reconcile(ctx context.Context, req ctrl
 	}
 
 	// TODO: workaround for not having watches in place yet
-	return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+	return ctrl.Result{}, nil
 }
