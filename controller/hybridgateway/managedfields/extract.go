@@ -45,13 +45,12 @@ func ExtractAsUnstructured(obj runtime.Object, fieldManager string, subresource 
 		return nil, fmt.Errorf("unable to convert managed fields for %s to unstructured, expected map, got %T", fieldManager, u)
 	}
 
-	// TODO(alacuku): Properly set the type meta on the returned object inferring from the input object and scheme.
-	// set the type meta manually if it doesn't exist to avoid missing kind errors
-	// when decoding from unstructured JSON
-	if _, ok := m["kind"]; !ok && obj.GetObjectKind().GroupVersionKind().Kind != "" {
-		m["kind"] = obj.GetObjectKind().GroupVersionKind().Kind
-		m["apiVersion"] = obj.GetObjectKind().GroupVersionKind().GroupVersion().String()
-	}
+	// We set the same gvk for the object that holds the managed fields.
+	// We are sure that the gvk is set otherwise the function will error in the
+	// previous steps.
+	gvk := obj.GetObjectKind().GroupVersionKind()
+	m["apiVersion"] = gvk.GroupVersion().String()
+	m["kind"] = gvk.Kind
 
 	return &unstructured.Unstructured{
 		Object: m,
