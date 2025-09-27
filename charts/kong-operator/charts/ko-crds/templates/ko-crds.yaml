@@ -51,7 +51,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: aigateways.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -594,7 +594,7 @@ metadata:
 {{ end }}
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: controlplanes.gateway-operator.konghq.com
 spec:
 {{ if .Values.global.webhooks.conversion.enabled }}
@@ -9565,7 +9565,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: dataplanemetricsextensions.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -9717,7 +9717,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: dataplanes.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -19277,7 +19277,7 @@ metadata:
 {{ end }}
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: gatewayconfigurations.gateway-operator.konghq.com
 spec:
 {{ if .Values.global.webhooks.conversion.enabled }}
@@ -46733,7 +46733,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: ingress-controller
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: ingressclassparameterses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -46794,7 +46794,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongcacertificates.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -47048,7 +47048,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongcertificates.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -47319,7 +47319,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: ingress-controller
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongclusterplugins.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -47630,7 +47630,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongconsumergroups.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -47885,7 +47885,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongconsumers.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -48167,7 +48167,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongcredentialacls.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -48360,7 +48360,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongcredentialapikeys.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -48553,7 +48553,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongcredentialbasicauths.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -48750,7 +48750,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongcredentialhmacs.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -48949,7 +48949,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongcredentialjwts.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -49172,7 +49172,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: ingress-controller
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongcustomentities.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -49367,7 +49367,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongdataplaneclientcertificates.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -49619,7 +49619,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongkeys.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -49948,7 +49948,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongkeysets.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -50201,7 +50201,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: konglicenses.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -50404,7 +50404,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongpluginbindings.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -50817,7 +50817,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongplugininstallations.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com
@@ -51002,7 +51002,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongplugins.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -51307,7 +51307,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongroutes.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -51728,7 +51728,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongservices.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -52043,7 +52043,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongsnis.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -52234,7 +52234,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongtargets.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -52431,7 +52431,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   labels:
     gateway.networking.k8s.io/policy: direct
   name: kongupstreampolicies.configuration.konghq.com
@@ -53156,7 +53156,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongupstreams.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -53325,6 +53325,7 @@ spec:
                   as hash input. Only required when `hash_on` is set to `uri_capture`.
                 type: string
               healthchecks:
+                description: Healthchecks - The array of healthchecks.
                 properties:
                   active:
                     properties:
@@ -53635,7 +53636,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongvaults.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -53929,7 +53930,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: konnectapiauthconfigurations.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -54137,7 +54138,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: konnectcloudgatewaydataplanegroupconfigurations.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -54605,7 +54606,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: konnectcloudgatewaynetworks.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -54848,7 +54849,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: konnectcloudgatewaytransitgateways.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -55239,7 +55240,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: konnectextensions.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -56023,7 +56024,7 @@ metadata:
 {{ end }}
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: konnectgatewaycontrolplanes.konnect.konghq.com
 spec:
 {{ if .Values.global.webhooks.conversion.enabled }}
@@ -56738,7 +56739,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: watchnamespacegrants.gateway-operator.konghq.com
 spec:
   group: gateway-operator.konghq.com

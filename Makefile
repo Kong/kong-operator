@@ -307,7 +307,7 @@ verify.generators: verify.repo generate verify.diff
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.gateway-api-urls generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.cli-arguments-docs generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix generate.format
+generate: generate.gateway-api-urls generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.cli-arguments-docs generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix generate.format
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
