@@ -19,6 +19,20 @@ func WithBlueGreenController(enabled bool) ControllerConfigOption {
 	}
 }
 
+// WithControlPlaneConfigurationDumpEnabled turns on the ControlPlane configuration diagnostics HTTP server
+// (serves /debug/controlplanes/... endpoints) in the test controller manager process.
+func WithControlPlaneConfigurationDumpEnabled(enabled bool) ControllerConfigOption {
+	return func(cfg *manager.Config) {
+		cfg.ControlPlaneConfigurationDumpEnabled = enabled
+		// Ensure the diagnostics server binds to a predictable port during tests
+		// so test cases can query it reliably. The CLI normally sets a default
+		// via flags, but tests bypass the CLI and construct the config directly.
+		if enabled && cfg.ControlPlaneConfigurationDumpAddr == "" {
+			cfg.ControlPlaneConfigurationDumpAddr = manager.DefaultControlPlaneConfigurationDumpAddr
+		}
+	}
+}
+
 // DefaultControllerConfigForTests returns a default configuration for the controller manager used in tests.
 // It can be adjusted by overriding arbitrary fields in the returned config or by providing config options.
 func DefaultControllerConfigForTests(opts ...ControllerConfigOption) manager.Config {

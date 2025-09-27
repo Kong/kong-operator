@@ -67,7 +67,10 @@ func TestMain(m *testing.M) {
 	helpers.SetDefaultDataPlaneImage(consts.DefaultDataPlaneImage)
 	helpers.SetDefaultDataPlaneBaseImage(consts.DefaultDataPlaneBaseImage)
 
-	cfg := testutils.DefaultControllerConfigForTests(testutils.WithBlueGreenController(blueGreenController))
+	cfg := testutils.DefaultControllerConfigForTests(
+		testutils.WithBlueGreenController(blueGreenController),
+		testutils.WithControlPlaneConfigurationDumpEnabled(true),
+	)
 
 	var code int
 	defer func() {
