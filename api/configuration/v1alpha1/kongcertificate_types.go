@@ -34,12 +34,18 @@ type KongCertificate struct {
 
 // KongCertificateSpec contains the specification for the KongCertificate.
 // +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
+// +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongCertificateSpec struct {
 	// ControlPlaneRef references the Konnect Control Plane that this KongCertificate should be created in.
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
 	// +required
 	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
+
+	// Adopt is the options for adopting a certificate from an existing certificate in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
 
 	KongCertificateAPISpec `json:",inline"`
 }

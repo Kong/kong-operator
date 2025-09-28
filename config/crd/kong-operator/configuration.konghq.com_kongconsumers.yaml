@@ -78,6 +78,39 @@ spec:
           spec:
             description: KongConsumerSpec defines the specification of the KongConsumer.
             properties:
+              adopt:
+                description: Adopt is the options for adopting a consumer from an
+                  existing consumer in Konnect.
+                properties:
+                  from:
+                    description: |-
+                      From is the source of the entity to adopt from.
+                      Now 'konnect' is supported.
+                    enum:
+                    - konnect
+                    type: string
+                  konnect:
+                    description: |-
+                      Konnect is the options for adopting the entity from Konnect.
+                      Required when from == 'konnect'.
+                    properties:
+                      id:
+                        description: ID is the Konnect ID of the entity.
+                        type: string
+                    required:
+                    - id
+                    type: object
+                required:
+                - from
+                type: object
+                x-kubernetes-validations:
+                - message: '''from''(adopt source) is immutable'
+                  rule: self.from == oldSelf.from
+                - message: Must specify Konnect options when from='konnect'
+                  rule: 'self.from == ''konnect'' ? has(self.konnect) : true'
+                - message: konnect.id is immutable
+                  rule: 'has(self.konnect) ? (self.konnect.id == oldSelf.konnect.id)
+                    : true'
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a ControlPlane this
                   Consumer is associated with.
@@ -159,6 +192,13 @@ spec:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
             type: object
+            x-kubernetes-validations:
+            - message: spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef
+              rule: '!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type
+                == ''konnectNamespacedRef'')'
+            - message: Cannot set or unset spec.adopt in updates
+              rule: (has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt)
+                && !has(self.adopt))
           status:
             default:
               conditions:
