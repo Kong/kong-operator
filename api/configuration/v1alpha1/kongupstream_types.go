@@ -58,6 +58,10 @@ type KongUpstreamSpec struct {
 	// +required
 	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
+	// Adopt is the options for adopting an upstream from an existing upstream in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
+
 	KongUpstreamAPISpec `json:",inline"`
 }
 
@@ -73,6 +77,8 @@ type KongUpstreamSpec struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'header' || has(self.hash_on_header))", message="hash_on_header is required when hash_on is set to `header`."
 // +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'query_arg' || has(self.hash_on_query_arg))", message="hash_on_query_arg is required when `hash_on` is set to `query_arg`."
 // +kubebuilder:validation:XValidation:rule="!has(self.hash_on) || (self.hash_on != 'uri_capture' || has(self.hash_on_uri_capture))", message="hash_on_uri_capture is required when `hash_on` is set to `uri_capture`."
+// +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongUpstreamAPISpec struct {
 	// Which load balancing algorithm to use.

@@ -58,6 +58,8 @@ type KongVault struct {
 }
 
 // KongVaultSpec defines specification of a custom Kong vault.
+// +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongVaultSpec struct {
 	// Backend is the type of the backend storing the secrets in the vault.
@@ -79,6 +81,10 @@ type KongVaultSpec struct {
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
 	// +optional
 	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+
+	// Adopt is the options for adopting a vault from an existing vault in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
 }
 
 // KongVaultStatus represents the current status of the KongVault resource.

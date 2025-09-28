@@ -50,13 +50,18 @@ type KongCredentialAPIKey struct {
 	Status KongCredentialAPIKeyStatus `json:"status,omitempty"`
 }
 
-// KongCredentialAPIKeySpec defines specification of a Kong Route.
+// KongCredentialAPIKeySpec defines specification of a Kong API key credential.
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongCredentialAPIKeySpec struct {
 	// ConsumerRef is a reference to a Consumer this KongCredentialAPIKey is associated with.
 	//
 	// +required
 	ConsumerRef corev1.LocalObjectReference `json:"consumerRef"`
+
+	// Adopt is the options for adopting an API key credential from an existing API key in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
 
 	KongCredentialAPIKeyAPISpec `json:",inline"`
 }

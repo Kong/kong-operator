@@ -50,6 +50,8 @@ type KongConsumerGroup struct {
 }
 
 // KongConsumerGroupSpec defines the desired state of KongConsumerGroup.
+// +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 type KongConsumerGroupSpec struct {
 	// Name is the name of the ConsumerGroup in Kong.
 	Name string `json:"name,omitempty"`
@@ -58,6 +60,10 @@ type KongConsumerGroupSpec struct {
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
 	// +optional
 	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+
+	// Adopt is the options for adopting a consumer group from an existing consumer group in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
 
 	// Tags is an optional set of tags applied to the ConsumerGroup.
 	Tags commonv1alpha1.Tags `json:"tags,omitempty"`

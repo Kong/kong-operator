@@ -47,6 +47,7 @@ type KongSNI struct {
 }
 
 // KongSNIAPISpec defines the spec of an SNI.
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongSNIAPISpec struct {
 	// Name is the name of the SNI. Required and must be a host or wildcard host.
@@ -62,6 +63,11 @@ type KongSNIAPISpec struct {
 type KongSNISpec struct {
 	// CertificateRef is the reference to the certificate to which the KongSNI is attached.
 	CertificateRef commonv1alpha1.NameRef `json:"certificateRef"`
+
+	// Adopt is the options for adopting an SNI from an existing SNI in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
+
 	// KongSNIAPISpec are the attributes of the Kong SNI itself.
 	KongSNIAPISpec `json:",inline"`
 }
