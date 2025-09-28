@@ -220,7 +220,7 @@ func (msm *Manager) Start(ctx context.Context) error {
 				switch sun.Action {
 				case add:
 					if err := msm.enableMetricsScraperForControlPlanesDataPlane(ctx, sun.ControlPlane); err != nil {
-						log.Error(msm.logger, err, "failed to enable metrics scraper for ControlPlane", sun.ControlPlane)
+						log.Error(msm.logger, err, "failed to enable metrics scraper for ControlPlane", "controlplane", sun.ControlPlane)
 					}
 				case remove:
 					msm.RemoveForControlPlaneNN(sun.ControlPlaneNN)
@@ -341,7 +341,7 @@ func (msm *Manager) RemoveForControlPlaneNN(cpNN types.NamespacedName) {
 
 	delete(msm.pipelines, dpUID)
 	delete(msm.cpNNToDpUID, cpNN)
-	log.Debug(msm.logger, "removed metrics scraper for ControlPlane", cpNN, "dataplane_uid", dpUID)
+	log.Debug(msm.logger, "removed metrics scraper for ControlPlane", "controlplane", cpNN, "dataplane_uid", dpUID)
 }
 
 func (msm *Manager) enableMetricsScraperForControlPlanesDataPlane(
