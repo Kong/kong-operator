@@ -286,7 +286,7 @@ func Run(
 	}
 	if cfg.SecretLabelSelector != "" {
 		caMgr.SecretLabels = map[string]string{
-			cfg.SecretLabelSelector: "true",
+			cfg.SecretLabelSelector: mgrconfig.LabelValueForSelectorInternal,
 		}
 	}
 	if err = mgr.Add(caMgr); err != nil {
@@ -502,7 +502,7 @@ func setByObjectFor[
 	selector string,
 	byObject map[client.Object]cache.ByObject,
 ) error {
-	req, err := labels.NewRequirement(selector, selection.Equals, []string{"true"})
+	req, err := labels.NewRequirement(selector, selection.In, []string{mgrconfig.LabelValueForSelectorTrue, mgrconfig.LabelValueForSelectorInternal})
 	if err != nil {
 		return fmt.Errorf("failed to make label requirement for secrets: %w", err)
 	}

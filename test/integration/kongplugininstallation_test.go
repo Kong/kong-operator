@@ -186,7 +186,7 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{
 				Name: string(secretRef.Name),
 				Labels: map[string]string{
-					config.DefaultSecretLabelSelector: "true",
+					config.DefaultSecretLabelSelector: config.LabelValueForSelectorTrue,
 				},
 			},
 			Type: corev1.SecretTypeDockerConfigJson,
