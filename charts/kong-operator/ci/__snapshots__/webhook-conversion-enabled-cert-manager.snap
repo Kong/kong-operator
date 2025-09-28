@@ -53560,8 +53560,8 @@ apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   annotations:
-    cert-manager.io/inject-ca-from: default/chartsnap-kong-operator-webhook-serving-cert
-    cert-manager.io/secret-template: '{ "labels": { "konghq.com/secret" : "true" } }'
+    cert-manager.io/inject-ca-from: default/chartsnap-kong-operator-webhook-validating-serving-cert
+    cert-manager.io/secret-template: '{ "labels": { "konghq.com/secret" : "internal" } }'
   labels:
     app.kubernetes.io/name: kong-operator
     helm.sh/chart: kong-operator-1.0.0

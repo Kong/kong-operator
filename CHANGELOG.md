@@ -33,6 +33,13 @@
 
 ## Unreleased
 
+### Fixes
+
+- Do not validate `Secret`s and `ConfigMap`s that are used internally by the operator.
+  This prevents issues when those resources are created during bootstrapping of the
+  operator, before the validating webhook is ready.
+  [#2356](https://github.com/Kong/kong-operator/pull/2356)
+
 ### Added
 
 - Hybrid Gateway support: Gateway API objects bound to `Gateway`s programmed in Konnect

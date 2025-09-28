@@ -152,7 +152,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 			Namespace: namespace.Name,
 			Name:      host,
 			Labels: map[string]string{
-				config.DefaultSecretLabelSelector: "true",
+				config.DefaultSecretLabelSelector: config.LabelValueForSelectorTrue,
 			},
 		},
 		Type: corev1.SecretTypeTLS,
