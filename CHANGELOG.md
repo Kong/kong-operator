@@ -40,6 +40,13 @@
   This prevents issues when those resources are created during bootstrapping of the
   operator, before the validating webhook is ready.
   [#2356](https://github.com/Kong/kong-operator/pull/2356)
+- Add the `status.clusterType` in `KonnectGatewayControlPlane` and set it when
+  KO attached the `KonnectGatewayControlPlane` with the control plane in
+  Konnect. The `KonnectExtension` now get the cluster type to fill its
+  `status.konnect.clusterType` from the `statusType` of `KonnectGatewayControlPlane`
+  to fix the incorrect cluster type filled in the status when the control plane
+  is mirrored from an existing control plane in Konnect.
+  [#2343](https://github.com/Kong/kong-operator/pull/2343)
 
 ### Added
 
