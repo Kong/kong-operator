@@ -29,6 +29,7 @@ import (
 	"github.com/kong/kong-operator/controller/kongplugininstallation/image"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
+	mgrconfig "github.com/kong/kong-operator/modules/manager/config"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
@@ -176,7 +177,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		} else {
 			cm.GenerateName = kpi.Name + "-"
 		}
-		k8sresources.SetLabel(&cm, r.ConfigMapLabelSelector, "true")
+		k8sresources.SetLabel(&cm, r.ConfigMapLabelSelector, mgrconfig.LabelValueForSelectorInternal)
 		k8sresources.LabelObjectAsKongPluginInstallationManaged(&cm)
 		k8sresources.AnnotateConfigMapWithKongPluginInstallation(&cm, kpi)
 		cm.Namespace = kpi.Namespace
