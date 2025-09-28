@@ -2320,6 +2320,11 @@ func (in *KongServiceSpec) DeepCopyInto(out *KongServiceSpec) {
 		*out = new(commonv1alpha1.ControlPlaneRef)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Adopt != nil {
+		in, out := &in.Adopt, &out.Adopt
+		*out = new(commonv1alpha1.AdoptOptions)
+		(*in).DeepCopyInto(*out)
+	}
 	in.KongServiceAPISpec.DeepCopyInto(&out.KongServiceAPISpec)
 }
 
