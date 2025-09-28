@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongupstreams.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -173,6 +173,7 @@ spec:
                   as hash input. Only required when `hash_on` is set to `uri_capture`.
                 type: string
               healthchecks:
+                description: Healthchecks - The array of healthchecks.
                 properties:
                   active:
                     properties:

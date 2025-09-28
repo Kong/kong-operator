@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: gateway-operator
-    kubernetes-configuration.konghq.com/version: v2.0.0
+    kubernetes-configuration.konghq.com/version: v2.0.1
   name: kongservices.configuration.konghq.com
 spec:
   group: configuration.konghq.com
