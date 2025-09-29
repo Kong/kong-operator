@@ -266,15 +266,23 @@ func (c *httpRouteConverter) addHostnames(ctx context.Context) error {
 					// This listener doesn't match the section reference, skip it
 					continue
 				}
+				if listener.Port != *pRef.Port {
+					// This listener doesn't match the port reference, skip it
+					continue
+				}
 			}
 
-			// If the listener has no hostname, it means it accepts all hostnames.
-			// In this case, we add all hostnames from the HTTPRoute.
+			// If the listener has no hostname, it means it accepts all HTTPRoute hostnames.
+			// No need to do further checks.
 			if listener.Hostname == nil || *listener.Hostname == "" {
 				for _, hostname := range c.route.Spec.Hostnames {
 					hosts = append(hosts, string(hostname))
 				}
-				break
+				c.ir.AddHostnames(intermediate.Hostnames{
+					Name:      hostnamesName,
+					Hostnames: hosts,
+				})
+				return nil
 			}
 
 			// Handle wildcard hostnames - get intersection
