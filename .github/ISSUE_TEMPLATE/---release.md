@@ -59,7 +59,6 @@ The packages [internal/consts][consts-pkg] and [pkg/versions][versions-pkg] cont
 These versions should be updated to match the new release. The example consts to look for:
 
 - `DefaultDataPlaneTag`
-- `DefaultControlPlaneVersion`
 
 ## GitHub PAT
 

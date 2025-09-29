@@ -9,11 +9,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	pkgapiscorev1 "k8s.io/kubernetes/pkg/apis/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
@@ -241,37 +239,6 @@ func getSelectorOverrides(overrideAnnotation string) (map[string]string, error) 
 
 func dataPlaneAdminServiceGenerateName(dataplane *operatorv1beta1.DataPlane) string {
 	return fmt.Sprintf("%s-admin-%s-", consts.DataPlanePrefix, dataplane.Name)
-}
-
-// GenerateNewAdmissionWebhookServiceForControlPlane is a helper to generate the admission webhook service for a control
-// plane.
-func GenerateNewAdmissionWebhookServiceForControlPlane(cp *gwtypes.ControlPlane) (*corev1.Service, error) {
-	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    cp.Namespace,
-			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-webhook-%s-", consts.ControlPlanePrefix, cp.Name)),
-			Labels: map[string]string{
-				"app":                           cp.Name,
-				consts.ControlPlaneServiceLabel: consts.ControlPlaneServiceKindWebhook,
-			},
-		},
-		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeClusterIP,
-			Selector: map[string]string{"app": cp.Name},
-			Ports: []corev1.ServicePort{
-				{
-					Name:     "webhook",
-					Protocol: corev1.ProtocolTCP,
-					Port:     consts.ControlPlaneAdmissionWebhookListenPort,
-				},
-			},
-		},
-	}
-	pkgapiscorev1.SetDefaults_Service(svc)
-	LabelObjectAsControlPlaneManaged(svc)
-	k8sutils.SetOwnerForObject(svc, cp)
-
-	return svc, nil
 }
 
 // GetDataPlaneIngressServiceName fetches the specified name of ingress service of dataplane.
