@@ -2,6 +2,7 @@ package converter
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/samber/lo"
@@ -225,6 +226,38 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 			c.outputStore = append(c.outputStore, &route)
 		}
 
+		// Build the kong plugin and kong plugin binding resources.
+		for _, filter := range val.Filters {
+			pluginName := filter.String()
+
+			plugin, err := builder.NewKongPlugin().
+				WithName(pluginName).
+				WithNamespace(c.route.Namespace).
+				WithLabels(c.route).
+				WithAnnotations(c.route, c.ir.GetParentRefByName(val.Name)).
+				WithFilter(filter.Filter).
+				WithOwner(c.route).Build()
+			if err != nil {
+				continue
+			}
+			c.outputStore = append(c.outputStore, &plugin)
+
+			// Create a KongPluginBinding to bind the KongPlugin to each rule match.
+			for _, match := range val.Matches {
+				routeName := match.String()
+				binding, err := builder.NewKongPluginBinding().
+					WithName(routeName + fmt.Sprintf(".%d", filter.Name.GetFilterIndex())).
+					WithNamespace(c.route.Namespace).
+					WithPluginRef(pluginName).
+					WithRouteRef(routeName).
+					WithControlPlaneRef(*cpr).
+					WithOwner(c.route).Build()
+				if err != nil {
+					continue
+				}
+				c.outputStore = append(c.outputStore, &binding)
+			}
+		}
 	}
 
 	return nil
