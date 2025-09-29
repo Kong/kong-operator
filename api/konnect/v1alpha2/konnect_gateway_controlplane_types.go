@@ -129,6 +129,13 @@ type KonnectGatewayControlPlaneStatus struct {
 
 	KonnectEntityStatus `json:",inline"`
 
+	// ClusterType is the cluster type of the Konnect control plane.
+	// When the KonnectGatewayControlPlane is attached to a control plane in Konnect,
+	// ClusterType is filled with the cluster type of the control plane.
+	//
+	// +optional
+	ClusterType sdkkonnectcomp.ControlPlaneClusterType `json:"clusterType,omitempty"`
+
 	// Endpoints defines the Konnect endpoints for the control plane.
 	// They are required by the DataPlane to be properly configured in
 	// Konnect and connect to the control plane.
