@@ -290,3 +290,92 @@ var supportedKonnectPackageTypesWithList = func() []supportedTypesT {
 }()
 
 var supportedGatewayOperatorPackageTypesWithList = supportedGatewayOperatorTypes
+
+var supportedConfigurationPackageTypesWithAdopt = []supportedTypesT{
+	{
+		PackageVersion: "v1",
+		Types: []templateDataT{
+			{
+				Type: "KongConsumer",
+			},
+		},
+	},
+	{
+		PackageVersion: "v1beta1",
+		Types: []templateDataT{
+			{
+				Type: "KongConsumerGroup",
+			},
+		},
+	},
+	{
+		PackageVersion: "v1alpha1",
+		Types: []templateDataT{
+			{
+				Type: "KongKey",
+			},
+			{
+				Type: "KongKeySet",
+			},
+			{
+				Type: "KongCredentialBasicAuth",
+			},
+			{
+				Type: "KongCredentialAPIKey",
+			},
+			{
+				Type: "KongCredentialJWT",
+			},
+			{
+				Type: "KongCredentialACL",
+			},
+			{
+				Type: "KongCredentialHMAC",
+			},
+			{
+				Type: "KongCACertificate",
+			},
+			{
+				Type: "KongCertificate",
+			},
+			{
+				Type: "KongPluginBinding",
+			},
+			{
+				Type: "KongService",
+			},
+			{
+				Type: "KongRoute",
+			},
+			{
+				Type: "KongUpstream",
+			},
+			{
+				Type: "KongTarget",
+			},
+			{
+				Type: "KongVault",
+			},
+			{
+				Type: "KongSNI",
+			},
+		},
+	},
+}
+
+var supportedKonnectPackageTypesWithAdopt = []supportedTypesT{
+	{
+		PackageVersion: "v1alpha1",
+		Types: []templateDataT{
+			{
+				Type: "KonnectCloudGatewayNetwork",
+			},
+			{
+				Type: "KonnectCloudGatewayTransitGateway",
+			},
+			{
+				Type: "KonnectCloudGatewayDataPlaneGroupConfiguration",
+			},
+		},
+	},
+}
