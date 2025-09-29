@@ -61,6 +61,10 @@
   - Added generated schema in zz_generated_schema.go for resource types.
   - Improved and extended unit tests for hybridgateway components.
   [2355](https://github.com/Kong/kong-operator/pull/2355)
+- Entity Adoption support: support adopting an existing entity from Konnect to
+  a Kubernetes custom resource for managing the existing entity by KO.
+  - Add adoption options to the CRDs supporting adopting entities from Konnect.
+    [#2336](https://github.com/Kong/kong-operator/pull/2336)
 
 ### Changed
 
