@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	dpconf "github.com/kong/kong-operator/ingress-controller/internal/dataplane/config"
+	"github.com/kong/kong-operator/ingress-controller/test/consts"
 )
 
 // -----------------------------------------------------------------------------
@@ -84,34 +85,6 @@ func KongTag() string {
 func KongImageTag() string {
 	if KongImage() != "" && KongTag() != "" {
 		return fmt.Sprintf("%s:%s", KongImage(), KongTag())
-	}
-	return ""
-}
-
-// ControllerImage is the Kong image to use in lieu of the default.
-func ControllerImage() string {
-	return os.Getenv("TEST_CONTROLLER_IMAGE")
-}
-
-// ControllerTag is the Kong image tag to use in tests.
-func ControllerTag() string {
-	return os.Getenv("TEST_CONTROLLER_TAG")
-}
-
-// ControllerImageUpgradeFrom is the repository of controller image to upgrade from in tests upgrading KIC.
-func ControllerImageUpgradeFrom() string {
-	return os.Getenv("TEST_CONTROLLER_IMAGE_UPGRADE_FROM")
-}
-
-// ControllerTagUpgradeFrom is the tag of controller image to upgrade from in tests upgrading KIC.
-func ControllerTagUpgradeFrom() string {
-	return os.Getenv("TEST_CONTROLLER_TAG_UPGRADE_FROM")
-}
-
-// ControllerImageTag is the combined Controller image and tag if both are set, or empty string if not.
-func ControllerImageTag() string {
-	if ControllerImage() != "" && ControllerTag() != "" {
-		return fmt.Sprintf("%s:%s", ControllerImage(), ControllerTag())
 	}
 	return ""
 }
@@ -216,7 +189,7 @@ func GithubRunID() string {
 func ControllerFeatureGates() string {
 	featureGates := os.Getenv("KONG_CONTROLLER_FEATURE_GATES")
 	if featureGates == "" {
-		featureGates = GetFeatureGates()
+		featureGates = consts.DefaultFeatureGates
 	}
 	return featureGates
 }

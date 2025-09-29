@@ -183,7 +183,7 @@ func createKINDBuilder(t *testing.T) *environments.Builder {
 	}
 	builder := environments.NewBuilder().WithClusterBuilder(clusterBuilder).WithAddons(metallb.New())
 	if testenv.ClusterLoadImages() == "true" {
-		builder = builder.WithAddons(buildImageLoadAddon(t, testenv.ControllerImageTag(), testenv.KongImageTag()))
+		builder = builder.WithAddons(buildImageLoadAddon(t, testenv.KongImageTag()))
 	}
 	return builder
 }
@@ -195,9 +195,8 @@ func createExistingKINDBuilder(t *testing.T, name string) (*environments.Builder
 
 	builder = builder.WithExistingCluster(cluster)
 	builder = builder.WithAddons(metallb.New())
-	if testenv.ClusterLoadImages() == "true" {
-		builder = builder.WithAddons(buildImageLoadAddon(t, testenv.ControllerImageTag(), testenv.KongImageTag()))
-	}
+	builder = builder.WithAddons(buildImageLoadAddon(t, testenv.KongImageTag()))
+
 	return builder, nil
 }
 
@@ -252,8 +251,8 @@ type ManifestDeploy struct {
 	// Path is the path to the manifest to deploy.
 	Path string
 
-	// SkipTestPatches is a flag that controls whether to apply standard test patches (e.g. replace controller
-	// image when TEST_CONTROLLER_IMAGE set, etc.) to the manifests before deploying them.
+	// SkipTestPatches is a flag that controls whether to apply
+	// standard test patches to the manifests before deploying them.
 	SkipTestPatches bool
 
 	// AdditionalSecrets is a list of additional secrets to create before deploying the manifest.

@@ -16,15 +16,19 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/konnect/nodes"
 	"github.com/kong/kong-operator/ingress-controller/internal/versions"
 	"github.com/kong/kong-operator/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/modules/manager/metadata"
 )
 
 const (
-	testKicVersion = "2.9.0"
-	testHostname   = "ingress-0"
+	testHostname = "ingress-0"
 )
 
-// testKongVersion matches enterprise version format.
-var testKongVersion = fmt.Sprintf("%s.0", versions.KICv3VersionCutoff)
+var (
+	// testKongVersion matches enterprise version format.
+	testKongVersion = fmt.Sprintf("%s.0", versions.KICv3VersionCutoff)
+	// testKOUserAgent matches the current KO user agent.
+	testKOUserAgent = metadata.Metadata().UserAgent()
+)
 
 type mockGatewayInstanceGetter struct {
 	gatewayInstances []konnect.GatewayInstance
@@ -58,14 +62,14 @@ func (m *mockGatewayClientsNotifier) Notify() {
 
 type mockConfigStatusQueue struct {
 	gatewayStatusCh chan clients.GatewayConfigApplyStatus
-	konnetStatusCh  chan clients.KonnectConfigUploadStatus
+	konnectStatusCh chan clients.KonnectConfigUploadStatus
 	ch              chan clients.ConfigStatus
 }
 
 func newMockConfigStatusNotifier() *mockConfigStatusQueue {
 	return &mockConfigStatusQueue{
 		gatewayStatusCh: make(chan clients.GatewayConfigApplyStatus),
-		konnetStatusCh:  make(chan clients.KonnectConfigUploadStatus),
+		konnectStatusCh: make(chan clients.KonnectConfigUploadStatus),
 		ch:              make(chan clients.ConfigStatus),
 	}
 }
@@ -79,7 +83,7 @@ func (m mockConfigStatusQueue) SubscribeGatewayConfigStatus() chan clients.Gatew
 }
 
 func (m mockConfigStatusQueue) SubscribeKonnectConfigStatus() chan clients.KonnectConfigUploadStatus {
-	return m.konnetStatusCh
+	return m.konnectStatusCh
 }
 
 func (m mockConfigStatusQueue) NotifyGatewayConfigStatus(status clients.GatewayConfigApplyStatus) {
@@ -87,7 +91,7 @@ func (m mockConfigStatusQueue) NotifyGatewayConfigStatus(status clients.GatewayC
 }
 
 func (m mockConfigStatusQueue) NotifyKonnectConfigStatus(status clients.KonnectConfigUploadStatus) {
-	m.konnetStatusCh <- status
+	m.konnectStatusCh <- status
 }
 
 func TestNodeAgentUpdateNodes(t *testing.T) {
@@ -121,7 +125,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testManagerID.String(),
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 				},
 			},
 			numNodes: 1,
@@ -134,7 +138,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testNodeIDs[0],
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 				},
 			},
 			gatewayConfigStatus: lo.ToPtr(clients.GatewayConfigApplyStatus{TranslationFailuresOccurred: true}),
@@ -144,7 +148,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testNodeIDs[0],
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStatePartialConfigFail),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 				},
 			},
 			numNodes: 1,
@@ -158,7 +162,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testNodeIDs[0],
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStatePartialConfigFail),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 					LastPing: time.Now().Unix() - 10,
 				},
 				// newer node, should reserve this.
@@ -167,7 +171,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testManagerID.String(),
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 					LastPing: time.Now().Unix() - 3,
 				},
 				// KIC node with other name, should delete this.
@@ -176,7 +180,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testNodeIDs[2],
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 					LastPing: time.Now().Unix() - 3,
 				},
 			},
@@ -186,7 +190,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testManagerID.String(),
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 				},
 			},
 			notContainNodes: []*nodes.NodeItem{
@@ -194,7 +198,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					Hostname: "ingress-1",
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 				},
 			},
 			numNodes: 1,
@@ -207,7 +211,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testManagerID.String(),
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 				},
 				{
 					Hostname: testHostname,
@@ -240,7 +244,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 					ID:       testManagerID.String(),
 					Type:     nodes.NodeTypeIngressController,
 					Status:   string(nodes.IngressControllerStateOperational),
-					Version:  testKicVersion,
+					Version:  testKOUserAgent,
 				},
 				{
 					Hostname: "proxy-1",
@@ -268,7 +272,7 @@ func TestNodeAgentUpdateNodes(t *testing.T) {
 
 			nodeAgent := konnect.NewNodeAgent(
 				testHostname,
-				testKicVersion,
+				testKOUserAgent,
 				konnect.DefaultRefreshNodePeriod,
 				logr.Discard(),
 				nodeClient,
@@ -336,7 +340,7 @@ func TestNodeAgent_StartDoesntReturnUntilContextGetsCancelled(t *testing.T) {
 
 	nodeAgent := konnect.NewNodeAgent(
 		testHostname,
-		testKicVersion,
+		testKOUserAgent,
 		konnect.DefaultRefreshNodePeriod,
 		logr.Discard(),
 		nodeClient,
@@ -381,7 +385,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnStatusNotification(t *testin
 
 	nodeAgent := konnect.NewNodeAgent(
 		testHostname,
-		testKicVersion,
+		testKOUserAgent,
 		konnect.DefaultRefreshNodePeriod,
 		logr.Discard(),
 		nodeClient,
@@ -483,7 +487,7 @@ func TestNodeAgent_ControllerNodeStatusGetsUpdatedOnlyWhenItChanges(t *testing.T
 
 	nodeAgent := konnect.NewNodeAgent(
 		testHostname,
-		testKicVersion,
+		testKOUserAgent,
 		konnect.DefaultRefreshNodePeriod,
 		logr.Discard(),
 		nodeClient,
@@ -533,7 +537,7 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 		ticker := mocks.NewTicker()
 		nodeAgent := konnect.NewNodeAgent(
 			testHostname,
-			testKicVersion,
+			testKOUserAgent,
 			konnect.DefaultRefreshNodePeriod,
 			logr.Discard(),
 			nodeClient,
@@ -570,7 +574,7 @@ func TestNodeAgent_TickerResetsOnEveryNodesUpdate(t *testing.T) {
 		ticker := mocks.NewTicker()
 		nodeAgent := konnect.NewNodeAgent(
 			testHostname,
-			testKicVersion,
+			testKOUserAgent,
 			konnect.DefaultRefreshNodePeriod,
 			logr.Discard(),
 			nodeClient,

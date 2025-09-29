@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kong-operator/internal/versions"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	configurationclient "github.com/kong/kong-operator/pkg/clientset"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
@@ -220,10 +219,6 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 	if opt.InstallViaKustomize {
 		t.Logf("deploying Gateway APIs CRDs from %s", testutils.GatewayExperimentalCRDsKustomizeURL)
 		require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), testutils.GatewayExperimentalCRDsKustomizeURL))
-
-		kicCRDsKustomizeURL := getCRDsKustomizeURLForKIC(t, versions.DefaultControlPlaneVersion)
-		t.Logf("deploying KIC CRDs from %s", kicCRDsKustomizeURL)
-		require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), kicCRDsKustomizeURL, "--server-side"))
 
 		t.Log("creating system namespaces and serviceaccounts")
 		require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))

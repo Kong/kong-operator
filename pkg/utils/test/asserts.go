@@ -11,7 +11,6 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -22,80 +21,6 @@ import (
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
-
-// MustListControlPlaneDeployments is a helper function for tests that
-// conveniently lists all deployments managed by a given controlplane.
-func MustListControlPlaneDeployments(t *testing.T, ctx context.Context, controlplane *gwtypes.ControlPlane, clients K8sClients) []appsv1.Deployment {
-	deployments, err := k8sutils.ListDeploymentsForOwner(
-		ctx,
-		clients.MgrClient,
-		controlplane.Namespace,
-		controlplane.UID,
-		client.MatchingLabels{
-			consts.GatewayOperatorManagedByLabel: consts.ControlPlaneManagedLabelValue,
-		},
-	)
-	require.NoError(t, err)
-	return deployments
-}
-
-// MustListControlPlaneClusterRoles is a helper function for tests that
-// conveniently lists all clusterroles owned by a given controlplane.
-func MustListControlPlaneClusterRoles(t *testing.T, ctx context.Context, controlplane *gwtypes.ControlPlane, clients K8sClients) []rbacv1.ClusterRole {
-	managedByLabelSet := k8sutils.GetManagedByLabelSet(controlplane)
-	clusterRoles, err := k8sutils.ListClusterRoles(
-		ctx,
-		clients.MgrClient,
-		client.MatchingLabels(managedByLabelSet),
-	)
-	require.NoError(t, err)
-	return clusterRoles
-}
-
-// MustListControlPlaneRoles is a helper function for tests that
-// conveniently lists all roles owned by a given controlplane.
-func MustListControlPlaneRoles(t require.TestingT, ctx context.Context, controlplane *gwtypes.ControlPlane, cl client.Client, opts ...client.ListOption) []rbacv1.Role {
-	managedByLabelSet := k8sutils.GetManagedByLabelSet(controlplane)
-	roles, err := k8sutils.ListRoles(
-		ctx,
-		cl,
-		append(
-			[]client.ListOption{client.MatchingLabels(managedByLabelSet)},
-			opts...,
-		)...,
-	)
-	require.NoError(t, err)
-	return roles
-}
-
-// MustListControlPlaneClusterRoleBindings is a helper function for tests that
-// conveniently lists all clusterrolebindings owned by a given controlplane.
-func MustListControlPlaneClusterRoleBindings(t *testing.T, ctx context.Context, controlplane *gwtypes.ControlPlane, clients K8sClients) []rbacv1.ClusterRoleBinding {
-	managedByLabelSet := k8sutils.GetManagedByLabelSet(controlplane)
-	clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
-		ctx,
-		clients.MgrClient,
-		client.MatchingLabels(managedByLabelSet),
-	)
-	require.NoError(t, err)
-	return clusterRoleBindings
-}
-
-// MustListControlPlaneRoleBindings is a helper function for tests that
-// conveniently lists all clusterrolebindings owned by a given controlplane.
-func MustListControlPlaneRoleBindings(t require.TestingT, ctx context.Context, controlplane *gwtypes.ControlPlane, cl client.Client, opts ...client.ListOption) []rbacv1.ClusterRoleBinding {
-	managedByLabelSet := k8sutils.GetManagedByLabelSet(controlplane)
-	clusterRoleBindings, err := k8sutils.ListClusterRoleBindings(
-		ctx,
-		cl,
-		append(
-			[]client.ListOption{client.MatchingLabels(managedByLabelSet)},
-			opts...,
-		)...,
-	)
-	require.NoError(t, err)
-	return clusterRoleBindings
-}
 
 // MustListControlPlanesForGateway is a helper function for tests that
 // conveniently lists all controlplanes managed by a given gateway.

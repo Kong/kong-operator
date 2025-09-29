@@ -1,8 +1,6 @@
 package integration
 
 import (
-	"context"
-	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -12,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,7 +23,6 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/builder"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test/helpers"
@@ -121,22 +117,6 @@ func TestControlPlaneEssentials(t *testing.T) {
 
 	t.Log("verifying that the controlplane gets marked as optionsValid")
 	require.Eventually(t, testutils.ControlPlaneIsOptionsValid(t, GetCtx(), controlplaneName, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
-
-	t.Run("webhook", func(t *testing.T) {
-		t.Skip("Skipping webhook tests for now, as they are not implemented yet for ControlPlane v2beta1, TODO: https://github.com/Kong/kong-operator/issues/1367")
-
-		t.Log("verifying controlplane has a validating webhook service created")
-		require.Eventually(t, testutils.ControlPlaneHasAdmissionWebhookService(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
-
-		t.Log("verifying controlplane has a validating webhook certificate secret created")
-		require.Eventually(t, testutils.ControlPlaneHasAdmissionWebhookCertificateSecret(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
-
-		t.Log("verifying controlplane has a validating webhook configuration created")
-		require.Eventually(t, testutils.ControlPlaneHasAdmissionWebhookConfiguration(t, GetCtx(), controlplane, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
-
-		t.Log("verifying controlplane's webhook is functional")
-		eventuallyVerifyControlPlaneWebhookIsFunctional(t, GetCtx(), client.NewNamespacedClient(clients.MgrClient, namespace.Name))
-	})
 }
 
 func TestControlPlaneWatchNamespaces(t *testing.T) {
@@ -280,67 +260,6 @@ func watchNamespaceGrantForNamespace(t *testing.T, cl client.Client, cp *gwtypes
 
 	require.NoError(t, cl.Create(GetCtx(), wng))
 	return wng
-}
-
-// TODO: https://github.com/Kong/kong-operator/issues/1367
-func verifyControlPlaneDeploymentAdmissionWebhookMount(t *testing.T, deployment *appsv1.Deployment) { //nolint:unused
-	volumes := deployment.Spec.Template.Spec.Volumes
-	volumeFound := lo.ContainsBy(volumes, func(v corev1.Volume) bool {
-		return v.Name == consts.ControlPlaneAdmissionWebhookVolumeName
-	})
-	require.Truef(t, volumeFound, "volume %s not found in deployment, actual: %s", consts.ControlPlaneAdmissionWebhookVolumeName, deployment.Spec.Template.Spec.Volumes)
-
-	controllerContainer := k8sutils.GetPodContainerByName(&deployment.Spec.Template.Spec, consts.ControlPlaneControllerContainerName)
-	require.NotNil(t, controllerContainer, "container %s not found in deployment", consts.ControlPlaneControllerContainerName)
-
-	volumeMount, ok := lo.Find(controllerContainer.VolumeMounts, func(vm corev1.VolumeMount) bool {
-		return vm.Name == consts.ControlPlaneAdmissionWebhookVolumeName
-	})
-	require.Truef(t, ok,
-		"volume mount %s not found in container %s, actual: %v",
-		consts.ControlPlaneAdmissionWebhookVolumeName,
-		consts.ControlPlaneControllerContainerName,
-		controllerContainer.VolumeMounts,
-	)
-	require.Equal(t, consts.ControlPlaneAdmissionWebhookVolumeMountPath, volumeMount.MountPath)
-}
-
-// eventuallyVerifyControlPlaneWebhookIsFunctional verifies that the controlplane validating webhook
-// is functional by creating a resource that should be rejected by the webhook and verifying that
-// it is rejected.
-func eventuallyVerifyControlPlaneWebhookIsFunctional(t *testing.T, ctx context.Context, cl client.Client) {
-	require.Eventually(t, func() bool {
-		ing := netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "test-ingress-",
-				Annotations: map[string]string{
-					"konghq.com/protocols": "invalid",
-				},
-			},
-			Spec: netv1.IngressSpec{
-				IngressClassName: lo.ToPtr(ingressClass),
-				DefaultBackend: &netv1.IngressBackend{
-					Service: &netv1.IngressServiceBackend{
-						Name: "test",
-						Port: netv1.ServiceBackendPort{
-							Number: 8080,
-						},
-					},
-				},
-			},
-		}
-
-		err := cl.Create(ctx, &ing)
-		if err == nil {
-			t.Logf("ControlPlane webhook accepted an invalid Ingress %s, retrying and waiting for webhook to become functional", client.ObjectKeyFromObject(&ing))
-			return false
-		}
-		if !strings.Contains(err.Error(), "admission webhook \"ingresses.validation.ingress-controller.konghq.com\" denied the request") {
-			t.Logf("unexpected error: %v", err)
-			return false
-		}
-		return true
-	}, testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 }
 
 func TestControlPlaneUpdate(t *testing.T) {
