@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -305,7 +306,7 @@ func buildKongAdminClient(t *testing.T, ctx context.Context, namespace, dataplan
 
 	kubeconfigPath := writeTemporaryKubeconfig(t, env)
 	forwardCtx, cancel := context.WithCancel(context.Background())
-	localPort := startPortForward(forwardCtx, t, kubeconfigPath, namespace, selectedPod.Name, consts.DataPlaneAdminAPIPort)
+	localPort := startPortForward(forwardCtx, t, kubeconfigPath, namespace, fmt.Sprintf("pod/%s", selectedPod.Name), consts.DataPlaneAdminAPIPort)
 
 	tlsConfig := buildAdminTLSConfig(t, adminSecret)
 	httpClient := &http.Client{
@@ -397,19 +398,16 @@ func waitForTerminatingEndpoint(t *testing.T, ctx context.Context, namespace, se
 	selector := labels.SelectorFromSet(map[string]string{discoveryv1.LabelServiceName: serviceName}).String()
 
 	require.Eventually(t, func() bool {
-		slices, err := sliceClient.List(ctx, metav1.ListOptions{LabelSelector: selector})
+		sliceList, err := sliceClient.List(ctx, metav1.ListOptions{LabelSelector: selector})
 		if err != nil {
 			t.Logf("error listing endpointslices: %v", err)
 			return false
 		}
-		for _, slice := range slices.Items {
+		for _, slice := range sliceList.Items {
 			for _, endpoint := range slice.Endpoints {
-				if endpoint.Conditions.Terminating != nil && *endpoint.Conditions.Terminating {
-					for _, addr := range endpoint.Addresses {
-						if addr == terminatingIP {
-							return true
-						}
-					}
+				if endpoint.Conditions.Terminating != nil && *endpoint.Conditions.Terminating &&
+					slices.Contains(endpoint.Addresses, terminatingIP) {
+					return true
 				}
 			}
 		}
@@ -444,12 +442,9 @@ func waitForWeightZero(t *testing.T, ctx context.Context, kongClient *kong.Clien
 }
 
 func hasTag(tags []*string, value string) bool {
-	for _, tag := range tags {
-		if tag != nil && *tag == value {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(tags, func(tag *string) bool {
+		return tag != nil && *tag == value
+	})
 }
 
 func upstreamIdentifier(upstream *kong.Upstream) *string {
@@ -475,11 +470,11 @@ func writeTemporaryKubeconfig(t *testing.T, env k8senvironments.Environment) str
 	return f.Name()
 }
 
-func startPortForward(ctx context.Context, t *testing.T, kubeconfigPath, namespace, podName string, targetPort int) int {
+func startPortForward(ctx context.Context, t *testing.T, kubeconfigPath, namespace, targetRef string, targetPort int) int {
 	t.Helper()
 
 	localPort := getFreePort(t)
-	args := []string{"--kubeconfig", kubeconfigPath, "port-forward", "-n", namespace, "pod/" + podName, fmt.Sprintf("%d:%d", localPort, targetPort)}
+	args := []string{"--kubeconfig", kubeconfigPath, "port-forward", "-n", namespace, targetRef, fmt.Sprintf("%d:%d", localPort, targetPort)}
 	cmd := exec.CommandContext(ctx, "kubectl", args...)
 	var output bytes.Buffer
 	cmd.Stdout = &output
@@ -537,7 +532,7 @@ func buildAdminTLSConfig(t *testing.T, secret *corev1.Secret) *tls.Config {
 		Certificates:       []tls.Certificate{cert},
 		RootCAs:            pool,
 		MinVersion:         tls.VersionTLS12,
-		InsecureSkipVerify: true,
+		InsecureSkipVerify: true, //nolint:gosec // Test establishes TLS via port-forwarded localhost; self-signed cert hostname doesn't match.
 	}
 }
 
