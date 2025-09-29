@@ -116,19 +116,6 @@ func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfiguration
 	return gwc
 }
 
-// WithControlPlaneWebhookDisabled disables the admission webhook for the control plane
-func WithControlPlaneWebhookDisabled() func(*operatorv2beta1.GatewayConfiguration) {
-	return func(gc *operatorv2beta1.GatewayConfiguration) {
-		// Commenting as we don't have a way to disable the webhook in the GatewayConfiguration v2 API yet.
-		// TODO: https://github.com/kong/kong-operator/issues/1367"
-		//
-		// gc.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env = append(gc.Spec.ControlPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env, corev1.EnvVar{
-		// 	Name:  "CONTROLLER_ADMISSION_WEBHOOK_LISTEN",
-		// 	Value: "off",
-		// })
-	}
-}
-
 // GenerateHTTPRoute generates an HTTPRoute to be used in tests
 func GenerateHTTPRoute(namespace string, gatewayName, serviceName string, opts ...func(*gatewayv1.HTTPRoute)) *gatewayv1.HTTPRoute {
 	httpRoute := &gatewayv1.HTTPRoute{

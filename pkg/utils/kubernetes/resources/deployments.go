@@ -18,22 +18,8 @@ import (
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
-const (
-	// DefaultControlPlaneCPURequest is the default ControlPlane CPU request.
-	DefaultControlPlaneCPURequest = "100m"
-	// DefaultControlPlaneCPULimit is the default ControlPlane CPU limit.
-	DefaultControlPlaneCPULimit = "200m"
-
-	// DefaultControlPlaneMemoryRequest is the default ControlPlane memory request.
-	DefaultControlPlaneMemoryRequest = "20Mi"
-	// DefaultControlPlaneMemoryLimit is the default ControlPlane memory limit.
-	DefaultControlPlaneMemoryLimit = "100Mi"
-)
-
-var terminationGracePeriodSeconds = int64(corev1.DefaultTerminationGracePeriodSeconds)
-
-// ApplyDeploymentUserPatches applies user PodTemplateSpec patches to a Deployment. It returns the existing Deployment
-// if there are no patches.
+// ApplyDeploymentUserPatches applies user PodTemplateSpec patches to a Deployment.
+// It returns the existing Deployment if there are no patches.
 func ApplyDeploymentUserPatches(
 	deployment *Deployment,
 	podTemplateSpec *corev1.PodTemplateSpec,
@@ -48,57 +34,6 @@ func ApplyDeploymentUserPatches(
 	}
 
 	return deployment, nil
-}
-
-// GenerateContainerForControlPlaneParams is a parameter struct for GenerateControlPlaneContainer function.
-type GenerateContainerForControlPlaneParams struct {
-	Image string
-	// AdmissionWebhookCertSecretName is the name of the Secret that holds the certificate for the admission webhook.
-	// If this is nil, the admission webhook will not be enabled.
-	AdmissionWebhookCertSecretName *string
-}
-
-// GenerateControlPlaneContainer generates a control plane container.
-func GenerateControlPlaneContainer(params GenerateContainerForControlPlaneParams) corev1.Container {
-	c := corev1.Container{
-		Name:                     consts.ControlPlaneControllerContainerName,
-		Image:                    params.Image,
-		ImagePullPolicy:          corev1.PullIfNotPresent,
-		TerminationMessagePath:   corev1.TerminationMessagePathDefault,
-		TerminationMessagePolicy: corev1.TerminationMessageReadFile,
-		VolumeMounts: []corev1.VolumeMount{
-			{
-				Name:      consts.ClusterCertificateVolume,
-				ReadOnly:  true,
-				MountPath: consts.ClusterCertificateVolumeMountPath,
-			},
-		},
-		Ports: []corev1.ContainerPort{
-			{
-				Name:          "health",
-				ContainerPort: 10254,
-				Protocol:      corev1.ProtocolTCP,
-			},
-		},
-		LivenessProbe:  GenerateControlPlaneProbe("/healthz", intstr.FromInt(10254)),
-		ReadinessProbe: GenerateControlPlaneProbe("/readyz", intstr.FromInt(10254)),
-		Resources:      *DefaultControlPlaneResources(),
-	}
-	// Only add the admission webhook volume mount and port if the secret name is provided.
-	if params.AdmissionWebhookCertSecretName != nil && *params.AdmissionWebhookCertSecretName != "" {
-		c.VolumeMounts = append(c.VolumeMounts, corev1.VolumeMount{
-			Name:      consts.ControlPlaneAdmissionWebhookVolumeName,
-			ReadOnly:  true,
-			MountPath: consts.ControlPlaneAdmissionWebhookVolumeMountPath,
-		})
-		c.Ports = append(c.Ports, corev1.ContainerPort{
-			Name:          consts.ControlPlaneAdmissionWebhookPortName,
-			ContainerPort: consts.ControlPlaneAdmissionWebhookListenPort,
-			Protocol:      corev1.ProtocolTCP,
-		})
-	}
-
-	return c
 }
 
 const (
@@ -116,7 +51,7 @@ const (
 // DeploymentOpt is an option for Deployment generators.
 type DeploymentOpt func(*appsv1.Deployment)
 
-// GenerateNewDeploymentForDataPlane generates a new Deployment for the DataPlane
+// GenerateNewDeploymentForDataPlane generates a new Deployment for the DataPlane.
 func GenerateNewDeploymentForDataPlane(
 	dataplane *operatorv1beta1.DataPlane,
 	dataplaneImage string,
@@ -159,7 +94,7 @@ func GenerateNewDeploymentForDataPlane(
 				Spec: corev1.PodSpec{
 					SecurityContext:               &corev1.PodSecurityContext{},
 					RestartPolicy:                 corev1.RestartPolicyAlways,
-					TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
+					TerminationGracePeriodSeconds: lo.ToPtr(int64(corev1.DefaultTerminationGracePeriodSeconds)),
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					SchedulerName:                 corev1.DefaultSchedulerName,
 					Volumes:                       []corev1.Volume{},
@@ -323,23 +258,6 @@ func DefaultDataPlaneResources() *corev1.ResourceRequirements {
 		}
 	})
 	return _dataPlaneDefaultResources.DeepCopy()
-}
-
-// DefaultControlPlaneResources generates a ResourceRequirements with the ControlPlane defaults.
-func DefaultControlPlaneResources() *corev1.ResourceRequirements {
-	_defaultControlPlaneResourcesOnce.Do(func() {
-		_controlPlaneDefaultResources = corev1.ResourceRequirements{
-			Requests: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse(DefaultControlPlaneCPURequest),
-				corev1.ResourceMemory: resource.MustParse(DefaultControlPlaneMemoryRequest),
-			},
-			Limits: corev1.ResourceList{
-				corev1.ResourceCPU:    resource.MustParse(DefaultControlPlaneCPULimit),
-				corev1.ResourceMemory: resource.MustParse(DefaultControlPlaneMemoryLimit),
-			},
-		}
-	})
-	return _controlPlaneDefaultResources.DeepCopy()
 }
 
 // ClusterCertificateVolume returns a volume holding a cluster certificate given a Secret holding a certificate.

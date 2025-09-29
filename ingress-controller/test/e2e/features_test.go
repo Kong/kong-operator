@@ -15,7 +15,6 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
@@ -99,13 +98,6 @@ func TestWebhookUpdate(t *testing.T) {
 	require.NoError(t, err)
 	addons := []clusters.Addon{}
 	addons = append(addons, metallb.New())
-	if testenv.ClusterLoadImages() == "true" {
-		if b, err := loadimage.NewBuilder().WithImage(testenv.ControllerImageTag()); err == nil {
-			addons = append(addons, b.Build())
-		} else {
-			require.NoError(t, err)
-		}
-	}
 	builder := environments.NewBuilder().WithExistingCluster(cluster).WithAddons(addons...)
 	env, err := builder.Build(ctx)
 	require.NoError(t, err)

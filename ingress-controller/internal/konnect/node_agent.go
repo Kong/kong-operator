@@ -88,10 +88,10 @@ func WithRefreshTicker(ticker Ticker) NodeAgentOpt {
 }
 
 // NewNodeAgent creates a new node agent.
-// hostname and version are hostname and version of KIC.
+// Parameters hostname and userAgent are hostname and userAgent of KO.
 func NewNodeAgent(
 	hostname string,
-	version string,
+	userAgent string,
 	refreshPeriod time.Duration,
 	logger logr.Logger,
 	client NodeClient,
@@ -106,7 +106,7 @@ func NewNodeAgent(
 	}
 	a := &NodeAgent{
 		hostname:                      hostname,
-		version:                       version,
+		version:                       userAgent,
 		logger:                        logger.WithName("konnect-node-agent"),
 		nodeClient:                    client,
 		refreshPeriod:                 refreshPeriod,

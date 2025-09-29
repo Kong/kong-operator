@@ -16,7 +16,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	policyv1 "k8s.io/api/policy/v1"
-	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,7 +32,6 @@ import (
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
-	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
 )
 
 // controlPlanePredicate is a helper function for tests that returns a function
@@ -160,21 +158,6 @@ func ControlPlaneIsOptionsValid(t *testing.T, ctx context.Context, controlPlane 
 	}, clients.OperatorClient)
 }
 
-// ControlPlaneIsNotReady is a helper function for tests. It returns a function
-// that can be used to check if a ControlPlane is marked as not Ready.
-// Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlaneIsNotReady(t *testing.T, ctx context.Context, controlplane types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlplane, func(c *operatorv2beta1.ControlPlane) bool {
-		for _, condition := range c.Status.Conditions {
-			if condition.Type == string(kcfgdataplane.ReadyType) &&
-				condition.Status == metav1.ConditionFalse {
-				return true
-			}
-		}
-		return false
-	}, clients.OperatorClient)
-}
-
 // ControlPlaneIsReady is a helper function for tests. It returns a function
 // that can be used to check if a ControlPlane is marked as Ready.
 // Should be used in conjunction with require.Eventually or assert.Eventually.
@@ -188,146 +171,6 @@ func ControlPlaneIsReady(t *testing.T, ctx context.Context, controlplane types.N
 		}
 		return false
 	}, clients.OperatorClient)
-}
-
-// ControlPlaneHasActiveDeployment is a helper function for tests that returns a function
-// that can be used to check if a ControlPlane has an active deployment.
-// Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlaneHasActiveDeployment(t *testing.T, ctx context.Context, controlplaneName types.NamespacedName, clients K8sClients) func() bool {
-	return controlPlanePredicate(t, ctx, controlplaneName, func(controlplane *operatorv2beta1.ControlPlane) bool {
-		// Fetch the local API object to interoperate with helpers expecting local types.
-		localCP := &gwtypes.ControlPlane{}
-		if err := clients.MgrClient.Get(ctx, controlplaneName, localCP); err != nil {
-			t.Logf("error getting controlplane via mgr client: %v", err)
-			return false
-		}
-		deployments := MustListControlPlaneDeployments(t, ctx, localCP, clients)
-		return len(deployments) == 1 &&
-			*deployments[0].Spec.Replicas > 0 &&
-			deployments[0].Status.AvailableReplicas == *deployments[0].Spec.Replicas
-	}, clients.OperatorClient)
-}
-
-// ControlPlaneHasClusterRole is a helper function for tests that returns a function
-// that can be used to check if a ControlPlane has a ClusterRole.
-// Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlaneHasClusterRole(t *testing.T, ctx context.Context, controlplane *gwtypes.ControlPlane, clients K8sClients) func() bool {
-	return func() bool {
-		clusterRoles := MustListControlPlaneClusterRoles(t, ctx, controlplane, clients)
-		t.Logf("%d clusterroles", len(clusterRoles))
-		return len(clusterRoles) > 0
-	}
-}
-
-// ControlPlanesClusterRoleHasPolicyRule is a helper function for tests that returns a function
-// that can be used to check if ControlPlane's ClusterRole contains the provided PolicyRule.
-// Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlanesClusterRoleHasPolicyRule(t *testing.T, ctx context.Context, controlplane *gwtypes.ControlPlane, clients K8sClients, pr rbacv1.PolicyRule) func() bool {
-	return func() bool {
-		clusterRoles := MustListControlPlaneClusterRoles(t, ctx, controlplane, clients)
-		t.Logf("%d clusterroles", len(clusterRoles))
-		if len(clusterRoles) == 0 {
-			return false
-		}
-		t.Logf("got %s clusterrole, checking if it contains the requested PolicyRule", clusterRoles[0].Name)
-		return slices.ContainsFunc(clusterRoles[0].Rules, func(e rbacv1.PolicyRule) bool {
-			return slices.Equal(e.APIGroups, pr.APIGroups) &&
-				slices.Equal(e.ResourceNames, pr.ResourceNames) &&
-				slices.Equal(e.Resources, pr.Resources) &&
-				slices.Equal(e.Verbs, pr.Verbs) &&
-				slices.Equal(e.NonResourceURLs, pr.NonResourceURLs)
-		})
-	}
-}
-
-// ControlPlanesClusterRoleBindingHasSubject is a helper function for tests that returns a function
-// that can be used to check if ControlPlane's ClusterRoleBinding contains the provided Subject.
-// Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlanesClusterRoleBindingHasSubject(t *testing.T, ctx context.Context, controlplane *gwtypes.ControlPlane, clients K8sClients, subject rbacv1.Subject) func() bool {
-	return func() bool {
-		clusterRoleBindings := MustListControlPlaneClusterRoleBindings(t, ctx, controlplane, clients)
-		t.Logf("%d clusterrolesbindings", len(clusterRoleBindings))
-		if len(clusterRoleBindings) == 0 {
-			return false
-		}
-		t.Logf("got %s clusterrolebinding, checking if it contains the requested Subject", clusterRoleBindings[0].Name)
-		return slices.ContainsFunc(clusterRoleBindings[0].Subjects, func(e rbacv1.Subject) bool {
-			return e.Kind == subject.Kind &&
-				e.APIGroup == subject.APIGroup &&
-				e.Name == subject.Name &&
-				e.Namespace == subject.Namespace
-		})
-	}
-}
-
-// ControlPlaneHasClusterRoleBinding is a helper function for tests that returns a function
-// that can be used to check if a ControlPlane has a ClusterRoleBinding.
-// Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlaneHasClusterRoleBinding(t *testing.T, ctx context.Context, controlplane *gwtypes.ControlPlane, clients K8sClients) func() bool {
-	return func() bool {
-		clusterRoleBindings := MustListControlPlaneClusterRoleBindings(t, ctx, controlplane, clients)
-		t.Logf("%d clusterrolebindings", len(clusterRoleBindings))
-		return len(clusterRoleBindings) > 0
-	}
-}
-
-// ControlPlaneCRBContainsCRAndSA is a helper function for tests that returns a function
-// that can be used to check if the ClusterRoleBinding of a ControPlane has the reference of ClusterRole belonging to the ControlPlane
-// and contains the service account used by the Deployment of the ControlPlane.
-func ControlPlaneCRBContainsCRAndSA(t *testing.T, ctx context.Context, controlplane *gwtypes.ControlPlane, clients K8sClients) func() bool {
-	return func() bool {
-		clusterRoleBindings := MustListControlPlaneClusterRoleBindings(t, ctx, controlplane, clients)
-		clusterRoles := MustListControlPlaneClusterRoles(t, ctx, controlplane, clients)
-		deployments := MustListControlPlaneDeployments(t, ctx, controlplane, clients)
-		if len(clusterRoleBindings) != 1 || len(clusterRoles) != 1 || len(deployments) != 1 {
-			return false
-		}
-		clusterRoleBinding := clusterRoleBindings[0]
-		clusterRole := clusterRoles[0]
-		serviceAccountName := deployments[0].Spec.Template.Spec.ServiceAccountName
-		return k8sresources.CompareClusterRoleName(&clusterRoleBinding, clusterRole.Name) &&
-			k8sresources.ClusterRoleBindingContainsServiceAccount(&clusterRoleBinding, controlplane.Namespace, serviceAccountName)
-	}
-}
-
-// ControlPlaneHasAdmissionWebhookService is a helper function for tests that returns a function
-// that can be used to check if a ControlPlane has an admission webhook Service.
-// Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlaneHasAdmissionWebhookService(t *testing.T, ctx context.Context, cp *gwtypes.ControlPlane, clients K8sClients) func() bool {
-	return func() bool {
-		services, err := k8sutils.ListServicesForOwner(ctx, clients.MgrClient, cp.Namespace, cp.UID, client.MatchingLabels{
-			consts.ControlPlaneServiceLabel: consts.ControlPlaneServiceKindWebhook,
-		})
-		require.NoError(t, err)
-		t.Logf("%d webhook services", len(services))
-		return len(services) > 0
-	}
-}
-
-// ControlPlaneHasAdmissionWebhookCertificateSecret is a helper function for tests that returns a function
-// that can be used to check if a ControlPlane has an admission webhook certificate Secret.
-// Should be used in conjunction with require.Eventually or assert.Eventually.
-func ControlPlaneHasAdmissionWebhookCertificateSecret(t *testing.T, ctx context.Context, cp *gwtypes.ControlPlane, clients K8sClients) func() bool {
-	return func() bool {
-		services, err := k8sutils.ListSecretsForOwner(ctx, clients.MgrClient, cp.UID, client.MatchingLabels{
-			consts.SecretUsedByServiceLabel: consts.ControlPlaneServiceKindWebhook,
-		})
-		require.NoError(t, err)
-		t.Logf("%d webhook secrets", len(services))
-		return len(services) > 0
-	}
-}
-
-// ControlPlaneHasAdmissionWebhookConfiguration is a helper function for tests that returns a function
-// that can be used to check if a ControlPlane has an admission webhook configuration.
-func ControlPlaneHasAdmissionWebhookConfiguration(t *testing.T, ctx context.Context, cp *gwtypes.ControlPlane, clients K8sClients) func() bool {
-	return func() bool {
-		managedByLabelSet := k8sutils.GetManagedByLabelSet(cp)
-		configs, err := k8sutils.ListValidatingWebhookConfigurations(ctx, clients.MgrClient, client.MatchingLabels(managedByLabelSet))
-		require.NoError(t, err)
-		t.Logf("%d validating webhook configurations", len(configs))
-		return len(configs) > 0
-	}
 }
 
 // DataPlaneHasActiveDeployment is a helper function for tests that returns a function
