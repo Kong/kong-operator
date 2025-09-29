@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -266,7 +267,7 @@ func (c *httpRouteConverter) addHostnames(ctx context.Context) error {
 					// This listener doesn't match the section reference, skip it
 					continue
 				}
-				if listener.Port != *pRef.Port {
+				if listener.Port != lo.FromPtr(pRef.Port) {
 					// This listener doesn't match the port reference, skip it
 					continue
 				}
