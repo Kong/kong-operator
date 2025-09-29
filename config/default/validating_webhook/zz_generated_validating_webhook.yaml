@@ -3,8 +3,8 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: controlplane-configuration-validations
   annotations:
-    cert-manager.io/inject-ca-from: kong-system/gateway-operator-serving-cert
-    cert-manager.io/secret-template: '{ "labels": { "konghq.com/secret" : "true" } }'
+    cert-manager.io/inject-ca-from: kong-system/gateway-operator-validating-serving-cert
+    cert-manager.io/secret-template: '{ "labels": { "konghq.com/secret" : "internal" } }'
   labels:
     app.kubernetes.io/component: ko
 webhooks:

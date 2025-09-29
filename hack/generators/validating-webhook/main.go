@@ -102,8 +102,8 @@ func templateInjectCAAnnotationForCertManager(yaml string) string {
 	// Replacement block with Helm templating
 	replacement := `{{- if .Values.global.webhooks.options.certManager.enabled }}
   annotations:
-    cert-manager.io/inject-ca-from: {{ template "kong.namespace" . }}/{{ template "kong.webhookServiceName" . }}-serving-cert
-    cert-manager.io/secret-template: '{ "labels": { "konghq.com/secret" : "true" } }'
+    cert-manager.io/inject-ca-from: {{ template "kong.namespace" . }}/{{ template "kong.webhookServiceName" . }}-validating-serving-cert
+    cert-manager.io/secret-template: '{ "labels": { "konghq.com/secret" : "internal" } }'
 {{- end }}
   labels:`
 

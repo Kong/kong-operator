@@ -170,7 +170,7 @@ func (msm *Manager) getCASecretAndKey(ctx context.Context) (*x509.Certificate, c
 	var caSecret corev1.Secret
 	err := msm.client.Get(ctx, msm.caSecretNN, &caSecret)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("failed to get CA secret %s: %w", msm.caSecretNN, err)
 	}
 
 	ca, ok := caSecret.Data[consts.TLSCRT]
