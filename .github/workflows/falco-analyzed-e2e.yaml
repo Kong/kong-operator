@@ -1,0 +1,78 @@
+name: falco-analyzed-e2e
+
+on:
+  workflow_dispatch:
+
+env:
+  MISE_VERBOSE: 1
+
+jobs:
+  run-e2e:
+    runs-on: ubuntu-latest
+    outputs:
+      falco_result: ${{ steps.falco_result.outcome }}
+    steps:
+    - name: start falco
+      continue-on-error: true
+      uses: falcosecurity/falco-actions/start@4a4ff48cca452b3b03f06073d1ae0ff564503fc9
+      with:
+        mode: analyze
+    
+    - name: checkout repository
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      with:
+        fetch-depth: 0
+
+    - name: setup golang
+      uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+      with:
+        go-version-file: go.mod
+
+    - name: build docker image
+      env:
+        IMG: kong-operator
+        TAG: e2e-${{ github.sha }}
+      run: make docker.build
+
+    - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
+      with:
+        install: false
+
+    - name: run e2e tests
+      run: make test.e2e
+      env:
+        KONG_TEST_KONG_OPERATOR_IMAGE_LOAD: kong-operator:e2e-${{ github.sha }}
+        GOTESTSUM_JUNITFILE: "e2e-tests.xml"
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: upload diagnostics
+      if: always()
+      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      with:
+        name: diagnostics-e2e
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
+    - name: stop falco and upload results
+      id: falco_result
+      continue-on-error: true
+      uses: falcosecurity/falco-actions/stop@4a4ff48cca452b3b03f06073d1ae0ff564503fc9
+      with:
+        mode: analyze
+  
+  analyze_falco_results:
+    name: Analyze Falco Results
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: run-e2e
+    if: contains(needs.run-e2e.result, 'success') && needs.run-e2e.outputs.falco_result == 'success'
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Analyze Falco Results
+        uses: falcosecurity/falco-actions/analyze@4a4ff48cca452b3b03f06073d1ae0ff564503fc9
+        continue-on-error: true
