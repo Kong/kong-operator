@@ -260,9 +260,7 @@ func enforceKonnectExtensionStatus(cp konnectv1alpha2.KonnectGatewayControlPlane
 	var toUpdate bool
 	expectedKonnectStatus := &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
 		ControlPlaneID: cp.Status.ID,
-		ClusterType: konnectClusterTypeToCRDClusterType(
-			sdkkonnectcomp.ControlPlaneClusterType(lo.FromPtrOr(cp.GetKonnectClusterType(), "")),
-		),
+		ClusterType:    konnectClusterTypeToCRDClusterType(cp.Status.ClusterType),
 	}
 
 	if cp.Status.Endpoints != nil {

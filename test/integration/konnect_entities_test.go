@@ -79,6 +79,9 @@ func TestKonnectEntities(t *testing.T) {
 		require.True(t, strings.HasPrefix(cp.Status.Endpoints.ControlPlaneEndpoint, "https://"), "must start with https://")
 		// Example: https://e7b5c7de43.us.tp.konghq.tech
 		require.True(t, strings.HasPrefix(cp.Status.Endpoints.TelemetryEndpoint, "https://"), "must start with https://")
+		// Check if the status.clusterType is set.
+		require.Equal(t, sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane, cp.Status.ClusterType,
+			"status.clusterType must be set to "+sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	t.Run("with Origin ControlPlane", func(t *testing.T) {
@@ -115,6 +118,10 @@ func TestKonnectEntities(t *testing.T) {
 			).Match(mirrorCP),
 			testutils.ControlPlaneCondDeadline, 2*testutils.ControlPlaneCondTick,
 		)
+
+		// Check if the status.clusterType is set.
+		require.Equal(t, sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane, cp.Status.ClusterType,
+			"status.clusterType must be set to "+sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane)
 
 		KonnectEntitiesTestCase(t, konnectEntitiesTestCaseParams{
 			cp:     mirrorCP,
