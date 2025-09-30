@@ -97,6 +97,16 @@ func TestAddHostnames(t *testing.T) {
 		expectedOutput []*configurationv1alpha1.KongRoute
 	}{
 		{
+			name:  "listener with no hostname (accepts all) and route with no hostnames (accepts all)",
+			route: newHTTPRouteWithHostnames(),
+			objects: append([]client.Object{
+				newGatewayWithListenerHostnames(),
+			}, newKonnectGatewayStandardObjects()...),
+			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
+				"httproute.default.test-route.0.0.0": nil,
+			}),
+		},
+		{
 			name:  "single listener and route with specific hostname",
 			route: newHTTPRouteWithHostnames("api.example.com"),
 			objects: append([]client.Object{
