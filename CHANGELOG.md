@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.0.3](#v203)
 - [v2.0.1](#v201)
 - [v2.0.0](#v200)
 - [v1.6.2](#v162)
@@ -31,7 +32,9 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.0.3]
+
+> Release date: 2025-09-30
 
 ### Fixes
 
@@ -46,21 +49,6 @@
   to fix the incorrect cluster type filled in the status when the control plane
   is mirrored from an existing control plane in Konnect.
   [#2343](https://github.com/Kong/kong-operator/pull/2343)
-
-### Added
-
-- Hybrid Gateway support: Gateway API objects bound to `Gateway`s programmed in Konnect
-  are converted into Konnect entities and used to configure the hybrid `DataPlane`.
-  [#2134](https://github.com/Kong/kong-operator/pull/2134)
-  [#2143](https://github.com/Kong/kong-operator/pull/2143)
-  [#2177](https://github.com/Kong/kong-operator/pull/2177)
-  [#2260](https://github.com/Kong/kong-operator/pull/2260)
-
-### Changed
-
-- For Hybrid `Gateway`s the operator does not run the `ControlPlane` anymore, as
-  the `DataPlane` is configured to use `Koko` as Konnect control plane.
-  [#2253](https://github.com/Kong/kong-operator/pull/2253)
 
 ## [v2.0.1]
 
@@ -1366,6 +1354,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.0.3]: https://github.com/Kong/kong-operator/compare/v2.0.1..v2.0.3
 [v2.0.1]: https://github.com/Kong/kong-operator/compare/v2.0.0..v2.0.1
 [v2.0.0]: https://github.com/Kong/kong-operator/compare/v1.6.2..v2.0.0
 [v1.6.2]: https://github.com/Kong/kong-operator/compare/v1.6.1..v1.6.2
