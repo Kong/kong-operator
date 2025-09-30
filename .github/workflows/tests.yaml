@@ -715,6 +715,7 @@ jobs:
       - install-with-kustomize
       - build
       - CRDs-validation
+      - unit-tests
       - envtest-tests
       - kongintegration-tests
       - conformance-tests
