@@ -51,6 +51,10 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 			GenerateName: "dp-",
 			Namespace:    ns.Name,
 		}
+		dpgcTypeMeta = metav1.TypeMeta{
+			APIVersion: "konnect.konghq.com/v1alpha1",
+			Kind:       "KonnectCloudGatewayDataPlaneGroupConfiguration",
+		}
 	)
 
 	logger := zapr.NewLogger(zap.New(zapcore.NewNopCore()))
@@ -73,8 +77,10 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 			{
 				Name: "deprecate message with static autoscale type",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
+					TypeMeta:   dpgcTypeMeta,
 					ObjectMeta: commonObjectMeta,
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
+						Version: "3.11",
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
 								Provider: "aws",
