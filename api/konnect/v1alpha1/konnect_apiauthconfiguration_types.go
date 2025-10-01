@@ -87,6 +87,17 @@ type KonnectAPIAuthConfigurationSpec struct {
 // KonnectAPIAuthConfigurationStatus is the status of the KonnectAPIAuthConfiguration resource.
 // +apireference:kgo:include
 type KonnectAPIAuthConfigurationStatus struct {
+	// Conditions describe the status of the Konnect configuration.
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "Valid", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	// +optional
+	// +patchStrategy=merge
+	// +patchMergeKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
 	// OrganizationID is the unique identifier of the organization in Konnect.
 	//
 	// +optional
@@ -96,15 +107,6 @@ type KonnectAPIAuthConfigurationStatus struct {
 	//
 	// +optional
 	ServerURL string `json:"serverURL,omitempty"`
-
-	// Conditions describe the status of the Konnect configuration.
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MinItems=1
-	// +kubebuilder:validation:MaxItems=8
-	// +kubebuilder:default={{type: "Valid", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // KonnectAPIAuthConfigurationList contains a list of KonnectAPIAuthConfiguration resources.

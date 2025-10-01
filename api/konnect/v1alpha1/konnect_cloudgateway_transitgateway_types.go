@@ -182,13 +182,6 @@ type AzureVNETPeeringAttachmentConfig struct {
 
 // KonnectCloudGatewayTransitGatewayStatus defines the current state of KonnectCloudGatewayTransitGateway.
 type KonnectCloudGatewayTransitGatewayStatus struct {
-	konnectv1alpha2.KonnectEntityStatusWithNetworkRef `json:",inline"`
-
-	// State is the state of the transit gateway on Konnect side.
-	//
-	// +optional
-	State sdkkonnectcomp.TransitGatewayState `json:"state,omitempty"`
-
 	// Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.
 	//
 	// Known condition types are:
@@ -199,8 +192,17 @@ type KonnectCloudGatewayTransitGatewayStatus struct {
 	// +listMapKey=type
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	// +patchStrategy=merge
+	// +patchMergeKey=type
 	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
+	konnectv1alpha2.KonnectEntityStatusWithNetworkRef `json:",inline"`
+
+	// State is the state of the transit gateway on Konnect side.
+	//
+	// +optional
+	State sdkkonnectcomp.TransitGatewayState `json:"state,omitempty"`
 }
 
 // KonnectCloudGatewayTransitGatewayList contains a list of KonnectCloudGatewayTransitGateway.
