@@ -488,7 +488,7 @@ KONG_OPERATOR_CHART_YAML_PATH = $(KONG_OPERATOR_CHART_DIR)/Chart.yaml
 manifests.charts.kong-operator.chart.yaml: yq
 	@echo "Generating $(KONG_OPERATOR_CHART_YAML_PATH)"
 	@$(YQ) eval \
-		'.dependencies = [ {"name":"ko-crds","version":"1.0.0"}]' \
+		'.dependencies = [ {"name":"ko-crds","version":"1.0.1"}]' \
 		-i $(KONG_OPERATOR_CHART_YAML_PATH)
 	@$(YQ) eval \
 		'.dependencies += [ {"name":"gwapi-standard-crds","version":"$(GATEWAY_API_VERSION:v%=%)","condition":"gwapi-standard-crds.enabled"}]' \
