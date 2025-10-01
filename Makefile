@@ -307,7 +307,12 @@ verify.generators: verify.repo generate verify.diff
 API_DIR ?= api
 
 .PHONY: generate
-generate: generate.gateway-api-urls generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.cli-arguments-docs generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix generate.format
+# Integrated workflow: in addition to API/deepcopy/docs, also generate manifests and update chart golden snapshots.
+# This consolidates the previous sequence:
+#   make generate && make manifests && make test.charts.golden.update
+# into a single command: make generate
+# Note: manifests is placed near the end to preserve the prior ordering (docs are generated from CRDs first).
+generate: generate.gateway-api-urls generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.cli-arguments-docs generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix generate.format manifests test.charts.golden.update
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -802,12 +807,12 @@ _ensure-kong-system-namespace:
 # Run a controller from your host.
 # TODO: https://github.com/Kong/kong-operator/issues/1989
 .PHONY: run
-run: download.telepresence manifests generate install.all _ensure-kong-system-namespace install.rbacs
+run: download.telepresence generate install.all _ensure-kong-system-namespace install.rbacs
 	@$(MAKE) _run
 
 # Run a controller from your host and make it impersonate the controller-manager service account from kong-system namespace.
 .PHONY: run.with_impersonate
-run.with_impersonate: download.telepresence manifests generate install.all _ensure-kong-system-namespace install.rbacs
+run.with_impersonate: download.telepresence generate install.all _ensure-kong-system-namespace install.rbacs
 	@$(MAKE) _run.with-impersonate
 
 KUBECONFIG ?= $(HOME)/.kube/config
@@ -867,7 +872,7 @@ run.skaffold:
 		$(MAKE) _skaffold
 
 .PHONY: debug
-debug: manifests generate install.all _ensure-kong-system-namespace
+debug: generate install.all _ensure-kong-system-namespace
 	KONG_OPERATOR_ANONYMOUS_REPORTS=false \
 	KONG_OPERATOR_LOGGING_MODE=development \
 		dlv debug ./cmd/main.go -- \
