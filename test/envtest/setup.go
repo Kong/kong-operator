@@ -29,10 +29,12 @@ import (
 func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.Config, *corev1.Namespace) {
 	t.Helper()
 
-	gwAPIVersion, err := testutil.ExtractModuleVersion(testutil.GatewayAPIModuleName)
+	// GatewayAPIModuleName is the name of the module where we import and install Gateway API CRDs from.
+	const gatewayAPIModuleName = "sigs.k8s.io/gateway-api"
+	gwAPIVersion, err := testutil.ExtractModuleVersion(gatewayAPIModuleName)
 	require.NoError(t, err)
 	gwAPICRDPath := filepath.Join(
-		testutil.ConstructModulePath(testutil.GatewayAPIModuleName, gwAPIVersion),
+		testutil.ConstructModulePath(gatewayAPIModuleName, gwAPIVersion),
 		"config", "crd", "standard",
 	)
 
