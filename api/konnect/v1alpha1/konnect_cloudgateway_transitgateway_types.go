@@ -153,10 +153,12 @@ type AwsTransitGatewayAttachmentConfig struct {
 	// TransitGatewayID is the AWS transit gateway ID to create attachment to.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	TransitGatewayID string `json:"transit_gateway_id"`
 	// RAMShareArn is the resource share ARN to verify request to create transit gateway attachment.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	RAMShareArn string `json:"ram_share_arn"`
 }
 
@@ -165,18 +167,22 @@ type AzureVNETPeeringAttachmentConfig struct {
 	// TenantID is the tenant ID for the Azure VNET Peering attachment.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	TenantID string `json:"tenant_id"`
 	// SubscriptionID is the subscription ID for the Azure VNET Peering attachment.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	SubscriptionID string `json:"subscription_id"`
 	// ResourceGroupName is the resource group name for the Azure VNET Peering attachment.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	ResourceGroupName string `json:"resource_group_name"`
 	// VnetName is the VNET Name for the Azure VNET Peering attachment.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	VnetName string `json:"vnet_name"`
 }
 

@@ -165,11 +165,13 @@ type KonnectEndpoints struct {
 	// TelemetryEndpoint is the endpoint for telemetry.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	TelemetryEndpoint string `json:"telemetry"`
 
 	// ControlPlaneEndpoint is the endpoint for the control plane.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	ControlPlaneEndpoint string `json:"controlPlane"`
 }
 

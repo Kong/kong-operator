@@ -29,6 +29,7 @@ type ExtensionRef struct {
 	// Kind is kind of the extension resource.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Kind string `json:"kind"`
 
 	// NamespacedRef is a reference to the extension resource.
