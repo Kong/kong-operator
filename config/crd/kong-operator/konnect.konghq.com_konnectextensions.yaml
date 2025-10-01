@@ -115,6 +115,7 @@ spec:
                           name:
                             description: Name is the name of the KonnectAPIAuthConfiguration
                               resource.
+                            minLength: 1
                             type: string
                         required:
                         - name
@@ -145,6 +146,7 @@ spec:
                               name:
                                 description: Name is the name of the Konnect Control
                                   Plane.
+                                minLength: 1
                                 type: string
                               namespace:
                                 description: |-
@@ -399,9 +401,11 @@ spec:
                       controlPlane:
                         description: ControlPlaneEndpoint is the endpoint for the
                           control plane.
+                        minLength: 1
                         type: string
                       telemetry:
                         description: TelemetryEndpoint is the endpoint for telemetry.
+                        minLength: 1
                         type: string
                     required:
                     - controlPlane
@@ -528,6 +532,7 @@ spec:
                               name:
                                 description: Name is the name of the Konnect Control
                                   Plane.
+                                minLength: 1
                                 type: string
                               namespace:
                                 description: |-
@@ -742,6 +747,7 @@ spec:
                   controlPlaneID:
                     description: ControlPlaneID is the Konnect ID of the ControlPlane
                       this KonnectExtension is associated with.
+                    minLength: 1
                     type: string
                   endpoints:
                     description: Endpoints defines the Konnect endpoints for the control
@@ -750,9 +756,11 @@ spec:
                       controlPlane:
                         description: ControlPlaneEndpoint is the endpoint for the
                           control plane.
+                        minLength: 1
                         type: string
                       telemetry:
                         description: TelemetryEndpoint is the endpoint for telemetry.
+                        minLength: 1
                         type: string
                     required:
                     - controlPlane

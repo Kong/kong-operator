@@ -77,10 +77,12 @@ spec:
                       ram_share_arn:
                         description: RAMShareArn is the resource share ARN to verify
                           request to create transit gateway attachment.
+                        minLength: 1
                         type: string
                       transit_gateway_id:
                         description: TransitGatewayID is the AWS transit gateway ID
                           to create attachment to.
+                        minLength: 1
                         type: string
                     required:
                     - ram_share_arn
@@ -138,18 +140,22 @@ spec:
                       resource_group_name:
                         description: ResourceGroupName is the resource group name
                           for the Azure VNET Peering attachment.
+                        minLength: 1
                         type: string
                       subscription_id:
                         description: SubscriptionID is the subscription ID for the
                           Azure VNET Peering attachment.
+                        minLength: 1
                         type: string
                       tenant_id:
                         description: TenantID is the tenant ID for the Azure VNET
                           Peering attachment.
+                        minLength: 1
                         type: string
                       vnet_name:
                         description: VnetName is the VNET Name for the Azure VNET
                           Peering attachment.
+                        minLength: 1
                         type: string
                     required:
                     - resource_group_name
