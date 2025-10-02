@@ -45,7 +45,6 @@ import (
 
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/test"
-	conststest "github.com/kong/kong-operator/ingress-controller/test/consts"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
 )
@@ -109,8 +108,9 @@ func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, envi
 	require.NoError(t, err)
 	logClusterInfo(t, env.Cluster())
 
-	t.Logf("deploying KIC Incubator CRDs from %s (since they are not packaged with base CRDs)", conststest.IncubatorCRDKustomizeDir)
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), conststest.IncubatorCRDKustomizeDir))
+	const incubatorCRDKustomizeDir = "../../config/crd/incubator"
+	t.Logf("deploying KIC Incubator CRDs from %s (since they are not packaged with base CRDs)", incubatorCRDKustomizeDir)
+	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), incubatorCRDKustomizeDir))
 
 	t.Cleanup(func() {
 		output := helpers.DumpDiagnosticsIfFailed(ctx, t, env.Cluster())
