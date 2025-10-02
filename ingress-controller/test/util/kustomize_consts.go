@@ -11,10 +11,6 @@ import (
 )
 
 const (
-	// kubernetesConfigurationModulePath is the kubernetes-configuration path used by the kustomize.
-	// It's different than the path used by Go mod related functions as these do change
-	// based on the major version of the module used whereas this one doesn't.
-	kubernetesConfigurationModulePath = "github.com/kong/kubernetes-configuration"
 	// ingressControllerModulePath points to Kubernetes configuration for KGO, since KIC part
 	// only needs a subset of it, so a dedicated one is not needed.
 	ingressControllerLocalPath = "./"

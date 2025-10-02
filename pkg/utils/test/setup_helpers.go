@@ -30,17 +30,6 @@ import (
 	operatorclient "github.com/kong/kong-operator/pkg/clientset"
 )
 
-const (
-	// KubernetesConfigurationModuleName is the name of the module where we import and install Kong configuration CRDs from.
-	KubernetesConfigurationModuleName = "github.com/kong/kubernetes-configuration/v2"
-	// GatewayAPIModuleName is the name of the module where we import and install Gateway API CRDs from.
-	GatewayAPIModuleName = "sigs.k8s.io/gateway-api"
-)
-
-func noOpClose() error {
-	return nil
-}
-
 // SetupControllerLogger sets up the controller logger.
 // This functions needs to be called before 30sec after the controller packages
 // is loaded, otherwise the logger will not be initialized.
@@ -57,7 +46,10 @@ func SetupControllerLogger(controllerManagerOut string) (func() error, error) {
 	if controllerManagerOut != "stdout" {
 		out, err := os.CreateTemp("", "gateway-operator-controller-logs")
 		if err != nil {
-			return noOpClose, err
+			// noOpClose
+			return func() error {
+				return nil
+			}, err
 		}
 		fmt.Printf("INFO: controller output is being logged to %s\n", out.Name())
 		destWriter = out
