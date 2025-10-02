@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/controller/hybridgateway/intermediate"
@@ -46,6 +47,8 @@ func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client, share
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongService"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongUpstream"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongTarget"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1.GroupVersion.Version, Kind: "KongPlugin"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongPluginBinding"},
 		},
 	}
 }
@@ -247,8 +250,10 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 			for _, match := range val.Matches {
 				routeName := match.String()
 				bbuild := builder.NewKongPluginBinding().
-					WithName(routeName + fmt.Sprintf(".%d", filter.Name.GetFilterIndex())).
+					WithName(routeName+fmt.Sprintf(".%d", filter.Name.GetFilterIndex())).
 					WithNamespace(c.route.Namespace).
+					WithLabels(c.route).
+					WithAnnotations(c.route, c.ir.GetParentRefByName(match.Name)).
 					WithPluginRef(pluginName).
 					WithControlPlaneRef(*cpr).
 					WithOwner(c.route)
