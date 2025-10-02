@@ -5,36 +5,37 @@ import (
 )
 
 type (
+	AllowedRoutes          = gatewayv1.AllowedRoutes
+	BackendObjectReference = gatewayv1.BackendObjectReference
+	BackendRef             = gatewayv1.BackendRef
+	CommonRouteSpec        = gatewayv1.CommonRouteSpec
+	GRPCRoute              = gatewayv1.GRPCRoute
 	Gateway                = gatewayv1.Gateway
-	GatewayController      = gatewayv1.GatewayController
-	GatewayList            = gatewayv1.GatewayList
 	GatewayClass           = gatewayv1.GatewayClass
 	GatewayClassSpec       = gatewayv1.GatewayClassSpec
+	GatewayController      = gatewayv1.GatewayController
+	GatewayList            = gatewayv1.GatewayList
 	GatewaySpec            = gatewayv1.GatewaySpec
 	GatewayStatusAddress   = gatewayv1.GatewayStatusAddress
-	Listener               = gatewayv1.Listener
+	Group                  = gatewayv1.Group
+	HTTPBackendRef         = gatewayv1.HTTPBackendRef
 	HTTPRoute              = gatewayv1.HTTPRoute
-	HTTPRouteSpec          = gatewayv1.HTTPRouteSpec
-	HTTPRouteRule          = gatewayv1.HTTPRouteRule
+	HTTPRouteFilter        = gatewayv1.HTTPRouteFilter
 	HTTPRouteList          = gatewayv1.HTTPRouteList
 	HTTPRouteMatch         = gatewayv1.HTTPRouteMatch
-	RouteParentStatus      = gatewayv1.RouteParentStatus
-	GRPCRoute              = gatewayv1.GRPCRoute
-	ParentReference        = gatewayv1.ParentReference
-	CommonRouteSpec        = gatewayv1.CommonRouteSpec
+	HTTPRouteRule          = gatewayv1.HTTPRouteRule
+	HTTPRouteSpec          = gatewayv1.HTTPRouteSpec
 	Kind                   = gatewayv1.Kind
+	Listener               = gatewayv1.Listener
 	Namespace              = gatewayv1.Namespace
-	Group                  = gatewayv1.Group
-	AllowedRoutes          = gatewayv1.AllowedRoutes
+	ObjectName             = gatewayv1.ObjectName
+	ParametersReference    = gatewayv1.ParametersReference
+	ParentReference        = gatewayv1.ParentReference
+	PortNumber             = gatewayv1.PortNumber
 	RouteGroupKind         = gatewayv1.RouteGroupKind
 	RouteNamespaces        = gatewayv1.RouteNamespaces
-	ObjectName             = gatewayv1.ObjectName
+	RouteParentStatus      = gatewayv1.RouteParentStatus
 	SectionName            = gatewayv1.SectionName
-	PortNumber             = gatewayv1.PortNumber
-	BackendRef             = gatewayv1.BackendRef
-	BackendObjectReference = gatewayv1.BackendObjectReference
-	HTTPBackendRef         = gatewayv1.HTTPBackendRef
-	ParametersReference    = gatewayv1.ParametersReference
 )
 
 var GroupVersion = gatewayv1.GroupVersion
