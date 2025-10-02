@@ -9,6 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
@@ -245,13 +246,20 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 			// Create a KongPluginBinding to bind the KongPlugin to each rule match.
 			for _, match := range val.Matches {
 				routeName := match.String()
-				binding, err := builder.NewKongPluginBinding().
+				bbuild := builder.NewKongPluginBinding().
 					WithName(routeName + fmt.Sprintf(".%d", filter.Name.GetFilterIndex())).
 					WithNamespace(c.route.Namespace).
 					WithPluginRef(pluginName).
-					WithRouteRef(routeName).
 					WithControlPlaneRef(*cpr).
-					WithOwner(c.route).Build()
+					WithOwner(c.route)
+				if filter.Filter.Type == gatewayv1.HTTPRouteFilterResponseHeaderModifier {
+					// For response header modifiers, bind the plugin to the KongService instead of KongRoute.
+					serviceName := val.String()
+					bbuild = bbuild.WithServiceRef(serviceName)
+				} else {
+					bbuild = bbuild.WithRouteRef(routeName)
+				}
+				binding, err := bbuild.Build()
 				if err != nil {
 					continue
 				}

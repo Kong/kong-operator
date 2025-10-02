@@ -120,7 +120,21 @@ func (b *KongPluginBuilder) WithFilter(filter gwtypes.HTTPRouteFilter) *KongPlug
 			return b
 		}
 		b.plugin.Config.Raw = configJSON
+	case gatewayv1.HTTPRouteFilterResponseHeaderModifier:
+		rt, err := translateResponseModifier(filter)
+		if err != nil {
+			b.errors = append(b.errors, err)
+			return b
+		}
 
+		b.plugin.PluginName = "response-transformer"
+
+		configJSON, err := json.Marshal(rt)
+		if err != nil {
+			b.errors = append(b.errors, fmt.Errorf("failed to marshal %q plugin config: %w", b.plugin.PluginName, err))
+			return b
+		}
+		b.plugin.Config.Raw = configJSON
 	default:
 		b.errors = append(b.errors, fmt.Errorf("unsupported filter type: %s", filter.Type))
 	}
@@ -129,13 +143,13 @@ func (b *KongPluginBuilder) WithFilter(filter gwtypes.HTTPRouteFilter) *KongPlug
 
 // internal functions and types for translating HTTPRouteFilter to KongPlugin configurations
 
-type requestTransformerTargetSlice struct {
+type transformerTargetSlice struct {
 	Headers []string `json:"headers,omitempty"`
 }
 
 type requestTransformer struct {
-	Add    requestTransformerTargetSlice `json:"add,omitzero"`
-	Remove requestTransformerTargetSlice `json:"remove,omitzero"`
+	Add    transformerTargetSlice `json:"add,omitzero"`
+	Remove transformerTargetSlice `json:"remove,omitzero"`
 }
 
 func translateRequestModifier(filter gwtypes.HTTPRouteFilter) (requestTransformer, error) {
@@ -169,6 +183,46 @@ func translateRequestModifier(filter gwtypes.HTTPRouteFilter) (requestTransforme
 	if len(plugin.Add.Headers) == 0 && len(plugin.Remove.Headers) == 0 {
 		err = errors.New("RequestHeaderModifier filter config is empty")
 		plugin = requestTransformer{}
+	}
+	return plugin, err
+}
+
+type responseTransformer struct {
+	Add    transformerTargetSlice `json:"add,omitzero"`
+	Remove transformerTargetSlice `json:"remove,omitzero"`
+}
+
+func translateResponseModifier(filter gwtypes.HTTPRouteFilter) (responseTransformer, error) {
+	var err error
+	plugin := responseTransformer{}
+
+	if filter.ResponseHeaderModifier == nil {
+		err = errors.New("ResponseHeaderModifier filter config is missing")
+		return plugin, err
+	}
+	plugin.Remove.Headers = []string{}
+	plugin.Add.Headers = []string{}
+
+	if len(filter.ResponseHeaderModifier.Set) > 0 {
+		for _, v := range filter.ResponseHeaderModifier.Set {
+			plugin.Remove.Headers = append(plugin.Remove.Headers, string(v.Name))
+			plugin.Add.Headers = append(plugin.Add.Headers, string(v.Name)+":"+v.Value)
+		}
+	}
+	if len(filter.ResponseHeaderModifier.Add) > 0 {
+		for _, v := range filter.ResponseHeaderModifier.Add {
+			plugin.Add.Headers = append(plugin.Add.Headers, string(v.Name)+":"+v.Value)
+		}
+	}
+	if len(filter.ResponseHeaderModifier.Remove) > 0 {
+		for _, v := range filter.ResponseHeaderModifier.Remove {
+			plugin.Remove.Headers = append(plugin.Remove.Headers, v)
+		}
+	}
+
+	if len(plugin.Add.Headers) == 0 && len(plugin.Remove.Headers) == 0 {
+		err = errors.New("ResponseHeaderModifier filter config is empty")
+		plugin = responseTransformer{}
 	}
 	return plugin, err
 }

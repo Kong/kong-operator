@@ -156,10 +156,10 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 			},
 			expectedPlugin: "request-transformer",
 			expectedConfig: requestTransformer{
-				Add: requestTransformerTargetSlice{
+				Add: transformerTargetSlice{
 					Headers: []string{"X-Custom-Header:custom-value", "X-Another-Header:another-value"},
 				},
-				Remove: requestTransformerTargetSlice{
+				Remove: transformerTargetSlice{
 					Headers: []string{},
 				},
 			},
@@ -174,10 +174,10 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 			},
 			expectedPlugin: "request-transformer",
 			expectedConfig: requestTransformer{
-				Add: requestTransformerTargetSlice{
+				Add: transformerTargetSlice{
 					Headers: []string{},
 				},
-				Remove: requestTransformerTargetSlice{
+				Remove: transformerTargetSlice{
 					Headers: []string{"X-Remove-Header", "custom-value"},
 				},
 			},
@@ -194,10 +194,10 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 			},
 			expectedPlugin: "request-transformer",
 			expectedConfig: requestTransformer{
-				Add: requestTransformerTargetSlice{
+				Add: transformerTargetSlice{
 					Headers: []string{"Authorization:Bearer token123"},
 				},
-				Remove: requestTransformerTargetSlice{
+				Remove: transformerTargetSlice{
 					Headers: []string{"Authorization"},
 				},
 			},
@@ -218,10 +218,10 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 			},
 			expectedPlugin: "request-transformer",
 			expectedConfig: requestTransformer{
-				Add: requestTransformerTargetSlice{
+				Add: transformerTargetSlice{
 					Headers: []string{"X-Set-Header:set-value", "X-Add-Header:add-value"},
 				},
-				Remove: requestTransformerTargetSlice{
+				Remove: transformerTargetSlice{
 					Headers: []string{"X-Set-Header", "X-Remove-Header"},
 				},
 			},
@@ -268,6 +268,139 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 	}
 }
 
+func TestKongPluginBuilder_WithFilter_ResponseHeaderModifier(t *testing.T) {
+	tests := []struct {
+		name           string
+		filter         gwtypes.HTTPRouteFilter
+		expectedPlugin string
+		expectedConfig responseTransformer
+		expectError    bool
+	}{
+		{
+			name: "add headers only",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterResponseHeaderModifier,
+				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Add: []gatewayv1.HTTPHeader{
+						{Name: "X-Custom-Header", Value: "custom-value"},
+						{Name: "X-Another-Header", Value: "another-value"},
+					},
+				},
+			},
+			expectedPlugin: "response-transformer",
+			expectedConfig: responseTransformer{
+				Add: transformerTargetSlice{
+					Headers: []string{"X-Custom-Header:custom-value", "X-Another-Header:another-value"},
+				},
+				Remove: transformerTargetSlice{
+					Headers: []string{},
+				},
+			},
+		},
+		{
+			name: "remove headers only",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterResponseHeaderModifier,
+				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Remove: []string{"X-Remove-Header", "custom-value"},
+				},
+			},
+			expectedPlugin: "response-transformer",
+			expectedConfig: responseTransformer{
+				Add: transformerTargetSlice{
+					Headers: []string{},
+				},
+				Remove: transformerTargetSlice{
+					Headers: []string{"X-Remove-Header", "custom-value"},
+				},
+			},
+		},
+		{
+			name: "set headers (remove + add)",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterResponseHeaderModifier,
+				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Set: []gatewayv1.HTTPHeader{
+						{Name: "Authorization", Value: "Bearer token123"},
+					},
+				},
+			},
+			expectedPlugin: "response-transformer",
+			expectedConfig: responseTransformer{
+				Add: transformerTargetSlice{
+					Headers: []string{"Authorization:Bearer token123"},
+				},
+				Remove: transformerTargetSlice{
+					Headers: []string{"Authorization"},
+				},
+			},
+		},
+		{
+			name: "mixed operations",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterResponseHeaderModifier,
+				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Add: []gatewayv1.HTTPHeader{
+						{Name: "X-Add-Header", Value: "add-value"},
+					},
+					Set: []gatewayv1.HTTPHeader{
+						{Name: "X-Set-Header", Value: "set-value"},
+					},
+					Remove: []string{"X-Remove-Header"},
+				},
+			},
+			expectedPlugin: "response-transformer",
+			expectedConfig: responseTransformer{
+				Add: transformerTargetSlice{
+					Headers: []string{"X-Set-Header:set-value", "X-Add-Header:add-value"},
+				},
+				Remove: transformerTargetSlice{
+					Headers: []string{"X-Set-Header", "X-Remove-Header"},
+				},
+			},
+		},
+		{
+			name: "nil ResponseHeaderModifier",
+			filter: gwtypes.HTTPRouteFilter{
+				Type:                   gatewayv1.HTTPRouteFilterResponseHeaderModifier,
+				ResponseHeaderModifier: nil,
+			},
+			expectError: true,
+		},
+		{
+			name: "empty ResponseHeaderModifier",
+			filter: gwtypes.HTTPRouteFilter{
+				Type:                   gatewayv1.HTTPRouteFilterResponseHeaderModifier,
+				ResponseHeaderModifier: &gatewayv1.HTTPHeaderFilter{},
+			},
+			expectError: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			builder := NewKongPlugin().WithFilter(tt.filter)
+
+			plugin, err := builder.Build()
+
+			if tt.expectError {
+				assert.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.expectedPlugin, plugin.PluginName)
+
+			var actualConfig responseTransformer
+			err = json.Unmarshal(plugin.Config.Raw, &actualConfig)
+			require.NoError(t, err)
+
+			assert.ElementsMatch(t, tt.expectedConfig.Add.Headers, actualConfig.Add.Headers)
+			assert.ElementsMatch(t, tt.expectedConfig.Remove.Headers, actualConfig.Remove.Headers)
+		})
+	}
+}
+
 func TestKongPluginBuilder_WithFilter_UnsupportedType(t *testing.T) {
 	filter := gwtypes.HTTPRouteFilter{
 		Type: gatewayv1.HTTPRouteFilterCORS, // Unsupported type
@@ -301,10 +434,10 @@ func TestTranslateRequestModifier(t *testing.T) {
 				},
 			},
 			expected: requestTransformer{
-				Add: requestTransformerTargetSlice{
+				Add: transformerTargetSlice{
 					Headers: []string{"X-Set:set-val", "X-Add:add-val"},
 				},
-				Remove: requestTransformerTargetSlice{
+				Remove: transformerTargetSlice{
 					Headers: []string{"X-Set", "X-Remove"},
 				},
 			},
