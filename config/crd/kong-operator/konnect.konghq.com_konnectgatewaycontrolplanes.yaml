@@ -86,6 +86,7 @@ spec:
                       name:
                         description: Name is the name of the KonnectAPIAuthConfiguration
                           resource.
+                        minLength: 1
                         type: string
                     required:
                     - name
@@ -313,9 +314,11 @@ spec:
                   controlPlane:
                     description: ControlPlaneEndpoint is the endpoint for the control
                       plane.
+                    minLength: 1
                     type: string
                   telemetry:
                     description: TelemetryEndpoint is the endpoint for telemetry.
+                    minLength: 1
                     type: string
                 required:
                 - controlPlane
@@ -453,6 +456,7 @@ spec:
                       name:
                         description: Name is the name of the KonnectAPIAuthConfiguration
                           resource.
+                        minLength: 1
                         type: string
                     required:
                     - name
@@ -668,9 +672,11 @@ spec:
                   controlPlane:
                     description: ControlPlaneEndpoint is the endpoint for the control
                       plane.
+                    minLength: 1
                     type: string
                   telemetry:
                     description: TelemetryEndpoint is the endpoint for telemetry.
+                    minLength: 1
                     type: string
                 required:
                 - controlPlane

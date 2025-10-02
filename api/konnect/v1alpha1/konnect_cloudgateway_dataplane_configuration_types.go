@@ -197,13 +197,6 @@ type ConfigurationDataPlaneGroupAutoscaleStatic struct {
 // KonnectCloudGatewayDataPlaneGroupConfigurationStatus defines the observed state of KonnectCloudGatewayDataPlaneGroupConfiguration.
 // +apireference:kgo:include
 type KonnectCloudGatewayDataPlaneGroupConfigurationStatus struct {
-	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"`
-
-	// DataPlaneGroups is a list of deployed data-plane groups.
-	//
-	// +optional
-	DataPlaneGroups []KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup `json:"dataplane_groups,omitempty"`
-
 	// Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.
 	//
 	// Known condition types are:
@@ -215,7 +208,16 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationStatus struct {
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// +patchStrategy=merge
+	// +patchMergeKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
+	konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:",inline"`
+
+	// DataPlaneGroups is a list of deployed data-plane groups.
+	//
+	// +optional
+	DataPlaneGroups []KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup `json:"dataplane_groups,omitempty"`
 }
 
 // KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup defines the observed state of a deployed data-plane group.

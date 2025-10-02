@@ -87,6 +87,7 @@ spec:
                       name:
                         description: Name is the name of the KonnectAPIAuthConfiguration
                           resource.
+                        minLength: 1
                         type: string
                     required:
                     - name

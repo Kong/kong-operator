@@ -973,3 +973,29 @@ install.telepresence: download.telepresence
 .PHONY: uninstall.telepresence
 uninstall.telepresence: download.telepresence
 	@$(PROJECT_DIR)/scripts/telepresence-manager.sh uninstall "$(TELEPRESENCE)"
+
+# Currently kube-api-linter can only be run with golangci-lint as custom linter.
+# There have been some discussions about making it possible to be run as a standalone tool
+# using go run but nothing has been implemented yet.
+# ref: https://github.com/kubernetes-sigs/kube-api-linter/issues/86
+
+GOLANGCI_LINT_KUBE_API_LINTER = $(PROJECT_DIR)/bin/golangci-kube-api-linter
+
+# Target below only checks if the kube-api-linter is installed, if not it will
+# run golangci-lint custom to produce a custom linter binary.
+# It does not enforce the version of kube-api-linter, so when that changes in
+# .custom-gcl.yml it will not cause a rebuild. Until that changes, we need to
+# manually remove the binary and call `make lint.api` to rebuild it.
+
+.PHONY: lint.api.remove
+lint.api.remove:
+	@rm -f $(GOLANGCI_LINT_KUBE_API_LINTER)
+
+.PHONY: lint.api
+lint.api: golangci-lint
+	@[[ -f $(GOLANGCI_LINT_KUBE_API_LINTER) ]] || $(GOLANGCI_LINT) custom -v
+	$(GOLANGCI_LINT_KUBE_API_LINTER) run --config $(PROJECT_DIR)/.golangci-kube-api.yaml -v \
+		./api/gateway-operator/v2beta1/... \
+		./api/konnect/v1alpha1/... \
+		./api/konnect/v1alpha2/... \
+		./api/common/v1alpha1/...

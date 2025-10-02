@@ -1,0 +1,103 @@
+version: "2"
+linters:
+  default: none
+  enable:
+    - kubeapilinter
+  settings:
+    custom:
+      kubeapilinter:
+        type: module
+        description: Kube API LInter lints Kube like APIs based on API conventions and best practices.
+        settings:
+          linters:
+            disable:
+              - "*"
+            enable:
+              - jsontags
+              - duplicatemarkers
+              - conditions
+              # - maxlength
+              - integers
+              - nobools
+              - nofloats
+              - nomaps
+              - nophase
+              - optionalorrequired
+              - requiredfields
+              - statusoptional
+              - statussubresource
+              - uniquemarkers
+          lintersConfig:
+            conditions:
+              isFirstField: Warn
+              useProtobuf: Warn
+              usePatchStrategy: Warn
+            nomaps:
+              policy: AllowStringToStringMaps
+            # We allow underscores as that's what many Konnect related fields use.
+            jsonTags:
+              jsonTagRegex: "^[a-z][a-z0-9_]*(?:[A-Z][a-z0-9_]*)*$"
+            optionalOrRequired:
+              preferredOptionalMarker: optional
+              preferredRequiredMarker: required
+  exclusions:
+    rules:
+      - linters:
+          - kubeapilinter
+        path: .*
+        text: "(optionalorrequired: embedded field  must be marked as optional or required)"
+      - linters:
+          - kubeapilinter
+        path: .*
+        text: "(optionalorrequired: field Spec must be marked as optional or required)"
+      # NOTE: kubeapilinter has been introduced after v1alpha1/konnect_gateway_controlplane_types.go
+      #       has been created and to prevent changes in the API and docs we disable the rule.
+      - linters:
+          - kubeapilinter
+        path: api/konnect/v1alpha1/konnect_gateway_controlplane_types.go
+        text: "nobools: field CloudGateway pointer should not use a bool. Use a string type with meaningful constant values as an enum."
+      # NOTE: Let the old APIs be as they are.
+      - linters:
+          - kubeapilinter
+        path: api/konnect/v1alpha1/.*
+        text: "conditions: Conditions field is missing the following markers: patchStrategy=merge, patchMergeKey=type"
+      # NOTE: Let the old APIs be as they are.
+      - linters:
+          - kubeapilinter
+        path: api/konnect/v1alpha1/.*
+        text: "conditions: Conditions field has incorrect tags, should be:"
+      # NOTE: Let the old APIs be as they are.
+      - linters:
+          - kubeapilinter
+        path: api/konnect/v1alpha1/.*
+        text: "conditions: Conditions field must be the first field in the struct"
+
+      # TODO: remove this.
+      - linters:
+          - kubeapilinter
+        path: api/.*
+        text: "requiredfields: field .* should have the omitempty tag."
+
+      # TODO: remove this.
+      - linters:
+          - kubeapilinter
+        path: api/.*
+        text: "requiredfields: field .* does not allow the zero value. It must have the omitzero tag."
+
+      # TODO: remove this.
+      - linters:
+          - kubeapilinter
+        path: api/konnect/(v1alpha1|v1alpha2)/.*
+        text: 'requiredfields: field .* has a valid zero value .* but the validation is not complete'
+
+      # TODO: remove this.
+      - linters:
+          - kubeapilinter
+        path: api/gateway-operator/v2beta1/shared_types.go
+        text: 'requiredfields: field .* has a valid zero value .* but the validation is not complete'
+
+      # TODO: remove this.
+      - linters:
+          - kubeapilinter
+        path: api/gateway-operator/v2beta1/shared_types.go
+        text: 'requiredfields: field Strategy has a valid zero value .* and should be a pointer.'

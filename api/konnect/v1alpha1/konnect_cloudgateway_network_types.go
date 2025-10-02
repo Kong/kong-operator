@@ -91,13 +91,6 @@ type KonnectCloudGatewayNetworkSpec struct {
 // KonnectCloudGatewayNetworkStatus defines the observed state of KonnectCloudGatewayNetwork.
 // +apireference:kgo:include
 type KonnectCloudGatewayNetworkStatus struct {
-	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
-
-	// State is the current state of the network. Can be e.g. initializing, ready, terminating.
-	//
-	// +optional
-	State string `json:"state,omitempty"`
-
 	// Conditions describe the current conditions of the KonnectCloudGatewayNetwork.
 	//
 	// Known condition types are:
@@ -109,7 +102,16 @@ type KonnectCloudGatewayNetworkStatus struct {
 	// +kubebuilder:validation:MaxItems=8
 	// +kubebuilder:default={{type: "Programmed", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
 	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
+	// +patchStrategy=merge
+	// +patchMergeKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
+	konnectv1alpha2.KonnectEntityStatus `json:",inline"`
+
+	// State is the current state of the network. Can be e.g. initializing, ready, terminating.
+	//
+	// +optional
+	State string `json:"state,omitempty"`
 }
 
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
