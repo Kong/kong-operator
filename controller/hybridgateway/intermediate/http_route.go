@@ -11,6 +11,7 @@ import (
 type Rule struct {
 	Name
 	Matches     map[string]Match
+	Filters     map[string]Filter
 	BackendRefs map[string]BackendRef
 }
 
@@ -26,6 +27,13 @@ type Match struct {
 type BackendRef struct {
 	Name
 	BackendRef gwtypes.HTTPBackendRef
+}
+
+// Filter represents a filter applied to an HTTPRoute rule.
+// It defines transformations or actions to be performed on requests that match the rule.
+type Filter struct {
+	Name
+	Filter gwtypes.HTTPRouteFilter
 }
 
 // ControlPlaneRef represents a control plane reference for Kong configuration.
@@ -84,6 +92,13 @@ func NewHTTPRouteRepresentation(route *gwtypes.HTTPRoute) *HTTPRouteRepresentati
 					Match: match,
 				})
 			}
+			for k, filter := range rule.Filters {
+				filterName := NameFromHTTPRoute(route, "", i, j, k)
+				repr.AddFilterForRule(ruleName, Filter{
+					Name:   filterName,
+					Filter: filter,
+				})
+			}
 			for k, bRef := range rule.BackendRefs {
 				bRefName := NameFromHTTPRoute(route, "", i, j, k)
 				repr.AddBackenRefForRule(ruleName, BackendRef{
@@ -131,8 +146,34 @@ func (t *HTTPRouteRepresentation) AddMatchForRule(rName Name, match Match) {
 			Matches: make(map[string]Match),
 		}
 	}
+	if rule.Matches == nil {
+		rule.Matches = make(map[string]Match)
+	}
 	matchKey := match.String()
 	rule.Matches[matchKey] = match
+	t.Rules[ruleKey] = rule
+}
+
+// AddFilterForRule adds a filter to a specific rule in the HTTPRoute representation.
+// If the rule doesn't exist, it creates a new rule with the provided name.
+// The filter is stored using its name as the key for easy retrieval.
+func (t *HTTPRouteRepresentation) AddFilterForRule(rName Name, filter Filter) {
+	if t.Rules == nil {
+		t.Rules = make(map[string]Rule)
+	}
+	ruleKey := rName.String()
+	rule, exists := t.Rules[ruleKey]
+	if !exists {
+		rule = Rule{
+			Name:    rName,
+			Filters: make(map[string]Filter),
+		}
+	}
+	if rule.Filters == nil {
+		rule.Filters = make(map[string]Filter)
+	}
+	filterKey := filter.String()
+	rule.Filters[filterKey] = filter
 	t.Rules[ruleKey] = rule
 }
 

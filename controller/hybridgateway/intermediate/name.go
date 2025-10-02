@@ -88,3 +88,8 @@ func (n *Name) GetMatchIndex() int {
 	}
 	return n.indexes[2]
 }
+
+// GetFilterIndex is an alias for GetMatchIndex.
+func (n *Name) GetFilterIndex() int {
+	return n.GetMatchIndex()
+}
