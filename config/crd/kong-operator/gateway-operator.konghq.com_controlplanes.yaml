@@ -8224,6 +8224,7 @@ spec:
                       type: string
                     kind:
                       description: Kind is kind of the extension resource.
+                      minLength: 1
                       type: string
                     name:
                       description: Name is the name of the referred resource.
@@ -8498,6 +8499,7 @@ spec:
                     properties:
                       name:
                         description: Ref is the name of the DataPlane to configure.
+                        minLength: 1
                         type: string
                     required:
                     - name
@@ -8550,6 +8552,7 @@ spec:
                       type: string
                     kind:
                       description: Kind is kind of the extension resource.
+                      minLength: 1
                       type: string
                     name:
                       description: Name is the name of the referred resource.

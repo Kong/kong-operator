@@ -8315,6 +8315,7 @@ spec:
                           type: string
                         kind:
                           description: Kind is kind of the extension resource.
+                          minLength: 1
                           type: string
                         name:
                           description: Name is the name of the referred resource.
@@ -17368,6 +17369,7 @@ spec:
                           type: string
                         kind:
                           description: Kind is kind of the extension resource.
+                          minLength: 1
                           type: string
                         name:
                           description: Name is the name of the referred resource.
@@ -17588,6 +17590,7 @@ spec:
                       type: string
                     kind:
                       description: Kind is kind of the extension resource.
+                      minLength: 1
                       type: string
                     name:
                       description: Name is the name of the referred resource.
@@ -27276,6 +27279,7 @@ spec:
                       type: string
                     kind:
                       description: Kind is kind of the extension resource.
+                      minLength: 1
                       type: string
                     name:
                       description: Name is the name of the referred resource.

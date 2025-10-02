@@ -184,6 +184,17 @@ type SecretRef struct {
 
 // KonnectExtensionStatus defines the observed state of KonnectExtension.
 type KonnectExtensionStatus struct {
+	// Conditions describe the current conditions of the KonnectExtensionStatus.
+	// Known condition types are:
+	//
+	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
+	// +patchStrategy=merge
+	// +patchMergeKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
 	// DataPlaneRefs is the array  of DataPlane references this is associated with.
 	// A new reference is set by the operator when this extension is associated with
 	// a DataPlane through its extensions spec.
@@ -209,15 +220,6 @@ type KonnectExtensionStatus struct {
 	//
 	// +optional
 	Konnect *KonnectExtensionControlPlaneStatus `json:"konnect,omitempty"`
-
-	// Conditions describe the current conditions of the KonnectExtensionStatus.
-	// Known condition types are:
-	//
-	// +optional
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MaxItems=8
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
 // KonnectExtensionClusterType is the type of the Konnect Control Plane.

@@ -226,11 +226,13 @@ type KonnectEndpoints struct {
 	// TelemetryEndpoint is the endpoint for telemetry.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	TelemetryEndpoint string `json:"telemetry"`
 
 	// ControlPlaneEndpoint is the endpoint for the control plane.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	ControlPlaneEndpoint string `json:"controlPlane"`
 }
 
@@ -239,6 +241,7 @@ type KonnectExtensionControlPlaneStatus struct {
 	// ControlPlaneID is the Konnect ID of the ControlPlane this KonnectExtension is associated with.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	ControlPlaneID string `json:"controlPlaneID"`
 
 	// ClusterType is the type of the Konnect Control Plane.
@@ -250,6 +253,7 @@ type KonnectExtensionControlPlaneStatus struct {
 	// Endpoints defines the Konnect endpoints for the control plane.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Endpoints KonnectEndpoints `json:"endpoints"`
 }
 
