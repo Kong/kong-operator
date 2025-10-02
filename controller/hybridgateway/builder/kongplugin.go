@@ -175,9 +175,7 @@ func translateRequestModifier(filter gwtypes.HTTPRouteFilter) (requestTransforme
 		}
 	}
 	if len(filter.RequestHeaderModifier.Remove) > 0 {
-		for _, v := range filter.RequestHeaderModifier.Remove {
-			plugin.Remove.Headers = append(plugin.Remove.Headers, v)
-		}
+		plugin.Remove.Headers = append(plugin.Remove.Headers, filter.RequestHeaderModifier.Remove...)
 	}
 
 	if len(plugin.Add.Headers) == 0 && len(plugin.Remove.Headers) == 0 {
@@ -215,9 +213,7 @@ func translateResponseModifier(filter gwtypes.HTTPRouteFilter) (responseTransfor
 		}
 	}
 	if len(filter.ResponseHeaderModifier.Remove) > 0 {
-		for _, v := range filter.ResponseHeaderModifier.Remove {
-			plugin.Remove.Headers = append(plugin.Remove.Headers, v)
-		}
+		plugin.Remove.Headers = append(plugin.Remove.Headers, filter.ResponseHeaderModifier.Remove...)
 	}
 
 	if len(plugin.Add.Headers) == 0 && len(plugin.Remove.Headers) == 0 {
