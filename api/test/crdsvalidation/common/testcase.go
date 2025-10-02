@@ -15,7 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
-	"github.com/kong/kubernetes-configuration/v2/pkg/clientset/scheme"
+	"github.com/kong/kong-operator/pkg/clientset/scheme"
 )
 
 // TestCasesGroup is a group of test cases related to CRD validation.

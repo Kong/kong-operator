@@ -359,7 +359,7 @@ jobs:
         name: tests-report-unit-tests
         path: unit-tests.xml
 
-  CRDs-validation:
+  CRDs:
     runs-on: ubuntu-latest
     needs: [check-docs-only]
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
@@ -380,6 +380,20 @@ jobs:
 
     - name: Run the crds validation tests
       run: make test.crds-validation
+    
+    # TODO: https://github.com/Kong/kong-operator/issues/2386
+    - name: Create k8s KinD Cluster
+      uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
+      with:
+        # NOTE: default is 0.26.0 https://github.com/helm/kind-action/blob/a1b0e391336a6ee6713a0583f8c6240d70863de3/kind.sh#L21
+        # so bump this manually
+        version: v0.27.0
+
+    - name: Verify installing CRDs via kustomize works
+      run: make install.only
+
+    - name: Run the rest of CRDs tests
+      run: make test.crds
 
   envtest-tests:
     runs-on: ubuntu-latest
@@ -717,7 +731,7 @@ jobs:
       - samples
       - install-with-kustomize
       - build
-      - CRDs-validation
+      - CRDs
       - unit-tests
       - envtest-tests
       - kongintegration-tests

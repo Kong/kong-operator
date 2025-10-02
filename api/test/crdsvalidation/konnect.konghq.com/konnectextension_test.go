@@ -6,10 +6,10 @@ import (
 
 	"github.com/samber/lo"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
-	common "github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	common "github.com/kong/kong-operator/test/crdsvalidation/common"
 )
 
 func TestKonnectExtension(t *testing.T) {

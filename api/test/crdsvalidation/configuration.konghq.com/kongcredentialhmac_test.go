@@ -8,9 +8,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kubernetes-configuration/v2/api/konnect/v1alpha2"
-	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/test/crdsvalidation/common"
 )
 
 func TestKongCredentialHMAC(t *testing.T) {

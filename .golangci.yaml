@@ -193,6 +193,10 @@ linters:
           - forbidigo
         path: internal/types/operatortypes.go
         text: use of `operatorv2beta1.(ControlPlane\w*)` forbidden
+      - linters:
+          - forbidigo
+        path: api/test
+        text: use of `operatorv1beta1.(ControlPlane\w*)` forbidden
     paths:
       - pkg/clientset
       - config/

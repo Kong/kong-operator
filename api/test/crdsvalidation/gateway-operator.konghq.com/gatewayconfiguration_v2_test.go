@@ -8,9 +8,9 @@ import (
 	policyv1 "k8s.io/api/policy/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 
-	commonv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/common/v1alpha1"
-	operatorv2beta1 "github.com/kong/kubernetes-configuration/v2/api/gateway-operator/v2beta1"
-	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
+	"github.com/kong/kong-operator/test/crdsvalidation/common"
 )
 
 func TestGatewayConfigurationV2(t *testing.T) {

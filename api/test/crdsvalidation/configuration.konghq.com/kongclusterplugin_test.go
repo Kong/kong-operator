@@ -6,8 +6,8 @@ import (
 	"github.com/samber/lo"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
-	"github.com/kong/kubernetes-configuration/v2/test/crdsvalidation/common"
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
+	"github.com/kong/kong-operator/test/crdsvalidation/common"
 )
 
 func TestKongClusterPlugin(t *testing.T) {
