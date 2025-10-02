@@ -29,6 +29,8 @@ type BackendRef struct {
 	BackendRef gwtypes.HTTPBackendRef
 }
 
+// Filter represents a filter applied to an HTTPRoute rule.
+// It defines transformations or actions to be performed on requests that match the rule.
 type Filter struct {
 	Name
 	Filter gwtypes.HTTPRouteFilter

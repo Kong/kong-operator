@@ -7,7 +7,7 @@ import (
 	"maps"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
@@ -105,7 +105,7 @@ func (b *KongPluginBuilder) MustBuild() configurationv1.KongPlugin {
 func (b *KongPluginBuilder) WithFilter(filter gwtypes.HTTPRouteFilter) *KongPluginBuilder {
 
 	switch filter.Type {
-	case v1.HTTPRouteFilterRequestHeaderModifier:
+	case gatewayv1.HTTPRouteFilterRequestHeaderModifier:
 		rt, err := translateRequestModifier(filter)
 		if err != nil {
 			b.errors = append(b.errors, err)
@@ -119,7 +119,7 @@ func (b *KongPluginBuilder) WithFilter(filter gwtypes.HTTPRouteFilter) *KongPlug
 			b.errors = append(b.errors, fmt.Errorf("failed to marshal %q plugin config: %w", b.plugin.PluginName, err))
 			return b
 		}
-		b.plugin.Config.Raw = []byte(configJSON)
+		b.plugin.Config.Raw = configJSON
 
 	default:
 		b.errors = append(b.errors, fmt.Errorf("unsupported filter type: %s", filter.Type))
@@ -138,13 +138,13 @@ type requestTransformer struct {
 	Remove requestTransformerTargetSlice `json:"remove,omitzero"`
 }
 
-func translateRequestModifier(filter gwtypes.HTTPRouteFilter) (plugin requestTransformer, err error) {
-	plugin = requestTransformer{}
-	err = nil
+func translateRequestModifier(filter gwtypes.HTTPRouteFilter) (requestTransformer, error) {
+	var err error
+	plugin := requestTransformer{}
 
 	if filter.RequestHeaderModifier == nil {
 		err = errors.New("RequestHeaderModifier filter config is missing")
-		return
+		return plugin, err
 	}
 	plugin.Remove.Headers = []string{}
 	plugin.Add.Headers = []string{}
@@ -162,7 +162,7 @@ func translateRequestModifier(filter gwtypes.HTTPRouteFilter) (plugin requestTra
 	}
 	if len(filter.RequestHeaderModifier.Remove) > 0 {
 		for _, v := range filter.RequestHeaderModifier.Remove {
-			plugin.Remove.Headers = append(plugin.Remove.Headers, string(v))
+			plugin.Remove.Headers = append(plugin.Remove.Headers, v)
 		}
 	}
 
@@ -170,5 +170,5 @@ func translateRequestModifier(filter gwtypes.HTTPRouteFilter) (plugin requestTra
 		err = errors.New("RequestHeaderModifier filter config is empty")
 		plugin = requestTransformer{}
 	}
-	return
+	return plugin, err
 }

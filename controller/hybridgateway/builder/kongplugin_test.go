@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	v1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -146,9 +146,9 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 		{
 			name: "add headers only",
 			filter: gwtypes.HTTPRouteFilter{
-				Type: v1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &v1.HTTPHeaderFilter{
-					Add: []v1.HTTPHeader{
+				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Add: []gatewayv1.HTTPHeader{
 						{Name: "X-Custom-Header", Value: "custom-value"},
 						{Name: "X-Another-Header", Value: "another-value"},
 					},
@@ -167,8 +167,8 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 		{
 			name: "remove headers only",
 			filter: gwtypes.HTTPRouteFilter{
-				Type: v1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &v1.HTTPHeaderFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
 					Remove: []string{"X-Remove-Header", "custom-value"},
 				},
 			},
@@ -185,9 +185,9 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 		{
 			name: "set headers (remove + add)",
 			filter: gwtypes.HTTPRouteFilter{
-				Type: v1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &v1.HTTPHeaderFilter{
-					Set: []v1.HTTPHeader{
+				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Set: []gatewayv1.HTTPHeader{
 						{Name: "Authorization", Value: "Bearer token123"},
 					},
 				},
@@ -205,12 +205,12 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 		{
 			name: "mixed operations",
 			filter: gwtypes.HTTPRouteFilter{
-				Type: v1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &v1.HTTPHeaderFilter{
-					Add: []v1.HTTPHeader{
+				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Add: []gatewayv1.HTTPHeader{
 						{Name: "X-Add-Header", Value: "add-value"},
 					},
-					Set: []v1.HTTPHeader{
+					Set: []gatewayv1.HTTPHeader{
 						{Name: "X-Set-Header", Value: "set-value"},
 					},
 					Remove: []string{"X-Remove-Header"},
@@ -229,7 +229,7 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 		{
 			name: "nil RequestHeaderModifier",
 			filter: gwtypes.HTTPRouteFilter{
-				Type:                  v1.HTTPRouteFilterRequestHeaderModifier,
+				Type:                  gatewayv1.HTTPRouteFilterRequestHeaderModifier,
 				RequestHeaderModifier: nil,
 			},
 			expectError: true,
@@ -237,8 +237,8 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 		{
 			name: "empty RequestHeaderModifier",
 			filter: gwtypes.HTTPRouteFilter{
-				Type:                  v1.HTTPRouteFilterRequestHeaderModifier,
-				RequestHeaderModifier: &v1.HTTPHeaderFilter{},
+				Type:                  gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{},
 			},
 			expectError: true,
 		},
@@ -270,7 +270,7 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 
 func TestKongPluginBuilder_WithFilter_UnsupportedType(t *testing.T) {
 	filter := gwtypes.HTTPRouteFilter{
-		Type: v1.HTTPRouteFilterCORS, // Unsupported type
+		Type: gatewayv1.HTTPRouteFilterCORS, // Unsupported type
 	}
 
 	builder := NewKongPlugin().WithFilter(filter)
@@ -290,11 +290,11 @@ func TestTranslateRequestModifier(t *testing.T) {
 		{
 			name: "successful translation with all operations",
 			filter: gwtypes.HTTPRouteFilter{
-				RequestHeaderModifier: &v1.HTTPHeaderFilter{
-					Add: []v1.HTTPHeader{
+				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Add: []gatewayv1.HTTPHeader{
 						{Name: "X-Add", Value: "add-val"},
 					},
-					Set: []v1.HTTPHeader{
+					Set: []gatewayv1.HTTPHeader{
 						{Name: "X-Set", Value: "set-val"},
 					},
 					Remove: []string{"X-Remove"},
@@ -319,7 +319,7 @@ func TestTranslateRequestModifier(t *testing.T) {
 		{
 			name: "empty RequestHeaderModifier",
 			filter: gwtypes.HTTPRouteFilter{
-				RequestHeaderModifier: &v1.HTTPHeaderFilter{},
+				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{},
 			},
 			expectError: true,
 		},
@@ -355,9 +355,9 @@ func TestKongPluginBuilder_ChainedCalls(t *testing.T) {
 	}
 
 	filter := gwtypes.HTTPRouteFilter{
-		Type: v1.HTTPRouteFilterRequestHeaderModifier,
-		RequestHeaderModifier: &v1.HTTPHeaderFilter{
-			Add: []v1.HTTPHeader{
+		Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+		RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+			Add: []gatewayv1.HTTPHeader{
 				{Name: "X-Test", Value: "test-value"},
 			},
 		},
