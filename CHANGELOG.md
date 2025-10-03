@@ -71,6 +71,7 @@
 
 ### Changed
 
+- kong/kong-gateway v3.12 is the default proxy image. [#2391](https://github.com/Kong/kong-operator/pull/2391)
 - For Hybrid `Gateway`s the operator does not run the `ControlPlane` anymore, as
   the `DataPlane` is configured to use `Koko` as Konnect control plane.
   [#2253](https://github.com/Kong/kong-operator/pull/2253)
