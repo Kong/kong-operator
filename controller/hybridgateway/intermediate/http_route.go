@@ -3,6 +3,7 @@ package intermediate
 import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
+	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
@@ -32,7 +33,7 @@ type BackendRef struct {
 // Filter represents a filter applied to an HTTPRoute rule.
 // It defines transformations or actions to be performed on requests that match the rule.
 type Filter struct {
-	Name
+	HashName
 	Filter gwtypes.HTTPRouteFilter
 }
 
@@ -92,11 +93,11 @@ func NewHTTPRouteRepresentation(route *gwtypes.HTTPRoute) *HTTPRouteRepresentati
 					Match: match,
 				})
 			}
-			for k, filter := range rule.Filters {
-				filterName := NameFromHTTPRoute(route, "", i, j, k)
+			for _, filter := range rule.Filters {
+				filterName := NameFromHash("filter", route.Namespace, utils.Hash32(filter))
 				repr.AddFilterForRule(ruleName, Filter{
-					Name:   filterName,
-					Filter: filter,
+					HashName: filterName,
+					Filter:   filter,
 				})
 			}
 			for k, bRef := range rule.BackendRefs {
@@ -128,6 +129,15 @@ func NameFromHTTPRoute(route *gwtypes.HTTPRoute, prefix string, indexes ...int) 
 		namespace: route.Namespace,
 		name:      route.Name,
 		indexes:   indexes,
+	}
+}
+
+// NameFromHash creates a Name instance using a specified prefix, namespace, and hash value.
+func NameFromHash(prefix, namespace, hash string) HashName {
+	return HashName{
+		prefix:    prefix,
+		namespace: namespace,
+		hash:      hash,
 	}
 }
 
