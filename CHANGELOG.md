@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.0.3](#v203)
 - [v2.0.2](#v202)
 - [v2.0.1](#v201)
 - [v2.0.0](#v200)
@@ -36,17 +37,8 @@
 
 ### Fixes
 
-- Do not validate `Secret`s and `ConfigMap`s that are used internally by the operator.
-  This prevents issues when those resources are created during bootstrapping of the
-  operator, before the validating webhook is ready.
-  [#2356](https://github.com/Kong/kong-operator/pull/2356)
-- Add the `status.clusterType` in `KonnectGatewayControlPlane` and set it when
-  KO attached the `KonnectGatewayControlPlane` with the control plane in
-  Konnect. The `KonnectExtension` now get the cluster type to fill its
-  `status.konnect.clusterType` from the `statusType` of `KonnectGatewayControlPlane`
-  to fix the incorrect cluster type filled in the status when the control plane
-  is mirrored from an existing control plane in Konnect.
-  [#2343](https://github.com/Kong/kong-operator/pull/2343)
+- Fix problem with starting operator when Konnect is enabled and conversion webhook disabled.
+  [#2392](https://github.com/Kong/kong-operator/issues/2392)
 
 ### Added
 
@@ -75,6 +67,24 @@
   the `DataPlane` is configured to use `Koko` as Konnect control plane.
   [#2253](https://github.com/Kong/kong-operator/pull/2253)
 
+## [v2.0.3]
+
+> Release date: 2025-09-30
+
+### Fixes
+
+- Do not validate `Secret`s and `ConfigMap`s that are used internally by the operator.
+  This prevents issues when those resources are created during bootstrapping of the
+  operator, before the validating webhook is ready.
+  [#2356](https://github.com/Kong/kong-operator/pull/2356)
+- Add the `status.clusterType` in `KonnectGatewayControlPlane` and set it when
+  KO attached the `KonnectGatewayControlPlane` with the control plane in
+  Konnect. The `KonnectExtension` now get the cluster type to fill its
+  `status.konnect.clusterType` from the `statusType` of `KonnectGatewayControlPlane`
+  to fix the incorrect cluster type filled in the status when the control plane
+  is mirrored from an existing control plane in Konnect.
+  [#2343](https://github.com/Kong/kong-operator/pull/2343)
+
 ## [v2.0.2]
 
 > Release date: 2025-09-22
@@ -92,7 +102,7 @@
 
 > Release date: 2025-09-17
 
-### Fixes
+## Fixes
 
 - Fix incorrect error handling during cluster CA secret creation.
   [#2250](https://github.com/Kong/kong-operator/pull/2250)
@@ -1391,6 +1401,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.0.3]: https://github.com/Kong/kong-operator/compare/v2.0.2..v2.0.3
 [v2.0.2]: https://github.com/Kong/kong-operator/compare/v2.0.1..v2.0.2
 [v2.0.1]: https://github.com/Kong/kong-operator/compare/v2.0.0..v2.0.1
 [v2.0.0]: https://github.com/Kong/kong-operator/compare/v1.6.2..v2.0.0
