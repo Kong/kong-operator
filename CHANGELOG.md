@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.0.4](#v204)
 - [v2.0.3](#v203)
 - [v2.0.2](#v202)
 - [v2.0.1](#v201)
@@ -35,11 +36,6 @@
 
 ## Unreleased
 
-### Fixes
-
-- Fix problem with starting operator when Konnect is enabled and conversion webhook disabled.
-  [#2392](https://github.com/Kong/kong-operator/issues/2392)
-
 ### Added
 
 - Hybrid Gateway support: Gateway API objects bound to `Gateway`s programmed in Konnect
@@ -67,6 +63,15 @@
 - For Hybrid `Gateway`s the operator does not run the `ControlPlane` anymore, as
   the `DataPlane` is configured to use `Koko` as Konnect control plane.
   [#2253](https://github.com/Kong/kong-operator/pull/2253)
+
+## [v2.0.4]
+
+> Release date: 2025-10-03
+
+### Fixes
+
+- Fix problem with starting operator when Konnect is enabled and conversion webhook disabled.
+  [#2392](https://github.com/Kong/kong-operator/issues/2392)
 
 ## [v2.0.3]
 
@@ -1402,6 +1407,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.0.4]: https://github.com/Kong/kong-operator/compare/v2.0.3..v2.0.4
 [v2.0.3]: https://github.com/Kong/kong-operator/compare/v2.0.2..v2.0.3
 [v2.0.2]: https://github.com/Kong/kong-operator/compare/v2.0.1..v2.0.2
 [v2.0.1]: https://github.com/Kong/kong-operator/compare/v2.0.0..v2.0.1
