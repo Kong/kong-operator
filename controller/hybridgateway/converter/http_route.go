@@ -2,7 +2,6 @@ package converter
 
 import (
 	"context"
-	"fmt"
 	"strings"
 
 	"github.com/samber/lo"
@@ -250,7 +249,7 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 			for _, match := range val.Matches {
 				routeName := match.String()
 				bbuild := builder.NewKongPluginBinding().
-					WithName(routeName+fmt.Sprintf(".%d", filter.Name.GetFilterIndex())).
+					WithName(strings.Join([]string{routeName, filter.GetHash()}, "-")).
 					WithNamespace(c.route.Namespace).
 					WithLabels(c.route).
 					WithAnnotations(c.route, c.ir.GetParentRefByName(match.Name)).
