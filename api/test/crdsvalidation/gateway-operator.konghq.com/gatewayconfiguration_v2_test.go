@@ -10,6 +10,7 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/test/crdsvalidation/common"
 )
 
@@ -254,6 +255,151 @@ func TestGatewayConfigurationV2(t *testing.T) {
 						},
 					},
 				},
+			},
+		}.Run(t)
+	})
+
+	t.Run("Konnect", func(t *testing.T) {
+		common.TestCasesGroup[*operatorv2beta1.GatewayConfiguration]{
+			{
+				Name: "it is valid to specify no Konnect options",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: nil,
+					},
+				},
+			},
+			{
+				Name: "it is valid to specify APIAuthConfigurationSpec without GatewayControlPlaneOptions",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							APIAuthConfigurationSpec: &konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+								Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
+								Token:     "spat_test_token",
+								ServerURL: "us.api.konghq.com",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "it is valid to specify both APIAuthConfigurationSpec and GatewayControlPlaneOptions",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							APIAuthConfigurationSpec: &konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+								Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
+								Token:     "spat_test_token",
+								ServerURL: "us.api.konghq.com",
+							},
+							GatewayControlPlaneOptions: &operatorv2beta1.GatewayControlPlaneOptions{
+								Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "it is invalid to specify GatewayControlPlaneOptions without APIAuthConfigurationSpec",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							GatewayControlPlaneOptions: &operatorv2beta1.GatewayControlPlaneOptions{
+								Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("GatewayControlPlaneOptions can only be specified when APIAuthConfigurationSpec is specified"),
+			},
+			{
+				Name: "it is valid to specify Mirror field when source is set to Mirror",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							APIAuthConfigurationSpec: &konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+								Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
+								Token:     "spat_test_token",
+								ServerURL: "us.api.konghq.com",
+							},
+							GatewayControlPlaneOptions: &operatorv2beta1.GatewayControlPlaneOptions{
+								Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
+								Mirror: &konnectv1alpha1.MirrorSpec{
+									Konnect: konnectv1alpha1.MirrorKonnect{
+										ID: commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967"),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "it is valid to have source set to Origin without Mirror field",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							APIAuthConfigurationSpec: &konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+								Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
+								Token:     "spat_test_token",
+								ServerURL: "us.api.konghq.com",
+							},
+							GatewayControlPlaneOptions: &operatorv2beta1.GatewayControlPlaneOptions{
+								Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "it is invalid to specify Mirror field when source is not set to Mirror",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							APIAuthConfigurationSpec: &konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+								Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
+								Token:     "spat_test_token",
+								ServerURL: "us.api.konghq.com",
+							},
+							GatewayControlPlaneOptions: &operatorv2beta1.GatewayControlPlaneOptions{
+								Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+								Mirror: &konnectv1alpha1.MirrorSpec{
+									Konnect: konnectv1alpha1.MirrorKonnect{
+										ID: commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967"),
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("mirror field cannot be set for type Origin"),
+			},
+			{
+				Name: "it is invalid to have source set to Mirror without Mirror field",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta,
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						Konnect: &operatorv2beta1.KonnectOptions{
+							APIAuthConfigurationSpec: &konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+								Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
+								Token:     "spat_test_token",
+								ServerURL: "us.api.konghq.com",
+							},
+							GatewayControlPlaneOptions: &operatorv2beta1.GatewayControlPlaneOptions{
+								Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("mirror field must be set for type Mirror"),
 			},
 		}.Run(t)
 	})

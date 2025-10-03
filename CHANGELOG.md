@@ -60,6 +60,8 @@
   - Added generated schema in zz_generated_schema.go for resource types.
   - Improved and extended unit tests for hybridgateway components.
   [2355](https://github.com/Kong/kong-operator/pull/2355)
+- Hybrid Gateway: add Konnect specific fields to `GatewayConfiguration` CRD.
+  [#2390](https://github.com/Kong/kong-operator/pull/2390)
 
 ### Changed
 
