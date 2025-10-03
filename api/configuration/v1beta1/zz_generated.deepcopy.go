@@ -23,7 +23,7 @@ package v1beta1
 import (
 	"github.com/kong/kong-operator/api/common/v1alpha1"
 	"github.com/kong/kong-operator/api/konnect/v1alpha2"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
 

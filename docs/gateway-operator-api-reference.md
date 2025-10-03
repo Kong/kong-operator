@@ -1952,6 +1952,7 @@ GatewayConfigurationSpec defines the desired state of GatewayConfiguration
 | `controlPlaneOptions` _[GatewayConfigControlPlaneOptions](#gatewayconfigcontrolplaneoptions)_ | ControlPlaneOptions is the specification for configuration overrides for ControlPlane resources that will be managed as part of the Gateway. |
 | `listenersOptions` _[GatewayConfigurationListenerOptions](#gatewayconfigurationlisteneroptions) array_ | ListenerOptions is the specification for configuration bound to specific listeners in the Gateway. It will override the default configuration of control plane or data plane for the specified listener. |
 | `extensions` _ExtensionRef array_ | Extensions provide additional or replacement features for the Gateway resource to influence or enhance functionality. NOTE: currently, there are only 2 extensions that can be attached at the Gateway level (KonnectExtension, DataPlaneMetricsExtension), so the amount of extensions is limited to 2. |
+| `konnect` _[KonnectOptions](#konnectoptions)_ | Konnect holds the configuration for a Konnect-managed control plane. If this field is set, the operator will provision a Gateway that is connected to a Konnect Control Plane. |
 
 
 _Appears in:_
@@ -1960,6 +1961,24 @@ _Appears in:_
 
 
 
+
+#### GatewayControlPlaneOptions
+
+
+GatewayControlPlaneOptions contains the options for configuring
+ControlPlane resources that will be managed as part of the Gateway
+when using Konnect.
+
+
+
+| Field | Description |
+| --- | --- |
+| `source` _[EntitySource](#entitysource)_ | Source represents the source type of the Konnect entity. |
+| `mirror` _[MirrorSpec](#mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
+
+
+_Appears in:_
+- [KonnectOptions](#konnectoptions)
 
 #### HorizontalScaling
 
@@ -1980,6 +1999,22 @@ ScaleTargetRef which is being controlled by the Operator.
 
 _Appears in:_
 - [Scaling](#scaling)
+
+#### KonnectOptions
+
+
+KonnectOptions contains the options for configuring a Konnect-managed ControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `apiAuthConfigurationSpec` _[KonnectAPIAuthConfigurationSpec](#konnectapiauthconfigurationspec)_ | APIAuthConfigurationSpec contains the Konnect API authentication configuration. If this field is not set, the operator will not be able to connect the Gateway to Konnect. |
+| `gatewayControlPlaneOptions` _[GatewayControlPlaneOptions](#gatewaycontrolplaneoptions)_ | GatewayControlPlaneOptions contains the options for configuring ControlPlane resources that will be managed as part of the Gateway when using Konnect. |
+
+
+_Appears in:_
+- [GatewayConfigurationSpec](#gatewayconfigurationspec)
 
 #### NamespacedName
 

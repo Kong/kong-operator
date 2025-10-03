@@ -24,7 +24,7 @@ import (
 	"github.com/Kong/sdk-konnect-go/models/components"
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	"github.com/kong/kong-operator/api/konnect/v1alpha2"
-	v1 "k8s.io/api/core/v1"
+	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
