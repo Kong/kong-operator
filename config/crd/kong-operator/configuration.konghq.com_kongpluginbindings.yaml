@@ -56,6 +56,39 @@ spec:
           spec:
             description: KongPluginBindingSpec defines specification of a KongPluginBinding.
             properties:
+              adopt:
+                description: Adopt is the options for adopting a plugin instance from
+                  an existing plugin in Konnect.
+                properties:
+                  from:
+                    description: |-
+                      From is the source of the entity to adopt from.
+                      Now 'konnect' is supported.
+                    enum:
+                    - konnect
+                    type: string
+                  konnect:
+                    description: |-
+                      Konnect is the options for adopting the entity from Konnect.
+                      Required when from == 'konnect'.
+                    properties:
+                      id:
+                        description: ID is the Konnect ID of the entity.
+                        type: string
+                    required:
+                    - id
+                    type: object
+                required:
+                - from
+                type: object
+                x-kubernetes-validations:
+                - message: '''from''(adopt source) is immutable'
+                  rule: self.from == oldSelf.from
+                - message: Must specify Konnect options when from='konnect'
+                  rule: 'self.from == ''konnect'' ? has(self.konnect) : true'
+                - message: konnect.id is immutable
+                  rule: 'has(self.konnect) ? (self.konnect.id == oldSelf.konnect.id)
+                    : true'
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a ControlPlane this
                   KongPluginBinding is associated with.
@@ -298,6 +331,12 @@ spec:
             - message: No targets must be set when scope is 'GlobalInControlPlane'
               rule: 'self.scope == ''GlobalInControlPlane'' ? !has(self.targets) :
                 true'
+            - message: spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef
+              rule: '!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type
+                == ''konnectNamespacedRef'')'
+            - message: Cannot set or unset spec.adopt in updates
+              rule: (has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt)
+                && !has(self.adopt))
           status:
             default:
               conditions:

@@ -80,6 +80,11 @@ func main() {
 					outputFile:      listFuncOutputFileName,
 					supportedTypes:  supportedConfigurationPackageTypesWithList,
 				},
+				{
+					templateContent: getAdoptFuncTemplate,
+					outputFile:      adoptFuncOutputFileName,
+					supportedTypes:  supportedConfigurationPackageTypesWithAdopt,
+				},
 			},
 		},
 		{
@@ -104,6 +109,11 @@ func main() {
 					templateContent: listFuncTemplate,
 					outputFile:      listFuncOutputFileName,
 					supportedTypes:  supportedKonnectPackageTypesWithList,
+				},
+				{
+					templateContent: getAdoptFuncTemplate,
+					outputFile:      adoptFuncOutputFileName,
+					supportedTypes:  supportedKonnectPackageTypesWithAdopt,
 				},
 			},
 		},

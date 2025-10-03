@@ -69,6 +69,8 @@ type KongPluginBinding struct {
 // KongPluginBindingSpec defines specification of a KongPluginBinding.
 // +kubebuilder:validation:XValidation:message="At least one target reference must be set when scope is 'OnlyTargets'",rule="self.scope == 'OnlyTargets' ? has(self.targets) && (has(self.targets.routeRef) || has(self.targets.serviceRef) || has(self.targets.consumerRef) || has(self.targets.consumerGroupRef)) : true"
 // +kubebuilder:validation:XValidation:message="No targets must be set when scope is 'GlobalInControlPlane'",rule="self.scope == 'GlobalInControlPlane' ? !has(self.targets) : true"
+// +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongPluginBindingSpec struct {
 	// PluginReference is a reference to the KongPlugin or KongClusterPlugin resource.
@@ -106,6 +108,10 @@ type KongPluginBindingSpec struct {
 	// +optional
 	// +kubebuilder:default:=OnlyTargets
 	Scope KongPluginBindingScope `json:"scope,omitempty"`
+
+	// Adopt is the options for adopting a plugin instance from an existing plugin in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
 }
 
 // KongPluginBindingTargets contains the targets references.

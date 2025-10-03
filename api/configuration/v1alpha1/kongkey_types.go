@@ -50,6 +50,8 @@ type KongKey struct {
 
 // KongKeySpec defines the spec for a KongKey.
 // +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
+// +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongKeySpec struct {
 	// ControlPlaneRef is a reference to a Konnect ControlPlane this KongKey is associated with.
@@ -61,6 +63,10 @@ type KongKeySpec struct {
 	// ControlPlane referenced by a KongKeySet must be the same as the ControlPlane referenced by the KongKey.
 	// +optional
 	KeySetRef *KeySetRef `json:"keySetRef,omitempty"`
+
+	// Adopt is the options for adopting a key from an existing key in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
 
 	// KongKeyAPISpec are the attributes of the KongKey itself.
 	KongKeyAPISpec `json:",inline"`

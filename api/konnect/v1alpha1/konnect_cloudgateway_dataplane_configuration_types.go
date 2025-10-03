@@ -42,6 +42,8 @@ type KonnectCloudGatewayDataPlaneGroupConfiguration struct {
 
 // KonnectCloudGatewayDataPlaneGroupConfigurationSpec defines the desired state of KonnectCloudGatewayDataPlaneGroupConfiguration.
 //
+// +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KonnectCloudGatewayDataPlaneGroupConfigurationSpec struct {
 	// Version specifies the desired Kong Gateway version.
@@ -67,6 +69,10 @@ type KonnectCloudGatewayDataPlaneGroupConfigurationSpec struct {
 	//
 	// +required
 	ControlPlaneRef commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
+
+	// Adopt is the options for adopting a cloud gateway dataplane group configuration from an existing transit dataplane group configuration in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
 }
 
 // APIAccess defines the API access type for data-plane groups.

@@ -50,13 +50,18 @@ type KongCredentialBasicAuth struct {
 	Status KongCredentialBasicAuthStatus `json:"status,omitempty"`
 }
 
-// KongCredentialBasicAuthSpec defines specification of a Kong Route.
+// KongCredentialBasicAuthSpec defines specification of a Kong BasicAuth credential.
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongCredentialBasicAuthSpec struct {
 	// ConsumerRef is a reference to a Consumer this CredentialBasicAuth is associated with.
 	//
 	// +required
 	ConsumerRef corev1.LocalObjectReference `json:"consumerRef"`
+
+	// Adopt is the options for adopting a BasicAuth credential from an existing BasicAuth credential in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
 
 	KongCredentialBasicAuthAPISpec `json:",inline"`
 }

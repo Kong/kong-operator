@@ -50,13 +50,18 @@ type KongCredentialHMAC struct {
 	Status KongCredentialHMACStatus `json:"status,omitempty"`
 }
 
-// KongCredentialHMACSpec defines specification of a Kong Route.
+// KongCredentialHMACSpec defines specification of a Kong HMAC credential.
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongCredentialHMACSpec struct {
 	// ConsumerRef is a reference to a Consumer this KongCredentialHMAC is associated with.
 	//
 	// +required
 	ConsumerRef corev1.LocalObjectReference `json:"consumerRef"`
+
+	// Adopt is the options for adopting a HMAC credential from an existing HMAC credential in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
 
 	KongCredentialHMACAPISpec `json:",inline"`
 }
