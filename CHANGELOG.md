@@ -2,7 +2,9 @@
 
 ## Table of Contents
 
+- [v2.0.4](#v204)
 - [v2.0.3](#v203)
+- [v2.0.2](#v202)
 - [v2.0.1](#v201)
 - [v2.0.0](#v200)
 - [v1.6.2](#v162)
@@ -32,6 +34,15 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## [v2.0.4]
+
+> Release date: 2025-10-03
+
+### Fixes
+
+- Fix problem with starting operator when Konnect is enabled and conversion webhook disabled.
+  [#2392](https://github.com/Kong/kong-operator/issues/2392)
+
 ## [v2.0.3]
 
 > Release date: 2025-09-30
@@ -49,6 +60,19 @@
   to fix the incorrect cluster type filled in the status when the control plane
   is mirrored from an existing control plane in Konnect.
   [#2343](https://github.com/Kong/kong-operator/pull/2343)
+
+## [v2.0.2]
+
+> Release date: 2025-09-22
+
+### Fixes
+
+- Cleanup old objects when new `ControlPlane` is ready.
+  Remove old finalizers from `ControlPlane` when cleanup is done.
+  [#2317](https://github.com/Kong/kong-operator/pull/2317)
+- Mark `Gateway`'s listeners as Programmed when `DataPlane` and its `Services` are ready.
+  This prevents downtime during KGO -> KO upgrades and in upgrades between KO versions.
+  [#2317](https://github.com/Kong/kong-operator/pull/2317)
 
 ## [v2.0.1]
 
@@ -1354,7 +1378,9 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
-[v2.0.3]: https://github.com/Kong/kong-operator/compare/v2.0.1..v2.0.3
+[v2.0.4]: https://github.com/Kong/kong-operator/compare/v2.0.3..v2.0.4
+[v2.0.3]: https://github.com/Kong/kong-operator/compare/v2.0.2..v2.0.3
+[v2.0.2]: https://github.com/Kong/kong-operator/compare/v2.0.1..v2.0.2
 [v2.0.1]: https://github.com/Kong/kong-operator/compare/v2.0.0..v2.0.1
 [v2.0.0]: https://github.com/Kong/kong-operator/compare/v1.6.2..v2.0.0
 [v1.6.2]: https://github.com/Kong/kong-operator/compare/v1.6.1..v1.6.2

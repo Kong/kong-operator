@@ -206,8 +206,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					Resource: "konnectextensions",
 				},
 				{
-					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
-					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
+					Group:    konnectv1alpha2.SchemeGroupVersion.Group,
+					Version:  konnectv1alpha2.SchemeGroupVersion.Version,
 					Resource: "konnectgatewaycontrolplanes",
 				},
 				{
