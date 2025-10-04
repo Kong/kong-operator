@@ -27,24 +27,34 @@ import (
 	gatewayapipkg "github.com/kong/kong-operator/pkg/gatewayapi"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/pkg/vars"
+	"github.com/kong/kong-operator/test"
 )
 
 var skippedTestsShared = []string{
 	// TODO: https://github.com/Kong/kong-operator/issues/2215
 	// HTTPRouteWeight is flaky for some reason. 2215 tracks solving it.
 	tests.HTTPRouteWeight.ShortName,
+
+	// NOTE:
+	// Issue tracking all gRPC related conformance tests:
+	// https://github.com/Kong/kong-operator/issues/2345
+	// Tests GRPCRouteHeaderMatching, GRPCExactMethodMatching are skipped
+	// because to proxy different gRPC services and route requests based on Header or Method,
+	// it is necessary to create separate catch-all routes for them.
+	// However, Kong does not define priority behavior in this situation unless priorities are manually added.
+	tests.GRPCRouteHeaderMatching.ShortName,
+	tests.GRPCExactMethodMatching.ShortName,
+	// When processing this scenario, the Kong's router requires `priority` to be specified for routes.
+	// We cannot provide that for routes that are part of the conformance suite.
+	tests.GRPCRouteListenerHostnameMatching.ShortName,
 }
 
 var skippedTestsForExpressionsRouter = []string{}
 
 var skippedTestsForTraditionalCompatibleRouter = []string{
-	// httproute
+	// HTTPRoute
 	tests.HTTPRouteHeaderMatching.ShortName,
 	tests.HTTPRouteInvalidBackendRefUnknownKind.ShortName,
-}
-
-type ConformanceConfig struct {
-	KongRouterFlavor consts.RouterFlavor
 }
 
 func TestGatewayConformance(t *testing.T) {
@@ -55,28 +65,28 @@ func TestGatewayConformance(t *testing.T) {
 	// Conformance tests are run for both available router flavours:
 	// traditional_compatible and expressions.
 	var (
-		config            ConformanceConfig
+		kongRouterFlavor  consts.RouterFlavor
 		skippedTests      = skippedTestsShared
 		supportedFeatures sets.Set[features.FeatureName]
 	)
 	switch rf := KongRouterFlavor(t); rf {
 	case consts.RouterFlavorTraditionalCompatible:
 		skippedTests = append(skippedTests, skippedTestsForTraditionalCompatibleRouter...)
-		config.KongRouterFlavor = consts.RouterFlavorTraditionalCompatible
+		kongRouterFlavor = consts.RouterFlavorTraditionalCompatible
 	case consts.RouterFlavorExpressions:
 		skippedTests = append(skippedTests, skippedTestsForExpressionsRouter...)
-		config.KongRouterFlavor = consts.RouterFlavorExpressions
+		kongRouterFlavor = consts.RouterFlavorExpressions
 	default:
 		t.Fatalf("unsupported KongRouterFlavor: %s", rf)
 	}
 
-	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(config.KongRouterFlavor)
+	supportedFeatures, err := gatewayapipkg.GetSupportedFeatures(kongRouterFlavor)
 	require.NoError(t, err)
 
-	t.Logf("using the following configuration for the conformance tests: %+v", config)
+	t.Logf("using the following Kong router flavor for the conformance tests: %s", kongRouterFlavor)
 
 	t.Log("creating GatewayConfiguration and GatewayClass for gateway conformance tests")
-	gwconf := createGatewayConfiguration(ctx, t, config)
+	gwconf := createGatewayConfiguration(ctx, t, kongRouterFlavor)
 	gwc := createGatewayClass(ctx, t, gwconf)
 
 	// There are no explicit conformance tests for GatewayClass, but we can
@@ -85,29 +95,19 @@ func TestGatewayConformance(t *testing.T) {
 	t.Log("configuring the Gateway API conformance test suite")
 	// Currently mode only relies on the KongRouterFlavor, but in the future
 	// we may want to add more modes.
-	mode := string(config.KongRouterFlavor)
+	mode := string(kongRouterFlavor)
 	metadata := metadata.Metadata()
-	reportFileName := fmt.Sprintf("standard-%s-%s-report.yaml", metadata.Release, mode)
+	reportFileName := fmt.Sprintf("experimental-%s-%s-report.yaml", metadata.Release, mode)
 
-	// set looser timeouts to avoid flakiness
+	// Set looser timeouts to avoid flakiness.
 	timeoutConfig := conformanceconfig.DefaultTimeoutConfig()
 	timeoutConfig.GatewayStatusMustHaveListeners = looserTimeout
 	timeoutConfig.GatewayListenersMustHaveConditions = looserTimeout
 	timeoutConfig.HTTPRouteMustHaveCondition = looserTimeout
 
 	opts := conformance.DefaultOptions(t)
-	opts.ReportOutputPath = "../../" + reportFileName
-	opts.Client = clients.MgrClient
-	opts.GatewayClassName = gwc.Name
-	opts.TimeoutConfig = timeoutConfig
 	opts.BaseManifests = testutils.GatewayRawRepoURL + "/conformance/base/manifests.yaml"
-	opts.SkipTests = skippedTests
-	opts.Mode = mode
-	opts.ConformanceProfiles = sets.New(
-		suite.GatewayHTTPConformanceProfileName,
-	)
-	opts.RestConfig.QPS = -1
-	opts.SupportedFeatures = supportedFeatures
+	opts.ReportOutputPath = "../../" + reportFileName
 	opts.Implementation = conformancev1.Implementation{
 		Organization: metadata.Organization,
 		Project:      metadata.ProjectName,
@@ -117,15 +117,27 @@ func TestGatewayConformance(t *testing.T) {
 			metadata.RepoURL + "/issues/new/choose",
 		},
 	}
+	opts.Mode = mode
+	opts.ConformanceProfiles = sets.New(
+		suite.GatewayHTTPConformanceProfileName,
+		suite.GatewayGRPCConformanceProfileName,
+	)
+	opts.SupportedFeatures = supportedFeatures
+	opts.SkipTests = skippedTests
+	opts.CleanupBaseResources = test.SkipCleanup()
+	opts.GatewayClassName = gwc.Name
+	opts.Client = clients.MgrClient
+	opts.TimeoutConfig = timeoutConfig
+	opts.RestConfig.QPS = -1
 
 	t.Log("running the Gateway API conformance test suite")
 	conformance.RunConformanceWithOptions(t, opts)
 }
 
-func createGatewayConfiguration(ctx context.Context, t *testing.T, c ConformanceConfig) *operatorv2beta1.GatewayConfiguration {
+func createGatewayConfiguration(ctx context.Context, t *testing.T, kongRouterFlavor consts.RouterFlavor) *operatorv2beta1.GatewayConfiguration {
 	gwconf := operatorv2beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "kgo-gwconf-conformance-",
+			GenerateName: "ko-gwconf-conformance-",
 			Namespace:    "default",
 		},
 		Spec: operatorv2beta1.GatewayConfigurationSpec{
@@ -154,7 +166,13 @@ func createGatewayConfiguration(ctx context.Context, t *testing.T, c Conformance
 										Env: []corev1.EnvVar{
 											{
 												Name:  "KONG_ROUTER_FLAVOR",
-												Value: string(c.KongRouterFlavor),
+												Value: string(kongRouterFlavor),
+											},
+											// The test cases for GRPCRoute in the current GatewayAPI all use the h2c protocol.
+											// In order to pass conformance tests, the proxy must listen http2 and http on the same port.
+											{
+												Name:  "KONG_PROXY_LISTEN",
+												Value: "0.0.0.0:8000 http2, 0.0.0.0:8443 http2 ssl",
 											},
 										},
 									},
@@ -164,9 +182,6 @@ func createGatewayConfiguration(ctx context.Context, t *testing.T, c Conformance
 					},
 				},
 			},
-
-			// TODO(pmalek): add support for ControlPlane optionns using GatewayConfiguration v2
-			// https://github.com/kong/kong-operator/issues/1728
 		},
 	}
 
@@ -180,7 +195,7 @@ func createGatewayConfiguration(ctx context.Context, t *testing.T, c Conformance
 func createGatewayClass(ctx context.Context, t *testing.T, gwconf *operatorv2beta1.GatewayConfiguration) *gatewayv1.GatewayClass {
 	gwc := &gatewayv1.GatewayClass{
 		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "kgo-gwclass-conformance-",
+			GenerateName: "ko-gwclass-conformance-",
 		},
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),

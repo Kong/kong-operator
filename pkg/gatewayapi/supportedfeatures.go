@@ -11,29 +11,33 @@ import (
 
 var (
 	traditionalCompatibleRouterSupportedFeatures = commonSupportedFeatures.Clone().Insert(
-	// add here the traditional compatible router specific features
+	// Add here the traditional compatible router specific features.
 	)
 
 	expressionsRouterSupportedFeatures = commonSupportedFeatures.Clone().Insert(
-		// extended
+		// HTTPRoute extended.
 		features.SupportHTTPRouteMethodMatching,
 		features.SupportHTTPRouteQueryParamMatching,
 	)
 )
 
 var commonSupportedFeatures = sets.New(
-	// core features
-	features.SupportHTTPRoute,
+	// Core features.
 	features.SupportGateway,
+	features.SupportHTTPRoute,
+	features.SupportGRPCRoute,
 	features.SupportReferenceGrant,
 
-	// Gateway extended
+	// Gateway extended.
 	features.SupportGatewayPort8080,
 
-	// HTTPRoute extended
+	// HTTPRoute extended.
 	features.SupportHTTPRouteResponseHeaderModification,
 	features.SupportHTTPRoutePathRewrite,
 	features.SupportHTTPRouteHostRewrite,
+	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/5868
+	// Temporarily disabled and tracking through the following issue.
+	// features.SupportHTTPRouteBackendTimeout,
 )
 
 // GetSupportedFeatures returns the supported features for the given router type.

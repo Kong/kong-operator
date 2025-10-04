@@ -4,7 +4,6 @@ run:
   build-tags:
     - integration_tests
     - e2e_tests
-    - conformance_tests
     - istio_tests
     - envtest
     - performance_tests
