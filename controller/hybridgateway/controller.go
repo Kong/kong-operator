@@ -3,23 +3,23 @@ package hybridgateway
 import (
 	"context"
 	"fmt"
-	"github.com/kong/kong-operator/internal/utils/index"
-	discoveryv1 "k8s.io/api/discovery/v1"
-	"k8s.io/apimachinery/pkg/types"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/controller/hybridgateway/converter"
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/controller/hybridgateway/watch"
 	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/internal/utils/index"
 )
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes,verbs=get;list;watch;create;update;patch;delete
@@ -151,7 +151,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) findHTTPRoutesForEndpointSlice(ctx co
 	}
 
 	service := &corev1.Service{}
-	if err := r.Client.Get(ctx, types.NamespacedName{Namespace: endpointSlice.Namespace, Name: serviceName}, service); err != nil {
+	if err := r.Get(ctx, types.NamespacedName{Namespace: endpointSlice.Namespace, Name: serviceName}, service); err != nil {
 		logger.Error(err, "failed to get service for endpointslice", "servicename", serviceName, "endpointslicenamespace", endpointSlice.Namespace)
 		return nil
 	}
@@ -162,7 +162,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) findHTTPRoutesForEndpointSlice(ctx co
 func (r *HybridGatewayReconciler[t, tPtr]) httpRoutesForService(ctx context.Context, service *corev1.Service) []reconcile.Request {
 	logger := ctrllog.FromContext(ctx).WithName("HybridGatewayWatcher")
 	var httpRoutes gatewayv1.HTTPRouteList
-	if err := r.Client.List(ctx, &httpRoutes,
+	if err := r.List(ctx, &httpRoutes,
 		client.MatchingFields{
 			index.BackendServicesOnHTTPRouteIndex: service.Namespace + "/" + service.Name,
 		},
