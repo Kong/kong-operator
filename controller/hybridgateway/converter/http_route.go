@@ -3,15 +3,15 @@ package converter
 import (
 	"context"
 	"fmt"
-	corev1 "k8s.io/api/core/v1"
-	discoveryv1 "k8s.io/api/discovery/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	"strings"
 
 	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -27,6 +27,7 @@ import (
 
 var _ APIConverter[gwtypes.HTTPRoute] = &httpRouteConverter{}
 
+// BackendRefTarget represents a target derived from a BackendRef in an HTTPRoute.
 type BackendRefTarget struct {
 	Name   string
 	Host   string
@@ -406,7 +407,7 @@ func (c *httpRouteConverter) getTargets(ctx context.Context, bRef intermediate.B
 	// retrieve the service with name and namespace from the BackendRef
 	svcNamespace := namespaceFromBackendRef(bRef.BackendRef, c.route.Namespace)
 	svc := &corev1.Service{}
-	err := c.Client.Get(ctx, client.ObjectKey{Name: string(bRef.BackendRef.Name), Namespace: svcNamespace}, svc)
+	err := c.Get(ctx, client.ObjectKey{Name: string(bRef.BackendRef.Name), Namespace: svcNamespace}, svc)
 	if err != nil {
 		// If the service is not found, return an empty target list (it might be created later).
 		return nil, err
@@ -426,7 +427,7 @@ func (c *httpRouteConverter) getTargets(ctx context.Context, bRef intermediate.B
 	if false {
 		// Use Service FQDN as target
 		target := BackendRefTarget{
-			Name:   bRef.Name.String(),
+			Name:   bRef.String(),
 			Host:   TargetHostAsServiceFQDN(bRef.BackendRef, c.route.Namespace),
 			Port:   *bRef.BackendRef.Port,
 			Weight: bRef.BackendRef.Weight,
@@ -447,7 +448,7 @@ func (c *httpRouteConverter) getTargets(ctx context.Context, bRef intermediate.B
 		return nil, err
 	}
 	labelSelector := labels.NewSelector().Add(*req)
-	err = c.Client.List(ctx, endpointSlices, &client.ListOptions{Namespace: svcNamespace, LabelSelector: labelSelector})
+	err = c.List(ctx, endpointSlices, &client.ListOptions{Namespace: svcNamespace, LabelSelector: labelSelector})
 
 	if err == nil {
 		for _, endpointSlice := range endpointSlices.Items {
@@ -468,7 +469,7 @@ func (c *httpRouteConverter) getTargets(ctx context.Context, bRef intermediate.B
 					for _, addr := range endpoint.Addresses {
 						weight := *bRef.BackendRef.Weight / int32(leng)
 						target := BackendRefTarget{
-							Name:   fmt.Sprintf("%s-%s", bRef.Name.String(), strings.ReplaceAll(addr, ".", "-")),
+							Name:   fmt.Sprintf("%s-%s", bRef.String(), strings.ReplaceAll(addr, ".", "-")),
 							Host:   addr,
 							Port:   gwtypes.PortNumber(upstreamPort),
 							Weight: &weight,

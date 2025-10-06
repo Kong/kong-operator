@@ -52,6 +52,7 @@ func (b *KongTargetBuilder) WithLabels(route *gwtypes.HTTPRoute) *KongTargetBuil
 	return b
 }
 
+// WithTarget sets the target (host:port) for the KongTarget.
 func (b *KongTargetBuilder) WithTarget(host string, port gwtypes.PortNumber) *KongTargetBuilder {
 	target := net.JoinHostPort(host, strconv.Itoa(int(port)))
 	b.target.Spec.Target = target
@@ -59,6 +60,7 @@ func (b *KongTargetBuilder) WithTarget(host string, port gwtypes.PortNumber) *Ko
 	return b
 }
 
+// WithWeight sets the weight for the KongTarget. If weight is nil, it defaults to 100.
 func (b *KongTargetBuilder) WithWeight(weight *int32) *KongTargetBuilder {
 	b.target.Spec.Weight = 100 // Weight is optional, default to 100 if not specified
 	if weight != nil {
