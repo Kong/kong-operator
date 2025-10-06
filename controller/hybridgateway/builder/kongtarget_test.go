@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"github.com/samber/lo"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -54,129 +55,38 @@ func TestKongTargetBuilder_WithLabels(t *testing.T) {
 	assert.NotEmpty(t, target.Labels)
 }
 
-func TestKongTargetBuilder_WithBackendRef(t *testing.T) {
-	port := gatewayv1.PortNumber(8080)
-	weight := int32(100)
+func TestNewKongTargetBuilder_WithTarget(t *testing.T) {
+	builder := NewKongTarget().WithTarget("myhost", 8080)
 
+	target, err := builder.Build()
+	require.NoError(t, err)
+	assert.Equal(t, "myhost:8080", target.Spec.Target)
+}
+
+func TestKongTargetBuilder_WithWeight(t *testing.T) {
 	tests := []struct {
 		name           string
-		httpRoute      *gwtypes.HTTPRoute
-		backendRef     *gwtypes.HTTPBackendRef
-		expectedTarget string
+		weight         *int32
 		expectedWeight int
 	}{
 		{
-			name: "backend ref with same namespace",
-			httpRoute: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
-			},
-			backendRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "test-service",
-						Port: &port,
-					},
-					Weight: &weight,
-				},
-			},
-			expectedTarget: "test-service.test-namespace.svc.cluster.local:8080",
+			name:           "backend ref with weight 100",
+			weight:         lo.ToPtr(int32(100)),
 			expectedWeight: 100,
 		},
 		{
-			name: "backend ref with different namespace",
-			httpRoute: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
-			},
-			backendRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name:      "test-service",
-						Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
-						Port:      &port,
-					},
-					Weight: &weight,
-				},
-			},
-			expectedTarget: "test-service.other-namespace.svc.cluster.local:8080",
+			name:           "backend ref without weight",
+			weight:         nil,
 			expectedWeight: 100,
-		},
-		{
-			name: "backend ref with empty namespace",
-			httpRoute: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
-			},
-			backendRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name:      "test-service",
-						Namespace: &[]gatewayv1.Namespace{""}[0],
-						Port:      &port,
-					},
-					Weight: &weight,
-				},
-			},
-			expectedTarget: "test-service.test-namespace.svc.cluster.local:8080",
-			expectedWeight: 100,
-		},
-		{
-			name: "backend ref with nil namespace",
-			httpRoute: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
-			},
-			backendRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name:      "test-service",
-						Namespace: nil,
-						Port:      &port,
-					},
-					Weight: &weight,
-				},
-			},
-			expectedTarget: "test-service.test-namespace.svc.cluster.local:8080",
-			expectedWeight: 100,
-		},
-		{
-			name: "backend ref without weight",
-			httpRoute: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
-			},
-			backendRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "test-service",
-						Port: &port,
-					},
-					Weight: nil,
-				},
-			},
-			expectedTarget: "test-service.test-namespace.svc.cluster.local:8080",
-			expectedWeight: 0,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewKongTarget().WithBackendRef(tt.httpRoute, tt.backendRef)
+			builder := NewKongTarget().WithWeight(tt.weight)
 
 			target, err := builder.Build()
 			require.NoError(t, err)
-			assert.Equal(t, tt.expectedTarget, target.Spec.Target)
 			assert.Equal(t, tt.expectedWeight, target.Spec.Weight)
 		})
 	}
@@ -328,7 +238,8 @@ func TestKongTargetBuilder_Chaining(t *testing.T) {
 	target := NewKongTarget().
 		WithName("test-target").
 		WithNamespace("test-namespace").
-		WithBackendRef(httpRoute, backendRef).
+		WithTarget(string(backendRef.Name)+"."+httpRoute.Namespace+".svc.cluster.local", *backendRef.Port).
+		WithWeight(backendRef.Weight).
 		WithUpstreamRef("test-upstream").
 		WithOwner(httpRoute).
 		WithLabels(httpRoute).

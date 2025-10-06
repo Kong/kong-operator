@@ -52,25 +52,19 @@ func (b *KongTargetBuilder) WithLabels(route *gwtypes.HTTPRoute) *KongTargetBuil
 	return b
 }
 
-// WithBackendRef sets the target specification based on the given HTTPRoute and backend reference.
-func (b *KongTargetBuilder) WithBackendRef(httpRoute *gwtypes.HTTPRoute, bRef *gwtypes.HTTPBackendRef) *KongTargetBuilder {
-	// Build the dns name of the service for the backendRef.
-	// TODO(alacuku): We need to handle the cluster domain properly for the cluster where we are running.
-	var namespace string
-	if bRef.Namespace == nil || *bRef.Namespace == "" {
-		namespace = httpRoute.Namespace
-	} else {
-		namespace = string(*bRef.Namespace)
-	}
-
-	host := string(bRef.Name) + "." + namespace + ".svc.cluster.local"
-	port := strconv.Itoa(int(*bRef.Port))
-	target := net.JoinHostPort(host, port)
+func (b *KongTargetBuilder) WithTarget(host string, port gwtypes.PortNumber) *KongTargetBuilder {
+	target := net.JoinHostPort(host, strconv.Itoa(int(port)))
 	b.target.Spec.Target = target
 
-	// Weight is optional, default to 100 if not specified
-	if bRef.Weight != nil {
-		b.target.Spec.Weight = int(*bRef.Weight)
+	return b
+}
+
+func (b *KongTargetBuilder) WithWeight(weight *int32) *KongTargetBuilder {
+	b.target.Spec.Weight = 100 // Weight is optional, default to 100 if not specified
+	if weight != nil {
+		newWeight := new(int)
+		*newWeight = int(*weight)
+		b.target.Spec.Weight = *newWeight
 	}
 	return b
 }
