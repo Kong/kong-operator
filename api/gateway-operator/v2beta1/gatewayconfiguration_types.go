@@ -24,6 +24,7 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 )
 
 func init() {
@@ -102,32 +103,17 @@ type GatewayConfigurationSpec struct {
 
 // KonnectOptions contains the options for configuring a Konnect-managed ControlPlane.
 //
-// +kubebuilder:validation:XValidation:message="GatewayControlPlaneOptions can only be specified when APIAuthConfigurationSpec is specified",rule="has(self.gatewayControlPlaneOptions) ? has(self.apiAuthConfigurationSpec) : true"
+// +kubebuilder:validation:XValidation:message="mirror field must be set for type Mirror",rule="self.source == 'Mirror' ? has(self.mirror) : true"
+// +kubebuilder:validation:XValidation:message="mirror field cannot be set for type Origin",rule="self.source == 'Origin' ? !has(self.mirror) : true"
 // +apireference:kgo:include
 type KonnectOptions struct {
-	// APIAuthConfigurationSpec contains the Konnect API authentication configuration.
+	// APIAuthConfigurationRef contains the Konnect API authentication configuration.
 	// If this field is not set, the operator will not be able to connect
 	// the Gateway to Konnect.
 	//
 	// +optional
-	APIAuthConfigurationSpec *konnectv1alpha1.KonnectAPIAuthConfigurationSpec `json:"apiAuthConfigurationSpec,omitempty"`
+	APIAuthConfigurationRef *konnectv1alpha2.KonnectAPIAuthConfigurationRef `json:"authRef,omitempty"`
 
-	// GatewayControlPlaneOptions contains the options for configuring
-	// ControlPlane resources that will be managed as part of the Gateway
-	// when using Konnect.
-	//
-	// +optional
-	GatewayControlPlaneOptions *GatewayControlPlaneOptions `json:"gatewayControlPlaneOptions,omitempty"`
-}
-
-// GatewayControlPlaneOptions contains the options for configuring
-// ControlPlane resources that will be managed as part of the Gateway
-// when using Konnect.
-//
-// +apireference:kgo:include
-// +kubebuilder:validation:XValidation:message="mirror field must be set for type Mirror",rule="self.source == 'Mirror' ? has(self.mirror) : true"
-// +kubebuilder:validation:XValidation:message="mirror field cannot be set for type Origin",rule="self.source == 'Origin' ? !has(self.mirror) : true"
-type GatewayControlPlaneOptions struct {
 	// Source represents the source type of the Konnect entity.
 	//
 	// +kubebuilder:validation:Enum=Origin;Mirror
