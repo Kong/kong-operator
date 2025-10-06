@@ -3,6 +3,10 @@ package converter
 import (
 	"context"
 	"fmt"
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	"strings"
 
 	"github.com/samber/lo"
@@ -22,6 +26,13 @@ import (
 )
 
 var _ APIConverter[gwtypes.HTTPRoute] = &httpRouteConverter{}
+
+type BackendRefTarget struct {
+	Name   string
+	Host   string
+	Port   gwtypes.PortNumber
+	Weight *int32
+}
 
 // httpRouteConverter is a concrete implementation of the APIConverter interface for HTTPRoute.
 type httpRouteConverter struct {
@@ -188,22 +199,28 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 
 		// Build the target resources.
 		for _, bRef := range val.BackendRefs {
-			targetName := bRef.String()
-
-			target, err := builder.NewKongTarget().
-				WithName(targetName).
-				WithNamespace(c.route.Namespace).
-				WithLabels(c.route).
-				WithAnnotations(c.route, c.ir.GetParentRefByName(bRef.Name)).
-				WithUpstreamRef(name).
-				WithBackendRef(c.route, &bRef.BackendRef).
-				WithOwner(c.route).Build()
+			targets, err := c.getTargets(ctx, bRef)
 			if err != nil {
-				// TODO: decide how to handle build errors in converter
-				// For now, skip this resource
+				// If we can't get targets for a backend ref, skip it.
 				continue
 			}
-			c.outputStore = append(c.outputStore, &target)
+			for _, target := range targets {
+				kongTarget, err := builder.NewKongTarget().
+					WithName(target.Name).
+					WithNamespace(c.route.Namespace).
+					WithLabels(c.route).
+					WithAnnotations(c.route, c.ir.GetParentRefByName(bRef.Name)).
+					WithUpstreamRef(name).
+					WithTarget(target.Host, target.Port).
+					WithWeight(target.Weight).
+					WithOwner(c.route).Build()
+				if err != nil {
+					// TODO: decide how to handle build errors in converter
+					// For now, skip this resource
+					continue
+				}
+				c.outputStore = append(c.outputStore, &kongTarget)
+			}
 		}
 
 		// Build the kong route resource.
@@ -380,4 +397,103 @@ func hostnameIntersection(listenerHostname, routeHostname string) string {
 	}
 
 	return "" // No intersection
+}
+
+// getTargets get targets to the intermediate representation based on the BackendRefs in the HTTPRoute.
+func (c *httpRouteConverter) getTargets(ctx context.Context, bRef intermediate.BackendRef) ([]BackendRefTarget, error) {
+	targets := []BackendRefTarget{}
+
+	// retrieve the service with name and namespace from the BackendRef
+	svcNamespace := namespaceFromBackendRef(bRef.BackendRef, c.route.Namespace)
+	svc := &corev1.Service{}
+	err := c.Client.Get(ctx, client.ObjectKey{Name: string(bRef.BackendRef.Name), Namespace: svcNamespace}, svc)
+	if err != nil {
+		// If the service is not found, return an empty target list (it might be created later).
+		return nil, err
+	}
+	// find the port in the service that matches the port in the BackendRef
+	svcPort, svcPortFound := lo.Find(svc.Spec.Ports, func(p corev1.ServicePort) bool {
+		return p.Port == int32(*bRef.BackendRef.Port)
+	})
+	if !svcPortFound {
+		// If the port is not found, return an empty target list (it might be created later).
+		return nil, fmt.Errorf("port %v not found in service %s/%s", *bRef.BackendRef.Port, svcNamespace, svc.Name)
+	}
+
+	// TODO: we have to add a way to configure if we want to use EndpointSlices or Service FQDN
+	// For now, we will always use EndpointSlices if available
+	// If you want to use Service FQDN, uncomment the following block
+	if false {
+		// Use Service FQDN as target
+		target := BackendRefTarget{
+			Name:   bRef.Name.String(),
+			Host:   TargetHostAsServiceFQDN(bRef.BackendRef, c.route.Namespace),
+			Port:   *bRef.BackendRef.Port,
+			Weight: bRef.BackendRef.Weight,
+		}
+		targets = append(targets, target)
+
+		return targets, nil
+	}
+
+	// Use EndpointSlices as targets
+	// List EndpointSlices for the service
+	// Reference: https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/
+	// Note: EndpointSlices are namespaced resources
+	// Reference: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#endpointslice-v1-discovery-k8s-io
+	endpointSlices := &discoveryv1.EndpointSliceList{}
+	req, err := labels.NewRequirement(discoveryv1.LabelServiceName, selection.Equals, []string{svc.Name})
+	if err != nil {
+		return nil, err
+	}
+	labelSelector := labels.NewSelector().Add(*req)
+	err = c.Client.List(ctx, endpointSlices, &client.ListOptions{Namespace: svcNamespace, LabelSelector: labelSelector})
+
+	if err == nil {
+		for _, endpointSlice := range endpointSlices.Items {
+			leng := len(endpointSlice.Endpoints)
+
+			for _, p := range endpointSlice.Ports {
+				if p.Port == nil || *p.Port < 0 || *p.Protocol != svcPort.Protocol || *p.Name != svcPort.Name {
+					continue
+				}
+				upstreamPort := *p.Port
+
+				for _, endpoint := range endpointSlice.Endpoints {
+					if endpoint.Conditions.Ready != nil && !*endpoint.Conditions.Ready {
+						// Skip not ready endpoints
+						continue
+					}
+
+					for _, addr := range endpoint.Addresses {
+						weight := *bRef.BackendRef.Weight / int32(leng)
+						target := BackendRefTarget{
+							Name:   fmt.Sprintf("%s-%s", bRef.Name.String(), strings.ReplaceAll(addr, ".", "-")),
+							Host:   addr,
+							Port:   gwtypes.PortNumber(upstreamPort),
+							Weight: &weight,
+						}
+						targets = append(targets, target)
+					}
+				}
+			}
+		}
+	}
+	return targets, nil
+}
+
+// TargetHostAsServiceFQDN constructs the fully qualified domain name (FQDN) for a backend service.
+// It combines the backend reference name, namespace, and standard Kubernetes service domain suffix.
+func TargetHostAsServiceFQDN(bRef gwtypes.HTTPBackendRef, defaultNamespace string) string {
+	namespace := namespaceFromBackendRef(bRef, defaultNamespace)
+	return string(bRef.Name) + "." + namespace + ".svc.cluster.local"
+}
+
+// namespaceFromBackendRef extracts the namespace from a BackendRef.
+// If the BackendRef does not specify a namespace, it defaults to the provided defaultNamespace.
+func namespaceFromBackendRef(bRef gwtypes.HTTPBackendRef, defaultNamespace string) string {
+	if bRef.Namespace != nil {
+		return string(*bRef.Namespace)
+	}
+	return defaultNamespace
 }
