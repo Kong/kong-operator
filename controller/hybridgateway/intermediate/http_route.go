@@ -67,6 +67,15 @@ type HTTPRouteRepresentation struct {
 	StripPath        bool
 }
 
+func newRule(name Name) Rule {
+	return Rule{
+		Name:        name,
+		Matches:     make(map[string]Match),
+		Filters:     make(map[string]Filter),
+		BackendRefs: make(map[string]BackendRef),
+	}
+}
+
 // NewHTTPRouteRepresentation creates a new HTTPRouteRepresentation from an HTTPRoute resource.
 // It initializes all the internal maps and extracts configuration like strip-path from annotations.
 func NewHTTPRouteRepresentation(route *gwtypes.HTTPRoute) *HTTPRouteRepresentation {
@@ -141,10 +150,7 @@ func (t *HTTPRouteRepresentation) AddMatchForRule(rName Name, match Match) {
 	ruleKey := rName.String()
 	rule, exists := t.Rules[ruleKey]
 	if !exists {
-		rule = Rule{
-			Name:    rName,
-			Matches: make(map[string]Match),
-		}
+		rule = newRule(rName)
 	}
 	if rule.Matches == nil {
 		rule.Matches = make(map[string]Match)
@@ -164,10 +170,7 @@ func (t *HTTPRouteRepresentation) AddFilterForRule(rName Name, filter Filter) {
 	ruleKey := rName.String()
 	rule, exists := t.Rules[ruleKey]
 	if !exists {
-		rule = Rule{
-			Name:    rName,
-			Filters: make(map[string]Filter),
-		}
+		rule = newRule(rName)
 	}
 	if rule.Filters == nil {
 		rule.Filters = make(map[string]Filter)
@@ -187,11 +190,7 @@ func (t *HTTPRouteRepresentation) AddBackenRefForRule(rName Name, backendRef Bac
 	ruleKey := rName.String()
 	rule, exists := t.Rules[ruleKey]
 	if !exists {
-		rule = Rule{
-			Name:        rName,
-			Matches:     make(map[string]Match),
-			BackendRefs: make(map[string]BackendRef),
-		}
+		rule = newRule(rName)
 	}
 	if rule.BackendRefs == nil {
 		rule.BackendRefs = make(map[string]BackendRef)
