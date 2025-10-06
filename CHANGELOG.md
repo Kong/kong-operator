@@ -58,6 +58,7 @@
   [2355](https://github.com/Kong/kong-operator/pull/2355)
 - Hybrid Gateway: add Konnect specific fields to `GatewayConfiguration` CRD.
   [#2390](https://github.com/Kong/kong-operator/pull/2390)
+  [#2405](https://github.com/Kong/kong-operator/pull/2405)
 
 ### Changed
 
