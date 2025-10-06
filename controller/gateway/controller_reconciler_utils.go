@@ -552,7 +552,9 @@ func (r *Reconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gate
 
 // isGatewayHybrid checks if the given GatewayConfiguration is in hybrid mode by inspecting its extensions.
 // It returns true if a KonnectExtension with ClusterTypeControlPlane is found, and a requeue flag if any extension status is not yet set.
-func (r *Reconciler) isGatewayHybrid(ctx context.Context, logger logr.Logger, gatewayConfiguration *GatewayConfiguration) (isHybrid bool, requeue bool, err error) {
+func (r *Reconciler) isGatewayHybrid(
+	ctx context.Context, logger logr.Logger, gatewayConfiguration *GatewayConfiguration,
+) (isHybrid bool, requeue bool, err error) {
 	for _, ext := range gatewayConfiguration.Spec.Extensions {
 		if ext.Group != konnectv1alpha2.SchemeGroupVersion.Group ||
 			ext.Kind != konnectv1alpha2.KonnectExtensionKind {

@@ -54,6 +54,14 @@ import (
 // GatewayReconciler
 // -----------------------------------------------------------------------------
 
+type gatewayType string
+
+const (
+	gatewayTypeStandard gatewayType = "standard"
+	gatewayTypeHybrid   gatewayType = "hybrid"
+	gatewayTypeKonnect  gatewayType = "konnect"
+)
+
 // Reconciler reconciles a Gateway object.
 type Reconciler struct {
 	client.Client
@@ -233,9 +241,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	hybridGateway, requeue, err := r.isGatewayHybrid(ctx, logger, gatewayConfig)
-	if requeue || err != nil {
+	gatewayType := gatewayTypeStandard
+	if hybridGateway, requeue, err := r.isGatewayHybrid(ctx, logger, gatewayConfig); requeue || err != nil {
 		return ctrl.Result{Requeue: true}, err
+	} else if hybridGateway {
+		gatewayType = gatewayTypeHybrid
 	}
 	// Provision dataplane creates a dataplane and adds the DataPlaneReady=True
 	// condition to the Gateway status if the dataplane is ready. If not ready
@@ -371,7 +381,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, err
 	}
 
-	if !hybridGateway {
+	switch gatewayType {
+	case gatewayTypeStandard:
 		// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
 		// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false.
 		controlplane := r.provisionControlPlane(ctx, logger, &gateway, gatewayConfig)
@@ -404,6 +415,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if controlplane == nil {
 			return ctrl.Result{}, errors.New("unexpected error, controlplane is nil. Returning to avoid panic")
 		}
+	case gatewayTypeHybrid:
+		// In hybrid mode we don't provision ControlPlane resources.
+	case gatewayTypeKonnect:
+		// TODO
 	}
 	// If the dataplane has not been marked as ready yet, return and wait for the next reconciliation loop.
 	if !k8sutils.HasConditionTrue(kcfggateway.DataPlaneReadyType, gwConditionAware) {
