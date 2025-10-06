@@ -173,24 +173,12 @@ func (r *HybridGatewayReconciler[t, tPtr]) httpRoutesForService(ctx context.Cont
 
 	requests := make(map[reconcile.Request]struct{})
 	for _, httpRoute := range httpRoutes.Items {
-		for _, rule := range httpRoute.Spec.Rules {
-			for _, backendRef := range rule.BackendRefs {
-				if backendRef.Kind != nil && *backendRef.Kind == "Service" && backendRef.Name == gatewayv1.ObjectName(service.Name) {
-					namespace := httpRoute.Namespace
-					if backendRef.Namespace != nil {
-						namespace = string(*backendRef.Namespace)
-					}
-					if namespace == service.Namespace {
-						requests[reconcile.Request{
-							NamespacedName: types.NamespacedName{
-								Namespace: httpRoute.Namespace,
-								Name:      httpRoute.Name,
-							},
-						}] = struct{}{}
-					}
-				}
-			}
-		}
+		requests[reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: httpRoute.Namespace,
+				Name:      httpRoute.Name,
+			},
+		}] = struct{}{}
 	}
 
 	reqs := make([]reconcile.Request, 0, len(requests))
