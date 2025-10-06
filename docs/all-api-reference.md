@@ -3764,24 +3764,6 @@ _Appears in:_
 
 
 
-#### GatewayControlPlaneOptions
-
-
-GatewayControlPlaneOptions contains the options for configuring
-ControlPlane resources that will be managed as part of the Gateway
-when using Konnect.
-
-
-
-| Field | Description |
-| --- | --- |
-| `source` _[EntitySource](#entitysource)_ | Source represents the source type of the Konnect entity. |
-| `mirror` _[MirrorSpec](#mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
-
-
-_Appears in:_
-- [KonnectOptions](#konnectoptions)
-
 #### HorizontalScaling
 
 
@@ -3811,8 +3793,9 @@ KonnectOptions contains the options for configuring a Konnect-managed ControlPla
 
 | Field | Description |
 | --- | --- |
-| `apiAuthConfigurationSpec` _[KonnectAPIAuthConfigurationSpec](#konnectapiauthconfigurationspec)_ | APIAuthConfigurationSpec contains the Konnect API authentication configuration. If this field is not set, the operator will not be able to connect the Gateway to Konnect. |
-| `gatewayControlPlaneOptions` _[GatewayControlPlaneOptions](#gatewaycontrolplaneoptions)_ | GatewayControlPlaneOptions contains the options for configuring ControlPlane resources that will be managed as part of the Gateway when using Konnect. |
+| `authRef` _[KonnectAPIAuthConfigurationRef](#konnectapiauthconfigurationref)_ | APIAuthConfigurationRef contains the Konnect API authentication configuration. If this field is not set, the operator will not be able to connect the Gateway to Konnect. |
+| `source` _[EntitySource](#entitysource)_ | Source represents the source type of the Konnect entity. |
+| `mirror` _[MirrorSpec](#mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
 
 
 _Appears in:_
@@ -4450,7 +4433,6 @@ KonnectAPIAuthConfigurationSpec is the specification of the KonnectAPIAuthConfig
 
 _Appears in:_
 - [KonnectAPIAuthConfiguration](#konnectapiauthconfiguration)
-- [KonnectOptions](#konnectoptions)
 
 
 
@@ -4770,8 +4752,8 @@ MirrorSpec contains the Konnect Mirror configuration.
 
 
 _Appears in:_
-- [GatewayControlPlaneOptions](#gatewaycontrolplaneoptions)
 - [KonnectGatewayControlPlaneSpec](#konnectgatewaycontrolplanespec)
+- [KonnectOptions](#konnectoptions)
 
 #### ProvisioningMethod
 _Underlying type:_ `string`
@@ -4933,6 +4915,7 @@ KonnectAPIAuthConfigurationRef is a reference to a KonnectAPIAuthConfiguration r
 
 _Appears in:_
 - [KonnectConfiguration](#konnectconfiguration)
+- [KonnectOptions](#konnectoptions)
 
 #### KonnectConfiguration
 

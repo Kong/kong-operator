@@ -11,6 +11,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/test/crdsvalidation/common"
 )
 
@@ -271,51 +272,17 @@ func TestGatewayConfigurationV2(t *testing.T) {
 				},
 			},
 			{
-				Name: "it is valid to specify APIAuthConfigurationSpec without GatewayControlPlaneOptions",
+				Name: "it is valid to specify APIAuthConfigurationRef without Source and Mirror",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
-							APIAuthConfigurationSpec: &konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
-								Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
-								Token:     "spat_test_token",
-								ServerURL: "us.api.konghq.com",
+							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+								Name: "my-konnect-auth-config",
 							},
 						},
 					},
 				},
-			},
-			{
-				Name: "it is valid to specify both APIAuthConfigurationSpec and GatewayControlPlaneOptions",
-				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2beta1.GatewayConfigurationSpec{
-						Konnect: &operatorv2beta1.KonnectOptions{
-							APIAuthConfigurationSpec: &konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
-								Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
-								Token:     "spat_test_token",
-								ServerURL: "us.api.konghq.com",
-							},
-							GatewayControlPlaneOptions: &operatorv2beta1.GatewayControlPlaneOptions{
-								Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
-							},
-						},
-					},
-				},
-			},
-			{
-				Name: "it is invalid to specify GatewayControlPlaneOptions without APIAuthConfigurationSpec",
-				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
-					Spec: operatorv2beta1.GatewayConfigurationSpec{
-						Konnect: &operatorv2beta1.KonnectOptions{
-							GatewayControlPlaneOptions: &operatorv2beta1.GatewayControlPlaneOptions{
-								Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
-							},
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("GatewayControlPlaneOptions can only be specified when APIAuthConfigurationSpec is specified"),
 			},
 			{
 				Name: "it is valid to specify Mirror field when source is set to Mirror",
@@ -323,17 +290,13 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
-							APIAuthConfigurationSpec: &konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
-								Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
-								Token:     "spat_test_token",
-								ServerURL: "us.api.konghq.com",
+							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+								Name: "my-konnect-auth-config",
 							},
-							GatewayControlPlaneOptions: &operatorv2beta1.GatewayControlPlaneOptions{
-								Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
-								Mirror: &konnectv1alpha1.MirrorSpec{
-									Konnect: konnectv1alpha1.MirrorKonnect{
-										ID: commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967"),
-									},
+							Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
+							Mirror: &konnectv1alpha1.MirrorSpec{
+								Konnect: konnectv1alpha1.MirrorKonnect{
+									ID: commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967"),
 								},
 							},
 						},
@@ -346,14 +309,10 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
-							APIAuthConfigurationSpec: &konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
-								Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
-								Token:     "spat_test_token",
-								ServerURL: "us.api.konghq.com",
+							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+								Name: "my-konnect-auth-config",
 							},
-							GatewayControlPlaneOptions: &operatorv2beta1.GatewayControlPlaneOptions{
-								Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
-							},
+							Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 						},
 					},
 				},
@@ -364,17 +323,13 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
-							APIAuthConfigurationSpec: &konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
-								Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
-								Token:     "spat_test_token",
-								ServerURL: "us.api.konghq.com",
+							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+								Name: "my-konnect-auth-config",
 							},
-							GatewayControlPlaneOptions: &operatorv2beta1.GatewayControlPlaneOptions{
-								Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
-								Mirror: &konnectv1alpha1.MirrorSpec{
-									Konnect: konnectv1alpha1.MirrorKonnect{
-										ID: commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967"),
-									},
+							Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+							Mirror: &konnectv1alpha1.MirrorSpec{
+								Konnect: konnectv1alpha1.MirrorKonnect{
+									ID: commonv1alpha1.KonnectIDType("8ae65120-cdec-4310-84c1-4b19caf67967"),
 								},
 							},
 						},
@@ -388,14 +343,10 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
-							APIAuthConfigurationSpec: &konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
-								Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
-								Token:     "spat_test_token",
-								ServerURL: "us.api.konghq.com",
+							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+								Name: "my-konnect-auth-config",
 							},
-							GatewayControlPlaneOptions: &operatorv2beta1.GatewayControlPlaneOptions{
-								Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
-							},
+							Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
 						},
 					},
 				},
