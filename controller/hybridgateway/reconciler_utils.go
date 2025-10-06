@@ -122,6 +122,26 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 	return false, false, nil
 }
 
+// EnforceStatus updates the status of the root object managed by the provided APIConverter.
+// This function delegates to the converter's UpdateRootObjectStatus method to handle
+// status condition management and cluster updates.
+//
+// Parameters:
+//   - ctx: The context for API calls
+//   - logger: Logger for debugging information
+//   - conv: The APIConverter that manages the root object and its status
+//
+// Returns:
+//   - stop: true if reconciliation should stop, false to continue
+//   - err: Any error that occurred during status processing
+//
+// This is a generic wrapper function that works with any converter implementing
+// the APIConverter interface, providing a consistent interface for status enforcement
+// across different resource types.
+func EnforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logger, conv converter.APIConverter[t]) (stop bool, err error) {
+	return conv.UpdateRootObjectStatus(ctx, logger)
+}
+
 // CleanOrphanedResources deletes resources previously managed by the converter but no longer present in the desired output.
 func CleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr[t]](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) error {
 	desiredObjects := conv.GetOutputStore(ctx)
@@ -148,7 +168,7 @@ func CleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	for _, gvk := range expectedGVKs {
 		list := &unstructured.UnstructuredList{}
 		list.SetGroupVersionKind(gvk)
-		selector := metadata.LabelSelectorForOwnedResources(rootObjPtr)
+		selector := metadata.LabelSelectorForOwnedResources(rootObjPtr, nil)
 
 		// List all resources of this GVK owned by the root object in the same namespace.
 		ns := rootObjPtr.GetNamespace()

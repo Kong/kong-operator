@@ -18,9 +18,9 @@ type (
 	GatewaySpec            = gatewayv1.GatewaySpec
 	GatewayStatusAddress   = gatewayv1.GatewayStatusAddress
 	Group                  = gatewayv1.Group
-	HTTPBackendRef         = gatewayv1.HTTPBackendRef
 	HTTPRoute              = gatewayv1.HTTPRoute
 	HTTPRouteFilter        = gatewayv1.HTTPRouteFilter
+	HTTPRouteStatus        = gatewayv1.HTTPRouteStatus
 	HTTPRouteList          = gatewayv1.HTTPRouteList
 	HTTPRouteMatch         = gatewayv1.HTTPRouteMatch
 	HTTPRouteRule          = gatewayv1.HTTPRouteRule
@@ -29,21 +29,32 @@ type (
 	Listener               = gatewayv1.Listener
 	Namespace              = gatewayv1.Namespace
 	ObjectName             = gatewayv1.ObjectName
-	ParametersReference    = gatewayv1.ParametersReference
 	ParentReference        = gatewayv1.ParentReference
-	PortNumber             = gatewayv1.PortNumber
 	RouteGroupKind         = gatewayv1.RouteGroupKind
 	RouteNamespaces        = gatewayv1.RouteNamespaces
 	RouteParentStatus      = gatewayv1.RouteParentStatus
 	SectionName            = gatewayv1.SectionName
+	PortNumber             = gatewayv1.PortNumber
+	HTTPBackendRef         = gatewayv1.HTTPBackendRef
+	ParametersReference    = gatewayv1.ParametersReference
+	Hostname               = gatewayv1.Hostname
+	GroupVersionKind       = gatewayv1.Group
 )
 
 var GroupVersion = gatewayv1.GroupVersion
 
 const (
-	HTTPProtocolType = gatewayv1.HTTPProtocolType
+	HTTPProtocolType  = gatewayv1.HTTPProtocolType
+	HTTPSProtocolType = gatewayv1.HTTPSProtocolType
+	TLSModeTerminate  = gatewayv1.TLSModeTerminate
 
-	NamespacesFromAll      = gatewayv1.NamespacesFromAll
-	NamespacesFromSame     = gatewayv1.NamespacesFromSame
-	NamespacesFromSelector = gatewayv1.NamespacesFromSelector
+	NamespacesFromAll                     = gatewayv1.NamespacesFromAll
+	NamespacesFromSame                    = gatewayv1.NamespacesFromSame
+	NamespacesFromSelector                = gatewayv1.NamespacesFromSelector
+	ListenerConditionProgrammed           = gatewayv1.ListenerConditionProgrammed
+	RouteConditionAccepted                = gatewayv1.RouteConditionAccepted
+	RouteReasonAccepted                   = gatewayv1.RouteReasonAccepted
+	RouteReasonNoMatchingParent           = gatewayv1.RouteReasonNoMatchingParent
+	RouteReasonNotAllowedByListeners      = gatewayv1.RouteReasonNotAllowedByListeners
+	RouteReasonNoMatchingListenerHostname = gatewayv1.RouteReasonNoMatchingListenerHostname
 )

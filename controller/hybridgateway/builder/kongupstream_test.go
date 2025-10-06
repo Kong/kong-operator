@@ -45,7 +45,11 @@ func TestKongUpstreamBuilder_WithLabels(t *testing.T) {
 		},
 	}
 
-	builder := NewKongUpstream().WithLabels(httpRoute)
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+
+	builder := NewKongUpstream().WithLabels(httpRoute, parentRef)
 
 	upstream, err := builder.Build()
 	require.NoError(t, err)
@@ -216,7 +220,7 @@ func TestKongUpstreamBuilder_Chaining(t *testing.T) {
 		WithSpecName("test-spec").
 		WithControlPlaneRef(controlPlaneRef).
 		WithOwner(httpRoute).
-		WithLabels(httpRoute).
+		WithLabels(httpRoute, parentRef).
 		WithAnnotations(httpRoute, parentRef).
 		MustBuild()
 

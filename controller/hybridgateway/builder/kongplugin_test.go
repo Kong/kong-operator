@@ -45,7 +45,11 @@ func TestKongPluginBuilder_WithLabels(t *testing.T) {
 		},
 	}
 
-	builder := NewKongPlugin().WithLabels(route)
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+
+	builder := NewKongPlugin().WithLabels(route, parentRef)
 
 	plugin, err := builder.Build()
 	require.NoError(t, err)
@@ -72,6 +76,26 @@ func TestKongPluginBuilder_WithAnnotations(t *testing.T) {
 
 	assert.NotNil(t, plugin.Annotations)
 	assert.NotEmpty(t, plugin.Annotations)
+	// Existing test covers normal case. Add error cases:
+
+	t.Run("route is nil", func(t *testing.T) {
+		parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
+		builder := NewKongPlugin().WithAnnotations(nil, parentRef)
+		require.NotEmpty(t, builder.errors)
+		assert.Contains(t, builder.errors[0].Error(), "route cannot be nil")
+	})
+
+	t.Run("parentRef is nil", func(t *testing.T) {
+		route := &gwtypes.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-route",
+				Namespace: "default",
+			},
+		}
+		builder := NewKongPlugin().WithAnnotations(route, nil)
+		require.NotEmpty(t, builder.errors)
+		assert.Contains(t, builder.errors[0].Error(), "parentRef cannot be nil")
+	})
 }
 
 func TestKongPluginBuilder_WithOwner(t *testing.T) {
@@ -499,7 +523,7 @@ func TestKongPluginBuilder_ChainedCalls(t *testing.T) {
 	plugin := NewKongPlugin().
 		WithName("test-plugin").
 		WithNamespace("test-ns").
-		WithLabels(route).
+		WithLabels(route, parentRef).
 		WithAnnotations(route, parentRef).
 		WithFilter(filter).
 		MustBuild()

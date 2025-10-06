@@ -41,8 +41,8 @@ func (b *KongPluginBindingBuilder) WithNamespace(namespace string) *KongPluginBi
 }
 
 // WithLabels sets the labels for the KongPluginBinding resource based on the given HTTPRoute.
-func (b *KongPluginBindingBuilder) WithLabels(route *gwtypes.HTTPRoute) *KongPluginBindingBuilder {
-	labels := metadata.BuildLabels(route)
+func (b *KongPluginBindingBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongPluginBindingBuilder {
+	labels := metadata.BuildLabels(route, parentRef)
 	if b.binding.Labels == nil {
 		b.binding.Labels = make(map[string]string)
 	}

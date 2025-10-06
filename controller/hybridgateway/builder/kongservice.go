@@ -41,8 +41,8 @@ func (b *KongServiceBuilder) WithNamespace(namespace string) *KongServiceBuilder
 }
 
 // WithLabels sets the labels for the KongService being built.
-func (b *KongServiceBuilder) WithLabels(route *gwtypes.HTTPRoute) *KongServiceBuilder {
-	labels := metadata.BuildLabels(route)
+func (b *KongServiceBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongServiceBuilder {
+	labels := metadata.BuildLabels(route, parentRef)
 	if b.service.Labels == nil {
 		b.service.Labels = make(map[string]string)
 	}

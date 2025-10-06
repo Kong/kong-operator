@@ -4,12 +4,12 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
@@ -29,8 +29,8 @@ type APIConverter[t RootObject] interface {
 	Reduce(obj unstructured.Unstructured) []utils.ReduceFunc
 	// ListExistingObjects lists all existing unstructured.Unstructured objects of the destination API kind, using the provided context, and returns them along with any error encountered.
 	ListExistingObjects(ctx context.Context) ([]unstructured.Unstructured, error)
-	// UpdateSharedRouteStatus updates the shared route status.
-	UpdateSharedRouteStatus([]unstructured.Unstructured) error
+	// UpdateRootObjectStatus updates the status for the root object.
+	UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error)
 }
 
 // RootObject is an interface that represents all resource types that can be loaded
@@ -51,13 +51,11 @@ type RootObjectPtr[T RootObject] interface {
 // NewConverter is a factory function that creates and returns an APIConverter instance
 // based on the type of the provided root object. It supports different types of root objects
 // and returns an error if the type is unsupported.
-func NewConverter[t RootObject](obj t, cl client.Client, sharedStatusMap *route.SharedRouteStatusMap) (APIConverter[t], error) {
+func NewConverter[t RootObject](obj t, cl client.Client) (APIConverter[t], error) {
 	switch o := any(obj).(type) {
 	// TODO: add other types here
-	case corev1.Service:
-		return newServiceConverter(&o, cl, sharedStatusMap).(APIConverter[t]), nil
 	case gwtypes.HTTPRoute:
-		return newHTTPRouteConverter(&o, cl, sharedStatusMap).(APIConverter[t]), nil
+		return newHTTPRouteConverter(&o, cl).(APIConverter[t]), nil
 	default:
 		return nil, fmt.Errorf("unsupported root object type: %T", obj)
 	}

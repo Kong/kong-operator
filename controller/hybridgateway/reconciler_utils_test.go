@@ -87,7 +87,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 	root.SetName("httproute-owner")
 	root.SetNamespace("ns")
 	root.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1alpha2", Kind: "HTTPRoute"})
-	ownerLabels := metadata.BuildLabels(root)
+	ownerLabels := metadata.BuildLabels(root, nil)
 
 	tests := []struct {
 		name         string
@@ -279,4 +279,8 @@ func (f *fakeHTTPRouteConverter) ListExistingObjects(ctx context.Context) ([]uns
 }
 func (f *fakeHTTPRouteConverter) UpdateSharedRouteStatus([]unstructured.Unstructured) error {
 	return nil
+}
+
+func (f *fakeHTTPRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error) {
+	return false, nil
 }

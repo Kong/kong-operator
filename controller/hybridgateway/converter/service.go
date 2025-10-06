@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -196,6 +197,11 @@ func (d *serviceConverter) UpdateSharedRouteStatus(objs []unstructured.Unstructu
 		d.sharedStatusMap.UpdateProgrammedServices(*d.service, key, len(programmedObjs))
 	}
 	return nil
+}
+
+// UpdateRootObjectStatus implements APIConverter.
+func (d *serviceConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error) {
+	return false, nil
 }
 
 // -----------------------------------------------------------------------------
