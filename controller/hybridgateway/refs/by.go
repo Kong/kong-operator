@@ -61,6 +61,12 @@ func GetControlPlaneRefByParentRef(ctx context.Context, cl client.Client, route 
 		return nil, fmt.Errorf("unable to get ControlPlaneRef for ParentRef %+v in route %q: %w", pRef, client.ObjectKeyFromObject(route), err)
 	}
 
+	// If the KonnectNamespacedRef is nil, it means the Gateway does not reference a Konnect ControlPlane.
+	if konnectNamespacedRef == nil {
+		return nil, nil
+	}
+
+	// Clear the namespace to indicate that the reference is within the same namespace as the Gateway.
 	konnectNamespacedRef.Namespace = ""
 
 	return &commonv1alpha1.ControlPlaneRef{
