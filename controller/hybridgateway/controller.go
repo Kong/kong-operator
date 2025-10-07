@@ -4,15 +4,22 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/controller/hybridgateway/converter"
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/controller/hybridgateway/watch"
 	"github.com/kong/kong-operator/controller/pkg/log"
+	"github.com/kong/kong-operator/internal/utils/index"
 )
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes,verbs=get;list;watch;create;update;patch;delete
@@ -63,6 +70,19 @@ func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context,
 		builder = builder.Owns(owned)
 	}
 
+	// Watch for services to trigger reconciliation of HTTPRoutes that reference them.
+	// Watch for services to trigger reconciliation of HTTPRoutes that reference them.
+	builder.Watches(
+		&corev1.Service{},
+		handler.EnqueueRequestsFromMapFunc(r.findHTTPRoutesForService),
+	)
+
+	// Watch for endpoint slices to trigger reconciliation of HTTPRoutes that reference them.
+	builder.Watches(
+		&discoveryv1.EndpointSlice{},
+		handler.EnqueueRequestsFromMapFunc(r.findHTTPRoutesForEndpointSlice),
+	)
+
 	return builder.Complete(r)
 }
 
@@ -104,4 +124,67 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *HybridGatewayReconciler[t, tPtr]) findHTTPRoutesForService(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx).WithName("HybridGatewayServiceWatcher")
+	service, ok := obj.(*corev1.Service)
+	if !ok {
+		logger.Error(fmt.Errorf("unexpected type %T, expected %T", obj, &corev1.Service{}), "failed to cast object to service")
+		return nil
+	}
+	return r.httpRoutesForService(ctx, service)
+}
+
+func (r *HybridGatewayReconciler[t, tPtr]) findHTTPRoutesForEndpointSlice(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx).WithName("HybridGatewayEndpointSliceWatcher")
+	endpointSlice, ok := obj.(*discoveryv1.EndpointSlice)
+	if !ok {
+		logger.Error(fmt.Errorf("unexpected type %T, expected %T", obj, &discoveryv1.EndpointSlice{}), "failed to cast object to endpointslice")
+		return nil
+	}
+
+	serviceName, ok := endpointSlice.Labels[discoveryv1.LabelServiceName]
+	if !ok {
+		logger.Info("endpointslice has no service name label", "namespace", endpointSlice.Namespace, "name", endpointSlice.Name)
+		return nil
+	}
+
+	service := &corev1.Service{}
+	if err := r.Get(ctx, types.NamespacedName{Namespace: endpointSlice.Namespace, Name: serviceName}, service); err != nil {
+		logger.Error(err, "failed to get service for endpointslice", "servicename", serviceName, "endpointslicenamespace", endpointSlice.Namespace)
+		return nil
+	}
+
+	return r.httpRoutesForService(ctx, service)
+}
+
+func (r *HybridGatewayReconciler[t, tPtr]) httpRoutesForService(ctx context.Context, service *corev1.Service) []reconcile.Request {
+	logger := ctrllog.FromContext(ctx).WithName("HybridGatewayWatcher")
+	var httpRoutes gatewayv1.HTTPRouteList
+	if err := r.List(ctx, &httpRoutes,
+		client.MatchingFields{
+			index.BackendServicesOnHTTPRouteIndex: service.Namespace + "/" + service.Name,
+		},
+	); err != nil {
+		logger.Error(err, "failed to list httproutes")
+		return nil
+	}
+
+	requests := make(map[reconcile.Request]struct{})
+	for _, httpRoute := range httpRoutes.Items {
+		requests[reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Namespace: httpRoute.Namespace,
+				Name:      httpRoute.Name,
+			},
+		}] = struct{}{}
+	}
+
+	reqs := make([]reconcile.Request, 0, len(requests))
+	for req := range requests {
+		reqs = append(reqs, req)
+	}
+
+	return reqs
 }
