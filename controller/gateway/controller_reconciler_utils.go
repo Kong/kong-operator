@@ -25,6 +25,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	kcfgconsts "github.com/kong/kong-operator/api/common/consts"
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	kcfgdataplane "github.com/kong/kong-operator/api/gateway-operator/dataplane"
 	kcfggateway "github.com/kong/kong-operator/api/gateway-operator/gateway"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
@@ -47,7 +48,8 @@ import (
 // GatewayReconciler - Reconciler Helpers
 // -----------------------------------------------------------------------------
 
-func (r *Reconciler) createDataPlane(ctx context.Context,
+func (r *Reconciler) createDataPlane(
+	ctx context.Context,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *GatewayConfiguration,
 ) (*operatorv1beta1.DataPlane, error) {
@@ -577,6 +579,18 @@ func (r *Reconciler) isGatewayHybrid(
 		break
 	}
 	return isHybrid, requeue, nil
+}
+
+// isGatewayKonnect checks if the given GatewayConfiguration is in konnect mode by inspecting its fields.
+func isGatewayKonnect(
+	gatewayConfiguration *GatewayConfiguration,
+) (isKonnect bool) {
+	if k := gatewayConfiguration.Spec.Konnect; k != nil {
+		if lo.FromPtrOr(k.Source, commonv1alpha1.EntitySourceOrigin) == commonv1alpha1.EntitySourceOrigin && k.APIAuthConfigurationRef != nil {
+			return true
+		}
+	}
+	return false
 }
 
 // -----------------------------------------------------------------------------

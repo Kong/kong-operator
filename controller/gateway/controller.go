@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"time"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/samber/lo"
@@ -246,6 +247,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{Requeue: true}, err
 	} else if hybridGateway {
 		gatewayType = gatewayTypeHybrid
+	} else if isGatewayKonnect(gatewayConfig) {
+		gatewayType = gatewayTypeKonnect
 	}
 	// Provision dataplane creates a dataplane and adds the DataPlaneReady=True
 	// condition to the Gateway status if the dataplane is ready. If not ready
@@ -257,7 +260,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// * the new status is false and the previous status was true
 	// * dataplane provisioning has failed
 	// We want to continue the reconciliation loop in case the DataPlane is not ready
-	// with the WaitingToBecomeReadyReason statuc condition because when using
+	// with the WaitingToBecomeReadyReason status condition because when using
 	// Kong Gateway's readiness status /status/ready we need to provision the
 	// ControlPlane as well to make DataPlane ready.
 	if c, ok := k8sutils.GetCondition(kcfggateway.DataPlaneReadyType, gwConditionAware); !ok || c.Status == metav1.ConditionFalse || provisionErr != nil {
@@ -419,6 +422,95 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// In hybrid mode we don't provision ControlPlane resources.
 	case gatewayTypeKonnect:
 		// TODO
+		// Deploy KonnectGatewayControlPlane + KonnectExtension
+		// 		kind: KonnectGatewayControlPlane
+		// apiVersion: konnect.konghq.com/v1alpha1
+		// metadata:
+		//   name: jw-gateway-control-plane
+		//   namespace: default
+		// spec:
+		//   name: jw-gateway-control-plane # Name used to identify the Gateway Control Plane in Konnect
+		//   konnect:
+		//     authRef:
+		//       name: konnect-api-auth # Reference to the KonnectAPIAuthConfiguration object
+
+		kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				// GenerateName: fmt.Sprintf("%s-", gateway.Name),
+				Name:      fmt.Sprintf("jw-%s-%s", gateway.Namespace, gateway.Name),
+				Namespace: gateway.Namespace,
+			},
+			Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+				CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
+					Name: fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name),
+				},
+				KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
+					APIAuthConfigurationRef: *gatewayConfig.Spec.Konnect.APIAuthConfigurationRef,
+				},
+			},
+		}
+		k8sutils.SetOwnerForObject(kgcp, &gateway)
+		if err := r.Create(ctx, kgcp); err != nil {
+			log.Error(logger, err, "failed to create KonnectGatewayControlPlane")
+			return ctrl.Result{}, client.IgnoreAlreadyExists(err)
+		}
+
+		konnectExt := &konnectv1alpha2.KonnectExtension{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: fmt.Sprintf("%s-", gateway.Name),
+				Namespace:    gateway.Namespace,
+			},
+			Spec: konnectv1alpha2.KonnectExtensionSpec{
+				Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+					ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+						Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+							Type: "konnectNamespacedRef",
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name:      kgcp.Name,
+								Namespace: kgcp.Namespace,
+							},
+						},
+					},
+				},
+			},
+		}
+		k8sutils.SetOwnerForObject(kgcp, &gateway)
+		if err := r.Create(ctx, konnectExt); err != nil {
+			log.Error(logger, err, "failed to create KonnectExtension")
+			return ctrl.Result{}, client.IgnoreAlreadyExists(err)
+		}
+
+		log.Info(logger, "created KonnectGatewayControlPlane and KonnectExtension",
+			"KonnectGatewayControlPlane", client.ObjectKeyFromObject(kgcp),
+			"KonnectExtension", client.ObjectKeyFromObject(konnectExt),
+		)
+
+		// Patch dataplane with KonnectExtension
+		// client.
+		var dp operatorv1beta1.DataPlane
+		if err := r.Get(ctx, client.ObjectKeyFromObject(dataplane), &dp); err != nil { // refresh the dataplane object
+			log.Debug(logger, "failed to get dataplane", "error", err)
+			return ctrl.Result{}, client.IgnoreAlreadyExists(err)
+		}
+		dp.Spec.Extensions = []commonv1alpha1.ExtensionRef{
+			{
+				Kind:  konnectv1alpha2.KonnectExtensionKind,
+				Group: konnectv1alpha2.SchemeGroupVersion.Group,
+				NamespacedRef: commonv1alpha1.NamespacedRef{
+					Name:      konnectExt.Name,
+					Namespace: lo.ToPtr(konnectExt.Namespace),
+				},
+			},
+		}
+		if err := r.Update(ctx, &dp); err != nil {
+			log.Debug(logger, "failed to update dataplane with konnect extension", "error", err)
+			return ctrl.Result{}, client.IgnoreAlreadyExists(err)
+		}
+		log.Info(logger, "patched dataplane with konnect extension",
+			"dataplane", client.ObjectKeyFromObject(dataplane),
+			"konnectExtension", client.ObjectKeyFromObject(konnectExt),
+		)
+
 	}
 	// If the dataplane has not been marked as ready yet, return and wait for the next reconciliation loop.
 	if !k8sutils.HasConditionTrue(kcfggateway.DataPlaneReadyType, gwConditionAware) {
