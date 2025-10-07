@@ -917,7 +917,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 			if tt.setup != nil {
 				tt.setup(tt.gateway, tt.route)
 			}
-			cond, err := BuildAcceptedCondition(ctx, tt.client, tt.gateway, tt.route, tt.pRef)
+			cond, err := BuildAcceptedCondition(ctx, logr.Discard(), tt.client, tt.gateway, tt.route, tt.pRef)
 			if tt.name == "missing namespace triggers error branch" || tt.name == "invalid label selector triggers error branch" {
 				require.Error(t, err)
 				require.Nil(t, cond)
@@ -990,7 +990,7 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		conds, err := BuildProgrammedCondition(ctx, tt.client, route, pRef, tt.gvks)
+		conds, err := BuildProgrammedCondition(ctx, logr.Discard(), tt.client, route, pRef, tt.gvks)
 		if tt.wantErr {
 			require.Error(t, err, tt.name)
 			require.Nil(t, conds, tt.name)
@@ -1341,7 +1341,7 @@ func Test_FilterMatchingListeners(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		matches, cond := FilterMatchingListeners(gw, tt.pRef, tt.listeners)
+		matches, cond := FilterMatchingListeners(logr.Discard(), gw, tt.pRef, tt.listeners)
 		require.Len(t, matches, tt.wantLen, tt.name)
 		if tt.wantCond {
 			require.NotNil(t, cond, tt.name)
@@ -1522,7 +1522,7 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		matches, cond, err := FilterListenersByAllowedRoutes(gw, pRef, tt.listeners, tt.kind, tt.routeNS)
+		matches, cond, err := FilterListenersByAllowedRoutes(logr.Discard(), gw, pRef, tt.listeners, tt.kind, tt.routeNS)
 		if tt.wantErr {
 			require.Error(t, err, tt.name)
 			continue
@@ -1588,7 +1588,7 @@ func Test_FilterListenersByHostnames(t *testing.T) {
 	}
 
 	for _, tt := range tests {
-		matches, cond := FilterListenersByHostnames(tt.listeners, tt.hostnames)
+		matches, cond := FilterListenersByHostnames(logr.Discard(), tt.listeners, tt.hostnames)
 		require.Len(t, matches, tt.wantLen, tt.name)
 		if tt.wantCond {
 			require.NotNil(t, cond, tt.name)

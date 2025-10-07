@@ -155,7 +155,9 @@ func (c *httpRouteConverter) UpdateSharedRouteStatus(objs []unstructured.Unstruc
 func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error) {
 	updated := false
 	// For each parentRef in the HTTPRoute, build the conditions and set them in the status.
+	logger.V(1).Info("Starting UpdateRootObjectStatus", "route", c.route.Name)
 	for _, pRef := range c.route.Spec.ParentRefs {
+		logger.V(2).Info("Processing ParentReference", "parentRef", pRef)
 		// Check if the parentRef belongs to a Gateway managed by us.
 		gateway, err := route.GetSupportedGatewayForParentRef(ctx, logger, c.Client, pRef, c.route.Namespace)
 		if err != nil {
@@ -166,21 +168,24 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 				logger.V(1).Info("Skipping status update for unsupported or non-existent Gateway", "parentRef", pRef)
 				if route.RemoveStatusForParentRef(logger, c.route, pRef, vars.ControllerName()) {
 					// If we removed the status, we need to mark the update as true.
+					logger.V(2).Info("Removed ParentStatus for unsupported ParentReference", "parentRef", pRef)
 					updated = true
 				}
 				continue
 			} else {
+				logger.Error(err, "Failed to get supported gateway for ParentReference", "parentRef", pRef)
 				return false, fmt.Errorf("failed to get supported gateway for parentRef %s: %w", pRef.Name, err)
 			}
 		}
 
-		acceptedCondition, err := route.BuildAcceptedCondition(ctx, c.Client, gateway, c.route, pRef)
+		logger.V(2).Info("Building Accepted condition", "parentRef", pRef, "gateway", gateway.Name)
+		acceptedCondition, err := route.BuildAcceptedCondition(ctx, logger, c.Client, gateway, c.route, pRef)
 		if err != nil {
 			return false, fmt.Errorf("failed to update HTTPRoute status for parentRef %s: %w", pRef.Name, err)
 		}
 
-		// Build the programmed condition for the route and gateway.
-		programmedConditions, err := route.BuildProgrammedCondition(ctx, c.Client, c.route, pRef, c.expectedGVKs)
+		logger.V(2).Info("Building Programmed conditions", "parentRef", pRef, "gateway", gateway.Name)
+		programmedConditions, err := route.BuildProgrammedCondition(ctx, logger, c.Client, c.route, pRef, c.expectedGVKs)
 		if err != nil {
 			return false, fmt.Errorf("failed to build programmed condition for parentRef %s: %w", pRef.Name, err)
 		}
@@ -188,25 +193,31 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 		// Combine all conditions.
 		programmedConditions = append(programmedConditions, *acceptedCondition)
 
-		// Set the condition in the route status.
+		logger.V(2).Info("Setting status conditions", "parentRef", pRef, "conditionsCount", len(programmedConditions))
 		if route.SetStatusConditions(c.route, pRef, vars.ControllerName(), programmedConditions...) {
+			logger.V(1).Info("Status conditions updated for ParentReference", "parentRef", pRef)
 			updated = true
 		}
 	}
 
-	// Cleanup orphaned ParentStatus entries.
+	logger.V(2).Info("Cleaning up orphaned ParentStatus entries", "route", c.route.Name)
 	if route.CleanupOrphanedParentStatus(logger, c.route, vars.ControllerName()) {
+		logger.V(1).Info("Orphaned ParentStatus entries cleaned up", "route", c.route.Name)
 		updated = true
 	}
 
 	// Update the status in the cluster if there are changes.
 	if updated {
-		logger.V(1).Info("Updating HTTPRoute status", "route", c.route.Name, "status", c.route.Status)
+		logger.V(1).Info("Updating HTTPRoute status in cluster", "route", c.route.Name, "status", c.route.Status)
 		if err := c.Status().Update(ctx, c.route); err != nil {
+			logger.Error(err, "Failed to update HTTPRoute status in cluster", "route", c.route.Name)
 			return false, fmt.Errorf("failed to update HTTPRoute status: %w", err)
 		}
+	} else {
+		logger.V(1).Info("No status update required for HTTPRoute", "route", c.route.Name)
 	}
 
+	logger.V(1).Info("Finished UpdateRootObjectStatus", "route", c.route.Name, "updated", updated)
 	return updated, nil
 }
 
