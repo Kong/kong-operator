@@ -6,6 +6,7 @@ import (
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -56,7 +57,25 @@ func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context,
 	}
 	builder := ctrl.NewControllerManagedBy(mgr).
 		For(obj).
-		WithEventFilter(predicate.NewPredicateFuncs(filter))
+		WithEventFilter(
+			predicate.Funcs{
+				CreateFunc: func(e event.CreateEvent) bool {
+					return filter(e.Object)
+				},
+				UpdateFunc: func(e event.UpdateEvent) bool {
+					//
+					if filter(e.ObjectNew) {
+						return true
+					}
+					return filter(e.ObjectOld)
+				},
+				DeleteFunc: func(e event.DeleteEvent) bool {
+					return filter(e.Object)
+				},
+				GenericFunc: func(e event.GenericEvent) bool {
+					return filter(e.Object)
+				},
+			})
 
 	// Add watches for owned resources.
 	for _, owned := range watch.Owns(obj) {
