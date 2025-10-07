@@ -129,9 +129,9 @@ func (c *httpRouteConverter) UpdateSharedRouteStatus(objs []unstructured.Unstruc
 	return nil
 }
 
-// translate converts the HTTPRoute to KongRoute(s) and stores them in outputStore.
 func (c *httpRouteConverter) translate(ctx context.Context) error {
-	// Generate translation data.
+	// TODO: consider dropping the intermediate representation and doing everything in one pass.
+	// ControlPlaneRefs and Hostnames should be calculated at each pass in the parentRefs loop.
 	if err := c.addControlPlaneRefs(ctx); err != nil {
 		return err
 	}
@@ -139,131 +139,151 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 		return err
 	}
 
-	// Generate kong services, upstream and targets.
-	for _, val := range c.ir.Rules {
-		// Get the controlPlaneRef for the given Rule.
-		cpr := c.ir.GetControlPlaneRefByName(val.Name)
-		if cpr == nil {
+	// TODO: Should we hash the httproute namespace/name to ensure length limits?
+	// or may we drop it?
+	httpRouteName := strings.Join([]string{c.route.Namespace, c.route.Name}, "-")
+	for i, pRef := range c.route.Spec.ParentRefs {
+		pRefName := intermediate.NameFromHTTPRoute(c.route, "", i)
+		cpRef, err := refs.GetControlPlaneRefByParentRef(ctx, c.Client, c.route, pRef)
+		if err != nil {
+			return err
+		}
+		if cpRef == nil {
 			continue
 		}
-		hostnames := c.ir.GetHostnamesByName(val.Name)
+		hostnames := c.ir.GetHostnamesByName(pRefName)
 		if hostnames == nil {
 			continue
 		}
-		name := val.String()
 
-		// Build the upstream resource.
-		upstream, err := builder.NewKongUpstream().
-			WithName(name).
-			WithNamespace(c.route.Namespace).
-			WithLabels(c.route).
-			WithAnnotations(c.route, c.ir.GetParentRefByName(val.Name)).
-			WithSpecName(name).
-			WithControlPlaneRef(*cpr).
-			WithOwner(c.route).Build()
-		if err != nil {
-			// TODO: decide how to handle build errors in converter
-			// For now, skip this resource
-			continue
-		}
-		c.outputStore = append(c.outputStore, &upstream)
+		//pRefHash := utils.Hash32(pRef)
+		cpRefName := cpRef.KonnectNamespacedRef.Name
 
-		// Build the service resource.
-		service, err := builder.NewKongService().
-			WithName(name).
-			WithNamespace(c.route.Namespace).
-			WithLabels(c.route).
-			WithAnnotations(c.route, c.ir.GetParentRefByName(val.Name)).
-			WithSpecName(name).
-			WithSpecHost(name).
-			WithControlPlaneRef(*cpr).
-			WithOwner(c.route).Build()
-		if err != nil {
-			// TODO: decide how to handle build errors in converter
-			// For now, skip this resource
-			continue
-		}
-		c.outputStore = append(c.outputStore, &service)
-
-		// Build the target resources.
-		for _, bRef := range val.BackendRefs {
-			targetName := bRef.String()
-
-			target, err := builder.NewKongTarget().
-				WithName(targetName).
+		// For each rule in the HTTPRoute, create intermediate representation entries.
+		// TODO: move each resource creation to its own function to improve readability.
+		for _, rule := range c.route.Spec.Rules {
+			// Build the KongUpstream resource.
+			// name - scope: pRef/cpRef , id from BackendRefs
+			// TODO: httpRouteName can be dropped
+			upstreamName := strings.Join([]string{httpRouteName, cpRefName, utils.Hash32(rule.BackendRefs)}, ".")
+			upstream, err := builder.NewKongUpstream().
+				WithName(upstreamName).
 				WithNamespace(c.route.Namespace).
 				WithLabels(c.route).
-				WithAnnotations(c.route, c.ir.GetParentRefByName(bRef.Name)).
-				WithUpstreamRef(name).
-				WithBackendRef(c.route, &bRef.BackendRef).
+				WithAnnotations(c.route, &pRef).
+				WithSpecName(upstreamName).
+				WithControlPlaneRef(*cpRef).
 				WithOwner(c.route).Build()
 			if err != nil {
 				// TODO: decide how to handle build errors in converter
 				// For now, skip this resource
 				continue
 			}
-			c.outputStore = append(c.outputStore, &target)
-		}
+			c.outputStore = append(c.outputStore, &upstream)
 
-		// Build the kong route resource.
-		for _, match := range val.Matches {
-			routeName := match.String()
-			serviceName := val.String()
+			// Build the KongTarget resources.
+			for _, bRef := range rule.BackendRefs {
+				// Since KongTarget has a reference to a KongUpstream which changes if any of the backends change,
+				// we need to identify the KongTarget by hashing the entire BackendRefs slice. To have it unique
+				// we include the index.
+				// name - scope: pRef/cpRef, id from single BackendRef
+				// TODO: httpRouteName can be dropped
+				targetName := strings.Join([]string{httpRouteName, cpRefName, utils.Hash32(bRef)}, ".")
+				target, err := builder.NewKongTarget().
+					WithName(targetName).
+					WithNamespace(c.route.Namespace).
+					WithLabels(c.route).
+					WithAnnotations(c.route, &pRef).
+					WithUpstreamRef(upstreamName).
+					WithBackendRef(c.route, &bRef).
+					WithOwner(c.route).Build()
+				if err != nil {
+					// TODO: decide how to handle build errors in converter
+					// For now, skip this resource
+					continue
+				}
+				c.outputStore = append(c.outputStore, &target)
+			}
 
-			route, err := builder.NewKongRoute().
+			// Build the KongService resource.
+			// name - scope: pRef/cpRef , id from Matches
+			// TODO: httpRouteName can be dropped - same match on same cpRef in different httpRoutes makes no sense, right?
+			serviceName := strings.Join([]string{httpRouteName, cpRefName, utils.Hash32(rule.Matches)}, ".")
+			service, err := builder.NewKongService().
+				WithName(serviceName).
+				WithNamespace(c.route.Namespace).
+				WithLabels(c.route).
+				WithAnnotations(c.route, &pRef).
+				WithSpecName(serviceName).
+				WithSpecHost(upstreamName).
+				WithControlPlaneRef(*cpRef).
+				WithOwner(c.route).Build()
+			if err != nil {
+				// TODO: decide how to handle build errors in converter
+				// For now, skip this resource
+				continue
+			}
+			c.outputStore = append(c.outputStore, &service)
+
+			// Build the KongRoute resources.
+			routeName := serviceName
+			rbuild := builder.NewKongRoute().
 				WithName(routeName).
 				WithNamespace(c.route.Namespace).
 				WithLabels(c.route).
-				WithAnnotations(c.route, c.ir.GetParentRefByName(match.Name)).
+				WithAnnotations(c.route, &pRef).
 				WithSpecName(routeName).
 				WithHosts(hostnames.Hostnames).
 				WithStripPath(c.ir.StripPath).
 				WithKongService(serviceName).
-				WithHTTPRouteMatch(match.Match).
-				WithOwner(c.route).Build()
+				WithOwner(c.route)
+			for _, match := range rule.Matches {
+				rbuild = rbuild.WithHTTPRouteMatch(match)
+			}
+			route, err := rbuild.Build()
 			if err != nil {
 				// TODO: decide how to handle build errors in converter
 				// For now, skip this resource
 				continue
 			}
 			c.outputStore = append(c.outputStore, &route)
-		}
 
-		// Build the kong plugin and kong plugin binding resources.
-		for _, filter := range val.Filters {
-			pluginName := filter.String()
+			// Build the KongPlugin and KongPluginBinding resources.
+			for _, filter := range rule.Filters {
+				// KongPlugins are identified by the plugin itself. Multiple KongPluginBindings
+				// can point to the same KongPlugin (is this true?).
+				pluginName := strings.Join([]string{httpRouteName, cpRefName, utils.Hash32(filter)}, ".")
 
-			plugin, err := builder.NewKongPlugin().
-				WithName(pluginName).
-				WithNamespace(c.route.Namespace).
-				WithLabels(c.route).
-				WithAnnotations(c.route, c.ir.GetParentRefByName(val.Name)).
-				WithFilter(filter.Filter).
-				WithOwner(c.route).Build()
-			if err != nil {
-				continue
-			}
-			c.outputStore = append(c.outputStore, &plugin)
-
-			// Create a KongPluginBinding to bind the KongPlugin to each rule match.
-			for _, match := range val.Matches {
-				routeName := match.String()
-				bbuild := builder.NewKongPluginBinding().
-					WithName(strings.Join([]string{routeName, filter.GetHash()}, "-")).
+				plugin, err := builder.NewKongPlugin().
+					WithName(pluginName).
 					WithNamespace(c.route.Namespace).
 					WithLabels(c.route).
-					WithAnnotations(c.route, c.ir.GetParentRefByName(match.Name)).
+					WithAnnotations(c.route, &pRef).
+					WithFilter(filter).
+					WithOwner(c.route).Build()
+				if err != nil {
+					continue
+				}
+				c.outputStore = append(c.outputStore, &plugin)
+
+				// Create a KongPluginBinding to bind the KongPlugin to each rule match.
+				var bindingName string
+				bbuild := builder.NewKongPluginBinding().
+					WithNamespace(c.route.Namespace).
+					WithLabels(c.route).
+					WithAnnotations(c.route, &pRef).
 					WithPluginRef(pluginName).
-					WithControlPlaneRef(*cpr).
+					WithControlPlaneRef(*cpRef).
 					WithOwner(c.route)
-				if filter.Filter.Type == gatewayv1.HTTPRouteFilterResponseHeaderModifier {
+				if filter.Type == gatewayv1.HTTPRouteFilterResponseHeaderModifier {
 					// For response header modifiers, bind the plugin to the KongService instead of KongRoute.
-					serviceName := val.String()
+					bindingName = strings.Join([]string{serviceName, "plugin", utils.Hash32(filter)}, ".")
 					bbuild = bbuild.WithServiceRef(serviceName)
 				} else {
+					bindingName = strings.Join([]string{routeName, "plugin", utils.Hash32(filter)}, ".")
 					bbuild = bbuild.WithRouteRef(routeName)
 				}
-				binding, err := bbuild.Build()
+				binding, err := bbuild.WithName(bindingName).Build()
 				if err != nil {
 					continue
 				}
