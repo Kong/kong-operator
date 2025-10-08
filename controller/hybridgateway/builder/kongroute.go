@@ -112,8 +112,8 @@ func (b *KongRouteBuilder) WithNamespace(namespace string) *KongRouteBuilder {
 }
 
 // WithLabels sets the labels for the KongRoute resource based on the given HTTPRoute.
-func (b *KongRouteBuilder) WithLabels(route *gwtypes.HTTPRoute) *KongRouteBuilder {
-	labels := metadata.BuildLabels(route)
+func (b *KongRouteBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongRouteBuilder {
+	labels := metadata.BuildLabels(route, parentRef)
 	if b.route.Labels == nil {
 		b.route.Labels = make(map[string]string)
 	}

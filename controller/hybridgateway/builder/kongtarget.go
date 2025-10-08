@@ -43,8 +43,8 @@ func (b *KongTargetBuilder) WithNamespace(namespace string) *KongTargetBuilder {
 }
 
 // WithLabels sets the labels for the KongTarget being built.
-func (b *KongTargetBuilder) WithLabels(route *gwtypes.HTTPRoute) *KongTargetBuilder {
-	labels := metadata.BuildLabels(route)
+func (b *KongTargetBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongTargetBuilder {
+	labels := metadata.BuildLabels(route, parentRef)
 	if b.target.Labels == nil {
 		b.target.Labels = make(map[string]string)
 	}

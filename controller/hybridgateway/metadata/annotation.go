@@ -5,7 +5,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	routepkg "github.com/kong/kong-operator/controller/hybridgateway/route"
+	routeconst "github.com/kong/kong-operator/controller/hybridgateway/const/route"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
 )
@@ -48,7 +48,7 @@ func BuildAnnotations(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReferen
 	}
 
 	return map[string]string{
-		consts.GatewayOperatorHybridRouteAnnotation:    routepkg.HTTPRouteKey + "|" + client.ObjectKeyFromObject(route).String(),
+		consts.GatewayOperatorHybridRouteAnnotation:    routeconst.HTTPRouteKey + "|" + client.ObjectKeyFromObject(route).String(),
 		consts.GatewayOperatorHybridGatewaysAnnotation: gwObjKey.String(),
 	}
 }

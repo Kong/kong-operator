@@ -41,8 +41,8 @@ func (b *KongUpstreamBuilder) WithNamespace(namespace string) *KongUpstreamBuild
 }
 
 // WithLabels sets the labels for the KongUpstream being built.
-func (b *KongUpstreamBuilder) WithLabels(route *gwtypes.HTTPRoute) *KongUpstreamBuilder {
-	labels := metadata.BuildLabels(route)
+func (b *KongUpstreamBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) *KongUpstreamBuilder {
+	labels := metadata.BuildLabels(route, parentRef)
 	if b.upstream.Labels == nil {
 		b.upstream.Labels = make(map[string]string)
 	}

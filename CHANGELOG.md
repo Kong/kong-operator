@@ -59,6 +59,20 @@
 - Hybrid Gateway: add Konnect specific fields to `GatewayConfiguration` CRD.
   [#2390](https://github.com/Kong/kong-operator/pull/2390)
   [#2405](https://github.com/Kong/kong-operator/pull/2405)
+- Hybrid Gateway: implement granular accepted and programmed conditions for HTTPRoute status
+  This commit introduces comprehensive support for "Accepted" and "Programmed" status conditions
+  on HTTPRoute resources in the hybridgateway controller. The new logic evaluates each ParentReference
+  for controller ownership, Gateway/GatewayClass support, listener matching, and resource programming
+  status. For every relevant Kong resource (KongRoute, KongService, KongTarget, KongUpstream, KongPlugin, KongPluginBinding),
+  the controller sets detailed programmed conditions, providing clear feedback on which resources are operational
+  and which are not.
+  The update also refactors builder and metadata logic to ensure labels and annotations are correctly set for
+  all managed resources, and improves test coverage for label, annotation, and hostname intersection handling.
+  Legacy status controller code is removed, and the reconciliation flow is streamlined to use the new status
+  enforcement and translation logic.
+  This enables more robust troubleshooting and visibility for users, ensuring HTTPRoute status accurately reflects
+  the readiness and configuration of all associated Kong resources.
+  [2400](https://github.com/Kong/kong-operator/pull/2400)
 
 ### Changed
 
