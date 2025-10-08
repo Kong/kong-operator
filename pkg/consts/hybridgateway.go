@@ -32,4 +32,14 @@ const (
 	// used to annotate resources created for hybrid gateways, indicating which route
 	// is associated with the resource.
 	GatewayOperatorHybridRouteAnnotation = OperatorAnnotationPrefix + HybridRouteAnnotation
+
+	// GatewayOperatorHybridGatewaysNameLabel is the fully qualified label key
+	// used to label resources created for hybrid gateways, indicating the name of the gateway
+	// associated with the resource.
+	GatewayOperatorHybridGatewaysNameLabel = OperatorAnnotationPrefix + HybridGatewaysAnnotation + "-name"
+
+	// GatewayOperatorHybridGatewaysNamespaceLabel is the fully qualified label key
+	// used to label resources created for hybrid gateways, indicating the namespace of the gateway
+	// associated with the resource.
+	GatewayOperatorHybridGatewaysNamespaceLabel = OperatorAnnotationPrefix + HybridGatewaysAnnotation + "-namespace"
 )

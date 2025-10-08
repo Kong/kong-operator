@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -11,7 +12,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/kong/kong-operator/controller/hybridgateway/converter"
-	"github.com/kong/kong-operator/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/controller/hybridgateway/watch"
 	"github.com/kong/kong-operator/controller/pkg/log"
 )
@@ -34,16 +34,13 @@ import (
 // RootObjectPtr interfaces, allowing flexible reconciliation logic for different resource types.
 type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]] struct {
 	client.Client
-
-	sharedStatusMap *route.SharedRouteStatusMap
 }
 
 // NewHybridGatewayReconciler creates a new instance of GatewayAPIHybridReconciler for the specified
 // generic types t and tPtr. It initializes the reconciler with the client from the provided manager.
-func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, sharedStatusMap *route.SharedRouteStatusMap) *HybridGatewayReconciler[t, tPtr] {
+func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager) *HybridGatewayReconciler[t, tPtr] {
 	return &HybridGatewayReconciler[t, tPtr]{
-		Client:          mgr.GetClient(),
-		sharedStatusMap: sharedStatusMap,
+		Client: mgr.GetClient(),
 	}
 }
 
@@ -105,9 +102,17 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	log.Debug(logger, "Reconciling object", "Group", gvk.Group, "Kind", gvk.Kind)
 
-	conv, err := converter.NewConverter(rootObj, r.Client, r.sharedStatusMap)
+	conv, err := converter.NewConverter(rootObj, r.Client)
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+
+	if stop, err := EnforceStatus(ctx, logger, conv); err != nil && !k8serrors.IsConflict(err) {
+		return ctrl.Result{}, err
+	} else if k8serrors.IsConflict(err) {
+		return ctrl.Result{Requeue: true}, nil
+	} else if stop {
+		return ctrl.Result{}, nil
 	}
 
 	if err := Translate(conv, ctx); err != nil {

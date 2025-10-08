@@ -45,7 +45,11 @@ func TestKongTargetBuilder_WithLabels(t *testing.T) {
 		},
 	}
 
-	builder := NewKongTarget().WithLabels(httpRoute)
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+
+	builder := NewKongTarget().WithLabels(httpRoute, parentRef)
 
 	target, err := builder.Build()
 	require.NoError(t, err)
@@ -331,7 +335,7 @@ func TestKongTargetBuilder_Chaining(t *testing.T) {
 		WithBackendRef(httpRoute, backendRef).
 		WithUpstreamRef("test-upstream").
 		WithOwner(httpRoute).
-		WithLabels(httpRoute).
+		WithLabels(httpRoute, parentRef).
 		WithAnnotations(httpRoute, parentRef).
 		MustBuild()
 

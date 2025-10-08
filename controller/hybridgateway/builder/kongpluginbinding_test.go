@@ -44,7 +44,11 @@ func TestKongPluginBindingBuilder_WithLabels(t *testing.T) {
 		},
 	}
 
-	builder := NewKongPluginBinding().WithLabels(route)
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+
+	builder := NewKongPluginBinding().WithLabels(route, parentRef)
 
 	binding, err := builder.Build()
 	require.NoError(t, err)
@@ -156,6 +160,21 @@ func TestKongPluginBindingBuilder_WithOwner(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "owner cannot be nil")
 	})
+	t.Run("owner reference error", func(t *testing.T) {
+		httpRouteWithoutTypeMeta := &gwtypes.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-http-route",
+				Namespace: "test-namespace",
+				UID:       "test-uid",
+			},
+		}
+
+		builder := NewKongPluginBinding().WithOwner(httpRouteWithoutTypeMeta)
+
+		_, err := builder.Build()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to set owner reference")
+	})
 }
 
 func TestKongPluginBindingBuilder_MustBuild(t *testing.T) {
@@ -201,7 +220,7 @@ func TestKongPluginBindingBuilder_ChainedCalls(t *testing.T) {
 	binding := NewKongPluginBinding().
 		WithName("chained-binding").
 		WithNamespace("test-ns").
-		WithLabels(route).
+		WithLabels(route, parentRef).
 		WithAnnotations(route, parentRef).
 		WithPluginRef("test-plugin").
 		WithRouteRef("test-route").
@@ -246,7 +265,7 @@ func TestKongPluginBindingBuilder_FullBinding(t *testing.T) {
 	binding := NewKongPluginBinding().
 		WithName("complete-binding").
 		WithNamespace("test-namespace").
-		WithLabels(route).
+		WithLabels(route, parentRef).
 		WithAnnotations(route, parentRef).
 		WithPluginRef("rate-limiting").
 		WithRouteRef("api-route").
