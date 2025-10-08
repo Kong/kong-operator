@@ -458,6 +458,9 @@ func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client
 	var conditions []metav1.Condition
 	ns := route.GetNamespace()
 
+	// Skip setting programmed conditions for KongPlugins because they lack a status field.
+	expectedGVKs = FilterOutGVKByKind(expectedGVKs, "KongPlugin")
+
 	// For each expected GVK, list resources owned by the route and gateway.
 	for _, gvk := range expectedGVKs {
 		list := &unstructured.UnstructuredList{}
@@ -828,4 +831,16 @@ func SetConditionMeta(cond metav1.Condition, route *gwtypes.HTTPRoute) *metav1.C
 	cond.ObservedGeneration = route.Generation
 	cond.LastTransitionTime = metav1.Now()
 	return &cond
+}
+
+// FilterOutGVKByKind returns a new slice of GVKs with the specified kind removed.
+// It matches Kind == kindToFilter and filters those out.
+func FilterOutGVKByKind(expectedGVKs []schema.GroupVersionKind, kindToFilter string) []schema.GroupVersionKind {
+	var filtered []schema.GroupVersionKind
+	for _, gvk := range expectedGVKs {
+		if gvk.Kind != kindToFilter {
+			filtered = append(filtered, gvk)
+		}
+	}
+	return filtered
 }

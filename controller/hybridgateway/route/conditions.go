@@ -28,10 +28,6 @@ func GetProgrammedConditionForGVK(gvk schema.GroupVersionKind, programmed bool) 
 		condType = routeconst.ConditionTypeKongUpstreamProgrammed
 		reasonProgrammed = routeconst.ConditionReasonKongUpstreamProgrammed
 		reasonNotProgrammed = routeconst.ConditionReasonKongUpstreamNotProgrammed
-	case "KongPlugin":
-		condType = routeconst.ConditionTypeKongPluginProgrammed
-		reasonProgrammed = routeconst.ConditionReasonKongPluginProgrammed
-		reasonNotProgrammed = routeconst.ConditionReasonKongPluginNotProgrammed
 	case "KongPluginBinding":
 		condType = routeconst.ConditionTypeKongPluginBindingProgrammed
 		reasonProgrammed = routeconst.ConditionReasonKongPluginBindingProgrammed

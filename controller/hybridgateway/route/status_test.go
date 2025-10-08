@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -1598,6 +1599,67 @@ func Test_FilterListenersByHostnames(t *testing.T) {
 		} else {
 			require.Nil(t, cond, tt.name)
 		}
+	}
+}
+
+func TestFilterOutGVKByKind(t *testing.T) {
+	gvks := []schema.GroupVersionKind{
+		{Group: "foo", Version: "v1", Kind: "KongPlugin"},
+		{Group: "foo", Version: "v1", Kind: "KongService"},
+		{Group: "bar", Version: "v1", Kind: "KongRoute"},
+		{Group: "foo", Version: "v1", Kind: "KongPlugin"},
+	}
+
+	tests := []struct {
+		name         string
+		input        []schema.GroupVersionKind
+		kindToFilter string
+		expects      []schema.GroupVersionKind
+	}{
+		{
+			name:         "filter KongPlugin",
+			input:        gvks,
+			kindToFilter: "KongPlugin",
+			expects: []schema.GroupVersionKind{
+				{Group: "foo", Version: "v1", Kind: "KongService"},
+				{Group: "bar", Version: "v1", Kind: "KongRoute"},
+			},
+		},
+		{
+			name:         "filter KongService",
+			input:        gvks,
+			kindToFilter: "KongService",
+			expects: []schema.GroupVersionKind{
+				{Group: "foo", Version: "v1", Kind: "KongPlugin"},
+				{Group: "bar", Version: "v1", Kind: "KongRoute"},
+				{Group: "foo", Version: "v1", Kind: "KongPlugin"},
+			},
+		},
+		{
+			name:         "filter KongRoute",
+			input:        gvks,
+			kindToFilter: "KongRoute",
+			expects: []schema.GroupVersionKind{
+				{Group: "foo", Version: "v1", Kind: "KongPlugin"},
+				{Group: "foo", Version: "v1", Kind: "KongService"},
+				{Group: "foo", Version: "v1", Kind: "KongPlugin"},
+			},
+		},
+		{
+			name:         "filter non-existent kind",
+			input:        gvks,
+			kindToFilter: "NonExistent",
+			expects:      gvks,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := FilterOutGVKByKind(tt.input, tt.kindToFilter)
+			if !reflect.DeepEqual(got, tt.expects) {
+				t.Errorf("unexpected result: got %+v, want %+v", got, tt.expects)
+			}
+		})
 	}
 }
 

@@ -106,28 +106,6 @@ func TestGetProgrammedConditionForGVK(t *testing.T) {
 			},
 		},
 		{
-			name:       "KongPlugin programmed true",
-			gvk:        schema.GroupVersionKind{Kind: "KongPlugin"},
-			programmed: true,
-			expects: metav1.Condition{
-				Type:    routeconst.ConditionTypeKongPluginProgrammed,
-				Status:  metav1.ConditionTrue,
-				Reason:  routeconst.ConditionReasonKongPluginProgrammed,
-				Message: "Resource is programmed",
-			},
-		},
-		{
-			name:       "KongPlugin programmed false",
-			gvk:        schema.GroupVersionKind{Kind: "KongPlugin"},
-			programmed: false,
-			expects: metav1.Condition{
-				Type:    routeconst.ConditionTypeKongPluginProgrammed,
-				Status:  metav1.ConditionFalse,
-				Reason:  routeconst.ConditionReasonKongPluginNotProgrammed,
-				Message: "Resource is not programmed",
-			},
-		},
-		{
 			name:       "KongPluginBinding programmed true",
 			gvk:        schema.GroupVersionKind{Kind: "KongPluginBinding"},
 			programmed: true,
