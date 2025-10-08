@@ -185,14 +185,14 @@ func TestDeduplicateConditionsByType(t *testing.T) {
 			},
 		},
 		{
-			name: "most severe kept (True > Unknown > False)",
+			name: "most severe kept (False > Unknown > True)",
 			input: []metav1.Condition{
 				{Type: "A", Status: metav1.ConditionFalse},
 				{Type: "A", Status: metav1.ConditionUnknown},
 				{Type: "A", Status: metav1.ConditionTrue},
 			},
 			expects: []metav1.Condition{
-				{Type: "A", Status: metav1.ConditionTrue},
+				{Type: "A", Status: metav1.ConditionFalse},
 			},
 		},
 		{
@@ -204,8 +204,8 @@ func TestDeduplicateConditionsByType(t *testing.T) {
 				{Type: "B", Status: metav1.ConditionTrue},
 			},
 			expects: []metav1.Condition{
-				{Type: "A", Status: metav1.ConditionUnknown},
-				{Type: "B", Status: metav1.ConditionTrue},
+				{Type: "A", Status: metav1.ConditionFalse},
+				{Type: "B", Status: metav1.ConditionUnknown},
 			},
 		},
 	}

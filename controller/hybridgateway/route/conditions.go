@@ -62,12 +62,12 @@ func GetProgrammedConditionForGVK(gvk schema.GroupVersionKind, programmed bool) 
 }
 
 // DeduplicateConditionsByType returns a slice of conditions with unique types, keeping the most severe status for each type.
-// Severity order: True > Unknown > False. If multiple conditions of the same type exist, the most severe is kept.
+// Severity order: False (most severe) > Unknown > True (least severe). If multiple conditions of the same type exist, the most severe is kept.
 func DeduplicateConditionsByType(conditions []metav1.Condition) []metav1.Condition {
 	condMap := make(map[string]metav1.Condition)
 	for _, cond := range conditions {
 		existing, exists := condMap[cond.Type]
-		if !exists || conditionSeverity(cond.Status) > conditionSeverity(existing.Status) {
+		if !exists || conditionSeverity(cond.Status) < conditionSeverity(existing.Status) {
 			condMap[cond.Type] = cond
 		}
 	}
@@ -79,15 +79,15 @@ func DeduplicateConditionsByType(conditions []metav1.Condition) []metav1.Conditi
 }
 
 // conditionSeverity returns an integer representing the severity of a condition status.
-// True = 2, Unknown = 1, False = 0
+// False = 0 (most severe), Unknown = 1, True = 2 (least severe)
 func conditionSeverity(status metav1.ConditionStatus) int {
 	switch status {
-	case metav1.ConditionTrue:
-		return 2
+	case metav1.ConditionFalse:
+		return 0
 	case metav1.ConditionUnknown:
 		return 1
-	case metav1.ConditionFalse:
-		fallthrough
+	case metav1.ConditionTrue:
+		return 2
 	default:
 		return 0
 	}
