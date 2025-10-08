@@ -33,13 +33,6 @@ const (
 	// ConditionReasonKongUpstreamNotProgrammed is used when the KongUpstream resource is not programmed.
 	ConditionReasonKongUpstreamNotProgrammed = "KongUpstreamNotProgrammed"
 
-	// ConditionTypeKongPluginProgrammed is set on a Route to indicate whether its KongPlugin resource is programmed.
-	ConditionTypeKongPluginProgrammed = "KongPluginProgrammed"
-	// ConditionReasonKongPluginProgrammed is used when the KongPlugin resource is successfully programmed.
-	ConditionReasonKongPluginProgrammed = "KongPluginProgrammed"
-	// ConditionReasonKongPluginNotProgrammed is used when the KongPlugin resource is not programmed.
-	ConditionReasonKongPluginNotProgrammed = "KongPluginNotProgrammed"
-
 	// ConditionTypeKongPluginBindingProgrammed is set on a Route to indicate whether its KongPluginBinding resource is programmed.
 	ConditionTypeKongPluginBindingProgrammed = "KongPluginBindingProgrammed"
 	// ConditionReasonKongPluginBindingProgrammed is used when the KongPluginBinding resource is successfully programmed.

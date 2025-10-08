@@ -76,7 +76,7 @@ func TestKongPluginBuilder_WithAnnotations(t *testing.T) {
 
 	assert.NotNil(t, plugin.Annotations)
 	assert.NotEmpty(t, plugin.Annotations)
-	
+
 	t.Run("route is nil", func(t *testing.T) {
 		parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
 		builder := NewKongPlugin().WithAnnotations(nil, parentRef)

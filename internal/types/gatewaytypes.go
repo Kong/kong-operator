@@ -9,7 +9,6 @@ type (
 	BackendObjectReference = gatewayv1.BackendObjectReference
 	BackendRef             = gatewayv1.BackendRef
 	CommonRouteSpec        = gatewayv1.CommonRouteSpec
-	GRPCRoute              = gatewayv1.GRPCRoute
 	Gateway                = gatewayv1.Gateway
 	GatewayClass           = gatewayv1.GatewayClass
 	GatewayClassSpec       = gatewayv1.GatewayClassSpec
@@ -17,28 +16,29 @@ type (
 	GatewayList            = gatewayv1.GatewayList
 	GatewaySpec            = gatewayv1.GatewaySpec
 	GatewayStatusAddress   = gatewayv1.GatewayStatusAddress
+	GRPCRoute              = gatewayv1.GRPCRoute
 	Group                  = gatewayv1.Group
+	GroupVersionKind       = gatewayv1.Group
+	HTTPBackendRef         = gatewayv1.HTTPBackendRef
 	HTTPRoute              = gatewayv1.HTTPRoute
 	HTTPRouteFilter        = gatewayv1.HTTPRouteFilter
-	HTTPRouteStatus        = gatewayv1.HTTPRouteStatus
 	HTTPRouteList          = gatewayv1.HTTPRouteList
 	HTTPRouteMatch         = gatewayv1.HTTPRouteMatch
 	HTTPRouteRule          = gatewayv1.HTTPRouteRule
 	HTTPRouteSpec          = gatewayv1.HTTPRouteSpec
+	HTTPRouteStatus        = gatewayv1.HTTPRouteStatus
+	Hostname               = gatewayv1.Hostname
 	Kind                   = gatewayv1.Kind
 	Listener               = gatewayv1.Listener
 	Namespace              = gatewayv1.Namespace
 	ObjectName             = gatewayv1.ObjectName
+	ParametersReference    = gatewayv1.ParametersReference
 	ParentReference        = gatewayv1.ParentReference
+	PortNumber             = gatewayv1.PortNumber
 	RouteGroupKind         = gatewayv1.RouteGroupKind
 	RouteNamespaces        = gatewayv1.RouteNamespaces
 	RouteParentStatus      = gatewayv1.RouteParentStatus
 	SectionName            = gatewayv1.SectionName
-	PortNumber             = gatewayv1.PortNumber
-	HTTPBackendRef         = gatewayv1.HTTPBackendRef
-	ParametersReference    = gatewayv1.ParametersReference
-	Hostname               = gatewayv1.Hostname
-	GroupVersionKind       = gatewayv1.Group
 )
 
 var GroupVersion = gatewayv1.GroupVersion

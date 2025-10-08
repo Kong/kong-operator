@@ -164,7 +164,7 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 			if errors.Is(err, route.ErrNoGatewayClassFound) ||
 				errors.Is(err, route.ErrNoGatewayController) ||
 				errors.Is(err, route.ErrNoGatewayFound) {
-				// If the gateway is not managed by us, not found we skip setting conditions.
+				// If the gateway is not managed by us or not found we skip setting conditions.
 				logger.V(1).Info("Skipping status update for unsupported or non-existent Gateway", "parentRef", pRef)
 				if route.RemoveStatusForParentRef(logger, c.route, pRef, vars.ControllerName()) {
 					// If we removed the status, we need to mark the update as true.
@@ -181,7 +181,7 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 		logger.V(2).Info("Building Accepted condition", "parentRef", pRef, "gateway", gateway.Name)
 		acceptedCondition, err := route.BuildAcceptedCondition(ctx, logger, c.Client, gateway, c.route, pRef)
 		if err != nil {
-			return false, fmt.Errorf("failed to update HTTPRoute status for parentRef %s: %w", pRef.Name, err)
+			return false, fmt.Errorf("failed to build accepted condition for parentRef %s: %w", pRef.Name, err)
 		}
 
 		logger.V(2).Info("Building Programmed conditions", "parentRef", pRef, "gateway", gateway.Name)
