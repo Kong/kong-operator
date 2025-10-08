@@ -12,6 +12,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 )
 
 // GatewaysByNamespacedRef associates a KonnectNamespacedRef with a list of Gateways.
@@ -33,6 +34,7 @@ func GetNamespacedRefs(ctx context.Context, cl client.Client, obj runtime.Object
 
 // GetControlPlaneRefByParentRef retrieves the control plane reference for a given parent reference.
 func GetControlPlaneRefByParentRef(ctx context.Context, cl client.Client, route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference) (*commonv1alpha1.ControlPlaneRef, error) {
+	//XXX: tutaj
 	var namespace string
 	if pRef.Group == nil || *pRef.Group != "gateway.networking.k8s.io" {
 		return nil, nil
@@ -133,11 +135,23 @@ func byHTTPRoute(ctx context.Context, cl client.Client, httpRoute gwtypes.HTTPRo
 
 // byGateway returns the KonnectNamespacedRef associated with the given Gateway, or nil if not found.
 func byGateway(ctx context.Context, cl client.Client, gateway gwtypes.Gateway) (*commonv1alpha1.KonnectNamespacedRef, error) {
-	gatewayClass := getGatewayClassByGateway(ctx, cl, gateway)
-	if gatewayClass == nil {
+	extensions, err := gatewayutils.ListKonnectExtensionsForGateway(ctx, cl, &gateway)
+	if err != nil {
+		return nil, err
+	}
+	if len(extensions) == 0 {
 		return nil, nil
 	}
-	return byGatewayClass(ctx, cl, *gatewayClass)
+	if len(extensions) > 1 {
+		return nil, errors.New("multiple KonnectExtensions found for a single Gateway, which is not supported")
+	}
+	return byKonnectExtension(ctx, cl, extensions[0])
+
+	// gatewayClass := getGatewayClassByGateway(ctx, cl, gateway)
+	// if gatewayClass == nil {
+	// 	return nil, nil
+	// }
+	// return byGatewayClass(ctx, cl, *gatewayClass)
 }
 
 // byGatewayClass returns the KonnectNamespacedRef associated with the given GatewayClass, or nil if not found.

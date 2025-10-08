@@ -174,6 +174,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		cleanup = true
 	}
 
+	//TODO: controlplane from konnect
 	switch {
 	case len(dataPlaneList.Items)+len(controlPlaneList.Items) == 0:
 		updated = controllerutil.RemoveFinalizer(&ext, consts.ExtensionInUseFinalizer)

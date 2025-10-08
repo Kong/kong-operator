@@ -62,6 +62,7 @@ func filterByService(cl client.Client) func(obj client.Object) bool {
 
 func filterByHTTPRoute(cl client.Client) func(obj client.Object) bool {
 	return func(obj client.Object) bool {
+		fmt.Println(">>> FILTER BY HTTPRoute")
 		httpRoute, ok := obj.(*gwtypes.HTTPRoute)
 		if !ok {
 			// In case of an error, enqueue the event and in case the error persists
@@ -74,6 +75,9 @@ func filterByHTTPRoute(cl client.Client) func(obj client.Object) bool {
 			// In case of an error, enqueue the event and in case the error persists
 			// the reconciler will log it and act accordingly.
 			return true
+		}
+		for _, pRef := range konnectGatewayControlPlaneRefs {
+			fmt.Println(">>> REF:", pRef)
 		}
 		// in case the HTTPRoute needs to be configured in Konnect a Konnect Gateway ControlPlane should exist, we filter the service in
 		if len(konnectGatewayControlPlaneRefs) > 0 {

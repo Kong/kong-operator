@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
@@ -103,6 +104,88 @@ func (r *Reconciler) createControlPlane(
 	k8sutils.SetOwnerForObject(controlplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(controlplane)
 	return r.Create(ctx, controlplane)
+}
+
+func (r *Reconciler) createKonnectGatewayControlPlane(
+	ctx context.Context,
+	gateway *gwtypes.Gateway,
+	gatewayConfig *GatewayConfiguration,
+) (*konnectv1alpha2.KonnectGatewayControlPlane, error) {
+	if gatewayConfig.Spec.Konnect == nil {
+		return nil, fmt.Errorf("konnect configuration is required for konnect gateway controlplane")
+	}
+
+	kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    gateway.Namespace,
+			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)),
+		},
+		Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+			CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
+				Name: fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name),
+			},
+		},
+	}
+
+	if gatewayConfig.Spec.Konnect.APIAuthConfigurationRef != nil {
+		kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef = *gatewayConfig.Spec.Konnect.APIAuthConfigurationRef
+	}
+
+	if gatewayConfig.Spec.Konnect.Source != nil {
+		kgcp.Spec.Source = gatewayConfig.Spec.Konnect.Source
+	}
+
+	if gatewayConfig.Spec.Konnect.Mirror != nil {
+		kgcp.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
+			Konnect: konnectv1alpha2.MirrorKonnect{
+				ID: gatewayConfig.Spec.Konnect.Mirror.Konnect.ID,
+			},
+		}
+	}
+
+	k8sutils.SetOwnerForObject(kgcp, gateway)
+	gatewayutils.LabelObjectAsGatewayManaged(kgcp)
+
+	if err := r.Create(ctx, kgcp); err != nil {
+		return nil, err
+	}
+
+	return kgcp, nil
+}
+
+func (r *Reconciler) createKonnectExtension(
+	ctx context.Context,
+	gateway *gwtypes.Gateway,
+	konnectControlPlane *konnectv1alpha2.KonnectGatewayControlPlane,
+) (*konnectv1alpha2.KonnectExtension, error) {
+	konnectExt := &konnectv1alpha2.KonnectExtension{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    gateway.Namespace,
+			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)),
+		},
+		Spec: konnectv1alpha2.KonnectExtensionSpec{
+			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type: "konnectNamespacedRef",
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name:      konnectControlPlane.Name,
+							Namespace: konnectControlPlane.Namespace,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	k8sutils.SetOwnerForObject(konnectExt, gateway)
+	gatewayutils.LabelObjectAsGatewayManaged(konnectExt)
+
+	if err := r.Create(ctx, konnectExt); err != nil {
+		return nil, err
+	}
+
+	return konnectExt, nil
 }
 
 func (r *Reconciler) getGatewayAddresses(

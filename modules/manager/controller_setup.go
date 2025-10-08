@@ -627,7 +627,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		)
 
 		if c.KonnectHybridControllersEnabled {
-
+			fmt.Println("HYBRID CONTROLLERS ENABLED")
 			controllers = append(controllers,
 				newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr),
 				// TODO: Add more Hybrid controllers here

@@ -100,7 +100,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	}
 
 	gvk := obj.GetObjectKind().GroupVersionKind()
-	log.Debug(logger, "Reconciling object", "Group", gvk.Group, "Kind", gvk.Kind)
+	log.Info(logger, ">>> Reconciling object", "Group", gvk.Group, "Kind", gvk.Kind)
 
 	conv, err := converter.NewConverter(rootObj, r.Client)
 	if err != nil {
