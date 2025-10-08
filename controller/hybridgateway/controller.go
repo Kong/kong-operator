@@ -63,7 +63,8 @@ func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context,
 					return filter(e.Object)
 				},
 				UpdateFunc: func(e event.UpdateEvent) bool {
-					//
+					// If either the old or new object passes the filter, we want to reconcile.
+					// This ensures we handle cases where the object starts or stops matching the filter criteria.
 					if filter(e.ObjectNew) {
 						return true
 					}
