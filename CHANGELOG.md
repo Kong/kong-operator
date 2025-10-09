@@ -83,6 +83,10 @@
     - Deeply nested pruning scenarios
     - Preservation of non-map elements in slices
   [2413](https://github.com/Kong/kong-operator/pull/2413)
+- Entity Adoption support: support adopting an existing entity from Konnect to
+  a Kubernetes custom resource for managing the existing entity by KO.
+  - Add adoption options to the CRDs supporting adopting entities from Konnect.
+    [#2336](https://github.com/Kong/kong-operator/pull/2336)
 
 ### Changed
 

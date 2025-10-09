@@ -4,6 +4,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 )
 
@@ -46,6 +47,7 @@ type KonnectCloudGatewayNetwork struct {
 
 // KonnectCloudGatewayNetworkSpec defines the desired state of KonnectCloudGatewayNetwork.
 //
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KonnectCloudGatewayNetworkSpec struct {
 	// NOTE: These fields are extracted from sdkkonnectcomp.CreateNetworkRequest
@@ -83,6 +85,10 @@ type KonnectCloudGatewayNetworkSpec struct {
 	//
 	// +optional
 	State *sdkkonnectcomp.NetworkCreateState `json:"state"`
+
+	// Adopt is the options for adopting a cloud gateway network from an existing network in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
 
 	// +required
 	KonnectConfiguration konnectv1alpha2.KonnectConfiguration `json:"konnect"`
