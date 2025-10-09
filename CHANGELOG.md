@@ -73,6 +73,16 @@
   This enables more robust troubleshooting and visibility for users, ensuring HTTPRoute status accurately reflects
   the readiness and configuration of all associated Kong resources.
   [2400](https://github.com/Kong/kong-operator/pull/2400)
+- ManagedFields: improve pruning of empty fields in unstructured objects
+  - Enhance pruneEmptyFields to recursively remove empty maps from slices and maps, including those that become empty after nested pruning.
+  - Update logic to remove empty slices and zero-value fields more robustly.
+  - Expand and refine unit tests in prune_test.go to cover all edge cases, including:
+    - Nested empty maps and slices
+    - Removal of empty maps from slices
+    - Handling of mixed-type slices
+    - Deeply nested pruning scenarios
+    - Preservation of non-map elements in slices
+  [2413](https://github.com/Kong/kong-operator/pull/2413)
 
 ### Changed
 
