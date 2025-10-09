@@ -87,6 +87,12 @@
   a Kubernetes custom resource for managing the existing entity by KO.
   - Add adoption options to the CRDs supporting adopting entities from Konnect.
     [#2336](https://github.com/Kong/kong-operator/pull/2336)
+- HybridGateway:
+  - Added controller-runtime watches for Gateway and GatewayClass resources to the hybridgateway controller.
+  - HTTPRoutes are now reconciled when related Gateway or GatewayClass resources change.
+  - Improved event mapping and indexing logic for efficient reconciliation.
+  - Added unit tests for new watch and index logic.
+  [2419](https://github.com/Kong/kong-operator/pull/2419)
 
 ### Changed
 
