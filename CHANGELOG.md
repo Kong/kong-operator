@@ -90,6 +90,9 @@
   - Add `adopt.mode` field to the CRDs that support adopting existing entities. Supported modes:
     - `match`: read-only adoption. The operator adopts the referenced remote entity only when this CR's spec matches the remote configuration (no writes to the remote system). If they differ, adoption fails and the operator does not take ownership until the spec is aligned.
     [#2421](https://github.com/Kong/kong-operator/pull/2421)
+  - Implement the general handling process of adopting an existing entity and
+    adoption procedure for `KongService`s.
+    [#2424](https://github.com/Kong/kong-operator/pull/2424)
 - HybridGateway:
   - Added controller-runtime watches for Gateway and GatewayClass resources to the hybridgateway controller.
   - HTTPRoutes are now reconciled when related Gateway or GatewayClass resources change.

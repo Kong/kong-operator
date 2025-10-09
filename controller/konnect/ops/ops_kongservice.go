@@ -2,6 +2,7 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -82,6 +83,41 @@ func deleteService(
 		return handleDeleteError(ctx, err, svc)
 	}
 
+	return nil
+}
+
+func adoptService(
+	ctx context.Context,
+	sdk sdkops.ServicesSDK,
+	svc *configurationv1alpha1.KongService,
+) error {
+	cpID := svc.GetControlPlaneID()
+	konnectID := svc.Spec.Adopt.Konnect.ID
+	if cpID == "" {
+		return errors.New("No Control Plane ID")
+	}
+	resp, err := sdk.GetService(ctx, konnectID, cpID)
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{
+			KonnectID: konnectID,
+			Err:       err,
+		}
+	}
+	uidTag, hasUIDTag := findUIDTag(resp.Service.Tags)
+	if hasUIDTag && extractUIDFromTag(uidTag) != string(svc.UID) {
+		return KonnectEntityAdoptionUIDTagConflictError{
+			KonnectID:    konnectID,
+			ActualUIDTag: extractUIDFromTag(uidTag),
+		}
+	}
+
+	svcCopy := svc.DeepCopy()
+	svcCopy.SetKonnectID(konnectID)
+	if err = updateService(ctx, sdk, svcCopy); err != nil {
+		return err
+	}
+
+	svc.SetKonnectID(konnectID)
 	return nil
 }
 
