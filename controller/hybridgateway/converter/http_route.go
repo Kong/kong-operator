@@ -260,23 +260,6 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 		}
 		c.outputStore = append(c.outputStore, &upstream)
 
-		// Build the service resource.
-		service, err := builder.NewKongService().
-			WithName(name).
-			WithNamespace(c.route.Namespace).
-			WithLabels(c.route, c.ir.GetParentRefByName(val.Name)).
-			WithAnnotations(c.route, c.ir.GetParentRefByName(val.Name)).
-			WithSpecName(name).
-			WithSpecHost(name).
-			WithControlPlaneRef(*cpr).
-			WithOwner(c.route).Build()
-		if err != nil {
-			// TODO: decide how to handle build errors in converter
-			// For now, skip this resource
-			continue
-		}
-		c.outputStore = append(c.outputStore, &service)
-
 		// Build the target resources.
 		for _, bRef := range val.BackendRefs {
 			targetName := bRef.String()
@@ -296,6 +279,23 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 			}
 			c.outputStore = append(c.outputStore, &target)
 		}
+
+		// Build the service resource.
+		service, err := builder.NewKongService().
+			WithName(name).
+			WithNamespace(c.route.Namespace).
+			WithLabels(c.route, c.ir.GetParentRefByName(val.Name)).
+			WithAnnotations(c.route, c.ir.GetParentRefByName(val.Name)).
+			WithSpecName(name).
+			WithSpecHost(name).
+			WithControlPlaneRef(*cpr).
+			WithOwner(c.route).Build()
+		if err != nil {
+			// TODO: decide how to handle build errors in converter
+			// For now, skip this resource
+			continue
+		}
+		c.outputStore = append(c.outputStore, &service)
 
 		// Build the kong route resource.
 		for _, match := range val.Matches {
