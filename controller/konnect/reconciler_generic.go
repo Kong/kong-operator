@@ -528,13 +528,35 @@ func (r *KonnectEntityReconciler[T, TEnt]) adoptFromExistingEntity(
 		entityTypeName = constraints.EntityTypeName[T]()
 		logger         = log.GetLogger(ctx, entityTypeName, r.LoggingMode)
 		obj            = ent.DeepCopyObject().(client.Object)
+		retErr         error
 	)
 	status := ent.GetKonnectStatus()
 	logger.Info("Adopting from existing entity",
 		"type", ent.GetTypeName(), "konnect_id", adoptOptions.Konnect.ID)
-	_, err := ops.Adopt(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent, *adoptOptions)
-	if err != nil {
-		logger.Error(err, "failed to adopt entity", "type", ent.GetTypeName(), "konnect_id", adoptOptions.Konnect.ID)
+	// If adopting in match mode for Konnect Cloud Gateway resources, use the read-only match adopter.
+	if adoptOptions.Mode == "" || adoptOptions.Mode == commonv1alpha1.AdoptModeMatch {
+		switch any(ent).(type) {
+		case *konnectv1alpha1.KonnectCloudGatewayNetwork,
+			*konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
+			*konnectv1alpha1.KonnectCloudGatewayTransitGateway:
+			if err := ops.AdoptMatch(ctx, sdk, r.Client, ent); err != nil {
+				logger.Error(err, "failed to adopt entity in match mode", "type", ent.GetTypeName(), "konnect_id", adoptOptions.Konnect.ID)
+				retErr = err
+			}
+		default:
+			_, err := ops.Adopt(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent, *adoptOptions)
+			if err != nil {
+				logger.Error(err, "failed to adopt entity", "type", ent.GetTypeName(), "konnect_id", adoptOptions.Konnect.ID)
+				retErr = err
+			}
+		}
+	} else {
+		// Non-match adoption uses the generic adopter.
+		_, err := ops.Adopt(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent, *adoptOptions)
+		if err != nil {
+			logger.Error(err, "failed to adopt entity", "type", ent.GetTypeName(), "konnect_id", adoptOptions.Konnect.ID)
+			retErr = err
+		}
 	}
 
 	// Regardless of the error reported from Adopt(), if the Konnect ID has been
@@ -564,10 +586,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) adoptFromExistingEntity(
 		return ctrl.Result{}, nil
 	}
 
-	if err != nil {
+	if retErr != nil {
 		return ctrl.Result{}, ops.FailedKonnectOpError[T]{
 			Op:  ops.AdoptOp,
-			Err: err,
+			Err: retErr,
 		}
 	}
 
