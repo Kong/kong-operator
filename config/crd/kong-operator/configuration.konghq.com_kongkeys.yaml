@@ -48,6 +48,40 @@ spec:
           spec:
             description: KongKeySpec defines the spec for a KongKey.
             properties:
+              adopt:
+                description: Adopt is the options for adopting a key from an existing
+                  key in Konnect.
+                properties:
+                  from:
+                    description: |-
+                      From is the source of the entity to adopt from.
+                      Now 'konnect' is supported.
+                    enum:
+                    - konnect
+                    type: string
+                  konnect:
+                    description: |-
+                      Konnect is the options for adopting the entity from Konnect.
+                      Required when from == 'konnect'.
+                    properties:
+                      id:
+                        description: ID is the Konnect ID of the entity.
+                        minLength: 1
+                        type: string
+                    required:
+                    - id
+                    type: object
+                required:
+                - from
+                type: object
+                x-kubernetes-validations:
+                - message: '''from''(adopt source) is immutable'
+                  rule: self.from == oldSelf.from
+                - message: Must specify Konnect options when from='konnect'
+                  rule: 'self.from == ''konnect'' ? has(self.konnect) : true'
+                - message: konnect.id is immutable
+                  rule: 'has(self.konnect) ? (self.konnect.id == oldSelf.konnect.id)
+                    : true'
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a Konnect ControlPlane
                   this KongKey is associated with.
@@ -209,6 +243,12 @@ spec:
             - message: KIC is not supported as control plane
               rule: '!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type
                 != ''kic'''
+            - message: spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef
+              rule: '!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type
+                == ''konnectNamespacedRef'')'
+            - message: Cannot set or unset spec.adopt in updates
+              rule: (has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt)
+                && !has(self.adopt))
             - message: Either 'jwk' or 'pem' must be set
               rule: has(self.jwk) || has(self.pem)
           status:

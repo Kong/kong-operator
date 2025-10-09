@@ -376,6 +376,7 @@ KonnectCloudGatewayDataPlaneGroupConfigurationSpec defines the desired state of 
 | `dataplane_groups` _[KonnectConfigurationDataPlaneGroup](#konnectconfigurationdataplanegroup) array_ | DataplaneGroups is a list of desired data-plane groups that describe where to deploy instances, along with how many instances. |
 | `api_access` _[APIAccess](#apiaccess)_ | APIAccess is the desired type of API access for data-plane groups. |
 | `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane which DataPlanes from this configuration will connect to. |
+| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a cloud gateway dataplane group configuration from an existing transit dataplane group configuration in Konnect. |
 
 
 _Appears in:_
@@ -419,6 +420,7 @@ KonnectCloudGatewayNetworkSpec defines the desired state of KonnectCloudGatewayN
 | `availability_zones` _string array_ | List of availability zones that the network is attached to. |
 | `cidr_block` _string_ | CIDR block configuration for the network. |
 | `state` _[NetworkCreateState](#networkcreatestate)_ | Initial state for creating a network. |
+| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a cloud gateway network from an existing network in Konnect. |
 | `konnect` _[KonnectConfiguration](#konnectconfiguration)_ |  |
 
 
@@ -437,6 +439,7 @@ KonnectCloudGatewayTransitGatewaySpec defines the desired state of KonnectCloudG
 | Field | Description |
 | --- | --- |
 | `networkRef` _[ObjectRef](#objectref)_ | NetworkRef is the schema for the NetworkRef type. |
+| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a cloud gateway transit gateway from an existing transit gateway in Konnect. |
 | `type` _[TransitGatewayType](#transitgatewaytype)_ | Type is the type of the Konnect transit gateway. |
 | `awsTransitGateway` _[AWSTransitGateway](#awstransitgateway)_ | AWSTransitGateway is the configuration of an AWS transit gateway. Used when type is "AWS Transit Gateway". |
 | `azureTransitGateway` _[AzureTransitGateway](#azuretransitgateway)_ | AzureTransitGateway is the configuration of an Azure transit gateway. Used when type is "Azure Transit Gateway". |
