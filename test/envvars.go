@@ -77,7 +77,7 @@ func IsTelepresenceDisabled() bool {
 }
 
 // KeepTestCluster indicates whether the caller wants the cluster created by the test suite
-// to persist after the test for inspection. This has a nil effect when an existing cluster
+// to persist after the test for inspection. This has no effect when an existing cluster
 // is provided, as cleanup is not performed for existing clusters.
 func KeepTestCluster() bool {
 	envVar := strings.ToLower(os.Getenv("KONG_TEST_CLUSTER_PERSIST"))
