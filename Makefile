@@ -687,10 +687,6 @@ test.conformance:
 	@$(MAKE) _test.conformance \
 		GOTESTFLAGS="$(GOTESTFLAGS)" \
 		TEST_SUITE_PATH='./test/conformance/...'
-	@echo 'Conformance tests from the ingress-controller subdirectory'
-	@$(MAKE) _test.conformance \
-		GOTESTFLAGS="$(GOTESTFLAGS)-tags=conformance_tests" \
-		TEST_SUITE_PATH='./ingress-controller/test/conformance/...'
 
 
 .PHONY: test.kongintegration
