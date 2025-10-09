@@ -95,6 +95,11 @@
   the `DataPlane` is configured to use `Koko` as Konnect control plane.
   [#2253](https://github.com/Kong/kong-operator/pull/2253)
 
+### Fixed
+
+- Hybrid Gateway: generate a single KongRoute for each HTTPRoute Rule
+  [#2417](https://github.com/Kong/kong-operator/pull/2417)
+
 ## [v2.0.4]
 
 > Release date: 2025-10-03
