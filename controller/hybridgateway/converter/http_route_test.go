@@ -38,7 +38,7 @@ func TestAddHostnames(t *testing.T) {
 				newGatewayWithListenerHostnames(),
 			}, newKonnectGatewayStandardObjects()...),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
-				"httproute.default.test-route.0.0.0": nil,
+				"httproute.default.test-route.0.0": nil,
 			}),
 		},
 		{
@@ -48,7 +48,7 @@ func TestAddHostnames(t *testing.T) {
 				newGatewayWithListenerHostnames("api.example.com"),
 			}, newKonnectGatewayStandardObjects()...),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
-				"httproute.default.test-route.0.0.0": {"api.example.com"},
+				"httproute.default.test-route.0.0": {"api.example.com"},
 			}),
 		},
 		{
@@ -58,7 +58,7 @@ func TestAddHostnames(t *testing.T) {
 				newGatewayWithListenerHostnames("*.example.com"),
 			}, newKonnectGatewayStandardObjects()...),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
-				"httproute.default.test-route.0.0.0": {"*.example.com"},
+				"httproute.default.test-route.0.0": {"*.example.com"},
 			}),
 		},
 		{
@@ -68,7 +68,7 @@ func TestAddHostnames(t *testing.T) {
 				newGatewayWithListenerHostnames("*.example.com"),
 			}, newKonnectGatewayStandardObjects()...),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
-				"httproute.default.test-route.0.0.0": {"api.example.com", "web.example.com"},
+				"httproute.default.test-route.0.0": {"api.example.com", "web.example.com"},
 			}),
 		},
 		{
@@ -78,7 +78,7 @@ func TestAddHostnames(t *testing.T) {
 				newGatewayWithListenerHostnames("*.example.com"),
 			}, newKonnectGatewayStandardObjects()...),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
-				"httproute.default.test-route.0.0.0": {"web.example.com"},
+				"httproute.default.test-route.0.0": {"web.example.com"},
 			}),
 		},
 		{
@@ -96,7 +96,7 @@ func TestAddHostnames(t *testing.T) {
 				newGatewayWithListenerHostnames(),
 			}, newKonnectGatewayStandardObjects()...),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
-				"httproute.default.test-route.0.0.0": {"api.example.com", "web.example.com"},
+				"httproute.default.test-route.0.0": {"api.example.com", "web.example.com"},
 			}),
 		},
 	}

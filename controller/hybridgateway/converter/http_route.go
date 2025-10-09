@@ -242,15 +242,15 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 		if hostnames == nil {
 			continue
 		}
-		name := val.String()
 
 		// Build the upstream resource.
+		upstreamName := val.String()
 		upstream, err := builder.NewKongUpstream().
-			WithName(name).
+			WithName(upstreamName).
 			WithNamespace(c.route.Namespace).
 			WithLabels(c.route, c.ir.GetParentRefByName(val.Name)).
 			WithAnnotations(c.route, c.ir.GetParentRefByName(val.Name)).
-			WithSpecName(name).
+			WithSpecName(upstreamName).
 			WithControlPlaneRef(*cpr).
 			WithOwner(c.route).Build()
 		if err != nil {
@@ -259,23 +259,6 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 			continue
 		}
 		c.outputStore = append(c.outputStore, &upstream)
-
-		// Build the service resource.
-		service, err := builder.NewKongService().
-			WithName(name).
-			WithNamespace(c.route.Namespace).
-			WithLabels(c.route, c.ir.GetParentRefByName(val.Name)).
-			WithAnnotations(c.route, c.ir.GetParentRefByName(val.Name)).
-			WithSpecName(name).
-			WithSpecHost(name).
-			WithControlPlaneRef(*cpr).
-			WithOwner(c.route).Build()
-		if err != nil {
-			// TODO: decide how to handle build errors in converter
-			// For now, skip this resource
-			continue
-		}
-		c.outputStore = append(c.outputStore, &service)
 
 		// Build the target resources.
 		for _, bRef := range val.BackendRefs {
@@ -286,7 +269,7 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 				WithNamespace(c.route.Namespace).
 				WithLabels(c.route, c.ir.GetParentRefByName(bRef.Name)).
 				WithAnnotations(c.route, c.ir.GetParentRefByName(bRef.Name)).
-				WithUpstreamRef(name).
+				WithUpstreamRef(upstreamName).
 				WithBackendRef(c.route, &bRef.BackendRef).
 				WithOwner(c.route).Build()
 			if err != nil {
@@ -297,29 +280,46 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 			c.outputStore = append(c.outputStore, &target)
 		}
 
-		// Build the kong route resource.
-		for _, match := range val.Matches {
-			routeName := match.String()
-			serviceName := val.String()
-
-			route, err := builder.NewKongRoute().
-				WithName(routeName).
-				WithNamespace(c.route.Namespace).
-				WithLabels(c.route, c.ir.GetParentRefByName(match.Name)).
-				WithAnnotations(c.route, c.ir.GetParentRefByName(match.Name)).
-				WithSpecName(routeName).
-				WithHosts(hostnames.Hostnames).
-				WithStripPath(c.ir.StripPath).
-				WithKongService(serviceName).
-				WithHTTPRouteMatch(match.Match).
-				WithOwner(c.route).Build()
-			if err != nil {
-				// TODO: decide how to handle build errors in converter
-				// For now, skip this resource
-				continue
-			}
-			c.outputStore = append(c.outputStore, &route)
+		// Build the service resource.
+		serviceName := val.String()
+		service, err := builder.NewKongService().
+			WithName(serviceName).
+			WithNamespace(c.route.Namespace).
+			WithLabels(c.route, c.ir.GetParentRefByName(val.Name)).
+			WithAnnotations(c.route, c.ir.GetParentRefByName(val.Name)).
+			WithSpecName(serviceName).
+			WithSpecHost(upstreamName).
+			WithControlPlaneRef(*cpr).
+			WithOwner(c.route).Build()
+		if err != nil {
+			// TODO: decide how to handle build errors in converter
+			// For now, skip this resource
+			continue
 		}
+		c.outputStore = append(c.outputStore, &service)
+
+		// Build the kong route resource.
+		routeName := val.String()
+		routeBuilder := builder.NewKongRoute().
+			WithName(routeName).
+			WithNamespace(c.route.Namespace).
+			WithLabels(c.route, c.ir.GetParentRefByName(val.Name)).
+			WithAnnotations(c.route, c.ir.GetParentRefByName(val.Name)).
+			WithSpecName(routeName).
+			WithHosts(hostnames.Hostnames).
+			WithStripPath(c.ir.StripPath).
+			WithKongService(serviceName).
+			WithOwner(c.route)
+		for _, match := range val.Matches {
+			routeBuilder = routeBuilder.WithHTTPRouteMatch(match.Match)
+		}
+		route, err := routeBuilder.Build()
+		if err != nil {
+			// TODO: decide how to handle build errors in converter
+			// For now, skip this resource
+			continue
+		}
+		c.outputStore = append(c.outputStore, &route)
 
 		// Build the kong plugin and kong plugin binding resources.
 		for _, filter := range val.Filters {
@@ -338,29 +338,25 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 			c.outputStore = append(c.outputStore, &plugin)
 
 			// Create a KongPluginBinding to bind the KongPlugin to each rule match.
-			for _, match := range val.Matches {
-				routeName := match.String()
-				bbuild := builder.NewKongPluginBinding().
-					WithName(routeName+fmt.Sprintf(".%d", filter.Name.GetFilterIndex())).
-					WithNamespace(c.route.Namespace).
-					WithLabels(c.route, c.ir.GetParentRefByName(match.Name)).
-					WithAnnotations(c.route, c.ir.GetParentRefByName(match.Name)).
-					WithPluginRef(pluginName).
-					WithControlPlaneRef(*cpr).
-					WithOwner(c.route)
-				if filter.Filter.Type == gatewayv1.HTTPRouteFilterResponseHeaderModifier {
-					// For response header modifiers, bind the plugin to the KongService instead of KongRoute.
-					serviceName := val.String()
-					bbuild = bbuild.WithServiceRef(serviceName)
-				} else {
-					bbuild = bbuild.WithRouteRef(routeName)
-				}
-				binding, err := bbuild.Build()
-				if err != nil {
-					continue
-				}
-				c.outputStore = append(c.outputStore, &binding)
+			bbuild := builder.NewKongPluginBinding().
+				WithName(routeName+fmt.Sprintf(".%d", filter.Name.GetFilterIndex())).
+				WithNamespace(c.route.Namespace).
+				WithLabels(c.route, c.ir.GetParentRefByName(val.Name)).
+				WithAnnotations(c.route, c.ir.GetParentRefByName(val.Name)).
+				WithPluginRef(pluginName).
+				WithControlPlaneRef(*cpr).
+				WithOwner(c.route)
+			if filter.Filter.Type == gatewayv1.HTTPRouteFilterResponseHeaderModifier {
+				// For response header modifiers, bind the plugin to the KongService instead of KongRoute.
+				bbuild = bbuild.WithServiceRef(serviceName)
+			} else {
+				bbuild = bbuild.WithRouteRef(routeName)
 			}
+			binding, err := bbuild.Build()
+			if err != nil {
+				continue
+			}
+			c.outputStore = append(c.outputStore, &binding)
 		}
 	}
 
