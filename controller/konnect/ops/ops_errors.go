@@ -274,13 +274,18 @@ func SDKErrorIsConflict(sdkError *sdkkonnecterrs.SDKError) bool {
 	return false
 }
 
-func errIsNotFound(err error) bool {
+// ErrIsNotFound returns true if the provided error indicates that the entity was not found on Konnect.
+func ErrIsNotFound(err error) bool {
 	var (
-		notFoundError *sdkkonnecterrs.NotFoundError
-		sdkError      *sdkkonnecterrs.SDKError
+		notFoundError  *sdkkonnecterrs.NotFoundError
+		sdkError       *sdkkonnecterrs.SDKError
+		sdkLegacyError *sdkkonnecterrs.KonnectCPLegacyNotFoundError
 	)
+
 	return errors.As(err, &notFoundError) ||
-		errors.As(err, &sdkError) && sdkError.StatusCode == http.StatusNotFound
+		(errors.As(err, &sdkError) && sdkError.StatusCode == http.StatusNotFound) ||
+		// Returned by e.g. ListKongDataPlaneClientCertificates(...) for non-existing Control Plane ID.
+		errors.As(err, &sdkLegacyError)
 }
 
 // handleUpdateError handles errors that occur during an update operation.
@@ -295,7 +300,7 @@ func handleUpdateError[
 	ent TEnt,
 	createFunc func(ctx context.Context) error,
 ) error {
-	if errIsNotFound(err) {
+	if ErrIsNotFound(err) {
 		id := ent.GetKonnectStatus().GetKonnectID()
 		logEntityNotFoundRecreating(ctx, ent, id)
 		if createErr := createFunc(ctx); createErr != nil {
@@ -319,7 +324,7 @@ func handleDeleteError[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
 ](ctx context.Context, err error, ent TEnt) error {
-	if errIsNotFound(err) {
+	if ErrIsNotFound(err) {
 		ctrllog.FromContext(ctx).
 			Info("entity not found in Konnect, skipping delete",
 				"op", DeleteOp,
