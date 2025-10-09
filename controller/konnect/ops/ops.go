@@ -39,6 +39,8 @@ const (
 	UpdateOp Op = "update"
 	// DeleteOp is the operation type for deleting a Konnect entity.
 	DeleteOp Op = "delete"
+	// AdoptOp is the operation type for adopting a Konnect entity.
+	AdoptOp Op = "adopt"
 )
 
 // Create creates a Konnect entity.
