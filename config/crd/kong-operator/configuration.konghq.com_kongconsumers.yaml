@@ -96,6 +96,7 @@ spec:
                     properties:
                       id:
                         description: ID is the Konnect ID of the entity.
+                        minLength: 1
                         type: string
                     required:
                     - id

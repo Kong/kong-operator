@@ -295,7 +295,7 @@ func (obj {{ .Type }}List) GetItems() []{{ .Type }} {
 {{- end }}
 `
 	adoptFuncOutputFileName = "zz_generated_adopt_funcs.go"
-	getAdoptFuncTemplate    = `package  {{ .PackageVersion }}
+	getAdoptFuncTemplate    = `package {{ .PackageVersion }}
 
 import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
@@ -308,7 +308,7 @@ import (
 {{- range .Types }}
 
 // Get the options to adopt the resource from an existing resource.
-func(obj *{{.Type}}) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
+func (obj *{{.Type}}) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
 }
 

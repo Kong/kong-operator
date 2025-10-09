@@ -32,5 +32,6 @@ const (
 type AdoptKonnectOptions struct {
 	// ID is the Konnect ID of the entity.
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	ID string `json:"id"`
 }
