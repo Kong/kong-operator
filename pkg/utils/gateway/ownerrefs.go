@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -84,6 +85,76 @@ func ListControlPlanesForGateway(
 	}
 
 	return controlplanes, nil
+}
+
+// ListKonnectGatewayControlPlanesForGateway is a helper function to map a list of KonnectGatewayControlPlanes
+// that are owned and managed by a Gateway.
+func ListKonnectGatewayControlPlanesForGateway(
+	ctx context.Context,
+	c client.Client,
+	gateway *gwtypes.Gateway,
+) ([]konnectv1alpha2.KonnectGatewayControlPlane, error) {
+	if gateway.Namespace == "" {
+		return nil, fmt.Errorf("can't list KonnectGatewayControlPlanes for gateway: gateway resource was missing namespace")
+	}
+
+	konnectControlPlaneList := &konnectv1alpha2.KonnectGatewayControlPlaneList{}
+
+	err := c.List(
+		ctx,
+		konnectControlPlaneList,
+		client.InNamespace(gateway.Namespace),
+		client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	konnectControlPlanes := make([]konnectv1alpha2.KonnectGatewayControlPlane, 0)
+	for _, konnectControlPlane := range konnectControlPlaneList.Items {
+		if k8sutils.IsOwnedByRefUID(&konnectControlPlane, gateway.UID) {
+			konnectControlPlanes = append(konnectControlPlanes, konnectControlPlane)
+		}
+	}
+
+	return konnectControlPlanes, nil
+}
+
+// ListKonnectExtensionsForGateway is a helper function to map a list of KonnectExtensions
+// that are owned and managed by a Gateway.
+func ListKonnectExtensionsForGateway(
+	ctx context.Context,
+	c client.Client,
+	gateway *gwtypes.Gateway,
+) ([]konnectv1alpha2.KonnectExtension, error) {
+	if gateway.Namespace == "" {
+		return nil, fmt.Errorf("can't list KonnectExtensions for gateway: gateway resource was missing namespace")
+	}
+
+	konnectExtensionList := &konnectv1alpha2.KonnectExtensionList{}
+
+	err := c.List(
+		ctx,
+		konnectExtensionList,
+		client.InNamespace(gateway.Namespace),
+		client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	konnectExtensions := make([]konnectv1alpha2.KonnectExtension, 0)
+	for _, konnectExtension := range konnectExtensionList.Items {
+		if k8sutils.IsOwnedByRefUID(&konnectExtension, gateway.UID) {
+			konnectExtensions = append(konnectExtensions, konnectExtension)
+		}
+	}
+
+	return konnectExtensions, nil
 }
 
 // ListHTTPRoutesForGateway is a helper function which returns a list of HTTPRoutes

@@ -174,6 +174,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		cleanup = true
 	}
 
+	//TODO: controlplane from konnect
 	switch {
 	case len(dataPlaneList.Items)+len(controlPlaneList.Items) == 0:
 		updated = controllerutil.RemoveFinalizer(&ext, consts.ExtensionInUseFinalizer)
@@ -486,16 +487,16 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				// if the syncPeriod is set to zero, the controller won't requeue.
 				return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
 			}
-			updated, res, err := patch.WithFinalizer(ctx, r.Client, client.Object(certificateSecret), KonnectCleanupFinalizer)
-			if err != nil || !res.IsZero() {
-				return res, err
-			}
-			if updated {
-				log.Info(logger, "konnect-cleanup finalizer on the referenced secret updated")
-				// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
-				// if the syncPeriod is set to zero, the controller won't requeue.
-				return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
-			}
+			// updated, res, err := patch.WithFinalizer(ctx, r.Client, client.Object(certificateSecret), KonnectCleanupFinalizer)
+			// if err != nil || !res.IsZero() {
+			// 	return res, err
+			// }
+			// if updated {
+			// 	log.Info(logger, "konnect-cleanup finalizer on the referenced secret updated")
+			// 	// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
+			// 	// if the syncPeriod is set to zero, the controller won't requeue.
+			// 	return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
+			// }
 		}
 		updated, res, err := patch.WithFinalizer(ctx, r.Client, &ext, KonnectCleanupFinalizer)
 		if err != nil || !res.IsZero() {
