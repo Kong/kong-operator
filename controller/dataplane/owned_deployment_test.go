@@ -1,6 +1,7 @@
 package dataplane
 
 import (
+	"maps"
 	"testing"
 	"time"
 
@@ -307,9 +308,7 @@ func TestGenerateDataPlaneDeployment(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			additionalLabels := map[string]string{}
-			for k, v := range tc.additionalLabels {
-				additionalLabels[k] = v
-			}
+			maps.Copy(additionalLabels, tc.additionalLabels)
 
 			deployment, err := generateDataPlaneDeployment(tc.validateDataPlaneImage, tc.dataplane, tc.defaultImage, additionalLabels)
 
