@@ -255,11 +255,17 @@ func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, e
 	return res, certificateSecret, err
 }
 
-func enforceKonnectExtensionStatus(cp konnectv1alpha2.KonnectGatewayControlPlane, certificateSecret corev1.Secret, ext *konnectv1alpha2.KonnectExtension) bool {
+func enforceKonnectExtensionStatus(
+	cp konnectv1alpha2.KonnectGatewayControlPlane,
+	apiAuthRef konnectv1alpha2.KonnectAPIAuthConfigurationRef,
+	certificateSecret corev1.Secret,
+	ext *konnectv1alpha2.KonnectExtension,
+) bool {
 	var toUpdate bool
 	expectedKonnectStatus := &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
 		ControlPlaneID: cp.Status.ID,
 		ClusterType:    konnectClusterTypeToCRDClusterType(cp.Status.ClusterType),
+		AuthRef:        &apiAuthRef,
 	}
 
 	if cp.Status.Endpoints != nil {

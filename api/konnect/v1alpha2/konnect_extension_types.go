@@ -255,6 +255,12 @@ type KonnectExtensionControlPlaneStatus struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	Endpoints KonnectEndpoints `json:"endpoints"`
+
+	// AuthRef is the reference to the KonnectAPIAuthConfiguration used to authenticate with Konnect.
+	// For particular KonnectExtension and ControlPlane combination.
+	//
+	// +optional
+	AuthRef *KonnectAPIAuthConfigurationRef `json:"authRef,omitempty"`
 }
 
 // DataPlaneClientAuthStatus contains the status information related to the ClientAuth configuration.
