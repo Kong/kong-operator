@@ -2,11 +2,6 @@ package integration
 
 import (
 	"context"
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/test"
-	"github.com/kong/kong-operator/test/helpers/deploy"
 	"testing"
 	"time"
 
@@ -26,13 +21,18 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	kcfgdataplane "github.com/kong/kong-operator/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/dataplane/certificates"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/test"
 	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/test/helpers/deploy"
 	"github.com/kong/kong-operator/test/helpers/eventually"
 )
 
