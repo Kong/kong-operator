@@ -261,6 +261,71 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 				require.Equal(t, expected, actual)
 			},
 		},
+		{
+			name: "with volumes and volume mounts specified",
+			dataplane: &operatorv1beta1.DataPlane{
+				TypeMeta: metav1.TypeMeta{
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
+					Kind:       "DataPlane",
+				},
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "dataplane-name",
+					Namespace: "test-namespace",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Volumes: []corev1.Volume{
+											{
+												Name: "test-volume",
+												VolumeSource: corev1.VolumeSource{
+													EmptyDir: &corev1.EmptyDirVolumeSource{},
+												},
+											},
+										},
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+												VolumeMounts: []corev1.VolumeMount{
+													{
+														Name:      "test-volume",
+														MountPath: "/test/path",
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			testFunc: func(t *testing.T, deploymentSpec *appsv1.DeploymentSpec) {
+				expectedVolumes := []corev1.Volume{
+					{
+						Name: "test-volume",
+						VolumeSource: corev1.VolumeSource{
+							EmptyDir: &corev1.EmptyDirVolumeSource{},
+						},
+					},
+				}
+				actualVolumes := deploymentSpec.Template.Spec.Volumes
+				require.Equal(t, expectedVolumes, actualVolumes)
+
+				expectedVolumesMounts := []corev1.VolumeMount{
+					{
+						Name:      "test-volume",
+						MountPath: "/test/path",
+					},
+				}
+				require.Len(t, deploymentSpec.Template.Spec.Containers, 1)
+				require.Equal(t, expectedVolumesMounts, deploymentSpec.Template.Spec.Containers[0].VolumeMounts)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
