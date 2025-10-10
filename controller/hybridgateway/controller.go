@@ -8,6 +8,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
@@ -78,6 +79,11 @@ func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context,
 	// Add watches for owned resources.
 	for _, owned := range watch.Owns(obj) {
 		builder = builder.Owns(owned)
+	}
+
+	// Add watches for other resources.
+	for _, w := range watch.Watches(obj, r.Client) {
+		builder = builder.Watches(w.Object, handler.EnqueueRequestsFromMapFunc(w.MapFunc))
 	}
 
 	return builder.Complete(r)

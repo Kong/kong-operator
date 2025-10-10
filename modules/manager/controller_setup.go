@@ -128,6 +128,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForKonnectExtension(),
 			index.OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
 			index.OptionsForHTTPRoute(),
+			index.OptionsForGateway(),
 		)
 	}
 
