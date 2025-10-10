@@ -12,8 +12,22 @@ type AdoptOptions struct {
 	// +required
 	// +kubebuilder:validation:Enum=konnect
 	From AdoptSource `json:"from"`
-	// Mode defines the strategy to use when adopting an existing entity.
-	// When unset, "match" is assumed.
+	// Mode selects how the operator adopts an already-existing entity (for example,
+	// a Konnect resource) instead of creating a new one.
+	//
+	// Supported values:
+	// - "match": the operator retrieves the remote entity referenced by the
+	//   corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+	//   field-by-field comparison against this CR's spec (ignoring server-assigned
+	//   metadata). If the specification matches the remote state, the operator
+	//   adopts the entity: it sets the status identifier and marks the resource as
+	//   ready/programmed without issuing any write operation to the remote system.
+	//   If the specification does not match the remote state, adoption fails: the
+	//   operator does not modify the remote entity and surfaces a failure
+	//   condition, allowing the user to align the spec with the existing entity if
+	//   adoption is desired.
+	//
+	// Default: when unset, "match" is assumed.
 	// +optional
 	// +kubebuilder:validation:Enum=match
 	Mode AdoptMode `json:"mode,omitempty"`
@@ -31,11 +45,20 @@ const (
 	AdoptSourceKonnect AdoptSource = "konnect"
 )
 
-// AdoptMode is the strategy to use when adopting an existing entity.
+// AdoptMode is the strategy used when adopting an existing entity.
+//
+// The set of supported modes may be extended in the future. At present the
+// only value is "match", which requires exact (semantically equivalent)
+// alignment between the CR spec and the remote entity before adoption.
+// No mutations are performed against the remote system during adoption.
+// If any relevant field differs, adoption fails and the operator will not
+// take ownership until the spec is aligned.
 type AdoptMode string
 
 const (
-	// AdoptModeMatch ensures that the spec matches the configuration of the existing entity in Konnect.
+	// AdoptModeMatch enforces read-only adoption: the operator will only adopt
+	// the remote entity when the CR spec matches the remote configuration; no
+	// write operations are issued to the remote system during adoption.
 	AdoptModeMatch AdoptMode = "match"
 )
 

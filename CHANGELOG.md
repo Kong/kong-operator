@@ -87,7 +87,8 @@
   a Kubernetes custom resource for managing the existing entity by KO.
   - Add adoption options to the CRDs supporting adopting entities from Konnect.
     [#2336](https://github.com/Kong/kong-operator/pull/2336)
-  - Add `adopt.mode=match` to the CRDs.
+  - Add `adopt.mode` field to the CRDs that support adopting existing entities. Supported modes:
+    - `match`: read-only adoption. The operator adopts the referenced remote entity only when this CR's spec matches the remote configuration (no writes to the remote system). If they differ, adoption fails and the operator does not take ownership until the spec is aligned.
     [#2421](https://github.com/Kong/kong-operator/pull/2421)
 - HybridGateway:
   - Added controller-runtime watches for Gateway and GatewayClass resources to the hybridgateway controller.
