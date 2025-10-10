@@ -12,6 +12,11 @@ type AdoptOptions struct {
 	// +required
 	// +kubebuilder:validation:Enum=konnect
 	From AdoptSource `json:"from"`
+	// Mode defines the strategy to use when adopting an existing entity.
+	// When unset, "match" is assumed.
+	// +optional
+	// +kubebuilder:validation:Enum=match
+	Mode AdoptMode `json:"mode,omitempty"`
 	// Konnect is the options for adopting the entity from Konnect.
 	// Required when from == 'konnect'.
 	// +optional
@@ -24,6 +29,14 @@ type AdoptSource string
 const (
 	// AdoptSourceKonnect indicates that the entity is adopted from Konnect.
 	AdoptSourceKonnect AdoptSource = "konnect"
+)
+
+// AdoptMode is the strategy to use when adopting an existing entity.
+type AdoptMode string
+
+const (
+	// AdoptModeMatch ensures that the spec matches the configuration of the existing entity in Konnect.
+	AdoptModeMatch AdoptMode = "match"
 )
 
 // AdoptKonnectOptions specifies the options for adopting the entity from Konnect.

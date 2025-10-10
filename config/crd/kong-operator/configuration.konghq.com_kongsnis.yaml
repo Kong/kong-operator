@@ -70,6 +70,13 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode defines the strategy to use when adopting an existing entity.
+                      When unset, "match" is assumed.
+                    enum:
+                    - match
+                    type: string
                 required:
                 - from
                 type: object
