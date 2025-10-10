@@ -92,7 +92,7 @@
   - HTTPRoutes are now reconciled when related Gateway or GatewayClass resources change.
   - Improved event mapping and indexing logic for efficient reconciliation.
   - Added unit tests for new watch and index logic.
-  [2419](https://github.com/Kong/kong-operator/pull/2419)
+  [#2419](https://github.com/Kong/kong-operator/pull/2419)
 
 ### Changed
 
