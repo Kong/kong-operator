@@ -222,23 +222,20 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 
 // translate converts the HTTPRoute to KongRoute(s) and stores them in outputStore.
 func (c *httpRouteConverter) translate(ctx context.Context) error {
-	for _, pRefs := range c.route.Spec.ParentRefs {
-		cp, err := c.getControlPlaneRefByParentRef(ctx, pRefs)
-		if err != nil {
-			return err
-		}
-		if cp == nil {
-			continue
-		}
+	supportedParentRefs, err := c.getHybridGatewayParents(ctx)
+	if err != nil {
+		return err
+	}
+	if len(supportedParentRefs) == 0 {
+		return nil
+	}
 
-		hostnames, err := c.getHostnamesByParentRef(ctx, pRefs)
-		if err != nil {
-			return err
-		}
-		if hostnames == nil {
-			continue
-		}
-		httpRouteName := c.route.Namespace + "-" + c.route.Name
+	httpRouteName := c.route.Namespace + "-" + c.route.Name
+
+	for _, pRefData := range supportedParentRefs {
+		pRef := pRefData.parentRef
+		cp := pRefData.cpRef
+		hostnames := pRefData.hostnames
 		cpRefName := "cp" + utils.Hash32(cp)
 
 		for _, rule := range c.route.Spec.Rules {
@@ -247,8 +244,8 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 			upstream, err := builder.NewKongUpstream().
 				WithName(upstreamName).
 				WithNamespace(c.route.Namespace).
-				WithLabels(c.route, &pRefs).
-				WithAnnotations(c.route, &pRefs).
+				WithLabels(c.route, &pRef).
+				WithAnnotations(c.route, &pRef).
 				WithSpecName(upstreamName).
 				WithControlPlaneRef(*cp).
 				WithOwner(c.route).Build()
@@ -265,8 +262,8 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 				target, err := builder.NewKongTarget().
 					WithName(targetName).
 					WithNamespace(c.route.Namespace).
-					WithLabels(c.route, &pRefs).
-					WithAnnotations(c.route, &pRefs).
+					WithLabels(c.route, &pRef).
+					WithAnnotations(c.route, &pRef).
 					WithUpstreamRef(upstreamName).
 					WithBackendRef(c.route, &bRef).
 					WithOwner(c.route).Build()
@@ -284,8 +281,8 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 			service, err := builder.NewKongService().
 				WithName(serviceName).
 				WithNamespace(c.route.Namespace).
-				WithLabels(c.route, &pRefs).
-				WithAnnotations(c.route, &pRefs).
+				WithLabels(c.route, &pRef).
+				WithAnnotations(c.route, &pRef).
 				WithSpecName(serviceName).
 				WithSpecHost(upstreamName).
 				WithControlPlaneRef(*cp).
@@ -302,8 +299,8 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 			routeBuilder := builder.NewKongRoute().
 				WithName(routeName).
 				WithNamespace(c.route.Namespace).
-				WithLabels(c.route, &pRefs).
-				WithAnnotations(c.route, &pRefs).
+				WithLabels(c.route, &pRef).
+				WithAnnotations(c.route, &pRef).
 				WithSpecName(routeName).
 				WithHosts(hostnames).
 				WithStripPath(metadata.ExtractStripPath(c.route.Annotations)).
@@ -327,8 +324,8 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 				plugin, err := builder.NewKongPlugin().
 					WithName(pluginName).
 					WithNamespace(c.route.Namespace).
-					WithLabels(c.route, &pRefs).
-					WithAnnotations(c.route, &pRefs).
+					WithLabels(c.route, &pRef).
+					WithAnnotations(c.route, &pRef).
 					WithFilter(filter).
 					WithOwner(c.route).Build()
 				if err != nil {
@@ -339,8 +336,8 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 				// Create a KongPluginBinding to bind the KongPlugin to each rule match.
 				bbuild := builder.NewKongPluginBinding().
 					WithNamespace(c.route.Namespace).
-					WithLabels(c.route, &pRefs).
-					WithAnnotations(c.route, &pRefs).
+					WithLabels(c.route, &pRef).
+					WithAnnotations(c.route, &pRef).
 					WithPluginRef(pluginName).
 					WithControlPlaneRef(*cp).
 					WithOwner(c.route)
@@ -362,20 +359,52 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 	return nil
 }
 
+type hybridGatewayParent struct {
+	parentRef gwtypes.ParentReference
+	cpRef     *commonv1alpha1.ControlPlaneRef
+	hostnames []string
+}
+
+func (c *httpRouteConverter) getHybridGatewayParents(ctx context.Context) ([]hybridGatewayParent, error) {
+	result := []hybridGatewayParent{}
+
+	for _, pRef := range c.route.Spec.ParentRefs {
+		cp, err := c.getControlPlaneRefByParentRef(ctx, pRef)
+		if err != nil {
+			return nil, err
+		}
+		if cp == nil {
+			continue
+		}
+
+		hostnames, err := c.getHostnamesByParentRef(ctx, pRef)
+		if err != nil {
+			return nil, err
+		}
+		if hostnames == nil {
+			continue
+		}
+
+		result = append(result, hybridGatewayParent{
+			parentRef: pRef,
+			cpRef:     cp,
+			hostnames: hostnames,
+		})
+	}
+
+	return result, nil
+}
+
 func (c *httpRouteConverter) getControlPlaneRefByParentRef(ctx context.Context, pRef gwtypes.ParentReference) (*commonv1alpha1.ControlPlaneRef, error) {
 	return refs.GetControlPlaneRefByParentRef(ctx, c.Client, c.route, pRef)
 }
 
 func (c *httpRouteConverter) getHostnamesByParentRef(ctx context.Context, pRef gwtypes.ParentReference) ([]string, error) {
 	var err error
-	hostnames := []string{}
+	var hostnames []string
 
-	for _, hostname := range c.route.Spec.Hostnames {
-		hostnames = append(hostnames, string(hostname))
-	}
-
-	listeners := []gwtypes.Listener{}
-	if listeners, err = refs.GetListenersByParentRef(ctx, c.Client, c.route, pRef); err != nil {
+	listeners, err := refs.GetListenersByParentRef(ctx, c.Client, c.route, pRef)
+	if err != nil {
 		return nil, err
 	}
 
@@ -396,6 +425,7 @@ func (c *httpRouteConverter) getHostnamesByParentRef(ctx context.Context, pRef g
 		// If the listener has no hostname, it means it accepts all HTTPRoute hostnames.
 		// No need to do further checks.
 		if listener.Hostname == nil || *listener.Hostname == "" {
+			hostnames = []string{}
 			for _, host := range c.route.Spec.Hostnames {
 				hostnames = append(hostnames, string(host))
 			}
