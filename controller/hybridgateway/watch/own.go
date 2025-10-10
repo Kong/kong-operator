@@ -3,6 +3,7 @@ package watch
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
@@ -17,6 +18,8 @@ func Owns(obj client.Object) []client.Object {
 			&configurationv1alpha1.KongService{},
 			&configurationv1alpha1.KongUpstream{},
 			&configurationv1alpha1.KongTarget{},
+			&configurationv1alpha1.KongPluginBinding{},
+			&configurationv1.KongPlugin{},
 		}
 	default:
 		return nil
