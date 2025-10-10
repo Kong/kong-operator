@@ -277,13 +277,15 @@ func SDKErrorIsConflict(sdkError *sdkkonnecterrs.SDKError) bool {
 // ErrIsNotFound returns true if the provided error indicates that the entity was not found on Konnect.
 func ErrIsNotFound(err error) bool {
 	var (
-		notFoundError *sdkkonnecterrs.NotFoundError
-		sdkError      *sdkkonnecterrs.SDKError
+		notFoundError  *sdkkonnecterrs.NotFoundError
+		sdkError       *sdkkonnecterrs.SDKError
+		sdkLegacyError *sdkkonnecterrs.KonnectCPLegacyNotFoundError
 	)
+
 	return errors.As(err, &notFoundError) ||
-		errors.As(err, &sdkError) && sdkError.StatusCode == http.StatusNotFound ||
+		(errors.As(err, &sdkError) && sdkError.StatusCode == http.StatusNotFound) ||
 		// Returned by e.g. ListKongDataPlaneClientCertificates(...) for non-existing Control Plane ID.
-		err != nil && err.Error() == "{\"message\":\"Not Found\"}"
+		errors.As(err, &sdkLegacyError)
 }
 
 // handleUpdateError handles errors that occur during an update operation.

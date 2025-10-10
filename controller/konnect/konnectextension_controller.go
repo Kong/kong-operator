@@ -287,22 +287,21 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	apiAuthRef, err := getKonnectAPIAuthRefNN(ctx, r.Client, &ext)
 	if err != nil {
-		if k8serrors.IsNotFound(err) {
-			if cleanup {
-				// In case if KonnectExtension is during deletion and respective KonnectGatewayControlPlane
-				// has been already deleted, take apiAuthRef from the status, because it contains the last
-				// known reference and it is needed to perform all reconciliation steps.
-				apiAuthRef = types.NamespacedName{
-					Name: ext.Status.Konnect.AuthRef.Name,
-					// For now the referenced KonnectAPIAuthConfiguration is in the same namespace as the KonnectExtension.
-					Namespace: ext.Namespace,
-				}
-			} else {
-				// Requeue until the reference becomes valid.
-				return ctrl.Result{}, nil
+		if !k8serrors.IsNotFound(err) {
+			return ctrl.Result{}, err
+		}
+		if cleanup {
+			// In case if KonnectExtension is during deletion and respective KonnectGatewayControlPlane
+			// has been already deleted, take apiAuthRef from the status, because it contains the last
+			// known reference and it is needed to perform all reconciliation steps.
+			apiAuthRef = types.NamespacedName{
+				Name: ext.Status.Konnect.AuthRef.Name,
+				// For now the referenced KonnectAPIAuthConfiguration is in the same namespace as the KonnectExtension.
+				Namespace: ext.Namespace,
 			}
 		} else {
-			return ctrl.Result{}, err
+			// Requeue until the reference becomes valid.
+			return ctrl.Result{}, nil
 		}
 	}
 
