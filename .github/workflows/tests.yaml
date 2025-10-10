@@ -605,6 +605,8 @@ jobs:
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: integration-tests-bluegreen.xml
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
+        KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
 
     - name: upload diagnostics
       if: always()
