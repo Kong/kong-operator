@@ -68,3 +68,32 @@ type ControlPlaneGroupMemberNoKonnectIDError struct {
 func (e ControlPlaneGroupMemberNoKonnectIDError) Error() string {
 	return fmt.Sprintf("control plane group %s member %s has no Konnect ID", e.GroupName, e.MemberName)
 }
+
+// KonnectEntityAdoptionFetchError is an error type returned when failed to fetch the entity
+// on trying to adopt an existing entity in Konnect.
+type KonnectEntityAdoptionFetchError struct {
+	KonnectID string
+	Err       error
+}
+
+// Error implements the error interface.
+func (e KonnectEntityAdoptionFetchError) Error() string {
+	return fmt.Sprintf("failed to fetch Konnect entity (ID: %s) for adoption: %v", e.KonnectID, e.Err)
+}
+
+// Unwrap returns the underlying error.
+func (e KonnectEntityAdoptionFetchError) Unwrap() error {
+	return e.Err
+}
+
+// KonnectEntityAdoptionUIDTagConflictError is an error type returned in adopting an existing entity
+// when the entity has a tag to note that the entity is managed by another object with a different UID.
+type KonnectEntityAdoptionUIDTagConflictError struct {
+	KonnectID    string
+	ActualUIDTag string
+}
+
+// Error implements the error interface.
+func (e KonnectEntityAdoptionUIDTagConflictError) Error() string {
+	return fmt.Sprintf("Konnect entity (ID: %s) is managed by another k8s object with UID %s", e.KonnectID, e.ActualUIDTag)
+}

@@ -4,6 +4,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
@@ -61,6 +62,12 @@ type SupportedKonnectEntityType interface {
 	// TODO: add other types
 
 	GetTypeName() string
+}
+
+// KonnectEntityTypeSupportingAdoption are types supporting to adopt existing entities from Konnect.
+type KonnectEntityTypeSupportingAdoption interface {
+	GetTypeName() string
+	GetAdoptOptions() *commonv1alpha1.AdoptOptions
 }
 
 // EntityTypeObject is an interface that allows non Konnect types to be used

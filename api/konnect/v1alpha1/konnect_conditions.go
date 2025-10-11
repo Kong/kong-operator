@@ -210,3 +210,15 @@ const (
 	// mirroring has failed.
 	ControlPlaneMirroredReasonFailed = "Failed"
 )
+
+const (
+	// KonnectEntityAdoptedConditionType is the type of the condition that indicates
+	// the status for adopting existing entity in Konnect.
+	KonnectEntityAdoptedConditionType = "Adopted"
+	// KonnectEntityAdoptedReasonAdopted is the reason used with the Adopted condition type
+	// indicating that the adopting of the entity succeeded.
+	KonnectEntityAdoptedReasonAdopted = "Adopted"
+	// KonnectEntityAdoptedReasonFetchFailed is the reason used with the Adopted condition type
+	// indicating that the fetching of the entity failed.
+	KonnectEntityAdoptedReasonFetchFailed = "FetchFailed"
+)
