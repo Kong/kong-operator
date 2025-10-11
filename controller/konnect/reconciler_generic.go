@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
@@ -428,6 +429,48 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go
 	if status := ent.GetKonnectStatus(); status == nil || status.GetKonnectID() == "" {
 		obj := ent.DeepCopyObject().(client.Object)
+
+		if adoptable, ok := any(ent).(interface {
+			GetAdoptOptions() *commonv1alpha1.AdoptOptions
+		}); ok {
+			if adoptOpts := adoptable.GetAdoptOptions(); adoptOpts != nil {
+				// Only perform the new "match" adoption flow for Konnect Cloud Gateway resources.
+				switch any(ent).(type) {
+				case *konnectv1alpha1.KonnectCloudGatewayNetwork,
+					*konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
+					*konnectv1alpha1.KonnectCloudGatewayTransitGateway:
+					err := ops.AdoptMatch(ctx, sdk, r.Client, ent)
+
+					if st := ent.GetKonnectStatus(); st != nil && st.ID != "" {
+						if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
+							return res, err
+						}
+						setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
+					}
+
+					if res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, any(ent).(client.Object), obj); err != nil {
+						if k8serrors.IsConflict(err) {
+							return ctrl.Result{Requeue: true}, nil
+						}
+						return ctrl.Result{}, fmt.Errorf("failed to update status after adopting object: %w", err)
+					} else if res != op.Noop {
+						return ctrl.Result{}, nil
+					}
+
+					if err != nil {
+						return ctrl.Result{}, ops.FailedKonnectOpError[T]{
+							Op:  ops.AdoptOp,
+							Err: err,
+						}
+					}
+
+					return ctrl.Result{}, nil
+				default:
+					// For other adoptable types, fall through to the existing create flow.
+				}
+			}
+		}
+
 		_, err := ops.Create(ctx, sdk, r.Client, r.MetricRecorder, ent)
 
 		// TODO: this is actually not 100% error prone because when status
