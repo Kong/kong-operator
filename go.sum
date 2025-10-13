@@ -347,8 +347,8 @@ github.com/klauspost/compress v1.18.0 h1:c/Cqfb0r+Yi+JtIEq73FWXVkRonBlf0CRNYc8Zt
 github.com/klauspost/compress v1.18.0/go.mod h1:2Pp+KzxcywXVXMr50+X0Q/Lsb43OQHYWRCY2AiWywWQ=
 github.com/kong/go-database-reconciler v1.27.1 h1:a5EyqQsY5BF2p964J2PQW9BMIMvTz30A2FInIAf1TcA=
 github.com/kong/go-database-reconciler v1.27.1/go.mod h1:6EnCqJqkYWwf9UjkiIKXCv29kapPFUBQ2+FVjR9ZslE=
-github.com/kong/go-kong v0.68.0 h1:rQrLYRKXD6/xf41GBXj9Ns+woAH9p6a4VvcXNMiPZPI=
-github.com/kong/go-kong v0.68.0/go.mod h1:J0vGB3wsZ2i99zly1zTRe3v7rOKpkhQZRwbcTFP76qM=
+github.com/kong/go-kong v0.69.0 h1:1LHU3y+i23X+RxxXT/bKml5bsxeUfKTfWFa3RK85cSU=
+github.com/kong/go-kong v0.69.0/go.mod h1:J0vGB3wsZ2i99zly1zTRe3v7rOKpkhQZRwbcTFP76qM=
 github.com/kong/kubernetes-telemetry v0.1.10 h1:V+/Lco8VFY/CzoELwOPcGTyg0zbj/HAvoFkH50UsKYs=
 github.com/kong/kubernetes-telemetry v0.1.10/go.mod h1:/r/FevTOGegCqaxXCJyGkbE1E3IcYUGJd7xX7D73s2Y=
 github.com/kong/kubernetes-testing-framework v0.47.3 h1:2qqWxIQXAd/r1f+b+d/kuHZfN22IjgKouktyIA0B5so=
