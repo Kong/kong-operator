@@ -856,6 +856,7 @@ _run:
 		-enable-controller-kongplugininstallation \
 		-enable-controller-aigateway \
 		-enable-controller-konnect \
+		-enable-controller-konnect-hybrid \
 		-enable-controller-controlplaneextensions \
 		-enable-conversion-webhook=false \
 		-zap-time-encoding iso8601 \

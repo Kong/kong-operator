@@ -199,8 +199,6 @@ linters:
     paths:
       - pkg/clientset
       - config/
-      - third_party$
-      - builtin$
       - examples$
 issues:
   max-same-issues: 0
@@ -222,6 +220,4 @@ formatters:
     paths:
       - pkg/clientset
       - config/
-      - third_party$
-      - builtin$
       - examples$
