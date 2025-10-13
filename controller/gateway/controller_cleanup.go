@@ -5,14 +5,12 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	ctrlconsts "github.com/kong/kong-operator/controller/consts"
+	"github.com/kong/kong-operator/controller/pkg/finalizer"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 )
@@ -79,7 +77,7 @@ func (r *Reconciler) cleanup(
 		oldGateway := gateway.DeepCopy()
 		if controllerutil.RemoveFinalizer(gateway, string(GatewayFinalizerCleanupControlPlanes)) {
 			if err := r.Patch(ctx, gateway, client.MergeFrom(oldGateway)); err != nil {
-				res, err := handleGatewayFinalizerPatchOrUpdateError(err, logger)
+				res, err := finalizer.HandlePatchOrUpdateError(err, logger)
 				return false, res, err
 			}
 			log.Debug(logger, "finalizer for cleaning up controlplanes removed")
@@ -109,7 +107,7 @@ func (r *Reconciler) cleanup(
 		oldGateway := gateway.DeepCopy()
 		if controllerutil.RemoveFinalizer(gateway, string(GatewayFinalizerCleanupDataPlanes)) {
 			if err := r.Patch(ctx, gateway, client.MergeFrom(oldGateway)); err != nil {
-				res, err := handleGatewayFinalizerPatchOrUpdateError(err, logger)
+				res, err := finalizer.HandlePatchOrUpdateError(err, logger)
 				return false, res, err
 			}
 			log.Debug(logger, "finalizer for cleaning up dataplanes removed")
@@ -138,7 +136,7 @@ func (r *Reconciler) cleanup(
 		oldGateway := gateway.DeepCopy()
 		if controllerutil.RemoveFinalizer(gateway, string(GatewayFinalizerCleanupNetworkPolicies)) {
 			if err := r.Patch(ctx, gateway, client.MergeFrom(oldGateway)); err != nil {
-				res, err := handleGatewayFinalizerPatchOrUpdateError(err, logger)
+				res, err := finalizer.HandlePatchOrUpdateError(err, logger)
 				return true, res, err
 			}
 			log.Debug(logger, "finalizer for cleaning up network policies removed")
@@ -150,34 +148,4 @@ func (r *Reconciler) cleanup(
 
 	log.Debug(logger, "owned resources cleanup completed")
 	return true, ctrl.Result{}, nil
-}
-
-func handleGatewayFinalizerPatchOrUpdateError(err error, logger logr.Logger) (ctrl.Result, error) {
-	// Short cirtcuit.
-	if err == nil {
-		return ctrl.Result{}, nil
-	}
-
-	// If the Gateway is not found or there's a conflict patching, then requeue without an error.
-	if k8serrors.IsNotFound(err) || k8serrors.IsConflict(err) {
-		return ctrl.Result{
-			Requeue:      true,
-			RequeueAfter: ctrlconsts.RequeueWithoutBackoff,
-		}, nil
-	}
-
-	// Since controllers use cached clients, it's possible that the Gateway is out of sync with what
-	// is in the API server and this causes:
-	// Forbidden: no new finalizers can be added if the object is being deleted, found new finalizers []string{...}
-	// Code below handles that gracefully to not show users the errors that are not actionable.
-	if cause, ok := k8serrors.StatusCause(err, metav1.CauseTypeForbidden); k8serrors.IsInvalid(err) && ok {
-		log.Debug(logger, "failed to delete a finalizer on Gateway, requeueing request", "cause", cause)
-		return ctrl.Result{
-			Requeue:      true,
-			RequeueAfter: ctrlconsts.RequeueWithoutBackoff,
-		}, nil
-	}
-
-	// Return the error as is.
-	return ctrl.Result{}, err
 }

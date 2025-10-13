@@ -33,6 +33,7 @@ import (
 	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/pkg/extensions"
+	"github.com/kong/kong-operator/controller/pkg/finalizer"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/patch"
 	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
@@ -176,13 +177,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if cpFinalizerSet || dpFinalizerSet || npFinalizerSet {
 		log.Trace(logger, "Setting finalizers")
 		if err := r.Update(ctx, &gateway); err != nil {
-			res, err := handleGatewayFinalizerPatchOrUpdateError(err, logger)
-			if err != nil {
-				return res, fmt.Errorf("failed updating Gateway's finalizers: %w", err)
-			}
-			if !res.IsZero() {
-				return res, nil
-			}
+			return finalizer.HandlePatchOrUpdateError(err, logger)
 		}
 		return ctrl.Result{}, nil
 	}
