@@ -12,6 +12,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -167,7 +168,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	var updated, cleanup bool
 
-	// if the extension is marked for deletion and no object is using it, we can proceed with the cleanup.
+	// If the extension is marked for deletion and no object is using it, we can proceed with the cleanup.
 	if !ext.DeletionTimestamp.IsZero() &&
 		ext.DeletionTimestamp.Before(lo.ToPtr(metav1.Now())) &&
 		len(dataPlaneList.Items)+len(controlPlaneList.Items) == 0 {
@@ -264,24 +265,46 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 	}
 
-	// Get the GatewayKonnectControlPlane and set conditions accordingly.
+	// Get the GatewayKonnectControlPlane and set conditions accordingly, also
+	// obtain valid ControlPlane ID or requeue. When KonnectExtension is during deletion,
+	// we proceed with the cleanup even if the ControlPlane is not found.
+	cpID := lo.FromPtr(ext.Status.Konnect).ControlPlaneID
 	cp, res, err := r.getGatewayKonnectControlPlane(ctx, ext)
 	if err != nil || !res.IsZero() {
-		if !k8serrors.IsNotFound(err) && !errors.Is(err, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed) {
+		switch {
+		case !k8serrors.IsNotFound(err) && !errors.Is(err, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed):
 			return res, err
+		case k8serrors.IsNotFound(err) && cleanup:
+			log.Debug(logger, "ControlPlane not found, for KonnectExtension during deletion, proceeding with cleanup")
+		default:
+			log.Debug(logger, "ControlPlane not ready yet")
+			return res, nil
 		}
-		log.Debug(logger, "controlPlane not ready yet")
-		return res, nil
+	} else {
+		// Update the controlPlane ID to the value presented in the status by ControlPlane itself.
+		cpID = cp.Status.ID
 	}
 
 	log.Debug(logger, "controlPlane reference validity checked")
 
 	apiAuthRef, err := getKonnectAPIAuthRefNN(ctx, r.Client, &ext)
 	if err != nil {
-		if client.IgnoreNotFound(err) != nil {
+		if !k8serrors.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{}, nil
+		if cleanup {
+			// In case if KonnectExtension is during deletion and respective KonnectGatewayControlPlane
+			// has been already deleted, take apiAuthRef from the status, because it contains the last
+			// known reference and it is needed to perform all reconciliation steps.
+			apiAuthRef = types.NamespacedName{
+				Name: ext.Status.Konnect.AuthRef.Name,
+				// For now the referenced KonnectAPIAuthConfiguration is in the same namespace as the KonnectExtension.
+				Namespace: ext.Namespace,
+			}
+		} else {
+			// Requeue until the reference becomes valid.
+			return ctrl.Result{}, nil
+		}
 	}
 
 	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
@@ -398,9 +421,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	log.Debug(logger, "DataPlane certificate validity checked")
 
-	// get the list of DataPlane client certificates in Konnect
-	dpCertificates, err := ops.ListKongDataPlaneClientCertificates(ctx, sdk.GetDataPlaneCertificatesSDK(), cp.Status.ID)
-	if err != nil {
+	// Get the list of DataPlane client certificates in Konnect.
+	dpCertificates, err := ops.ListKongDataPlaneClientCertificates(ctx, sdk.GetDataPlaneCertificatesSDK(), cpID)
+	if err != nil && !ops.ErrIsNotFound(err) {
 		certProvisionedCond.Status = metav1.ConditionFalse
 		certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
 		certProvisionedCond.Message = err.Error()
@@ -465,7 +488,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					dpCert.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 						// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
 						// that expects the ControlPlaneID to be set in the status.
-						ControlPlaneID: cp.Status.ID,
+						ControlPlaneID: cpID,
 					}
 				},
 			)
@@ -520,7 +543,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					dpCert.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 						// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
 						// that expects the ControlPlaneID to be set in the status.
-						ControlPlaneID: cp.Status.ID,
+						ControlPlaneID: cpID,
 						// setting the ID in the status as a workaround for the DeleteKongDataPlaneClientCertificate method,
 						// that expects the ID to be set in the status.
 						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
@@ -576,8 +599,10 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return res, err
 	}
 
-	updateExtensionStatus := enforceKonnectExtensionStatus(*cp, *certificateSecret, &ext)
-	if updateExtensionStatus {
+	authRef := konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+		Name: apiAuth.Name,
+	}
+	if enforceKonnectExtensionStatus(*cp, authRef, *certificateSecret, &ext) {
 		log.Debug(logger, "updating KonnectExtension status")
 		err := r.Client.Status().Update(ctx, &ext)
 		if k8serrors.IsConflict(err) {

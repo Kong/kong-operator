@@ -738,6 +738,19 @@ spec:
                 description: Konnect contains the status information related to the
                   Konnect Control Plane.
                 properties:
+                  authRef:
+                    description: |-
+                      AuthRef is the reference to the KonnectAPIAuthConfiguration used to authenticate with Konnect.
+                      For particular KonnectExtension and ControlPlane combination.
+                    properties:
+                      name:
+                        description: Name is the name of the KonnectAPIAuthConfiguration
+                          resource.
+                        minLength: 1
+                        type: string
+                    required:
+                    - name
+                    type: object
                   clusterType:
                     description: ClusterType is the type of the Konnect Control Plane.
                     enum:
