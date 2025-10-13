@@ -27,9 +27,13 @@ type AdoptOptions struct {
 	//   condition, allowing the user to align the spec with the existing entity if
 	//   adoption is desired.
 	//
-	// Default: when unset, "match" is assumed.
+	// - "override": the operator overrides the remote entity by the CR's spec.
+	//   If the entity with the ID and type exists, and it is not managed
+	//   by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+	//   label or tag of the Konnect entity), the operator updates the remote entity
+	//   by the CR's spec.
 	// +optional
-	// +kubebuilder:validation:Enum=match
+	// +kubebuilder:validation:Enum=match;override
 	Mode AdoptMode `json:"mode,omitempty"`
 	// Konnect is the options for adopting the entity from Konnect.
 	// Required when from == 'konnect'.
@@ -60,6 +64,10 @@ const (
 	// the remote entity when the CR spec matches the remote configuration; no
 	// write operations are issued to the remote system during adoption.
 	AdoptModeMatch AdoptMode = "match"
+	// AdoptModeOverride indicates that the operator will override the existing entity
+	// with the spec of the Kubernetes object. If the configuration does not match,
+	// the operator will update the remote entity in to match the spec of the Kubernetes object.
+	AdoptModeOverride AdoptMode = "override"
 )
 
 // AdoptKonnectOptions specifies the options for adopting the entity from Konnect.

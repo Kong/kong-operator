@@ -217,6 +217,95 @@ func (_c *MockServicesSDK_DeleteService_Call) RunAndReturn(run func(ctx context.
 	return _c
 }
 
+// GetService provides a mock function for the type MockServicesSDK
+func (_mock *MockServicesSDK) GetService(ctx context.Context, serviceID string, controlPlaneID string, opts ...operations.Option) (*operations.GetServiceResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, serviceID, controlPlaneID, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, serviceID, controlPlaneID)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetService")
+	}
+
+	var r0 *operations.GetServiceResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.GetServiceResponse, error)); ok {
+		return returnFunc(ctx, serviceID, controlPlaneID, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.GetServiceResponse); ok {
+		r0 = returnFunc(ctx, serviceID, controlPlaneID, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.GetServiceResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, serviceID, controlPlaneID, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockServicesSDK_GetService_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetService'
+type MockServicesSDK_GetService_Call struct {
+	*mock.Call
+}
+
+// GetService is a helper method to define mock.On call
+//   - ctx context.Context
+//   - serviceID string
+//   - controlPlaneID string
+//   - opts ...operations.Option
+func (_e *MockServicesSDK_Expecter) GetService(ctx interface{}, serviceID interface{}, controlPlaneID interface{}, opts ...interface{}) *MockServicesSDK_GetService_Call {
+	return &MockServicesSDK_GetService_Call{Call: _e.mock.On("GetService",
+		append([]interface{}{ctx, serviceID, controlPlaneID}, opts...)...)}
+}
+
+func (_c *MockServicesSDK_GetService_Call) Run(run func(ctx context.Context, serviceID string, controlPlaneID string, opts ...operations.Option)) *MockServicesSDK_GetService_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockServicesSDK_GetService_Call) Return(getServiceResponse *operations.GetServiceResponse, err error) *MockServicesSDK_GetService_Call {
+	_c.Call.Return(getServiceResponse, err)
+	return _c
+}
+
+func (_c *MockServicesSDK_GetService_Call) RunAndReturn(run func(ctx context.Context, serviceID string, controlPlaneID string, opts ...operations.Option) (*operations.GetServiceResponse, error)) *MockServicesSDK_GetService_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListService provides a mock function for the type MockServicesSDK
 func (_mock *MockServicesSDK) ListService(ctx context.Context, request operations.ListServiceRequest, opts ...operations.Option) (*operations.ListServiceResponse, error) {
 	var tmpRet mock.Arguments
