@@ -108,6 +108,9 @@
 
 - Hybrid Gateway: generate a single KongRoute for each HTTPRoute Rule
   [#2417](https://github.com/Kong/kong-operator/pull/2417)
+- Fix issue with deletion of `KonnectExtension` when the referenced
+  `KonnectGatewayControlPlane` is deleted (it used to hang indefinitely).
+  [#2423](https://github.com/Kong/kong-operator/pull/2423)
 
 ## [v2.0.4]
 

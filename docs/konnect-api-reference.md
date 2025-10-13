@@ -832,6 +832,7 @@ KonnectAPIAuthConfigurationRef is a reference to a KonnectAPIAuthConfiguration r
 
 _Appears in:_
 - [KonnectConfiguration](#konnectconfiguration)
+- [KonnectExtensionControlPlaneStatus](#konnectextensioncontrolplanestatus)
 
 #### KonnectConfiguration
 
@@ -998,6 +999,7 @@ KonnectExtensionControlPlaneStatus contains the Konnect Control Plane status inf
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this KonnectExtension is associated with. |
 | `clusterType` _[KonnectExtensionClusterType](#konnectextensionclustertype)_ | ClusterType is the type of the Konnect Control Plane. |
 | `endpoints` _[KonnectEndpoints](#konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. |
+| `authRef` _[KonnectAPIAuthConfigurationRef](#konnectapiauthconfigurationref)_ | AuthRef is the reference to the KonnectAPIAuthConfiguration used to authenticate with Konnect. For particular KonnectExtension and ControlPlane combination. |
 
 
 _Appears in:_
