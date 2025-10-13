@@ -557,17 +557,26 @@ func Adopt[
 
 	// Set "Adopted" and "Programmed" conditions of the object based on errors returned in the adopt operation.
 	var (
-		errSDK   *sdkkonnecterrs.SDKError
-		errFetch KonnectEntityAdoptionFetchError
+		errSDK         *sdkkonnecterrs.SDKError
+		errFetch       KonnectEntityAdoptionFetchError
+		errUIDConflict KonnectEntityAdoptionUIDTagConflictError
+		errNotMatch    KonnectEntityAdoptionNotMatchError
 	)
 
 	switch {
+	// If the adoption process failed to fetch the entity, we use the "FetchFailed" reason in the "adopted" condition.
 	case errors.As(err, &errFetch):
 		if errors.As(errFetch.Err, &errSDK) {
 			statusCode = errSDK.StatusCode
 		}
 		SetKonnectEntityAdoptedConditionFalse(e, konnectv1alpha1.KonnectEntityAdoptedReasonFetchFailed, err)
 		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, err)
+	case errors.As(err, &errUIDConflict):
+		SetKonnectEntityAdoptedConditionFalse(e, konnectv1alpha1.KonnectEntityAdoptedReasonUIDConflict, errUIDConflict)
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, errUIDConflict)
+	case errors.As(err, &errNotMatch):
+		SetKonnectEntityAdoptedConditionFalse(e, konnectv1alpha1.KonnectEntityAdoptedReasonNotMatch, errNotMatch)
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, errNotMatch)
 	case errors.As(err, &errSDK):
 		statusCode = errSDK.StatusCode
 		SetKonnectEntityAdoptedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, errSDK)
@@ -826,4 +835,19 @@ func findUIDTag(tags []string) (string, bool) {
 // extractUIDFromTag extracts the k8s UID from the tag.
 func extractUIDFromTag(tag string) string {
 	return strings.TrimPrefix(tag, "k8s-uid:")
+}
+
+// equalWithDefault compares two values from the pointers and fallback to
+// the given default value if the pointer is nil or the value is the zero value for the given type.
+func equalWithDefault[T comparable](
+	a *T, b *T, defaultValue T,
+) bool {
+	var aVal, bVal T
+	if a == nil || lo.IsEmpty(*a) {
+		aVal = defaultValue
+	}
+	if b == nil || lo.IsEmpty(*b) {
+		bVal = defaultValue
+	}
+	return aVal == bVal
 }

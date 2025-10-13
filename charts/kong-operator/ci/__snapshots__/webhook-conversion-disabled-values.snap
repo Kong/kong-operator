@@ -19543,6 +19543,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -19835,6 +19836,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -20453,6 +20455,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -20773,6 +20776,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -21064,6 +21068,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -21304,6 +21309,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -21544,6 +21550,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -21788,6 +21795,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -22034,6 +22042,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -22720,6 +22729,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -23084,6 +23094,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -23579,6 +23590,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -24481,6 +24493,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -24901,6 +24914,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -25235,6 +25249,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -25472,6 +25487,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -26371,6 +26387,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -26876,6 +26893,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -27399,6 +27417,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -27881,6 +27900,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from
@@ -28162,6 +28182,7 @@ spec:
                       Default: when unset, "match" is assumed.
                     enum:
                     - match
+                    - override
                     type: string
                 required:
                 - from

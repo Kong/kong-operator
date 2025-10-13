@@ -97,3 +97,14 @@ type KonnectEntityAdoptionUIDTagConflictError struct {
 func (e KonnectEntityAdoptionUIDTagConflictError) Error() string {
 	return fmt.Sprintf("Konnect entity (ID: %s) is managed by another k8s object with UID %s", e.KonnectID, e.ActualUIDTag)
 }
+
+// KonnectEntityAdoptionNotMatchError is an error type returned in adopting an existing entity
+// in "match" mode but the configuration of the existing entity does not match the spec of the object.
+type KonnectEntityAdoptionNotMatchError struct {
+	KonnectID string
+}
+
+// Error implements the error interface.
+func (e KonnectEntityAdoptionNotMatchError) Error() string {
+	return fmt.Sprintf("Konnect entity (ID: %s) does not match the spec of the object when adopting in match mode", e.KonnectID)
+}
