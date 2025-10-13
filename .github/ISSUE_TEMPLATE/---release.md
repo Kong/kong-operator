@@ -28,7 +28,7 @@ If the troubleshooting section does not contain the answer to the problem you en
 - [ ] After the PR is merged, [release-bot][release-bot-workflow] workflow will be triggered. It will create a new GH release, as well as a release branch (if not patch or prerelease):
   - [ ] Check the [releases][releases] page. The release has to be marked manually as `latest` if this is the case.
   - [ ] Check the `release/N.M.x` release branch exists.
-- [ ] Update the official documentation at [github.com/Kong/docs.konghq.com][docs_repo]
+- [ ] Update the official documentation at [https://github.com/Kong/developer.konghq.com/][docs_repo]
   - [ ] Run post processing script for `${KUBERNETES_CONFIGURATION_REPO}/docs/gateway-operator-api-reference.md`, providing a tagged version of CRD reference from docs repo as an argument, e.g. `app/_src/gateway-operator/reference/custom-resources/1.2.x.md`.
     This will add the necessary skaffolding so that the reference is rendered correctly on docs.konghq.com.
 
@@ -44,11 +44,10 @@ If the troubleshooting section does not contain the answer to the problem you en
 - [ ] Schedule a retro meeting. Invite the team (team-kubernetes@konghq.com) and a Product Manager. Remember to link to [retro notes](https://docs.google.com/document/d/15gDtl425zyttbDwA8qQrh5yBgTD5OpnhjOquqfSJUx4/edit#heading=h.biunbyheelys) in the invite description
 
 
-[docs_repo]: https://github.com/Kong/docs.konghq.com/
-[cli_ref_docs]: https://docs.konghq.com/gateway-operator/latest/reference/cli-arguments/
+[docs_repo]: https://github.com/Kong/developer.konghq.com/
 [helm_upgrade_test]: https://github.com/kong/kong-operator/blob/9f33d27ab875b91e50d7e750b45a293c1395da2d/test/e2e/test_upgrade.go
 [release-bot-workflow]: ../workflows/release-bot.yaml
-[helm-chart-upgrade]: https://github.com/Kong/charts/blob/main/charts/gateway-operator/UPGRADE.md
+[helm-chart-upgrade]: ../../charts/kong-operator/UPGRADE.md
 
 ## Verify default hardcoded versions
 
