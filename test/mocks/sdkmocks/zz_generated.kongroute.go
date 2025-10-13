@@ -217,6 +217,95 @@ func (_c *MockRoutesSDK_DeleteRoute_Call) RunAndReturn(run func(ctx context.Cont
 	return _c
 }
 
+// GetRoute provides a mock function for the type MockRoutesSDK
+func (_mock *MockRoutesSDK) GetRoute(ctx context.Context, routeID string, controlPlaneID string, opts ...operations.Option) (*operations.GetRouteResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, routeID, controlPlaneID, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, routeID, controlPlaneID)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetRoute")
+	}
+
+	var r0 *operations.GetRouteResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.GetRouteResponse, error)); ok {
+		return returnFunc(ctx, routeID, controlPlaneID, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.GetRouteResponse); ok {
+		r0 = returnFunc(ctx, routeID, controlPlaneID, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.GetRouteResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, routeID, controlPlaneID, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockRoutesSDK_GetRoute_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetRoute'
+type MockRoutesSDK_GetRoute_Call struct {
+	*mock.Call
+}
+
+// GetRoute is a helper method to define mock.On call
+//   - ctx context.Context
+//   - routeID string
+//   - controlPlaneID string
+//   - opts ...operations.Option
+func (_e *MockRoutesSDK_Expecter) GetRoute(ctx interface{}, routeID interface{}, controlPlaneID interface{}, opts ...interface{}) *MockRoutesSDK_GetRoute_Call {
+	return &MockRoutesSDK_GetRoute_Call{Call: _e.mock.On("GetRoute",
+		append([]interface{}{ctx, routeID, controlPlaneID}, opts...)...)}
+}
+
+func (_c *MockRoutesSDK_GetRoute_Call) Run(run func(ctx context.Context, routeID string, controlPlaneID string, opts ...operations.Option)) *MockRoutesSDK_GetRoute_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockRoutesSDK_GetRoute_Call) Return(getRouteResponse *operations.GetRouteResponse, err error) *MockRoutesSDK_GetRoute_Call {
+	_c.Call.Return(getRouteResponse, err)
+	return _c
+}
+
+func (_c *MockRoutesSDK_GetRoute_Call) RunAndReturn(run func(ctx context.Context, routeID string, controlPlaneID string, opts ...operations.Option) (*operations.GetRouteResponse, error)) *MockRoutesSDK_GetRoute_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListRoute provides a mock function for the type MockRoutesSDK
 func (_mock *MockRoutesSDK) ListRoute(ctx context.Context, request operations.ListRouteRequest, opts ...operations.Option) (*operations.ListRouteResponse, error) {
 	var tmpRet mock.Arguments
