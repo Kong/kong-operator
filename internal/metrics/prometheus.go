@@ -26,6 +26,7 @@ const (
 	KonnectEntityOperationCreate  KonnectEntityOperation = "create"
 	KonnectEntityOperationUpdate  KonnectEntityOperation = "update"
 	KonnectEntityOperationDelete  KonnectEntityOperation = "delete"
+	KonnectEntityOperationAdopt   KonnectEntityOperation = "adopt"
 	// KonnectEntityTypeKey indicates the type of the operated Konnect entity.
 	KonnectEntityTypeKey = "entity_type"
 	// SuccessKey indicates whether the operation is successfully done.

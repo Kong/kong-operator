@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/go-logr/logr"
+	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,6 +41,8 @@ const (
 	UpdateOp Op = "update"
 	// DeleteOp is the operation type for deleting a Konnect entity.
 	DeleteOp Op = "delete"
+	// AdoptOp is the operation type for adopting an existing Konnect entity.
+	AdoptOp Op = "adopt"
 )
 
 // Create creates a Konnect entity.
@@ -522,6 +526,90 @@ func Update[
 	return ctrl.Result{}, IgnoreUnrecoverableAPIErr(err, loggerForEntity(ctx, e, UpdateOp))
 }
 
+// Adopt adopts an exiting entity in Konnect and take over the management of the entity.
+func Adopt[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](
+	ctx context.Context,
+	sdk sdkops.SDKWrapper,
+	syncPeriod time.Duration,
+	cl client.Client,
+	metricRecorder metrics.Recorder,
+	e TEnt,
+	adoptOptions commonv1alpha1.AdoptOptions,
+) (ctrl.Result, error) {
+
+	var (
+		err        error
+		entityType = e.GetTypeName()
+		statusCode int
+		start      = time.Now()
+	)
+
+	switch ent := any(e).(type) {
+	case *configurationv1alpha1.KongService:
+		err = adoptService(ctx, sdk.GetServicesSDK(), ent)
+	// TODO: implement adoption for other types.
+	default:
+		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
+	}
+
+	// Set "Adopted" and "Programmed" conditions of the object based on errors returned in the adopt operation.
+	var (
+		errSDK         *sdkkonnecterrs.SDKError
+		errFetch       KonnectEntityAdoptionFetchError
+		errUIDConflict KonnectEntityAdoptionUIDTagConflictError
+		errNotMatch    KonnectEntityAdoptionNotMatchError
+	)
+
+	switch {
+	// If the adoption process failed to fetch the entity, we use the "FetchFailed" reason in the "adopted" condition.
+	case errors.As(err, &errFetch):
+		if errors.As(errFetch.Err, &errSDK) {
+			statusCode = errSDK.StatusCode
+		}
+		SetKonnectEntityAdoptedConditionFalse(e, konnectv1alpha1.KonnectEntityAdoptedReasonFetchFailed, err)
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, err)
+	case errors.As(err, &errUIDConflict):
+		SetKonnectEntityAdoptedConditionFalse(e, konnectv1alpha1.KonnectEntityAdoptedReasonUIDConflict, errUIDConflict)
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, errUIDConflict)
+	case errors.As(err, &errNotMatch):
+		SetKonnectEntityAdoptedConditionFalse(e, konnectv1alpha1.KonnectEntityAdoptedReasonNotMatch, errNotMatch)
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, errNotMatch)
+	case errors.As(err, &errSDK):
+		statusCode = errSDK.StatusCode
+		SetKonnectEntityAdoptedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, errSDK)
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, errSDK)
+	case err != nil:
+		SetKonnectEntityAdoptedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, err)
+		SetKonnectEntityProgrammedConditionFalse(e, kcfgkonnect.KonnectEntitiesFailedToAdoptReason, err)
+	default:
+		SetKonnectEntityAdoptedConditionTrue(e)
+		SetKonnectEntityProgrammedConditionTrue(e)
+	}
+
+	if err != nil {
+		metricRecorder.RecordKonnectEntityOperationFailure(
+			sdk.GetServerURL(),
+			metrics.KonnectEntityOperationAdopt,
+			entityType,
+			time.Since(start),
+			statusCode,
+		)
+	} else {
+		metricRecorder.RecordKonnectEntityOperationSuccess(
+			sdk.GetServerURL(),
+			metrics.KonnectEntityOperationAdopt,
+			entityType,
+			time.Since(start),
+		)
+	}
+
+	logOpComplete(ctx, start, AdoptOp, e, err)
+	return ctrl.Result{}, IgnoreUnrecoverableAPIErr(err, loggerForEntity(ctx, e, AdoptOp))
+}
+
 func loggerForEntity[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -735,4 +823,31 @@ func isMirrorEntity[
 	default:
 		return false
 	}
+}
+
+// findUIDTag finds tags annotating the k8s UID.
+func findUIDTag(tags []string) (string, bool) {
+	return lo.Find(tags, func(s string) bool {
+		return strings.HasPrefix(s, "k8s-uid:")
+	})
+}
+
+// extractUIDFromTag extracts the k8s UID from the tag.
+func extractUIDFromTag(tag string) string {
+	return strings.TrimPrefix(tag, "k8s-uid:")
+}
+
+// equalWithDefault compares two values from the pointers and fallback to
+// the given default value if the pointer is nil or the value is the zero value for the given type.
+func equalWithDefault[T comparable](
+	a *T, b *T, defaultValue T,
+) bool {
+	var aVal, bVal T
+	if a == nil || lo.IsEmpty(*a) {
+		aVal = defaultValue
+	}
+	if b == nil || lo.IsEmpty(*b) {
+		bVal = defaultValue
+	}
+	return aVal == bVal
 }
