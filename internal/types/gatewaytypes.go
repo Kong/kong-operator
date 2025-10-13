@@ -2,6 +2,7 @@ package types
 
 import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 type (
@@ -19,6 +20,7 @@ type (
 	GRPCRoute              = gatewayv1.GRPCRoute
 	Group                  = gatewayv1.Group
 	GroupVersionKind       = gatewayv1.Group
+	Hostname               = gatewayv1.Hostname
 	HTTPBackendRef         = gatewayv1.HTTPBackendRef
 	HTTPRoute              = gatewayv1.HTTPRoute
 	HTTPRouteFilter        = gatewayv1.HTTPRouteFilter
@@ -27,7 +29,6 @@ type (
 	HTTPRouteRule          = gatewayv1.HTTPRouteRule
 	HTTPRouteSpec          = gatewayv1.HTTPRouteSpec
 	HTTPRouteStatus        = gatewayv1.HTTPRouteStatus
-	Hostname               = gatewayv1.Hostname
 	Kind                   = gatewayv1.Kind
 	Listener               = gatewayv1.Listener
 	Namespace              = gatewayv1.Namespace
@@ -35,6 +36,8 @@ type (
 	ParametersReference    = gatewayv1.ParametersReference
 	ParentReference        = gatewayv1.ParentReference
 	PortNumber             = gatewayv1.PortNumber
+	ReferenceGrantList     = gatewayv1beta1.ReferenceGrantList
+	ReferenceGrantSpec     = gatewayv1beta1.ReferenceGrantSpec
 	RouteGroupKind         = gatewayv1.RouteGroupKind
 	RouteNamespaces        = gatewayv1.RouteNamespaces
 	RouteParentStatus      = gatewayv1.RouteParentStatus
@@ -44,17 +47,22 @@ type (
 var GroupVersion = gatewayv1.GroupVersion
 
 const (
-	HTTPProtocolType  = gatewayv1.HTTPProtocolType
-	HTTPSProtocolType = gatewayv1.HTTPSProtocolType
-	TLSModeTerminate  = gatewayv1.TLSModeTerminate
-
+	GroupName                             = gatewayv1.GroupName
+	HTTPProtocolType                      = gatewayv1.HTTPProtocolType
+	HTTPSProtocolType                     = gatewayv1.HTTPSProtocolType
+	ListenerConditionProgrammed           = gatewayv1.ListenerConditionProgrammed
 	NamespacesFromAll                     = gatewayv1.NamespacesFromAll
 	NamespacesFromSame                    = gatewayv1.NamespacesFromSame
 	NamespacesFromSelector                = gatewayv1.NamespacesFromSelector
-	ListenerConditionProgrammed           = gatewayv1.ListenerConditionProgrammed
 	RouteConditionAccepted                = gatewayv1.RouteConditionAccepted
+	RouteConditionResolvedRefs            = gatewayv1.RouteConditionResolvedRefs
 	RouteReasonAccepted                   = gatewayv1.RouteReasonAccepted
+	RouteReasonBackendNotFound            = gatewayv1.RouteReasonBackendNotFound
+	RouteReasonInvalidKind                = gatewayv1.RouteReasonInvalidKind
+	RouteReasonNoMatchingListenerHostname = gatewayv1.RouteReasonNoMatchingListenerHostname
 	RouteReasonNoMatchingParent           = gatewayv1.RouteReasonNoMatchingParent
 	RouteReasonNotAllowedByListeners      = gatewayv1.RouteReasonNotAllowedByListeners
-	RouteReasonNoMatchingListenerHostname = gatewayv1.RouteReasonNoMatchingListenerHostname
+	RouteReasonRefNotPermitted            = gatewayv1.RouteReasonRefNotPermitted
+	RouteReasonResolvedRefs               = gatewayv1.RouteReasonResolvedRefs
+	TLSModeTerminate                      = gatewayv1.TLSModeTerminate
 )

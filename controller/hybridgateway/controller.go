@@ -35,13 +35,16 @@ import (
 // RootObjectPtr interfaces, allowing flexible reconciliation logic for different resource types.
 type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]] struct {
 	client.Client
+	// ReferenceGrantEnabled indicates whether ReferenceGrants are enabled in the cluster (i.e., the CRD is available)
+	referenceGrantEnabled bool
 }
 
 // NewHybridGatewayReconciler creates a new instance of GatewayAPIHybridReconciler for the specified
 // generic types t and tPtr. It initializes the reconciler with the client from the provided manager.
-func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager) *HybridGatewayReconciler[t, tPtr] {
+func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, referenceGrantEnabled bool) *HybridGatewayReconciler[t, tPtr] {
 	return &HybridGatewayReconciler[t, tPtr]{
-		Client: mgr.GetClient(),
+		Client:                mgr.GetClient(),
+		referenceGrantEnabled: referenceGrantEnabled,
 	}
 }
 
@@ -108,7 +111,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	log.Debug(logger, "Reconciling object", "Group", gvk.Group, "Kind", gvk.Kind)
 
-	conv, err := converter.NewConverter(rootObj, r.Client)
+	conv, err := converter.NewConverter(rootObj, r.Client, r.referenceGrantEnabled)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
