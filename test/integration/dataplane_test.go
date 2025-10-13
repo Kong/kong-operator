@@ -1315,10 +1315,9 @@ func TestDataPlaneKonnectCert(t *testing.T) {
 
 func TestDataPlaneWithKonnectExtension(t *testing.T) {
 	t.Parallel()
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	namespace, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
-	// Generate a test ID for labeling resources
-	// in order to easily identify them in Konnect
+	// Generate a test ID for labeling resources in order to easily identify them in Konnect.
 	testID := uuid.NewString()[:8]
 	t.Logf("Test ID: %s", testID)
 
@@ -1439,7 +1438,10 @@ func TestDataPlaneWithKonnectExtension(t *testing.T) {
 	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	dataplane, err := dataplaneClient.Create(GetCtx(), dataplane, metav1.CreateOptions{})
 	require.NoError(t, err)
-	cleaner.Add(dataplane)
+	// NOTE: We use deleteObjectAndWaitForDeletionFn to ensure the dataplane is fully cleaned up
+	// because it uses the KonnectExtension and currently we have a limitation that a KonnectExtension
+	// cannot be deleted if there is a DataPlane using it.
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, dataplane.DeepCopy()))
 
 	dataplaneName := client.ObjectKeyFromObject(dataplane)
 
