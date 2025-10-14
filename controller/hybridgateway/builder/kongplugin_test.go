@@ -163,7 +163,7 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 		name           string
 		filter         gwtypes.HTTPRouteFilter
 		expectedPlugin string
-		expectedConfig requestTransformer
+		expectedConfig transformerData
 		expectError    bool
 	}{
 		{
@@ -178,7 +178,7 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 				},
 			},
 			expectedPlugin: "request-transformer",
-			expectedConfig: requestTransformer{
+			expectedConfig: transformerData{
 				Add: transformerTargetSlice{
 					Headers: []string{"X-Custom-Header:custom-value", "X-Another-Header:another-value"},
 				},
@@ -196,7 +196,7 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 				},
 			},
 			expectedPlugin: "request-transformer",
-			expectedConfig: requestTransformer{
+			expectedConfig: transformerData{
 				Add: transformerTargetSlice{
 					Headers: []string{},
 				},
@@ -216,7 +216,7 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 				},
 			},
 			expectedPlugin: "request-transformer",
-			expectedConfig: requestTransformer{
+			expectedConfig: transformerData{
 				Add: transformerTargetSlice{
 					Headers: []string{"Authorization:Bearer token123"},
 				},
@@ -240,7 +240,7 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 				},
 			},
 			expectedPlugin: "request-transformer",
-			expectedConfig: requestTransformer{
+			expectedConfig: transformerData{
 				Add: transformerTargetSlice{
 					Headers: []string{"X-Set-Header:set-value", "X-Add-Header:add-value"},
 				},
@@ -281,7 +281,7 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedPlugin, plugin.PluginName)
 
-			var actualConfig requestTransformer
+			var actualConfig transformerData
 			err = json.Unmarshal(plugin.Config.Raw, &actualConfig)
 			require.NoError(t, err)
 
@@ -440,7 +440,7 @@ func TestTranslateRequestModifier(t *testing.T) {
 	tests := []struct {
 		name        string
 		filter      gwtypes.HTTPRouteFilter
-		expected    requestTransformer
+		expected    transformerData
 		expectError bool
 	}{
 		{
@@ -456,7 +456,7 @@ func TestTranslateRequestModifier(t *testing.T) {
 					Remove: []string{"X-Remove"},
 				},
 			},
-			expected: requestTransformer{
+			expected: transformerData{
 				Add: transformerTargetSlice{
 					Headers: []string{"X-Set:set-val", "X-Add:add-val"},
 				},
@@ -487,7 +487,7 @@ func TestTranslateRequestModifier(t *testing.T) {
 
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Equal(t, requestTransformer{}, result)
+				assert.Equal(t, transformerData{}, result)
 				return
 			}
 
