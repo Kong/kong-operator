@@ -217,7 +217,7 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 
 	// CRDs for gateway APIs.
 	fmt.Printf("INFO: deploying Gateway API CRDs: %s\n", GatewayExperimentalCRDsKustomizeURL)
-	if err := clusters.KustomizeDeployForCluster(ctx, cluster, GatewayExperimentalCRDsKustomizeURL); err != nil {
+	if err := clusters.KustomizeDeployForCluster(ctx, cluster, GatewayExperimentalCRDsKustomizeURL, kubectlFlags...); err != nil {
 		return err
 	}
 
