@@ -409,8 +409,7 @@
   [#1388](https://github.com/kong/kong-operator/pull/1388)
   [#1410](https://github.com/kong/kong-operator/pull/1410)
   [#1555](https://github.com/kong/kong-operator/pull/1555)
-  <!-- TODO: https://github.com/kong/kong-operator/issues/1501 add link to guide from documentation. -->
-  For more information on this please see: https://docs.konghq.com/gateway-operator/latest/
+  For more information on this please see: https://developer.konghq.com/operator/reference/control-plane-watch-namespaces/#controlplane-s-watchnamespaces-field
 - Implemented `Mirror` and `Origin` `KonnectGatewayControlPlane`s.
   [#1496](https://github.com/kong/kong-operator/pull/1496)
 
@@ -481,7 +480,7 @@
   [#1148](https://github.com/kong/kong-operator/pull/1148)
 - Support for the `konnect-extension.gateway-operator.konghq.com` CRD has been interrupted. The new
   API `konnect-extension.konnect.konghq.com` must be used instead. The migration path is described in
-  the [Kong documentation](https://docs.konghq.com/gateway-operator/latest/guides/migrating/migrate-from-1.4-to-1.5/).
+  the [Kong documentation](https://developer.konghq.com/operator/konnect/reference/migrate-1.4-1.5/).
   [#1183](https://github.com/kong/kong-operator/pull/1183)
 - Migrate KGO CRDs conditions to the kubernetes-configuration repo.
   With this migration process, we have moved all conditions from the KGO repo to [kubernetes-configuration](kubernetes-configuration).

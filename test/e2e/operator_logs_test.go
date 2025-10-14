@@ -109,8 +109,7 @@ func TestOperatorLogs(t *testing.T) {
 	}()
 
 	// start a new go routine that iterates over the log stream and performs some checks on the log lines
-	wg.Add(1)
-	go func() {
+	wg.Go(func() {
 		defer wg.Done()
 		scanner := bufio.NewScanner(readCloser)
 		for scanner.Scan() && !t.Failed() {
@@ -147,7 +146,7 @@ func TestOperatorLogs(t *testing.T) {
 		if !scanner.Scan() {
 			t.Log("log stream closed")
 		}
-	}()
+	})
 
 	t.Log("deploying a GatewayClass resource")
 	gatewayClass := helpers.MustGenerateGatewayClass(t)
