@@ -12,12 +12,12 @@ const (
 const (
 	// DefaultDataPlanesReadinessReconciliationInterval is the interval at which the manager will run DPs readiness reconciliation loop.
 	// It's the same as the default interval of a Kubernetes container's readiness probe.
-	DefaultDataPlanesReadinessReconciliationInterval = 10 * time.Second
+	DefaultDataPlanesReadinessReconciliationInterval = 20 * time.Second
 	// MinDataPlanesReadinessReconciliationInterval is the minimum interval of DPs readiness reconciliation loop.
 	MinDataPlanesReadinessReconciliationInterval = 3 * time.Second
 	// DefaultDataPlanesReadinessCheckTimeout is the default timeout of readiness check.
 	// When a readiness check request did not get response within the timeout, the gateway instance will turn into `Pending` status.
-	DefaultDataPlanesReadinessCheckTimeout = 5 * time.Second
+	DefaultDataPlanesReadinessCheckTimeout = 15 * time.Second
 )
 
 const (
