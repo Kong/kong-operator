@@ -31,8 +31,6 @@ import (
 )
 
 const (
-	// KubernetesConfigurationModuleName is the name of the module where we import and install Kong configuration CRDs from.
-	KubernetesConfigurationModuleName = "github.com/kong/kubernetes-configuration/v2"
 	// GatewayAPIModuleName is the name of the module where we import and install Gateway API CRDs from.
 	GatewayAPIModuleName = "sigs.k8s.io/gateway-api"
 )
@@ -229,7 +227,7 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 		return err
 	}
 
-	if err := InstallKubernetesConfigurationCRDs(ctx, cluster); err != nil {
+	if err := InstallKongOperatorCRDs(ctx, cluster); err != nil {
 		return err
 	}
 
@@ -241,8 +239,8 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 	return nil
 }
 
-// InstallKubernetesConfigurationCRDs installs the Kong CRDs from the local repository paths.
-func InstallKubernetesConfigurationCRDs(ctx context.Context, cluster clusters.Cluster) error {
+// InstallKongOperatorCRDs installs the Kong CRDs from the local repository paths.
+func InstallKongOperatorCRDs(ctx context.Context, cluster clusters.Cluster) error {
 	kubectlFlags := []string{"--server-side", "-v5"}
 
 	localCRDDirs := []string{
@@ -257,6 +255,12 @@ func InstallKubernetesConfigurationCRDs(ctx context.Context, cluster clusters.Cl
 	}
 
 	return nil
+}
+
+// InstallKubernetesConfigurationCRDs is kept for backward compatibility with older helpers naming.
+// Deprecated: use InstallKongOperatorCRDs instead.
+func InstallKubernetesConfigurationCRDs(ctx context.Context, cluster clusters.Cluster) error {
+	return InstallKongOperatorCRDs(ctx, cluster)
 }
 
 func waitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Clientset) error {

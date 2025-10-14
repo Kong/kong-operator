@@ -17,15 +17,15 @@ func TestConstructModulePath(t *testing.T) {
 	}{
 		{
 			name:       "simple module",
-			moduleName: "github.com/kong/kubernetes-configuration",
+			moduleName: "github.com/kong/kong-operator",
 			version:    "v1.0.0",
-			expected:   filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "kong", "kubernetes-configuration@v1.0.0"),
+			expected:   filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "kong", "kong-operator@v1.0.0"),
 		},
 		{
 			name:       "simple module v2",
-			moduleName: "github.com/kong/kubernetes-configuration/v2",
+			moduleName: "github.com/kong/kong-operator/v2",
 			version:    "v2.0.0",
-			expected:   filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "kong", "kubernetes-configuration", "v2@v2.0.0"),
+			expected:   filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "kong", "kong-operator", "v2@v2.0.0"),
 		},
 		{
 			name:       "module with subdomain",
