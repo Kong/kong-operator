@@ -148,6 +148,8 @@
   [#2253](https://github.com/Kong/kong-operator/pull/2253)
 - HybridGateway auto-generated resource names has been revised.
   [#2566](https://github.com/Kong/kong-operator/pull/2566)
+- Update Gateway API to 1.4.0
+  [#2451](https://github.com/Kong/kong-operator/pull/2451)
 
 ### Fixes
 
