@@ -108,6 +108,9 @@
   - Improved event mapping and indexing logic for efficient reconciliation.
   - Added unit tests for new watch and index logic.
   [#2419](https://github.com/Kong/kong-operator/pull/2419)
+- Provision hybrid Gateway: implement support for provisioning hybrid Gateways with
+  gateway api `Gateway` and `GatewayConfiguration` resources.
+  [#2457](https://github.com/Kong/kong-operator/pull/2457)
 
 ### Changed
 

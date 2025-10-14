@@ -246,46 +246,6 @@ func TestGetListenersByParentRef(t *testing.T) {
 	}
 }
 
-func TestByGatewayConfiguration(t *testing.T) {
-	tests := []struct {
-		name        string
-		setup       func() (client.Client, gwtypes.GatewayConfiguration)
-		expected    *commonv1alpha1.KonnectNamespacedRef
-		wantErr     bool
-		description string
-	}{
-		{
-			name: "GatewayConfiguration without KonnectExtension",
-			setup: func() (client.Client, gwtypes.GatewayConfiguration) {
-				cl := fake.NewClientBuilder().Build()
-				gwConfig := gwtypes.GatewayConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-gateway-config",
-					},
-				}
-				return cl, gwConfig
-			},
-			expected:    nil,
-			wantErr:     false,
-			description: "should return nil when KonnectExtension not found",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cl, gwConfig := tt.setup()
-			result, err := byGatewayConfiguration(context.Background(), cl, gwConfig)
-
-			if tt.wantErr {
-				assert.Error(t, err, tt.description)
-			} else {
-				assert.NoError(t, err, tt.description)
-				assert.Equal(t, tt.expected, result, tt.description)
-			}
-		})
-	}
-}
-
 func TestByKonnectExtension(t *testing.T) {
 	tests := []struct {
 		name        string

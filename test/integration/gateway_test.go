@@ -22,14 +22,19 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/pkg/consts"
 	"github.com/kong/kong-operator/pkg/gatewayapi"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/test"
 	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/test/helpers/deploy"
 	"github.com/kong/kong-operator/test/helpers/envs"
 )
 
@@ -170,6 +175,265 @@ func TestGatewayEssentials(t *testing.T) {
 	t.Log("verifying that ControlPlane sub-resources are deleted")
 	assert.Eventually(t, func() bool {
 		_, err := GetClients().OperatorClient.GatewayOperatorV2beta1().ControlPlanes(namespace.Name).Get(GetCtx(), controlplane.Name, metav1.GetOptions{})
+		return errors.IsNotFound(err)
+	}, time.Minute, time.Second)
+
+	t.Run("checking NetworkPolicies", func(t *testing.T) {
+		t.Skip("skipping as this requires adding network intercepts for integration tests: https://github.com/Kong/kong-operator/issues/2074")
+		// NOTE: We're not verifying if the NetworkPolicies are created
+		// in integration tests.
+		// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
+	})
+
+	t.Log("verifying that gateway itself is deleted")
+	require.Eventually(t, testutils.GatewayNotExist(t, GetCtx(), gatewayNN, clients), time.Minute, time.Second)
+}
+
+func TestGatewayHybridFull(t *testing.T) {
+	t.Parallel()
+	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+
+	// Generate a test ID for labeling resources in order to easily identify them in Konnect.
+	testID := uuid.NewString()[:8]
+	t.Logf("Test ID: %s", testID)
+
+	// Create a KonnectAPIAuthConfiguration
+	// using the token from the test environment
+	// and the Konnect server URL from the test environment.
+	authCfg := deploy.KonnectAPIAuthConfiguration(
+		t,
+		GetCtx(),
+		client.NewNamespacedClient(GetClients().MgrClient, namespace.Name),
+		deploy.WithTestIDLabel(testID),
+		func(obj client.Object) {
+			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
+			authCfg.Spec.Type = konnectv1alpha1.KonnectAPIAuthTypeToken
+			authCfg.Spec.Token = test.KonnectAccessToken()
+			authCfg.Spec.ServerURL = test.KonnectServerURL()
+		},
+	)
+
+	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
+	gatewayConfig.Spec.Konnect = &operatorv2beta1.KonnectOptions{
+		APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+			Name: authCfg.Name,
+		},
+	}
+	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
+	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gatewayConfig)
+
+	gatewayClass := helpers.MustGenerateGatewayClass(t)
+	gatewayClass.Spec.ParametersRef = &gatewayv1.ParametersReference{
+		Group:     "gateway-operator.konghq.com",
+		Kind:      "GatewayConfiguration",
+		Name:      gatewayConfig.Name,
+		Namespace: (*gatewayv1.Namespace)(&namespace.Name),
+	}
+	t.Logf("deploying the GatewayClass %s", gatewayClass.Name)
+	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gatewayClass)
+
+	t.Log("deploying Gateway resource")
+	gatewayNN := types.NamespacedName{
+		Name:      uuid.NewString(),
+		Namespace: namespace.Name,
+	}
+	gateway := helpers.GenerateGateway(gatewayNN, gatewayClass)
+	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(gateway)
+
+	t.Log("verifying Gateway gets marked as Scheduled")
+	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
+
+	t.Log("verifying Gateway gets marked as Programmed")
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+
+	t.Log("verifying Gateway gets an IP address")
+	require.Eventually(t, testutils.GatewayIPAddressExist(t, GetCtx(), gatewayNN, clients), testutils.SubresourceReadinessWait, time.Second)
+	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayNN, clients)
+	gatewayIPAddress := gateway.Status.Addresses[0].Value
+
+	t.Log("verifying that the DataPlane becomes Ready")
+	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	dataPlanes := testutils.MustListDataPlanesForGateway(t, GetCtx(), gateway, clients)
+	require.Len(t, dataPlanes, 1)
+	dataplane := dataPlanes[0]
+
+	t.Log("verifying that the KonnectGatewayControlPlane becomes provisioned")
+	require.Eventually(t, testutils.KonnectGatewayControlPlaneIsProgrammed(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+	konnectGatewayControlPlanes := testutils.MustListKonnectGatewayControlPlanesForGateway(t, GetCtx(), gateway, clients)
+	require.Len(t, konnectGatewayControlPlanes, 1)
+	konnectGatewayControlPlane := konnectGatewayControlPlanes[0]
+
+	t.Run("checking NetworkPolicies", func(t *testing.T) {
+		t.Skip("skipping as this requires adding network intercepts for integration tests: https://github.com/Kong/kong-operator/issues/2074")
+		// NOTE: We're not verifying if the NetworkPolicies are created
+		// in integration tests.
+		// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
+	})
+
+	t.Log("verifying connectivity to the Gateway")
+	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
+
+	t.Log("verifying GatewayClass has supportedFeatures set")
+	requiredFeatures, err := gatewayapi.GetSupportedFeatures(consts.RouterFlavorTraditionalCompatible)
+	require.NoError(t, err)
+	require.Eventually(t, testutils.GatewayClassHasSupportedFeatures(t, GetCtx(), string(gateway.Spec.GatewayClassName), clients, requiredFeatures.UnsortedList()...), testutils.SubresourceReadinessWait, time.Second)
+
+	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
+	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
+	konnectGatewayControlPlaneClient := GetClients().OperatorClient.KonnectV1alpha2().KonnectGatewayControlPlanes(namespace.Name)
+
+	t.Log("verifying that dataplane has 1 ready replica")
+	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, GetCtx(), dataplaneNN, clients, 1), time.Minute, time.Second)
+
+	t.Log("deploying backend deployment (httpbin) of HTTPRoute")
+	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err = GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(GetCtx(), deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeClusterIP)
+	_, err = GetEnv().Cluster().Client().CoreV1().Services(namespace.Name).Create(GetCtx(), service, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	httpRoute := helpers.GenerateHTTPRoute(namespace.Name, gateway.Name, service.Name)
+	t.Logf("creating HTTPRoute %s/%s to access deployment %s via kong", httpRoute.Namespace, httpRoute.Name, deployment.Name)
+	require.EventuallyWithT(t,
+		func(c *assert.CollectT) {
+			result, err := GetClients().GatewayClient.GatewayV1().HTTPRoutes(namespace.Name).Create(GetCtx(), httpRoute, metav1.CreateOptions{})
+			require.NoError(c, err, "failed to deploy HTTPRoute %s/%s", httpRoute.Namespace, httpRoute.Name)
+			cleaner.Add(result)
+		},
+		testutils.DefaultIngressWait, testutils.WaitIngressTick,
+	)
+	cleaner.Add(httpRoute)
+
+	verifyHTTPRoute := func(t *testing.T, gatewayIPAddress string) {
+		t.Helper()
+		t.Log("verifying connectivity to the HTTPRoute")
+		const (
+			httpRouteAccessTimeout = 3 * time.Minute
+			waitTick               = time.Second
+		)
+
+		httpClient, err := helpers.CreateHTTPClient(nil, "")
+		require.NoError(t, err)
+
+		t.Log("route to /test path of service httpbin should receive a 200 OK response")
+		request := helpers.MustBuildRequest(t, GetCtx(), http.MethodGet, "http://"+gatewayIPAddress+"/test", "")
+		require.Eventually(
+			t,
+			testutils.GetResponseBodyContains(t, clients, httpClient, request, "<title>httpbin.org</title>"),
+			httpRouteAccessTimeout,
+			time.Second,
+		)
+
+		t.Log("route to /test/1234 path of service httpbin should receive a 404 OK response")
+		request = helpers.MustBuildRequest(t, GetCtx(), http.MethodGet, "http://"+gatewayIPAddress+"/test/1234", "")
+		require.Eventually(
+			t,
+			testutils.GetResponseBodyContains(t, clients, httpClient, request, "<h1>Not Found</h1>"),
+			httpRouteAccessTimeout,
+			time.Second,
+		)
+	}
+	t.Log("verify HTTPRoute routing")
+	verifyHTTPRoute(t, gatewayIPAddress)
+
+	// When Gateway is deleted before or KonnectGatewayControlPlane recreated,
+	// old KongRoutes are not deleted, the finalizer on KongRoute blocks deletion forever.
+	// Hence it's deleted now (with assurance) before deleting Gateway or underlying KonnectGatewayControlPlane.
+	// TODO: https://github.com/Kong/kong-operator/issues/2468
+	t.Log("deleting HTTPRoute")
+	require.NoError(t, GetClients().GatewayClient.GatewayV1().HTTPRoutes(httpRoute.Namespace).Delete(GetCtx(), httpRoute.Name, metav1.DeleteOptions{}))
+	require.Eventually(t, func() bool {
+		krList := &configurationv1alpha1.KongRouteList{}
+		err := GetClients().MgrClient.List(GetCtx(), krList, client.InNamespace(namespace.Name))
+		if err != nil {
+			t.Logf("error listing KongRoutes: %v", err)
+			return false
+		}
+		if len(krList.Items) > 0 {
+			t.Logf("waiting for KongRoutes to be deleted, still present: %s", lo.Map(krList.Items, func(item configurationv1alpha1.KongRoute, _ int) string {
+				return item.Name
+			}))
+			return false
+		}
+		return true
+	}, 2*time.Minute, 2*time.Second, true)
+
+	t.Log("deleting KonnectGatewayControlPlane")
+	require.NoError(t, konnectGatewayControlPlaneClient.Delete(GetCtx(), konnectGatewayControlPlane.Name, metav1.DeleteOptions{}))
+	t.Log("deleting dataplane")
+	require.NoError(t, dataplaneClient.Delete(GetCtx(), dataplane.Name, metav1.DeleteOptions{}))
+
+	t.Log("verifying that the KonnectGatewayControlPlane becomes provisioned again")
+	require.Eventually(t, testutils.KonnectGatewayControlPlaneIsProgrammed(t, GetCtx(), gateway, clients), 45*time.Second, time.Second)
+	konnectGatewayControlPlanes = testutils.MustListKonnectGatewayControlPlanesForGateway(t, GetCtx(), gateway, clients)
+	require.Len(t, konnectGatewayControlPlanes, 1)
+	konnectGatewayControlPlane = konnectGatewayControlPlanes[0]
+
+	t.Log("verifying that the DataPlane becomes provisioned again")
+	require.Eventually(t, testutils.GatewayDataPlaneIsReady(t, GetCtx(), gateway, clients), 45*time.Second, time.Second)
+	dataPlanes = testutils.MustListDataPlanesForGateway(t, GetCtx(), gateway, clients)
+	require.Len(t, dataPlanes, 1)
+	dataplane = dataPlanes[0]
+
+	t.Log("verifying Gateway gets marked as Programmed again")
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+
+	t.Log("verifying Gateway gets an IP address again")
+	require.Eventually(t, testutils.GatewayIPAddressExist(t, GetCtx(), gatewayNN, clients), testutils.SubresourceReadinessWait, time.Second)
+	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayNN, clients)
+	gatewayIPAddress = gateway.Status.Addresses[0].Value
+
+	t.Log("verifying connectivity to the Gateway")
+	require.Eventually(t, Expect404WithNoRouteFunc(t, GetCtx(), "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
+
+	t.Log("verifying services managed by the dataplane")
+	var dataplaneService corev1.Service
+	dataplaneName := types.NamespacedName{
+		Namespace: dataplane.Namespace,
+		Name:      dataplane.Name,
+	}
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, &dataplaneService, clients, client.MatchingLabels{
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+	}), time.Minute, time.Second)
+
+	t.Log("deleting the dataplane service")
+	require.NoError(t, GetClients().MgrClient.Delete(GetCtx(), &dataplaneService))
+
+	t.Log("verifying services managed by the dataplane after deletion")
+	require.Eventually(t, testutils.DataPlaneHasActiveService(t, GetCtx(), dataplaneName, &dataplaneService, clients, client.MatchingLabels{
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+	}), time.Minute, time.Second)
+	services := testutils.MustListDataPlaneServices(t, GetCtx(), &dataplane, GetClients().MgrClient, client.MatchingLabels{
+		consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+		consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+	})
+	require.Len(t, services, 1)
+
+	t.Log("deleting Gateway resource")
+	require.NoError(t, GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Delete(GetCtx(), gateway.Name, metav1.DeleteOptions{}))
+
+	t.Log("verifying that DataPlane sub-resources are deleted")
+	assert.Eventually(t, func() bool {
+		_, err := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name).Get(GetCtx(), dataplane.Name, metav1.GetOptions{})
+		return errors.IsNotFound(err)
+	}, time.Minute, time.Second)
+
+	t.Log("verifying that KonnectGatewayControlPlane sub-resources are deleted")
+	assert.Eventually(t, func() bool {
+		_, err := GetClients().OperatorClient.KonnectV1alpha2().KonnectGatewayControlPlanes(namespace.Name).Get(GetCtx(), konnectGatewayControlPlane.Name, metav1.GetOptions{})
 		return errors.IsNotFound(err)
 	}, time.Minute, time.Second)
 

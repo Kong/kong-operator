@@ -15,6 +15,12 @@ const (
 
 	// DataPlaneReadyType the DataPlane is deployed and Ready
 	DataPlaneReadyType consts.ConditionType = "DataPlaneReady"
+
+	// KonnectExtensionReadyType the KonnectExtension is deployed and Ready
+	KonnectExtensionReadyType consts.ConditionType = "KonnectExtensionReady"
+
+	// KonnectGatewayControlPlaneProgrammedType the ControlPlane is programmed in Konnect
+	KonnectGatewayControlPlaneProgrammedType consts.ConditionType = "KonnectGatewayControlPlaneProgrammed"
 )
 
 // -----------------------------------------------------------------------------

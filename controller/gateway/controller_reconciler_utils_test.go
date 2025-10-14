@@ -1,11 +1,9 @@
 package gateway
 
 import (
-	"context"
 	"errors"
 	"testing"
 
-	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1872,144 +1870,69 @@ func TestIsGatewayHybrid(t *testing.T) {
 	require.NoError(t, konnectv1alpha2.AddToScheme(scheme.Get()))
 
 	type testCase struct {
-		name                      string
-		extensions                []commonv1alpha1.ExtensionRef
-		konnectControlPlaneStatus *konnectv1alpha2.KonnectExtensionControlPlaneStatus
-		konnectExtensionNotFound  bool
-		expectHybrid              bool
-		expectRequeue             bool
+		name         string
+		konnect      *operatorv2beta1.KonnectOptions
+		expectHybrid bool
 	}
-
-	konnectExtName := "konnect-ext"
-	konnectExtNamespace := "test-ns"
 
 	tests := []testCase{
 		{
-			name:          "no extensions",
-			extensions:    nil,
-			expectHybrid:  false,
-			expectRequeue: false,
+			name:         "no konnect configuration",
+			konnect:      nil,
+			expectHybrid: false,
 		},
 		{
-			name: "extension not konnect",
-			extensions: []commonv1alpha1.ExtensionRef{
-				{
-					Group: "some.other.group",
-					Kind:  "OtherKind",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "other-ext",
-					},
+			name: "konnect with source Origin and auth ref",
+			konnect: &operatorv2beta1.KonnectOptions{
+				Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+				APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+					Name: "test-auth",
 				},
 			},
-			expectHybrid:  false,
-			expectRequeue: false,
+			expectHybrid: true,
 		},
 		{
-			name: "konnect extension, status set, not control plane",
-			extensions: []commonv1alpha1.ExtensionRef{
-				{
-					Group: konnectv1alpha2.SchemeGroupVersion.Group,
-					Kind:  konnectv1alpha2.KonnectExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: konnectExtName,
-					},
-				},
+			name: "konnect with source Origin but no auth ref",
+			konnect: &operatorv2beta1.KonnectOptions{
+				Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 			},
-			konnectControlPlaneStatus: &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
-				ClusterType: konnectv1alpha2.ClusterTypeK8sIngressController,
-			},
-			expectHybrid:  false,
-			expectRequeue: false,
+			expectHybrid: false,
 		},
 		{
-			name: "konnect extension, status set, control plane",
-			extensions: []commonv1alpha1.ExtensionRef{
-				{
-					Group: konnectv1alpha2.SchemeGroupVersion.Group,
-					Kind:  konnectv1alpha2.KonnectExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: konnectExtName,
-					},
+			name: "konnect with source Mirror and auth ref",
+			konnect: &operatorv2beta1.KonnectOptions{
+				Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
+				APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+					Name: "test-auth",
 				},
 			},
-			konnectControlPlaneStatus: &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
-				ClusterType: konnectv1alpha2.ClusterTypeControlPlane,
-			},
-			expectHybrid:  true,
-			expectRequeue: false,
+			expectHybrid: false,
 		},
 		{
-			name: "konnect extension reference, no status set yet",
-			extensions: []commonv1alpha1.ExtensionRef{
-				{
-					Group: konnectv1alpha2.SchemeGroupVersion.Group,
-					Kind:  konnectv1alpha2.KonnectExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: konnectExtName,
-					},
+			name: "konnect with default source (Origin) and auth ref",
+			konnect: &operatorv2beta1.KonnectOptions{
+				APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+					Name: "test-auth",
 				},
 			},
-			expectHybrid:  false,
-			expectRequeue: true,
-		},
-		{
-			name: "konnect extension reference, no konnect extension found",
-			extensions: []commonv1alpha1.ExtensionRef{
-				{
-					Group: konnectv1alpha2.SchemeGroupVersion.Group,
-					Kind:  konnectv1alpha2.KonnectExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: konnectExtName,
-					},
-				},
-			},
-			konnectExtensionNotFound: true,
+			expectHybrid: true,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			var objs []client.Object
-			if !tc.konnectExtensionNotFound {
-				konnectExt := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      konnectExtName,
-						Namespace: konnectExtNamespace,
-					},
-				}
-				if tc.konnectControlPlaneStatus != nil {
-					konnectExt.Status = konnectv1alpha2.KonnectExtensionStatus{
-						Konnect: tc.konnectControlPlaneStatus,
-					}
-				}
-				objs = append(objs, konnectExt)
-			}
-
-			cl := fakectrlruntimeclient.NewClientBuilder().
-				WithScheme(scheme.Get()).
-				WithObjects(objs...).
-				Build()
-
-			r := &Reconciler{
-				Client: cl,
-			}
-			gatewayConfig := &GatewayConfiguration{
+			gatewayConfig := &operatorv2beta1.GatewayConfiguration{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: konnectExtNamespace,
+					Name:      "test-gateway-config",
+					Namespace: "test-ns",
 				},
-				Spec: GatewayConfigurationSpec{
-					Extensions: tc.extensions,
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					Konnect: tc.konnect,
 				},
 			}
 
-			isHybrid, requeue, err := r.isGatewayHybrid(context.Background(), logr.Discard(), gatewayConfig)
-			if tc.konnectExtensionNotFound {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
+			isHybrid := isGatewayHybrid(gatewayConfig)
 			assert.Equal(t, tc.expectHybrid, isHybrid)
-			assert.Equal(t, tc.expectRequeue, requeue)
 		})
 	}
 }
