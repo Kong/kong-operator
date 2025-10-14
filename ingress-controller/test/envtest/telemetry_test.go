@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -207,7 +208,15 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 					Spec: gatewayapi.TCPRouteSpec{
 						Rules: []gatewayapi.TCPRouteRule{
 							{
-								BackendRefs: []gatewayapi.BackendRef{},
+								BackendRefs: []gatewayapi.BackendRef{
+									{
+										BackendObjectReference: gatewayapi.BackendObjectReference{
+											Kind: "Service",
+											Name: gatewayapi.ObjectName("test"),
+											Port: lo.ToPtr(gatewayapi.PortNumber(443)),
+										},
+									},
+								},
 							},
 						},
 					},
