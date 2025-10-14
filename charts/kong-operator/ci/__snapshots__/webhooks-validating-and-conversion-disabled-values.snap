@@ -19498,6 +19498,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -19769,6 +19795,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -20366,6 +20418,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -20665,6 +20743,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -20935,6 +21039,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -21154,6 +21284,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -21373,6 +21529,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -21596,6 +21778,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -21821,6 +22029,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -22486,6 +22720,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -22829,6 +23089,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -23303,6 +23589,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -24184,6 +24496,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -24583,6 +24921,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -24896,6 +25260,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -25112,6 +25502,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -25990,6 +26406,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -26474,6 +26916,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -26976,6 +27444,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -27437,6 +27931,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -27697,6 +28217,32 @@ spec:
                     required:
                     - id
                     type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
                 required:
                 - from
                 type: object
@@ -28311,6 +28857,18 @@ spec:
               konnect:
                 description: Konnect contains the status information related to the Konnect Control Plane.
                 properties:
+                  authRef:
+                    description: |-
+                      AuthRef is the reference to the KonnectAPIAuthConfiguration used to authenticate with Konnect.
+                      For particular KonnectExtension and ControlPlane combination.
+                    properties:
+                      name:
+                        description: Name is the name of the KonnectAPIAuthConfiguration resource.
+                        minLength: 1
+                        type: string
+                    required:
+                    - name
+                    type: object
                   clusterType:
                     description: ClusterType is the type of the Konnect Control Plane.
                     enum:

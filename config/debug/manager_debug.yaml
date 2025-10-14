@@ -33,6 +33,7 @@ spec:
             - -zap-log-level=debug
             - -enable-controller-kongplugininstallation
             - -enable-controller-konnect
+            - -enable-controller-konnect-hybrid
             - -enable-controller-controlplaneextensions
           name: manager
           env:

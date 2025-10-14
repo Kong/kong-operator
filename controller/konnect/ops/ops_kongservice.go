@@ -2,12 +2,16 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/url"
+	"strconv"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
@@ -85,6 +89,59 @@ func deleteService(
 	return nil
 }
 
+func adoptService(
+	ctx context.Context,
+	sdk sdkops.ServicesSDK,
+	svc *configurationv1alpha1.KongService,
+) error {
+	cpID := svc.GetControlPlaneID()
+	adoptOptions := svc.Spec.Adopt
+	konnectID := adoptOptions.Konnect.ID
+	if cpID == "" {
+		return errors.New("No Control Plane ID")
+	}
+	resp, err := sdk.GetService(ctx, konnectID, cpID)
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{
+			KonnectID: konnectID,
+			Err:       err,
+		}
+	}
+	uidTag, hasUIDTag := findUIDTag(resp.Service.Tags)
+	if hasUIDTag && extractUIDFromTag(uidTag) != string(svc.UID) {
+		return KonnectEntityAdoptionUIDTagConflictError{
+			KonnectID:    konnectID,
+			ActualUIDTag: extractUIDFromTag(uidTag),
+		}
+	}
+
+	adoptMode := adoptOptions.Mode
+	if adoptMode == "" {
+		adoptMode = commonv1alpha1.AdoptModeOverride
+	}
+	switch adoptOptions.Mode {
+	case commonv1alpha1.AdoptModeOverride:
+		svcCopy := svc.DeepCopy()
+		svcCopy.SetKonnectID(konnectID)
+		if err = updateService(ctx, sdk, svcCopy); err != nil {
+			return err
+		}
+	case commonv1alpha1.AdoptModeMatch:
+		// When adopting in match mode, we return error if the service does not match.
+		// when it matches, we do nothing but fill the Konnect ID to mark that the adoption is successful.
+		if !serviceMatch(resp.Service, svc) {
+			return KonnectEntityAdoptionNotMatchError{
+				KonnectID: konnectID,
+			}
+		}
+	default:
+		return fmt.Errorf("failed to adopt: adopt mode %q not supported", adoptMode)
+	}
+
+	svc.SetKonnectID(konnectID)
+	return nil
+}
+
 func kongServiceToSDKServiceInput(
 	svc *configurationv1alpha1.KongService,
 ) sdkkonnectcomp.Service {
@@ -136,4 +193,25 @@ func getKongServiceForUID(
 	}
 
 	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), svc)
+}
+
+// serviceMatch compares the existing service fetched from Konnect and the spec of the KongService
+// for adopting in match mode.
+func serviceMatch(konnectService *sdkkonnectcomp.ServiceOutput, svc *configurationv1alpha1.KongService) bool {
+	spec := svc.Spec
+	if spec.URL != nil {
+		parsedURL, err := url.Parse(*spec.URL)
+		if err != nil {
+			return false
+		}
+		spec.Protocol = sdkkonnectcomp.Protocol(parsedURL.Scheme)
+		spec.Host = parsedURL.Hostname()
+		spec.Port, _ = strconv.ParseInt(parsedURL.Port(), 10, 64)
+		spec.Path = lo.ToPtr(parsedURL.Path)
+	}
+	return equalWithDefault(konnectService.Name, spec.Name, "") &&
+		konnectService.Host == spec.Host &&
+		equalWithDefault(konnectService.Port, &spec.Port, 80) &&
+		equalWithDefault(konnectService.Protocol, &spec.Protocol, "http") &&
+		equalWithDefault(konnectService.Path, spec.Path, "/")
 }

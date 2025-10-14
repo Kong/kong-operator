@@ -215,7 +215,7 @@ func TestKonnectExtension(t *testing.T) {
 			})
 
 			// run the KonnectExtension test cases.
-			KonnectExtensionTestCases(t, KonnectExtensionTestCaseParams{
+			konnectExtensionTestCases(t, KonnectExtensionTestCaseParams{
 				konnectControlPlane: cp,
 				service:             service,
 				client:              clientNamespaced,
@@ -259,7 +259,7 @@ func TestKonnectExtension(t *testing.T) {
 				authConfigName:      authCfg.Name,
 			})
 
-			KonnectExtensionTestCases(t, KonnectExtensionTestCaseParams{
+			konnectExtensionTestCases(t, KonnectExtensionTestCaseParams{
 				konnectControlPlane: mirrorCP,
 				service:             service,
 				client:              clientNamespaced,
@@ -267,6 +267,48 @@ func TestKonnectExtension(t *testing.T) {
 				authConfigName:      authCfg.Name,
 			})
 		})
+	})
+
+	t.Run("Konnect hybrid ControlPlane different order of deletion (KonnectGatewayControlPlane before KonnectExtension)", func(t *testing.T) {
+		// Create a Konnect control plane for the KonnectExtension to attach to.
+		cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
+			deploy.WithTestIDLabel(testID),
+			deploy.KonnectGatewayControlPlaneLabel(deploy.KonnectTestIDLabel, testID),
+		)
+
+		t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
+			require.NoError(t, err)
+			assertKonnectEntityProgrammed(t, cp)
+		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+
+		konnectExtension := deploy.KonnectExtension(
+			t,
+			ctx,
+			clientNamespaced,
+			deploy.WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(cp),
+		)
+
+		t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", konnectExtension.Namespace, konnectExtension.Name)
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			ok, msg := checkKonnectExtensionConditions(
+				t,
+				konnectExtension,
+				helpers.CheckAllConditionsTrue,
+				konnectv1alpha1.ControlPlaneRefValidConditionType,
+				konnectv1alpha1.DataPlaneCertificateProvisionedConditionType,
+				konnectv1alpha2.KonnectExtensionReadyConditionType)
+			assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, konnectExtension.Status.Conditions)
+		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+
+		t.Log("Test deletion")
+
+		// Enforce order explicitly to check the behavior.
+		t.Log("Deleting KonnectControlPlane")
+		deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy())()
+		t.Log("Deleting KonnectExtension")
+		deleteObjectAndWaitForDeletionFn(t, konnectExtension.DeepCopy())()
 	})
 }
 
@@ -278,7 +320,7 @@ type KonnectExtensionTestCaseParams struct {
 	authConfigName      string
 }
 
-func KonnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCaseParams) {
+func konnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCaseParams) {
 	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat()
 
 	t.Run("KonnectExtension with KonnectNamespacedRef control plane ref", func(t *testing.T) {

@@ -72,7 +72,7 @@
   enforcement and translation logic.
   This enables more robust troubleshooting and visibility for users, ensuring HTTPRoute status accurately reflects
   the readiness and configuration of all associated Kong resources.
-  [2400](https://github.com/Kong/kong-operator/pull/2400)
+  [#2400](https://github.com/Kong/kong-operator/pull/2400)
 - ManagedFields: improve pruning of empty fields in unstructured objects
   - Enhance pruneEmptyFields to recursively remove empty maps from slices and maps, including those that become empty after nested pruning.
   - Update logic to remove empty slices and zero-value fields more robustly.
@@ -82,11 +82,24 @@
     - Handling of mixed-type slices
     - Deeply nested pruning scenarios
     - Preservation of non-map elements in slices
-  [2413](https://github.com/Kong/kong-operator/pull/2413)
+  [#2413](https://github.com/Kong/kong-operator/pull/2413)
 - Entity Adoption support: support adopting an existing entity from Konnect to
   a Kubernetes custom resource for managing the existing entity by KO.
   - Add adoption options to the CRDs supporting adopting entities from Konnect.
     [#2336](https://github.com/Kong/kong-operator/pull/2336)
+  - Add `adopt.mode` field to the CRDs that support adopting existing entities.
+    Supported modes:
+    - `match`: read-only adoption. The operator adopts the referenced remote entity
+      only when this CR's spec matches the remote configuration
+      (no writes to the remote system).
+      If they differ, adoption fails and the operator does not take ownership until
+      the spec is aligned.
+    - `override`: The operator overrides the remote entity with the spec in the CR.
+    [#2421](https://github.com/Kong/kong-operator/pull/2421)
+    [#2424](https://github.com/Kong/kong-operator/pull/2424)
+  - Implement the general handling process of adopting an existing entity and
+    adoption procedure for `KongService`s in `match` and `override` mode.
+    [#2424](https://github.com/Kong/kong-operator/pull/2424)
 - HybridGateway:
   - Added controller-runtime watches for Gateway and GatewayClass resources to the hybridgateway controller.
   - HTTPRoutes are now reconciled when related Gateway or GatewayClass resources change.
@@ -105,6 +118,11 @@
 
 - Hybrid Gateway: generate a single KongRoute for each HTTPRoute Rule
   [#2417](https://github.com/Kong/kong-operator/pull/2417)
+- Fix issue with deletion of `KonnectExtension` when the referenced
+  `KonnectGatewayControlPlane` is deleted (it used to hang indefinitely).
+  [#2423](https://github.com/Kong/kong-operator/pull/2423)
+- Hybrid Gateway: add watchers for KongPlugin and KongPluginBinding
+  [#2427](https://github.com/Kong/kong-operator/pull/2427)
 
 ## [v2.0.4]
 
@@ -393,8 +411,7 @@
   [#1388](https://github.com/kong/kong-operator/pull/1388)
   [#1410](https://github.com/kong/kong-operator/pull/1410)
   [#1555](https://github.com/kong/kong-operator/pull/1555)
-  <!-- TODO: https://github.com/kong/kong-operator/issues/1501 add link to guide from documentation. -->
-  For more information on this please see: https://docs.konghq.com/gateway-operator/latest/
+  For more information on this please see: https://developer.konghq.com/operator/reference/control-plane-watch-namespaces/#controlplane-s-watchnamespaces-field
 - Implemented `Mirror` and `Origin` `KonnectGatewayControlPlane`s.
   [#1496](https://github.com/kong/kong-operator/pull/1496)
 
@@ -465,7 +482,7 @@
   [#1148](https://github.com/kong/kong-operator/pull/1148)
 - Support for the `konnect-extension.gateway-operator.konghq.com` CRD has been interrupted. The new
   API `konnect-extension.konnect.konghq.com` must be used instead. The migration path is described in
-  the [Kong documentation](https://docs.konghq.com/gateway-operator/latest/guides/migrating/migrate-from-1.4-to-1.5/).
+  the [Kong documentation](https://developer.konghq.com/operator/konnect/reference/migrate-1.4-1.5/).
   [#1183](https://github.com/kong/kong-operator/pull/1183)
 - Migrate KGO CRDs conditions to the kubernetes-configuration repo.
   With this migration process, we have moved all conditions from the KGO repo to [kubernetes-configuration](kubernetes-configuration).
