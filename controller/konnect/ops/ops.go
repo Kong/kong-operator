@@ -558,6 +558,8 @@ func Adopt[
 		err = adoptKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent, adoptOptions)
 	case *configurationv1alpha1.KongRoute:
 		err = adoptRoute(ctx, sdk.GetRoutesSDK(), ent)
+	case *configurationv1alpha1.KongUpstream:
+		err = adoptUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
 	// TODO: implement adoption for other types.
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
