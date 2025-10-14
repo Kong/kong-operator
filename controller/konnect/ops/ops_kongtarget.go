@@ -2,6 +2,7 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -9,6 +10,7 @@ import (
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
@@ -100,6 +102,69 @@ func deleteTarget(
 	return nil
 }
 
+func adoptTarget(
+	ctx context.Context,
+	sdk sdkops.TargetsSDK,
+	target *configurationv1alpha1.KongTarget,
+) error {
+	cpID := target.GetControlPlaneID()
+
+	if cpID == "" {
+		return errors.New("No Control Plane ID")
+	}
+	if target.Status.Konnect == nil || target.Status.Konnect.UpstreamID == "" {
+		return fmt.Errorf("can't adopt %T %s without a Konnect Upstream ID", target, client.ObjectKeyFromObject(target))
+	}
+	adoptOptions := target.Spec.Adopt
+	konnectID := adoptOptions.Konnect.ID
+
+	resp, err := sdk.GetTargetWithUpstream(ctx, sdkkonnectops.GetTargetWithUpstreamRequest{
+		ControlPlaneID:      cpID,
+		UpstreamIDForTarget: target.Status.Konnect.UpstreamID,
+		TargetID:            konnectID,
+	})
+
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{
+			KonnectID: konnectID,
+			Err:       err,
+		}
+	}
+	uidTag, hasUIDTag := findUIDTag(resp.Target.Tags)
+	if hasUIDTag && extractUIDFromTag(uidTag) != string(target.UID) {
+		return KonnectEntityAdoptionUIDTagConflictError{
+			KonnectID:    konnectID,
+			ActualUIDTag: extractUIDFromTag(uidTag),
+		}
+	}
+
+	adoptMode := adoptOptions.Mode
+	if adoptMode == "" {
+		adoptMode = commonv1alpha1.AdoptModeOverride
+	}
+	switch adoptOptions.Mode {
+	case commonv1alpha1.AdoptModeOverride:
+		targetCopy := target.DeepCopy()
+		targetCopy.SetKonnectID(konnectID)
+		if err = updateTarget(ctx, sdk, targetCopy); err != nil {
+			return err
+		}
+	case commonv1alpha1.AdoptModeMatch:
+		// When adopting in match mode, we return error if the upstream does not match.
+		// when it matches, we do nothing but fill the Konnect ID to mark that the adoption is successful.
+		if !targetMatch(resp.Target, target) {
+			return KonnectEntityAdoptionNotMatchError{
+				KonnectID: konnectID,
+			}
+		}
+	default:
+		return fmt.Errorf("failed to adopt: adopt mode %q not supported", adoptMode)
+	}
+
+	target.SetKonnectID(konnectID)
+	return nil
+}
+
 func kongTargetToTargetWithoutParents(target *configurationv1alpha1.KongTarget) sdkkonnectcomp.TargetWithoutParents {
 	return sdkkonnectcomp.TargetWithoutParents{
 		Target: lo.ToPtr(target.Spec.Target),
@@ -133,4 +198,9 @@ func getKongTargetForUID(
 	}
 
 	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), target)
+}
+
+func targetMatch(konnectTarget *sdkkonnectcomp.Target, target *configurationv1alpha1.KongTarget) bool {
+	return equalWithDefault(konnectTarget.Target, &target.Spec.Target, "") &&
+		equalWithDefault(konnectTarget.Weight, lo.ToPtr(int64(target.Spec.Weight)), 100)
 }

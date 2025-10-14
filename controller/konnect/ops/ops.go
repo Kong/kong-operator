@@ -560,6 +560,8 @@ func Adopt[
 		err = adoptRoute(ctx, sdk.GetRoutesSDK(), ent)
 	case *configurationv1alpha1.KongUpstream:
 		err = adoptUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
+	case *configurationv1alpha1.KongTarget:
+		err = adoptTarget(ctx, sdk.GetTargetsSDK(), ent)
 	// TODO: implement adoption for other types.
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
