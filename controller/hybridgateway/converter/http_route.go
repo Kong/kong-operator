@@ -31,17 +31,19 @@ var _ APIConverter[gwtypes.HTTPRoute] = &httpRouteConverter{}
 type httpRouteConverter struct {
 	client.Client
 
-	route        *gwtypes.HTTPRoute
-	outputStore  []client.Object
-	expectedGVKs []schema.GroupVersionKind
+	route                 *gwtypes.HTTPRoute
+	outputStore           []client.Object
+	expectedGVKs          []schema.GroupVersionKind
+	referenceGrantEnabled bool
 }
 
 // NewHTTPRouteConverter returns a new instance of httpRouteConverter.
-func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client) APIConverter[gwtypes.HTTPRoute] {
+func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client, referenceGrantEnabled bool) APIConverter[gwtypes.HTTPRoute] {
 	return &httpRouteConverter{
-		Client:      cl,
-		outputStore: []client.Object{},
-		route:       httpRoute,
+		Client:                cl,
+		outputStore:           []client.Object{},
+		route:                 httpRoute,
+		referenceGrantEnabled: referenceGrantEnabled,
 		expectedGVKs: []schema.GroupVersionKind{
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongRoute"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongService"},
@@ -153,6 +155,14 @@ func (c *httpRouteConverter) UpdateSharedRouteStatus(objs []unstructured.Unstruc
 // for Gateways controlled by this controller, leaving other controllers' entries untouched.
 func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error) {
 	updated := false
+
+	// First, build the resolvedRefs conditons for the HTTPRoute since it is the same for all ParentRefs.
+	logger.V(1).Info("Building ResolvedRefs condition for HTTPRoute", "route", c.route.Name)
+	resolvedRefsCond, err := route.BuildResolvedRefsCondition(ctx, logger, c.Client, c.route, c.referenceGrantEnabled)
+	if err != nil {
+		return false, fmt.Errorf("failed to build resolvedRefs condition for HTTPRoute %s: %w", c.route.Name, err)
+	}
+
 	// For each parentRef in the HTTPRoute, build the conditions and set them in the status.
 	logger.V(1).Info("Starting UpdateRootObjectStatus", "route", c.route.Name)
 	for _, pRef := range c.route.Spec.ParentRefs {
@@ -190,7 +200,7 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 		}
 
 		// Combine all conditions.
-		programmedConditions = append(programmedConditions, *acceptedCondition)
+		programmedConditions = append(programmedConditions, *acceptedCondition, *resolvedRefsCond)
 
 		logger.V(2).Info("Setting status conditions", "parentRef", pRef, "conditionsCount", len(programmedConditions))
 		if route.SetStatusConditions(c.route, pRef, vars.ControllerName(), programmedConditions...) {
