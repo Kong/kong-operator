@@ -484,9 +484,124 @@ func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client
 	return DeduplicateConditionsByType(conditions), nil
 }
 
-// isProgrammed checks if an unstructured Kubernetes object has a "Programmed" condition with status "True".
-// This function is used to determine if resources (like Kong CRDs) are ready and operational.
+// BuildResolvedRefsCondition evaluates all BackendRefs in an HTTPRoute to determine if their references are valid and permitted.
+// It checks that each BackendRef:
+//   - Has a supported group/kind
+//   - Exists in the target namespace
+//   - Is permitted by ReferenceGrant if referencing a different namespace
 //
+// Returns a condition indicating whether all references are resolved, or details about the first failure encountered.
+//
+// Parameters:
+//   - ctx: Context for API calls
+//   - logger: Logger for debugging information
+//   - cl: Kubernetes client for resource operations
+//   - route: The HTTPRoute whose BackendRefs are being checked
+//   - referenceGrantEnabled: Whether ReferenceGrant support is enabled
+//
+// Returns:
+//   - *metav1.Condition: Condition indicating resolved refs status
+//   - error: Any error encountered during evaluation
+func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute, referenceGrantEnabled bool) (*metav1.Condition, error) {
+	conditionSet := false
+	cond := &metav1.Condition{
+		Type:    string(gwtypes.RouteConditionResolvedRefs),
+		Status:  metav1.ConditionTrue,
+		Reason:  string(gwtypes.RouteReasonResolvedRefs),
+		Message: "All references resolved",
+	}
+	for _, rule := range route.Spec.Rules {
+		for _, bRef := range rule.BackendRefs {
+			// BackendRef namespace.
+			bRefNamespace := route.Namespace
+			if bRef.Namespace != nil && *bRef.Namespace != "" {
+				bRefNamespace = string(*bRef.Namespace)
+			}
+
+			// BackendRef group kind.
+			bRefGK := string(*bRef.Kind)
+			if gr := string(*bRef.Group); gr != "" {
+				bRefGK = fmt.Sprintf("%s/%s", gr, bRefGK)
+			}
+
+			// Check if the group kind is supported for the reference.
+			if !IsBackendRefSupported(bRef.Group, bRef.Kind) {
+				logger.V(1).Info("Unsupported BackendRef group/kind", "group", bRef.Group, "kind", bRef.Kind)
+				cond.Reason = string(gwtypes.RouteReasonInvalidKind)
+				cond.Status = metav1.ConditionFalse
+				cond.Message = fmt.Sprintf("Unsupported BackendRef %s/%s group/kind: %s", bRefNamespace, bRef.Name, bRefGK)
+				conditionSet = true
+				break
+			}
+
+			// Check if the referenced object exists.
+			service := &corev1.Service{}
+			err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(bRef.Name)}, service)
+			if err != nil {
+				if k8serrors.IsNotFound(err) {
+					logger.V(1).Info("BackendRef not found", "namespace", bRefNamespace, "name", bRef.Name)
+					cond.Reason = string(gwtypes.RouteReasonBackendNotFound)
+					cond.Status = metav1.ConditionFalse
+					cond.Message = fmt.Sprintf("BackendRef %s/%s not found", bRefNamespace, bRef.Name)
+					conditionSet = true
+					break
+				}
+				return nil, fmt.Errorf("failed to get BackendRef %s/%s: %w", bRefNamespace, bRef.Name, err)
+			}
+
+			// Check if the referenced object is permitted by the reference grant if in a different namespace.
+			if bRefNamespace != route.Namespace {
+				if !referenceGrantEnabled {
+					logger.V(1).Info("BackendRef in different namespace but ReferenceGrant support is disabled", "namespace", bRefNamespace, "name", bRef.Name)
+					cond.Reason = string(gwtypes.RouteReasonRefNotPermitted)
+					cond.Status = metav1.ConditionFalse
+					cond.Message = fmt.Sprintf("BackendRef %s/%s in different namespace and ReferenceGrant support is disabled", bRefNamespace, bRef.Name)
+					conditionSet = true
+					break
+				}
+
+				// List ReferenceGrants in the backend ref namespace.
+				grantList := &gwtypes.ReferenceGrantList{}
+				if err := cl.List(ctx, grantList, client.InNamespace(bRefNamespace)); err != nil {
+					return nil, fmt.Errorf("failed to list ReferenceGrants in namespace %s: %w", bRefNamespace, err)
+				}
+
+				if len(grantList.Items) == 0 {
+					logger.V(1).Info("No ReferenceGrants found in backend ref namespace", "namespace", bRefNamespace)
+					cond.Reason = string(gwtypes.RouteReasonRefNotPermitted)
+					cond.Status = metav1.ConditionFalse
+					cond.Message = fmt.Sprintf("No ReferenceGrants found in namespace %s for BackendRef %s/%s", bRefNamespace, bRefNamespace, bRef.Name)
+					conditionSet = true
+					break
+				}
+
+				permitted := false
+				for _, grant := range grantList.Items {
+					if IsHTTPReferenceGranted(grant.Spec, bRef, route.Namespace) {
+						permitted = true
+						break
+					}
+				}
+
+				if !permitted {
+					logger.V(1).Info("BackendRef not permitted by ReferenceGrant", "namespace", bRefNamespace, "name", bRef.Name)
+					cond.Reason = string(gwtypes.RouteReasonRefNotPermitted)
+					cond.Status = metav1.ConditionFalse
+					cond.Message = fmt.Sprintf("BackendRef %s/%s not permitted by any ReferenceGrant", bRefNamespace, bRef.Name)
+					conditionSet = true
+					break
+				}
+			}
+
+		}
+		if conditionSet {
+			break
+		}
+	}
+
+	return SetConditionMeta(*cond, route), nil
+}
+
 // The function safely navigates the object's status.conditions array to find a condition with:
 // - type: "Programmed"
 // - status: "True"
@@ -843,4 +958,62 @@ func FilterOutGVKByKind(expectedGVKs []schema.GroupVersionKind, kindToFilter str
 		}
 	}
 	return filtered
+}
+
+// IsBackendRefSupported returns true if the BackendRef group and kind are supported by Gateway API.
+// Only core "Service" is supported.
+func IsBackendRefSupported(group *gwtypes.Group, kind *gwtypes.Kind) bool {
+	if kind == nil {
+		return false
+	}
+
+	k := string(*kind)
+
+	// Acceptable group values for Service: nil, "", "core".
+	var g string
+	if group != nil {
+		g = string(*group)
+	}
+
+	return (g == "" || g == "core") && k == "Service"
+}
+
+// IsHTTPReferenceGranted checks if a ReferenceGrant permits an HTTPRoute to reference a backend in another namespace.
+// It validates that the ReferenceGrant's 'from' section matches the HTTPRoute and source namespace,
+// and that the 'to' section matches the backend's group, kind, and name.
+// Returns true if the reference is permitted, false otherwise.
+//
+// Parameters:
+//   - grantSpec: The ReferenceGrant spec to check
+//   - backendRef: The HTTPBackendRef being referenced
+//   - fromNamespace: The namespace of the HTTPRoute making the reference
+//
+// Returns:
+//   - bool: true if the reference is permitted by the grant, false otherwise
+func IsHTTPReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwtypes.HTTPBackendRef, fromNamespace string) bool {
+	var backendRefGroup gwtypes.Group
+	var backendRefKind gwtypes.Kind
+
+	if backendRef.Group != nil {
+		backendRefGroup = *backendRef.Group
+	}
+	if backendRef.Kind != nil {
+		backendRefKind = *backendRef.Kind
+	}
+
+	for _, from := range grantSpec.From {
+		if from.Group != gwtypes.GroupName || from.Kind != "HTTPRoute" || fromNamespace != string(from.Namespace) {
+			continue
+		}
+
+		for _, to := range grantSpec.To {
+			if backendRefGroup == to.Group &&
+				backendRefKind == to.Kind &&
+				(to.Name == nil || *to.Name == backendRef.Name) {
+				return true
+			}
+		}
+	}
+
+	return false
 }

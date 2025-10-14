@@ -628,9 +628,24 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		)
 
 		if c.KonnectHybridControllersEnabled {
+			var referenceGrantEnabled bool
+
+			logger := mgr.GetLogger().WithValues("component", "gatewayapi-hybrid-controller")
+
+			// Check if ReferenceGrant support is enabled in the cluster.
+			checker := k8sutils.CRDChecker{Client: mgr.GetClient()}
+			referenceGrantEnabled, err := checker.CRDExists(schema.GroupVersionResource{
+				Group:    gwtypes.GroupVersion.Group,
+				Resource: "referencegrants",
+				Version:  gwtypes.GroupVersion.Version,
+			})
+			if err != nil {
+				logger.Info("failed to check if ReferenceGrant CRD is present in the cluster, assuming it is not present", "error", err)
+				referenceGrantEnabled = false
+			}
 
 			controllers = append(controllers,
-				newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr),
+				newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, referenceGrantEnabled),
 				// TODO: Add more Hybrid controllers here
 			)
 		}
@@ -678,9 +693,9 @@ func newKonnectPluginController[
 	}
 }
 
-func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager) ControllerDef {
+func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, referenceGrantEnabled bool) ControllerDef {
 	return ControllerDef{
 		Enabled:    true,
-		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr),
+		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr, referenceGrantEnabled),
 	}
 }

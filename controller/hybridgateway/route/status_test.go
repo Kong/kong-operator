@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -17,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/vars"
@@ -1663,9 +1665,705 @@ func TestFilterOutGVKByKind(t *testing.T) {
 	}
 }
 
+func TestIsBackendRefSupported(t *testing.T) {
+	tests := []struct {
+		name  string
+		group *gwtypes.Group
+		kind  *gwtypes.Kind
+		want  bool
+	}{
+		{
+			name:  "nil group, Service kind",
+			group: nil,
+			kind:  kindPtr("Service"),
+			want:  true,
+		},
+		{
+			name:  "empty group, Service kind",
+			group: groupPtr(""),
+			kind:  kindPtr("Service"),
+			want:  true,
+		},
+		{
+			name:  "core group, Service kind",
+			group: groupPtr("core"),
+			kind:  kindPtr("Service"),
+			want:  true,
+		},
+		{
+			name:  "corev1 group, Service kind",
+			group: groupPtr("corev1"),
+			kind:  kindPtr("Service"),
+			want:  false,
+		},
+		{
+			name:  "v1 group, Service kind",
+			group: groupPtr("v1"),
+			kind:  kindPtr("Service"),
+			want:  false,
+		},
+		{
+			name:  "unsupported group, Service kind",
+			group: groupPtr("foo"),
+			kind:  kindPtr("Service"),
+			want:  false,
+		},
+		{
+			name:  "core group, unsupported kind",
+			group: groupPtr("core"),
+			kind:  kindPtr("Deployment"),
+			want:  false,
+		},
+		{
+			name:  "nil kind",
+			group: groupPtr("core"),
+			kind:  nil,
+			want:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsBackendRefSupported(tt.group, tt.kind)
+			if got != tt.want {
+				t.Errorf("IsBackendRefSupported(%v, %v) = %v, want %v", tt.group, tt.kind, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestIsHTTPReferenceGranted(t *testing.T) {
+	tests := []struct {
+		name          string
+		grantSpec     gwtypes.ReferenceGrantSpec
+		backendRef    gwtypes.HTTPBackendRef
+		fromNamespace string
+		want          bool
+	}{
+		{
+			name: "granted when all fields match",
+			grantSpec: gwtypes.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{{
+					Group:     gwtypes.GroupName,
+					Kind:      "HTTPRoute",
+					Namespace: gwtypes.Namespace("default"),
+				}},
+				To: []gatewayv1beta1.ReferenceGrantTo{{
+					Group: gwtypes.Group("core"),
+					Kind:  gwtypes.Kind("Service"),
+					Name:  ptrObjName("my-service"),
+				}},
+			},
+			backendRef: gwtypes.HTTPBackendRef{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name:  gwtypes.ObjectName("my-service"),
+						Kind:  kindPtr("Service"),
+						Group: groupPtr("core"),
+					},
+				},
+			},
+			fromNamespace: "default",
+			want:          true,
+		},
+		{
+			name: "not granted when group does not match",
+			grantSpec: gwtypes.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{{
+					Group:     gwtypes.GroupName,
+					Kind:      "HTTPRoute",
+					Namespace: gwtypes.Namespace("default"),
+				}},
+				To: []gatewayv1beta1.ReferenceGrantTo{{
+					Group: gwtypes.Group("core"),
+					Kind:  gwtypes.Kind("Service"),
+					Name:  ptrObjName("my-service"),
+				}},
+			},
+			backendRef: gwtypes.HTTPBackendRef{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name:  gwtypes.ObjectName("my-service"),
+						Kind:  kindPtr("Service"),
+						Group: groupPtr("other"),
+					},
+				},
+			},
+			fromNamespace: "default",
+			want:          false,
+		},
+		{
+			name: "not granted when kind does not match",
+			grantSpec: gwtypes.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{{
+					Group:     gwtypes.GroupName,
+					Kind:      "HTTPRoute",
+					Namespace: gwtypes.Namespace("default"),
+				}},
+				To: []gatewayv1beta1.ReferenceGrantTo{{
+					Group: gwtypes.Group("core"),
+					Kind:  gwtypes.Kind("Service"),
+					Name:  ptrObjName("my-service"),
+				}},
+			},
+			backendRef: gwtypes.HTTPBackendRef{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name:  gwtypes.ObjectName("my-service"),
+						Kind:  kindPtr("OtherKind"),
+						Group: groupPtr("core"),
+					},
+				},
+			},
+			fromNamespace: "default",
+			want:          false,
+		},
+		{
+			name: "not granted when name does not match",
+			grantSpec: gwtypes.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{{
+					Group:     gwtypes.GroupName,
+					Kind:      "HTTPRoute",
+					Namespace: gwtypes.Namespace("default"),
+				}},
+				To: []gatewayv1beta1.ReferenceGrantTo{{
+					Group: gwtypes.Group("core"),
+					Kind:  gwtypes.Kind("Service"),
+					Name:  ptrObjName("my-service"),
+				}},
+			},
+			backendRef: gwtypes.HTTPBackendRef{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name:  gwtypes.ObjectName("other-service"),
+						Kind:  kindPtr("Service"),
+						Group: groupPtr("core"),
+					},
+				},
+			},
+			fromNamespace: "default",
+			want:          false,
+		},
+		{
+			name: "granted when to.Name is nil (wildcard)",
+			grantSpec: gwtypes.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{{
+					Group:     gwtypes.GroupName,
+					Kind:      "HTTPRoute",
+					Namespace: gwtypes.Namespace("default"),
+				}},
+				To: []gatewayv1beta1.ReferenceGrantTo{{
+					Group: gwtypes.Group("core"),
+					Kind:  gwtypes.Kind("Service"),
+					Name:  nil,
+				}},
+			},
+			backendRef: gwtypes.HTTPBackendRef{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name:  gwtypes.ObjectName("my-service"),
+						Kind:  kindPtr("Service"),
+						Group: groupPtr("core"),
+					},
+				},
+			},
+			fromNamespace: "default",
+			want:          true,
+		},
+		{
+			name: "not granted when from.Namespace does not match",
+			grantSpec: gwtypes.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{{
+					Group:     gwtypes.GroupName,
+					Kind:      "HTTPRoute",
+					Namespace: gwtypes.Namespace("default"),
+				}},
+				To: []gatewayv1beta1.ReferenceGrantTo{{
+					Group: gwtypes.Group("core"),
+					Kind:  gwtypes.Kind("Service"),
+					Name:  ptrObjName("my-service"),
+				}},
+			},
+			backendRef: gwtypes.HTTPBackendRef{
+				BackendRef: gwtypes.BackendRef{
+					BackendObjectReference: gwtypes.BackendObjectReference{
+						Name:  gwtypes.ObjectName("my-service"),
+						Kind:  kindPtr("Service"),
+						Group: groupPtr("core"),
+					},
+				},
+			},
+			fromNamespace: "other-ns",
+			want:          false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsHTTPReferenceGranted(tt.grantSpec, tt.backendRef, tt.fromNamespace)
+			if got != tt.want {
+				t.Errorf("IsHTTPReferenceGranted() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+// erroringClient wraps a fake client and returns errors for specific operations.
+type erroringClient struct {
+	client.Client
+	errorOnListReferenceGrants bool
+	errorOnGetService          bool
+}
+
+func (e *erroringClient) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	if e.errorOnListReferenceGrants {
+		// Check if this is a ReferenceGrantList by type assertion.
+		if _, ok := list.(*gwtypes.ReferenceGrantList); ok {
+			return fmt.Errorf("simulated list error for ReferenceGrants")
+		}
+	}
+	return e.Client.List(ctx, list, opts...)
+}
+
+func (e *erroringClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	if e.errorOnGetService {
+		// Check if this is a Service by type assertion.
+		if _, ok := obj.(*corev1.Service); ok {
+			return fmt.Errorf("simulated get error for Service %s/%s", key.Namespace, key.Name)
+		}
+	}
+	return e.Client.Get(ctx, key, obj, opts...)
+}
+
+func TestBuildResolvedRefsCondition(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	// Create test services
+	serviceDefault := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "svc",
+		},
+	}
+
+	serviceOtherNS := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "other-ns",
+			Name:      "test-svc",
+		},
+	}
+
+	// Create base route
+	routeBase := &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "route",
+		},
+		Spec: gwtypes.HTTPRouteSpec{
+			Rules: []gwtypes.HTTPRouteRule{{
+				BackendRefs: []gwtypes.HTTPBackendRef{{
+					BackendRef: gwtypes.BackendRef{
+						BackendObjectReference: gwtypes.BackendObjectReference{
+							Name:  gwtypes.ObjectName("svc"),
+							Kind:  kindPtr("Service"),
+							Group: groupPtr("core"),
+						},
+					},
+				}},
+			}},
+		},
+	}
+
+	tests := []struct {
+		name                  string
+		clientObjs            []client.Object
+		route                 *gwtypes.HTTPRoute
+		referenceGrantEnabled bool
+		wantStatus            metav1.ConditionStatus
+		wantReason            string
+		wantMsgPart           string
+	}{
+		{
+			name:                  "all references resolved - same namespace",
+			clientObjs:            []client.Object{serviceDefault},
+			route:                 routeBase,
+			referenceGrantEnabled: false,
+			wantStatus:            metav1.ConditionTrue,
+			wantReason:            string(gwtypes.RouteReasonResolvedRefs),
+			wantMsgPart:           "All references resolved",
+		},
+		{
+			name:       "unsupported group/kind",
+			clientObjs: []client.Object{serviceDefault},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						BackendRefs: []gwtypes.HTTPBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:  gwtypes.ObjectName("svc"),
+									Kind:  kindPtr("Unsupported"),
+									Group: groupPtr("core"),
+								},
+							},
+						}},
+					}},
+				},
+			},
+			referenceGrantEnabled: false,
+			wantStatus:            metav1.ConditionFalse,
+			wantReason:            string(gwtypes.RouteReasonInvalidKind),
+			wantMsgPart:           "Unsupported BackendRef",
+		},
+		{
+			name:                  "service not found",
+			clientObjs:            []client.Object{},
+			route:                 routeBase,
+			referenceGrantEnabled: false,
+			wantStatus:            metav1.ConditionFalse,
+			wantReason:            string(gwtypes.RouteReasonBackendNotFound),
+			wantMsgPart:           "not found",
+		},
+		{
+			name:       "cross-namespace, grant disabled",
+			clientObjs: []client.Object{serviceOtherNS},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						BackendRefs: []gwtypes.HTTPBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:      gwtypes.ObjectName("test-svc"),
+									Kind:      kindPtr("Service"),
+									Group:     groupPtr("core"),
+									Namespace: nsPtr("other-ns"),
+								},
+							},
+						}},
+					}},
+				},
+			},
+			referenceGrantEnabled: false,
+			wantStatus:            metav1.ConditionFalse,
+			wantReason:            string(gwtypes.RouteReasonRefNotPermitted),
+			wantMsgPart:           "ReferenceGrant support is disabled",
+		},
+		{
+			name:       "cross-namespace, no grants found",
+			clientObjs: []client.Object{serviceOtherNS},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						BackendRefs: []gwtypes.HTTPBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:      gwtypes.ObjectName("test-svc"),
+									Kind:      kindPtr("Service"),
+									Group:     groupPtr("core"),
+									Namespace: nsPtr("other-ns"),
+								},
+							},
+						}},
+					}},
+				},
+			},
+			referenceGrantEnabled: true,
+			wantStatus:            metav1.ConditionFalse,
+			wantReason:            string(gwtypes.RouteReasonRefNotPermitted),
+			wantMsgPart:           "No ReferenceGrants found",
+		},
+		{
+			name: "cross-namespace, grant exists but not permitted",
+			clientObjs: []client.Object{
+				&corev1.Service{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "other-ns",
+						Name:      "other-svc",
+					},
+				},
+				&gatewayv1beta1.ReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "other-ns",
+						Name:      "grant",
+					},
+					Spec: gatewayv1beta1.ReferenceGrantSpec{
+						From: []gatewayv1beta1.ReferenceGrantFrom{{
+							Group:     gwtypes.GroupName,
+							Kind:      "HTTPRoute",
+							Namespace: gwtypes.Namespace("default"),
+						}},
+						To: []gatewayv1beta1.ReferenceGrantTo{{
+							Group: gwtypes.Group("core"),
+							Kind:  gwtypes.Kind("Service"),
+							Name:  ptrObjName("allowed-svc"),
+						}},
+					},
+				},
+			},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						BackendRefs: []gwtypes.HTTPBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:      gwtypes.ObjectName("other-svc"),
+									Kind:      kindPtr("Service"),
+									Group:     groupPtr("core"),
+									Namespace: nsPtr("other-ns"),
+								},
+							},
+						}},
+					}},
+				},
+			},
+			referenceGrantEnabled: true,
+			wantStatus:            metav1.ConditionFalse,
+			wantReason:            string(gwtypes.RouteReasonRefNotPermitted),
+			wantMsgPart:           "not permitted by any ReferenceGrant",
+		},
+		{
+			name: "cross-namespace, grant permits reference",
+			clientObjs: []client.Object{
+				serviceOtherNS,
+				&gatewayv1beta1.ReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "other-ns",
+						Name:      "grant",
+					},
+					Spec: gatewayv1beta1.ReferenceGrantSpec{
+						From: []gatewayv1beta1.ReferenceGrantFrom{{
+							Group:     gwtypes.GroupName,
+							Kind:      "HTTPRoute",
+							Namespace: gwtypes.Namespace("default"),
+						}},
+						To: []gatewayv1beta1.ReferenceGrantTo{{
+							Group: gwtypes.Group("core"),
+							Kind:  gwtypes.Kind("Service"),
+							Name:  ptrObjName("test-svc"),
+						}},
+					},
+				},
+			},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						BackendRefs: []gwtypes.HTTPBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:      gwtypes.ObjectName("test-svc"),
+									Kind:      kindPtr("Service"),
+									Group:     groupPtr("core"),
+									Namespace: nsPtr("other-ns"),
+								},
+							},
+						}},
+					}},
+				},
+			},
+			referenceGrantEnabled: true,
+			wantStatus:            metav1.ConditionTrue,
+			wantReason:            string(gwtypes.RouteReasonResolvedRefs),
+			wantMsgPart:           "All references resolved",
+		},
+		{
+			name:       "multiple refs, first fails",
+			clientObjs: []client.Object{serviceDefault},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						BackendRefs: []gwtypes.HTTPBackendRef{
+							{
+								BackendRef: gwtypes.BackendRef{
+									BackendObjectReference: gwtypes.BackendObjectReference{
+										Name:  gwtypes.ObjectName("not-found"),
+										Kind:  kindPtr("Service"),
+										Group: groupPtr("core"),
+									},
+								},
+							},
+							{
+								BackendRef: gwtypes.BackendRef{
+									BackendObjectReference: gwtypes.BackendObjectReference{
+										Name:  gwtypes.ObjectName("svc"),
+										Kind:  kindPtr("Service"),
+										Group: groupPtr("core"),
+									},
+								},
+							},
+						},
+					}},
+				},
+			},
+			referenceGrantEnabled: false,
+			wantStatus:            metav1.ConditionFalse,
+			wantReason:            string(gwtypes.RouteReasonBackendNotFound),
+			wantMsgPart:           "not found",
+		},
+		{
+			name:       "empty group uses implicit core",
+			clientObjs: []client.Object{serviceDefault},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						BackendRefs: []gwtypes.HTTPBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:  gwtypes.ObjectName("svc"),
+									Kind:  kindPtr("Service"),
+									Group: groupPtr(""), // Empty group
+								},
+							},
+						}},
+					}},
+				},
+			},
+			referenceGrantEnabled: false,
+			wantStatus:            metav1.ConditionTrue,
+			wantReason:            string(gwtypes.RouteReasonResolvedRefs),
+			wantMsgPart:           "All references resolved",
+		},
+	}
+
+	// Test cases that expect errors need special handling.
+	errorTests := []struct {
+		name                  string
+		clientObjs            []client.Object
+		route                 *gwtypes.HTTPRoute
+		referenceGrantEnabled bool
+		clientFactory         func([]client.Object) client.Client
+		wantError             bool
+		wantErrorContains     string
+	}{
+		{
+			name:       "error listing reference grants",
+			clientObjs: []client.Object{serviceOtherNS},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						BackendRefs: []gwtypes.HTTPBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:      gwtypes.ObjectName("test-svc"),
+									Kind:      kindPtr("Service"),
+									Group:     groupPtr("core"),
+									Namespace: nsPtr("other-ns"),
+								},
+							},
+						}},
+					}},
+				},
+			},
+			referenceGrantEnabled: true,
+			clientFactory: func(objs []client.Object) client.Client {
+				s := runtime.NewScheme()
+				_ = corev1.AddToScheme(s)
+				_ = gatewayv1beta1.Install(s)
+				return &erroringClient{
+					Client:                     fake.NewClientBuilder().WithScheme(s).WithObjects(objs...).Build(),
+					errorOnListReferenceGrants: true,
+				}
+			},
+			wantError:         true,
+			wantErrorContains: "failed to list ReferenceGrants",
+		},
+		{
+			name:       "error getting service",
+			clientObjs: []client.Object{},
+			route: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Spec: gwtypes.HTTPRouteSpec{
+					Rules: []gwtypes.HTTPRouteRule{{
+						BackendRefs: []gwtypes.HTTPBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:  gwtypes.ObjectName("svc"),
+									Kind:  kindPtr("Service"),
+									Group: groupPtr("core"),
+								},
+							},
+						}},
+					}},
+				},
+			},
+			referenceGrantEnabled: false,
+			clientFactory: func(objs []client.Object) client.Client {
+				s := runtime.NewScheme()
+				_ = corev1.AddToScheme(s)
+				_ = gatewayv1beta1.Install(s)
+				return &erroringClient{
+					Client:            fake.NewClientBuilder().WithScheme(s).WithObjects(objs...).Build(),
+					errorOnGetService: true,
+				}
+			},
+			wantError:         true,
+			wantErrorContains: "failed to get BackendRef",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := runtime.NewScheme()
+			_ = corev1.AddToScheme(s)
+			_ = gatewayv1beta1.Install(s)
+
+			// Create fake client
+			clientBuilder := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.clientObjs...)
+
+			cl := clientBuilder.Build()
+
+			cond, err := BuildResolvedRefsCondition(ctx, logger, cl, tt.route, tt.referenceGrantEnabled)
+			require.NoError(t, err)
+			require.NotNil(t, cond)
+
+			if cond.Status != tt.wantStatus {
+				t.Errorf("got status %v, want %v", cond.Status, tt.wantStatus)
+			}
+			if cond.Reason != tt.wantReason {
+				t.Errorf("got reason %v, want %v", cond.Reason, tt.wantReason)
+			}
+			if tt.wantMsgPart != "" && !strings.Contains(cond.Message, tt.wantMsgPart) {
+				t.Errorf("message %q does not contain %q", cond.Message, tt.wantMsgPart)
+			}
+		})
+	}
+
+	// Run error tests that expect the function to return an error.
+	for _, tt := range errorTests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := runtime.NewScheme()
+			_ = corev1.AddToScheme(s)
+			_ = gatewayv1beta1.Install(s)
+
+			cl := tt.clientFactory(tt.clientObjs)
+
+			cond, err := BuildResolvedRefsCondition(ctx, logger, cl, tt.route, tt.referenceGrantEnabled)
+			if tt.wantError {
+				require.Error(t, err)
+				require.Nil(t, cond)
+				if tt.wantErrorContains != "" {
+					require.Contains(t, err.Error(), tt.wantErrorContains)
+				}
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, cond)
+			}
+		})
+	}
+}
+
 func groupPtr(s string) *gatewayv1.Group                                     { g := gatewayv1.Group(s); return &g }
 func kindPtr(s string) *gatewayv1.Kind                                       { k := gatewayv1.Kind(s); return &k }
 func nsPtr(s string) *gatewayv1.Namespace                                    { n := gatewayv1.Namespace(s); return &n }
 func sectionPtr(s string) *gatewayv1.SectionName                             { sec := gatewayv1.SectionName(s); return &sec }
 func portPtr(i int32) *gatewayv1.PortNumber                                  { p := gatewayv1.PortNumber(i); return &p }
+func ptrObjName(s string) *gwtypes.ObjectName                                { n := gwtypes.ObjectName(s); return &n }
 func fromNamespacesPtr(v gatewayv1.FromNamespaces) *gatewayv1.FromNamespaces { return &v }
