@@ -205,7 +205,11 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 				&gatewayapi.TCPRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
 					Spec: gatewayapi.TCPRouteSpec{
-						Rules: []gatewayapi.TCPRouteRule{{}},
+						Rules: []gatewayapi.TCPRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{},
+							},
+						},
 					},
 				},
 				metav1.CreateOptions{},
