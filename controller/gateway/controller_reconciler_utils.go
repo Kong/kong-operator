@@ -1037,7 +1037,7 @@ func setDataPlaneIngressServicePorts(
 		}
 		port := operatorv1beta1.DataPlaneServicePort{
 			Name: name,
-			Port: int32(l.Port),
+			Port: l.Port,
 		}
 		switch l.Protocol {
 		case gatewayv1.HTTPSProtocolType:

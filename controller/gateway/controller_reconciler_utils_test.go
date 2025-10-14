@@ -872,7 +872,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			gatewayNamespace: "default",
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
-				TLS: &gatewayv1.GatewayTLSConfig{
+				TLS: &gatewayv1.ListenerTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
@@ -912,7 +912,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			gatewayNamespace: "default",
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
-				TLS: &gatewayv1.GatewayTLSConfig{
+				TLS: &gatewayv1.ListenerTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModePassthrough),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
@@ -952,7 +952,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			gatewayNamespace: "default",
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
-				TLS: &gatewayv1.GatewayTLSConfig{
+				TLS: &gatewayv1.ListenerTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
@@ -983,7 +983,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			gatewayNamespace: "default",
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
-				TLS: &gatewayv1.GatewayTLSConfig{
+				TLS: &gatewayv1.ListenerTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
@@ -1011,7 +1011,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			gatewayNamespace: "default",
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
-				TLS: &gatewayv1.GatewayTLSConfig{
+				TLS: &gatewayv1.ListenerTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
@@ -1041,7 +1041,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			gatewayNamespace: "default",
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
-				TLS: &gatewayv1.GatewayTLSConfig{
+				TLS: &gatewayv1.ListenerTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
@@ -1081,7 +1081,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			gatewayNamespace: "default",
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
-				TLS: &gatewayv1.GatewayTLSConfig{
+				TLS: &gatewayv1.ListenerTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{
@@ -1145,7 +1145,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			gatewayNamespace: "default",
 			listener: gwtypes.Listener{
 				Protocol: gatewayv1.HTTPSProtocolType,
-				TLS: &gatewayv1.GatewayTLSConfig{
+				TLS: &gatewayv1.ListenerTLSConfig{
 					Mode: lo.ToPtr(gatewayv1.TLSModeTerminate),
 					CertificateRefs: []gatewayv1.SecretObjectReference{
 						{

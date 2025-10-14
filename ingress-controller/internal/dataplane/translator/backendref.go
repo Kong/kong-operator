@@ -77,7 +77,7 @@ func backendRefsToKongStateBackends(
 
 		port := int32(-1)
 		if backendRef.Port != nil {
-			port = int32(*backendRef.Port)
+			port = *backendRef.Port
 		}
 		backend, err := kongstate.NewServiceBackendForService(
 			nn,
