@@ -2584,10 +2584,6 @@ func groupPtr(s string) *gatewayv1.Group                                     { g
 func kindPtr(s string) *gatewayv1.Kind                                       { k := gatewayv1.Kind(s); return &k }
 func nsPtr(s string) *gatewayv1.Namespace                                    { n := gatewayv1.Namespace(s); return &n }
 func sectionPtr(s string) *gatewayv1.SectionName                             { sec := gatewayv1.SectionName(s); return &sec }
-<<<<<<< HEAD
-func portPtr(i int32) *gatewayv1.PortNumber                                  { p := gatewayv1.PortNumber(i); return &p }
 func ptrObjName(s string) *gwtypes.ObjectName                                { n := gwtypes.ObjectName(s); return &n }
-=======
 func portPtr(i int32) *gatewayv1.PortNumber                                  { return &i }
->>>>>>> 20569fc94 (chore: bump Gateway API to 1.4.0)
 func fromNamespacesPtr(v gatewayv1.FromNamespaces) *gatewayv1.FromNamespaces { return &v }

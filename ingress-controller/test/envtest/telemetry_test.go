@@ -211,7 +211,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 								BackendRefs: []gatewayapi.BackendRef{
 									{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Kind: "Service",
+											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
 											Name: gatewayapi.ObjectName("test"),
 											Port: lo.ToPtr(gatewayapi.PortNumber(443)),
 										},
@@ -230,7 +230,19 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 				&gatewayapi.UDPRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
 					Spec: gatewayapi.UDPRouteSpec{
-						Rules: []gatewayapi.UDPRouteRule{{}},
+						Rules: []gatewayapi.UDPRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{
+									{
+										BackendObjectReference: gatewayapi.BackendObjectReference{
+											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Name: gatewayapi.ObjectName("test"),
+											Port: lo.ToPtr(gatewayapi.PortNumber(443)),
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 				metav1.CreateOptions{},
@@ -242,7 +254,19 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 				&gatewayapi.TLSRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
 					Spec: gatewayapi.TLSRouteSpec{
-						Rules: []gatewayapi.TLSRouteRule{{}},
+						Rules: []gatewayapi.TLSRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{
+									{
+										BackendObjectReference: gatewayapi.BackendObjectReference{
+											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Name: gatewayapi.ObjectName("test"),
+											Port: lo.ToPtr(gatewayapi.PortNumber(443)),
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 				metav1.CreateOptions{},
