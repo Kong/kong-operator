@@ -211,7 +211,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 								BackendRefs: []gatewayapi.BackendRef{
 									{
 										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Kind: "Service",
+											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
 											Name: gatewayapi.ObjectName("test"),
 											Port: lo.ToPtr(gatewayapi.PortNumber(443)),
 										},
