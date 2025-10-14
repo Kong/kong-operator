@@ -24,6 +24,7 @@ spec:
             - -zap-devel=true
             - -enable-controller-kongplugininstallation
             - -enable-controller-konnect
+            - -enable-controller-konnect-hybrid
             - -enable-controller-controlplaneextensions
           name: manager
           env:

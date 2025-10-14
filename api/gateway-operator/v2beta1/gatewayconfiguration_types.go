@@ -23,6 +23,8 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 )
 
 func init() {
@@ -90,6 +92,40 @@ type GatewayConfigurationSpec struct {
 	// +kubebuilder:validation:MaxItems=2
 	// +kubebuilder:validation:XValidation:message="Extension not allowed for GatewayConfiguration",rule="self.all(e, (e.group == 'konnect.konghq.com' && e.kind == 'KonnectExtension') || (e.group == 'gateway-operator.konghq.com' && e.kind == 'DataPlaneMetricsExtension'))"
 	Extensions []commonv1alpha1.ExtensionRef `json:"extensions,omitempty"`
+
+	// Konnect holds the configuration for a Konnect-managed control plane.
+	// If this field is set, the operator will provision a Gateway that is
+	// connected to a Konnect Control Plane.
+	//
+	// +optional
+	Konnect *KonnectOptions `json:"konnect,omitempty"`
+}
+
+// KonnectOptions contains the options for configuring a Konnect-managed ControlPlane.
+//
+// +kubebuilder:validation:XValidation:message="mirror field must be set for type Mirror",rule="self.source == 'Mirror' ? has(self.mirror) : true"
+// +kubebuilder:validation:XValidation:message="mirror field cannot be set for type Origin",rule="self.source == 'Origin' ? !has(self.mirror) : true"
+// +apireference:kgo:include
+type KonnectOptions struct {
+	// APIAuthConfigurationRef contains the Konnect API authentication configuration.
+	// If this field is not set, the operator will not be able to connect
+	// the Gateway to Konnect.
+	//
+	// +optional
+	APIAuthConfigurationRef *konnectv1alpha2.KonnectAPIAuthConfigurationRef `json:"authRef,omitempty"`
+
+	// Source represents the source type of the Konnect entity.
+	//
+	// +kubebuilder:validation:Enum=Origin;Mirror
+	// +optional
+	// +kubebuilder:default=Origin
+	Source *commonv1alpha1.EntitySource `json:"source,omitempty"`
+
+	// Mirror is the Konnect Mirror configuration.
+	// It is only applicable for ControlPlanes that are created as Mirrors.
+	//
+	// +optional
+	Mirror *konnectv1alpha1.MirrorSpec `json:"mirror,omitempty"`
 }
 
 // GatewayConfigControlPlaneOptions contains the options for configuring

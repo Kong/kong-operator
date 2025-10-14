@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
@@ -427,7 +428,16 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// We should look at the "expectations" for this:
 	// https://github.com/kubernetes/kubernetes/blob/master/pkg/controller/controller_utils.go
 	if status := ent.GetKonnectStatus(); status == nil || status.GetKonnectID() == "" {
+
+		// Check if the object is adopting an existing Konnect entity.
+		if adoptable, ok := any(ent).(constraints.KonnectEntityTypeSupportingAdoption); ok {
+			if adoptOptions := adoptable.GetAdoptOptions(); adoptOptions != nil && adoptOptions.Konnect != nil {
+				return r.adoptFromExistingEntity(ctx, sdk, ent, adoptOptions, &apiAuth, server)
+			}
+		}
+
 		obj := ent.DeepCopyObject().(client.Object)
+
 		_, err := ops.Create(ctx, sdk, r.Client, r.MetricRecorder, ent)
 
 		// TODO: this is actually not 100% error prone because when status
@@ -502,6 +512,67 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	return ctrl.Result{
 		RequeueAfter: r.SyncPeriod,
 	}, nil
+}
+
+// adoptFromExistingEntity adopts the existing entity from Konnect based on reconciled object
+// if it is not attached to the existing entity yet, and sets the status and finalizers.
+func (r *KonnectEntityReconciler[T, TEnt]) adoptFromExistingEntity(
+	ctx context.Context,
+	sdk sdkops.SDKWrapper,
+	ent TEnt,
+	adoptOptions *commonv1alpha1.AdoptOptions,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	server server.Server,
+) (ctrl.Result, error) {
+	var (
+		entityTypeName = constraints.EntityTypeName[T]()
+		logger         = log.GetLogger(ctx, entityTypeName, r.LoggingMode)
+		obj            = ent.DeepCopyObject().(client.Object)
+	)
+	status := ent.GetKonnectStatus()
+	logger.Info("Adopting from existing entity",
+		"type", ent.GetTypeName(), "konnect_id", adoptOptions.Konnect.ID)
+	_, err := ops.Adopt(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent, *adoptOptions)
+	if err != nil {
+		logger.Error(err, "failed to adopt entity", "type", ent.GetTypeName(), "konnect_id", adoptOptions.Konnect.ID)
+	}
+
+	// Regardless of the error reported from Adopt(), if the Konnect ID has been
+	// set then:
+	// - add the finalizer so that the resource can be cleaned up from Konnect on deletion...
+	if status != nil && status.ID != "" {
+		if _, res, err := patch.WithFinalizer(ctx, r.Client, ent, KonnectCleanupFinalizer); err != nil || !res.IsZero() {
+			return res, err
+		}
+
+		// ...
+		// - add the Org ID and Server URL to the status so that the resource can be
+		//   cleaned up from Konnect on deletion and also so that the status can
+		//   indicate where the corresponding Konnect entity is located.
+		setStatusServerURLAndOrgID(ent, server, apiAuth.Status.OrganizationID)
+	}
+
+	// Regardless of the error, patch the status as it can contain the Konnect ID,
+	// Org ID, Server URL and status conditions.
+	// Konnect ID will be needed for the finalizer to work.
+	if res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, any(ent).(client.Object), obj); err != nil {
+		if k8serrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("failed to update status after creating object: %w", err)
+	} else if res != op.Noop {
+		return ctrl.Result{}, nil
+	}
+
+	if err != nil {
+		return ctrl.Result{}, ops.FailedKonnectOpError[T]{
+			Op:  ops.AdoptOp,
+			Err: err,
+		}
+	}
+
+	// NOTE: we don't need to requeue here because the object update will trigger another reconciliation.
+	return ctrl.Result{}, nil
 }
 
 func setStatusServerURLAndOrgID(

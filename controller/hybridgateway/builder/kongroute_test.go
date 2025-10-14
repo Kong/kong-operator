@@ -374,7 +374,11 @@ func TestKongRouteBuilder_WithLabels(t *testing.T) {
 		},
 	}
 
-	builder := NewKongRoute().WithLabels(httpRoute)
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+
+	builder := NewKongRoute().WithLabels(httpRoute, parentRef)
 
 	route, err := builder.Build()
 	require.NoError(t, err)
@@ -477,7 +481,7 @@ func TestKongRouteBuilder_Chaining(t *testing.T) {
 		WithHTTPRouteMatch(match).
 		WithKongService("test-service").
 		WithOwner(httpRoute).
-		WithLabels(httpRoute).
+		WithLabels(httpRoute, parentRef).
 		WithAnnotations(httpRoute, parentRef).
 		MustBuild()
 

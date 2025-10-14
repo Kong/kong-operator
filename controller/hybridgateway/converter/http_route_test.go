@@ -23,72 +23,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
-func TestHostnameIntersection(t *testing.T) {
-	tests := []struct {
-		name             string
-		listenerHostname string
-		routeHostname    string
-		expected         string
-	}{
-		{
-			name:             "exact match",
-			listenerHostname: "api.example.com",
-			routeHostname:    "api.example.com",
-			expected:         "api.example.com",
-		},
-		{
-			name:             "listener wildcard, route specific",
-			listenerHostname: "*.example.com",
-			routeHostname:    "api.example.com",
-			expected:         "api.example.com",
-		},
-		{
-			name:             "route wildcard, listener specific",
-			listenerHostname: "api.example.com",
-			routeHostname:    "*.example.com",
-			expected:         "api.example.com",
-		},
-		{
-			name:             "no intersection - different domains",
-			listenerHostname: "*.example.com",
-			routeHostname:    "api.other.com",
-			expected:         "",
-		},
-		{
-			name:             "multiple subdomains",
-			listenerHostname: "*.example.com",
-			routeHostname:    "sub.api.example.com",
-			expected:         "sub.api.example.com",
-		},
-		{
-			name:             "no intersection - exact mismatch",
-			listenerHostname: "api.example.com",
-			routeHostname:    "web.example.com",
-			expected:         "",
-		},
-		{
-			name:             "wildcard domain match",
-			listenerHostname: "*.example.com",
-			routeHostname:    "web.example.com",
-			expected:         "web.example.com",
-		},
-		{
-			name:             "both wildcards - no intersection",
-			listenerHostname: "*.example.com",
-			routeHostname:    "*.other.com",
-			expected:         "",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := hostnameIntersection(tt.listenerHostname, tt.routeHostname)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
-}
-
-func TestAddHostnames(t *testing.T) {
+func TestHostnamesIntersection(t *testing.T) {
 
 	tests := []struct {
 		name           string
@@ -103,7 +38,7 @@ func TestAddHostnames(t *testing.T) {
 				newGatewayWithListenerHostnames(),
 			}, newKonnectGatewayStandardObjects()...),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
-				"httproute.default.test-route.0.0.0": nil,
+				"route.1": nil,
 			}),
 		},
 		{
@@ -113,7 +48,7 @@ func TestAddHostnames(t *testing.T) {
 				newGatewayWithListenerHostnames("api.example.com"),
 			}, newKonnectGatewayStandardObjects()...),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
-				"httproute.default.test-route.0.0.0": {"api.example.com"},
+				"route.1": {"api.example.com"},
 			}),
 		},
 		{
@@ -123,7 +58,7 @@ func TestAddHostnames(t *testing.T) {
 				newGatewayWithListenerHostnames("*.example.com"),
 			}, newKonnectGatewayStandardObjects()...),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
-				"httproute.default.test-route.0.0.0": {"*.example.com"},
+				"route.1": {"*.example.com"},
 			}),
 		},
 		{
@@ -133,7 +68,7 @@ func TestAddHostnames(t *testing.T) {
 				newGatewayWithListenerHostnames("*.example.com"),
 			}, newKonnectGatewayStandardObjects()...),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
-				"httproute.default.test-route.0.0.0": {"api.example.com", "web.example.com"},
+				"route.1": {"api.example.com", "web.example.com"},
 			}),
 		},
 		{
@@ -143,7 +78,7 @@ func TestAddHostnames(t *testing.T) {
 				newGatewayWithListenerHostnames("*.example.com"),
 			}, newKonnectGatewayStandardObjects()...),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
-				"httproute.default.test-route.0.0.0": {"web.example.com"},
+				"route.1": {"web.example.com"},
 			}),
 		},
 		{
@@ -161,7 +96,7 @@ func TestAddHostnames(t *testing.T) {
 				newGatewayWithListenerHostnames(),
 			}, newKonnectGatewayStandardObjects()...),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
-				"httproute.default.test-route.0.0.0": {"api.example.com", "web.example.com"},
+				"route.1": {"api.example.com", "web.example.com"},
 			}),
 		},
 	}
@@ -182,7 +117,7 @@ func TestAddHostnames(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
 
-			converter := newHTTPRouteConverter(tt.route, fakeClient, nil)
+			converter := newHTTPRouteConverter(tt.route, fakeClient)
 			err := converter.Translate()
 			require.NoError(t, err)
 
@@ -202,15 +137,12 @@ func TestAddHostnames(t *testing.T) {
 			require.Equal(t, len(tt.expectedOutput), len(kongRoutes), "KongRoute objects number different than expected")
 
 			for _, expectedRoute := range tt.expectedOutput {
-				found := false
 				for _, actualRoute := range kongRoutes {
-					if expectedRoute.Name == actualRoute.Name && expectedRoute.Namespace == actualRoute.Namespace {
-						assert.Equal(t, expectedRoute.Spec.Hosts, actualRoute.Spec.Hosts, "KongRoute hosts does not match the expected one")
-						found = true
-						break
+					assert.Equal(t, len(expectedRoute.Spec.Hosts), len(actualRoute.Spec.Hosts), "KongRoute hosts length does not match the expected one")
+					for _, h := range expectedRoute.Spec.Hosts {
+						assert.Contains(t, actualRoute.Spec.Hosts, h, "KongRoute hosts does not contain expected hostname %s", h)
 					}
 				}
-				assert.True(t, found, "Expected KongRoute %s/%s not found in output", expectedRoute.Namespace, expectedRoute.Name)
 			}
 		})
 	}

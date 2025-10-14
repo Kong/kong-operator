@@ -1,4 +1,4 @@
-# [Kong Operator](https://docs.konghq.com/gateway-operator/latest/)
+# [Kong Operator][docs]
 
 <img src="./logo/logo.png" alt="KGO logo" title="Kong Operator" height="150" width="150" />
 
@@ -16,12 +16,12 @@ With Kong Operator, users can:
 * Upgrade Data Planes using a [rolling restart][docs_upgrade_rolling] or [blue/green deployments][docs_upgrade_bg].
 * Configure [auto scaling on Data Planes][docs_autoscaling].
 
-[docs_sidecar]: https://docs.konghq.com/gateway-operator/latest/customization/sidecars/
-[docs_dataplane_image]: https://docs.konghq.com/gateway-operator/latest/customization/data-plane-image/
-[docs_podtemplatespec]: https://docs.konghq.com/gateway-operator/latest/customization/pod-template-spec/
-[docs_upgrade_rolling]: https://docs.konghq.com/gateway-operator/latest/guides/upgrade/data-plane/rolling/
-[docs_upgrade_bg]: https://docs.konghq.com/gateway-operator/latest/guides/upgrade/data-plane/blue-green/
-[docs_autoscaling]: https://docs.konghq.com/gateway-operator/latest/guides/autoscaling-kong/
+[docs_sidecar]: https://developer.konghq.com/operator/dataplanes/how-to/deploy-sidecars/
+[docs_dataplane_image]: https://developer.konghq.com/operator/dataplanes/how-to/set-dataplane-image/
+[docs_podtemplatespec]: https://developer.konghq.com/operator/dataplanes/reference/podtemplatespec/
+[docs_upgrade_rolling]: https://developer.konghq.com/operator/dataplanes/upgrade/gateway/rolling/
+[docs_upgrade_bg]: https://developer.konghq.com/operator/dataplanes/upgrade/gateway/blue-green/
+[docs_autoscaling]: https://developer.konghq.com/operator/dataplanes/reference/autoscale-workloads/
 
 ## Current Features
 
@@ -145,6 +145,6 @@ and [Zoom][zoom] links.
 [slack]:https://kubernetes.slack.com/messages/kong
 [kong-meet]:https://konghq.com/online-meetups/
 [zoom]:https://zoom.us
-[docs]:https://docs.konghq.com/gateway-operator/latest/
-[docsqs]:https://docs.konghq.com/gateway-operator/latest/get-started/kic/install/
+[docs]:https://developer.konghq.com/operator/
+[docsqs]:https://developer.konghq.com/operator/dataplanes/get-started/kic/install/
 [operator-concept]:https://kubernetes.io/docs/concepts/extend-kubernetes/operator/

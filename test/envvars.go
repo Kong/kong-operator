@@ -75,3 +75,30 @@ func IsTelepresenceDisabled() bool {
 	}
 	return ret
 }
+
+// KeepTestCluster indicates whether the caller wants the cluster created by the test suite
+// to persist after the test for inspection. This has no effect when an existing cluster
+// is provided, as cleanup is not performed for existing clusters.
+func KeepTestCluster() bool {
+	envVar := strings.ToLower(os.Getenv("KONG_TEST_CLUSTER_PERSIST"))
+	keepTestCluster := envVar == "true" || envVar == "1"
+	fmt.Printf("INFO: keeping test cluster after tests: %t\n", keepTestCluster)
+	return keepTestCluster
+}
+
+// IsCI indicates whether or not the tests are running in a CI environment.
+func IsCI() bool {
+	// It's a common convention that e.g. GitHub, GitLab, and other CI providers
+	// set the CI environment variable.
+	envVar := strings.ToLower(os.Getenv("CI"))
+	isCI := envVar == "true" || envVar == "1"
+	fmt.Printf("INFO: running in CI: %t\n", isCI)
+	return isCI
+}
+
+// SkipCleanup indicates whether or not the test environment should skip cleanup,
+// either because it's running in a CI environment or because the user has
+// explicitly requested to keep the test cluster.
+func SkipCleanup() bool {
+	return IsCI() || !KeepTestCluster()
+}

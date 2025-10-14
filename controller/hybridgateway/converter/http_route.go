@@ -2,20 +2,27 @@ package converter
 
 import (
 	"context"
-	"strings"
+	"errors"
+	"fmt"
 
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
-	"github.com/kong/kong-operator/controller/hybridgateway/intermediate"
+	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
+	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/pkg/vars"
 )
 
 var _ APIConverter[gwtypes.HTTPRoute] = &httpRouteConverter{}
@@ -24,26 +31,24 @@ var _ APIConverter[gwtypes.HTTPRoute] = &httpRouteConverter{}
 type httpRouteConverter struct {
 	client.Client
 
-	route           *gwtypes.HTTPRoute
-	outputStore     []client.Object
-	sharedStatusMap *route.SharedRouteStatusMap
-	ir              *intermediate.HTTPRouteRepresentation
-	expectedGVKs    []schema.GroupVersionKind
+	route        *gwtypes.HTTPRoute
+	outputStore  []client.Object
+	expectedGVKs []schema.GroupVersionKind
 }
 
 // NewHTTPRouteConverter returns a new instance of httpRouteConverter.
-func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client, sharedStatusMap *route.SharedRouteStatusMap) APIConverter[gwtypes.HTTPRoute] {
+func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client) APIConverter[gwtypes.HTTPRoute] {
 	return &httpRouteConverter{
-		Client:          cl,
-		outputStore:     []client.Object{},
-		sharedStatusMap: sharedStatusMap,
-		route:           httpRoute,
-		ir:              intermediate.NewHTTPRouteRepresentation(httpRoute),
+		Client:      cl,
+		outputStore: []client.Object{},
+		route:       httpRoute,
 		expectedGVKs: []schema.GroupVersionKind{
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongRoute"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongService"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongUpstream"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongTarget"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1.GroupVersion.Version, Kind: "KongPlugin"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongPluginBinding"},
 		},
 	}
 }
@@ -125,213 +130,315 @@ func (c *httpRouteConverter) UpdateSharedRouteStatus(objs []unstructured.Unstruc
 	return nil
 }
 
+// UpdateRootObjectStatus updates the status of the HTTPRoute by processing each ParentReference
+// and setting appropriate conditions based on the Gateway's support and readiness.
+//
+// The function performs the following operations:
+// 1. Iterates through each ParentRef in the HTTPRoute spec
+// 2. Validates if the ParentRef is supported by this controller (checks Gateway and GatewayClass)
+// 3. Builds and sets the "Accepted" condition for supported ParentRefs
+// 4. Skips unsupported ParentRefs (wrong controller, missing Gateway/GatewayClass)
+// 5. Cleans up orphaned ParentStatus entries that are no longer relevant
+// 6. Updates the HTTPRoute status in the cluster if any changes were made
+//
+// Parameters:
+//   - ctx: The context for API calls
+//   - logger: Logger for debugging information
+//
+// Returns:
+//   - bool: true if the status was updated, false if no changes were made
+//   - error: Any error that occurred during status processing
+//
+// The function respects controller ownership and only manages ParentStatus entries
+// for Gateways controlled by this controller, leaving other controllers' entries untouched.
+func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error) {
+	updated := false
+	// For each parentRef in the HTTPRoute, build the conditions and set them in the status.
+	logger.V(1).Info("Starting UpdateRootObjectStatus", "route", c.route.Name)
+	for _, pRef := range c.route.Spec.ParentRefs {
+		logger.V(2).Info("Processing ParentReference", "parentRef", pRef)
+		// Check if the parentRef belongs to a Gateway managed by us.
+		gateway, err := route.GetSupportedGatewayForParentRef(ctx, logger, c.Client, pRef, c.route.Namespace)
+		if err != nil {
+			if errors.Is(err, route.ErrNoGatewayClassFound) ||
+				errors.Is(err, route.ErrNoGatewayController) ||
+				errors.Is(err, route.ErrNoGatewayFound) {
+				// If the gateway is not managed by us or not found we skip setting conditions.
+				logger.V(1).Info("Skipping status update for unsupported or non-existent Gateway", "parentRef", pRef)
+				if route.RemoveStatusForParentRef(logger, c.route, pRef, vars.ControllerName()) {
+					// If we removed the status, we need to mark the update as true.
+					logger.V(2).Info("Removed ParentStatus for unsupported ParentReference", "parentRef", pRef)
+					updated = true
+				}
+				continue
+			} else {
+				logger.Error(err, "Failed to get supported gateway for ParentReference", "parentRef", pRef)
+				return false, fmt.Errorf("failed to get supported gateway for parentRef %s: %w", pRef.Name, err)
+			}
+		}
+
+		logger.V(2).Info("Building Accepted condition", "parentRef", pRef, "gateway", gateway.Name)
+		acceptedCondition, err := route.BuildAcceptedCondition(ctx, logger, c.Client, gateway, c.route, pRef)
+		if err != nil {
+			return false, fmt.Errorf("failed to build accepted condition for parentRef %s: %w", pRef.Name, err)
+		}
+
+		logger.V(2).Info("Building Programmed conditions", "parentRef", pRef, "gateway", gateway.Name)
+		programmedConditions, err := route.BuildProgrammedCondition(ctx, logger, c.Client, c.route, pRef, c.expectedGVKs)
+		if err != nil {
+			return false, fmt.Errorf("failed to build programmed condition for parentRef %s: %w", pRef.Name, err)
+		}
+
+		// Combine all conditions.
+		programmedConditions = append(programmedConditions, *acceptedCondition)
+
+		logger.V(2).Info("Setting status conditions", "parentRef", pRef, "conditionsCount", len(programmedConditions))
+		if route.SetStatusConditions(c.route, pRef, vars.ControllerName(), programmedConditions...) {
+			logger.V(1).Info("Status conditions updated for ParentReference", "parentRef", pRef)
+			updated = true
+		}
+	}
+
+	logger.V(2).Info("Cleaning up orphaned ParentStatus entries", "route", c.route.Name)
+	if route.CleanupOrphanedParentStatus(logger, c.route, vars.ControllerName()) {
+		logger.V(1).Info("Orphaned ParentStatus entries cleaned up", "route", c.route.Name)
+		updated = true
+	}
+
+	// Update the status in the cluster if there are changes.
+	if updated {
+		logger.V(1).Info("Updating HTTPRoute status in cluster", "route", c.route.Name, "status", c.route.Status)
+		if err := c.Status().Update(ctx, c.route); err != nil {
+			logger.Error(err, "Failed to update HTTPRoute status in cluster", "route", c.route.Name)
+			return false, fmt.Errorf("failed to update HTTPRoute status: %w", err)
+		}
+	} else {
+		logger.V(1).Info("No status update required for HTTPRoute", "route", c.route.Name)
+	}
+
+	logger.V(1).Info("Finished UpdateRootObjectStatus", "route", c.route.Name, "updated", updated)
+	return updated, nil
+}
+
 // translate converts the HTTPRoute to KongRoute(s) and stores them in outputStore.
 func (c *httpRouteConverter) translate(ctx context.Context) error {
-	// Generate translation data.
-	if err := c.addControlPlaneRefs(ctx); err != nil {
+	supportedParentRefs, err := c.getHybridGatewayParents(ctx)
+	if err != nil {
 		return err
 	}
-	if err := c.addHostnames(ctx); err != nil {
-		return err
+	if len(supportedParentRefs) == 0 {
+		return nil
 	}
 
-	// Generate kong services, upstream and targets.
-	for _, val := range c.ir.Rules {
-		// Get the controlPlaneRef for the given Rule.
-		cpr := c.ir.GetControlPlaneRefByName(val.Name)
-		if cpr == nil {
-			continue
-		}
-		hostnames := c.ir.GetHostnamesByName(val.Name)
-		if hostnames == nil {
-			continue
-		}
-		name := val.String()
+	httpRouteName := c.route.Namespace + "-" + c.route.Name
 
-		// Build the upstream resource.
-		upstream, err := builder.NewKongUpstream().
-			WithName(name).
-			WithNamespace(c.route.Namespace).
-			WithLabels(c.route).
-			WithAnnotations(c.route, c.ir.GetParentRefByName(val.Name)).
-			WithSpecName(name).
-			WithControlPlaneRef(*cpr).
-			WithOwner(c.route).Build()
-		if err != nil {
-			// TODO: decide how to handle build errors in converter
-			// For now, skip this resource
-			continue
-		}
-		c.outputStore = append(c.outputStore, &upstream)
+	for _, pRefData := range supportedParentRefs {
+		pRef := pRefData.parentRef
+		cp := pRefData.cpRef
+		hostnames := pRefData.hostnames
+		cpRefName := "cp" + utils.Hash32(cp)
 
-		// Build the service resource.
-		service, err := builder.NewKongService().
-			WithName(name).
-			WithNamespace(c.route.Namespace).
-			WithLabels(c.route).
-			WithAnnotations(c.route, c.ir.GetParentRefByName(val.Name)).
-			WithSpecName(name).
-			WithSpecHost(name).
-			WithControlPlaneRef(*cpr).
-			WithOwner(c.route).Build()
-		if err != nil {
-			// TODO: decide how to handle build errors in converter
-			// For now, skip this resource
-			continue
-		}
-		c.outputStore = append(c.outputStore, &service)
-
-		// Build the target resources.
-		for _, bRef := range val.BackendRefs {
-			targetName := bRef.String()
-
-			target, err := builder.NewKongTarget().
-				WithName(targetName).
+		for _, rule := range c.route.Spec.Rules {
+			// Build the KongUpstream resource.
+			upstreamName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.BackendRefs)).String()
+			upstream, err := builder.NewKongUpstream().
+				WithName(upstreamName).
 				WithNamespace(c.route.Namespace).
-				WithLabels(c.route).
-				WithAnnotations(c.route, c.ir.GetParentRefByName(bRef.Name)).
-				WithUpstreamRef(name).
-				WithBackendRef(c.route, &bRef.BackendRef).
+				WithLabels(c.route, &pRef).
+				WithAnnotations(c.route, &pRef).
+				WithSpecName(upstreamName).
+				WithControlPlaneRef(*cp).
 				WithOwner(c.route).Build()
 			if err != nil {
 				// TODO: decide how to handle build errors in converter
 				// For now, skip this resource
 				continue
 			}
-			c.outputStore = append(c.outputStore, &target)
-		}
+			c.outputStore = append(c.outputStore, &upstream)
 
-		// Build the kong route resource.
-		for _, match := range val.Matches {
-			routeName := match.String()
-			serviceName := val.String()
+			// Build the KongTarget resources.
+			for _, bRef := range rule.BackendRefs {
+				targetName := upstreamName + "." + utils.Hash32(bRef)
+				target, err := builder.NewKongTarget().
+					WithName(targetName).
+					WithNamespace(c.route.Namespace).
+					WithLabels(c.route, &pRef).
+					WithAnnotations(c.route, &pRef).
+					WithUpstreamRef(upstreamName).
+					WithBackendRef(c.route, &bRef).
+					WithOwner(c.route).Build()
+				if err != nil {
+					// TODO: decide how to handle build errors in converter
+					// For now, skip this resource
+					continue
+				}
+				c.outputStore = append(c.outputStore, &target)
+			}
 
-			route, err := builder.NewKongRoute().
+			// Build the KongService resource.
+			// TODO: httpRouteName may be dropped - same matches on same cpRef in different httpRoutes makes no sense, right?
+			serviceName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.Matches)).String()
+			service, err := builder.NewKongService().
+				WithName(serviceName).
+				WithNamespace(c.route.Namespace).
+				WithLabels(c.route, &pRef).
+				WithAnnotations(c.route, &pRef).
+				WithSpecName(serviceName).
+				WithSpecHost(upstreamName).
+				WithControlPlaneRef(*cp).
+				WithOwner(c.route).Build()
+			if err != nil {
+				// TODO: decide how to handle build errors in converter
+				// For now, skip this resource
+				continue
+			}
+			c.outputStore = append(c.outputStore, &service)
+
+			// Build the kong route resource.
+			routeName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.Matches)).String()
+			routeBuilder := builder.NewKongRoute().
 				WithName(routeName).
 				WithNamespace(c.route.Namespace).
-				WithLabels(c.route).
-				WithAnnotations(c.route, c.ir.GetParentRefByName(match.Name)).
+				WithLabels(c.route, &pRef).
+				WithAnnotations(c.route, &pRef).
 				WithSpecName(routeName).
-				WithHosts(hostnames.Hostnames).
-				WithStripPath(c.ir.StripPath).
+				WithHosts(hostnames).
+				WithStripPath(metadata.ExtractStripPath(c.route.Annotations)).
 				WithKongService(serviceName).
-				WithHTTPRouteMatch(match.Match).
-				WithOwner(c.route).Build()
+				WithOwner(c.route)
+			for _, match := range rule.Matches {
+				routeBuilder = routeBuilder.WithHTTPRouteMatch(match)
+			}
+			route, err := routeBuilder.Build()
 			if err != nil {
 				// TODO: decide how to handle build errors in converter
 				// For now, skip this resource
 				continue
 			}
 			c.outputStore = append(c.outputStore, &route)
-		}
 
+			// Build the kong plugin and kong plugin binding resources.
+			for _, filter := range rule.Filters {
+				filterHash := utils.Hash32(filter)
+				pluginName := namegen.NewName(httpRouteName, cpRefName, filterHash).String()
+				plugin, err := builder.NewKongPlugin().
+					WithName(pluginName).
+					WithNamespace(c.route.Namespace).
+					WithLabels(c.route, &pRef).
+					WithAnnotations(c.route, &pRef).
+					WithFilter(filter).
+					WithOwner(c.route).Build()
+				if err != nil {
+					continue
+				}
+				c.outputStore = append(c.outputStore, &plugin)
+
+				// Create a KongPluginBinding to bind the KongPlugin to each rule match.
+				bbuild := builder.NewKongPluginBinding().
+					WithNamespace(c.route.Namespace).
+					WithLabels(c.route, &pRef).
+					WithAnnotations(c.route, &pRef).
+					WithPluginRef(pluginName).
+					WithControlPlaneRef(*cp).
+					WithOwner(c.route)
+				if filter.Type == gatewayv1.HTTPRouteFilterResponseHeaderModifier {
+					// For response header modifiers, bind the plugin to the KongService instead of KongRoute.
+					bbuild = bbuild.WithServiceRef(serviceName).WithName(serviceName + "." + filterHash)
+				} else {
+					bbuild = bbuild.WithRouteRef(routeName).WithName(routeName + "." + filterHash)
+				}
+				binding, err := bbuild.Build()
+				if err != nil {
+					continue
+				}
+				c.outputStore = append(c.outputStore, &binding)
+			}
+		}
 	}
 
 	return nil
 }
 
-func (c *httpRouteConverter) addControlPlaneRefs(ctx context.Context) error {
-	for i, pRef := range c.route.Spec.ParentRefs {
-		pRefName := intermediate.NameFromHTTPRoute(c.route, "", i)
-		cpRef, err := refs.GetControlPlaneRefByParentRef(ctx, c.Client, c.route, pRef)
+type hybridGatewayParent struct {
+	parentRef gwtypes.ParentReference
+	cpRef     *commonv1alpha1.ControlPlaneRef
+	hostnames []string
+}
+
+func (c *httpRouteConverter) getHybridGatewayParents(ctx context.Context) ([]hybridGatewayParent, error) {
+	result := []hybridGatewayParent{}
+
+	for _, pRef := range c.route.Spec.ParentRefs {
+		cp, err := c.getControlPlaneRefByParentRef(ctx, pRef)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		c.ir.AddControlPlaneRef(intermediate.ControlPlaneRef{
-			Name:            pRefName,
-			ControlPlaneRef: cpRef,
+		if cp == nil {
+			continue
+		}
+
+		hostnames, err := c.getHostnamesByParentRef(ctx, pRef)
+		if err != nil {
+			return nil, err
+		}
+		if hostnames == nil {
+			continue
+		}
+
+		result = append(result, hybridGatewayParent{
+			parentRef: pRef,
+			cpRef:     cp,
+			hostnames: hostnames,
 		})
 	}
-	return nil
+
+	return result, nil
 }
 
-// addHostnames adds hostnames to the intermediate representation based on the HTTPRoute's ParentRefs
-// and their associated Gateways and Listeners. If there is no intersection between the HTTPRoute's hostnames
-// and the Listener's hostname, no Hostnames entry is added. If all hostnames are accepted, an entry with an
-// empty hostname list is added.
-func (c *httpRouteConverter) addHostnames(ctx context.Context) error {
-
-	for i, pRef := range c.route.Spec.ParentRefs {
-		var err error
-		var listeners []gwtypes.Listener
-		hosts := []string{}
-		hostnamesName := intermediate.NameFromHTTPRoute(c.route, "", i)
-		if listeners, err = refs.GetListenersByParentRef(ctx, c.Client, c.route, pRef); err != nil {
-			return err
-		}
-		for _, listener := range listeners {
-			// Check section reference if present
-			if pRef.SectionName != nil {
-				sectionName := string(*pRef.SectionName)
-				if string(listener.Name) != sectionName {
-					// This listener doesn't match the section reference, skip it
-					continue
-				}
-				if listener.Port != lo.FromPtr(pRef.Port) {
-					// This listener doesn't match the port reference, skip it
-					continue
-				}
-			}
-
-			// If the listener has no hostname, it means it accepts all HTTPRoute hostnames.
-			// No need to do further checks.
-			if listener.Hostname == nil || *listener.Hostname == "" {
-				for _, hostname := range c.route.Spec.Hostnames {
-					hosts = append(hosts, string(hostname))
-				}
-				c.ir.AddHostnames(intermediate.Hostnames{
-					Name:      hostnamesName,
-					Hostnames: hosts,
-				})
-				return nil
-			}
-
-			// Handle wildcard hostnames - get intersection
-			for _, hostname := range c.route.Spec.Hostnames {
-				routeHostname := string(hostname)
-				if intersection := hostnameIntersection(string(*listener.Hostname), routeHostname); intersection != "" {
-					hosts = append(hosts, intersection)
-				}
-			}
-		}
-		if len(hosts) > 0 {
-			c.ir.AddHostnames(intermediate.Hostnames{
-				Name:      hostnamesName,
-				Hostnames: hosts,
-			})
-		}
-	}
-	return nil
+func (c *httpRouteConverter) getControlPlaneRefByParentRef(ctx context.Context, pRef gwtypes.ParentReference) (*commonv1alpha1.ControlPlaneRef, error) {
+	return refs.GetControlPlaneRefByParentRef(ctx, c.Client, c.route, pRef)
 }
 
-// hostnameIntersection returns the intersection of listener and route hostnames.
-// Returns the most specific hostname that satisfies both constraints, or an empty string if
-// there is no intersection.
-func hostnameIntersection(listenerHostname, routeHostname string) string {
-	// Exact match - return the common hostname
-	if listenerHostname == routeHostname {
-		return routeHostname
+func (c *httpRouteConverter) getHostnamesByParentRef(ctx context.Context, pRef gwtypes.ParentReference) ([]string, error) {
+	var err error
+	var hostnames []string
+
+	listeners, err := refs.GetListenersByParentRef(ctx, c.Client, c.route, pRef)
+	if err != nil {
+		return nil, err
 	}
 
-	// Listener is wildcard (*.example.com), route is specific (api.example.com)
-	if strings.HasPrefix(listenerHostname, "*.") {
-		wildcardDomain := listenerHostname[1:] // Remove "*"
+	for _, listener := range listeners {
+		// Check section reference if present
+		if pRef.SectionName != nil {
+			sectionName := string(*pRef.SectionName)
+			if string(listener.Name) != sectionName {
+				// This listener doesn't match the section reference, skip it
+				continue
+			}
+			if listener.Port != lo.FromPtr(pRef.Port) {
+				// This listener doesn't match the port reference, skip it
+				continue
+			}
+		}
 
-		// Route hostname must end with the wildcard domain
-		if strings.HasSuffix(routeHostname, wildcardDomain) {
-			return routeHostname // Return the more specific route hostname
+		// If the listener has no hostname, it means it accepts all HTTPRoute hostnames.
+		// No need to do further checks.
+		if listener.Hostname == nil || *listener.Hostname == "" {
+			hostnames = []string{}
+			for _, host := range c.route.Spec.Hostnames {
+				hostnames = append(hostnames, string(host))
+			}
+			return hostnames, nil
+		}
+
+		// Handle wildcard hostnames - get intersection
+		for _, host := range c.route.Spec.Hostnames {
+			routeHostname := string(host)
+			if intersection := utils.HostnameIntersection(string(*listener.Hostname), routeHostname); intersection != "" {
+				hostnames = append(hostnames, intersection)
+			}
 		}
 	}
-
-	// Route is wildcard (*.example.com), listener is specific (api.example.com)
-	if strings.HasPrefix(routeHostname, "*.") {
-		wildcardDomain := routeHostname[1:] // Remove "*"
-
-		// Listener hostname must end with the wildcard domain
-		if strings.HasSuffix(listenerHostname, wildcardDomain) {
-			return listenerHostname // Return the more specific listener hostname
-		}
-	}
-
-	return "" // No intersection
+	return hostnames, nil
 }

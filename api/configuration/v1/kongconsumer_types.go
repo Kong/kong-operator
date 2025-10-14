@@ -69,12 +69,18 @@ type KongConsumer struct {
 }
 
 // KongConsumerSpec defines the specification of the KongConsumer.
+// +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongConsumerSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this Consumer is associated with.
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
 	// +optional
 	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef,omitempty"`
+
+	// Adopt is the options for adopting a consumer from an existing consumer in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
 
 	// Tags is an optional set of tags applied to the consumer.
 	Tags commonv1alpha1.Tags `json:"tags,omitempty"`

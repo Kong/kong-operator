@@ -94,6 +94,11 @@ func (in *KongConsumerGroupSpec) DeepCopyInto(out *KongConsumerGroupSpec) {
 		*out = new(v1alpha1.ControlPlaneRef)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Adopt != nil {
+		in, out := &in.Adopt, &out.Adopt
+		*out = new(v1alpha1.AdoptOptions)
+		(*in).DeepCopyInto(*out)
+	}
 	if in.Tags != nil {
 		in, out := &in.Tags, &out.Tags
 		*out = make(v1alpha1.Tags, len(*in))

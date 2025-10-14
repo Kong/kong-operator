@@ -9,10 +9,12 @@ import (
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/pkg/metadata"
@@ -490,4 +492,173 @@ func TestCreateAndUpdateKongService_KubernetesMetadataConsistency(t *testing.T) 
 		"duplicate-tag",
 	}
 	require.ElementsMatch(t, expectedTags, output.Tags)
+}
+
+func TestAdoptKongServiceOverride(t *testing.T) {
+	ctx := t.Context()
+	testCases := []struct {
+		name                string
+		mockServicePair     func(*testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService)
+		assertions          func(*testing.T, *configurationv1alpha1.KongService)
+		expectedErrContains string
+		expectedErrType     error
+	}{
+		{
+			name: "success",
+			mockServicePair: func(t *testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := sdkmocks.NewMockServicesSDK(t)
+				sdk.EXPECT().GetService(mock.Anything, "1234", "123456789").Return(
+					&sdkkonnectops.GetServiceResponse{
+						Service: &sdkkonnectcomp.ServiceOutput{},
+					},
+					nil,
+				)
+				sdk.EXPECT().UpsertService(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.UpsertServiceRequest) bool {
+					return req.ServiceID == "1234"
+				})).Return(
+					&sdkkonnectops.UpsertServiceResponse{}, nil,
+				)
+				svc := &configurationv1alpha1.KongService{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "adopt-service-1",
+						Namespace: "default",
+						UID:       "abcd-0001",
+					},
+					Spec: configurationv1alpha1.KongServiceSpec{
+						Adopt: &commonv1alpha1.AdoptOptions{
+							From: commonv1alpha1.AdoptSourceKonnect,
+							Mode: commonv1alpha1.AdoptModeOverride,
+							Konnect: &commonv1alpha1.AdoptKonnectOptions{
+								ID: "1234",
+							},
+						},
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							Name: lo.ToPtr("svc-1"),
+							Host: "example.com",
+						},
+					},
+					Status: configurationv1alpha1.KongServiceStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							ControlPlaneID: "123456789",
+						},
+					},
+				}
+				return sdk, svc
+			},
+			assertions: func(t *testing.T, ks *configurationv1alpha1.KongService) {
+				assert.Equal(t, "1234", ks.GetKonnectID())
+			},
+		},
+		{
+			name: "failed to fetch",
+			mockServicePair: func(t *testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := sdkmocks.NewMockServicesSDK(t)
+				sdk.EXPECT().GetService(mock.Anything, "1234", "123456789").Return(
+					&sdkkonnectops.GetServiceResponse{
+						Service: &sdkkonnectcomp.ServiceOutput{},
+					},
+					&sdkkonnecterrs.NotFoundError{},
+				)
+				svc := &configurationv1alpha1.KongService{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "adopt-service-1",
+						Namespace: "default",
+						UID:       "abcd-0001",
+					},
+					Spec: configurationv1alpha1.KongServiceSpec{
+						Adopt: &commonv1alpha1.AdoptOptions{
+							From: commonv1alpha1.AdoptSourceKonnect,
+							Mode: commonv1alpha1.AdoptModeOverride,
+							Konnect: &commonv1alpha1.AdoptKonnectOptions{
+								ID: "1234",
+							},
+						},
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							Name: lo.ToPtr("svc-1"),
+							Host: "example.com",
+						},
+					},
+					Status: configurationv1alpha1.KongServiceStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							ControlPlaneID: "123456789",
+						},
+					},
+				}
+				return sdk, svc
+			},
+			assertions: func(t *testing.T, ks *configurationv1alpha1.KongService) {
+				assert.Empty(t, ks.GetKonnectID())
+			},
+			expectedErrContains: "failed to fetch Konnect entity",
+			expectedErrType:     KonnectEntityAdoptionFetchError{},
+		},
+		{
+			name: "uid conflict",
+			mockServicePair: func(t *testing.T) (*sdkmocks.MockServicesSDK, *configurationv1alpha1.KongService) {
+				sdk := sdkmocks.NewMockServicesSDK(t)
+				sdk.EXPECT().GetService(mock.Anything, "1234", "123456789").Return(
+					&sdkkonnectops.GetServiceResponse{
+						Service: &sdkkonnectcomp.ServiceOutput{
+							// different UID in tag
+							Tags: []string{"k8s-uid:abcd-0000"},
+						},
+					}, nil,
+				)
+				svc := &configurationv1alpha1.KongService{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "adopt-service-1",
+						Namespace: "default",
+						UID:       "abcd-0001",
+					},
+					Spec: configurationv1alpha1.KongServiceSpec{
+						Adopt: &commonv1alpha1.AdoptOptions{
+							From: commonv1alpha1.AdoptSourceKonnect,
+							Mode: commonv1alpha1.AdoptModeOverride,
+							Konnect: &commonv1alpha1.AdoptKonnectOptions{
+								ID: "1234",
+							},
+						},
+						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
+							Name: lo.ToPtr("svc-1"),
+							Host: "example.com",
+						},
+					},
+					Status: configurationv1alpha1.KongServiceStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+							ControlPlaneID: "123456789",
+						},
+					},
+				}
+				return sdk, svc
+			},
+			assertions: func(t *testing.T, ks *configurationv1alpha1.KongService) {
+				assert.Empty(t, ks.GetKonnectID())
+			},
+			expectedErrContains: "Konnect entity (ID: 1234) is managed by another k8s object",
+			expectedErrType:     KonnectEntityAdoptionUIDTagConflictError{},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sdk, svc := tc.mockServicePair(t)
+
+			err := adoptService(ctx, sdk, svc)
+
+			if tc.assertions != nil {
+				tc.assertions(t, svc)
+			}
+
+			if tc.expectedErrContains != "" {
+				assert.ErrorContains(t, err, tc.expectedErrContains)
+				if tc.expectedErrType != nil {
+					require.ErrorAs(t, err, &tc.expectedErrType)
+				}
+				return
+			}
+
+			require.NoError(t, err)
+		})
+	}
+
 }

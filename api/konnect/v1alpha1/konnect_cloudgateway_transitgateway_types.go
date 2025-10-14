@@ -51,6 +51,11 @@ type KonnectCloudGatewayTransitGatewaySpec struct {
 	//
 	// +required
 	NetworkRef commonv1alpha1.ObjectRef `json:"networkRef"`
+
+	// Adopt is the options for adopting a cloud gateway transit gateway from an existing transit gateway in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
+
 	// KonnectTransitGatewayAPISpec is the configuration of the transit gateway on Konnect side.
 	KonnectTransitGatewayAPISpec `json:",inline"`
 }

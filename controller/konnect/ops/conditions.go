@@ -83,6 +83,36 @@ func SetKonnectEntityMirroredConditionFalse(
 	)
 }
 
+// SetKonnectEntityAdoptedConditionTrue sets the KonnectEntityAdopted condition to True
+// on the provided object.
+func SetKonnectEntityAdoptedConditionTrue(
+	obj entityType,
+) {
+	_setKonnectEntityConditon(
+		obj,
+		konnectv1alpha1.KonnectEntityAdoptedConditionType,
+		metav1.ConditionTrue,
+		konnectv1alpha1.KonnectEntityAdoptedReasonAdopted,
+		"",
+	)
+}
+
+// SetKonnectEntityAdoptedConditionFalse sets the KonnectEntityAdopted condition
+// to false on the provided object.
+func SetKonnectEntityAdoptedConditionFalse(
+	obj entityType,
+	reason kcfgconsts.ConditionReason,
+	err error,
+) {
+	_setKonnectEntityConditon(
+		obj,
+		konnectv1alpha1.KonnectEntityAdoptedConditionType,
+		metav1.ConditionFalse,
+		reason,
+		err.Error(),
+	)
+}
+
 func _setKonnectEntityConditon(
 	obj entityType,
 	cType kcfgconsts.ConditionType,

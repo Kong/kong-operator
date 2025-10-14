@@ -51,13 +51,18 @@ type KongCredentialJWT struct {
 	Status KongCredentialJWTStatus `json:"status,omitempty"`
 }
 
-// KongCredentialJWTSpec defines specification of a Kong Route.
+// KongCredentialJWTSpec defines specification of a Kong JWT credential.
+// +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +apireference:kgo:include
 type KongCredentialJWTSpec struct {
 	// ConsumerRef is a reference to a Consumer this KongCredentialJWT is associated with.
 	//
 	// +required
 	ConsumerRef corev1.LocalObjectReference `json:"consumerRef"`
+
+	// Adopt is the options for adopting a JWT credential from an existing JWT credential in Konnect.
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
 
 	KongCredentialJWTAPISpec `json:",inline"`
 }

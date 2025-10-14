@@ -4,7 +4,6 @@ run:
   build-tags:
     - integration_tests
     - e2e_tests
-    - conformance_tests
     - istio_tests
     - envtest
     - performance_tests
@@ -193,11 +192,13 @@ linters:
           - forbidigo
         path: internal/types/operatortypes.go
         text: use of `operatorv2beta1.(ControlPlane\w*)` forbidden
+      - linters:
+          - forbidigo
+        path: api/test
+        text: use of `operatorv1beta1.(ControlPlane\w*)` forbidden
     paths:
       - pkg/clientset
       - config/
-      - third_party$
-      - builtin$
       - examples$
 issues:
   max-same-issues: 0
@@ -219,6 +220,4 @@ formatters:
     paths:
       - pkg/clientset
       - config/
-      - third_party$
-      - builtin$
       - examples$

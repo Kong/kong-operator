@@ -312,7 +312,7 @@ API_DIR ?= api
 #   make generate && make manifests && make test.charts.golden.update
 # into a single command: make generate
 # Note: manifests is placed near the end to preserve the prior ordering (docs are generated from CRDs first).
-generate: generate.gateway-api-urls generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.cli-arguments-docs generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix generate.format manifests test.charts.golden.update
+generate: generate.gateway-api-urls generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix generate.format manifests test.charts.golden.update generate.cli-arguments-docs
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -602,6 +602,31 @@ test.crds-validation:
 test.crds-validation.pretty:
 	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname ENVTEST_TEST_PATHS=./test/crdsvalidation/...
 
+# --- Section just to run tests that require CRDs to be installed in the cluste.r ---
+# TODO: https://github.com/Kong/kong-operator/issues/2386
+
+# Define a constant list of channels
+CHANNELS := ingress-controller-incubator gateway-operator kong-operator
+
+.PHONY: install.only
+install.only: kustomize
+	@for channel in $(CHANNELS); do \
+		$(KUSTOMIZE) build config/crd/$$channel | kubectl apply --server-side -f -; \
+	done
+
+# Running this target requires to have a cluster with the CRDs installed (make install.only) available.
+.PHONY: test.crds
+test.crds: gotestsum
+	GOFLAGS=$(GOFLAGS) \
+	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
+	$(GOTESTSUM) -- $(GOTESTFLAGS) \
+	-timeout $(INTEGRATION_TEST_TIMEOUT) \
+	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
+	-race \
+	-coverprofile=$(COVERPROFILE) \
+	./api/test/...
+# --- End of section just to run tests that require CRDs to be installed in the cluster. ---
+
 .PHONY: _test.integration
 _test.integration: gotestsum download.telepresence
 	KUBECONFIG=$(KUBECONFIG) \
@@ -662,10 +687,6 @@ test.conformance:
 	@$(MAKE) _test.conformance \
 		GOTESTFLAGS="$(GOTESTFLAGS)" \
 		TEST_SUITE_PATH='./test/conformance/...'
-	@echo 'Conformance tests from the ingress-controller subdirectory'
-	@$(MAKE) _test.conformance \
-		GOTESTFLAGS="$(GOTESTFLAGS)-tags=conformance_tests" \
-		TEST_SUITE_PATH='./ingress-controller/test/conformance/...'
 
 
 .PHONY: test.kongintegration
@@ -835,6 +856,7 @@ _run:
 		-enable-controller-kongplugininstallation \
 		-enable-controller-aigateway \
 		-enable-controller-konnect \
+		-enable-controller-konnect-hybrid \
 		-enable-controller-controlplaneextensions \
 		-enable-conversion-webhook=false \
 		-zap-time-encoding iso8601 \

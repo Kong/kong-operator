@@ -2,6 +2,8 @@
 
 ## Table of Contents
 
+- [v2.0.4](#v204)
+- [v2.0.3](#v203)
 - [v2.0.2](#v202)
 - [v2.0.1](#v201)
 - [v2.0.0](#v200)
@@ -34,20 +36,6 @@
 
 ## Unreleased
 
-### Fixes
-
-- Do not validate `Secret`s and `ConfigMap`s that are used internally by the operator.
-  This prevents issues when those resources are created during bootstrapping of the
-  operator, before the validating webhook is ready.
-  [#2356](https://github.com/Kong/kong-operator/pull/2356)
-- Add the `status.clusterType` in `KonnectGatewayControlPlane` and set it when
-  KO attached the `KonnectGatewayControlPlane` with the control plane in
-  Konnect. The `KonnectExtension` now get the cluster type to fill its
-  `status.konnect.clusterType` from the `statusType` of `KonnectGatewayControlPlane`
-  to fix the incorrect cluster type filled in the status when the control plane
-  is mirrored from an existing control plane in Konnect.
-  [#2343](https://github.com/Kong/kong-operator/pull/2343)
-
 ### Added
 
 - Hybrid Gateway support: Gateway API objects bound to `Gateway`s programmed in Konnect
@@ -68,12 +56,100 @@
   - Added generated schema in zz_generated_schema.go for resource types.
   - Improved and extended unit tests for hybridgateway components.
   [2355](https://github.com/Kong/kong-operator/pull/2355)
+- Hybrid Gateway: add Konnect specific fields to `GatewayConfiguration` CRD.
+  [#2390](https://github.com/Kong/kong-operator/pull/2390)
+  [#2405](https://github.com/Kong/kong-operator/pull/2405)
+- Hybrid Gateway: implement granular accepted and programmed conditions for HTTPRoute status
+  This commit introduces comprehensive support for "Accepted" and "Programmed" status conditions
+  on HTTPRoute resources in the hybridgateway controller. The new logic evaluates each ParentReference
+  for controller ownership, Gateway/GatewayClass support, listener matching, and resource programming
+  status. For every relevant Kong resource (KongRoute, KongService, KongTarget, KongUpstream, KongPlugin, KongPluginBinding),
+  the controller sets detailed programmed conditions, providing clear feedback on which resources are operational
+  and which are not.
+  The update also refactors builder and metadata logic to ensure labels and annotations are correctly set for
+  all managed resources, and improves test coverage for label, annotation, and hostname intersection handling.
+  Legacy status controller code is removed, and the reconciliation flow is streamlined to use the new status
+  enforcement and translation logic.
+  This enables more robust troubleshooting and visibility for users, ensuring HTTPRoute status accurately reflects
+  the readiness and configuration of all associated Kong resources.
+  [#2400](https://github.com/Kong/kong-operator/pull/2400)
+- ManagedFields: improve pruning of empty fields in unstructured objects
+  - Enhance pruneEmptyFields to recursively remove empty maps from slices and maps, including those that become empty after nested pruning.
+  - Update logic to remove empty slices and zero-value fields more robustly.
+  - Expand and refine unit tests in prune_test.go to cover all edge cases, including:
+    - Nested empty maps and slices
+    - Removal of empty maps from slices
+    - Handling of mixed-type slices
+    - Deeply nested pruning scenarios
+    - Preservation of non-map elements in slices
+  [#2413](https://github.com/Kong/kong-operator/pull/2413)
+- Entity Adoption support: support adopting an existing entity from Konnect to
+  a Kubernetes custom resource for managing the existing entity by KO.
+  - Add adoption options to the CRDs supporting adopting entities from Konnect.
+    [#2336](https://github.com/Kong/kong-operator/pull/2336)
+  - Add `adopt.mode` field to the CRDs that support adopting existing entities.
+    Supported modes:
+    - `match`: read-only adoption. The operator adopts the referenced remote entity
+      only when this CR's spec matches the remote configuration
+      (no writes to the remote system).
+      If they differ, adoption fails and the operator does not take ownership until
+      the spec is aligned.
+    - `override`: The operator overrides the remote entity with the spec in the CR.
+    [#2421](https://github.com/Kong/kong-operator/pull/2421)
+    [#2424](https://github.com/Kong/kong-operator/pull/2424)
+  - Implement the general handling process of adopting an existing entity and
+    adoption procedure for `KongService`s in `match` and `override` mode.
+    [#2424](https://github.com/Kong/kong-operator/pull/2424)
+- HybridGateway:
+  - Added controller-runtime watches for Gateway and GatewayClass resources to the hybridgateway controller.
+  - HTTPRoutes are now reconciled when related Gateway or GatewayClass resources change.
+  - Improved event mapping and indexing logic for efficient reconciliation.
+  - Added unit tests for new watch and index logic.
+  [#2419](https://github.com/Kong/kong-operator/pull/2419)
 
 ### Changed
 
+- kong/kong-gateway v3.12 is the default proxy image. [#2391](https://github.com/Kong/kong-operator/pull/2391)
 - For Hybrid `Gateway`s the operator does not run the `ControlPlane` anymore, as
   the `DataPlane` is configured to use `Koko` as Konnect control plane.
   [#2253](https://github.com/Kong/kong-operator/pull/2253)
+
+### Fixed
+
+- Hybrid Gateway: generate a single KongRoute for each HTTPRoute Rule
+  [#2417](https://github.com/Kong/kong-operator/pull/2417)
+- Fix issue with deletion of `KonnectExtension` when the referenced
+  `KonnectGatewayControlPlane` is deleted (it used to hang indefinitely).
+  [#2423](https://github.com/Kong/kong-operator/pull/2423)
+- Hybrid Gateway: add watchers for KongPlugin and KongPluginBinding
+  [#2427](https://github.com/Kong/kong-operator/pull/2427)
+
+## [v2.0.4]
+
+> Release date: 2025-10-03
+
+### Fixes
+
+- Fix problem with starting operator when Konnect is enabled and conversion webhook disabled.
+  [#2392](https://github.com/Kong/kong-operator/issues/2392)
+
+## [v2.0.3]
+
+> Release date: 2025-09-30
+
+### Fixes
+
+- Do not validate `Secret`s and `ConfigMap`s that are used internally by the operator.
+  This prevents issues when those resources are created during bootstrapping of the
+  operator, before the validating webhook is ready.
+  [#2356](https://github.com/Kong/kong-operator/pull/2356)
+- Add the `status.clusterType` in `KonnectGatewayControlPlane` and set it when
+  KO attached the `KonnectGatewayControlPlane` with the control plane in
+  Konnect. The `KonnectExtension` now get the cluster type to fill its
+  `status.konnect.clusterType` from the `statusType` of `KonnectGatewayControlPlane`
+  to fix the incorrect cluster type filled in the status when the control plane
+  is mirrored from an existing control plane in Konnect.
+  [#2343](https://github.com/Kong/kong-operator/pull/2343)
 
 ## [v2.0.2]
 
@@ -92,7 +168,7 @@
 
 > Release date: 2025-09-17
 
-### Fixes
+## Fixes
 
 - Fix incorrect error handling during cluster CA secret creation.
   [#2250](https://github.com/Kong/kong-operator/pull/2250)
@@ -335,8 +411,7 @@
   [#1388](https://github.com/kong/kong-operator/pull/1388)
   [#1410](https://github.com/kong/kong-operator/pull/1410)
   [#1555](https://github.com/kong/kong-operator/pull/1555)
-  <!-- TODO: https://github.com/kong/kong-operator/issues/1501 add link to guide from documentation. -->
-  For more information on this please see: https://docs.konghq.com/gateway-operator/latest/
+  For more information on this please see: https://developer.konghq.com/operator/reference/control-plane-watch-namespaces/#controlplane-s-watchnamespaces-field
 - Implemented `Mirror` and `Origin` `KonnectGatewayControlPlane`s.
   [#1496](https://github.com/kong/kong-operator/pull/1496)
 
@@ -407,7 +482,7 @@
   [#1148](https://github.com/kong/kong-operator/pull/1148)
 - Support for the `konnect-extension.gateway-operator.konghq.com` CRD has been interrupted. The new
   API `konnect-extension.konnect.konghq.com` must be used instead. The migration path is described in
-  the [Kong documentation](https://docs.konghq.com/gateway-operator/latest/guides/migrating/migrate-from-1.4-to-1.5/).
+  the [Kong documentation](https://developer.konghq.com/operator/konnect/reference/migrate-1.4-1.5/).
   [#1183](https://github.com/kong/kong-operator/pull/1183)
 - Migrate KGO CRDs conditions to the kubernetes-configuration repo.
   With this migration process, we have moved all conditions from the KGO repo to [kubernetes-configuration](kubernetes-configuration).
@@ -1391,6 +1466,8 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.0.4]: https://github.com/Kong/kong-operator/compare/v2.0.3..v2.0.4
+[v2.0.3]: https://github.com/Kong/kong-operator/compare/v2.0.2..v2.0.3
 [v2.0.2]: https://github.com/Kong/kong-operator/compare/v2.0.1..v2.0.2
 [v2.0.1]: https://github.com/Kong/kong-operator/compare/v2.0.0..v2.0.1
 [v2.0.0]: https://github.com/Kong/kong-operator/compare/v1.6.2..v2.0.0
