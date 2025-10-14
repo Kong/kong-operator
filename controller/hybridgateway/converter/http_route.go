@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
@@ -286,8 +285,7 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 			}
 
 			// Build the KongService resource.
-			// TODO: httpRouteName may be dropped - same matches on same cpRef in different httpRoutes makes no sense, right?
-			serviceName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.Matches)).String()
+			serviceName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.BackendRefs)).String()
 			service, err := builder.NewKongService().
 				WithName(serviceName).
 				WithNamespace(c.route.Namespace).
@@ -344,20 +342,15 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 				c.outputStore = append(c.outputStore, &plugin)
 
 				// Create a KongPluginBinding to bind the KongPlugin to each rule match.
-				bbuild := builder.NewKongPluginBinding().
+				binding, err := builder.NewKongPluginBinding().
+					WithName(routeName+"."+filterHash).
 					WithNamespace(c.route.Namespace).
 					WithLabels(c.route, &pRef).
 					WithAnnotations(c.route, &pRef).
 					WithPluginRef(pluginName).
 					WithControlPlaneRef(*cp).
-					WithOwner(c.route)
-				if filter.Type == gatewayv1.HTTPRouteFilterResponseHeaderModifier {
-					// For response header modifiers, bind the plugin to the KongService instead of KongRoute.
-					bbuild = bbuild.WithServiceRef(serviceName).WithName(serviceName + "." + filterHash)
-				} else {
-					bbuild = bbuild.WithRouteRef(routeName).WithName(routeName + "." + filterHash)
-				}
-				binding, err := bbuild.Build()
+					WithOwner(c.route).
+					WithRouteRef(routeName).Build()
 				if err != nil {
 					continue
 				}
