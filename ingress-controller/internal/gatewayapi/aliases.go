@@ -34,7 +34,7 @@ type (
 	GatewaySpec                               = gatewayv1.GatewaySpec
 	GatewayStatus                             = gatewayv1.GatewayStatus
 	GatewayStatusAddress                      = gatewayv1.GatewayStatusAddress
-	GatewayTLSConfig                          = gatewayv1.GatewayTLSConfig
+	GatewayTLSConfig                          = gatewayv1.ListenerTLSConfig
 	Group                                     = gatewayv1.Group
 	HeaderMatchType                           = gatewayv1.HeaderMatchType
 	HTTPBackendRef                            = gatewayv1.HTTPBackendRef
@@ -65,8 +65,8 @@ type (
 	ListenerConditionReason                   = gatewayv1.ListenerConditionReason
 	ListenerConditionType                     = gatewayv1.ListenerConditionType
 	ListenerStatus                            = gatewayv1.ListenerStatus
-	LocalPolicyTargetReferenceWithSectionName = gatewayv1alpha2.LocalPolicyTargetReferenceWithSectionName
-	LocalPolicyTargetReference                = gatewayv1alpha2.LocalPolicyTargetReference
+	LocalPolicyTargetReferenceWithSectionName = gatewayv1.LocalPolicyTargetReferenceWithSectionName
+	LocalPolicyTargetReference                = gatewayv1.LocalPolicyTargetReference
 	Namespace                                 = gatewayv1.Namespace
 	ObjectName                                = gatewayv1.ObjectName
 	ParentReference                           = gatewayv1.ParentReference
@@ -99,7 +99,7 @@ type (
 	GRPCRouteSpec                             = gatewayv1.GRPCRouteSpec
 	GRPCRouteStatus                           = gatewayv1.GRPCRouteStatus
 
-	PolicyAncestorStatus = gatewayv1alpha2.PolicyAncestorStatus
+	PolicyAncestorStatus = gatewayv1.PolicyAncestorStatus
 	PolicyStatus         = gatewayv1alpha2.PolicyStatus
 	TCPRoute             = gatewayv1alpha2.TCPRoute
 	TCPRouteList         = gatewayv1alpha2.TCPRouteList
@@ -119,11 +119,11 @@ type (
 
 	BackendTLSPolicy            = gatewayv1alpha3.BackendTLSPolicy
 	BackendTLSPolicyList        = gatewayv1alpha3.BackendTLSPolicyList
-	BackendTLSPolicySpec        = gatewayv1alpha3.BackendTLSPolicySpec
-	BackendTLSPolicyValidation  = gatewayv1alpha3.BackendTLSPolicyValidation
-	SubjectAltName              = gatewayv1alpha3.SubjectAltName
-	SubjectAltNameType          = gatewayv1alpha3.SubjectAltNameType
-	WellKnownCACertificatesType = gatewayv1alpha3.WellKnownCACertificatesType
+	BackendTLSPolicySpec        = gatewayv1.BackendTLSPolicySpec
+	BackendTLSPolicyValidation  = gatewayv1.BackendTLSPolicyValidation
+	SubjectAltName              = gatewayv1.SubjectAltName
+	SubjectAltNameType          = gatewayv1.SubjectAltNameType
+	WellKnownCACertificatesType = gatewayv1.WellKnownCACertificatesType
 )
 
 const (
@@ -194,11 +194,11 @@ const (
 	TLSProtocolType                       = gatewayv1.TLSProtocolType
 	UDPProtocolType                       = gatewayv1.UDPProtocolType
 
-	PolicyConditionAccepted = gatewayv1alpha2.PolicyConditionAccepted
-	PolicyReasonAccepted    = gatewayv1alpha2.PolicyReasonAccepted
-	PolicyReasonConflicted  = gatewayv1alpha2.PolicyReasonConflicted
-	PolicyReasonInvalid     = gatewayv1alpha2.PolicyReasonInvalid
+	PolicyConditionAccepted = gatewayv1.PolicyConditionAccepted
+	PolicyReasonAccepted    = gatewayv1.PolicyReasonAccepted
+	PolicyReasonConflicted  = gatewayv1.PolicyReasonConflicted
+	PolicyReasonInvalid     = gatewayv1.PolicyReasonInvalid
 
-	HostnameSubjectAltNameType = gatewayv1alpha3.HostnameSubjectAltNameType
-	URISubjectAltNameType      = gatewayv1alpha3.URISubjectAltNameType
+	HostnameSubjectAltNameType = gatewayv1.HostnameSubjectAltNameType
+	URISubjectAltNameType      = gatewayv1.URISubjectAltNameType
 )

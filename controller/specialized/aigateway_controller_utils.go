@@ -221,7 +221,7 @@ func aiCloudGatewayToHTTPRoute(
 								BackendObjectReference: gatewayv1.BackendObjectReference{
 									Name:      gatewayv1.ObjectName(kubeSvc.Name),
 									Namespace: (*gatewayv1.Namespace)(&kubeSvc.Namespace),
-									Port:      (*gatewayv1.PortNumber)(&kubeSvc.Spec.Ports[0].Port), // only one port for AI ExternalNameSvc, is predictable
+									Port:      (&kubeSvc.Spec.Ports[0].Port), // only one port for AI ExternalNameSvc, is predictable
 									Kind:      (*gatewayv1.Kind)(&backendKind),
 								},
 							},
