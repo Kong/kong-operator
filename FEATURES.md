@@ -92,7 +92,7 @@ by OpenAI (e.g. ChatGPT).
 >
 > Then see our `config/samples/aigateway.yaml` example to get started.
 
-[hybr]:https://docs.konghq.com/gateway/latest/production/deployment-topologies/hybrid-mode/
+[hybr]:https://developer.konghq.com/gateway/hybrid-mode/
 [keps]:https://github.com/kong/kong-operator/tree/main/keps
 [k8s]:https://kubernetes.io
 [caps]:https://sdk.operatorframework.io/docs/overview/operator-capabilities/
@@ -102,13 +102,13 @@ by OpenAI (e.g. ChatGPT).
 [gwapi]:https://gateway-api.sigs.k8s.io
 [gw]:https://github.com/kong/kong
 [gwcfg]:https://pkg.go.dev/github.com/kong/kong-operator@main/api/v1beta1#GatewayConfiguration
-[tops]:https://docs.konghq.com/gateway/latest/production/deployment-topologies/
+[tops]:https://developer.konghq.com/gateway/deployment-topologies/
 [dapi]:https://pkg.go.dev/github.com/kong/kong-operator@main/api/v1beta1#DataPlane
 [kic]:https://github.com/kong/kubernetes-ingress-controller
 [capi]:https://pkg.go.dev/github.com/kong/kong-operator@main/api/v1alpha1#ControlPlane
-[dbl]:https://docs.konghq.com/gateway/latest/production/deployment-topologies/db-less-and-declarative-config/
-[trd]:https://docs.konghq.com/gateway/latest/production/deployment-topologies/traditional/
-[hybrd]:https://docs.konghq.com/gateway/latest/production/deployment-topologies/hybrid-mode/setup/#install-and-start-data-planes
-[hybrc]:https://docs.konghq.com/gateway/latest/production/deployment-topologies/hybrid-mode/setup/#set-up-the-control-plane
+[dbl]:https://developer.konghq.com/gateway/db-less-mode/
+[trd]:https://developer.konghq.com/gateway/traditional-mode/
+[hybrd]:https://developer.konghq.com/gateway/hybrid-mode/#install-and-start-data-planes
+[hybrc]:https://developer.konghq.com/gateway/hybrid-mode/#set-up-the-control-plane
 [aiplugins]:https://konghq.com/products/kong-ai-gateway
-[quick-start-konnect]:https://docs.konghq.com/gateway-operator/latest/get-started/konnect/install/
+[quick-start-konnect]:https://developer.konghq.com/operator/install/
