@@ -163,9 +163,16 @@ func GenerateNewDeploymentForDataPlane(
 					TerminationGracePeriodSeconds: &terminationGracePeriodSeconds,
 					DNSPolicy:                     corev1.DNSClusterFirst,
 					SchedulerName:                 corev1.DefaultSchedulerName,
-					Volumes:                       []corev1.Volume{},
+					// NOTE: The base proxy container is generated without taking PodTemplateSpec
+					// into account but the volumes (and volume mounts) are taken from the
+					// PodTemplateSpec if they are specified there to prevent clobbering them
+					// due to strategic merge patch limitations.
+					// This would most likely not be necessary if we implemented patching
+					// with SSA and structured marge patch instead of strategic merge patch,
+					// see: https://github.com/Kong/kong-operator/issues/1743.
+					Volumes: VolumesFromPodTemplateSpecOrNil(dataplane.Spec.Deployment.PodTemplateSpec),
 					Containers: []corev1.Container{
-						GenerateDataPlaneContainer(dataplaneImage),
+						GenerateDataPlaneContainer(dataplaneImage, dataplane.Spec.Deployment.PodTemplateSpec),
 					},
 				},
 			},
@@ -217,11 +224,25 @@ func GenerateNewDeploymentForDataPlane(
 	return &wrapped, nil
 }
 
+func VolumesFromPodTemplateSpecOrNil(pts *corev1.PodTemplateSpec) []corev1.Volume {
+	if pts == nil || pts.Spec.Volumes == nil {
+		return nil
+	}
+	return pts.Spec.Volumes
+}
+
 // GenerateDataPlaneContainer generates a DataPlane container.
-func GenerateDataPlaneContainer(image string) corev1.Container {
+func GenerateDataPlaneContainer(image string, pts *corev1.PodTemplateSpec) corev1.Container {
 	return corev1.Container{
-		Name:            consts.DataPlaneProxyContainerName,
-		VolumeMounts:    []corev1.VolumeMount{},
+		Name: consts.DataPlaneProxyContainerName,
+		// NOTE: The base proxy container is generated without taking PodTemplateSpec
+		// into account but the volumes (and volume mounts) are taken from the
+		// PodTemplateSpec if they are specified there to prevent clobbering them
+		// due to strategic merge patch limitations.
+		// This would most likely not be necessary if we implemented patching
+		// with SSA and structured marge patch instead of strategic merge patch,
+		// see: https://github.com/Kong/kong-operator/issues/1743.
+		VolumeMounts:    VolumeMountsFromPodTemplateSpecContainerOrNil(pts, consts.DataPlaneProxyContainerName),
 		Image:           image,
 		ImagePullPolicy: corev1.PullIfNotPresent,
 		Lifecycle: &corev1.Lifecycle{
@@ -262,6 +283,19 @@ func GenerateDataPlaneContainer(image string) corev1.Container {
 		ReadinessProbe: GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusEndpoint),
 		Resources:      *DefaultDataPlaneResources(),
 	}
+}
+
+func VolumeMountsFromPodTemplateSpecContainerOrNil(pts *corev1.PodTemplateSpec, containerName string) []corev1.VolumeMount {
+	if pts == nil || pts.Spec.Containers == nil {
+		return nil
+	}
+	c, ok := lo.Find(pts.Spec.Containers, func(c corev1.Container) bool {
+		return c.Name == containerName
+	})
+	if !ok {
+		return nil
+	}
+	return c.VolumeMounts
 }
 
 // GenerateDataPlaneReadinessProbe generates a dataplane probe that uses the specified endpoint.

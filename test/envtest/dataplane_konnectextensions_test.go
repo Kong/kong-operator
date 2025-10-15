@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -55,8 +56,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 	factory := sdkmocks.NewMockSDKFactory(t)
 
 	const (
-		clusterCASecretName   = "cluster-ca"
-		konnectControlPlaneID = "aee0667a-90c6-45a6-a2d8-575e1e487b86"
+		clusterCASecretName = "cluster-ca"
 	)
 
 	clusterCAKeyConfig := secrets.KeyConfig{
@@ -89,26 +89,6 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		konnectExtensionReconciler,
 	)
 
-	t.Logf("Setting up expected ListDpClientCertificates SDK call returning no certificates")
-	factory.SDK.DataPlaneCertificatesSDK.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneID).
-		Return(&sdkkonnectops.ListDpClientCertificatesResponse{
-			StatusCode: http.StatusOK,
-		}, nil)
-
-	t.Logf("Setting up expected CreateDataplaneCertificate SDK call")
-	factory.SDK.DataPlaneCertificatesSDK.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneID, mock.Anything).
-		Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
-			StatusCode: http.StatusCreated,
-			DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
-				Item: &sdkkonnectcomp.DataPlaneClientCertificate{
-					ID: lo.ToPtr("dp-client-cert-id"),
-				},
-			},
-		}, nil)
-
-	t.Logf("Waiting for caches to sync as CA manager relies on it")
-	mgr.GetCache().WaitForCacheSync(ctx)
-
 	t.Logf("Creating cluster CA secret")
 	require.NoError(t, secrets.CreateClusterCACertificate(ctx, logr.Discard(), cl, types.NamespacedName{
 		Name:      clusterCASecretName,
@@ -117,58 +97,82 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		"konghq.com/secret": "true",
 	}, clusterCAKeyConfig))
 
-	t.Logf("Creating KonnectAPIAuthConfiguration")
-	konnectAPIAuthConfiguration := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
+	t.Run("base", func(t *testing.T) {
+		const konnectControlPlaneID = "aee0667a-90c6-45a6-a2d8-575e1e487b86"
 
-	t.Logf("Creating and setting expecting status for corresponding KonnectControlPlane with Konnect ID: %s", konnectControlPlaneID)
-	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, cl, konnectAPIAuthConfiguration, deploy.WithKonnectID(konnectControlPlaneID))
+		t.Logf("Setting up expected ListDpClientCertificates SDK call returning no certificates")
+		factory.SDK.DataPlaneCertificatesSDK.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneID).
+			Return(&sdkkonnectops.ListDpClientCertificatesResponse{
+				StatusCode: http.StatusOK,
+			}, nil)
 
-	t.Logf("Creating KonnectExtension")
-	konnectExtension := konnectv1alpha2.KonnectExtension{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "ke-",
-			Namespace:    ns.Name,
-		},
-		Spec: konnectv1alpha2.KonnectExtensionSpec{
-			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
-				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
-						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-							Name: cp.Name,
+		t.Logf("Setting up expected CreateDataplaneCertificate SDK call")
+		factory.SDK.DataPlaneCertificatesSDK.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneID, mock.Anything).
+			Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
+				StatusCode: http.StatusCreated,
+				DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
+					Item: &sdkkonnectcomp.DataPlaneClientCertificate{
+						ID: lo.ToPtr("dp-client-cert-id"),
+					},
+				},
+			}, nil)
+
+		t.Logf("Waiting for caches to sync as CA manager relies on it")
+		mgr.GetCache().WaitForCacheSync(ctx)
+
+		t.Logf("Creating KonnectAPIAuthConfiguration")
+		konnectAPIAuthConfiguration := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
+
+		t.Logf("Creating and setting expecting status for corresponding KonnectControlPlane with Konnect ID: %s", konnectControlPlaneID)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, cl, konnectAPIAuthConfiguration, deploy.WithKonnectID(konnectControlPlaneID))
+
+		t.Logf("Creating KonnectExtension")
+		konnectExtension := konnectv1alpha2.KonnectExtension{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "ke-",
+				Namespace:    ns.Name,
+			},
+			Spec: konnectv1alpha2.KonnectExtensionSpec{
+				Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+					ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+						Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+							Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: cp.Name,
+							},
 						},
 					},
 				},
 			},
-		},
-	}
-	require.NoError(t, cl.Create(ctx, &konnectExtension))
+		}
+		require.NoError(t, cl.Create(ctx, &konnectExtension))
 
-	t.Logf("Creating DataPlane with KonnectExtension reference")
-	dp := operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "dp-",
-			Namespace:    ns.Name,
-		},
-		Spec: operatorv1beta1.DataPlaneSpec{
-			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
-				Extensions: []commonv1alpha1.ExtensionRef{
-					{
-						Group: konnectv1alpha1.GroupVersion.Group,
-						Kind:  "KonnectExtension",
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: konnectExtension.Name,
+		t.Logf("Creating DataPlane with KonnectExtension reference")
+		dp := operatorv1beta1.DataPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "dp-",
+				Namespace:    ns.Name,
+			},
+			Spec: operatorv1beta1.DataPlaneSpec{
+				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+					Extensions: []commonv1alpha1.ExtensionRef{
+						{
+							Group: konnectv1alpha1.GroupVersion.Group,
+							Kind:  "KonnectExtension",
+							NamespacedRef: commonv1alpha1.NamespacedRef{
+								Name: konnectExtension.Name,
+							},
 						},
 					},
-				},
-				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						PodTemplateSpec: &corev1.PodTemplateSpec{
-							Spec: corev1.PodSpec{
-								Containers: []corev1.Container{
-									{
-										Name:  consts.DataPlaneProxyContainerName,
-										Image: consts.DefaultDataPlaneImage,
+					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+						DeploymentOptions: operatorv1beta1.DeploymentOptions{
+							PodTemplateSpec: &corev1.PodTemplateSpec{
+								Spec: corev1.PodSpec{
+									Containers: []corev1.Container{
+										{
+											Name:  consts.DataPlaneProxyContainerName,
+											Image: consts.DefaultDataPlaneImage,
+										},
 									},
 								},
 							},
@@ -176,116 +180,291 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 					},
 				},
 			},
-		},
-	}
-	require.NoError(t, cl.Create(ctx, &dp))
+		}
+		require.NoError(t, cl.Create(ctx, &dp))
 
-	t.Logf("Waiting for KonnectExtension to become ready")
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(&konnectExtension), &konnectExtension))
-		conditions := konnectExtension.Status.Conditions
-		require.True(t, lo.ContainsBy(conditions, func(c metav1.Condition) bool {
-			return c.Type == "Ready" && c.Status == metav1.ConditionTrue
-		}), "expected KonnectExtension to have a ready condition, got: %+v", conditions)
-	}, waitTime, tickTime)
+		t.Logf("Waiting for KonnectExtension to become ready")
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(&konnectExtension), &konnectExtension))
+			conditions := konnectExtension.Status.Conditions
+			require.True(t, lo.ContainsBy(conditions, func(c metav1.Condition) bool {
+				return c.Type == "Ready" && c.Status == metav1.ConditionTrue
+			}), "expected KonnectExtension to have a ready condition, got: %+v", conditions)
+		}, waitTime, tickTime)
 
-	t.Logf("Waiting for Deployment to be created and verifying Deployment has KonnectExtension applied")
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		var deployments appsv1.DeploymentList
-		require.NoError(t, cl.List(ctx, &deployments,
-			client.InNamespace(ns.Name),
-			client.MatchingLabels{
-				"app": dp.Name,
-			},
-		))
+		t.Logf("Waiting for Deployment to be created and verifying Deployment has KonnectExtension applied")
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			var deployments appsv1.DeploymentList
+			require.NoError(t, cl.List(ctx, &deployments,
+				client.InNamespace(ns.Name),
+				client.MatchingLabels{
+					"app": dp.Name,
+				},
+			))
 
-		require.Len(t, deployments.Items, 1)
-		createdDeployment := &deployments.Items[0]
+			require.Len(t, deployments.Items, 1)
+			createdDeployment := &deployments.Items[0]
 
-		dpContainer := k8sutils.GetPodContainerByName(&createdDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
-		require.NotNil(t, dpContainer)
-		volumes := createdDeployment.Spec.Template.Spec.Volumes
-		volumeMounts := dpContainer.VolumeMounts
+			dpContainer := k8sutils.GetPodContainerByName(&createdDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+			require.NotNil(t, dpContainer)
+			volumes := createdDeployment.Spec.Template.Spec.Volumes
+			volumeMounts := dpContainer.VolumeMounts
 
-		hasClusterCertVolume := lo.ContainsBy(createdDeployment.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool {
-			return v.Name == consts.ClusterCertificateVolume
-		})
-		require.Truef(t, hasClusterCertVolume, "expected deployment spec to have cluster certificate volume, got: %+v", volumes)
+			hasClusterCertVolume := lo.ContainsBy(createdDeployment.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool {
+				return v.Name == consts.ClusterCertificateVolume
+			})
+			require.Truef(t, hasClusterCertVolume, "expected deployment spec to have cluster certificate volume, got: %+v", volumes)
 
-		hasClusterCertVolumeMount := lo.ContainsBy(dpContainer.VolumeMounts, func(vm corev1.VolumeMount) bool {
-			return vm.Name == consts.ClusterCertificateVolume &&
-				vm.MountPath == consts.ClusterCertificateVolumeMountPath &&
-				vm.ReadOnly == true
-		})
-		require.True(t, hasClusterCertVolumeMount, "expected deployment spec to have cluster certificate volume mount, got: %+v", volumeMounts)
+			hasClusterCertVolumeMount := lo.ContainsBy(dpContainer.VolumeMounts, func(vm corev1.VolumeMount) bool {
+				return vm.Name == consts.ClusterCertificateVolume &&
+					vm.MountPath == consts.ClusterCertificateVolumeMountPath &&
+					vm.ReadOnly == true
+			})
+			require.True(t, hasClusterCertVolumeMount, "expected deployment spec to have cluster certificate volume mount, got: %+v", volumeMounts)
 
-		hasKongClusterCertVolume := lo.ContainsBy(createdDeployment.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool {
-			return v.Name == consts.KongClusterCertVolume
-		})
-		require.True(t, hasKongClusterCertVolume, "expected deployment spec to have Kong cluster certificate volume, got: %+v", volumes)
+			hasKongClusterCertVolume := lo.ContainsBy(createdDeployment.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool {
+				return v.Name == consts.KongClusterCertVolume
+			})
+			require.True(t, hasKongClusterCertVolume, "expected deployment spec to have Kong cluster certificate volume, got: %+v", volumes)
 
-		hasKongClusterCertVolumeMount := lo.ContainsBy(dpContainer.VolumeMounts, func(vm corev1.VolumeMount) bool {
-			return vm.Name == consts.KongClusterCertVolume &&
-				vm.MountPath == consts.KongClusterCertVolumeMountPath
-		})
-		require.True(t, hasKongClusterCertVolumeMount, "expected deployment spec to have Kong cluster certificate volume mount, got: %+v", volumeMounts)
+			hasKongClusterCertVolumeMount := lo.ContainsBy(dpContainer.VolumeMounts, func(vm corev1.VolumeMount) bool {
+				return vm.Name == consts.KongClusterCertVolume &&
+					vm.MountPath == consts.KongClusterCertVolumeMountPath
+			})
+			require.True(t, hasKongClusterCertVolumeMount, "expected deployment spec to have Kong cluster certificate volume mount, got: %+v", volumeMounts)
 
-		expectedEnvVars := []corev1.EnvVar{
-			{
-				Name:  "KONG_CLUSTER_CERT",
-				Value: consts.KongClusterCertVolumeMountPath + "/tls.crt",
+			expectedEnvVars := []corev1.EnvVar{
+				{
+					Name:  "KONG_CLUSTER_CERT",
+					Value: consts.KongClusterCertVolumeMountPath + "/tls.crt",
+				},
+				{
+					Name:  "KONG_CLUSTER_CERT_KEY",
+					Value: consts.KongClusterCertVolumeMountPath + "/tls.key",
+				},
+				{
+					Name:  "KONG_CLUSTER_CONTROL_PLANE",
+					Value: "cp.endpoint:443",
+				},
+				{
+					Name:  "KONG_CLUSTER_MTLS",
+					Value: "pki",
+				},
+				{
+					Name:  "KONG_CLUSTER_SERVER_NAME",
+					Value: "cp.endpoint",
+				},
+				{
+					Name:  "KONG_CLUSTER_TELEMETRY_ENDPOINT",
+					Value: "tp.endpoint:443",
+				},
+				{
+					Name:  "KONG_CLUSTER_TELEMETRY_SERVER_NAME",
+					Value: "tp.endpoint",
+				},
+				{
+					Name:  "KONG_KONNECT_MODE",
+					Value: "on",
+				},
+				{
+					Name:  "KONG_LUA_SSL_TRUSTED_CERTIFICATE",
+					Value: "system",
+				},
+				{
+					Name:  "KONG_ROLE",
+					Value: "data_plane",
+				},
+				{
+					Name:  "KONG_VITALS",
+					Value: "off",
+				},
+			}
+			for _, expectedEnvVar := range expectedEnvVars {
+				assert.Contains(t, dpContainer.Env, expectedEnvVar)
+			}
+		}, waitTime, tickTime)
+
+		t.Logf("Waiting for DataPlane to have KonnectExtensionApplied condition")
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(&dp), &dp))
+			require.True(t, lo.ContainsBy(dp.Status.Conditions, func(c metav1.Condition) bool {
+				return c.Type == string(konnect2.KonnectExtensionAppliedType) && c.Status == metav1.ConditionTrue
+			}), "expected DataPlane to have KonnectExtensionApplied condition, got: %+v", dp.Status.Conditions)
+		}, waitTime, tickTime)
+	})
+
+	t.Run("DataPlane with custom volumes", func(t *testing.T) {
+		const konnectControlPlaneID = "aee0667a-90c6-45a6-a2d8-575e1e487b88"
+
+		t.Log("Check if user provided volumes and volume mounts are preserved when KonnectExtension is applied to DataPlane")
+
+		t.Logf("Setting up expected ListDpClientCertificates SDK call returning no certificates")
+		factory.SDK.DataPlaneCertificatesSDK.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneID).
+			Return(&sdkkonnectops.ListDpClientCertificatesResponse{
+				StatusCode: http.StatusOK,
+			}, nil)
+
+		t.Logf("Setting up expected CreateDataplaneCertificate SDK call")
+		factory.SDK.DataPlaneCertificatesSDK.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneID, mock.Anything).
+			Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
+				StatusCode: http.StatusCreated,
+				DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
+					Item: &sdkkonnectcomp.DataPlaneClientCertificate{
+						ID: lo.ToPtr("dp-client-cert-id"),
+					},
+				},
+			}, nil)
+
+		t.Logf("Waiting for caches to sync as CA manager relies on it")
+		mgr.GetCache().WaitForCacheSync(ctx)
+
+		t.Logf("Creating KonnectAPIAuthConfiguration")
+		konnectAPIAuthConfiguration := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
+
+		t.Logf("Creating and setting expecting status for corresponding KonnectControlPlane with Konnect ID: %s", konnectControlPlaneID)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, cl, konnectAPIAuthConfiguration, deploy.WithKonnectID(konnectControlPlaneID))
+
+		t.Logf("Creating KonnectExtension")
+		konnectExtension := konnectv1alpha2.KonnectExtension{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "ke-",
+				Namespace:    ns.Name,
 			},
-			{
-				Name:  "KONG_CLUSTER_CERT_KEY",
-				Value: consts.KongClusterCertVolumeMountPath + "/tls.key",
-			},
-			{
-				Name:  "KONG_CLUSTER_CONTROL_PLANE",
-				Value: "cp.endpoint:443",
-			},
-			{
-				Name:  "KONG_CLUSTER_MTLS",
-				Value: "pki",
-			},
-			{
-				Name:  "KONG_CLUSTER_SERVER_NAME",
-				Value: "cp.endpoint",
-			},
-			{
-				Name:  "KONG_CLUSTER_TELEMETRY_ENDPOINT",
-				Value: "tp.endpoint:443",
-			},
-			{
-				Name:  "KONG_CLUSTER_TELEMETRY_SERVER_NAME",
-				Value: "tp.endpoint",
-			},
-			{
-				Name:  "KONG_KONNECT_MODE",
-				Value: "on",
-			},
-			{
-				Name:  "KONG_LUA_SSL_TRUSTED_CERTIFICATE",
-				Value: "system",
-			},
-			{
-				Name:  "KONG_ROLE",
-				Value: "data_plane",
-			},
-			{
-				Name:  "KONG_VITALS",
-				Value: "off",
+			Spec: konnectv1alpha2.KonnectExtensionSpec{
+				Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+					ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+						Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+							Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: cp.Name,
+							},
+						},
+					},
+				},
 			},
 		}
-		for _, expectedEnvVar := range expectedEnvVars {
-			assert.Contains(t, dpContainer.Env, expectedEnvVar)
-		}
-	}, waitTime, tickTime)
+		require.NoError(t, cl.Create(ctx, &konnectExtension))
 
-	t.Logf("Waiting for DataPlane to have KonnectExtensionApplied condition")
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(&dp), &dp))
-		require.True(t, lo.ContainsBy(dp.Status.Conditions, func(c metav1.Condition) bool {
-			return c.Type == string(konnect2.KonnectExtensionAppliedType) && c.Status == metav1.ConditionTrue
-		}), "expected DataPlane to have KonnectExtensionApplied condition, got: %+v", dp.Status.Conditions)
-	}, waitTime, tickTime)
+		t.Logf("Creating DataPlane with KonnectExtension reference")
+		dp := operatorv1beta1.DataPlane{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "dp-",
+				Namespace:    ns.Name,
+			},
+			Spec: operatorv1beta1.DataPlaneSpec{
+				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+					Extensions: []commonv1alpha1.ExtensionRef{
+						{
+							Group: konnectv1alpha1.GroupVersion.Group,
+							Kind:  "KonnectExtension",
+							NamespacedRef: commonv1alpha1.NamespacedRef{
+								Name: konnectExtension.Name,
+							},
+						},
+					},
+					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+						DeploymentOptions: operatorv1beta1.DeploymentOptions{
+							PodTemplateSpec: &corev1.PodTemplateSpec{
+								Spec: corev1.PodSpec{
+									Volumes: []corev1.Volume{
+										{
+											Name: "custom-volume",
+											VolumeSource: corev1.VolumeSource{
+												EmptyDir: &corev1.EmptyDirVolumeSource{
+													SizeLimit: resource.NewQuantity(100, resource.Format("Gi")),
+												},
+											},
+										},
+									},
+									Containers: []corev1.Container{
+										{
+											Name:  consts.DataPlaneProxyContainerName,
+											Image: consts.DefaultDataPlaneImage,
+											VolumeMounts: []corev1.VolumeMount{
+												{
+													Name:      "custom-volume",
+													MountPath: "/var/custom-volume",
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+		require.NoError(t, cl.Create(ctx, &dp))
+
+		t.Logf("Waiting for KonnectExtension to become ready")
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(&konnectExtension), &konnectExtension))
+			conditions := konnectExtension.Status.Conditions
+			require.True(t, lo.ContainsBy(conditions, func(c metav1.Condition) bool {
+				return c.Type == "Ready" && c.Status == metav1.ConditionTrue
+			}), "expected KonnectExtension to have a ready condition, got: %+v", conditions)
+		}, waitTime, tickTime)
+
+		t.Logf("Waiting for Deployment to be created and verifying Deployment has KonnectExtension applied")
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			var deployments appsv1.DeploymentList
+			require.NoError(t, cl.List(ctx, &deployments,
+				client.InNamespace(ns.Name),
+				client.MatchingLabels{
+					"app": dp.Name,
+				},
+			))
+
+			require.Len(t, deployments.Items, 1)
+			createdDeployment := &deployments.Items[0]
+
+			dpContainer := k8sutils.GetPodContainerByName(&createdDeployment.Spec.Template.Spec, consts.DataPlaneProxyContainerName)
+			require.NotNil(t, dpContainer)
+			volumes := createdDeployment.Spec.Template.Spec.Volumes
+			volumeMounts := dpContainer.VolumeMounts
+
+			hasClusterCertVolume := lo.ContainsBy(createdDeployment.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool {
+				return v.Name == consts.ClusterCertificateVolume
+			})
+			require.Truef(t, hasClusterCertVolume, "expected deployment spec to have cluster certificate volume, got: %+v", volumes)
+
+			hasCustomVolume := lo.ContainsBy(createdDeployment.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool {
+				return v.Name == "custom-volume"
+			})
+			require.Truef(t, hasCustomVolume, "expected deployment spec to have custom-volume volume, got: %+v", volumes)
+
+			hasCustomVolumeMount := lo.ContainsBy(dpContainer.VolumeMounts, func(vm corev1.VolumeMount) bool {
+				return vm.Name == "custom-volume" &&
+					vm.MountPath == "/var/custom-volume"
+			})
+			require.True(t, hasCustomVolumeMount, "expected deployment spec to have custom volume mount, got: %+v", volumeMounts)
+
+			hasClusterCertVolumeMount := lo.ContainsBy(dpContainer.VolumeMounts, func(vm corev1.VolumeMount) bool {
+				return vm.Name == consts.ClusterCertificateVolume &&
+					vm.MountPath == consts.ClusterCertificateVolumeMountPath &&
+					vm.ReadOnly == true
+			})
+			require.True(t, hasClusterCertVolumeMount, "expected deployment spec to have cluster certificate volume mount, got: %+v", volumeMounts)
+
+			hasKongClusterCertVolume := lo.ContainsBy(createdDeployment.Spec.Template.Spec.Volumes, func(v corev1.Volume) bool {
+				return v.Name == consts.KongClusterCertVolume
+			})
+			require.True(t, hasKongClusterCertVolume, "expected deployment spec to have Kong cluster certificate volume, got: %+v", volumes)
+
+			hasKongClusterCertVolumeMount := lo.ContainsBy(dpContainer.VolumeMounts, func(vm corev1.VolumeMount) bool {
+				return vm.Name == consts.KongClusterCertVolume &&
+					vm.MountPath == consts.KongClusterCertVolumeMountPath
+			})
+			require.True(t, hasKongClusterCertVolumeMount, "expected deployment spec to have Kong cluster certificate volume mount, got: %+v", volumeMounts)
+		}, waitTime, tickTime)
+
+		t.Logf("Waiting for DataPlane to have KonnectExtensionApplied condition")
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(&dp), &dp))
+			require.True(t, lo.ContainsBy(dp.Status.Conditions, func(c metav1.Condition) bool {
+				return c.Type == string(konnect2.KonnectExtensionAppliedType) && c.Status == metav1.ConditionTrue
+			}), "expected DataPlane to have KonnectExtensionApplied condition, got: %+v", dp.Status.Conditions)
+		}, waitTime, tickTime)
+	})
 }

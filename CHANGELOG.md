@@ -34,6 +34,13 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- Fix `DataPlane`'s volumes and volume mounts patching when specified by user
+  [#2425](https://github.com/Kong/kong-operator/pull/2425)
+
 ## [v2.0.4]
 
 > Release date: 2025-10-03
@@ -78,7 +85,7 @@
 
 > Release date: 2025-09-17
 
-## Fixes
+### Fixes
 
 - Fix incorrect error handling during cluster CA secret creation.
   [#2250](https://github.com/Kong/kong-operator/pull/2250)
@@ -238,7 +245,7 @@
 - `kong/kong-gateway` v3.11 is the default proxy image.
   [#2212](https://github.com/Kong/kong-operator/pull/2212)
 
-### Fixed
+### Fixes
 
 - Do not check "Programmed" condition in status of `Gateway` listeners in
   extracting certificates in controlplane's translation of Kong configuration.
@@ -270,7 +277,7 @@
 
 > Release date: 2025-07-11
 
-### Fixed
+### Fixes
 
 - Ignore the `ForbiddenError` in `sdk-konnect-go` returned from running CRUD
   operations against Konnect APIs. This prevents endless reconciliation when an
@@ -696,7 +703,7 @@
   flag or the `GATEWAY_OPERATOR_ENABLE_CONTROLLER_KONNECT` env var is set.
   [#738](https://github.com/kong/kong-operator/pull/738)
 
-### Fixed
+### Fixes
 
 - Fixed `ControlPlane` cluster wide resources not migrating to new ownership labels
   (introduced in 1.3.0) when upgrading the operator from 1.2 (or older) to 1.3.0.

@@ -108,8 +108,10 @@ func TestDeploymentBuilder(t *testing.T) {
 									Spec: corev1.PodSpec{
 										Volumes: []corev1.Volume{
 											{
-												// NOTE: we need to provide the existing entry in the slice
+												// NOTE: we can provide the existing entry in the slice
 												// to prevent merging the provided new entry with existing entries.
+												// Next test case shows that we can also not provide it and it will
+												// still work as expected (although the order may change).
 												Name: consts.ClusterCertificateVolume,
 											},
 											{
@@ -200,6 +202,111 @@ func TestDeploymentBuilder(t *testing.T) {
 					{
 						Name:      "test-volume",
 						MountPath: "/var/test/",
+						ReadOnly:  true,
+					},
+				},
+					deployment.Spec.Template.Spec.Containers[0].VolumeMounts,
+				)
+			},
+		},
+		{
+			name: "new DataPlane with custom secret (without specifying the base certificate volume or volume mount)",
+			dataPlane: &operatorv1beta1.DataPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-secret-volume",
+					Namespace: "default",
+				},
+				Spec: operatorv1beta1.DataPlaneSpec{
+					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv1beta1.DeploymentOptions{
+								PodTemplateSpec: &corev1.PodTemplateSpec{
+									Spec: corev1.PodSpec{
+										Volumes: []corev1.Volume{
+											{
+												Name: "test-volume",
+												VolumeSource: corev1.VolumeSource{
+													Secret: &corev1.SecretVolumeSource{
+														SecretName: "test-secret",
+													},
+												},
+											},
+										},
+										Containers: []corev1.Container{
+											{
+												Name: consts.DataPlaneProxyContainerName,
+												VolumeMounts: []corev1.VolumeMount{
+													{
+														Name:      "test-volume",
+														MountPath: "/var/test/",
+														ReadOnly:  true,
+													},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			certSecretName: "certificate",
+			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
+				ctx := t.Context()
+
+				deploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
+					WithClusterCertificate(certSecretName).
+					WithAdditionalLabels(deploymentLiveLabels)
+
+				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, validateDataPlaneImage)
+				require.NoError(t, err)
+				require.Equal(t, op.Created, res)
+				require.Len(t, deployment.Spec.Template.Spec.Volumes, 2)
+				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
+				require.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 2)
+
+				certificateVolume := corev1.Volume{}
+				certificateVolume.Secret = &corev1.SecretVolumeSource{}
+				// Fill in the defaults for the volume after setting the secret volume source
+				// field. This prevents setting the empty dir volume source field which
+				// would conflict with the secret volume source field.
+				k8sresources.SetDefaultsVolume(&certificateVolume)
+				certificateVolume.Name = consts.ClusterCertificateVolume
+				certificateVolume.Secret.SecretName = "certificate"
+				certificateVolume.Secret.Items = []corev1.KeyToPath{
+					{
+						Key:  "tls.crt",
+						Path: "tls.crt",
+					},
+					{
+						Key:  "tls.key",
+						Path: "tls.key",
+					},
+					{
+						Key:  "ca.crt",
+						Path: "ca.crt",
+					},
+				}
+
+				testVolume := corev1.Volume{}
+				testVolume.Secret = &corev1.SecretVolumeSource{}
+				// Fill in the defaults for the volume after setting the secret volume source
+				// field. This prevents setting the empty dir volume source field which
+				// would conflict with the secret volume source field.
+				k8sresources.SetDefaultsVolume(&testVolume)
+				testVolume.Name = "test-volume"
+				testVolume.Secret.SecretName = "test-secret"
+
+				require.Equal(t, []corev1.VolumeMount{
+					{
+						Name:      "test-volume",
+						MountPath: "/var/test/",
+						ReadOnly:  true,
+					},
+					{
+						Name:      consts.ClusterCertificateVolume,
+						MountPath: consts.ClusterCertificateVolumeMountPath,
 						ReadOnly:  true,
 					},
 				},

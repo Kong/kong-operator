@@ -516,7 +516,7 @@ func checkKonnectExtensionConditions(
 func checkKonnectExtensionStatus(
 	ke *konnectv1alpha2.KonnectExtension,
 	expectedKonnectCPID string,
-	expectedDPCertificateSecretName string,
+	expectedDPCertificateSecretName string, //nolint:unparam
 ) func(t *assert.CollectT) {
 	return func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: ke.Name, Namespace: ke.Namespace}, ke)
