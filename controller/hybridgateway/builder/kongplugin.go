@@ -147,78 +147,79 @@ type transformerTargetSlice struct {
 	Headers []string `json:"headers,omitempty"`
 }
 
-type requestTransformer struct {
-	Add    transformerTargetSlice `json:"add,omitzero"`
-	Remove transformerTargetSlice `json:"remove,omitzero"`
+type transformerData struct {
+	// Add: adds an header only if the header is not existent.
+	// Append: adds a new header even if the header is already existent (adds a new instance).
+	// Remove: removes an entry.
+	// Replace: overwrites an header value only if the header exists.
+	Add     transformerTargetSlice `json:"add,omitzero"`
+	Append  transformerTargetSlice `json:"append,omitzero"`
+	Remove  transformerTargetSlice `json:"remove,omitzero"`
+	Replace transformerTargetSlice `json:"replace,omitzero"`
 }
 
-func translateRequestModifier(filter gwtypes.HTTPRouteFilter) (requestTransformer, error) {
+func translateRequestModifier(filter gwtypes.HTTPRouteFilter) (transformerData, error) {
 	var err error
-	plugin := requestTransformer{}
+	plugin := transformerData{}
 
 	if filter.RequestHeaderModifier == nil {
 		err = errors.New("RequestHeaderModifier filter config is missing")
 		return plugin, err
 	}
-	plugin.Remove.Headers = []string{}
-	plugin.Add.Headers = []string{}
 
+	// In order to overwrite an header of add if not present (GWAPI Set) we should do a Kong Plugin
+	// Replace (so it will overwrite it if found) + Add (so if not found, will add it).
 	if len(filter.RequestHeaderModifier.Set) > 0 {
 		for _, v := range filter.RequestHeaderModifier.Set {
-			plugin.Remove.Headers = append(plugin.Remove.Headers, string(v.Name))
+			plugin.Replace.Headers = append(plugin.Replace.Headers, string(v.Name)+":"+v.Value)
 			plugin.Add.Headers = append(plugin.Add.Headers, string(v.Name)+":"+v.Value)
 		}
 	}
+	// Add for GWAPI equals "append" for Kong Plugins (it will add another instance of the header).
 	if len(filter.RequestHeaderModifier.Add) > 0 {
 		for _, v := range filter.RequestHeaderModifier.Add {
-			plugin.Add.Headers = append(plugin.Add.Headers, string(v.Name)+":"+v.Value)
+			plugin.Append.Headers = append(plugin.Append.Headers, string(v.Name)+":"+v.Value)
 		}
 	}
 	if len(filter.RequestHeaderModifier.Remove) > 0 {
 		plugin.Remove.Headers = append(plugin.Remove.Headers, filter.RequestHeaderModifier.Remove...)
 	}
 
-	if len(plugin.Add.Headers) == 0 && len(plugin.Remove.Headers) == 0 {
+	if len(plugin.Add.Headers)+len(plugin.Append.Headers)+
+		len(plugin.Remove.Headers)+len(plugin.Replace.Headers) == 0 {
 		err = errors.New("RequestHeaderModifier filter config is empty")
-		plugin = requestTransformer{}
+		plugin = transformerData{}
 	}
 	return plugin, err
 }
 
-type responseTransformer struct {
-	Add    transformerTargetSlice `json:"add,omitzero"`
-	Remove transformerTargetSlice `json:"remove,omitzero"`
-}
-
-func translateResponseModifier(filter gwtypes.HTTPRouteFilter) (responseTransformer, error) {
+func translateResponseModifier(filter gwtypes.HTTPRouteFilter) (transformerData, error) {
 	var err error
-	plugin := responseTransformer{}
+	plugin := transformerData{}
 
 	if filter.ResponseHeaderModifier == nil {
 		err = errors.New("ResponseHeaderModifier filter config is missing")
 		return plugin, err
 	}
-	plugin.Remove.Headers = []string{}
-	plugin.Add.Headers = []string{}
 
 	if len(filter.ResponseHeaderModifier.Set) > 0 {
 		for _, v := range filter.ResponseHeaderModifier.Set {
-			plugin.Remove.Headers = append(plugin.Remove.Headers, string(v.Name))
+			plugin.Replace.Headers = append(plugin.Replace.Headers, string(v.Name)+":"+v.Value)
 			plugin.Add.Headers = append(plugin.Add.Headers, string(v.Name)+":"+v.Value)
 		}
 	}
 	if len(filter.ResponseHeaderModifier.Add) > 0 {
 		for _, v := range filter.ResponseHeaderModifier.Add {
-			plugin.Add.Headers = append(plugin.Add.Headers, string(v.Name)+":"+v.Value)
+			plugin.Append.Headers = append(plugin.Append.Headers, string(v.Name)+":"+v.Value)
 		}
 	}
 	if len(filter.ResponseHeaderModifier.Remove) > 0 {
 		plugin.Remove.Headers = append(plugin.Remove.Headers, filter.ResponseHeaderModifier.Remove...)
 	}
 
-	if len(plugin.Add.Headers) == 0 && len(plugin.Remove.Headers) == 0 {
+	if len(plugin.Add.Headers)+len(plugin.Append.Headers)+len(plugin.Remove.Headers)+len(plugin.Replace.Headers) == 0 {
 		err = errors.New("ResponseHeaderModifier filter config is empty")
-		plugin = responseTransformer{}
+		plugin = transformerData{}
 	}
 	return plugin, err
 }
