@@ -13,7 +13,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
-	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
@@ -270,10 +269,9 @@ type fakeHTTPRouteConverter struct {
 func (f *fakeHTTPRouteConverter) GetOutputStore(ctx context.Context) []unstructured.Unstructured {
 	return f.desired
 }
-func (f *fakeHTTPRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind              { return f.gvks }
-func (f *fakeHTTPRouteConverter) GetRootObject() gwtypes.HTTPRoute                        { return f.root }
-func (f *fakeHTTPRouteConverter) Translate() error                                        { return nil }
-func (f *fakeHTTPRouteConverter) Reduce(obj unstructured.Unstructured) []utils.ReduceFunc { return nil }
+func (f *fakeHTTPRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind { return f.gvks }
+func (f *fakeHTTPRouteConverter) GetRootObject() gwtypes.HTTPRoute           { return f.root }
+func (f *fakeHTTPRouteConverter) Translate() error                           { return nil }
 func (f *fakeHTTPRouteConverter) ListExistingObjects(ctx context.Context) ([]unstructured.Unstructured, error) {
 	return nil, nil
 }
