@@ -100,6 +100,8 @@
   - Implement the general handling process of adopting an existing entity and
     adoption procedure for `KongService`s in `match` and `override` mode.
     [#2424](https://github.com/Kong/kong-operator/pull/2424)
+  - Implement the Match mode for adoption for Konnect cloud gateway entities
+    [#2429](https://github.com/Kong/kong-operator/pull/2429)
 - HybridGateway:
   - Added controller-runtime watches for Gateway and GatewayClass resources to the hybridgateway controller.
   - HTTPRoutes are now reconciled when related Gateway or GatewayClass resources change.
