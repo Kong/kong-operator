@@ -38,6 +38,7 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
 	extensionskonnect "github.com/kong/kong-operator/controller/pkg/extensions/konnect"
+	"github.com/kong/kong-operator/controller/pkg/finalizer"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
@@ -173,11 +174,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// remove finalizer
 		if controllerutil.RemoveFinalizer(cp, string(ControlPlaneFinalizerCPInstanceTeardown)) {
 			if err := r.Update(ctx, cp); err != nil {
-				if k8serrors.IsConflict(err) {
-					log.Debug(logger, "conflict found when updating ControlPlane, retrying")
-					return ctrl.Result{Requeue: true, RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
-				}
-				return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane: %w", err)
+				return finalizer.HandlePatchOrUpdateError(err, logger)
 			}
 		}
 
@@ -190,16 +187,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if controllerutil.AddFinalizer(cp, string(ControlPlaneFinalizerCPInstanceTeardown)) {
 		log.Trace(logger, "setting finalizers")
 		if err := r.Update(ctx, cp); err != nil {
-			if k8serrors.IsConflict(err) {
-				log.Debug(logger, "conflict found when updating ControlPlane finalizer, retrying",
-					"finalizer", string(ControlPlaneFinalizerCPInstanceTeardown),
-				)
-				return ctrl.Result{Requeue: true, RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
-			}
-			return ctrl.Result{}, fmt.Errorf("failed updating ControlPlane's finalizer %s: %w",
-				string(ControlPlaneFinalizerCPInstanceTeardown),
-				err,
-			)
+			return finalizer.HandlePatchOrUpdateError(err, logger)
 		}
 		// Requeue to ensure that we do not miss next reconciliation request in case
 		// AddFinalizer calls returned true but the update resulted in a noop.
@@ -468,7 +456,7 @@ func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, update
 	}
 
 	log.Debug(logger, "patching ControlPlane status", "status", updated.Status)
-	if err := r.Client.Status().Patch(ctx, updated, client.MergeFrom(current)); err != nil {
+	if err := r.Client.Status().Patch(ctx, updated, client.MergeFrom(current)); client.IgnoreNotFound(err) != nil {
 		if k8serrors.IsConflict(err) {
 			log.Debug(logger, "conflict found when updating ControlPlane, retrying")
 			return ctrl.Result{Requeue: true, RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
