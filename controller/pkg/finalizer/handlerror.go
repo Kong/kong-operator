@@ -13,7 +13,7 @@ import (
 // HandlePatchOrUpdateError handles errors returned from patch or update operations
 // on Kubernetes resources when changing finalizers.
 func HandlePatchOrUpdateError(err error, logger logr.Logger) (ctrl.Result, error) {
-	// Short cirtcuit.
+	// Short circuit.
 	if err == nil {
 		return ctrl.Result{}, nil
 	}

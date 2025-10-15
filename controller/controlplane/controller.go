@@ -456,7 +456,7 @@ func (r *Reconciler) patchStatus(ctx context.Context, logger logr.Logger, update
 	}
 
 	log.Debug(logger, "patching ControlPlane status", "status", updated.Status)
-	if err := r.Client.Status().Patch(ctx, updated, client.MergeFrom(current)); err != nil && !k8serrors.IsNotFound(err) {
+	if err := r.Client.Status().Patch(ctx, updated, client.MergeFrom(current)); client.IgnoreNotFound(err) != nil {
 		if k8serrors.IsConflict(err) {
 			log.Debug(logger, "conflict found when updating ControlPlane, retrying")
 			return ctrl.Result{Requeue: true, RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
