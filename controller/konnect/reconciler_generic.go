@@ -528,6 +528,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) adoptFromExistingEntity(
 		entityTypeName = constraints.EntityTypeName[T]()
 		logger         = log.GetLogger(ctx, entityTypeName, r.LoggingMode)
 		obj            = ent.DeepCopyObject().(client.Object)
+		retErr         error
 	)
 	status := ent.GetKonnectStatus()
 	logger.Info("Adopting from existing entity",
@@ -535,6 +536,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) adoptFromExistingEntity(
 	_, err := ops.Adopt(ctx, sdk, r.SyncPeriod, r.Client, r.MetricRecorder, ent, *adoptOptions)
 	if err != nil {
 		logger.Error(err, "failed to adopt entity", "type", ent.GetTypeName(), "konnect_id", adoptOptions.Konnect.ID)
+		retErr = err
 	}
 
 	// Regardless of the error reported from Adopt(), if the Konnect ID has been
@@ -564,10 +566,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) adoptFromExistingEntity(
 		return ctrl.Result{}, nil
 	}
 
-	if err != nil {
+	if retErr != nil {
 		return ctrl.Result{}, ops.FailedKonnectOpError[T]{
 			Op:  ops.AdoptOp,
-			Err: err,
+			Err: retErr,
 		}
 	}
 
