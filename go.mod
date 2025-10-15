@@ -7,7 +7,7 @@ require (
 	dario.cat/mergo v1.0.2
 	github.com/Kong/sdk-konnect-go v0.10.1
 	github.com/Masterminds/sprig/v3 v3.3.0
-	github.com/avast/retry-go/v4 v4.6.1
+	github.com/avast/retry-go/v4 v4.7.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cert-manager/cert-manager v1.18.2
 	github.com/cloudflare/cfssl v1.6.5
