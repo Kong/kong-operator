@@ -123,7 +123,7 @@
   [#2423](https://github.com/Kong/kong-operator/pull/2423)
 - Hybrid Gateway: add watchers for KongPlugin and KongPluginBinding
   [#2427](https://github.com/Kong/kong-operator/pull/2427)
-- Hybrid Gateway: attack KongService generation to BackendRefs and fix filter/plugin conversion.
+- Hybrid Gateway: attach KongService generation to BackendRefs and fix filter/plugin conversion.
   [#2456](https://github.com/Kong/kong-operator/pull/2456)
 
 ## [v2.0.4]
