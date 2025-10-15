@@ -9,6 +9,7 @@ import (
 	sdkkonnectretry "github.com/Kong/sdk-konnect-go/retry"
 	"github.com/samber/lo"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
@@ -127,14 +128,23 @@ func cloudGatewayNetworkToCreateNetworkRequest(s konnectv1alpha1.KonnectCloudGat
 	}
 }
 
-// adoptKonnectCloudGatewayNetworkMatch adopts an existing Konnect Network in match mode.
+// adoptKonnectCloudGatewayNetwork adopts an existing Konnect Network.
 // It fetches the network from Konnect and verifies that the spec matches the remote configuration.
-func adoptKonnectCloudGatewayNetworkMatch(
+// Only match mode adoption is supported for Network resources.
+func adoptKonnectCloudGatewayNetwork(
 	ctx context.Context,
 	sdk sdkops.CloudGatewaysSDK,
 	n *konnectv1alpha1.KonnectCloudGatewayNetwork,
-	konnectID string,
+	adoptOptions commonv1alpha1.AdoptOptions,
 ) error {
+	if adoptOptions.Konnect == nil || adoptOptions.Konnect.ID == "" {
+		return fmt.Errorf("konnect ID must be provided for adoption")
+	}
+	if adoptOptions.Mode != "" && adoptOptions.Mode != commonv1alpha1.AdoptModeMatch {
+		return fmt.Errorf("only match mode adoption is supported for cloud gateway network, got mode: %q", adoptOptions.Mode)
+	}
+
+	konnectID := adoptOptions.Konnect.ID
 	resp, err := sdk.GetNetwork(ctx, konnectID)
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{KonnectID: konnectID, Err: err}

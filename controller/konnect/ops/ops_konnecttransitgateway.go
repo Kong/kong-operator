@@ -11,6 +11,7 @@ import (
 	"github.com/Kong/sdk-konnect-go/retry"
 	"github.com/samber/lo"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
@@ -246,12 +247,20 @@ func listTransitGatewayResponseDataToEntityWithIDSlice(resps []sdkkonnectcomp.Tr
 	})
 }
 
-func adoptKonnectTransitGatewayMatch(
+func adoptKonnectTransitGateway(
 	ctx context.Context,
 	sdk sdkops.CloudGatewaysSDK,
 	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
-	konnectID string,
+	adoptOptions commonv1alpha1.AdoptOptions,
 ) error {
+	if adoptOptions.Konnect == nil || adoptOptions.Konnect.ID == "" {
+		return fmt.Errorf("konnect ID must be provided for adoption")
+	}
+	if adoptOptions.Mode != "" && adoptOptions.Mode != commonv1alpha1.AdoptModeMatch {
+		return fmt.Errorf("only match mode adoption is supported for cloud gateway transit gateway, got mode: %q", adoptOptions.Mode)
+	}
+
+	konnectID := adoptOptions.Konnect.ID
 	networkID := tg.GetNetworkID()
 	if networkID == "" {
 		return CantPerformOperationWithoutNetworkIDError{Entity: tg, Op: GetOp}

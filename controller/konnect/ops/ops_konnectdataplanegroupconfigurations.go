@@ -298,13 +298,21 @@ func dataPlaneGroupsResponseToStatus(
 	return ret
 }
 
-func adoptKonnectDataPlaneGroupConfigurationMatch(
+func adoptKonnectDataPlaneGroupConfiguration(
 	ctx context.Context,
 	sdk sdkops.CloudGatewaysSDK,
 	cl client.Client,
 	cfg *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
-	konnectID string,
+	adoptOptions commonv1alpha1.AdoptOptions,
 ) error {
+	if adoptOptions.Konnect == nil || adoptOptions.Konnect.ID == "" {
+		return fmt.Errorf("konnect ID must be provided for adoption")
+	}
+	if adoptOptions.Mode != "" && adoptOptions.Mode != commonv1alpha1.AdoptModeMatch {
+		return fmt.Errorf("only match mode adoption is supported for cloud gateway data plane group configuration, got mode: %q", adoptOptions.Mode)
+	}
+
+	konnectID := adoptOptions.Konnect.ID
 	cpID := cfg.GetControlPlaneID()
 	if cpID == "" {
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cfg, Op: GetOp}
