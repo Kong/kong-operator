@@ -23,7 +23,6 @@ import (
 	"github.com/kong/kong-operator/test"
 	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/deploy"
-	"github.com/kong/kong-operator/test/helpers/eventually"
 )
 
 func TestKonnectEntities(t *testing.T) {
@@ -371,21 +370,6 @@ func KonnectEntitiesTestCase(t *testing.T, params konnectEntitiesTestCaseParams)
 		require.NotNil(t, ksni.Status.Konnect)
 		assert.Equal(t, kcert.GetKonnectID(), ksni.Status.Konnect.CertificateID)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
-}
-
-// deleteObjectAndWaitForDeletionFn returns a function that deletes the given object and waits for it to be gone.
-// It's designed to be used with t.Cleanup() to ensure the object is properly deleted (it's not stuck with finalizers, etc.).
-func deleteObjectAndWaitForDeletionFn(t *testing.T, obj client.Object) func() {
-	return func() {
-		t.Logf("Deleting %s/%s and waiting for it gone",
-			obj.GetNamespace(), obj.GetName(),
-		)
-		cl := GetClients().MgrClient
-		require.NoError(t, cl.Delete(GetCtx(), obj))
-		eventually.WaitForObjectToNotExist(t, ctx, cl, obj,
-			testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick,
-		)
-	}
 }
 
 // assertKonnectEntityProgrammed asserts that the KonnectEntityProgrammed condition is set to true and the Konnect
