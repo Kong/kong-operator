@@ -100,6 +100,8 @@
   - Implement the general handling process of adopting an existing entity and
     adoption procedure for `KongService`s in `match` and `override` mode.
     [#2424](https://github.com/Kong/kong-operator/pull/2424)
+  - Implement the Match mode for adoption for Konnect cloud gateway entities
+    [#2429](https://github.com/Kong/kong-operator/pull/2429)
 - HybridGateway:
   - Added controller-runtime watches for Gateway and GatewayClass resources to the hybridgateway controller.
   - HTTPRoutes are now reconciled when related Gateway or GatewayClass resources change.
@@ -114,7 +116,7 @@
   the `DataPlane` is configured to use `Koko` as Konnect control plane.
   [#2253](https://github.com/Kong/kong-operator/pull/2253)
 
-### Fixed
+### Fixes
 
 - Hybrid Gateway: generate a single KongRoute for each HTTPRoute Rule
   [#2417](https://github.com/Kong/kong-operator/pull/2417)
@@ -123,6 +125,10 @@
   [#2423](https://github.com/Kong/kong-operator/pull/2423)
 - Hybrid Gateway: add watchers for KongPlugin and KongPluginBinding
   [#2427](https://github.com/Kong/kong-operator/pull/2427)
+- Fix `DataPlane`'s volumes and volume mounts patching when specified by user
+  [#2425](https://github.com/Kong/kong-operator/pull/2425)
+- Hybrid Gateway: attach KongService generation to BackendRefs and fix filter/plugin conversion.
+  [#2456](https://github.com/Kong/kong-operator/pull/2456)
 
 ## [v2.0.4]
 
@@ -168,7 +174,7 @@
 
 > Release date: 2025-09-17
 
-## Fixes
+### Fixes
 
 - Fix incorrect error handling during cluster CA secret creation.
   [#2250](https://github.com/Kong/kong-operator/pull/2250)
@@ -327,7 +333,7 @@
 - `kong/kong-gateway` v3.11 is the default proxy image.
   [#2212](https://github.com/Kong/kong-operator/pull/2212)
 
-### Fixed
+### Fixes
 
 - Do not check "Programmed" condition in status of `Gateway` listeners in
   extracting certificates in controlplane's translation of Kong configuration.
@@ -359,7 +365,7 @@
 
 > Release date: 2025-07-11
 
-### Fixed
+### Fixes
 
 - Ignore the `ForbiddenError` in `sdk-konnect-go` returned from running CRUD
   operations against Konnect APIs. This prevents endless reconciliation when an
@@ -784,7 +790,7 @@
   flag or the `GATEWAY_OPERATOR_ENABLE_CONTROLLER_KONNECT` env var is set.
   [#738](https://github.com/kong/kong-operator/pull/738)
 
-### Fixed
+### Fixes
 
 - Fixed `ControlPlane` cluster wide resources not migrating to new ownership labels
   (introduced in 1.3.0) when upgrading the operator from 1.2 (or older) to 1.3.0.

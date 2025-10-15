@@ -550,6 +550,12 @@ func Adopt[
 	switch ent := any(e).(type) {
 	case *configurationv1alpha1.KongService:
 		err = adoptService(ctx, sdk.GetServicesSDK(), ent)
+	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
+		err = adoptKonnectCloudGatewayNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent, adoptOptions)
+	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
+		err = adoptKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), cl, ent, adoptOptions)
+	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
+		err = adoptKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent, adoptOptions)
 	// TODO: implement adoption for other types.
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)

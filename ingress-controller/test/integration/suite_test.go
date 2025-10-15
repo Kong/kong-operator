@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/blang/semver/v4"
@@ -216,6 +217,11 @@ func TestMain(m *testing.M) {
 			// within a certain number of seconds. Pausing certain segments manager in a debugger can exceed this deadline,
 			// so elections are disabled in integration tests for convenience.
 			c.LeaderElectionForce = managercfg.LeaderElectionDisabled
+			// Increase Admin API readiness tolerance for flakier CI environments.
+			// The default timeout is 5s; in CI the admin API may be slower to accept connections.
+			// We also ensure the reconciliation interval remains larger than the timeout per validation rules.
+			c.GatewayDiscoveryReadinessCheckTimeout = 15 * time.Second
+			c.GatewayDiscoveryReadinessCheckInterval = 20 * time.Second
 		})
 		defer cancel()
 		helpers.ExitOnErr(ctx, err)

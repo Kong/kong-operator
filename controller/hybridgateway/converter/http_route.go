@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
@@ -81,55 +80,6 @@ func (c *httpRouteConverter) GetOutputStore(ctx context.Context) []unstructured.
 // GetExpectedGVKs returns the list of GroupVersionKinds that this converter expects to manage for HTTPRoute resources.
 func (c *httpRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 	return c.expectedGVKs
-}
-
-// Reduce implements APIConverter.
-func (c *httpRouteConverter) Reduce(obj unstructured.Unstructured) []utils.ReduceFunc {
-	switch obj.GetKind() {
-	case "KongRoute":
-		return []utils.ReduceFunc{
-			utils.KeepProgrammed,
-			utils.KeepYoungest,
-		}
-	default:
-		return nil
-	}
-}
-
-// ListExistingObjects implements APIConverter.
-func (c *httpRouteConverter) ListExistingObjects(ctx context.Context) ([]unstructured.Unstructured, error) {
-	if c.route == nil {
-		return nil, nil
-	}
-
-	list := &configurationv1alpha1.KongRouteList{}
-	labels := map[string]string{
-		// TODO: Add appropriate labels for KongRoute objects managed by HTTPRoute
-	}
-	opts := []client.ListOption{
-		client.InNamespace(c.route.Namespace),
-		client.MatchingLabels(labels),
-	}
-	if err := c.List(ctx, list, opts...); err != nil {
-		return nil, err
-	}
-
-	unstructuredItems := make([]unstructured.Unstructured, 0, len(list.Items))
-	for _, item := range list.Items {
-		unstr, err := utils.ToUnstructured(&item, c.Scheme())
-		if err != nil {
-			return nil, err
-		}
-		unstructuredItems = append(unstructuredItems, unstr)
-	}
-
-	return unstructuredItems, nil
-}
-
-// UpdateSharedRouteStatus implements APIConverter.
-func (c *httpRouteConverter) UpdateSharedRouteStatus(objs []unstructured.Unstructured) error {
-	// TODO: Implement status update logic for HTTPRoute
-	return nil
 }
 
 // UpdateRootObjectStatus updates the status of the HTTPRoute by processing each ParentReference
@@ -286,8 +236,7 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 			}
 
 			// Build the KongService resource.
-			// TODO: httpRouteName may be dropped - same matches on same cpRef in different httpRoutes makes no sense, right?
-			serviceName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.Matches)).String()
+			serviceName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.BackendRefs)).String()
 			service, err := builder.NewKongService().
 				WithName(serviceName).
 				WithNamespace(c.route.Namespace).
@@ -344,20 +293,15 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 				c.outputStore = append(c.outputStore, &plugin)
 
 				// Create a KongPluginBinding to bind the KongPlugin to each rule match.
-				bbuild := builder.NewKongPluginBinding().
+				binding, err := builder.NewKongPluginBinding().
+					WithName(routeName+"."+filterHash).
 					WithNamespace(c.route.Namespace).
 					WithLabels(c.route, &pRef).
 					WithAnnotations(c.route, &pRef).
 					WithPluginRef(pluginName).
 					WithControlPlaneRef(*cp).
-					WithOwner(c.route)
-				if filter.Type == gatewayv1.HTTPRouteFilterResponseHeaderModifier {
-					// For response header modifiers, bind the plugin to the KongService instead of KongRoute.
-					bbuild = bbuild.WithServiceRef(serviceName).WithName(serviceName + "." + filterHash)
-				} else {
-					bbuild = bbuild.WithRouteRef(routeName).WithName(routeName + "." + filterHash)
-				}
-				binding, err := bbuild.Build()
+					WithOwner(c.route).
+					WithRouteRef(routeName).Build()
 				if err != nil {
 					continue
 				}
