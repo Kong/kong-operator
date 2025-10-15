@@ -2,7 +2,9 @@ package ops
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"sort"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -242,4 +244,211 @@ func listTransitGatewayResponseDataToEntityWithIDSlice(resps []sdkkonnectcomp.Tr
 	return lo.Map(resps, func(resp sdkkonnectcomp.TransitGatewayResponse, _ int) extractedEntityID {
 		return extractedEntityID(extractKonnectIDFromTransitGatewayResponse(&resp))
 	})
+}
+
+func adoptKonnectTransitGatewayMatch(
+	ctx context.Context,
+	sdk sdkops.CloudGatewaysSDK,
+	tg *konnectv1alpha1.KonnectCloudGatewayTransitGateway,
+	konnectID string,
+) error {
+	networkID := tg.GetNetworkID()
+	if networkID == "" {
+		return CantPerformOperationWithoutNetworkIDError{Entity: tg, Op: GetOp}
+	}
+
+	resp, err := sdk.GetTransitGateway(ctx, networkID, konnectID)
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{KonnectID: konnectID, Err: err}
+	}
+	if resp == nil || resp.TransitGatewayResponse == nil {
+		return fmt.Errorf("failed getting %s: %w", tg.GetTypeName(), ErrNilResponse)
+	}
+
+	if diff := compareTransitGatewaySpec(tg.Spec.KonnectTransitGatewayAPISpec, resp.TransitGatewayResponse); diff != "" {
+		return KonnectEntityAdoptionNotMatchError{KonnectID: konnectID}
+	}
+
+	tg.SetKonnectID(extractKonnectIDFromTransitGatewayResponse(resp.TransitGatewayResponse))
+	tg.Status.State = extractStateFromTransitGatewayResponse(resp.TransitGatewayResponse)
+	return nil
+}
+
+func compareTransitGatewaySpec(
+	spec konnectv1alpha1.KonnectTransitGatewayAPISpec,
+	remote *sdkkonnectcomp.TransitGatewayResponse,
+) string {
+	switch spec.Type {
+	case konnectv1alpha1.TransitGatewayTypeAWSTransitGateway:
+		aws := remote.AwsTransitGatewayResponse
+		if aws == nil {
+			return "transit gateway type mismatch"
+		}
+		if spec.AWSTransitGateway == nil {
+			return "spec.awsTransitGateway must be provided"
+		}
+		if spec.AWSTransitGateway.Name != aws.GetName() {
+			return fmt.Sprintf("name mismatch spec=%q konnect=%q", spec.AWSTransitGateway.Name, aws.GetName())
+		}
+		if !lo.ElementsMatch(spec.AWSTransitGateway.CIDRBlocks, aws.GetCidrBlocks()) {
+			return fmt.Sprintf(
+				"cidr_blocks mismatch spec=%v konnect=%v",
+				spec.AWSTransitGateway.CIDRBlocks,
+				aws.GetCidrBlocks(),
+			)
+		}
+		if diff := compareTransitGatewayDNSConfig(spec.AWSTransitGateway.DNSConfig, aws.GetDNSConfig()); diff != "" {
+			return diff
+		}
+		if diff := compareAwsTransitGatewayAttachment(spec.AWSTransitGateway.AttachmentConfig, aws.GetTransitGatewayAttachmentConfig()); diff != "" {
+			return diff
+		}
+	case konnectv1alpha1.TransitGatewayTypeAzureTransitGateway:
+		azure := remote.AzureTransitGatewayResponse
+		if azure == nil {
+			return "transit gateway type mismatch"
+		}
+		if spec.AzureTransitGateway == nil {
+			return "spec.azureTransitGateway must be provided"
+		}
+		if spec.AzureTransitGateway.Name != azure.GetName() {
+			return fmt.Sprintf("name mismatch spec=%q konnect=%q", spec.AzureTransitGateway.Name, azure.GetName())
+		}
+		if diff := compareTransitGatewayDNSConfig(spec.AzureTransitGateway.DNSConfig, azure.GetDNSConfig()); diff != "" {
+			return diff
+		}
+		if diff := compareAzureTransitGatewayAttachment(spec.AzureTransitGateway.AttachmentConfig, azure.GetTransitGatewayAttachmentConfig()); diff != "" {
+			return diff
+		}
+	default:
+		return fmt.Sprintf("unsupported transit gateway type %q", spec.Type)
+	}
+
+	return ""
+}
+
+func compareTransitGatewayDNSConfig(
+	spec []konnectv1alpha1.TransitGatewayDNSConfig,
+	remote []sdkkonnectcomp.TransitGatewayDNSConfig,
+) string {
+	specNorm := normalizeDNSConfigs(spec)
+	remoteNorm := normalizeKonnectDNSConfigs(remote)
+
+	// Compare using JSON since the structs are already normalized and sorted
+	specJSON, err := marshalNormalized(specNorm)
+	if err != nil {
+		return err.Error()
+	}
+	remoteJSON, err := marshalNormalized(remoteNorm)
+	if err != nil {
+		return err.Error()
+	}
+
+	if specJSON != remoteJSON {
+		return fmt.Sprintf("dns_config mismatch spec=%s konnect=%s", specJSON, remoteJSON)
+	}
+
+	return ""
+}
+
+func compareAwsTransitGatewayAttachment(
+	spec konnectv1alpha1.AwsTransitGatewayAttachmentConfig,
+	remote sdkkonnectcomp.AwsTransitGatewayAttachmentConfig,
+) string {
+	if spec.TransitGatewayID != remote.GetTransitGatewayID() {
+		return fmt.Sprintf(
+			"attachment.transit_gateway_id mismatch spec=%q konnect=%q",
+			spec.TransitGatewayID,
+			remote.GetTransitGatewayID(),
+		)
+	}
+	if spec.RAMShareArn != remote.GetRAMShareArn() {
+		return fmt.Sprintf(
+			"attachment.ram_share_arn mismatch spec=%q konnect=%q",
+			spec.RAMShareArn,
+			remote.GetRAMShareArn(),
+		)
+	}
+	return ""
+}
+
+func compareAzureTransitGatewayAttachment(
+	spec konnectv1alpha1.AzureVNETPeeringAttachmentConfig,
+	remote sdkkonnectcomp.AzureVNETPeeringAttachmentConfig,
+) string {
+	if spec.TenantID != remote.GetTenantID() {
+		return fmt.Sprintf("attachment.tenant_id mismatch spec=%q konnect=%q", spec.TenantID, remote.GetTenantID())
+	}
+	if spec.SubscriptionID != remote.GetSubscriptionID() {
+		return fmt.Sprintf(
+			"attachment.subscription_id mismatch spec=%q konnect=%q",
+			spec.SubscriptionID,
+			remote.GetSubscriptionID(),
+		)
+	}
+	if spec.ResourceGroupName != remote.GetResourceGroupName() {
+		return fmt.Sprintf(
+			"attachment.resource_group_name mismatch spec=%q konnect=%q",
+			spec.ResourceGroupName,
+			remote.GetResourceGroupName(),
+		)
+	}
+	if spec.VnetName != remote.GetVnetName() {
+		return fmt.Sprintf("attachment.vnet_name mismatch spec=%q konnect=%q", spec.VnetName, remote.GetVnetName())
+	}
+	return ""
+}
+
+func normalizeDNSConfigs(spec []konnectv1alpha1.TransitGatewayDNSConfig) []normalizedDNSConfig {
+	result := make([]normalizedDNSConfig, 0, len(spec))
+	for _, cfg := range spec {
+		result = append(result, normalizedDNSConfig{
+			RemoteDNSServerIPAddresses: sortedCopy(cfg.RemoteDNSServerIPAddresses),
+			DomainProxyList:            sortedCopy(cfg.DomainProxyList),
+		})
+	}
+	return sortNormalizedDNS(result)
+}
+
+func normalizeKonnectDNSConfigs(spec []sdkkonnectcomp.TransitGatewayDNSConfig) []normalizedDNSConfig {
+	result := make([]normalizedDNSConfig, 0, len(spec))
+	for _, cfg := range spec {
+		result = append(result, normalizedDNSConfig{
+			RemoteDNSServerIPAddresses: sortedCopy(cfg.GetRemoteDNSServerIPAddresses()),
+			DomainProxyList:            sortedCopy(cfg.GetDomainProxyList()),
+		})
+	}
+	return sortNormalizedDNS(result)
+}
+
+func marshalNormalized[T any](value T) (string, error) {
+	bytes, err := json.Marshal(value)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes), nil
+}
+
+func sortedCopy(values []string) []string {
+	if values == nil {
+		return nil
+	}
+	copyValues := make([]string, len(values))
+	copy(copyValues, values)
+	sort.Strings(copyValues)
+	return copyValues
+}
+
+func sortNormalizedDNS(dns []normalizedDNSConfig) []normalizedDNSConfig {
+	if dns == nil {
+		return nil
+	}
+	result := make([]normalizedDNSConfig, len(dns))
+	copy(result, dns)
+	sort.Slice(result, func(i, j int) bool {
+		keyI, _ := marshalNormalized(result[i])
+		keyJ, _ := marshalNormalized(result[j])
+		return keyI < keyJ
+	})
+	return result
 }

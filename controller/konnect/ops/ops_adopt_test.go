@@ -3,6 +3,7 @@ package ops
 import (
 	"context"
 	"testing"
+	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -17,9 +18,20 @@ import (
 	kcfgkonnect "github.com/kong/kong-operator/api/konnect"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/internal/metrics"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
+
+// noOpMetricsRecorder is a no-op implementation of metrics.Recorder for testing.
+type noOpMetricsRecorder struct{}
+
+func (noOpMetricsRecorder) RecordKonnectEntityOperationSuccess(string, metrics.KonnectEntityOperation, string, time.Duration) {
+}
+func (noOpMetricsRecorder) RecordKonnectEntityOperationFailure(string, metrics.KonnectEntityOperation, string, time.Duration, int) {
+}
+
+var metricRecorder = noOpMetricsRecorder{}
 
 func TestAdoptMatchNetworkSuccess(t *testing.T) {
 	t.Parallel()
@@ -66,7 +78,8 @@ func TestAdoptMatchNetworkSuccess(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, AdoptMatch(ctx, *sdk, cl, network))
+	_, err := Adopt(ctx, *sdk, 0, cl, metricRecorder, network, *network.Spec.Adopt)
+	require.NoError(t, err)
 	assert.Equal(t, "net-1", network.GetKonnectID())
 	assert.Equal(t, string(sdkkonnectcomp.NetworkStateReady), network.Status.State)
 	assertProgrammedCondition(t, network.GetConditions(), metav1.ConditionTrue, string(konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed))
@@ -116,7 +129,7 @@ func TestAdoptMatchNetworkMismatch(t *testing.T) {
 		}, nil).
 		Once()
 
-	err := AdoptMatch(ctx, *sdk, cl, network)
+	_, err := Adopt(ctx, *sdk, 0, cl, metricRecorder, network, *network.Spec.Adopt)
 	require.Error(t, err)
 	assert.Empty(t, network.GetKonnectID())
 	assertProgrammedCondition(t, network.GetConditions(), metav1.ConditionFalse, string(kcfgkonnect.KonnectEntitiesFailedToAdoptReason))
@@ -197,7 +210,8 @@ func TestAdoptMatchDataPlaneGroupConfigurationSuccess(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, AdoptMatch(ctx, *sdk, cl, cfg))
+	_, err := Adopt(ctx, *sdk, 0, cl, metricRecorder, cfg, *cfg.Spec.Adopt)
+	require.NoError(t, err)
 	assert.Equal(t, "cfg-1", cfg.GetKonnectID())
 	assert.Len(t, cfg.Status.DataPlaneGroups, 1)
 	assertProgrammedCondition(t, cfg.GetConditions(), metav1.ConditionTrue, string(konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed))
@@ -263,7 +277,8 @@ func TestAdoptMatchTransitGatewaySuccess(t *testing.T) {
 		Return(&sdkkonnectops.GetTransitGatewayResponse{TransitGatewayResponse: &awsResp}, nil).
 		Once()
 
-	require.NoError(t, AdoptMatch(ctx, *sdk, cl, tg))
+	_, err := Adopt(ctx, *sdk, 0, cl, metricRecorder, tg, *tg.Spec.Adopt)
+	require.NoError(t, err)
 	assert.Equal(t, "tg-1", tg.GetKonnectID())
 	assert.Equal(t, sdkkonnectcomp.TransitGatewayStateReady, tg.Status.State)
 	assertProgrammedCondition(t, tg.GetConditions(), metav1.ConditionTrue, string(konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed))
@@ -354,7 +369,7 @@ func TestAdoptMatchDataPlaneGroupConfigurationMismatch(t *testing.T) {
 		}, nil).
 		Once()
 
-	err := AdoptMatch(ctx, *sdk, cl, cfg)
+	_, err := Adopt(ctx, *sdk, 0, cl, metricRecorder, cfg, *cfg.Spec.Adopt)
 	require.Error(t, err)
 	assert.Empty(t, cfg.GetKonnectID())
 	assertProgrammedCondition(t, cfg.GetConditions(), metav1.ConditionFalse, string(kcfgkonnect.KonnectEntitiesFailedToAdoptReason))
@@ -420,7 +435,7 @@ func TestAdoptMatchTransitGatewayMismatch(t *testing.T) {
 		Return(&sdkkonnectops.GetTransitGatewayResponse{TransitGatewayResponse: &awsResp}, nil).
 		Once()
 
-	err := AdoptMatch(ctx, *sdk, cl, tg)
+	_, err := Adopt(ctx, *sdk, 0, cl, metricRecorder, tg, *tg.Spec.Adopt)
 	require.Error(t, err)
 	assert.Empty(t, tg.GetKonnectID())
 	assertProgrammedCondition(t, tg.GetConditions(), metav1.ConditionFalse, string(kcfgkonnect.KonnectEntitiesFailedToAdoptReason))
@@ -450,7 +465,7 @@ func TestAdoptMatchUnsupportedMode(t *testing.T) {
 		},
 	}
 
-	err := AdoptMatch(ctx, *sdk, cl, network)
+	_, err := Adopt(ctx, *sdk, 0, cl, metricRecorder, network, *network.Spec.Adopt)
 	require.Error(t, err)
 	assert.Empty(t, network.GetKonnectID())
 	assertProgrammedCondition(t, network.GetConditions(), metav1.ConditionFalse, string(kcfgkonnect.KonnectEntitiesFailedToAdoptReason))
@@ -479,7 +494,7 @@ func TestAdoptMatchMissingKonnectID(t *testing.T) {
 		},
 	}
 
-	err := AdoptMatch(ctx, *sdk, cl, network)
+	_, err := Adopt(ctx, *sdk, 0, cl, metricRecorder, network, *network.Spec.Adopt)
 	require.Error(t, err)
 	assert.Empty(t, network.GetKonnectID())
 	assertProgrammedCondition(t, network.GetConditions(), metav1.ConditionFalse, string(kcfgkonnect.KonnectEntitiesFailedToAdoptReason))

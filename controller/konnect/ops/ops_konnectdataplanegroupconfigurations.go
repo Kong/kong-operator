@@ -3,6 +3,8 @@ package ops
 import (
 	"context"
 	"fmt"
+	"slices"
+	"sort"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"k8s.io/apimachinery/pkg/types"
@@ -294,4 +296,253 @@ func dataPlaneGroupsResponseToStatus(
 		)
 	}
 	return ret
+}
+
+func adoptKonnectDataPlaneGroupConfigurationMatch(
+	ctx context.Context,
+	sdk sdkops.CloudGatewaysSDK,
+	cl client.Client,
+	cfg *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
+	konnectID string,
+) error {
+	cpID := cfg.GetControlPlaneID()
+	if cpID == "" {
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: cfg, Op: GetOp}
+	}
+
+	resp, err := sdk.GetConfiguration(ctx, konnectID)
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{KonnectID: konnectID, Err: err}
+	}
+	if resp == nil || resp.ConfigurationManifest == nil {
+		return fmt.Errorf("failed getting %s: %w", cfg.GetTypeName(), ErrNilResponse)
+	}
+
+	manifest := resp.ConfigurationManifest
+
+	if diff, err := compareDataPlaneGroupConfigurationSpec(ctx, cl, cfg, manifest); err != nil {
+		return err
+	} else if diff != "" {
+		return KonnectEntityAdoptionNotMatchError{KonnectID: konnectID}
+	}
+
+	cfg.SetKonnectID(manifest.ID)
+	cfg.Status.DataPlaneGroups = dataPlaneGroupsResponseToStatus(manifest.GetDataplaneGroups())
+	return nil
+}
+
+func compareDataPlaneGroupConfigurationSpec(
+	ctx context.Context,
+	cl client.Client,
+	cfg *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
+	manifest *sdkkonnectcomp.ConfigurationManifest,
+) (string, error) {
+	if manifest.GetControlPlaneID() != cfg.GetControlPlaneID() {
+		return fmt.Sprintf(
+			"controlPlaneRef mismatch spec=%q konnect=%q",
+			cfg.GetControlPlaneID(),
+			manifest.GetControlPlaneID(),
+		), nil
+	}
+
+	specAPIAccess := sdkkonnectcomp.APIAccessPrivatePlusPublic
+	if cfg.Spec.APIAccess != nil {
+		specAPIAccess = *cfg.Spec.APIAccess
+	}
+	manifestAPIAccess := sdkkonnectcomp.APIAccessPrivatePlusPublic
+	if manifest.GetAPIAccess() != nil {
+		manifestAPIAccess = *manifest.GetAPIAccess()
+	}
+	if specAPIAccess != manifestAPIAccess {
+		return fmt.Sprintf(
+			"api_access mismatch spec=%q konnect=%q",
+			specAPIAccess,
+			manifestAPIAccess,
+		), nil
+	}
+
+	if cfg.Spec.Version != manifest.GetVersion() {
+		return fmt.Sprintf("version mismatch spec=%q konnect=%q", cfg.Spec.Version, manifest.GetVersion()), nil
+	}
+
+	specGroups, err := normalizeSpecDataplaneGroups(ctx, cl, cfg)
+	if err != nil {
+		return "", err
+	}
+	manifestGroups, err := normalizeKonnectDataplaneGroups(manifest.GetDataplaneGroups())
+	if err != nil {
+		return "", err
+	}
+
+	specJSON, err := marshalNormalized(specGroups)
+	if err != nil {
+		return "", err
+	}
+	manifestJSON, err := marshalNormalized(manifestGroups)
+	if err != nil {
+		return "", err
+	}
+
+	if specJSON != manifestJSON {
+		return fmt.Sprintf("dataplane_groups mismatch spec=%s konnect=%s", specJSON, manifestJSON), nil
+	}
+
+	return "", nil
+}
+
+func normalizeSpecDataplaneGroups(
+	ctx context.Context,
+	cl client.Client,
+	cfg *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration,
+) ([]normalizedDPGroup, error) {
+	result := make([]normalizedDPGroup, 0, len(cfg.Spec.DataplaneGroups))
+	for _, group := range cfg.Spec.DataplaneGroups {
+		networkID, err := resolveNetworkRef(ctx, cl, cfg.GetNamespace(), group.NetworkRef)
+		if err != nil {
+			return nil, err
+		}
+
+		norm := normalizedDPGroup{
+			Provider:    string(group.Provider),
+			Region:      group.Region,
+			NetworkID:   networkID,
+			Autoscale:   normalizeSpecAutoscale(group.Autoscale),
+			Environment: normalizeSpecEnvironment(group.Environment),
+		}
+		result = append(result, norm)
+	}
+	return sortNormalizedDPGroups(result)
+}
+
+func normalizeKonnectDataplaneGroups(groups []sdkkonnectcomp.ConfigurationDataPlaneGroup) ([]normalizedDPGroup, error) {
+	result := make([]normalizedDPGroup, 0, len(groups))
+	for _, group := range groups {
+		norm := normalizedDPGroup{
+			Provider:    string(group.GetProvider()),
+			Region:      group.GetRegion(),
+			NetworkID:   group.GetCloudGatewayNetworkID(),
+			Environment: normalizeKonnectEnvironment(group.GetEnvironment()),
+		}
+
+		autoNorm, err := normalizeKonnectAutoscale(group.GetAutoscale())
+		if err != nil {
+			return nil, err
+		}
+		norm.Autoscale = autoNorm
+		result = append(result, norm)
+	}
+	return sortNormalizedDPGroups(result)
+}
+
+func sortNormalizedDPGroups(groups []normalizedDPGroup) ([]normalizedDPGroup, error) {
+	type sortableGroup struct {
+		key string
+		val normalizedDPGroup
+	}
+	s := make([]sortableGroup, 0, len(groups))
+	for _, g := range groups {
+		envSorted := sortNormalizedEnvironment(g.Environment)
+		auto := g.Autoscale
+		if auto.Static != nil {
+			auto.Static = &normalizedStatic{
+				InstanceType:       auto.Static.InstanceType,
+				RequestedInstances: auto.Static.RequestedInstances,
+			}
+		}
+		if auto.Autopilot != nil {
+			auto.Autopilot = &normalizedAutopilot{
+				BaseRps: auto.Autopilot.BaseRps,
+				MaxRps:  auto.Autopilot.MaxRps,
+			}
+		}
+		g.Environment = envSorted
+		g.Autoscale = auto
+		key, err := marshalNormalized(g)
+		if err != nil {
+			return nil, err
+		}
+		s = append(s, sortableGroup{key: key, val: g})
+	}
+	sort.Slice(s, func(i, j int) bool { return s[i].key < s[j].key })
+	result := make([]normalizedDPGroup, 0, len(s))
+	for _, entry := range s {
+		result = append(result, entry.val)
+	}
+	return result, nil
+}
+
+func normalizeSpecAutoscale(autoscale konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale) normalizedAutoscale {
+	switch autoscale.Type {
+	case konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeAutopilot:
+		norm := normalizedAutoscale{Type: string(konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeAutopilot)}
+		if autoscale.Autopilot != nil {
+			norm.Autopilot = &normalizedAutopilot{
+				BaseRps: autoscale.Autopilot.BaseRps,
+				MaxRps:  autoscale.Autopilot.MaxRps,
+			}
+		}
+		return norm
+	case konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic:
+		norm := normalizedAutoscale{Type: string(konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic)}
+		if autoscale.Static != nil {
+			norm.Static = &normalizedStatic{
+				InstanceType:       string(autoscale.Static.InstanceType),
+				RequestedInstances: autoscale.Static.RequestedInstances,
+			}
+		}
+		return norm
+	default:
+		return normalizedAutoscale{Type: string(autoscale.Type)}
+	}
+}
+
+func normalizeKonnectAutoscale(autoscale sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscale) (normalizedAutoscale, error) {
+	if autoscale.ConfigurationDataPlaneGroupAutoscaleAutopilot != nil {
+		auto := autoscale.ConfigurationDataPlaneGroupAutoscaleAutopilot
+		return normalizedAutoscale{
+			Type: string(konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeAutopilot),
+			Autopilot: &normalizedAutopilot{
+				BaseRps: auto.GetBaseRps(),
+				MaxRps:  auto.GetMaxRps(),
+			},
+		}, nil
+	}
+	if autoscale.ConfigurationDataPlaneGroupAutoscaleStatic != nil {
+		st := autoscale.ConfigurationDataPlaneGroupAutoscaleStatic
+		return normalizedAutoscale{
+			Type: string(konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic),
+			Static: &normalizedStatic{
+				InstanceType:       string(st.GetInstanceType()),
+				RequestedInstances: st.GetRequestedInstances(),
+			},
+		}, nil
+	}
+	return normalizedAutoscale{}, fmt.Errorf("unsupported autoscale configuration in Konnect response")
+}
+
+func normalizeSpecEnvironment(env []konnectv1alpha1.ConfigurationDataPlaneGroupEnvironmentField) []normalizedEnvironment {
+	result := make([]normalizedEnvironment, 0, len(env))
+	for _, e := range env {
+		result = append(result, normalizedEnvironment{Name: e.Name, Value: e.Value})
+	}
+	return sortNormalizedEnvironment(result)
+}
+
+func normalizeKonnectEnvironment(env []sdkkonnectcomp.ConfigurationDataPlaneGroupEnvironmentField) []normalizedEnvironment {
+	result := make([]normalizedEnvironment, 0, len(env))
+	for _, e := range env {
+		result = append(result, normalizedEnvironment{Name: e.GetName(), Value: e.GetValue()})
+	}
+	return sortNormalizedEnvironment(result)
+}
+
+func sortNormalizedEnvironment(env []normalizedEnvironment) []normalizedEnvironment {
+	result := slices.Clone(env)
+	sort.Slice(result, func(i, j int) bool {
+		if result[i].Name == result[j].Name {
+			return result[i].Value < result[j].Value
+		}
+		return result[i].Name < result[j].Name
+	})
+	return result
 }

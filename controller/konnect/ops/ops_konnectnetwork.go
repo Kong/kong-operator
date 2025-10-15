@@ -7,6 +7,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnectretry "github.com/Kong/sdk-konnect-go/retry"
+	"github.com/samber/lo"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
@@ -124,4 +125,59 @@ func cloudGatewayNetworkToCreateNetworkRequest(s konnectv1alpha1.KonnectCloudGat
 		CidrBlock:                     s.CidrBlock,
 		State:                         s.State,
 	}
+}
+
+// adoptKonnectCloudGatewayNetworkMatch adopts an existing Konnect Network in match mode.
+// It fetches the network from Konnect and verifies that the spec matches the remote configuration.
+func adoptKonnectCloudGatewayNetworkMatch(
+	ctx context.Context,
+	sdk sdkops.CloudGatewaysSDK,
+	n *konnectv1alpha1.KonnectCloudGatewayNetwork,
+	konnectID string,
+) error {
+	resp, err := sdk.GetNetwork(ctx, konnectID)
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{KonnectID: konnectID, Err: err}
+	}
+	if resp == nil || resp.Network == nil {
+		return fmt.Errorf("failed getting %s: %w", n.GetTypeName(), ErrNilResponse)
+	}
+
+	if diffs := compareNetworkSpec(n.Spec, resp.Network); len(diffs) > 0 {
+		return KonnectEntityAdoptionNotMatchError{KonnectID: konnectID}
+	}
+
+	n.SetKonnectID(resp.Network.ID)
+	n.Status.State = string(resp.Network.GetState())
+	return nil
+}
+
+// compareNetworkSpec compares the Network spec with the remote Konnect Network.
+// Returns a list of differences, empty if they match.
+func compareNetworkSpec(spec konnectv1alpha1.KonnectCloudGatewayNetworkSpec, remote *sdkkonnectcomp.Network) []string {
+	var diffs []string
+	if spec.Name != remote.GetName() {
+		diffs = append(diffs, fmt.Sprintf("name spec=%q konnect=%q", spec.Name, remote.GetName()))
+	}
+	if spec.CloudGatewayProviderAccountID != remote.GetCloudGatewayProviderAccountID() {
+		diffs = append(diffs, fmt.Sprintf(
+			"cloud_gateway_provider_account_id spec=%q konnect=%q",
+			spec.CloudGatewayProviderAccountID,
+			remote.GetCloudGatewayProviderAccountID(),
+		))
+	}
+	if spec.Region != remote.GetRegion() {
+		diffs = append(diffs, fmt.Sprintf("region spec=%q konnect=%q", spec.Region, remote.GetRegion()))
+	}
+	if !lo.ElementsMatch(spec.AvailabilityZones, remote.GetAvailabilityZones()) {
+		diffs = append(diffs, fmt.Sprintf(
+			"availability_zones spec=%v konnect=%v",
+			spec.AvailabilityZones,
+			remote.GetAvailabilityZones(),
+		))
+	}
+	if spec.CidrBlock != remote.GetCidrBlock() {
+		diffs = append(diffs, fmt.Sprintf("cidr_block spec=%q konnect=%q", spec.CidrBlock, remote.GetCidrBlock()))
+	}
+	return diffs
 }

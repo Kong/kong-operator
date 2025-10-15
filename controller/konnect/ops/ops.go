@@ -550,6 +550,33 @@ func Adopt[
 	switch ent := any(e).(type) {
 	case *configurationv1alpha1.KongService:
 		err = adoptService(ctx, sdk.GetServicesSDK(), ent)
+	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
+		switch {
+		case adoptOptions.Konnect == nil || adoptOptions.Konnect.ID == "":
+			err = fmt.Errorf("konnect ID must be provided for adoption")
+		case adoptOptions.Mode != "" && adoptOptions.Mode != commonv1alpha1.AdoptModeMatch:
+			err = fmt.Errorf("only match mode adoption is supported for cloud gateway resources, got mode: %q", adoptOptions.Mode)
+		default:
+			err = adoptKonnectCloudGatewayNetworkMatch(ctx, sdk.GetCloudGatewaysSDK(), ent, adoptOptions.Konnect.ID)
+		}
+	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
+		switch {
+		case adoptOptions.Konnect == nil || adoptOptions.Konnect.ID == "":
+			err = fmt.Errorf("konnect ID must be provided for adoption")
+		case adoptOptions.Mode != "" && adoptOptions.Mode != commonv1alpha1.AdoptModeMatch:
+			err = fmt.Errorf("only match mode adoption is supported for cloud gateway resources, got mode: %q", adoptOptions.Mode)
+		default:
+			err = adoptKonnectDataPlaneGroupConfigurationMatch(ctx, sdk.GetCloudGatewaysSDK(), cl, ent, adoptOptions.Konnect.ID)
+		}
+	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
+		switch {
+		case adoptOptions.Konnect == nil || adoptOptions.Konnect.ID == "":
+			err = fmt.Errorf("konnect ID must be provided for adoption")
+		case adoptOptions.Mode != "" && adoptOptions.Mode != commonv1alpha1.AdoptModeMatch:
+			err = fmt.Errorf("only match mode adoption is supported for cloud gateway resources, got mode: %q", adoptOptions.Mode)
+		default:
+			err = adoptKonnectTransitGatewayMatch(ctx, sdk.GetCloudGatewaysSDK(), ent, adoptOptions.Konnect.ID)
+		}
 	// TODO: implement adoption for other types.
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
