@@ -10,7 +10,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
@@ -25,10 +24,6 @@ type APIConverter[t RootObject] interface {
 	GetRootObject() t
 	// GetOutputStore returns a slice of unstructured.Unstructured objects representing the current state of the store, using the provided context.
 	GetOutputStore(ctx context.Context) []unstructured.Unstructured
-	// Reduce returns a slice of utils.ReduceFunc functions that can be applied to the given unstructured.Unstructured object to get a list of duplicates to be removed.
-	Reduce(obj unstructured.Unstructured) []utils.ReduceFunc
-	// ListExistingObjects lists all existing unstructured.Unstructured objects of the destination API kind, using the provided context, and returns them along with any error encountered.
-	ListExistingObjects(ctx context.Context) ([]unstructured.Unstructured, error)
 	// UpdateRootObjectStatus updates the status for the root object.
 	UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error)
 }

@@ -82,55 +82,6 @@ func (c *httpRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 	return c.expectedGVKs
 }
 
-// Reduce implements APIConverter.
-func (c *httpRouteConverter) Reduce(obj unstructured.Unstructured) []utils.ReduceFunc {
-	switch obj.GetKind() {
-	case "KongRoute":
-		return []utils.ReduceFunc{
-			utils.KeepProgrammed,
-			utils.KeepYoungest,
-		}
-	default:
-		return nil
-	}
-}
-
-// ListExistingObjects implements APIConverter.
-func (c *httpRouteConverter) ListExistingObjects(ctx context.Context) ([]unstructured.Unstructured, error) {
-	if c.route == nil {
-		return nil, nil
-	}
-
-	list := &configurationv1alpha1.KongRouteList{}
-	labels := map[string]string{
-		// TODO: Add appropriate labels for KongRoute objects managed by HTTPRoute
-	}
-	opts := []client.ListOption{
-		client.InNamespace(c.route.Namespace),
-		client.MatchingLabels(labels),
-	}
-	if err := c.List(ctx, list, opts...); err != nil {
-		return nil, err
-	}
-
-	unstructuredItems := make([]unstructured.Unstructured, 0, len(list.Items))
-	for _, item := range list.Items {
-		unstr, err := utils.ToUnstructured(&item, c.Scheme())
-		if err != nil {
-			return nil, err
-		}
-		unstructuredItems = append(unstructuredItems, unstr)
-	}
-
-	return unstructuredItems, nil
-}
-
-// UpdateSharedRouteStatus implements APIConverter.
-func (c *httpRouteConverter) UpdateSharedRouteStatus(objs []unstructured.Unstructured) error {
-	// TODO: Implement status update logic for HTTPRoute
-	return nil
-}
-
 // UpdateRootObjectStatus updates the status of the HTTPRoute by processing each ParentReference
 // and setting appropriate conditions based on the Gateway's support and readiness.
 //
