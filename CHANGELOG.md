@@ -127,6 +127,8 @@
   [#2427](https://github.com/Kong/kong-operator/pull/2427)
 - Fix `DataPlane`'s volumes and volume mounts patching when specified by user
   [#2425](https://github.com/Kong/kong-operator/pull/2425)
+- Hybrid Gateway: attach KongService generation to BackendRefs and fix filter/plugin conversion.
+  [#2456](https://github.com/Kong/kong-operator/pull/2456)
 
 ## [v2.0.4]
 
