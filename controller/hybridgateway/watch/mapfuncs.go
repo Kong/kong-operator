@@ -3,6 +3,8 @@ package watch
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -78,6 +80,81 @@ func MapHTTPRouteForGatewayClass(cl client.Client) handler.MapFunc {
 				return nil
 			}
 			requests = append(requests, gwRequests...)
+		}
+		return requests
+	}
+}
+
+// listHTTPRoutesForService lists all HTTPRoutes that reference a specific Service using the BackendServicesOnHTTPRouteIndex.
+// It returns a slice of reconcile.Requests for each matching HTTPRoute, enabling efficient event handling
+// and reconciliation when a Service changes.
+func listHTTPRoutesForService(ctx context.Context, cl client.Client, svcNamespace, svcName string) ([]reconcile.Request, error) {
+	httpRoutes := &gwtypes.HTTPRouteList{}
+
+	// List all HTTPRoutes that reference this Service using the index.
+	err := cl.List(ctx, httpRoutes, client.MatchingFields{
+		index.BackendServicesOnHTTPRouteIndex: svcNamespace + "/" + svcName,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	requests := make([]reconcile.Request, len(httpRoutes.Items))
+	for i, httpRoute := range httpRoutes.Items {
+		requests[i] = reconcile.Request{
+			NamespacedName: client.ObjectKey{
+				Namespace: httpRoute.Namespace,
+				Name:      httpRoute.Name,
+			},
+		}
+	}
+	return requests, nil
+}
+
+// MapHTTPRouteForService returns a handler.MapFunc that, given a Service object,
+// lists all HTTPRoutes referencing that Service using the BackendServicesOnHTTPRouteIndex.
+// It returns a slice of reconcile.Requests for each matching HTTPRoute, enabling efficient event handling
+// and reconciliation when a Service changes.
+func MapHTTPRouteForService(cl client.Client) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		svc, ok := obj.(*corev1.Service)
+		if !ok {
+			return nil
+		}
+
+		requests, err := listHTTPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
+		if err != nil {
+			return nil
+		}
+		return requests
+	}
+}
+
+// MapHTTPRouteForEndpointSlice returns a handler.MapFunc that, given an EndpointSlice object,
+// retrieves the owning Service and lists all HTTPRoutes referencing that Service using the BackendServicesOnHTTPRouteIndex.
+// It returns a slice of reconcile.Requests for each matching HTTPRoute, enabling efficient event handling
+// and reconciliation when an EndpointSlice changes.
+func MapHTTPRouteForEndpointSlice(cl client.Client) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		epSlice, ok := obj.(*discoveryv1.EndpointSlice)
+		if !ok {
+			return nil
+		}
+
+		// Get the Service that owns this EndpointSlice.
+		svcName, ok := epSlice.Labels[discoveryv1.LabelServiceName]
+		if !ok {
+			return nil
+		}
+		svc := &corev1.Service{}
+		err := cl.Get(ctx, client.ObjectKey{Namespace: epSlice.Namespace, Name: svcName}, svc)
+		if err != nil {
+			return nil
+		}
+
+		requests, err := listHTTPRoutesForService(ctx, cl, svc.Namespace, svc.Name)
+		if err != nil {
+			return nil
 		}
 		return requests
 	}
