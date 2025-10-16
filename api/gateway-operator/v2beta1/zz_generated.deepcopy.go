@@ -316,7 +316,7 @@ func (in *ControlPlaneKonnectLicensing) DeepCopyInto(out *ControlPlaneKonnectLic
 	}
 	if in.StorageState != nil {
 		in, out := &in.StorageState, &out.StorageState
-		*out = new(ControlPlaneKonnectLicensingState)
+		*out = new(ControlPlaneKonnectLicenseStorageState)
 		**out = **in
 	}
 }

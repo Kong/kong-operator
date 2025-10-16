@@ -155,6 +155,7 @@ type GatewayConfigDataPlaneOptions struct {
 	// use this GatewayConfig.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxItems=32
 	PluginsToInstall []NamespacedName `json:"pluginsToInstall,omitempty"`
 }
 
