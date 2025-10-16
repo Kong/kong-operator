@@ -216,7 +216,7 @@ func (c *ControlPlaneOptions) convertTo(dst *operatorv2beta1.ControlPlaneOptions
 			return err
 		}
 
-		storageState, err := parseEnvForToggle[operatorv2beta1.ControlPlaneKonnectLicensingState](envControllerEnableKonnectLicensingStorage, containerEnvVars)
+		storageState, err := parseEnvForToggle[operatorv2beta1.ControlPlaneKonnectLicenseStorageState](envControllerEnableKonnectLicensingStorage, containerEnvVars)
 		if err != nil {
 			return err
 		}

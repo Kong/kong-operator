@@ -125,4 +125,10 @@ linters:
       - linters:
           - kubeapilinter
         path: api/(konnect/v1alpha(1|2)|gateway-operator/v2beta1)/.*
-        text: 'maxlength: .*'
+        text: 'maxlength: field .* must have a maximum items, add kubebuilder:validation:MaxItems marker'
+
+      # TODO: remove this.
+      - linters:
+          - kubeapilinter
+        path: api/(common/v1alpha1|konnect/v1alpha1|konnect/v1alpha2)/.*
+        text: 'maxlength: field .* must have a maximum length, add kubebuilder:validation:(items:)?MaxLength marker'
