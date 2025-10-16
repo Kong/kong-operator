@@ -24,77 +24,62 @@ import (
 )
 
 func TestHostnamesIntersection(t *testing.T) {
-
 	tests := []struct {
 		name           string
 		route          *gwtypes.HTTPRoute
-		objects        []client.Object
+		gateway        *gwtypes.Gateway
 		expectedOutput []*configurationv1alpha1.KongRoute
 	}{
 		{
-			name:  "listener with no hostname (accepts all) and route with no hostnames (accepts all)",
-			route: newHTTPRouteWithHostnames(),
-			objects: append([]client.Object{
-				newGatewayWithListenerHostnames(),
-			}, newKonnectGatewayStandardObjects()...),
+			name:    "listener with no hostname (accepts all) and route with no hostnames (accepts all)",
+			route:   newHTTPRouteWithHostnames(),
+			gateway: newGatewayWithListenerHostnames(),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
 				"route.1": nil,
 			}),
 		},
 		{
-			name:  "single listener and route with specific hostname",
-			route: newHTTPRouteWithHostnames("api.example.com"),
-			objects: append([]client.Object{
-				newGatewayWithListenerHostnames("api.example.com"),
-			}, newKonnectGatewayStandardObjects()...),
+			name:    "single listener and route with specific hostname",
+			route:   newHTTPRouteWithHostnames("api.example.com"),
+			gateway: newGatewayWithListenerHostnames("api.example.com"),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
 				"route.1": {"api.example.com"},
 			}),
 		},
 		{
-			name:  "single listener and route with wildcard hostname",
-			route: newHTTPRouteWithHostnames("*.example.com"),
-			objects: append([]client.Object{
-				newGatewayWithListenerHostnames("*.example.com"),
-			}, newKonnectGatewayStandardObjects()...),
+			name:    "single listener and route with wildcard hostname",
+			route:   newHTTPRouteWithHostnames("*.example.com"),
+			gateway: newGatewayWithListenerHostnames("*.example.com"),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
 				"route.1": {"*.example.com"},
 			}),
 		},
 		{
-			name:  "single listener with wildcard hostname matching two hostnames from the route",
-			route: newHTTPRouteWithHostnames("api.example.com", "web.example.com"),
-			objects: append([]client.Object{
-				newGatewayWithListenerHostnames("*.example.com"),
-			}, newKonnectGatewayStandardObjects()...),
+			name:    "single listener with wildcard hostname matching two hostnames from the route",
+			route:   newHTTPRouteWithHostnames("api.example.com", "web.example.com"),
+			gateway: newGatewayWithListenerHostnames("*.example.com"),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
 				"route.1": {"api.example.com", "web.example.com"},
 			}),
 		},
 		{
-			name:  "single listener with wildcard hostname matching only one hostname from the route",
-			route: newHTTPRouteWithHostnames("api.example.test", "web.example.com"),
-			objects: append([]client.Object{
-				newGatewayWithListenerHostnames("*.example.com"),
-			}, newKonnectGatewayStandardObjects()...),
+			name:    "single listener with wildcard hostname matching only one hostname from the route",
+			route:   newHTTPRouteWithHostnames("api.example.test", "web.example.com"),
+			gateway: newGatewayWithListenerHostnames("*.example.com"),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
 				"route.1": {"web.example.com"},
 			}),
 		},
 		{
-			name:  "no matching hostnames between listener and route",
-			route: newHTTPRouteWithHostnames("api.example.com"),
-			objects: append([]client.Object{
-				newGatewayWithListenerHostnames("web.example.com"),
-			}, newKonnectGatewayStandardObjects()...),
+			name:           "no matching hostnames between listener and route",
+			route:          newHTTPRouteWithHostnames("api.example.com"),
+			gateway:        newGatewayWithListenerHostnames("web.example.com"),
 			expectedOutput: []*configurationv1alpha1.KongRoute{},
 		},
 		{
-			name:  "listener with no hostname (accepts all)",
-			route: newHTTPRouteWithHostnames("api.example.com", "web.example.com"),
-			objects: append([]client.Object{
-				newGatewayWithListenerHostnames(),
-			}, newKonnectGatewayStandardObjects()...),
+			name:    "listener with no hostname (accepts all)",
+			route:   newHTTPRouteWithHostnames("api.example.com", "web.example.com"),
+			gateway: newGatewayWithListenerHostnames(),
 			expectedOutput: newExpectedKongRoutesWithHostnames(map[string][]string{
 				"route.1": {"api.example.com", "web.example.com"},
 			}),
@@ -115,7 +100,9 @@ func TestHostnamesIntersection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
+			objects := newKonnectGatewayStandardObjects(tt.gateway)
+
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
 			converter := newHTTPRouteConverter(tt.route, fakeClient, true)
 			err := converter.Translate()
@@ -197,16 +184,42 @@ func newHTTPRouteWithHostnames(hostnames ...string) *gwtypes.HTTPRoute {
 
 func newGatewayWithListenerHostnames(hostnames ...string) *gwtypes.Gateway {
 	var gwListeeners []gwtypes.Listener
+	var gwListenerStatuses []gatewayv1.ListenerStatus
+
 	for i, h := range hostnames {
+		listenerName := gwtypes.SectionName(fmt.Sprintf("listener-%d", i))
 		gwListeeners = append(gwListeeners, gwtypes.Listener{
-			Name:     gwtypes.SectionName(fmt.Sprintf("listener-%d", i)),
+			Name:     listenerName,
 			Hostname: lo.ToPtr(gatewayv1.Hostname(h)),
+			Protocol: gwtypes.HTTPProtocolType,
+			Port:     gwtypes.PortNumber(80),
+		})
+		gwListenerStatuses = append(gwListenerStatuses, gatewayv1.ListenerStatus{
+			Name: listenerName,
+			Conditions: []metav1.Condition{
+				{
+					Type:   string(gwtypes.ListenerConditionProgrammed),
+					Status: metav1.ConditionTrue,
+				},
+			},
 		})
 	}
 	if len(gwListeeners) == 0 {
 		// Add a listener with no hostname (accepts all hostnames)
+		listenerName := gwtypes.SectionName("listener-0")
 		gwListeeners = append(gwListeeners, gwtypes.Listener{
-			Name: "listener-0",
+			Name:     listenerName,
+			Protocol: gwtypes.HTTPProtocolType,
+			Port:     gwtypes.PortNumber(80),
+		})
+		gwListenerStatuses = append(gwListenerStatuses, gatewayv1.ListenerStatus{
+			Name: listenerName,
+			Conditions: []metav1.Condition{
+				{
+					Type:   string(gwtypes.ListenerConditionProgrammed),
+					Status: metav1.ConditionTrue,
+				},
+			},
 		})
 	}
 
@@ -223,11 +236,50 @@ func newGatewayWithListenerHostnames(hostnames ...string) *gwtypes.Gateway {
 			GatewayClassName: "test-gateway-class",
 			Listeners:        gwListeeners,
 		},
+		Status: gatewayv1.GatewayStatus{
+			Listeners: gwListenerStatuses,
+		},
 	}
 }
 
-func newKonnectGatewayStandardObjects() []client.Object {
+func newKonnectGatewayStandardObjects(gateway *gwtypes.Gateway) []client.Object {
+	konnectExt := &konnectv1alpha2.KonnectExtension{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "KonnectExtension",
+			APIVersion: "konnect.konghq.com/v1alpha2",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-extension",
+			Namespace: "default",
+			Labels: map[string]string{
+				"gateway-operator.konghq.com/managed-by": "gateway",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "gateway.networking.k8s.io/v1",
+					Kind:       "Gateway",
+					Name:       gateway.Name,
+					UID:        gateway.UID,
+				},
+			},
+		},
+		Spec: konnectv1alpha2.KonnectExtensionSpec{
+			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type: "konnectNamespacedRef",
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name:      "default",
+							Namespace: "default",
+						},
+					},
+				},
+			},
+		},
+	}
+
 	objects := []client.Object{
+		gateway,
 		&gwtypes.GatewayClass{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "GatewayClass",
@@ -268,29 +320,7 @@ func newKonnectGatewayStandardObjects() []client.Object {
 				},
 			},
 		},
-		&konnectv1alpha2.KonnectExtension{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KonnectExtension",
-				APIVersion: "konnect.konghq.com/v1alpha2",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-extension",
-				Namespace: "default",
-			},
-			Spec: konnectv1alpha2.KonnectExtensionSpec{
-				Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
-					ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-						Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
-							Type: "konnectNamespacedRef",
-							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-								Name:      "default",
-								Namespace: "default",
-							},
-						},
-					},
-				},
-			},
-		},
+		konnectExt,
 		&konnectv1alpha2.KonnectGatewayControlPlane{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "KonnectControlPlane",

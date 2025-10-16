@@ -13,6 +13,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 )
 
@@ -334,4 +335,84 @@ func filterKongCredentials[
 	}
 
 	return append(creds[:best], creds[best+1:]...)
+}
+
+// -----------------------------------------------------------------------------
+// Filter functions - KonnectGatewayControlPlanes
+// -----------------------------------------------------------------------------
+
+// filterKonnectGatewayControlPlanes filters out the KonnectGatewayControlPlane to be kept and returns all the KonnectGatewayControlPlanes
+// to be deleted.
+// The KonnectGatewayControlPlane with Programmed status condition is kept.
+// If no such control plane is found the oldest is kept.
+func filterKonnectGatewayControlPlanes(cps []konnectv1alpha2.KonnectGatewayControlPlane) []konnectv1alpha2.KonnectGatewayControlPlane {
+	if len(cps) < 2 {
+		return []konnectv1alpha2.KonnectGatewayControlPlane{}
+	}
+
+	programmed := -1
+	best := 0
+	for i, cp := range cps {
+		if lo.ContainsBy(cp.Status.Conditions, func(c metav1.Condition) bool {
+			return c.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+				c.Status == metav1.ConditionTrue
+		}) {
+
+			if programmed != -1 && cp.CreationTimestamp.Before(&cps[programmed].CreationTimestamp) {
+				best = i
+				programmed = i
+			} else if programmed == -1 {
+				best = i
+				programmed = i
+			}
+
+			continue
+		}
+
+		if cp.CreationTimestamp.Before(&cps[best].CreationTimestamp) && programmed == -1 {
+			best = i
+		}
+	}
+
+	return append(cps[:best], cps[best+1:]...)
+}
+
+// -----------------------------------------------------------------------------
+// Filter functions - KonnectExtensions
+// -----------------------------------------------------------------------------
+
+// filterKonnectExtensions filters out the KonnectExtension to be kept and returns all the KonnectExtensions
+// to be deleted.
+// The KonnectExtension with Ready status condition is kept.
+// If no such extension is found the oldest is kept.
+func filterKonnectExtensions(exts []konnectv1alpha2.KonnectExtension) []konnectv1alpha2.KonnectExtension {
+	if len(exts) < 2 {
+		return []konnectv1alpha2.KonnectExtension{}
+	}
+
+	ready := -1
+	best := 0
+	for i, ext := range exts {
+		if lo.ContainsBy(ext.Status.Conditions, func(c metav1.Condition) bool {
+			return c.Type == konnectv1alpha2.KonnectExtensionReadyConditionType &&
+				c.Status == metav1.ConditionTrue
+		}) {
+
+			if ready != -1 && ext.CreationTimestamp.Before(&exts[ready].CreationTimestamp) {
+				best = i
+				ready = i
+			} else if ready == -1 {
+				best = i
+				ready = i
+			}
+
+			continue
+		}
+
+		if ext.CreationTimestamp.Before(&exts[best].CreationTimestamp) && ready == -1 {
+			best = i
+		}
+	}
+
+	return append(exts[:best], exts[best+1:]...)
 }
