@@ -48,4 +48,4 @@ telepresence: "2.24.1"
 # renovate: datasource=github-tags depName=DavidAnson/markdownlint-cli2
 markdownlint-cli2: "0.18.1"
 # renovate: datasource=github-releases depName=cert-manager/cert-manager
-cert-manager: "1.18.2"
+cert-manager: "1.18.3"
