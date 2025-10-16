@@ -12,7 +12,7 @@ require (
 	github.com/cert-manager/cert-manager v1.18.2
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/cnf/structhash v0.0.0-20250313080605-df4c6cc74a9a
-	github.com/docker/docker v28.4.0+incompatible
+	github.com/docker/docker v28.5.1+incompatible
 	github.com/docker/go-connections v0.6.0
 	github.com/dominikbraun/graph v0.23.0
 	github.com/evanphx/json-patch/v5 v5.9.11
