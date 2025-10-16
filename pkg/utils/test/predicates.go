@@ -707,6 +707,28 @@ func GatewayControlPlaneIsProvisioned(t *testing.T, ctx context.Context, gateway
 	}
 }
 
+// KonnectGatewayControlPlaneIsProgrammed returns a function that checks if a KonnectGatewayControlPlane is programmed.
+func KonnectGatewayControlPlaneIsProgrammed(t *testing.T, ctx context.Context, gateway *gwtypes.Gateway, clients K8sClients) func() bool {
+	return func() bool {
+		controlPlanes := MustListKonnectGatewayControlPlanesForGateway(t, ctx, gateway, clients)
+
+		if len(controlPlanes) == 1 {
+			// if the controlplane DeletionTimestamp is set, the controlplane deletion has been requested.
+			// Hence we cannot consider it as a provisioned valid controlplane.
+			if controlPlanes[0].DeletionTimestamp != nil {
+				return false
+			}
+			for _, condition := range controlPlanes[0].Status.Conditions {
+				if condition.Type == "Programmed" &&
+					condition.Status == metav1.ConditionTrue {
+					return true
+				}
+			}
+		}
+		return false
+	}
+}
+
 // GatewayNetworkPoliciesExist is a helper function for tests that returns a function
 // that can be used to check if a Gateway owns a networkpolicy.
 // Should be used in conjunction with require.Eventually or assert.Eventually.

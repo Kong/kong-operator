@@ -12,6 +12,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 )
 
 // GatewaysByNamespacedRef associates a KonnectNamespacedRef with a list of Gateways.
@@ -133,32 +134,20 @@ func byHTTPRoute(ctx context.Context, cl client.Client, httpRoute gwtypes.HTTPRo
 
 // byGateway returns the KonnectNamespacedRef associated with the given Gateway, or nil if not found.
 func byGateway(ctx context.Context, cl client.Client, gateway gwtypes.Gateway) (*commonv1alpha1.KonnectNamespacedRef, error) {
-	gatewayClass := getGatewayClassByGateway(ctx, cl, gateway)
-	if gatewayClass == nil {
-		return nil, nil
-	}
-	return byGatewayClass(ctx, cl, *gatewayClass)
-}
-
-// byGatewayClass returns the KonnectNamespacedRef associated with the given GatewayClass, or nil if not found.
-func byGatewayClass(ctx context.Context, cl client.Client, gatewayClass gwtypes.GatewayClass) (*commonv1alpha1.KonnectNamespacedRef, error) {
-	gatewayConfiguration := getGatewayConfigurationByGatewayClass(ctx, cl, gatewayClass)
-	if gatewayConfiguration == nil {
-		return nil, nil
-	}
-	return byGatewayConfiguration(ctx, cl, *gatewayConfiguration)
-}
-
-// byGatewayConfiguration returns the KonnectNamespacedRef associated with the given GatewayConfiguration, or an error if retrieval fails.
-func byGatewayConfiguration(ctx context.Context, cl client.Client, gatewayConfiguration gwtypes.GatewayConfiguration) (*commonv1alpha1.KonnectNamespacedRef, error) {
-	konnectExtension, err := getKonnectExtensionByGatewayConfiguration(ctx, cl, gatewayConfiguration)
+	extensions, err := gatewayutils.ListKonnectExtensionsForGateway(ctx, cl, &gateway)
 	if err != nil {
 		return nil, err
 	}
-	if konnectExtension == nil {
+
+	switch l := len(extensions); l {
+	case 0:
 		return nil, nil
+	case 1:
+		return byKonnectExtension(ctx, cl, extensions[0])
+	default:
+		return nil, errors.New("multiple KonnectExtensions found for a single Gateway, which is not supported")
+
 	}
-	return byKonnectExtension(ctx, cl, *konnectExtension)
 }
 
 // byKonnectExtension returns the KonnectNamespacedRef from the given KonnectExtension, or empty if not present.

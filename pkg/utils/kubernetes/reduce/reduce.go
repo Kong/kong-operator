@@ -15,6 +15,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/pkg/clientops"
 )
@@ -164,4 +165,20 @@ func ReduceKongCredentials[
 ](ctx context.Context, k8sClient client.Client, kongCredentials []T) error {
 	filtered := filterKongCredentials[T, TPtr](kongCredentials)
 	return clientops.DeleteAll[T, TPtr](ctx, k8sClient, filtered)
+}
+
+// +kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectgatewaycontrolplanes,verbs=delete
+
+// ReduceKonnectGatewayControlPlane detects the best KonnectGatewayControlPlane in the set and deletes all the others.
+func ReduceKonnectGatewayControlPlane(ctx context.Context, k8sClient client.Client, cps []konnectv1alpha2.KonnectGatewayControlPlane) error {
+	filteredCPs := filterKonnectGatewayControlPlanes(cps)
+	return clientops.DeleteAll(ctx, k8sClient, filteredCPs)
+}
+
+// +kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectextensions,verbs=delete
+
+// ReduceKonnectExtension detects the best KonnectExtension in the set and deletes all the others.
+func ReduceKonnectExtension(ctx context.Context, k8sClient client.Client, exts []konnectv1alpha2.KonnectExtension) error {
+	filteredExts := filterKonnectExtensions(exts)
+	return clientops.DeleteAll(ctx, k8sClient, filteredExts)
 }
