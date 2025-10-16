@@ -3846,6 +3846,18 @@ ControlPlaneKonnectConsumersSyncState defines the state of consumer synchronizat
 _Appears in:_
 - [ControlPlaneKonnectOptions](#controlplanekonnectoptions)
 
+#### ControlPlaneKonnectLicenseStorageState
+_Underlying type:_ `string`
+
+ControlPlaneKonnectLicenseStorageState defines the state of Konnect licensing.
+
+
+
+
+
+_Appears in:_
+- [ControlPlaneKonnectLicensing](#controlplanekonnectlicensing)
+
 #### ControlPlaneKonnectLicensing
 
 
@@ -3858,7 +3870,7 @@ ControlPlaneKonnectLicensing defines the configuration for Konnect licensing.
 | `state` _[ControlPlaneKonnectLicensingState](#controlplanekonnectlicensingstate)_ | State indicates whether Konnect licensing is enabled. |
 | `initialPollingPeriod` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#duration-v1-meta)_ | InitialPollingPeriod is the initial polling period for license checks. |
 | `pollingPeriod` _[Duration](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#duration-v1-meta)_ | PollingPeriod is the polling period for license checks. |
-| `storageState` _[ControlPlaneKonnectLicensingState](#controlplanekonnectlicensingstate)_ | StorageState indicates whether to store licenses fetched from Konnect to Secrets locally to use them later when connection to Konnect is broken. Only effective when State is set to enabled. |
+| `storageState` _[ControlPlaneKonnectLicenseStorageState](#controlplanekonnectlicensestoragestate)_ | StorageState indicates whether to store licenses fetched from Konnect to Secrets locally to use them later when connection to Konnect is broken. Only effective when State is set to enabled. |
 
 
 _Appears in:_
