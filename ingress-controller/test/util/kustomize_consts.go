@@ -10,28 +10,21 @@ import (
 	"github.com/samber/lo"
 )
 
-const (
-	// ingressControllerModulePath points to Kubernetes configuration for KGO, since KIC part
-	// only needs a subset of it, so a dedicated one is not needed.
-	ingressControllerLocalPath = "./"
-)
-
 var (
 	kongRBACsKustomize = initKongRBACsKustomizePath()
 
-	kubernetesConfigurationModuleVersion = "" // unused; local paths are used instead of remote module refs
-	kongIncubatorCRDsKustomize           = initKongIncubatorCRDsKustomizePath()
-	kongKOCRDsKustomize                  = initKongOperatorConfigurationCRDs()
+	kongIncubatorCRDsKustomize = initKongIncubatorCRDsKustomizePath()
+	kongKOCRDsKustomize        = initKongOperatorConfigurationCRDs()
 )
 
 func initKongIncubatorCRDsKustomizePath() string {
-	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/crd/ingress-controller-incubator")
+	dir := filepath.Join(lo.Must(getRepoRoot()), "config/crd/ingress-controller-incubator")
 	ensureDirExists(dir)
 	return dir
 }
 
 func initKongRBACsKustomizePath() string {
-	dir := filepath.Join(lo.Must(getRepoRoot()), ingressControllerLocalPath+"config/rbac/")
+	dir := filepath.Join(lo.Must(getRepoRoot()), "config/rbac/")
 	ensureDirExists(dir)
 	return dir
 }

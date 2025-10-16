@@ -86,13 +86,11 @@ func StartReconcilers(
 
 	// This wait group makes it so that we wait for manager to exit.
 	// This way we get clean test logs not mixing between tests.
-	wg := sync.WaitGroup{}
-	wg.Add(1)
 	t.Logf("Starting manager for test case %s", t.Name())
-	go func() {
-		defer wg.Done()
+	var wg sync.WaitGroup
+	wg.Go(func() {
 		assert.NoError(t, mgr.Start(ctx))
-	}()
+	})
 	t.Cleanup(func() {
 		wg.Wait()
 		DumpLogsIfTestFailed(t, logs)
