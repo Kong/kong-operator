@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 
+	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -135,6 +136,21 @@ func (b *KongPluginBuilder) WithFilter(filter gwtypes.HTTPRouteFilter) *KongPlug
 			return b
 		}
 		b.plugin.Config.Raw = configJSON
+	case gatewayv1.HTTPRouteFilterRequestRedirect:
+		pluginConf, err := translateRequestRedirect(filter)
+		if err != nil {
+			b.errors = append(b.errors, err)
+			return b
+		}
+
+		b.plugin.PluginName = "redirect"
+
+		configJSON, err := json.Marshal(pluginConf)
+		if err != nil {
+			b.errors = append(b.errors, fmt.Errorf("failed to marshal %q plugin config: %w", b.plugin.PluginName, err))
+			return b
+		}
+		b.plugin.Config.Raw = configJSON
 	default:
 		b.errors = append(b.errors, fmt.Errorf("unsupported filter type: %s", filter.Type))
 	}
@@ -222,4 +238,88 @@ func translateResponseModifier(filter gwtypes.HTTPRouteFilter) (transformerData,
 		plugin = transformerData{}
 	}
 	return plugin, err
+}
+
+type requestRedirectConfig struct {
+	KeepIncomingPath bool   `json:"keep_incoming_path"`
+	Location         string `json:"location"`
+	StatusCode       int    `json:"status_code"`
+}
+
+func translateRequestRedirect(filter gwtypes.HTTPRouteFilter) (requestRedirectConfig, error) {
+	rr := filter.RequestRedirect
+
+	if rr == nil {
+		return requestRedirectConfig{}, errors.New("RequestRedirect filter config is missing")
+	}
+
+	// GWAPI default status code is 302
+	plugin := requestRedirectConfig{StatusCode: 302}
+
+	if rr.StatusCode != nil {
+		plugin.StatusCode = *rr.StatusCode
+	}
+
+	locHost := translateRequestRedirectHostname(rr)
+	locPath, err := translateRequestRedirectPath(rr)
+	if err != nil {
+		return requestRedirectConfig{}, err
+	}
+	if locPath == "" {
+		plugin.KeepIncomingPath = true
+		locPath = "/"
+	}
+
+	plugin.Location = locHost + locPath
+	return plugin, nil
+}
+
+func translateRequestRedirectHostname(rr *gatewayv1.HTTPRequestRedirectFilter) string {
+	if rr.Hostname == nil {
+		return ""
+	}
+
+	// when no scheme specified we assume `http` (as KIC does) but we should preserve the actual scheme instead.
+	// this cannot be done with direct filter -> kong plugin conversion.
+	// See https://github.com/Kong/kong-operator/issues/2466.
+	host := lo.FromPtrOr(rr.Scheme, "http") + "://"
+	host += lo.FromPtrOr((*string)(rr.Hostname), "")
+	if rr.Port != nil {
+		host += fmt.Sprintf(":%d", *rr.Port)
+	}
+	return host
+}
+
+func translateRequestRedirectPath(rr *gatewayv1.HTTPRequestRedirectFilter) (string, error) {
+	path := ""
+	var err error
+
+	if rr.Path == nil {
+		return path, nil
+	}
+
+	pathModifier := rr.Path
+	switch pathModifier.Type {
+	case gatewayv1.FullPathHTTPPathModifier:
+		path = translateRequestRedirectPathFullPath(pathModifier.ReplaceFullPath)
+	case gatewayv1.PrefixMatchHTTPPathModifier:
+		path = translateRequestRedirectPathPrefixMatch(pathModifier.ReplacePrefixMatch)
+	default:
+		err = errors.New("unsupported RequestRedirect path modifier type: " + string(pathModifier.Type))
+	}
+	return path, err
+}
+
+func translateRequestRedirectPathFullPath(replaceFullPath *string) string {
+	if replaceFullPath == nil || *replaceFullPath == "" {
+		return "/"
+	}
+	return *replaceFullPath
+}
+
+func translateRequestRedirectPathPrefixMatch(prefixMatch *string) string {
+	// Not implemented yet - Kong does not have a direct equivalent for prefix match replacement.
+	// KIC in Konnect just ignores PrefixMatch filters, let's do the same.
+	// Tracker: https://github.com/Kong/kong-operator/issues/2466
+	return "/"
 }
