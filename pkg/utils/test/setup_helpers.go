@@ -221,20 +221,20 @@ func DeployCRDs(ctx context.Context, crdPath string, operatorClient *operatorcli
 		return err
 	}
 
-	if err := InstallKubernetesConfigurationCRDs(ctx, cluster); err != nil {
+	if err := installKongOperatorCRDs(ctx, cluster); err != nil {
 		return err
 	}
 
 	// NOTE: this check is not ideal, because we don't know if CRDs were deployed, it assumes that all for KGO are deployed
 	// and checks it by waiting for a single arbitrary chosen CRDs for each API group.
-	if err := waitForOperatorCRDs(ctx, operatorClient); err != nil {
+	if err := waitForKongOperatorCRDs(ctx, operatorClient); err != nil {
 		return err
 	}
 	return nil
 }
 
-// InstallKubernetesConfigurationCRDs installs the Kong CRDs from the local repository paths.
-func InstallKubernetesConfigurationCRDs(ctx context.Context, cluster clusters.Cluster) error {
+// installKongOperatorCRDs installs the Kong CRDs from the local repository paths.
+func installKongOperatorCRDs(ctx context.Context, cluster clusters.Cluster) error {
 	kubectlFlags := []string{"--server-side", "-v5"}
 
 	localCRDDirs := []string{
@@ -251,7 +251,7 @@ func InstallKubernetesConfigurationCRDs(ctx context.Context, cluster clusters.Cl
 	return nil
 }
 
-func waitForOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Clientset) error {
+func waitForKongOperatorCRDs(ctx context.Context, operatorClient *operatorclient.Clientset) error {
 	ready := false
 	for !ready {
 		select {

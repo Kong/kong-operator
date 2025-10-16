@@ -327,7 +327,6 @@ generate.crd-kustomize:
 generate.api: controller-gen
 	$(CONTROLLER_GEN) object:headerFile="hack/generators/boilerplate.go.txt" paths="./$(API_DIR)/..."
 
-# Alias for consistency with kubernetes-configuration naming
 .PHONY: generate.deepcopy
 generate.deepcopy: generate.api
 

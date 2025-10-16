@@ -106,12 +106,10 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 	)
 	// This wait group makes it so that we wait for manager to exit.
 	// This way we get clean test logs not mixing between tests.
-	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	var wg sync.WaitGroup
+	wg.Go(func() {
 		assert.NoError(t, mgr.Start(ctx))
-	}()
+	})
 	t.Cleanup(func() { wg.Wait() })
 
 	return adminService, adminPod, n
