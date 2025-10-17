@@ -17,7 +17,7 @@ type (
 	GatewayList            = gatewayv1.GatewayList
 	GatewaySpec            = gatewayv1.GatewaySpec
 	GatewayStatusAddress   = gatewayv1.GatewayStatusAddress
-	GRPCRoute              = gatewayv1.GRPCRoute
+	GatewayTLSConfig       = gatewayv1.ListenerTLSConfig
 	Group                  = gatewayv1.Group
 	GroupVersionKind       = gatewayv1.Group
 	Hostname               = gatewayv1.Hostname

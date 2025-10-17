@@ -742,7 +742,7 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 		listeners = append(listeners, gatewayapi.Listener{
 			Name:     (gatewayapi.SectionName)(port.Name),
 			Protocol: (gatewayapi.ProtocolType)(port.Protocol),
-			Port:     (gatewayapi.PortNumber)(port.Port),
+			Port:     (port.Port),
 			AllowedRoutes: &gatewayapi.AllowedRoutes{
 				Kinds: []gatewayapi.RouteGroupKind{
 					protocolToRouteGroupKind[port.Protocol],

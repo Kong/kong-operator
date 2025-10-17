@@ -147,9 +147,6 @@ func TestGetEnvValueFromContainer(t *testing.T) {
 		},
 	}
 
-	b := fakeclient.NewClientBuilder()
-	b.WithObjects(defaultObjects...)
-
 	testCases := []struct {
 		name          string
 		container     *corev1.Container
@@ -289,7 +286,10 @@ func TestGetEnvValueFromContainer(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			c := b.Build()
+			c := fakeclient.NewClientBuilder().
+				WithObjects(defaultObjects...).
+				Build()
+
 			value, found, err := GetEnvValueFromContainer(t.Context(), tc.container, "default", tc.key, c)
 			if tc.hasError {
 				require.Error(t, err)
