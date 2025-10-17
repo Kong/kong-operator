@@ -2,12 +2,14 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
@@ -85,6 +87,59 @@ func deleteUpstream(
 	return nil
 }
 
+func adoptUpstream(
+	ctx context.Context,
+	sdk sdkops.UpstreamsSDK,
+	upstream *configurationv1alpha1.KongUpstream,
+) error {
+	cpID := upstream.GetControlPlaneID()
+	adoptOptions := upstream.Spec.Adopt
+	konnectID := adoptOptions.Konnect.ID
+	if cpID == "" {
+		return errors.New("No Control Plane ID")
+	}
+	resp, err := sdk.GetUpstream(ctx, konnectID, cpID)
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{
+			KonnectID: konnectID,
+			Err:       err,
+		}
+	}
+	uidTag, hasUIDTag := findUIDTag(resp.Upstream.Tags)
+	if hasUIDTag && extractUIDFromTag(uidTag) != string(upstream.UID) {
+		return KonnectEntityAdoptionUIDTagConflictError{
+			KonnectID:    konnectID,
+			ActualUIDTag: extractUIDFromTag(uidTag),
+		}
+	}
+
+	adoptMode := adoptOptions.Mode
+	if adoptMode == "" {
+		adoptMode = commonv1alpha1.AdoptModeOverride
+	}
+	switch adoptMode {
+	case commonv1alpha1.AdoptModeOverride:
+		upstreamCopy := upstream.DeepCopy()
+		upstreamCopy.SetKonnectID(konnectID)
+		if err = updateUpstream(ctx, sdk, upstreamCopy); err != nil {
+			return err
+		}
+	case commonv1alpha1.AdoptModeMatch:
+		// When adopting in match mode, we return error if the upstream does not match.
+		// when it matches, we do nothing but fill the Konnect ID to mark that the adoption is successful.
+		if !upstreamMatch(resp.Upstream, upstream) {
+			return KonnectEntityAdoptionNotMatchError{
+				KonnectID: konnectID,
+			}
+		}
+	default:
+		return fmt.Errorf("failed to adopt: adopt mode %q not supported", adoptMode)
+	}
+
+	upstream.SetKonnectID(konnectID)
+	return nil
+}
+
 func kongUpstreamToSDKUpstreamInput(
 	upstream *configurationv1alpha1.KongUpstream,
 ) sdkkonnectcomp.Upstream {
@@ -135,4 +190,24 @@ func getKongUpstreamForUID(
 	}
 
 	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), u)
+}
+
+func upstreamMatch(konnectUpstream *sdkkonnectcomp.Upstream, upstream *configurationv1alpha1.KongUpstream) bool {
+	upstreamInput := kongUpstreamToSDKUpstreamInput(upstream)
+
+	return equalWithDefault(konnectUpstream.Algorithm, upstreamInput.Algorithm, sdkkonnectcomp.UpstreamAlgorithmRoundRobin) &&
+		equalWithDefault(konnectUpstream.HashFallback, upstreamInput.HashFallback, sdkkonnectcomp.HashFallbackNone) &&
+		equalWithDefault(konnectUpstream.HashFallbackHeader, upstreamInput.HashFallbackHeader, "") &&
+		equalWithDefault(konnectUpstream.HashFallbackQueryArg, upstreamInput.HashFallbackQueryArg, "") &&
+		equalWithDefault(konnectUpstream.HashFallbackURICapture, upstreamInput.HashFallbackURICapture, "") &&
+		equalWithDefault(konnectUpstream.HashOn, upstreamInput.HashOn, sdkkonnectcomp.HashOnNone) &&
+		equalWithDefault(konnectUpstream.HashOnCookie, upstreamInput.HashOnCookie, "") &&
+		equalWithDefault(konnectUpstream.HashOnCookiePath, upstreamInput.HashOnCookiePath, "/") &&
+		equalWithDefault(konnectUpstream.HashOnHeader, upstreamInput.HashOnHeader, "") &&
+		equalWithDefault(konnectUpstream.HashOnQueryArg, upstreamInput.HashOnQueryArg, "") &&
+		equalWithDefault(konnectUpstream.HashOnURICapture, upstreamInput.HashOnURICapture, "") &&
+		equalWithDefault(konnectUpstream.Healthchecks, upstreamInput.Healthchecks, sdkkonnectcomp.Healthchecks{}) &&
+		equalWithDefault(konnectUpstream.HostHeader, upstreamInput.HostHeader, "") &&
+		konnectUpstream.Name == upstreamInput.Name &&
+		equalWithDefault(konnectUpstream.Slots, upstreamInput.Slots, 10000)
 }

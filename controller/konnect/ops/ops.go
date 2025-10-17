@@ -556,6 +556,12 @@ func Adopt[
 		err = adoptKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), cl, ent, adoptOptions)
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
 		err = adoptKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), ent, adoptOptions)
+	case *configurationv1alpha1.KongRoute:
+		err = adoptRoute(ctx, sdk.GetRoutesSDK(), ent)
+	case *configurationv1alpha1.KongUpstream:
+		err = adoptUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
+	case *configurationv1alpha1.KongTarget:
+		err = adoptTarget(ctx, sdk.GetTargetsSDK(), ent)
 	// TODO: implement adoption for other types.
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
@@ -843,7 +849,7 @@ func extractUIDFromTag(tag string) string {
 	return strings.TrimPrefix(tag, "k8s-uid:")
 }
 
-// equalWithDefault compares two values from the pointers and fallback to
+// equalWithDefault compares two values from the pointers and falls back to
 // the given default value if the pointer is nil or the value is the zero value for the given type.
 func equalWithDefault[T comparable](
 	a *T, b *T, defaultValue T,
@@ -851,9 +857,13 @@ func equalWithDefault[T comparable](
 	var aVal, bVal T
 	if a == nil || lo.IsEmpty(*a) {
 		aVal = defaultValue
+	} else {
+		aVal = *a
 	}
 	if b == nil || lo.IsEmpty(*b) {
 		bVal = defaultValue
+	} else {
+		bVal = *b
 	}
 	return aVal == bVal
 }
