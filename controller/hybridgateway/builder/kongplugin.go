@@ -253,7 +253,7 @@ func translateRequestRedirect(filter gwtypes.HTTPRouteFilter) (requestRedirectCo
 		return requestRedirectConfig{}, errors.New("RequestRedirect filter config is missing")
 	}
 
-	// GWAPI default status code is 302
+	// GWAPI default status code is 302.
 	plugin := requestRedirectConfig{StatusCode: 302}
 
 	if rr.StatusCode != nil {
