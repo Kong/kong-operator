@@ -100,6 +100,10 @@ func TestAdoptRoute(t *testing.T) {
 								ID: "1234",
 							},
 						},
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type:          "namespacedRef",
+							NamespacedRef: &commonv1alpha1.NameRef{Name: "svc-1"},
+						},
 						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 							Paths: []string{"/test-1"},
 						},
@@ -107,6 +111,7 @@ func TestAdoptRoute(t *testing.T) {
 					Status: configurationv1alpha1.KongRouteStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndServiceRefs{
 							ControlPlaneID: "123456789",
+							ServiceID:      "12345",
 						},
 					},
 				}
@@ -119,6 +124,9 @@ func TestAdoptRoute(t *testing.T) {
 						Route: &sdkkonnectcomp.Route{
 							Type: sdkkonnectcomp.RouteTypeRouteJSON,
 							RouteJSON: &sdkkonnectcomp.RouteJSON{
+								Service: &sdkkonnectcomp.RouteJSONService{
+									ID: lo.ToPtr("12345"),
+								},
 								Paths: []string{"/test"},
 							},
 						},
@@ -223,6 +231,61 @@ func TestAdoptRoute(t *testing.T) {
 				return sdk, route
 			},
 			expectedErrContains: fmt.Sprintf("route type %q not supported", sdkkonnectcomp.RouteTypeRouteExpression),
+		},
+		{
+			name: "service reference not match",
+			mockRoutePair: func(t *testing.T) (*sdkmocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
+				sdk := sdkmocks.NewMockRoutesSDK(t)
+				route := &configurationv1alpha1.KongRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "route-1",
+						Namespace: "default",
+						UID:       k8stypes.UID("abcd-1234"),
+					},
+					Spec: configurationv1alpha1.KongRouteSpec{
+						Adopt: &commonv1alpha1.AdoptOptions{
+							From: commonv1alpha1.AdoptSourceKonnect,
+							Mode: commonv1alpha1.AdoptModeOverride,
+							Konnect: &commonv1alpha1.AdoptKonnectOptions{
+								ID: "1234",
+							},
+						},
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type:          "namespacedRef",
+							NamespacedRef: &commonv1alpha1.NameRef{Name: "svc-1"},
+						},
+						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+							Paths: []string{"/test-1"},
+						},
+					},
+					Status: configurationv1alpha1.KongRouteStatus{
+						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndServiceRefs{
+							ControlPlaneID: "123456789",
+							ServiceID:      "12345",
+						},
+					},
+				}
+				sdk.EXPECT().GetRoute(
+					mock.Anything,
+					"1234",
+					"123456789",
+				).Return(
+					&sdkkonnectops.GetRouteResponse{
+						Route: &sdkkonnectcomp.Route{
+							Type: sdkkonnectcomp.RouteTypeRouteJSON,
+							RouteJSON: &sdkkonnectcomp.RouteJSON{
+								Service: &sdkkonnectcomp.RouteJSONService{
+									ID: lo.ToPtr("123456"),
+								},
+								Paths: []string{"/test"},
+							},
+						},
+					}, nil,
+				)
+
+				return sdk, route
+			},
+			expectedErrContains: "failed to adopt: reference service ID does not match",
 		},
 		{
 			name: "success in match mode",

@@ -109,9 +109,32 @@ func adoptRoute(
 	}
 	// KO only supports routes with "RouteJSON" type now.
 	if resp.Route.Type != sdkkonnectcomp.RouteTypeRouteJSON {
-		return fmt.Errorf("route type %q not supported", resp.Route.Type)
+		return fmt.Errorf("failed to adopt: route type %q not supported", resp.Route.Type)
 	}
-	// TODO: check if the service on the route matches the given serviceRef of the KongRoute?
+	if resp.Route.RouteJSON == nil {
+		return fmt.Errorf("route content in RouteJSON is empty")
+	}
+
+	// Check if the service ID matches.
+	if route.Spec.ServiceRef != nil {
+		// if the KongRoute has a service reference, check if the referenced service matches.
+		if route.Status.Konnect.ServiceID == "" {
+			return fmt.Errorf("failed to adopt: service reference not resolved")
+		}
+		if resp.Route.RouteJSON.Service == nil ||
+			resp.Route.RouteJSON.Service.ID == nil {
+			return fmt.Errorf("failed to adopt: existing route does not have service reference")
+		}
+		if *resp.Route.RouteJSON.Service.ID != route.Status.Konnect.ServiceID {
+			return fmt.Errorf("failed to adopt: reference service ID does not match")
+		}
+	} else {
+		// if the KongRoute does not have a service reference, the existing route should not have a reference service.
+		if resp.Route.RouteJSON.Service != nil {
+			return fmt.Errorf("failed to adopt: KongRoute has no service reference but existing route has service reference")
+		}
+	}
+
 	uidTag, hasUIDTag := findUIDTag(resp.Route.RouteJSON.Tags)
 	if hasUIDTag && extractUIDFromTag(uidTag) != string(route.UID) {
 		return KonnectEntityAdoptionUIDTagConflictError{
