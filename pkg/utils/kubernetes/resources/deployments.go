@@ -241,10 +241,16 @@ func GenerateDataPlaneReadinessProbe(endpoint string) *corev1.Probe {
 		SuccessThreshold:    1,
 		TimeoutSeconds:      1,
 		ProbeHandler: corev1.ProbeHandler{
-			HTTPGet: &corev1.HTTPGetAction{
-				Path:   endpoint,
-				Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
-				Scheme: corev1.URISchemeHTTP,
+			// HTTPGet: &corev1.HTTPGetAction{
+			// 	Path:   endpoint,
+			// 	Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+			// 	Scheme: corev1.URISchemeHTTP,
+			// },
+			Exec: &corev1.ExecAction{
+				Command: []string{
+					"cat",
+					"/etc/hostname",
+				},
 			},
 		},
 	}

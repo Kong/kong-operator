@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -99,7 +100,28 @@ func KongInKonnectDefaults(
 		newEnvSet["KONG_CLUSTER_DP_LABELS"] = clusterDataPlaneLabelStringFromLabels(dpLabels)
 	}
 
+	if konnect := konnectExtensionStatus.Konnect; konnect != nil {
+		// "HOUDINI_APIGW_KONNECT_API_HOSTNAME":    "eu.control-plane.konghq.tech",             //
+		if konnect.Endpoints.ServerURL != "" {
+			// newEnvSet["HOUDINI_APIGW_KONNECT_API_HOSTNAME"] = sanitizeEndpoint(konnect.Endpoints.ServerURL)
+			newEnvSet["HOUDINI_APIGW_KONNECT_API_HOSTNAME"] = replaceRegionAPI(sanitizeEndpoint(konnect.Endpoints.ServerURL))
+		}
+		// "HOUDINI_APIGW_KONNECT_GATEWAY_ID":      "${HOUDINI_APIGW_KONNECT_GATEWAY_ID}",      //
+		if konnect.ControlPlaneID != "" {
+			// newEnvSet["HOUDINI_APIGW_KONNECT_GATEWAY_ID"] = konnect.ControlPlaneID
+			newEnvSet["HOUDINI_APIGW_KONNECT_GATEWAY_ID"] = "0199ed01-7064-752f-8225-d1d961aa583f"
+		}
+	}
+
 	return newEnvSet
+}
+
+// replaceRegionAPI replaces "<region>.api.konghq.tech" with "<region>.control-plane.konghq.tech"
+// Example: "eu.api.konghq.tech" -> "eu.control-plane.konghq.tech"
+// It preserves the region part and works for multiple occurrences.
+func replaceRegionAPI(s string) string {
+	re := regexp.MustCompile(`\b([a-z0-9-]+)\.api\.konghq\.tech\b`)
+	return re.ReplaceAllString(s, "${1}.control-plane.konghq.tech")
 }
 
 func sanitizeEndpoint(endpoint string) string {

@@ -771,12 +771,17 @@ spec:
                           control plane.
                         minLength: 1
                         type: string
+                      serverURL:
+                        description: ServerURL is the server URL for the control plane.
+                        minLength: 1
+                        type: string
                       telemetry:
                         description: TelemetryEndpoint is the endpoint for telemetry.
                         minLength: 1
                         type: string
                     required:
                     - controlPlane
+                    - serverURL
                     - telemetry
                     type: object
                 required:

@@ -234,6 +234,12 @@ type KonnectEndpoints struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	ControlPlaneEndpoint string `json:"controlPlane"`
+
+	// ServerURL is the server URL for the control plane.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	ServerURL string `json:"serverURL"`
 }
 
 // KonnectExtensionControlPlaneStatus contains the Konnect Control Plane status information.

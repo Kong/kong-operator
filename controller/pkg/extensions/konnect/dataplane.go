@@ -76,6 +76,31 @@ func (p *DataPlaneKonnectExtensionProcessor) Process(ctx context.Context, cl cli
 	}
 	envSet := config.KongInKonnectDefaults(dataplaneLabels, konnectExtension.Status)
 
+	if dpClientAuth := konnectExtension.Status.DataPlaneClientAuth; dpClientAuth != nil && dpClientAuth.CertificateSecretRef != nil {
+		var (
+			clientAuthSecret   corev1.Secret
+			clientAuthSecretNN = client.ObjectKey{
+				Namespace: konnectExtension.Namespace,
+				Name:      dpClientAuth.CertificateSecretRef.Name,
+			}
+		)
+		if err := cl.Get(ctx, clientAuthSecretNN, &clientAuthSecret); err != nil {
+			return false, fmt.Errorf("failed to get DataPlane client certificate secret %s: %w", clientAuthSecretNN, err)
+		}
+		certKey, certKeyOK := clientAuthSecret.Data[consts.TLSKey]
+		if !certKeyOK || len(certKey) == 0 {
+			return false, fmt.Errorf("DataPlane client certificate secret %s is missing the %q key", clientAuthSecretNN, consts.TLSKey)
+		}
+		certCrt, certCrtOK := clientAuthSecret.Data[consts.TLSCRT]
+		if !certCrtOK || len(certCrt) == 0 {
+			return false, fmt.Errorf("DataPlane client certificate secret %s is missing the %q key", clientAuthSecretNN, consts.TLSCRT)
+		}
+		// "HOUDINI_APIGW_KONNECT_CLIENT_CERT":     "${HOUDINI_APIGW_KONNECT_CLIENT_CERT}",     //
+		envSet["HOUDINI_APIGW_KONNECT_CLIENT_CERT"] = string(certCrt)
+		// "HOUDINI_APIGW_KONNECT_CLIENT_CERT_KEY": "${HOUDINI_APIGW_KONNECT_CLIENT_CERT_KEY}", //
+		envSet["HOUDINI_APIGW_KONNECT_CLIENT_CERT_KEY"] = string(certKey)
+	}
+
 	config.FillContainerEnvs(nil, &d.Spec.Template, consts.DataPlaneProxyContainerName, config.EnvVarMapToSlice(envSet))
 	dataPlane.Spec.Deployment.PodTemplateSpec = &d.Spec.Template
 
