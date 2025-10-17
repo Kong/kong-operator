@@ -132,6 +132,10 @@
   [#2425](https://github.com/Kong/kong-operator/pull/2425)
 - Hybrid Gateway: attach KongService generation to BackendRefs and fix filter/plugin conversion.
   [#2456](https://github.com/Kong/kong-operator/pull/2456)
+- Do not cleanup `null`s in the configuration of plugins with Kong running in
+  DBLess mode in the translator of ingress-controller. This enables user to use
+  explicit `null`s in plugins.
+  [#2459](https://github.com/Kong/kong-operator/pull/2459)
 
 ## [v2.0.4]
 
