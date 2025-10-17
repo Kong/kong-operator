@@ -75,6 +75,7 @@ func handleKonnectGatewayControlPlaneSpecific(
 	kgcp.Status.Endpoints = &konnectv1alpha2.KonnectEndpoints{
 		TelemetryEndpoint:    konnectCP.Config.TelemetryEndpoint,
 		ControlPlaneEndpoint: konnectCP.Config.ControlPlaneEndpoint,
+		ServerURL:            sdk.GetServerURL(),
 	}
 	return true, nil
 }

@@ -272,6 +272,7 @@ func enforceKonnectExtensionStatus(
 		expectedKonnectStatus.Endpoints = konnectv1alpha2.KonnectEndpoints{
 			ControlPlaneEndpoint: cp.Status.Endpoints.ControlPlaneEndpoint,
 			TelemetryEndpoint:    cp.Status.Endpoints.TelemetryEndpoint,
+			ServerURL:            cp.Status.Endpoints.ServerURL,
 		}
 	}
 
