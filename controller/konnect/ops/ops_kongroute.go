@@ -246,6 +246,8 @@ func routeJSONMatch(routeJSON *sdkkonnectcomp.RouteJSON, route *configurationv1a
 		equalWithDefault(routeJSON.HTTPSRedirectStatusCode, routeJSONInput.HTTPSRedirectStatusCode,
 			sdkkonnectcomp.HTTPSRedirectStatusCodeFourHundredAndTwentySix) &&
 		lo.ElementsMatch(routeJSON.Snis, routeJSONInput.Snis) &&
+		equalWithDefault(routeJSON.PathHandling, routeJSONInput.PathHandling,
+			sdkkonnectcomp.PathHandlingV0) &&
 		lo.ElementsMatch(routeJSON.Sources, routeJSONInput.Sources) &&
 		lo.ElementsMatch(routeJSON.Destinations, routeJSONInput.Destinations)
 
