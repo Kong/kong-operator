@@ -283,7 +283,7 @@ func translateRequestRedirectHostname(rr *gatewayv1.HTTPRequestRedirectFilter) s
 	// this cannot be done with direct filter -> kong plugin conversion.
 	// See https://github.com/Kong/kong-operator/issues/2466.
 	host := lo.FromPtrOr(rr.Scheme, "http") + "://"
-	host += lo.FromPtrOr((*string)(rr.Hostname), "")
+	host += string(lo.FromPtrOr((rr.Hostname), ""))
 	if rr.Port != nil {
 		host += fmt.Sprintf(":%d", *rr.Port)
 	}
