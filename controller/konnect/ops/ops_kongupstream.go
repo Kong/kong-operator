@@ -117,7 +117,7 @@ func adoptUpstream(
 	if adoptMode == "" {
 		adoptMode = commonv1alpha1.AdoptModeOverride
 	}
-	switch adoptOptions.Mode {
+	switch adoptMode {
 	case commonv1alpha1.AdoptModeOverride:
 		upstreamCopy := upstream.DeepCopy()
 		upstreamCopy.SetKonnectID(konnectID)

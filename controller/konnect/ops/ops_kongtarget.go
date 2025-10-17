@@ -142,7 +142,7 @@ func adoptTarget(
 	if adoptMode == "" {
 		adoptMode = commonv1alpha1.AdoptModeOverride
 	}
-	switch adoptOptions.Mode {
+	switch adoptMode {
 	case commonv1alpha1.AdoptModeOverride:
 		targetCopy := target.DeepCopy()
 		targetCopy.SetKonnectID(konnectID)
