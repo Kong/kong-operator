@@ -217,6 +217,95 @@ func (_c *MockUpstreamsSDK_DeleteUpstream_Call) RunAndReturn(run func(ctx contex
 	return _c
 }
 
+// GetUpstream provides a mock function for the type MockUpstreamsSDK
+func (_mock *MockUpstreamsSDK) GetUpstream(ctx context.Context, upstreamID string, controlPlaneID string, opts ...operations.Option) (*operations.GetUpstreamResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, upstreamID, controlPlaneID, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, upstreamID, controlPlaneID)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetUpstream")
+	}
+
+	var r0 *operations.GetUpstreamResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.GetUpstreamResponse, error)); ok {
+		return returnFunc(ctx, upstreamID, controlPlaneID, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.GetUpstreamResponse); ok {
+		r0 = returnFunc(ctx, upstreamID, controlPlaneID, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.GetUpstreamResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, upstreamID, controlPlaneID, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockUpstreamsSDK_GetUpstream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetUpstream'
+type MockUpstreamsSDK_GetUpstream_Call struct {
+	*mock.Call
+}
+
+// GetUpstream is a helper method to define mock.On call
+//   - ctx context.Context
+//   - upstreamID string
+//   - controlPlaneID string
+//   - opts ...operations.Option
+func (_e *MockUpstreamsSDK_Expecter) GetUpstream(ctx interface{}, upstreamID interface{}, controlPlaneID interface{}, opts ...interface{}) *MockUpstreamsSDK_GetUpstream_Call {
+	return &MockUpstreamsSDK_GetUpstream_Call{Call: _e.mock.On("GetUpstream",
+		append([]interface{}{ctx, upstreamID, controlPlaneID}, opts...)...)}
+}
+
+func (_c *MockUpstreamsSDK_GetUpstream_Call) Run(run func(ctx context.Context, upstreamID string, controlPlaneID string, opts ...operations.Option)) *MockUpstreamsSDK_GetUpstream_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockUpstreamsSDK_GetUpstream_Call) Return(getUpstreamResponse *operations.GetUpstreamResponse, err error) *MockUpstreamsSDK_GetUpstream_Call {
+	_c.Call.Return(getUpstreamResponse, err)
+	return _c
+}
+
+func (_c *MockUpstreamsSDK_GetUpstream_Call) RunAndReturn(run func(ctx context.Context, upstreamID string, controlPlaneID string, opts ...operations.Option) (*operations.GetUpstreamResponse, error)) *MockUpstreamsSDK_GetUpstream_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListUpstream provides a mock function for the type MockUpstreamsSDK
 func (_mock *MockUpstreamsSDK) ListUpstream(ctx context.Context, request operations.ListUpstreamRequest, opts ...operations.Option) (*operations.ListUpstreamResponse, error) {
 	var tmpRet mock.Arguments

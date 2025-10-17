@@ -204,6 +204,89 @@ func (_c *MockTargetsSDK_DeleteTargetWithUpstream_Call) RunAndReturn(run func(ct
 	return _c
 }
 
+// GetTargetWithUpstream provides a mock function for the type MockTargetsSDK
+func (_mock *MockTargetsSDK) GetTargetWithUpstream(ctx context.Context, req operations.GetTargetWithUpstreamRequest, opts ...operations.Option) (*operations.GetTargetWithUpstreamResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, req, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, req)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetTargetWithUpstream")
+	}
+
+	var r0 *operations.GetTargetWithUpstreamResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.GetTargetWithUpstreamRequest, ...operations.Option) (*operations.GetTargetWithUpstreamResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.GetTargetWithUpstreamRequest, ...operations.Option) *operations.GetTargetWithUpstreamResponse); ok {
+		r0 = returnFunc(ctx, req, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.GetTargetWithUpstreamResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, operations.GetTargetWithUpstreamRequest, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, req, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockTargetsSDK_GetTargetWithUpstream_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetTargetWithUpstream'
+type MockTargetsSDK_GetTargetWithUpstream_Call struct {
+	*mock.Call
+}
+
+// GetTargetWithUpstream is a helper method to define mock.On call
+//   - ctx context.Context
+//   - req operations.GetTargetWithUpstreamRequest
+//   - opts ...operations.Option
+func (_e *MockTargetsSDK_Expecter) GetTargetWithUpstream(ctx interface{}, req interface{}, opts ...interface{}) *MockTargetsSDK_GetTargetWithUpstream_Call {
+	return &MockTargetsSDK_GetTargetWithUpstream_Call{Call: _e.mock.On("GetTargetWithUpstream",
+		append([]interface{}{ctx, req}, opts...)...)}
+}
+
+func (_c *MockTargetsSDK_GetTargetWithUpstream_Call) Run(run func(ctx context.Context, req operations.GetTargetWithUpstreamRequest, opts ...operations.Option)) *MockTargetsSDK_GetTargetWithUpstream_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.GetTargetWithUpstreamRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.GetTargetWithUpstreamRequest)
+		}
+		var arg2 []operations.Option
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockTargetsSDK_GetTargetWithUpstream_Call) Return(getTargetWithUpstreamResponse *operations.GetTargetWithUpstreamResponse, err error) *MockTargetsSDK_GetTargetWithUpstream_Call {
+	_c.Call.Return(getTargetWithUpstreamResponse, err)
+	return _c
+}
+
+func (_c *MockTargetsSDK_GetTargetWithUpstream_Call) RunAndReturn(run func(ctx context.Context, req operations.GetTargetWithUpstreamRequest, opts ...operations.Option) (*operations.GetTargetWithUpstreamResponse, error)) *MockTargetsSDK_GetTargetWithUpstream_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListTargetWithUpstream provides a mock function for the type MockTargetsSDK
 func (_mock *MockTargetsSDK) ListTargetWithUpstream(ctx context.Context, request operations.ListTargetWithUpstreamRequest, opts ...operations.Option) (*operations.ListTargetWithUpstreamResponse, error) {
 	var tmpRet mock.Arguments
