@@ -128,11 +128,9 @@ func adoptRoute(
 		if *resp.Route.RouteJSON.Service.ID != route.Status.Konnect.ServiceID {
 			return fmt.Errorf("failed to adopt: reference service ID does not match")
 		}
-	} else {
+	} else if resp.Route.RouteJSON.Service != nil {
 		// if the KongRoute does not have a service reference, the existing route should not have a reference service.
-		if resp.Route.RouteJSON.Service != nil {
-			return fmt.Errorf("failed to adopt: KongRoute has no service reference but existing route has service reference")
-		}
+		return fmt.Errorf("failed to adopt: KongRoute has no service reference but existing route has service reference")
 	}
 
 	uidTag, hasUIDTag := findUIDTag(resp.Route.RouteJSON.Tags)
