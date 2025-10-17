@@ -275,7 +275,7 @@ func translateRequestRedirect(filter gwtypes.HTTPRouteFilter) (requestRedirectCo
 }
 
 func translateRequestRedirectHostname(rr *gatewayv1.HTTPRequestRedirectFilter) string {
-	if rr.Hostname == nil {
+	if rr.Hostname == nil || *rr.Hostname == "" {
 		return ""
 	}
 

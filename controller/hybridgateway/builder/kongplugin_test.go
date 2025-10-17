@@ -707,6 +707,13 @@ func TestTranslateRequestRedirectHostname(t *testing.T) {
 			expected: "",
 		},
 		{
+			name: "empty hostname",
+			redirect: &gatewayv1.HTTPRequestRedirectFilter{
+				Hostname: lo.ToPtr(gatewayv1.PreciseHostname("")),
+			},
+			expected: "",
+		},
+		{
 			name: "hostname only with default scheme",
 			redirect: &gatewayv1.HTTPRequestRedirectFilter{
 				Hostname: lo.ToPtr(gatewayv1.PreciseHostname("example.com")),
