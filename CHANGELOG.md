@@ -145,7 +145,6 @@
   explicit `null`s in plugins.
   [#2459](https://github.com/Kong/kong-operator/pull/2459)
 
-
 ## [v2.0.4]
 
 > Release date: 2025-10-03
