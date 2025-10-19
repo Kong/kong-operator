@@ -217,6 +217,95 @@ func (_c *MockCertificatesSDK_DeleteCertificate_Call) RunAndReturn(run func(ctx 
 	return _c
 }
 
+// GetCertificate provides a mock function for the type MockCertificatesSDK
+func (_mock *MockCertificatesSDK) GetCertificate(ctx context.Context, certificateID string, controlPlaneID string, opts ...operations.Option) (*operations.GetCertificateResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, certificateID, controlPlaneID, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, certificateID, controlPlaneID)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetCertificate")
+	}
+
+	var r0 *operations.GetCertificateResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.GetCertificateResponse, error)); ok {
+		return returnFunc(ctx, certificateID, controlPlaneID, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.GetCertificateResponse); ok {
+		r0 = returnFunc(ctx, certificateID, controlPlaneID, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.GetCertificateResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, certificateID, controlPlaneID, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockCertificatesSDK_GetCertificate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetCertificate'
+type MockCertificatesSDK_GetCertificate_Call struct {
+	*mock.Call
+}
+
+// GetCertificate is a helper method to define mock.On call
+//   - ctx context.Context
+//   - certificateID string
+//   - controlPlaneID string
+//   - opts ...operations.Option
+func (_e *MockCertificatesSDK_Expecter) GetCertificate(ctx interface{}, certificateID interface{}, controlPlaneID interface{}, opts ...interface{}) *MockCertificatesSDK_GetCertificate_Call {
+	return &MockCertificatesSDK_GetCertificate_Call{Call: _e.mock.On("GetCertificate",
+		append([]interface{}{ctx, certificateID, controlPlaneID}, opts...)...)}
+}
+
+func (_c *MockCertificatesSDK_GetCertificate_Call) Run(run func(ctx context.Context, certificateID string, controlPlaneID string, opts ...operations.Option)) *MockCertificatesSDK_GetCertificate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockCertificatesSDK_GetCertificate_Call) Return(getCertificateResponse *operations.GetCertificateResponse, err error) *MockCertificatesSDK_GetCertificate_Call {
+	_c.Call.Return(getCertificateResponse, err)
+	return _c
+}
+
+func (_c *MockCertificatesSDK_GetCertificate_Call) RunAndReturn(run func(ctx context.Context, certificateID string, controlPlaneID string, opts ...operations.Option) (*operations.GetCertificateResponse, error)) *MockCertificatesSDK_GetCertificate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListCertificate provides a mock function for the type MockCertificatesSDK
 func (_mock *MockCertificatesSDK) ListCertificate(ctx context.Context, request operations.ListCertificateRequest, opts ...operations.Option) (*operations.ListCertificateResponse, error) {
 	var tmpRet mock.Arguments
