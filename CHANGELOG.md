@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.0.5](#v205)
 - [v2.0.4](#v204)
 - [v2.0.3](#v203)
 - [v2.0.2](#v202)
@@ -128,10 +129,17 @@
   [#2423](https://github.com/Kong/kong-operator/pull/2423)
 - Hybrid Gateway: add watchers for KongPlugin and KongPluginBinding
   [#2427](https://github.com/Kong/kong-operator/pull/2427)
-- Fix `DataPlane`'s volumes and volume mounts patching when specified by user
-  [#2425](https://github.com/Kong/kong-operator/pull/2425)
 - Hybrid Gateway: attach KongService generation to BackendRefs and fix filter/plugin conversion.
   [#2456](https://github.com/Kong/kong-operator/pull/2456)
+
+## [v2.0.5]
+
+> Release date: 2025-10-17
+
+### Fixes
+
+- Fix `DataPlane`'s volumes and volume mounts patching when specified by user
+  [#2425](https://github.com/Kong/kong-operator/pull/2425)
 - Do not cleanup `null`s in the configuration of plugins with Kong running in
   DBLess mode in the translator of ingress-controller. This enables user to use
   explicit `null`s in plugins.
@@ -1479,6 +1487,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.0.5]: https://github.com/Kong/kong-operator/compare/v2.0.4..v2.0.5
 [v2.0.4]: https://github.com/Kong/kong-operator/compare/v2.0.3..v2.0.4
 [v2.0.3]: https://github.com/Kong/kong-operator/compare/v2.0.2..v2.0.3
 [v2.0.2]: https://github.com/Kong/kong-operator/compare/v2.0.1..v2.0.2
