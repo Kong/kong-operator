@@ -562,6 +562,10 @@ func Adopt[
 		err = adoptUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
 		err = adoptTarget(ctx, sdk.GetTargetsSDK(), ent)
+	case *configurationv1alpha1.KongKey:
+		err = adoptKey(ctx, sdk.GetKeysSDK(), ent)
+	case *configurationv1alpha1.KongKeySet:
+		err = adoptKeySet(ctx, sdk.GetKeySetsSDK(), ent)
 	// TODO: implement adoption for other types.
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
