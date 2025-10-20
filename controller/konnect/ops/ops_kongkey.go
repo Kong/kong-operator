@@ -2,12 +2,14 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
@@ -90,6 +92,77 @@ func deleteKey(
 	return nil
 }
 
+func adoptKey(
+	ctx context.Context,
+	sdk sdkops.KeysSDK,
+	key *configurationv1alpha1.KongKey,
+) error {
+	cpID := key.GetControlPlaneID()
+	if cpID == "" {
+		return errors.New("No Control Plane ID")
+	}
+
+	adoptOptions := key.Spec.Adopt
+	konnectID := adoptOptions.Konnect.ID
+
+	resp, err := sdk.GetKey(ctx, konnectID, cpID)
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{
+			KonnectID: konnectID,
+			Err:       err,
+		}
+	}
+
+	if resp == nil || resp.Key == nil {
+		return KonnectEntityAdoptionFetchError{
+			KonnectID: konnectID,
+			Err:       fmt.Errorf("empty response when fetching key"),
+		}
+	}
+
+	uidTag, hasUIDTag := findUIDTag(resp.Key.Tags)
+	if hasUIDTag && extractUIDFromTag(uidTag) != string(key.UID) {
+		return KonnectEntityAdoptionUIDTagConflictError{
+			KonnectID:    konnectID,
+			ActualUIDTag: extractUIDFromTag(uidTag),
+		}
+	}
+
+	adoptMode := adoptOptions.Mode
+	if adoptMode == "" {
+		adoptMode = commonv1alpha1.AdoptModeOverride
+	}
+
+	switch adoptMode {
+	case commonv1alpha1.AdoptModeOverride:
+		keyCopy := key.DeepCopy()
+		keyCopy.SetKonnectID(konnectID)
+		if err = updateKey(ctx, sdk, keyCopy); err != nil {
+			return err
+		}
+	case commonv1alpha1.AdoptModeMatch:
+		if !keyMatch(resp.Key, key) {
+			return KonnectEntityAdoptionNotMatchError{
+				KonnectID: konnectID,
+			}
+		}
+	default:
+		return fmt.Errorf("failed to adopt: adopt mode %q not supported", adoptMode)
+	}
+
+	key.SetKonnectID(konnectID)
+
+	if adoptMode == commonv1alpha1.AdoptModeMatch {
+		actualKeySetID := ""
+		if resp.Key.Set != nil && resp.Key.Set.ID != nil {
+			actualKeySetID = lo.FromPtr(resp.Key.Set.ID)
+		}
+		key.Status.Konnect.SetKeySetID(actualKeySetID)
+	}
+
+	return nil
+}
+
 func kongKeyToKeyInput(key *configurationv1alpha1.KongKey) sdkkonnectcomp.Key {
 	k := sdkkonnectcomp.Key{
 		Jwk:  key.Spec.JWK,
@@ -131,4 +204,49 @@ func getKongKeyForUID(
 	}
 
 	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), key)
+}
+
+func keyMatch(konnectKey *sdkkonnectcomp.Key, key *configurationv1alpha1.KongKey) bool {
+	if konnectKey == nil {
+		return false
+	}
+
+	if konnectKey.GetKid() != key.Spec.KID {
+		return false
+	}
+
+	if !equalWithDefault(konnectKey.Name, key.Spec.Name, "") {
+		return false
+	}
+
+	if key.Spec.JWK != nil || konnectKey.Jwk != nil {
+		if !equalWithDefault(konnectKey.Jwk, key.Spec.JWK, "") {
+			return false
+		}
+	}
+
+	if key.Spec.PEM != nil {
+		if konnectKey.Pem == nil ||
+			konnectKey.Pem.PublicKey == nil ||
+			*konnectKey.Pem.PublicKey != key.Spec.PEM.PublicKey {
+			return false
+		}
+		// Private key may not be returned by Konnect. If it is returned, ensure it matches.
+		if konnectKey.Pem.PrivateKey != nil && *konnectKey.Pem.PrivateKey != key.Spec.PEM.PrivateKey {
+			return false
+		}
+	} else if konnectKey.Pem != nil && konnectKey.Pem.PublicKey != nil && key.Spec.JWK == nil {
+		// If spec does not expect a PEM or JWK, but Konnect returns a PEM, treat as mismatch.
+		return false
+	}
+
+	expectedKeySetID := ""
+	if key.Status.Konnect != nil {
+		expectedKeySetID = key.Status.Konnect.GetKeySetID()
+	}
+	actualKeySetID := ""
+	if konnectKey.Set != nil && konnectKey.Set.ID != nil {
+		actualKeySetID = lo.FromPtr(konnectKey.Set.ID)
+	}
+	return expectedKeySetID == actualKeySetID
 }
