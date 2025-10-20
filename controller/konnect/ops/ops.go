@@ -570,6 +570,10 @@ func Adopt[
 		err = adoptSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongVault:
 		err = adoptVault(ctx, sdk.GetVaultSDK(), ent)
+	case *configurationv1alpha1.KongKey:
+		err = adoptKey(ctx, sdk.GetKeysSDK(), ent)
+	case *configurationv1alpha1.KongKeySet:
+		err = adoptKeySet(ctx, sdk.GetKeySetsSDK(), ent)
 	// TODO: implement adoption for other types.
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)

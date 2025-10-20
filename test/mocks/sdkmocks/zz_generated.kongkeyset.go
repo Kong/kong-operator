@@ -217,6 +217,95 @@ func (_c *MockKeySetsSDK_DeleteKeySet_Call) RunAndReturn(run func(ctx context.Co
 	return _c
 }
 
+// GetKeySet provides a mock function for the type MockKeySetsSDK
+func (_mock *MockKeySetsSDK) GetKeySet(ctx context.Context, keySetID string, controlPlaneID string, opts ...operations.Option) (*operations.GetKeySetResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, keySetID, controlPlaneID, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, keySetID, controlPlaneID)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetKeySet")
+	}
+
+	var r0 *operations.GetKeySetResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.GetKeySetResponse, error)); ok {
+		return returnFunc(ctx, keySetID, controlPlaneID, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.GetKeySetResponse); ok {
+		r0 = returnFunc(ctx, keySetID, controlPlaneID, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.GetKeySetResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, keySetID, controlPlaneID, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockKeySetsSDK_GetKeySet_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetKeySet'
+type MockKeySetsSDK_GetKeySet_Call struct {
+	*mock.Call
+}
+
+// GetKeySet is a helper method to define mock.On call
+//   - ctx context.Context
+//   - keySetID string
+//   - controlPlaneID string
+//   - opts ...operations.Option
+func (_e *MockKeySetsSDK_Expecter) GetKeySet(ctx interface{}, keySetID interface{}, controlPlaneID interface{}, opts ...interface{}) *MockKeySetsSDK_GetKeySet_Call {
+	return &MockKeySetsSDK_GetKeySet_Call{Call: _e.mock.On("GetKeySet",
+		append([]interface{}{ctx, keySetID, controlPlaneID}, opts...)...)}
+}
+
+func (_c *MockKeySetsSDK_GetKeySet_Call) Run(run func(ctx context.Context, keySetID string, controlPlaneID string, opts ...operations.Option)) *MockKeySetsSDK_GetKeySet_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockKeySetsSDK_GetKeySet_Call) Return(getKeySetResponse *operations.GetKeySetResponse, err error) *MockKeySetsSDK_GetKeySet_Call {
+	_c.Call.Return(getKeySetResponse, err)
+	return _c
+}
+
+func (_c *MockKeySetsSDK_GetKeySet_Call) RunAndReturn(run func(ctx context.Context, keySetID string, controlPlaneID string, opts ...operations.Option) (*operations.GetKeySetResponse, error)) *MockKeySetsSDK_GetKeySet_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListKeySet provides a mock function for the type MockKeySetsSDK
 func (_mock *MockKeySetsSDK) ListKeySet(ctx context.Context, request operations.ListKeySetRequest, opts ...operations.Option) (*operations.ListKeySetResponse, error) {
 	var tmpRet mock.Arguments
