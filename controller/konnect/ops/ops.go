@@ -568,6 +568,8 @@ func Adopt[
 		err = adoptCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongSNI:
 		err = adoptSNI(ctx, sdk.GetSNIsSDK(), ent)
+	case *configurationv1alpha1.KongVault:
+		err = adoptVault(ctx, sdk.GetVaultSDK(), ent)
 	// TODO: implement adoption for other types.
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
