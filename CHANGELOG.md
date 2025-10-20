@@ -103,6 +103,8 @@
     [#2424](https://github.com/Kong/kong-operator/pull/2424)
   - Implement the Match mode for adoption for Konnect cloud gateway entities
     [#2429](https://github.com/Kong/kong-operator/pull/2429)
+  - Implement adoption for KongKey and KongKeySet resources
+    [#2487](https://github.com/Kong/kong-operator/pull/2487)
 - HybridGateway:
   - Added controller-runtime watches for Gateway and GatewayClass resources to the hybridgateway controller.
   - HTTPRoutes are now reconciled when related Gateway or GatewayClass resources change.
