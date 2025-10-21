@@ -3,13 +3,17 @@ package ops
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"reflect"
+	"slices"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
@@ -132,6 +136,71 @@ func getPluginForUID(
 	}
 
 	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), pluginBinding)
+}
+
+func adoptPluginBinding(
+	ctx context.Context,
+	sdk sdkops.PluginSDK,
+	cl client.Client,
+	pluginBinding *configurationv1alpha1.KongPluginBinding,
+) error {
+	cpID := pluginBinding.GetControlPlaneID()
+	adoptOptions := pluginBinding.Spec.Adopt
+	if cpID == "" {
+		return errors.New("No Control Plane ID")
+	}
+	if adoptOptions == nil || adoptOptions.Konnect == nil {
+		return errors.New("Konnect adopt options must be provided")
+	}
+	konnectID := adoptOptions.Konnect.ID
+
+	resp, err := sdk.GetPlugin(ctx, konnectID, cpID)
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{
+			KonnectID: konnectID,
+			Err:       err,
+		}
+	}
+	if resp == nil || resp.Plugin == nil {
+		return fmt.Errorf("failed getting %s: %w", pluginBinding.GetTypeName(), ErrNilResponse)
+	}
+
+	if uidTag, hasUIDTag := findUIDTag(resp.Plugin.Tags); hasUIDTag && extractUIDFromTag(uidTag) != string(pluginBinding.UID) {
+		return KonnectEntityAdoptionUIDTagConflictError{
+			KonnectID:    konnectID,
+			ActualUIDTag: extractUIDFromTag(uidTag),
+		}
+	}
+
+	adoptMode := adoptOptions.Mode
+	if adoptMode == "" {
+		adoptMode = commonv1alpha1.AdoptModeOverride
+	}
+
+	switch adoptMode {
+	case commonv1alpha1.AdoptModeOverride:
+		// Update the remote plugin to match the spec.
+		pluginBindingCopy := pluginBinding.DeepCopy()
+		pluginBindingCopy.SetKonnectID(konnectID)
+		if err := updatePlugin(ctx, sdk, cl, pluginBindingCopy); err != nil {
+			return err
+		}
+	case commonv1alpha1.AdoptModeMatch:
+		matches, err := pluginBindingMatches(ctx, cl, pluginBinding, resp.Plugin)
+		if err != nil {
+			return err
+		}
+		if !matches {
+			return KonnectEntityAdoptionNotMatchError{
+				KonnectID: konnectID,
+			}
+		}
+	default:
+		return fmt.Errorf("failed to adopt: adopt mode %q not supported", adoptMode)
+	}
+
+	pluginBinding.SetKonnectID(konnectID)
+	return nil
 }
 
 // -----------------------------------------------------------------------------
@@ -307,4 +376,119 @@ func kongPluginWithTargetsToKongPluginInput(binding *configurationv1alpha1.KongP
 	}
 
 	return pluginInput, nil
+}
+
+func pluginBindingMatches(
+	ctx context.Context,
+	cl client.Client,
+	binding *configurationv1alpha1.KongPluginBinding,
+	konnectPlugin *sdkkonnectcomp.Plugin,
+) (bool, error) {
+	desired, err := kongPluginBindingToSDKPluginInput(ctx, cl, binding)
+	if err != nil {
+		return false, err
+	}
+	if desired == nil {
+		return false, fmt.Errorf("failed to render desired plugin input for %s", client.ObjectKeyFromObject(binding))
+	}
+
+	if desired.Name != konnectPlugin.Name {
+		return false, nil
+	}
+	if boolValueOrDefault(desired.Enabled, true) != boolValueOrDefault(konnectPlugin.Enabled, true) {
+		return false, nil
+	}
+	if stringValueOrEmpty(desired.InstanceName) != stringValueOrEmpty(konnectPlugin.InstanceName) {
+		return false, nil
+	}
+	if !protocolsEqual(desired.Protocols, konnectPlugin.Protocols) {
+		return false, nil
+	}
+	if !configsEqual(desired.Config, konnectPlugin.Config) {
+		return false, nil
+	}
+	if pluginServiceID(desired.Service) != pluginServiceID(konnectPlugin.Service) {
+		return false, nil
+	}
+	if pluginRouteID(desired.Route) != pluginRouteID(konnectPlugin.Route) {
+		return false, nil
+	}
+	if pluginConsumerID(desired.Consumer) != pluginConsumerID(konnectPlugin.Consumer) {
+		return false, nil
+	}
+	if pluginConsumerGroupID(desired.ConsumerGroup) != pluginConsumerGroupID(konnectPlugin.ConsumerGroup) {
+		return false, nil
+	}
+
+	return true, nil
+}
+
+func boolValueOrDefault(v *bool, def bool) bool {
+	if v == nil {
+		return def
+	}
+	return *v
+}
+
+func stringValueOrEmpty(v *string) string {
+	if v == nil {
+		return ""
+	}
+	return *v
+}
+
+func protocolsEqual(expected, actual []sdkkonnectcomp.Protocols) bool {
+	if len(expected) == 0 && len(actual) == 0 {
+		return true
+	}
+
+	exp := make([]string, len(expected))
+	for i, p := range expected {
+		exp[i] = string(p)
+	}
+	act := make([]string, len(actual))
+	for i, p := range actual {
+		act[i] = string(p)
+	}
+
+	slices.Sort(exp)
+	slices.Sort(act)
+
+	return reflect.DeepEqual(exp, act)
+}
+
+func configsEqual(expected, actual map[string]any) bool {
+	if len(expected) == 0 && len(actual) == 0 {
+		return true
+	}
+
+	return reflect.DeepEqual(expected, actual)
+}
+
+func pluginServiceID(service *sdkkonnectcomp.PluginService) string {
+	if service == nil || service.ID == nil {
+		return ""
+	}
+	return *service.ID
+}
+
+func pluginRouteID(route *sdkkonnectcomp.PluginRoute) string {
+	if route == nil || route.ID == nil {
+		return ""
+	}
+	return *route.ID
+}
+
+func pluginConsumerID(consumer *sdkkonnectcomp.PluginConsumer) string {
+	if consumer == nil || consumer.ID == nil {
+		return ""
+	}
+	return *consumer.ID
+}
+
+func pluginConsumerGroupID(group *sdkkonnectcomp.PluginConsumerGroup) string {
+	if group == nil || group.ID == nil {
+		return ""
+	}
+	return *group.ID
 }
