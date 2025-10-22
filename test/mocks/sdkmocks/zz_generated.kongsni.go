@@ -204,6 +204,89 @@ func (_c *MockSNIsSDK_DeleteSniWithCertificate_Call) RunAndReturn(run func(ctx c
 	return _c
 }
 
+// GetSniWithCertificate provides a mock function for the type MockSNIsSDK
+func (_mock *MockSNIsSDK) GetSniWithCertificate(ctx context.Context, request operations.GetSniWithCertificateRequest, opts ...operations.Option) (*operations.GetSniWithCertificateResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, request, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, request)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetSniWithCertificate")
+	}
+
+	var r0 *operations.GetSniWithCertificateResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.GetSniWithCertificateRequest, ...operations.Option) (*operations.GetSniWithCertificateResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.GetSniWithCertificateRequest, ...operations.Option) *operations.GetSniWithCertificateResponse); ok {
+		r0 = returnFunc(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.GetSniWithCertificateResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, operations.GetSniWithCertificateRequest, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockSNIsSDK_GetSniWithCertificate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetSniWithCertificate'
+type MockSNIsSDK_GetSniWithCertificate_Call struct {
+	*mock.Call
+}
+
+// GetSniWithCertificate is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request operations.GetSniWithCertificateRequest
+//   - opts ...operations.Option
+func (_e *MockSNIsSDK_Expecter) GetSniWithCertificate(ctx interface{}, request interface{}, opts ...interface{}) *MockSNIsSDK_GetSniWithCertificate_Call {
+	return &MockSNIsSDK_GetSniWithCertificate_Call{Call: _e.mock.On("GetSniWithCertificate",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockSNIsSDK_GetSniWithCertificate_Call) Run(run func(ctx context.Context, request operations.GetSniWithCertificateRequest, opts ...operations.Option)) *MockSNIsSDK_GetSniWithCertificate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.GetSniWithCertificateRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.GetSniWithCertificateRequest)
+		}
+		var arg2 []operations.Option
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockSNIsSDK_GetSniWithCertificate_Call) Return(getSniWithCertificateResponse *operations.GetSniWithCertificateResponse, err error) *MockSNIsSDK_GetSniWithCertificate_Call {
+	_c.Call.Return(getSniWithCertificateResponse, err)
+	return _c
+}
+
+func (_c *MockSNIsSDK_GetSniWithCertificate_Call) RunAndReturn(run func(ctx context.Context, request operations.GetSniWithCertificateRequest, opts ...operations.Option) (*operations.GetSniWithCertificateResponse, error)) *MockSNIsSDK_GetSniWithCertificate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListSni provides a mock function for the type MockSNIsSDK
 func (_mock *MockSNIsSDK) ListSni(ctx context.Context, request operations.ListSniRequest, opts ...operations.Option) (*operations.ListSniResponse, error) {
 	var tmpRet mock.Arguments
