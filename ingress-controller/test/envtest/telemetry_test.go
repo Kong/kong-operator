@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -205,7 +206,19 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 				&gatewayapi.TCPRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
 					Spec: gatewayapi.TCPRouteSpec{
-						Rules: []gatewayapi.TCPRouteRule{{}},
+						Rules: []gatewayapi.TCPRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{
+									{
+										BackendObjectReference: gatewayapi.BackendObjectReference{
+											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Name: gatewayapi.ObjectName("test"),
+											Port: lo.ToPtr(gatewayapi.PortNumber(443)),
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 				metav1.CreateOptions{},
@@ -217,7 +230,19 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 				&gatewayapi.UDPRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
 					Spec: gatewayapi.UDPRouteSpec{
-						Rules: []gatewayapi.UDPRouteRule{{}},
+						Rules: []gatewayapi.UDPRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{
+									{
+										BackendObjectReference: gatewayapi.BackendObjectReference{
+											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Name: gatewayapi.ObjectName("test"),
+											Port: lo.ToPtr(gatewayapi.PortNumber(443)),
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 				metav1.CreateOptions{},
@@ -229,7 +254,19 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 				&gatewayapi.TLSRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
 					Spec: gatewayapi.TLSRouteSpec{
-						Rules: []gatewayapi.TLSRouteRule{{}},
+						Rules: []gatewayapi.TLSRouteRule{
+							{
+								BackendRefs: []gatewayapi.BackendRef{
+									{
+										BackendObjectReference: gatewayapi.BackendObjectReference{
+											Kind: lo.ToPtr(gatewayapi.Kind("Service")),
+											Name: gatewayapi.ObjectName("test"),
+											Port: lo.ToPtr(gatewayapi.PortNumber(443)),
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 				metav1.CreateOptions{},
