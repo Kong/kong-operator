@@ -105,6 +105,8 @@
     [#2429](https://github.com/Kong/kong-operator/pull/2429)
   - Implement adoption support for `KongCertificate`, `KongCACertificate` and `KongSNI`
     [#2484](https://github.com/Kong/kong-operator/pull/2484)
+  - Implement adoption for `KongPluginBinding`.
+    [#2492](https://github.com/Kong/kong-operator/pull/2492)
 - HybridGateway:
   - Added controller-runtime watches for Gateway and GatewayClass resources to the hybridgateway controller.
   - HTTPRoutes are now reconciled when related Gateway or GatewayClass resources change.
