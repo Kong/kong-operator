@@ -2,6 +2,7 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
@@ -119,6 +121,63 @@ func deleteCertificate(
 	return nil
 }
 
+func adoptCertificate(
+	ctx context.Context,
+	sdk sdkops.CertificatesSDK,
+	cert *configurationv1alpha1.KongCertificate,
+) error {
+	cpID := cert.GetControlPlaneID()
+	if cpID == "" {
+		return errors.New("No Control Plane ID")
+	}
+	adoptOptions := cert.Spec.Adopt
+	konnectID := adoptOptions.Konnect.ID
+
+	resp, err := sdk.GetCertificate(ctx, konnectID, cpID)
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{
+			KonnectID: konnectID,
+			Err:       err,
+		}
+	}
+	if resp == nil || resp.Certificate == nil {
+		return fmt.Errorf("failed to adopt %s: %w", cert.GetTypeName(), ErrNilResponse)
+	}
+
+	uidTag, hasUIDTag := findUIDTag(resp.Certificate.Tags)
+	if hasUIDTag && extractUIDFromTag(uidTag) != string(cert.UID) {
+		return KonnectEntityAdoptionUIDTagConflictError{
+			KonnectID:    konnectID,
+			ActualUIDTag: extractUIDFromTag(uidTag),
+		}
+	}
+
+	adoptMode := adoptOptions.Mode
+	if adoptMode == "" {
+		adoptMode = commonv1alpha1.AdoptModeOverride
+	}
+
+	switch adoptMode {
+	case commonv1alpha1.AdoptModeOverride:
+		certCopy := cert.DeepCopy()
+		certCopy.SetKonnectID(konnectID)
+		if err = updateCertificate(ctx, sdk, certCopy); err != nil {
+			return err
+		}
+	case commonv1alpha1.AdoptModeMatch:
+		if !certificateMatch(resp.Certificate, cert) {
+			return KonnectEntityAdoptionNotMatchError{
+				KonnectID: konnectID,
+			}
+		}
+	default:
+		return fmt.Errorf("failed to adopt: adopt mode %q not supported", adoptMode)
+	}
+
+	cert.SetKonnectID(konnectID)
+	return nil
+}
+
 func kongCertificateToCertificateInput(cert *configurationv1alpha1.KongCertificate) sdkkonnectcomp.Certificate {
 	input := sdkkonnectcomp.Certificate{
 		Cert: cert.Spec.Cert,
@@ -153,4 +212,25 @@ func getKongCertificateForUID(
 	}
 
 	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), cert)
+}
+
+func certificateMatch(
+	konnectCert *sdkkonnectcomp.Certificate,
+	cert *configurationv1alpha1.KongCertificate,
+) bool {
+	if konnectCert == nil {
+		return false
+	}
+	spec := cert.Spec
+	return konnectCert.Cert == spec.Cert &&
+		konnectCert.Key == spec.Key &&
+		equalWithDefault(konnectCert.CertAlt, stringPtrOrNil(spec.CertAlt), "") &&
+		equalWithDefault(konnectCert.KeyAlt, stringPtrOrNil(spec.KeyAlt), "")
+}
+
+func stringPtrOrNil(val string) *string {
+	if val == "" {
+		return nil
+	}
+	return lo.ToPtr(val)
 }
