@@ -3,12 +3,15 @@ package ops
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"reflect"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
@@ -77,6 +80,65 @@ func deleteVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv
 	return nil
 }
 
+func adoptVault(ctx context.Context, sdk sdkops.VaultSDK, vault *configurationv1alpha1.KongVault) error {
+	cpID := vault.GetControlPlaneID()
+	if cpID == "" {
+		return errors.New("No Control Plane ID")
+	}
+
+	adoptOptions := vault.Spec.Adopt
+	if adoptOptions == nil || adoptOptions.Konnect == nil {
+		return fmt.Errorf("failed to adopt: missing Konnect ID")
+	}
+
+	konnectID := adoptOptions.Konnect.ID
+
+	resp, err := sdk.GetVault(ctx, konnectID, cpID)
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{
+			KonnectID: konnectID,
+			Err:       err,
+		}
+	}
+	if resp == nil || resp.Vault == nil {
+		return fmt.Errorf("failed to adopt %s: %w", vault.GetTypeName(), ErrNilResponse)
+	}
+
+	uidTag, hasUIDTag := findUIDTag(resp.Vault.Tags)
+	if hasUIDTag && extractUIDFromTag(uidTag) != string(vault.UID) {
+		return KonnectEntityAdoptionUIDTagConflictError{
+			KonnectID:    konnectID,
+			ActualUIDTag: extractUIDFromTag(uidTag),
+		}
+	}
+
+	adoptMode := adoptOptions.Mode
+	if adoptMode == "" {
+		adoptMode = commonv1alpha1.AdoptModeOverride
+	}
+
+	switch adoptMode {
+	case commonv1alpha1.AdoptModeOverride:
+		vaultCopy := vault.DeepCopy()
+		vaultCopy.SetKonnectID(konnectID)
+		if err = updateVault(ctx, sdk, vaultCopy); err != nil {
+			return err
+		}
+	case commonv1alpha1.AdoptModeMatch:
+		if !vaultMatch(resp.Vault, vault) {
+			return KonnectEntityAdoptionNotMatchError{
+				KonnectID: konnectID,
+			}
+		}
+	default:
+		return fmt.Errorf("failed to adopt: adopt mode %q not supported", adoptMode)
+	}
+
+	vault.SetKonnectID(konnectID)
+
+	return nil
+}
+
 func kongVaultToVaultInput(vault *configurationv1alpha1.KongVault) (sdkkonnectcomp.Vault, error) {
 	vaultConfig := map[string]any{}
 	err := json.Unmarshal(vault.Spec.Config.Raw, &vaultConfig)
@@ -93,6 +155,29 @@ func kongVaultToVaultInput(vault *configurationv1alpha1.KongVault) (sdkkonnectco
 		input.Description = lo.ToPtr(vault.Spec.Description)
 	}
 	return input, nil
+}
+
+func vaultMatch(konnectVault *sdkkonnectcomp.Vault, vault *configurationv1alpha1.KongVault) bool {
+	if konnectVault == nil {
+		return false
+	}
+
+	expected, err := kongVaultToVaultInput(vault)
+	if err != nil {
+		return false
+	}
+
+	return konnectVault.Name == expected.Name &&
+		konnectVault.Prefix == expected.Prefix &&
+		equalWithDefault(konnectVault.Description, expected.Description, "") &&
+		vaultConfigMatch(konnectVault.Config, expected.Config)
+}
+
+func vaultConfigMatch(a map[string]any, b map[string]any) bool {
+	if len(a) == 0 && len(b) == 0 {
+		return true
+	}
+	return reflect.DeepEqual(a, b)
 }
 
 func getKongVaultForUID(
