@@ -8,6 +8,7 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
@@ -83,6 +84,76 @@ func deleteConsumerGroup(
 	}
 
 	return nil
+}
+
+func adoptConsumerGroup(
+	ctx context.Context,
+	sdk sdkops.ConsumerGroupSDK,
+	group *configurationv1beta1.KongConsumerGroup,
+	adoptOptions commonv1alpha1.AdoptOptions,
+) error {
+	cpID := group.GetControlPlaneID()
+	if cpID == "" {
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: group, Op: AdoptOp}
+	}
+	konnectID := adoptOptions.Konnect.ID
+	resp, err := sdk.GetConsumerGroup(ctx, konnectID, cpID)
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{
+			KonnectID: konnectID,
+			Err:       err,
+		}
+	}
+
+	if resp == nil || resp.GetConsumerGroupInsideWrapper() == nil || resp.GetConsumerGroupInsideWrapper().GetConsumerGroup() == nil {
+		return fmt.Errorf("failed to adopt %s: %w", group.GetTypeName(), ErrNilResponse)
+	}
+
+	existing := resp.GetConsumerGroupInsideWrapper().GetConsumerGroup()
+
+	uidTag, hasUIDTag := findUIDTag(existing.Tags)
+	if hasUIDTag && extractUIDFromTag(uidTag) != string(group.UID) {
+		return KonnectEntityAdoptionUIDTagConflictError{
+			KonnectID:    konnectID,
+			ActualUIDTag: extractUIDFromTag(uidTag),
+		}
+	}
+
+	adoptMode := adoptOptions.Mode
+	if adoptMode == "" {
+		adoptMode = commonv1alpha1.AdoptModeOverride
+	}
+
+	switch adoptMode {
+	case commonv1alpha1.AdoptModeOverride:
+		groupCopy := group.DeepCopy()
+		groupCopy.SetKonnectID(konnectID)
+		if err = updateConsumerGroup(ctx, sdk, groupCopy); err != nil {
+			return err
+		}
+	case commonv1alpha1.AdoptModeMatch:
+		if !consumerGroupMatch(existing, group) {
+			return KonnectEntityAdoptionNotMatchError{
+				KonnectID: konnectID,
+			}
+		}
+	default:
+		return fmt.Errorf("failed to adopt: adopt mode %q not supported", adoptMode)
+	}
+
+	group.SetKonnectID(konnectID)
+	return nil
+}
+
+func consumerGroupMatch(
+	existing *sdkkonnectcomp.ConsumerGroup,
+	group *configurationv1beta1.KongConsumerGroup,
+) bool {
+	if existing == nil {
+		return false
+	}
+
+	return existing.GetName() == group.Spec.Name
 }
 
 func kongConsumerGroupToSDKConsumerGroupInput(
