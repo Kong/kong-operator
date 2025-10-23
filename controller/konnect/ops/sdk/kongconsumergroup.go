@@ -15,4 +15,5 @@ type ConsumerGroupSDK interface {
 	AddConsumerToGroup(ctx context.Context, request sdkkonnectops.AddConsumerToGroupRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.AddConsumerToGroupResponse, error)
 	RemoveConsumerFromGroup(ctx context.Context, request sdkkonnectops.RemoveConsumerFromGroupRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.RemoveConsumerFromGroupResponse, error)
 	ListConsumerGroup(ctx context.Context, request sdkkonnectops.ListConsumerGroupRequest, opts ...sdkkonnectops.Option) (*sdkkonnectops.ListConsumerGroupResponse, error)
+	GetConsumerGroup(ctx context.Context, consumerGroupID string, controlPlaneID string, opts ...sdkkonnectops.Option) (*sdkkonnectops.GetConsumerGroupResponse, error)
 }
