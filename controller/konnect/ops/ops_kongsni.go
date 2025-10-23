@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
@@ -125,6 +126,71 @@ func deleteSNI(
 	return nil
 }
 
+func adoptSNI(
+	ctx context.Context,
+	sdk sdkops.SNIsSDK,
+	sni *configurationv1alpha1.KongSNI,
+) error {
+	cpID := sni.GetControlPlaneID()
+	if cpID == "" {
+		return errors.New("No Control Plane ID")
+	}
+	if sni.Status.Konnect == nil || sni.Status.Konnect.CertificateID == "" {
+		return fmt.Errorf("can't adopt %T %s without a Konnect Certificate ID", sni, client.ObjectKeyFromObject(sni))
+	}
+
+	adoptOptions := sni.Spec.Adopt
+	konnectID := adoptOptions.Konnect.ID
+
+	resp, err := sdk.GetSniWithCertificate(ctx, sdkkonnectops.GetSniWithCertificateRequest{
+		ControlPlaneID: cpID,
+		CertificateID:  sni.Status.Konnect.CertificateID,
+		SNIID:          konnectID,
+	})
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{
+			KonnectID: konnectID,
+			Err:       err,
+		}
+	}
+	if resp == nil || resp.Sni == nil {
+		return fmt.Errorf("failed to adopt %s: %w", sni.GetTypeName(), ErrNilResponse)
+	}
+
+	uidTag, hasUIDTag := findUIDTag(resp.Sni.Tags)
+	if hasUIDTag && extractUIDFromTag(uidTag) != string(sni.UID) {
+		return KonnectEntityAdoptionUIDTagConflictError{
+			KonnectID:    konnectID,
+			ActualUIDTag: extractUIDFromTag(uidTag),
+		}
+	}
+
+	adoptMode := adoptOptions.Mode
+	if adoptMode == "" {
+		adoptMode = commonv1alpha1.AdoptModeOverride
+	}
+
+	switch adoptMode {
+	case commonv1alpha1.AdoptModeOverride:
+		sniCopy := sni.DeepCopy()
+		sniCopy.SetKonnectID(konnectID)
+		if err = updateSNI(ctx, sdk, sniCopy); err != nil {
+			return err
+		}
+	case commonv1alpha1.AdoptModeMatch:
+		if !sniMatch(resp.Sni, sni) {
+			return KonnectEntityAdoptionNotMatchError{
+				KonnectID: konnectID,
+			}
+		}
+	default:
+		return fmt.Errorf("failed to adopt: adopt mode %q not supported", adoptMode)
+	}
+
+	sni.SetKonnectID(konnectID)
+	return nil
+}
+
 func kongSNIToSNIWithoutParents(sni *configurationv1alpha1.KongSNI) sdkkonnectcomp.SNIWithoutParents {
 	return sdkkonnectcomp.SNIWithoutParents{
 		Name: sni.Spec.Name,
@@ -146,4 +212,15 @@ func getKongSNIForUID(ctx context.Context, sdk sdkops.SNIsSDK, sni *configuratio
 	}
 
 	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), sni)
+}
+
+func sniMatch(konnectSNI *sdkkonnectcomp.Sni, sni *configurationv1alpha1.KongSNI) bool {
+	if konnectSNI == nil {
+		return false
+	}
+	if konnectSNI.Certificate.ID == nil || *konnectSNI.Certificate.ID == "" {
+		return false
+	}
+	return konnectSNI.Name == sni.Spec.Name &&
+		*konnectSNI.Certificate.ID == sni.Status.Konnect.CertificateID
 }

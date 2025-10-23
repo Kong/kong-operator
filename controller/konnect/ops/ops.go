@@ -562,6 +562,12 @@ func Adopt[
 		err = adoptUpstream(ctx, sdk.GetUpstreamsSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
 		err = adoptTarget(ctx, sdk.GetTargetsSDK(), ent)
+	case *configurationv1alpha1.KongCertificate:
+		err = adoptCertificate(ctx, sdk.GetCertificatesSDK(), ent)
+	case *configurationv1alpha1.KongCACertificate:
+		err = adoptCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
+	case *configurationv1alpha1.KongSNI:
+		err = adoptSNI(ctx, sdk.GetSNIsSDK(), ent)
 	// TODO: implement adoption for other types.
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
