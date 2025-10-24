@@ -568,6 +568,16 @@ func Adopt[
 		err = adoptCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongSNI:
 		err = adoptSNI(ctx, sdk.GetSNIsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialAPIKey:
+		err = adoptKongCredentialAPIKey(ctx, sdk.GetAPIKeyCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialBasicAuth:
+		err = adoptKongCredentialBasicAuth(ctx, sdk.GetBasicAuthCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialACL:
+		err = adoptKongCredentialACL(ctx, sdk.GetACLCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialJWT:
+		err = adoptKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongCredentialHMAC:
+		err = adoptKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
 	// TODO: implement adoption for other types.
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
