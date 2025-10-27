@@ -2,6 +2,7 @@ package test
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"slices"
@@ -884,4 +885,29 @@ func GetDataPlaneReplicaSets(
 	}
 
 	return ownedRS, nil
+}
+
+// DumpGatewayListnersConditions dumps conditions of listeners in the give gateway.
+func DumpGatewayListnersConditions(
+	t *testing.T,
+	ctx context.Context,
+	gatewayNSN types.NamespacedName,
+	clients K8sClients,
+) string {
+	gw := MustGetGateway(t, ctx, gatewayNSN, clients)
+	specListenerNames := make([]string, 0, len(gw.Spec.Listeners))
+	for _, listener := range gw.Spec.Listeners {
+		specListenerNames = append(specListenerNames, string(listener.Name))
+	}
+	ret := fmt.Sprintf("spec.listeners: %s\n", strings.Join(
+		specListenerNames, ",",
+	))
+	for _, listenerStatus := range gw.Status.Listeners {
+		listenerConditions := []string{}
+		for _, condition := range listenerStatus.Conditions {
+			listenerConditions = append(listenerConditions, fmt.Sprintf("%+v", condition))
+		}
+		ret += fmt.Sprintf("listener %s conditions: %s\n", listenerStatus.Name, strings.Join(listenerConditions, "; "))
+	}
+	return ret
 }
