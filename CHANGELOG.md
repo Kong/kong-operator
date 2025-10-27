@@ -114,6 +114,8 @@
 - Provision hybrid Gateway: implement support for provisioning hybrid Gateways with
   gateway api `Gateway` and `GatewayConfiguration` resources.
   [#2457](https://github.com/Kong/kong-operator/pull/2457)
+- Add support to HTTPRoute RequestRedirect filter
+  [#2470](https://github.com/Kong/kong-operator/pull/2470)
 
 ### Changed
 
