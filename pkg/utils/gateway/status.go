@@ -41,15 +41,23 @@ func IsProgrammed(gateway *gwtypes.Gateway) bool {
 // AreListenersProgrammed indicates whether or not all the provided Gateway
 // listeners were marked as Programmed by the controller.
 func AreListenersProgrammed(gateway *gwtypes.Gateway) bool {
-	return lo.EveryBy(gateway.Spec.Listeners, func(listener gatewayv1.Listener) bool {
-		return lo.ContainsBy(gateway.Status.Listeners, func(listenerStatus gatewayv1.ListenerStatus) bool {
-			if listener.Name == listenerStatus.Name {
-				return lo.ContainsBy(listenerStatus.Conditions, func(condition metav1.Condition) bool {
-					return condition.Type == string(gatewayv1.ListenerConditionProgrammed) &&
-						condition.Status == metav1.ConditionTrue
-				})
-			}
+	return lo.EveryBy(gateway.Spec.Listeners, func(listener gwtypes.Listener) bool {
+		return IsListenerProgrammed(gateway, listener.Name)
+	})
+}
+
+// IsListenerProgrammed returns true if the listener with given name
+// has the "Programmed" condition and set to True in the given gateway.
+func IsListenerProgrammed(gateway *gwtypes.Gateway, listenerName gwtypes.SectionName) bool {
+	return lo.ContainsBy(gateway.Status.Listeners, func(listenerStatus gatewayv1.ListenerStatus) bool {
+		// Return false if no status with the given name in gateway.status.listeners.
+		if listenerName != listenerStatus.Name {
 			return false
+		}
+		// Find the "Programmed" condition inside the listener status if name matches.
+		return lo.ContainsBy(listenerStatus.Conditions, func(condition metav1.Condition) bool {
+			return condition.Type == string(gatewayv1.ListenerConditionProgrammed) &&
+				condition.Status == metav1.ConditionTrue
 		})
 	})
 }

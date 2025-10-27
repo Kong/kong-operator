@@ -111,8 +111,9 @@ func TestGatewayEssentials(t *testing.T) {
 	t.Log("deleting dataplane")
 	require.NoError(t, dataplaneClient.Delete(GetCtx(), dataplane.Name, metav1.DeleteOptions{}))
 
-	t.Log("verifying Gateway gets and its listeners are marked as not Programmed")
+	t.Logf("verifying Gateway gets marked as not Programmed at %v", time.Now())
 	require.Eventually(t, testutils.Not(testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNN, clients)), testutils.GatewayReadyTimeLimit, 100*time.Millisecond)
+	t.Logf("verifying all listeners of the gateway get marked as not Programmed at %v", time.Now())
 	require.Eventually(t, testutils.Not(testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayNN, clients)), testutils.GatewayReadyTimeLimit, 100*time.Millisecond,
 		testutils.DumpGatewayListnersConditions(t, GetCtx(), gatewayNN, clients))
 
