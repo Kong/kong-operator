@@ -37,14 +37,20 @@ type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPt
 	client.Client
 	// ReferenceGrantEnabled indicates whether ReferenceGrants are enabled in the cluster (i.e., the CRD is available)
 	referenceGrantEnabled bool
+	// FQDNMode indicates whether to use FQDN endpoints for service discovery.
+	fqdnMode bool
+	// ClusterDomain is the cluster domain to use for FQDN (empty uses service.namespace.svc format).
+	clusterDomain string
 }
 
 // NewHybridGatewayReconciler creates a new instance of GatewayAPIHybridReconciler for the specified
 // generic types t and tPtr. It initializes the reconciler with the client from the provided manager.
-func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, referenceGrantEnabled bool) *HybridGatewayReconciler[t, tPtr] {
+func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, referenceGrantEnabled bool, fqdnMode bool, clusterDomain string) *HybridGatewayReconciler[t, tPtr] {
 	return &HybridGatewayReconciler[t, tPtr]{
 		Client:                mgr.GetClient(),
 		referenceGrantEnabled: referenceGrantEnabled,
+		fqdnMode:              fqdnMode,
+		clusterDomain:         clusterDomain,
 	}
 }
 
@@ -111,7 +117,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	log.Debug(logger, "Reconciling object", "Group", gvk.Group, "Kind", gvk.Kind)
 
-	conv, err := converter.NewConverter(rootObj, r.Client, r.referenceGrantEnabled)
+	conv, err := converter.NewConverter(rootObj, r.Client, r.referenceGrantEnabled, r.fqdnMode, r.clusterDomain)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

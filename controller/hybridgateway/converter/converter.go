@@ -46,11 +46,11 @@ type RootObjectPtr[T RootObject] interface {
 // NewConverter is a factory function that creates and returns an APIConverter instance
 // based on the type of the provided root object. It supports different types of root objects
 // and returns an error if the type is unsupported.
-func NewConverter[t RootObject](obj t, cl client.Client, referenceGrantEnabled bool) (APIConverter[t], error) {
+func NewConverter[t RootObject](obj t, cl client.Client, referenceGrantEnabled bool, fqdnMode bool, clusterDomain string) (APIConverter[t], error) {
 	switch o := any(obj).(type) {
 	// TODO: add other types here
 	case gwtypes.HTTPRoute:
-		return newHTTPRouteConverter(&o, cl, referenceGrantEnabled).(APIConverter[t]), nil
+		return newHTTPRouteConverter(&o, cl, referenceGrantEnabled, fqdnMode, clusterDomain).(APIConverter[t]), nil
 	default:
 		return nil, fmt.Errorf("unsupported root object type: %T", obj)
 	}

@@ -645,7 +645,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			}
 
 			controllers = append(controllers,
-				newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, referenceGrantEnabled),
+				newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, referenceGrantEnabled, false, ""), // TODO: make FQDN mode and cluster domain configurable
 				// TODO: Add more Hybrid controllers here
 			)
 		}
@@ -693,9 +693,9 @@ func newKonnectPluginController[
 	}
 }
 
-func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, referenceGrantEnabled bool) ControllerDef {
+func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, referenceGrantEnabled bool, fqdnMode bool, clusterDomain string) ControllerDef {
 	return ControllerDef{
 		Enabled:    true,
-		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr, referenceGrantEnabled),
+		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr, referenceGrantEnabled, fqdnMode, clusterDomain),
 	}
 }
