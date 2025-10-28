@@ -217,6 +217,95 @@ func (_c *MockVaultSDK_DeleteVault_Call) RunAndReturn(run func(ctx context.Conte
 	return _c
 }
 
+// GetVault provides a mock function for the type MockVaultSDK
+func (_mock *MockVaultSDK) GetVault(ctx context.Context, vaultID string, controlPlaneID string, opts ...operations.Option) (*operations.GetVaultResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, vaultID, controlPlaneID, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, vaultID, controlPlaneID)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetVault")
+	}
+
+	var r0 *operations.GetVaultResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.GetVaultResponse, error)); ok {
+		return returnFunc(ctx, vaultID, controlPlaneID, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.GetVaultResponse); ok {
+		r0 = returnFunc(ctx, vaultID, controlPlaneID, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.GetVaultResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, vaultID, controlPlaneID, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockVaultSDK_GetVault_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetVault'
+type MockVaultSDK_GetVault_Call struct {
+	*mock.Call
+}
+
+// GetVault is a helper method to define mock.On call
+//   - ctx context.Context
+//   - vaultID string
+//   - controlPlaneID string
+//   - opts ...operations.Option
+func (_e *MockVaultSDK_Expecter) GetVault(ctx interface{}, vaultID interface{}, controlPlaneID interface{}, opts ...interface{}) *MockVaultSDK_GetVault_Call {
+	return &MockVaultSDK_GetVault_Call{Call: _e.mock.On("GetVault",
+		append([]interface{}{ctx, vaultID, controlPlaneID}, opts...)...)}
+}
+
+func (_c *MockVaultSDK_GetVault_Call) Run(run func(ctx context.Context, vaultID string, controlPlaneID string, opts ...operations.Option)) *MockVaultSDK_GetVault_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockVaultSDK_GetVault_Call) Return(getVaultResponse *operations.GetVaultResponse, err error) *MockVaultSDK_GetVault_Call {
+	_c.Call.Return(getVaultResponse, err)
+	return _c
+}
+
+func (_c *MockVaultSDK_GetVault_Call) RunAndReturn(run func(ctx context.Context, vaultID string, controlPlaneID string, opts ...operations.Option) (*operations.GetVaultResponse, error)) *MockVaultSDK_GetVault_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListVault provides a mock function for the type MockVaultSDK
 func (_mock *MockVaultSDK) ListVault(ctx context.Context, request operations.ListVaultRequest, opts ...operations.Option) (*operations.ListVaultResponse, error) {
 	var tmpRet mock.Arguments
