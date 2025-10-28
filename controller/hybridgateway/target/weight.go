@@ -19,13 +19,23 @@ func gcd(a, b uint32) uint32 {
 	return a
 }
 
-// lcm computes the least common multiple of two numbers.
+// lcm computes the least common multiple of two numbers with overflow protection.
 func lcm(a, b uint32) uint32 {
 	if a == 0 || b == 0 {
 		return 0
 	}
 	// To prevent potential overflow, calculate as (a / gcd) * b.
-	return (a / gcd(a, b)) * b
+	g := gcd(a, b)
+	quotient := a / g
+
+	// Check for overflow before multiplication
+	if quotient > 0 && b > (1<<32-1)/quotient {
+		// Overflow would occur, return maximum uint32 as a fallback
+		// This will be handled gracefully by the caller
+		return 1<<32 - 1
+	}
+
+	return quotient * b
 }
 
 // CalculateEndpointWeights translates a set of service-level weights into the
@@ -38,12 +48,12 @@ func lcm(a, b uint32) uint32 {
 //
 // --- Mathematical Logic ---
 //
-//  1. **Calculate Traffic-per-Endpoint Ratio:** For each backend service, the conceptual
+//  1. Calculate Traffic-per-Endpoint Ratio: For each backend service, the conceptual
 //     share of traffic for a single endpoint is proportional to its (ServiceWeight / NumberOfEndpoints).
 //     For example, a service with weight 80 and 10 endpoints has a per-endpoint "value" of 8,
 //     while a service with weight 100 and 20 endpoints has a per-endpoint "value" of 5.
 //
-//  2. **Convert Ratios to Integers:** Since the dataplane requires integer weights, we must
+//  2. Convert Ratios to Integers: Since the dataplane requires integer weights, we must
 //     convert these fractional ratios into a set of whole numbers that maintain the
 //     exact same proportions.
 //     - First, each fraction (W/E) is simplified to its lowest terms by dividing
@@ -52,7 +62,7 @@ func lcm(a, b uint32) uint32 {
 //     simplified fractions. This LCM is the smallest number that can be used as a
 //     common multiplier to turn all the fractions into integers.
 //
-//  3. **Simplify to Smallest Integers:** The resulting integer weights are mathematically
+//  3. Simplify to Smallest Integers: The resulting integer weights are mathematically
 //     correct but might be unnecessarily large (e.g., 300 and 400). To ensure maximum
 //     efficiency in the data plane, we simplify them.
 //     - We calculate the GCD of this new set of integer weights.
@@ -61,8 +71,11 @@ func lcm(a, b uint32) uint32 {
 //
 // --- Edge Cases Handled ---
 //
-// - A backend with 0 weight or 0 endpoints is correctly assigned an effective endpoint weight of 0.
-// - This gracefully handles the case where a service has weight > 0 but no ready endpoints.
+//   - A backend with 0 weight or 0 endpoints is correctly assigned an effective endpoint weight of 0.
+//   - This gracefully handles the case where a service has weight > 0 but no ready endpoints.
+//   - Overflow Protection: All arithmetic operations are protected against uint32 overflow.
+//     If calculations would exceed uint32 limits, values are capped at the maximum, ensuring
+//     the algorithm remains stable even with extreme configurations.
 //
 // --- Example 1: Basic Case ---
 //
@@ -136,9 +149,17 @@ func CalculateEndpointWeights(backends []BackendRef) map[string]uint32 {
 
 	// Step 2: Find the least common multiple (LCM) of all denominators.
 	// This gives us a common multiplier to turn all fractions into integers.
+	// Note: LCM can grow very large with many different denominators, potentially causing overflow.
 	overallLCM := activeDenominators[0]
 	for i := 1; i < len(activeDenominators); i++ {
-		overallLCM = lcm(overallLCM, activeDenominators[i])
+		newLCM := lcm(overallLCM, activeDenominators[i])
+		// If LCM calculation hit the overflow cap, we've reached mathematical limits.
+		if newLCM == 1<<32-1 {
+			// In practice, this should be extremely rare with realistic service configurations.
+			overallLCM = newLCM
+			break
+		}
+		overallLCM = newLCM
 	}
 
 	// Step 3: Calculate the un-simplified, integer-based weights.
@@ -146,7 +167,20 @@ func CalculateEndpointWeights(backends []BackendRef) map[string]uint32 {
 	nonZeroWeights := make([]uint32, 0)
 	for _, f := range fractions {
 		// The weight is the fraction's value multiplied by the LCM.
-		weight := (f.num * overallLCM) / f.den
+		// Use uint64 arithmetic to prevent overflow, then check bounds.
+		var weight uint32
+		if f.num == 0 {
+			weight = 0
+		} else {
+			// Perform calculation in uint64 to detect overflow.
+			result := (uint64(f.num) * uint64(overallLCM)) / uint64(f.den)
+			if result > uint64(1<<32-1) {
+				// Overflow detected, cap at maximum uint32.
+				weight = 1<<32 - 1
+			} else {
+				weight = uint32(result)
+			}
+		}
 		unsimplifiedWeights = append(unsimplifiedWeights, weight)
 		if weight > 0 {
 			nonZeroWeights = append(nonZeroWeights, weight)

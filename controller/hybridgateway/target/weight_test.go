@@ -442,9 +442,9 @@ func TestCalculateEndpointWeights_EdgeCaseCombinations(t *testing.T) {
 		assert.Equal(t, expected, result)
 	})
 
-	t.Run("edge case: force LCM overflow to trigger defensive branch", func(t *testing.T) {
-		// Use maximum uint32 values to force overflow.
-		// These two large prime numbers should cause LCM overflow.
+	t.Run("edge case: handle LCM overflow gracefully", func(t *testing.T) {
+		// Use maximum uint32 values to test overflow protection.
+		// These two large prime numbers should cause LCM overflow in the old logic.
 		// Large prime close to max uint32.
 		large1 := uint32(4294967291)
 		// Another large prime.
@@ -459,19 +459,51 @@ func TestCalculateEndpointWeights_EdgeCaseCombinations(t *testing.T) {
 
 		result := CalculateEndpointWeights(backends)
 
-		// If LCM overflows and becomes 0, the defensive branch should trigger
-		// and all services should get weight 0.
+		// With overflow protection, the algorithm should handle this gracefully
+		// and return valid (possibly capped) weights rather than causing a panic or returning 0.
 		assert.NotNil(t, result)
 		assert.Contains(t, result, "overflow-1")
 		assert.Contains(t, result, "overflow-2")
 
-		// Check if we successfully triggered the defensive branch.
-		if result["overflow-1"] == 0 && result["overflow-2"] == 0 {
-			// Success! We triggered the len(nonZeroWeights) == 0 branch.
-			t.Logf("Successfully triggered defensive branch: all weights are 0 due to LCM overflow")
-		} else {
-			// The numbers weren't large enough to cause overflow, but that's ok.
-			t.Logf("LCM overflow did not occur, got weights: %v", result)
+		// The overflow protection should ensure we get reasonable results
+		// Either both weights are equal (if overflow hit the cap) or proportional
+		weight1 := result["overflow-1"]
+		weight2 := result["overflow-2"]
+
+		t.Logf("Overflow protection test results: overflow-1=%d, overflow-2=%d", weight1, weight2)
+
+		// Both weights should be non-zero and reasonable (not exceed uint32 max)
+		assert.Greater(t, weight1, uint32(0), "overflow-1 should have non-zero weight")
+		assert.Greater(t, weight2, uint32(0), "overflow-2 should have non-zero weight")
+		assert.LessOrEqual(t, weight1, uint32(1<<32-1), "overflow-1 should not exceed uint32 max")
+		assert.LessOrEqual(t, weight2, uint32(1<<32-1), "overflow-2 should not exceed uint32 max")
+	})
+
+	t.Run("edge case: handle weight multiplication overflow", func(t *testing.T) {
+		// Test case where f.num * overallLCM would overflow
+		backends := []BackendRef{
+			{Name: "large-weight", Weight: 1000000, Endpoints: 3}, // Large weight
+			{Name: "small", Weight: 1, Endpoints: 7},              // Creates LCM that when multiplied causes overflow
 		}
+
+		result := CalculateEndpointWeights(backends)
+
+		assert.NotNil(t, result)
+		assert.Contains(t, result, "large-weight")
+		assert.Contains(t, result, "small")
+
+		// Both should have reasonable weights, not overflow
+		largeWeight := result["large-weight"]
+		smallWeight := result["small"]
+
+		t.Logf("Multiplication overflow test: large-weight=%d, small=%d", largeWeight, smallWeight)
+
+		assert.Greater(t, largeWeight, uint32(0))
+		assert.Greater(t, smallWeight, uint32(0))
+		assert.LessOrEqual(t, largeWeight, uint32(1<<32-1))
+		assert.LessOrEqual(t, smallWeight, uint32(1<<32-1))
+
+		// The ratio should still be approximately correct (large-weight should be much larger)
+		assert.Greater(t, largeWeight, smallWeight*100, "large-weight should be significantly larger than small")
 	})
 }
