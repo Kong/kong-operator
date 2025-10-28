@@ -64,7 +64,7 @@ func TestGatewayEssentials(t *testing.T) {
 	t.Log("verifying Gateway gets marked as Programmed")
 	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayNN, clients), testutils.GatewayReadyTimeLimit, time.Second,
-		testutils.DumpGatewayListnersConditions(t, GetCtx(), gatewayNN, clients))
+		testutils.DumpGatewayAndListenersConditions(t, GetCtx(), gatewayNN, clients))
 
 	t.Log("verifying Gateway gets an IP address")
 	require.Eventually(t, testutils.GatewayIPAddressExist(t, GetCtx(), gatewayNN, clients), testutils.SubresourceReadinessWait, time.Second)
@@ -111,11 +111,15 @@ func TestGatewayEssentials(t *testing.T) {
 	t.Log("deleting dataplane")
 	require.NoError(t, dataplaneClient.Delete(GetCtx(), dataplane.Name, metav1.DeleteOptions{}))
 
-	t.Logf("verifying Gateway gets marked as not Programmed at %v", time.Now())
-	require.Eventually(t, testutils.Not(testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNN, clients)), testutils.GatewayReadyTimeLimit, 100*time.Millisecond)
-	t.Logf("verifying all listeners of the gateway get marked as not Programmed at %v", time.Now())
-	require.Eventually(t, testutils.Not(testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayNN, clients)), testutils.GatewayReadyTimeLimit, 100*time.Millisecond,
-		testutils.DumpGatewayListnersConditions(t, GetCtx(), gatewayNN, clients))
+	t.Logf("verifying Gateway and all its listeners gets marked as not Programmed at %v", time.Now())
+	// Since the "Programmed = False" conditions state of gateway and its listeners is a trasient state,
+	// we check the conditions of gateway and listeners in one `Eventually` group to reduce the flakiness caused by delays.
+	require.Eventually(t, func() bool {
+		return testutils.Not(testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNN, clients))() &&
+			testutils.Not(testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayNN, clients))()
+	}, testutils.GatewayReadyTimeLimit, 100*time.Millisecond,
+		testutils.DumpGatewayAndListenersConditions(t, GetCtx(), gatewayNN, clients),
+	)
 
 	t.Log("verifying that the ControlPlane becomes provisioned again")
 	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, GetCtx(), gateway, clients), 45*time.Second, time.Second)
