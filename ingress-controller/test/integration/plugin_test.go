@@ -4,6 +4,7 @@ package integration
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -802,14 +804,27 @@ func TestPluginNullInConfig(t *testing.T) {
 		require.NoError(t, err, "failed to create Kong client")
 		plugins, err := kc.Plugins.ListAll(ctx)
 		require.NoError(t, err, "failed to list plugins")
-		if len(plugins) != 1 {
+
+		datadogPlugin, found := lo.Find(plugins, func(p *kong.Plugin) bool {
+			return p.Name != nil && *p.Name == "datadog"
+		})
+		if !found {
+			t.Logf("datadog plugin not found. %d Plugins found: %s",
+				len(plugins),
+				strings.Join(
+					lo.Map(plugins, func(p *kong.Plugin, _ int) string {
+						return lo.FromPtrOr(p.Name, "_")
+					}),
+					","),
+			)
 			return false
 		}
-		plugin := plugins[0]
-		if plugin.Name == nil || *plugin.Name != "datadog" {
-			return false
-		}
-		configPrefix, ok := plugin.Config["prefix"]
+
+		configJSON, err := json.Marshal(datadogPlugin.Config)
+		require.NoError(t, err)
+		t.Logf("Configuration of datadog plugin: %s", string(configJSON))
+
+		configPrefix, ok := datadogPlugin.Config["prefix"]
 		return ok && configPrefix == nil
 	}, ingressWait, waitTick, "failed to find 'datadog' plugin with null in config.prefix in Kong")
 }
