@@ -66,7 +66,9 @@ func Create[
 
 	switch ent := any(e).(type) {
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
-		err = ensureControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+		// TODO(pmalek)
+		err = createAPIGateway(ctx, sdk.GetAPIGatewaysSDK(), cl, ent)
+		// err = ensureControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = createKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
@@ -129,7 +131,8 @@ func Create[
 		var id string
 		switch ent := any(e).(type) {
 		case *konnectv1alpha2.KonnectGatewayControlPlane:
-			id, errGet = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+			// TODO(pmalek): can't get the API Gateway via a UID, not implemented in the SDK yet.
+			// id, errGet = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
 		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 			// NOTE: since Cloud Gateways resource do not support labels/tags,
 			// we can't reliably get the Konnect ID for a Cloud Gateway Network
@@ -268,7 +271,8 @@ func Delete[
 	)
 	switch ent := any(ent).(type) {
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
-		err = deleteControlPlane(ctx, sdk.GetControlPlaneSDK(), ent)
+		// TODO(pmalek)
+		err = deleteAPIGateway(ctx, sdk.GetAPIGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = deleteKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
@@ -419,10 +423,12 @@ func Update[
 	)
 	switch ent := any(e).(type) {
 	case *konnectv1alpha2.KonnectGatewayControlPlane:
-		// if the ControlPlane is of type origin, enforce the spec on Konnect.
-		if *ent.Spec.Source == commonv1alpha1.EntitySourceOrigin {
-			err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
-		}
+		// TODO(pmalek)
+		// // if the ControlPlane is of type origin, enforce the spec on Konnect.
+		// if *ent.Spec.Source == commonv1alpha1.EntitySourceOrigin {
+		// 	err = updateControlPlane(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+		// }
+		err = updateAPIGateway(ctx, sdk.GetAPIGatewaysSDK(), cl, ent)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = updateKonnectNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
@@ -539,7 +545,6 @@ func Adopt[
 	e TEnt,
 	adoptOptions commonv1alpha1.AdoptOptions,
 ) (ctrl.Result, error) {
-
 	var (
 		err        error
 		entityType = e.GetTypeName()
