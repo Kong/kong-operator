@@ -20,6 +20,8 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	hybridgatewayerrors "github.com/kong/kong-operator/controller/hybridgateway/errors"
+
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/vars"
 )
@@ -705,7 +707,7 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 			gw, err := GetSupportedGatewayForParentRef(ctx, logger, cl, tt.pRef, tt.routeNS)
 			if tt.wantErr != nil {
 				require.Error(t, err)
-				if errors.Is(err, ErrNoGatewayFound) || errors.Is(err, ErrNoGatewayClassFound) || errors.Is(err, ErrNoGatewayController) {
+				if errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound) || errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound) || errors.Is(err, hybridgatewayerrors.ErrNoGatewayController) {
 					// Specific error type matches
 					return
 				}
