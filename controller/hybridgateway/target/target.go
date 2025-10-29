@@ -19,17 +19,17 @@ import (
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
-// ValidBackendRef represents a BackendRef that has passed all validation checks.
-type ValidBackendRef struct {
-	BackendRef  *gwtypes.HTTPBackendRef
-	Service     *corev1.Service
-	ServicePort *corev1.ServicePort
-	// ReadyEndpoints contains merged endpoint addresses from all EndpointSlices for this service.
-	ReadyEndpoints []string
-	// TargetPort is the actual port to use in Kong targets (already resolved based on service type).
-	TargetPort int
-	// Weight is the calculated weight per endpoint for this backend (after weight recalculation).
-	Weight int32
+// validBackendRef represents a BackendRef that has passed all validation checks.
+type validBackendRef struct {
+	backendRef  *gwtypes.HTTPBackendRef
+	service     *corev1.Service
+	servicePort *corev1.ServicePort
+	// readyEndpoints contains merged endpoint addresses from all EndpointSlices for this service.
+	readyEndpoints []string
+	// targetPort is the actual port to use in Kong targets (already resolved based on service type).
+	targetPort int
+	// weight is the calculated weight per endpoint for this backend (after weight recalculation).
+	weight int32
 }
 
 // TargetsForBackendRefs creates KongTargets for all BackendRefs in a rule.
@@ -251,8 +251,8 @@ func filterValidBackendRefs(
 	referenceGrantEnabled bool,
 	fqdn bool,
 	clusterDomain string,
-) ([]ValidBackendRef, error) {
-	var validBackendRefs []ValidBackendRef
+) ([]validBackendRef, error) {
+	var validBackendRefs []validBackendRef
 
 	for _, bRef := range backendRefs {
 		// Check if the backendRef is supported.
@@ -311,14 +311,14 @@ func filterValidBackendRefs(
 		targetPort := resolveTargetPort(svc, svcPort, fqdn)
 
 		// If we reach here, the BackendRef is valid and has endpoints.
-		validBackendRefs = append(validBackendRefs, ValidBackendRef{
-			BackendRef:     &bRef,
-			Service:        svc,
-			ServicePort:    svcPort,
-			ReadyEndpoints: readyEndpoints,
-			TargetPort:     targetPort,
+		validBackendRefs = append(validBackendRefs, validBackendRef{
+			backendRef:     &bRef,
+			service:        svc,
+			servicePort:    svcPort,
+			readyEndpoints: readyEndpoints,
+			targetPort:     targetPort,
 			// Will be calculated in recalculateWeightsAcrossBackendRefs.
-			Weight: 0,
+			weight: 0,
 		})
 	}
 
@@ -328,7 +328,7 @@ func filterValidBackendRefs(
 // recalculateWeightsAcrossBackendRefs recalculates weights across all valid BackendRefs in a rule.
 // This uses the weight calculation algorithm from weight.go to ensure mathematically
 // correct proportional distribution based on the original BackendRef weights and endpoint counts.
-func recalculateWeightsAcrossBackendRefs(validBackendRefs []ValidBackendRef) []ValidBackendRef {
+func recalculateWeightsAcrossBackendRefs(validBackendRefs []validBackendRef) []validBackendRef {
 	if len(validBackendRefs) == 0 {
 		return validBackendRefs
 	}
@@ -337,16 +337,16 @@ func recalculateWeightsAcrossBackendRefs(validBackendRefs []ValidBackendRef) []V
 	backends := make([]BackendRef, len(validBackendRefs))
 	for i, vbRef := range validBackendRefs {
 		// Generate a unique name for this backend (using service name and namespace).
-		backendName := fmt.Sprintf("%s/%s", vbRef.Service.Namespace, vbRef.Service.Name)
+		backendName := fmt.Sprintf("%s/%s", vbRef.service.Namespace, vbRef.service.Name)
 
 		// Get the original weight (default to 1 if not specified).
 		weight := uint32(1)
-		if vbRef.BackendRef.Weight != nil {
-			weight = uint32(*vbRef.BackendRef.Weight)
+		if vbRef.backendRef.Weight != nil {
+			weight = uint32(*vbRef.backendRef.Weight)
 		}
 
 		// Number of ready endpoints (could be 1 for FQDN/ExternalName).
-		endpoints := uint32(len(vbRef.ReadyEndpoints))
+		endpoints := uint32(len(vbRef.readyEndpoints))
 
 		backends[i] = BackendRef{
 			Name:      backendName,
@@ -360,38 +360,38 @@ func recalculateWeightsAcrossBackendRefs(validBackendRefs []ValidBackendRef) []V
 
 	// Update the weights in our ValidBackendRef structs directly.
 	for i, vbRef := range validBackendRefs {
-		backendName := fmt.Sprintf("%s/%s", vbRef.Service.Namespace, vbRef.Service.Name)
+		backendName := fmt.Sprintf("%s/%s", vbRef.service.Namespace, vbRef.service.Name)
 		endpointWeight := endpointWeights[backendName]
-		validBackendRefs[i].Weight = int32(endpointWeight)
+		validBackendRefs[i].weight = int32(endpointWeight)
 	}
 
 	return validBackendRefs
 }
 
-// createTargetsFromValidBackendRefs creates KongTargets from ValidBackendRef structs.
+// createTargetsFromValidBackendRefs creates KongTargets from validBackendRef structs.
 // This function handles all service types (ClusterIP, ExternalName, FQDN) using a unified approach.
 func createTargetsFromValidBackendRefs(httpRoute *gwtypes.HTTPRoute, pRef *gwtypes.ParentReference, upstreamName string,
-	validBackendRefs []ValidBackendRef) ([]configurationv1alpha1.KongTarget, error) {
+	validBackendRefs []validBackendRef) ([]configurationv1alpha1.KongTarget, error) {
 	var targets []configurationv1alpha1.KongTarget
 
 	for _, vbRef := range validBackendRefs {
 		// Skip backends with no endpoints (they have weight 0 anyway).
 		// This should not happen, but if it happens then we skip them.
-		if len(vbRef.ReadyEndpoints) == 0 {
+		if len(vbRef.readyEndpoints) == 0 {
 			continue
 		}
 
-		// After recalculateWeightsAcrossBackendRefs, the ValidBackendRef.Weight contains
+		// After recalculateWeightsAcrossBackendRefs, the ValidBackendRef.weight contains
 		// the calculated weight per endpoint, so we use it directly for all endpoints.
-		weight := vbRef.Weight
+		weight := vbRef.weight
 
-		for _, endpoint := range vbRef.ReadyEndpoints {
+		for _, endpoint := range vbRef.readyEndpoints {
 			// Use the pre-calculated target port (already resolved based on service type and mode).
-			port := vbRef.TargetPort
+			port := vbRef.targetPort
 
 			// Create target with explicit endpoint address (works for all cases: real endpoints, FQDN, external names).
 			target, err := builder.NewKongTarget().
-				WithName(fmt.Sprintf("%s.%s", upstreamName, utils.Hash32(utils.Hash32(vbRef.BackendRef)+endpoint))).
+				WithName(fmt.Sprintf("%s.%s", upstreamName, utils.Hash32(utils.Hash32(vbRef.backendRef)+endpoint))).
 				WithNamespace(httpRoute.Namespace).
 				WithLabels(httpRoute, pRef).
 				WithAnnotations(httpRoute, pRef).
