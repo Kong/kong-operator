@@ -13,6 +13,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	hybridgatewayerrors "github.com/kong/kong-operator/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -274,19 +275,6 @@ func isConditionEqual(a, b metav1.Condition) bool {
 		a.ObservedGeneration == b.ObservedGeneration
 }
 
-// Predefined errors returned by GetSupportedGatewayForParentRef to indicate
-// specific reasons why a ParentReference is not supported by this controller.
-var (
-	// ErrNoGatewayFound is returned when the Gateway referenced by a ParentReference does not exist in the cluster.
-	ErrNoGatewayFound = fmt.Errorf("no supported gateway found")
-
-	// ErrNoGatewayClassFound is returned when the GatewayClass referenced by a Gateway does not exist in the cluster.
-	ErrNoGatewayClassFound = fmt.Errorf("no gatewayClass found for gateway")
-
-	// ErrNoGatewayController is returned when the GatewayClass exists but is not controlled by this controller.
-	ErrNoGatewayController = fmt.Errorf("gatewayClass is not controlled by this controller")
-)
-
 // GetSupportedGatewayForParentRef checks if the given ParentReference is supported by this controller
 // and returns the associated Gateway if it is supported.
 //
@@ -308,9 +296,9 @@ var (
 //   - error: Specific error indicating why the ParentRef is not supported, or nil if validation passes.
 //
 // The function returns specific errors to help callers understand why a ParentRef is not supported:
-// - ErrNoGatewayFound: The referenced Gateway doesn't exist.
-// - ErrNoGatewayClassFound: The Gateway's GatewayClass doesn't exist.
-// - ErrNoGatewayController: The GatewayClass is not controlled by this controller.
+// - hybridgatewayerrors.ErrNoGatewayFound: The referenced Gateway doesn't exist.
+// - hybridgatewayerrors.ErrNoGatewayClassFound: The Gateway's GatewayClass doesn't exist.
+// - hybridgatewayerrors.ErrNoGatewayController: The GatewayClass is not controlled by this controller.
 // - nil error with nil Gateway: The ParentRef is valid but not supported (wrong kind/group).
 func GetSupportedGatewayForParentRef(ctx context.Context, logger logr.Logger, cl client.Client, pRef gwtypes.ParentReference,
 	routeNamespace string) (*gwtypes.Gateway, error) {
@@ -337,7 +325,7 @@ func GetSupportedGatewayForParentRef(ctx context.Context, logger logr.Logger, cl
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: string(pRef.Name)}, &gateway); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// Gateway doesn't exist, not supported.
-			return nil, ErrNoGatewayFound
+			return nil, hybridgatewayerrors.ErrNoGatewayFound
 		}
 		return nil, fmt.Errorf("failed to get gateway for ParentReference %v: %w", pRef, err)
 	}
@@ -347,7 +335,7 @@ func GetSupportedGatewayForParentRef(ctx context.Context, logger logr.Logger, cl
 	if err := cl.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// GatewayClass doesn't exist, not supported.
-			return nil, ErrNoGatewayClassFound
+			return nil, hybridgatewayerrors.ErrNoGatewayClassFound
 		}
 		return nil, fmt.Errorf("failed to get gatewayClass for parentReference %v: %w", pRef, err)
 	}
@@ -355,10 +343,10 @@ func GetSupportedGatewayForParentRef(ctx context.Context, logger logr.Logger, cl
 	// Check if the gatewayClass is controlled by us.
 	// If not, we just ignore it and return nil.
 	if string(gatewayClass.Spec.ControllerName) != vars.ControllerName() {
-		return nil, ErrNoGatewayController
+		return nil, hybridgatewayerrors.ErrNoGatewayController
 	}
 
-	// All checks passed - this ParentRef is supported
+	// All checks passed, this ParentRef is supported.
 	return &gateway, nil
 }
 

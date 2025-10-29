@@ -15,6 +15,7 @@ import (
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
+	hybridgatewayerrors "github.com/kong/kong-operator/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/controller/hybridgateway/refs"
@@ -125,9 +126,9 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 		// Check if the parentRef belongs to a Gateway managed by us.
 		gateway, err := route.GetSupportedGatewayForParentRef(ctx, logger, c.Client, pRef, c.route.Namespace)
 		if err != nil {
-			if errors.Is(err, route.ErrNoGatewayClassFound) ||
-				errors.Is(err, route.ErrNoGatewayController) ||
-				errors.Is(err, route.ErrNoGatewayFound) {
+			if errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound) ||
+				errors.Is(err, hybridgatewayerrors.ErrNoGatewayController) ||
+				errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound) {
 				// If the gateway is not managed by us or not found we skip setting conditions.
 				logger.V(1).Info("Skipping status update for unsupported or non-existent Gateway", "parentRef", pRef)
 				if route.RemoveStatusForParentRef(logger, c.route, pRef, vars.ControllerName()) {
