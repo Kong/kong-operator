@@ -13,6 +13,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
+	hybridgatewayerrors "github.com/kong/kong-operator/controller/hybridgateway/errors"
 )
 
 // GatewaysByNamespacedRef associates a KonnectNamespacedRef with a list of Gateways.
@@ -54,6 +55,9 @@ func GetControlPlaneRefByParentRef(ctx context.Context, cl client.Client, route 
 		Name:      string(pRef.Name),
 	}, gw)
 	if err != nil {
+		if k8serrors.IsNotFound(err) {
+			return nil, hybridgatewayerrors.ErrNoGatewayFound
+		}
 		return nil, fmt.Errorf("unable to get ControlPlaneRef for ParentRef %+v in route %q: %w", pRef, client.ObjectKeyFromObject(route), err)
 	}
 
