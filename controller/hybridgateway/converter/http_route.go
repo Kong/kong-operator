@@ -124,7 +124,7 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 	for _, pRef := range c.route.Spec.ParentRefs {
 		logger.V(2).Info("Processing ParentReference", "parentRef", pRef)
 		// Check if the parentRef belongs to a Gateway managed by us.
-		gateway, err := route.GetSupportedGatewayForParentRef(ctx, logger, c.Client, pRef, c.route.Namespace)
+		gateway, err := refs.GetSupportedGatewayForParentRef(ctx, logger, c.Client, pRef, c.route.Namespace)
 		if err != nil {
 			if errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound) ||
 				errors.Is(err, hybridgatewayerrors.ErrNoGatewayController) ||
