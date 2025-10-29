@@ -125,7 +125,7 @@ func CleanupOrphanedParentStatus(logger logr.Logger, route *gwtypes.HTTPRoute, c
 	}
 
 	// Filter out orphaned ParentStatus entries.
-	var filteredParents []gwtypes.RouteParentStatus
+	filteredParents := []gwtypes.RouteParentStatus{}
 	removed := false
 
 	for _, parentStatus := range route.Status.Parents {
@@ -173,7 +173,7 @@ func RemoveStatusForParentRef(logger logr.Logger, route *gwtypes.HTTPRoute, pRef
 		return false
 	}
 	removed := false
-	var filteredParents []gwtypes.RouteParentStatus
+	filteredParents := []gwtypes.RouteParentStatus{}
 	for _, parentStatus := range route.Status.Parents {
 		if string(parentStatus.ControllerName) == controllerName && isParentRefEqual(parentStatus.ParentRef, pRef) {
 			// Skip this entry (remove it).
