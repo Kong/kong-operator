@@ -19,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -27,6 +28,7 @@ import (
 	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/consts"
 	"github.com/kong/kong-operator/pkg/gatewayapi"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
@@ -47,6 +49,14 @@ func TestGatewayEssentials(t *testing.T) {
 	gatewayClass, err := GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
 	require.NoError(t, err)
 	cleaner.Add(gatewayClass)
+
+	t.Log("setting up watch for Gateways")
+	cl, err := client.NewWithWatch(GetEnv().Cluster().Config(), client.Options{
+		Scheme: scheme.Get(),
+	})
+	require.NoError(t, err, "failed to setup a client for watching gateways")
+	wGateway, err := cl.Watch(GetCtx(), &gatewayv1.GatewayList{}, client.InNamespace(namespace.Name))
+	require.NoError(t, err, "failed to start watching gateways")
 
 	t.Log("deploying Gateway resource")
 	gatewayNN := types.NamespacedName{
@@ -110,9 +120,18 @@ func TestGatewayEssentials(t *testing.T) {
 	t.Log("deleting dataplane")
 	require.NoError(t, dataplaneClient.Delete(GetCtx(), dataplane.Name, metav1.DeleteOptions{}))
 
-	t.Log("verifying Gateway gets and its listeners are marked as not Programmed")
-	require.Eventually(t, testutils.Not(testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNN, clients)), testutils.GatewayReadyTimeLimit, 100*time.Millisecond)
-	require.Eventually(t, testutils.Not(testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayNN, clients)), testutils.GatewayReadyTimeLimit, 100*time.Millisecond)
+	// Since the `Programmed = False` condition of gateway and listeners is a transient state
+	// which appears only for a short duration and recovers to `Programmed = True` after CP and DP restarted,
+	// we use `watch` instead of `Eventually` to catch the state.
+	t.Logf("verifying Gateway gets and its listeners are marked as not Programmed")
+	_ = helpers.WatchFor(t, GetCtx(), wGateway, apiwatch.Modified,
+		testutils.GatewayReadyTimeLimit,
+		func(gw *gatewayv1.Gateway) bool {
+			return gw.Name == gatewayNN.Name && gw.Namespace == gatewayNN.Namespace &&
+				!gatewayutils.IsProgrammed(gw) && !gatewayutils.AreListenersProgrammed(gw)
+		},
+		"Did not see gateway and all its listeners' Programmed condition set to False in watching gateways",
+	)
 
 	t.Log("verifying that the ControlPlane becomes provisioned again")
 	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, GetCtx(), gateway, clients), 45*time.Second, time.Second)
