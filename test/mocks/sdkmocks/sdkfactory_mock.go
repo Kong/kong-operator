@@ -6,6 +6,8 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	"github.com/Kong/sdk-konnect-go/mocks"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/controller/konnect/server"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -35,7 +37,11 @@ type MockSDKWrapper struct {
 	KeySetsSDK                  *MockKeySetsSDK
 	SNIsSDK                     *MockSNIsSDK
 	DataPlaneCertificatesSDK    *MockDataPlaneClientCertificatesSDK
-	server                      server.Server
+
+	APIGatewayDataPlaneCertificatesSDK *mocks.MockAPIGatewayDataPlaneCertificatesSDK
+	APIGatewaysSDK                     *mocks.MockAPIGatewaysSDK
+
+	server server.Server
 }
 
 var _ sdkops.SDKWrapper = MockSDKWrapper{}
@@ -65,6 +71,9 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		KeySetsSDK:                  NewMockKeySetsSDK(t),
 		SNIsSDK:                     NewMockSNIsSDK(t),
 		DataPlaneCertificatesSDK:    NewMockDataPlaneClientCertificatesSDK(t),
+
+		APIGatewayDataPlaneCertificatesSDK: mocks.NewMockAPIGatewayDataPlaneCertificatesSDK(t),
+		APIGatewaysSDK:                     mocks.NewMockAPIGatewaysSDK(t),
 
 		server: lo.Must(server.NewServer[*gwtypes.ControlPlane](SDKServerURL)),
 	}
@@ -169,6 +178,14 @@ func (m MockSDKWrapper) GetSNIsSDK() sdkops.SNIsSDK {
 
 func (m MockSDKWrapper) GetDataPlaneCertificatesSDK() sdkops.DataPlaneClientCertificatesSDK {
 	return m.DataPlaneCertificatesSDK
+}
+
+func (m MockSDKWrapper) GetAPIGatewayDataPlaneCertificatesSDK() sdkkonnectgo.APIGatewayDataPlaneCertificatesSDK {
+	return m.APIGatewayDataPlaneCertificatesSDK
+}
+
+func (m MockSDKWrapper) GetAPIGatewaysSDK() sdkkonnectgo.APIGatewaysSDK {
+	return m.APIGatewaysSDK
 }
 
 func (m MockSDKWrapper) GetCloudGatewaysSDK() sdkops.CloudGatewaysSDK {

@@ -33,6 +33,9 @@ type SDKWrapper interface {
 	GetDataPlaneCertificatesSDK() DataPlaneClientCertificatesSDK
 	GetCloudGatewaysSDK() CloudGatewaysSDK
 
+	GetAPIGatewayDataPlaneCertificatesSDK() sdkkonnectgo.APIGatewayDataPlaneCertificatesSDK
+	GetAPIGatewaysSDK() sdkkonnectgo.APIGatewaysSDK
+
 	// GetServerURL returns the server URL for recording metrics.
 	GetServerURL() string
 	GetServer() server.Server
@@ -163,6 +166,16 @@ func (w sdkWrapper) GetKeySetsSDK() KeySetsSDK {
 // GetDataPlaneCertificatesSDK returns the SDK to operate data plane certificates.
 func (w sdkWrapper) GetDataPlaneCertificatesSDK() DataPlaneClientCertificatesSDK {
 	return w.sdk.DPCertificates
+}
+
+// GetAPIGatewayDataPlaneCertificatesSDK returns the SDK to operate API Gateway data plane certificates.
+func (w sdkWrapper) GetAPIGatewayDataPlaneCertificatesSDK() sdkkonnectgo.APIGatewayDataPlaneCertificatesSDK {
+	return w.sdk.APIGatewayDataPlaneCertificates
+}
+
+// GetAPIGatewaysSDK returns the SDK to operate API Gateways.
+func (w sdkWrapper) GetAPIGatewaysSDK() sdkkonnectgo.APIGatewaysSDK {
+	return w.sdk.APIGateways
 }
 
 // GetCloudGatewaysSDK returns the SDK to operate Konnect Dedicated Cloud Gateways SDK.
