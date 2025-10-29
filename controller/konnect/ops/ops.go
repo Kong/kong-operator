@@ -574,6 +574,8 @@ func Adopt[
 		err = adoptKey(ctx, sdk.GetKeysSDK(), ent)
 	case *configurationv1alpha1.KongKeySet:
 		err = adoptKeySet(ctx, sdk.GetKeySetsSDK(), ent)
+	case *configurationv1alpha1.KongPluginBinding:
+		err = adoptPluginBinding(ctx, sdk.GetPluginSDK(), cl, ent)
 	// TODO: implement adoption for other types.
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
