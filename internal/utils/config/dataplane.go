@@ -109,7 +109,7 @@ func KongInKonnectDefaults(
 		// "HOUDINI_APIGW_KONNECT_GATEWAY_ID":      "${HOUDINI_APIGW_KONNECT_GATEWAY_ID}",      //
 		if konnect.ControlPlaneID != "" {
 			// newEnvSet["HOUDINI_APIGW_KONNECT_GATEWAY_ID"] = konnect.ControlPlaneID
-			newEnvSet["HOUDINI_APIGW_KONNECT_GATEWAY_ID"] = "0199ed01-7064-752f-8225-d1d961aa583f"
+			newEnvSet["HOUDINI_APIGW_KONNECT_GATEWAY_ID"] = konnectExtensionStatus.Konnect.ControlPlaneID
 		}
 	}
 

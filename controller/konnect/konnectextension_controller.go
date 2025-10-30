@@ -422,7 +422,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	log.Debug(logger, "DataPlane certificate validity checked")
 
 	// Get the list of DataPlane client certificates in Konnect.
-	dpCertificates, err := ops.ListKongDataPlaneClientCertificates(ctx, sdk.GetDataPlaneCertificatesSDK(), cpID)
+	dpCertificates, err := ops.ListAPIGatewayDataPlaneClientCertificates(ctx, sdk.GetAPIGatewayDataPlaneCertificatesSDK(), cpID)
 	if err != nil && !ops.ErrIsNotFound(err) {
 		certProvisionedCond.Status = metav1.ConditionFalse
 		certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
@@ -444,18 +444,18 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	var (
-		cert      sdkkonnectcomp.DataPlaneClientCertificate
+		cert      sdkkonnectcomp.APIGatewayDataPlaneCertificate
 		certFound bool
 	)
 	// retrieve all the konnect certificates bound to this secret
-	mappedIDs := lo.FilterMap(dpCertificates, func(c sdkkonnectcomp.DataPlaneClientCertificate, _ int) (k string, include bool) {
-		if c.Cert != nil && c.ID != nil {
-			certStr := sanitizeCert(*c.Cert)
+	mappedIDs := lo.FilterMap(dpCertificates, func(c sdkkonnectcomp.APIGatewayDataPlaneCertificate, _ int) (k string, include bool) {
+		if c.Certificate != "" && c.ID != "" {
+			certStr := sanitizeCert(c.Certificate)
 			certDataStr := sanitizeCert(string(certData))
 			if certStr == certDataStr {
 				cert = c
 				certFound = true
-				return *c.ID, true
+				return c.ID, true
 			}
 		}
 		return "", false
@@ -492,7 +492,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					}
 				},
 			)
-			if err := ops.CreateKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), &dpCert); err != nil {
+			if err := ops.CreateAPIGatewayDataPlaneClientCertificate(ctx, sdk.GetAPIGatewayDataPlaneCertificatesSDK(), &dpCert); err != nil {
 				certProvisionedCond.Status = metav1.ConditionFalse
 				certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
 				certProvisionedCond.Message = err.Error()
@@ -531,7 +531,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	case cleanup || secretCleanup:
 		if certFound {
 			// This should never happen, but checking to make the dereference below bullet-proof
-			if cert.ID == nil {
+			if cert.ID == "" {
 				return ctrl.Result{}, errors.New("cannot cleanup certificate in Konnect without ID")
 			}
 			dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
@@ -547,12 +547,12 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 						// setting the ID in the status as a workaround for the DeleteKongDataPlaneClientCertificate method,
 						// that expects the ID to be set in the status.
 						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-							ID: *cert.ID,
+							ID: cert.ID,
 						},
 					}
 				},
 			)
-			if err := ops.DeleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), &dpCert); err != nil {
+			if err := ops.DeleteAPIGatewayDataPlaneClientCertificate(ctx, sdk.GetAPIGatewayDataPlaneCertificatesSDK(), &dpCert); err != nil {
 				certProvisionedCond.Status = metav1.ConditionFalse
 				certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
 				certProvisionedCond.Message = err.Error()

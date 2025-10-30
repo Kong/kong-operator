@@ -112,7 +112,7 @@ func Create[
 	case *configurationv1alpha1.KongSNI:
 		err = createSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
-		err = CreateKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
+		err = CreateAPIGatewayDataPlaneClientCertificate(ctx, sdk.GetAPIGatewayDataPlaneCertificatesSDK(), ent)
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 	default:
@@ -132,7 +132,13 @@ func Create[
 		switch ent := any(e).(type) {
 		case *konnectv1alpha2.KonnectGatewayControlPlane:
 			// TODO(pmalek): can't get the API Gateway via a UID, not implemented in the SDK yet.
-			// id, errGet = getControlPlaneForUID(ctx, sdk.GetControlPlaneSDK(), sdk.GetControlPlaneGroupSDK(), cl, ent)
+			apigw, errGetByID := GetAPIGatewayByID(ctx, sdk.GetAPIGatewaysSDK(), ent.GetKonnectID())
+			if errGetByID != nil {
+				err = errGetByID
+			} else {
+				id = apigw.ID
+			}
+
 		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 			// NOTE: since Cloud Gateways resource do not support labels/tags,
 			// we can't reliably get the Konnect ID for a Cloud Gateway Network
@@ -316,7 +322,7 @@ func Delete[
 	case *configurationv1alpha1.KongSNI:
 		err = deleteSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
-		err = DeleteKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
+		err = DeleteAPIGatewayDataPlaneClientCertificate(ctx, sdk.GetAPIGatewayDataPlaneCertificatesSDK(), ent)
 		// ---------------------------------------------------------------------
 		// TODO: add other Konnect types
 	default:
