@@ -418,41 +418,13 @@ func ensureConsumerMatch(
 		return lo.FromPtrOr(item.GetID(), "")
 	}))
 
-	if !stringSlicesEqualAsSets(actualIDs, desiredConsumerGroupsIDs) {
+	if !lo.ElementsMatch(lo.Uniq(actualIDs), lo.Uniq(desiredConsumerGroupsIDs)) {
 		return KonnectEntityAdoptionNotMatchError{
 			KonnectID: konnectID,
 		}
 	}
 
 	return nil
-}
-
-func stringSlicesEqualAsSets(a, b []string) bool {
-	if len(a) == 0 && len(b) == 0 {
-		return true
-	}
-
-	setA := make(map[string]struct{}, len(a))
-	for _, item := range a {
-		setA[item] = struct{}{}
-	}
-
-	setB := make(map[string]struct{}, len(b))
-	for _, item := range b {
-		setB[item] = struct{}{}
-	}
-
-	if len(setA) != len(setB) {
-		return false
-	}
-
-	for key := range setA {
-		if _, ok := setB[key]; !ok {
-			return false
-		}
-	}
-
-	return true
 }
 
 func kongConsumerToSDKConsumerInput(
