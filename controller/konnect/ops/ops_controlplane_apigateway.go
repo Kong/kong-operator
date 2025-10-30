@@ -6,7 +6,6 @@ import (
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
-	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
@@ -131,33 +130,10 @@ func GetAPIGatewayByID(
 	sdk sdkkonnectgo.APIGatewaysSDK,
 	id string,
 ) (*sdkkonnectcomp.Gateway, error) {
-	reqList := sdkkonnectops.ListAPIGatewaysRequest{
-		Filter: &sdkkonnectcomp.APIGatewayCommonFilter{
-			Name: &sdkkonnectcomp.StringFieldContainsFilter{
-				// TODO: not useful
-				// Contains: string,
-			},
-			// TODO: not implemented in the SDK yet
-			// ID:
-			// ID: &sdkkonnectcomp.ID{
-			// 	Eq: lo.ToPtr(id),
-			// },
-		},
+	resp, err := sdk.GetAPIGateway(ctx, id)
+	if err != nil || resp == nil || resp.Gateway == nil {
+		return nil, fmt.Errorf("failed getting API Gateway with id %s: %w", id, err)
 	}
 
-	resp, err := sdk.ListAPIGateways(ctx, reqList)
-	if err != nil || resp == nil || resp.ListGatewaysResponse == nil {
-		return nil, fmt.Errorf("failed listing for API Gateway with id %s: %w", id, err)
-	}
-
-	if len(resp.ListGatewaysResponse.Data) == 0 {
-		return nil, fmt.Errorf("failed listing API Gateways by id: %w", EntityWithMatchingIDNotFoundError{ID: id})
-	}
-
-	// This should never happen, as ID is unique.
-	if len(resp.ListGatewaysResponse.Data) > 1 {
-		return nil, fmt.Errorf("failed listing API Gateways by id: %w", MultipleEntitiesWithMatchingIDFoundError{ID: id})
-	}
-
-	return &resp.ListGatewaysResponse.Data[0], nil
+	return resp.Gateway, nil
 }

@@ -68,13 +68,14 @@ func handleKonnectGatewayControlPlaneSpecific(
 	if kgcpID == "" {
 		return false, nil
 	}
-	konnectCP, err := ops.GetControlPlaneByID(ctx, sdk.GetControlPlaneSDK(), kgcpID)
-	if err != nil {
-		return false, fmt.Errorf("can't read KonnectGatewayControlPlane with ID: %s from Konnect API: %w", kgcpID, err)
+	konnectCP, err := ops.GetAPIGatewayByID(ctx, sdk.GetAPIGatewaysSDK(), kgcpID)
+	if err != nil || konnectCP == nil {
+		return false, fmt.Errorf("can't read API Gateway with ID: %s from Konnect API: %w", kgcpID, err)
 	}
 	kgcp.Status.Endpoints = &konnectv1alpha2.KonnectEndpoints{
-		TelemetryEndpoint:    konnectCP.Config.TelemetryEndpoint,
-		ControlPlaneEndpoint: konnectCP.Config.ControlPlaneEndpoint,
+		// TODO(pmalek): not used by API Gateways. Will not be used when we migrate to new CRD.
+		TelemetryEndpoint:    "https://dummy", // konnectCP.Config.TelemetryEndpoint,
+		ControlPlaneEndpoint: "https://dummy", // konnectCP.Config.ControlPlaneEndpoint,
 		ServerURL:            sdk.GetServerURL(),
 	}
 	return true, nil
