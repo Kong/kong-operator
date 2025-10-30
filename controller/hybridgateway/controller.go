@@ -130,7 +130,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, nil
 	}
 
-	if err := Translate(conv, ctx); err != nil {
+	if err := Translate(conv, ctx, logger); err != nil {
 		return ctrl.Result{}, err
 	}
 

@@ -137,7 +137,7 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 					return client.Get(ctx, key, obj, opts...)
 				},
 			},
-			wantErr: fmt.Errorf("failed to get gateway for ParentReference"),
+			wantErr: fmt.Errorf("failed to get gateway for ParentRef"),
 		},
 		{
 			name:    "gatewayclass get generic error",
@@ -152,7 +152,7 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 					return client.Get(ctx, key, obj, opts...)
 				},
 			},
-			wantErr: fmt.Errorf("failed to get gatewayClass for parentReference"),
+			wantErr: fmt.Errorf("failed to get gatewayClass for ParentRef"),
 		},
 		{
 			name:    "parentRef with custom namespace",
