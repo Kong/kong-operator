@@ -28,6 +28,8 @@ func WatchFor[
 ) T {
 	t.Helper()
 
+	require.Greater(t, timeout, time.Duration(0), "Must provide a duration greater than 0 as the timeout")
+
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 

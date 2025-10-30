@@ -57,6 +57,7 @@ func TestGatewayEssentials(t *testing.T) {
 	require.NoError(t, err, "failed to setup a client for watching gateways")
 	wGateway, err := cl.Watch(GetCtx(), &gatewayv1.GatewayList{}, client.InNamespace(namespace.Name))
 	require.NoError(t, err, "failed to start watching gateways")
+	t.Cleanup(func() { wGateway.Stop() })
 
 	t.Log("deploying Gateway resource")
 	gatewayNN := types.NamespacedName{
