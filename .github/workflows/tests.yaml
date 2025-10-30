@@ -185,6 +185,20 @@ jobs:
         retry_wait_seconds: 20
         command: make verify.generators
 
+  matrix_k8s_node_versions:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - id: set-matrix
+        run: |
+          (
+            echo 'matrix<<EOF'
+            yq eval -o=json '.' .github/supported_k8s_node_versions.yaml
+            echo 'EOF'
+          ) >> "${GITHUB_OUTPUT}"
+
   samples:
     runs-on: ubuntu-latest
     needs: [check-docs-only]
@@ -361,7 +375,12 @@ jobs:
 
   CRDs:
     runs-on: ubuntu-latest
-    needs: [check-docs-only]
+    needs:
+    - check-docs-only
+    - matrix_k8s_node_versions
+    strategy:
+      matrix:
+        kubernetes-node-version: ${{ fromJson(needs.matrix_k8s_node_versions.outputs.matrix) }}
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
@@ -379,7 +398,14 @@ jobs:
         install: false
 
     - name: Run the crds validation tests
-      run: make test.crds-validation
+      run: |
+        VERSION="${{ matrix.kubernetes-node-version }}"
+        # Remove leading 'v'
+        VERSION="${VERSION#v}"
+        # Remove patch number as envtest releases are not provided for every patch version
+        VERSION="${VERSION%.*}"
+        echo "Cluster version: $VERSION"
+        make test.crds-validation CLUSTER_VERSION=${VERSION}
     
     # TODO: https://github.com/Kong/kong-operator/issues/2386
     - name: Create k8s KinD Cluster
@@ -387,7 +413,8 @@ jobs:
       with:
         # NOTE: default is 0.26.0 https://github.com/helm/kind-action/blob/a1b0e391336a6ee6713a0583f8c6240d70863de3/kind.sh#L21
         # so bump this manually
-        version: v0.27.0
+        version: v0.30.0
+        node_image: kindest/node:${{ matrix.kubernetes-node-version }}
 
     - name: Verify installing CRDs via kustomize works
       run: make install.only
