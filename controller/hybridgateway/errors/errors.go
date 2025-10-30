@@ -13,4 +13,7 @@ var (
 
 	// ErrNoGatewayController is returned when a GatewayClass exists but is not controlled by this controller.
 	ErrNoGatewayController = fmt.Errorf("gatewayClass is not controlled by this controller")
+
+	// ErrKonnectExtensionCrossNamespaceReference is returned when a KonnectExtension references a ControlPlane in a different namespace.
+	ErrKonnectExtensionCrossNamespaceReference = fmt.Errorf("cross-namespace references between KonnectExtension and ControlPlane are not supported")
 )

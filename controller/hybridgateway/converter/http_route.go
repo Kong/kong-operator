@@ -66,8 +66,8 @@ func (c *httpRouteConverter) GetRootObject() gwtypes.HTTPRoute {
 }
 
 // Translate implements APIConverter.
-func (c *httpRouteConverter) Translate() error {
-	return c.translate(context.TODO())
+func (c *httpRouteConverter) Translate(ctx context.Context, logger logr.Logger) error {
+	return c.translate(ctx, logger)
 }
 
 // GetOutputStore implements APIConverter.
@@ -187,8 +187,8 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 }
 
 // translate converts the HTTPRoute to KongRoute(s) and stores them in outputStore.
-func (c *httpRouteConverter) translate(ctx context.Context) error {
-	supportedParentRefs, err := c.getHybridGatewayParents(ctx)
+func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) error {
+	supportedParentRefs, err := c.getHybridGatewayParents(ctx, logger)
 	if err != nil {
 		return err
 	}
@@ -328,15 +328,27 @@ type hybridGatewayParent struct {
 	hostnames []string
 }
 
-func (c *httpRouteConverter) getHybridGatewayParents(ctx context.Context) ([]hybridGatewayParent, error) {
+func (c *httpRouteConverter) getHybridGatewayParents(ctx context.Context, logger logr.Logger) ([]hybridGatewayParent, error) {
 	result := []hybridGatewayParent{}
-
 	for _, pRef := range c.route.Spec.ParentRefs {
-		cp, err := c.getControlPlaneRefByParentRef(ctx, pRef)
+		cp, err := refs.GetControlPlaneRefByParentRef(ctx, logger, c.Client, c.route, pRef)
 		if err != nil {
-			return nil, err
+			switch {
+			case errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound),
+				errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound),
+				errors.Is(err, hybridgatewayerrors.ErrNoGatewayController),
+				errors.Is(err, hybridgatewayerrors.ErrKonnectExtensionCrossNamespaceReference):
+				// These are expected errors to be handled gracefully. Log and skip this ParentRef, continue with others.
+				logger.V(1).Info("Skipping ParentRef due to expected error", "parentRef", pRef, "error", err)
+				continue
+			default:
+				// Unexpected system error, fail the entire translation.
+				return nil, fmt.Errorf("failed to get ControlPlaneRef for ParentRef %s: %w", pRef.Name, err)
+			}
 		}
+
 		if cp == nil {
+			logger.V(1).Info("No ControlPlaneRef found for ParentRef, skipping", "parentRef", pRef)
 			continue
 		}
 
@@ -356,10 +368,6 @@ func (c *httpRouteConverter) getHybridGatewayParents(ctx context.Context) ([]hyb
 	}
 
 	return result, nil
-}
-
-func (c *httpRouteConverter) getControlPlaneRefByParentRef(ctx context.Context, pRef gwtypes.ParentReference) (*commonv1alpha1.ControlPlaneRef, error) {
-	return refs.GetControlPlaneRefByParentRef(ctx, c.Client, c.route, pRef)
 }
 
 func (c *httpRouteConverter) getHostnamesByParentRef(ctx context.Context, pRef gwtypes.ParentReference) ([]string, error) {
