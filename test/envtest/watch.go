@@ -7,10 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/kr/pretty"
 	"github.com/stretchr/testify/require"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"github.com/kong/kong-operator/test/helpers"
 )
 
 const (
@@ -70,8 +71,7 @@ func setupWatch[
 }
 
 // watchFor watches for an event of type eventType using the provided watch.Interface.
-// It returns when either context is done - and then it marks the test as failed -
-// or when the event has been received and predicate returned true.
+// It is a wrapper of helpers.WatchFor which uses the type safe `watch` and a fixed timeout.
 func watchFor[
 	T client.Object,
 ](
@@ -84,36 +84,5 @@ func watchFor[
 ) T {
 	t.Helper()
 
-	ctx, cancel := context.WithTimeout(ctx, clientWatchTimeout)
-	defer cancel()
-
-	var (
-		obj                   T
-		receivedAtLeastOneObj bool
-	)
-	for found := false; !found; {
-		select {
-		case <-ctx.Done():
-			if receivedAtLeastOneObj {
-				require.Failf(t, failMsg, "Last object received:\n%v", pretty.Sprint(obj))
-			} else {
-				require.Fail(t, failMsg)
-			}
-		case e := <-w.WatchI().ResultChan():
-			if e.Type != eventType {
-				continue
-			}
-			var ok bool
-			obj, ok = e.Object.(T)
-			if !ok {
-				continue
-			}
-			receivedAtLeastOneObj = true
-			if !predicate(obj) {
-				continue
-			}
-			found = true
-		}
-	}
-	return obj
+	return helpers.WatchFor(t, ctx, w.WatchI(), eventType, clientWatchTimeout, predicate, failMsg)
 }
