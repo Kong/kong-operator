@@ -180,8 +180,8 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        timeout_minutes: 3
-        max_attempts: 6
+        timeout_minutes: 5
+        max_attempts: 5
         retry_wait_seconds: 20
         command: make verify.generators
 
