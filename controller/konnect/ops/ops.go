@@ -550,6 +550,10 @@ func Adopt[
 	switch ent := any(e).(type) {
 	case *configurationv1alpha1.KongService:
 		err = adoptService(ctx, sdk.GetServicesSDK(), ent)
+	case *configurationv1.KongConsumer:
+		err = adoptConsumer(ctx, sdk.GetConsumersSDK(), sdk.GetConsumerGroupsSDK(), cl, ent, adoptOptions)
+	case *configurationv1beta1.KongConsumerGroup:
+		err = adoptConsumerGroup(ctx, sdk.GetConsumerGroupsSDK(), ent, adoptOptions)
 	case *konnectv1alpha1.KonnectCloudGatewayNetwork:
 		err = adoptKonnectCloudGatewayNetwork(ctx, sdk.GetCloudGatewaysSDK(), ent, adoptOptions)
 	case *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration:
