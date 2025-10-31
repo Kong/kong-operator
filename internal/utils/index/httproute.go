@@ -57,10 +57,6 @@ func backendServicesOnHTTPRoute(o client.Object) []string {
 			if backendRef.Namespace != nil {
 				ns = string(*backendRef.Namespace)
 			}
-			// TODO(mlavacca): support cross-namespace references
-			if ns != httpRoute.Namespace {
-				continue
-			}
 
 			services = append(services, ns+"/"+string(backendRef.Name))
 		}

@@ -6,6 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -42,6 +44,31 @@ type fakeErrorClient struct {
 
 func (f *fakeErrorClient) List(ctx context.Context, obj client.ObjectList, opts ...client.ListOption) error {
 	return assert.AnError
+}
+
+// getErrorClient simulates a client.Client that always returns an error on Get.
+type getErrorClient struct {
+	client.Client
+}
+
+func (c *getErrorClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	return assert.AnError
+}
+
+// listErrorClient simulates a client.Client that returns an error only when listing HTTPRoutes for a Service.
+type listErrorClient struct {
+	client.Client
+}
+
+func (c *listErrorClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	return nil // Service fetch succeeds
+}
+
+func (c *listErrorClient) List(ctx context.Context, obj client.ObjectList, opts ...client.ListOption) error {
+	if _, ok := obj.(*gwtypes.HTTPRouteList); ok {
+		return assert.AnError
+	}
+	return nil
 }
 
 func Test_listHTTPRoutesForGateway_table(t *testing.T) {
@@ -265,6 +292,314 @@ func Test_MapHTTPRouteForGatewayClass(t *testing.T) {
 		ctx := context.Background()
 		obj := gatewayClass
 		requests := errorMapFunc(ctx, obj)
+		require.Nil(t, requests)
+	})
+}
+
+func Test_listHTTPRoutesForService(t *testing.T) {
+	scheme := runtime.NewScheme()
+	scheme.AddKnownTypes(
+		schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version},
+		&gwtypes.HTTPRoute{}, &corev1.Service{},
+	)
+	_ = gatewayv1.Install(scheme)
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-ns",
+			Name:      "test-svc",
+		},
+	}
+
+	httpRoute := &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-ns",
+			Name:      "route-1",
+		},
+		Spec: gwtypes.HTTPRouteSpec{
+			Rules: []gwtypes.HTTPRouteRule{{
+				BackendRefs: []gwtypes.HTTPBackendRef{{
+					BackendRef: gwtypes.BackendRef{
+						BackendObjectReference: gwtypes.BackendObjectReference{
+							Name: gatewayv1.ObjectName("test-svc"),
+						},
+					},
+				}},
+			}},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(svc, httpRoute).
+		WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, func(obj client.Object) []string {
+			httpRoute, ok := obj.(*gwtypes.HTTPRoute)
+			if !ok {
+				return nil
+			}
+			var keys []string
+			for _, rule := range httpRoute.Spec.Rules {
+				for _, ref := range rule.BackendRefs {
+					keys = append(keys, httpRoute.Namespace+"/"+string(ref.BackendRef.Name))
+				}
+			}
+			return keys
+		}).
+		Build()
+
+	t.Run("success", func(t *testing.T) {
+		ctx := context.Background()
+		requests, err := listHTTPRoutesForService(ctx, cl, "test-ns", "test-svc")
+		require.NoError(t, err)
+		require.Len(t, requests, 1)
+		require.Equal(t, "route-1", requests[0].Name)
+		require.Equal(t, "test-ns", requests[0].Namespace)
+	})
+
+	t.Run("error branch", func(t *testing.T) {
+		requests, err := listHTTPRoutesForService(context.Background(), &fakeErrorClient{}, "test-ns", "test-svc")
+		require.Error(t, err)
+		require.Nil(t, requests)
+	})
+
+	t.Run("error branch - list error", func(t *testing.T) {
+		requests, err := listHTTPRoutesForService(context.Background(), &listErrorClient{}, "test-ns", "test-svc")
+		require.Error(t, err)
+		require.Nil(t, requests)
+	})
+}
+
+func Test_MapHTTPRouteForService(t *testing.T) {
+	scheme := runtime.NewScheme()
+	scheme.AddKnownTypes(
+		schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version},
+		&gwtypes.HTTPRoute{}, &corev1.Service{},
+	)
+	_ = gatewayv1.Install(scheme)
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-ns",
+			Name:      "test-svc",
+		},
+	}
+
+	httpRoute := &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-ns",
+			Name:      "route-1",
+		},
+		Spec: gwtypes.HTTPRouteSpec{
+			Rules: []gwtypes.HTTPRouteRule{{
+				BackendRefs: []gwtypes.HTTPBackendRef{{
+					BackendRef: gwtypes.BackendRef{
+						BackendObjectReference: gwtypes.BackendObjectReference{
+							Name: gatewayv1.ObjectName("test-svc"),
+						},
+					},
+				}},
+			}},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(svc, httpRoute).
+		WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, func(obj client.Object) []string {
+			httpRoute, ok := obj.(*gwtypes.HTTPRoute)
+			if !ok {
+				return nil
+			}
+			var keys []string
+			for _, rule := range httpRoute.Spec.Rules {
+				for _, ref := range rule.BackendRefs {
+					keys = append(keys, httpRoute.Namespace+"/"+string(ref.BackendRef.Name))
+				}
+			}
+			return keys
+		}).
+		Build()
+
+	mapFunc := MapHTTPRouteForService(cl)
+
+	t.Run("success", func(t *testing.T) {
+		ctx := context.Background()
+		obj := svc
+		requests := mapFunc(ctx, obj)
+		require.Len(t, requests, 1)
+		require.Equal(t, "route-1", requests[0].Name)
+		require.Equal(t, "test-ns", requests[0].Namespace)
+	})
+
+	t.Run("service in different namespace", func(t *testing.T) {
+		// Service in 'other-ns', HTTPRoute in 'test-ns' referencing 'test-svc'
+		otherSvc := &corev1.Service{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "other-ns",
+				Name:      "test-svc",
+			},
+		}
+		clDiffNS := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(otherSvc, httpRoute).
+			WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, func(obj client.Object) []string {
+				httpRoute, ok := obj.(*gwtypes.HTTPRoute)
+				if !ok {
+					return nil
+				}
+				var keys []string
+				for _, rule := range httpRoute.Spec.Rules {
+					for _, ref := range rule.BackendRefs {
+						keys = append(keys, httpRoute.Namespace+"/"+string(ref.BackendRef.Name))
+					}
+				}
+				return keys
+			}).
+			Build()
+		mapFuncDiffNS := MapHTTPRouteForService(clDiffNS)
+		ctx := context.Background()
+		obj := otherSvc
+		requests := mapFuncDiffNS(ctx, obj)
+		require.Len(t, requests, 0)
+	})
+
+	t.Run("wrong type", func(t *testing.T) {
+		ctx := context.Background()
+		obj := &corev1.Pod{}
+		requests := mapFunc(ctx, obj)
+		require.Nil(t, requests)
+	})
+
+	t.Run("error branch", func(t *testing.T) {
+		errorMapFunc := MapHTTPRouteForService(&fakeErrorClient{})
+		ctx := context.Background()
+		obj := svc
+		requests := errorMapFunc(ctx, obj)
+		require.Nil(t, requests)
+	})
+}
+
+func Test_MapHTTPRouteForEndpointSlice(t *testing.T) {
+	scheme := runtime.NewScheme()
+	scheme.AddKnownTypes(
+		schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version},
+		&gwtypes.HTTPRoute{}, &corev1.Service{}, &discoveryv1.EndpointSlice{},
+	)
+	_ = gatewayv1.Install(scheme)
+
+	svc := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-ns",
+			Name:      "test-svc",
+		},
+	}
+
+	httpRoute := &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-ns",
+			Name:      "route-1",
+		},
+		Spec: gwtypes.HTTPRouteSpec{
+			Rules: []gwtypes.HTTPRouteRule{{
+				BackendRefs: []gwtypes.HTTPBackendRef{{
+					BackendRef: gwtypes.BackendRef{
+						BackendObjectReference: gwtypes.BackendObjectReference{
+							Name: gatewayv1.ObjectName("test-svc"),
+						},
+					},
+				}},
+			}},
+		},
+	}
+
+	epSlice := &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "test-ns",
+			Name:      "slice-1",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "test-svc",
+			},
+		},
+	}
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(svc, httpRoute, epSlice).
+		WithIndex(&gwtypes.HTTPRoute{}, index.BackendServicesOnHTTPRouteIndex, func(obj client.Object) []string {
+			httpRoute, ok := obj.(*gwtypes.HTTPRoute)
+			if !ok {
+				return nil
+			}
+			var keys []string
+			for _, rule := range httpRoute.Spec.Rules {
+				for _, ref := range rule.BackendRefs {
+					keys = append(keys, httpRoute.Namespace+"/"+string(ref.BackendRef.Name))
+				}
+			}
+			return keys
+		}).
+		Build()
+
+	mapFunc := MapHTTPRouteForEndpointSlice(cl)
+
+	t.Run("success", func(t *testing.T) {
+		ctx := context.Background()
+		obj := epSlice
+		requests := mapFunc(ctx, obj)
+		require.Len(t, requests, 1)
+		require.Equal(t, "route-1", requests[0].Name)
+		require.Equal(t, "test-ns", requests[0].Namespace)
+	})
+
+	t.Run("wrong type", func(t *testing.T) {
+		ctx := context.Background()
+		obj := &corev1.Pod{}
+		requests := mapFunc(ctx, obj)
+		require.Nil(t, requests)
+	})
+
+	t.Run("missing service label", func(t *testing.T) {
+		ctx := context.Background()
+		badSlice := &discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "test-ns",
+				Name:      "slice-2",
+			},
+		}
+		requests := mapFunc(ctx, badSlice)
+		require.Nil(t, requests)
+	})
+
+	t.Run("service not found", func(t *testing.T) {
+		ctx := context.Background()
+		missingSvcSlice := &discoveryv1.EndpointSlice{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "test-ns",
+				Name:      "slice-3",
+				Labels: map[string]string{
+					discoveryv1.LabelServiceName: "missing-svc",
+				},
+			},
+		}
+		requests := mapFunc(ctx, missingSvcSlice)
+		require.Nil(t, requests)
+	})
+
+	t.Run("error branch", func(t *testing.T) {
+		clGetErr := &getErrorClient{}
+		errorMapFunc := MapHTTPRouteForEndpointSlice(clGetErr)
+		ctx := context.Background()
+		obj := epSlice
+		requests := errorMapFunc(ctx, obj)
+		require.Nil(t, requests)
+	})
+
+	t.Run("error on HTTPRoute list", func(t *testing.T) {
+		clListErr := &listErrorClient{}
+		mapFuncErrList := MapHTTPRouteForEndpointSlice(clListErr)
+		ctx := context.Background()
+		obj := epSlice
+		requests := mapFuncErrList(ctx, obj)
 		require.Nil(t, requests)
 	})
 }

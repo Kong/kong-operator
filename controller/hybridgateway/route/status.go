@@ -560,27 +560,19 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 					break
 				}
 
-				// List ReferenceGrants in the backend ref namespace.
-				grantList := &gwtypes.ReferenceGrantList{}
-				if err := cl.List(ctx, grantList, client.InNamespace(bRefNamespace)); err != nil {
-					return nil, fmt.Errorf("failed to list ReferenceGrants in namespace %s: %w", bRefNamespace, err)
+				// Use CheckReferenceGrant helper to check if the reference is permitted.
+				permitted, found, err := CheckReferenceGrant(ctx, cl, &bRef, route.Namespace)
+				if err != nil {
+					return nil, fmt.Errorf("failed to check ReferenceGrant for BackendRef %s/%s: %w", bRefNamespace, bRef.Name, err)
 				}
 
-				if len(grantList.Items) == 0 {
+				if !found {
 					logger.V(1).Info("No ReferenceGrants found in backend ref namespace", "namespace", bRefNamespace)
 					cond.Reason = string(gwtypes.RouteReasonRefNotPermitted)
 					cond.Status = metav1.ConditionFalse
 					cond.Message = fmt.Sprintf("No ReferenceGrants found in namespace %s for BackendRef %s/%s", bRefNamespace, bRefNamespace, bRef.Name)
 					conditionSet = true
 					break
-				}
-
-				permitted := false
-				for _, grant := range grantList.Items {
-					if IsHTTPReferenceGranted(grant.Spec, bRef, route.Namespace) {
-						permitted = true
-						break
-					}
 				}
 
 				if !permitted {
@@ -1016,4 +1008,47 @@ func IsHTTPReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwt
 	}
 
 	return false
+}
+
+// CheckReferenceGrant checks if a cross-namespace BackendRef is permitted by ReferenceGrants.
+// This function assumes the BackendRef is cross-namespace and requires the namespace to be explicitly set.
+//
+// The function performs the following checks:
+// 1. Validates that the BackendRef has a namespace set (required for cross-namespace checks)
+// 2. Lists all ReferenceGrants in the target namespace
+// 3. Checks if any ReferenceGrant permits the HTTPRoute to access the BackendRef
+//
+// Returns:
+// - permitted: true if a ReferenceGrant allows the cross-namespace access
+// - found: true if ReferenceGrants exist in the target namespace (regardless of permission)
+// - err: any error that occurred during ReferenceGrant lookup
+//
+// Note: This function does NOT check if namespaces are the same - it assumes cross-namespace
+// access and will return an error if no namespace is set on the BackendRef.
+func CheckReferenceGrant(ctx context.Context, cl client.Client, bRef *gwtypes.HTTPBackendRef, routeNamespace string) (permitted bool, found bool, err error) {
+	// Check that the backendRef has a namespace set and if not return an error.
+	if bRef.Namespace == nil || *bRef.Namespace == "" {
+		return false, false, fmt.Errorf("backendRef namespace is not set for cross-namespace reference check, name %s", bRef.Name)
+	}
+
+	// List ReferenceGrants in the backend ref namespace.
+	grantList := &gwtypes.ReferenceGrantList{}
+	if err := cl.List(ctx, grantList, client.InNamespace(string(*bRef.Namespace))); err != nil {
+		return false, false, fmt.Errorf("failed to list ReferenceGrants in namespace %s: %w", *bRef.Namespace, err)
+	}
+
+	// No ReferenceGrants found.
+	if len(grantList.Items) == 0 {
+		return false, false, nil
+	}
+
+	// Check if any ReferenceGrant permits this reference
+	for _, grant := range grantList.Items {
+		if IsHTTPReferenceGranted(grant.Spec, *bRef, routeNamespace) {
+			return true, true, nil
+		}
+	}
+
+	// ReferenceGrants exist but none permit this reference
+	return false, true, nil
 }
