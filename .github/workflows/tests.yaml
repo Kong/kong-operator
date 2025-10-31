@@ -369,14 +369,14 @@ jobs:
         GOTESTSUM_JUNITFILE: "unit-tests.xml"
 
     - name: collect test coverage
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: coverage-unit-tests
         path: coverage.unit.out
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: tests-report-unit-tests
         path: unit-tests.xml
@@ -478,14 +478,14 @@ jobs:
         make test.envtest CLUSTER_VERSION=${VERSION}
 
     - name: collect test coverage
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: ${{ matrix.directory == '.' && 'ko' || matrix.directory }}-coverage-envtest-tests
         path: ${{ matrix.directory }}/coverage.envtest.out
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: ${{ matrix.directory == '.' && 'ko' || matrix.directory }}-tests-report-envtest-tests
         path: ${{ matrix.directory }}/envtest-tests.xml
@@ -538,7 +538,7 @@ jobs:
 
     - name: upload diagnostics
       if: ${{ always() }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: diagnostics-conformance-${{ matrix.router-flavor }}
         path: /tmp/ktf-diag*
@@ -546,13 +546,13 @@ jobs:
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: tests-report-conformance-${{ matrix.router-flavor }}
         path: conformance-tests-${{ matrix.router-flavor }}.xml
 
     - name: collect conformance report
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: conformance-report-${{ matrix.router-flavor }}
         path: experimental-*-report.yaml
@@ -601,21 +601,21 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: diagnostics-integration
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: ${{ matrix.directory == '.' && 'ko' || matrix.directory }}-coverage-integration
         path: ${{ matrix.directory }}/coverage.integration.out
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: ${{ matrix.directory == '.' && 'ko' || matrix.directory }}-tests-report-integration
         path: ${{ matrix.directory }}/integration-tests.xml
@@ -653,21 +653,21 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: diagnostics-integration-bluegreen
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: coverage-integration-bluegreen
         path: coverage.integration-bluegreen.out
 
     - name: collect test report
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: tests-report-integration-bluegreen
         path: integration-tests-bluegreen.xml
@@ -710,7 +710,7 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: diagnostics-e2e
         path: /tmp/ktf-diag*
@@ -718,7 +718,7 @@ jobs:
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
       with:
         name: tests-report-e2e
         path: e2e-tests.xml

@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
 	kcfgkonnect "github.com/kong/kong-operator/api/konnect"
@@ -307,6 +308,120 @@ func deleteConsumer(
 	_, err := sdk.DeleteConsumer(ctx, consumer.Status.Konnect.ControlPlaneID, id)
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, consumer); errWrap != nil {
 		return handleDeleteError(ctx, err, consumer)
+	}
+
+	return nil
+}
+
+func adoptConsumer(
+	ctx context.Context,
+	sdk sdkops.ConsumersSDK,
+	cgSDK sdkops.ConsumerGroupSDK,
+	cl client.Client,
+	consumer *configurationv1.KongConsumer,
+	adoptOptions commonv1alpha1.AdoptOptions,
+) error {
+	cpID := consumer.GetControlPlaneID()
+	if cpID == "" {
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: consumer, Op: AdoptOp}
+	}
+	konnectID := adoptOptions.Konnect.ID
+	resp, err := sdk.GetConsumer(ctx, konnectID, cpID)
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{
+			KonnectID: konnectID,
+			Err:       err,
+		}
+	}
+
+	if resp == nil || resp.Consumer == nil {
+		return fmt.Errorf("failed to adopt %s: %w", consumer.GetTypeName(), ErrNilResponse)
+	}
+
+	uidTag, hasUIDTag := findUIDTag(resp.Consumer.Tags)
+	if hasUIDTag && extractUIDFromTag(uidTag) != string(consumer.UID) {
+		return KonnectEntityAdoptionUIDTagConflictError{
+			KonnectID:    konnectID,
+			ActualUIDTag: extractUIDFromTag(uidTag),
+		}
+	}
+
+	adoptMode := adoptOptions.Mode
+	if adoptMode == "" {
+		adoptMode = commonv1alpha1.AdoptModeOverride
+	}
+
+	switch adoptMode {
+	case commonv1alpha1.AdoptModeOverride:
+		consumerCopy := consumer.DeepCopy()
+		consumerCopy.SetKonnectID(konnectID)
+		if err = updateConsumer(ctx, sdk, cgSDK, cl, consumerCopy); err != nil {
+			return err
+		}
+	case commonv1alpha1.AdoptModeMatch:
+		if err = ensureConsumerMatch(ctx, sdk, cl, consumer, resp.Consumer, cpID, konnectID); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("failed to adopt: adopt mode %q not supported", adoptMode)
+	}
+
+	consumer.SetKonnectID(konnectID)
+
+	return nil
+}
+
+func ensureConsumerMatch(
+	ctx context.Context,
+	sdk sdkops.ConsumersSDK,
+	cl client.Client,
+	consumer *configurationv1.KongConsumer,
+	existing *sdkkonnectcomp.Consumer,
+	cpID, konnectID string,
+) error {
+	if existing == nil {
+		return fmt.Errorf("existing consumer data is nil")
+	}
+
+	if lo.FromPtrOr(existing.Username, "") != consumer.Username {
+		return KonnectEntityAdoptionNotMatchError{
+			KonnectID: konnectID,
+		}
+	}
+	if lo.FromPtrOr(existing.CustomID, "") != consumer.CustomID {
+		return KonnectEntityAdoptionNotMatchError{
+			KonnectID: konnectID,
+		}
+	}
+
+	desiredConsumerGroupsIDs, invalidConsumerGroups, err := resolveConsumerGroupsKonnectIDs(ctx, consumer, cl)
+	populateConsumerGroupRefsValidCondition(invalidConsumerGroups, consumer)
+	if err != nil {
+		return KonnectEntityAdoptionNotMatchError{
+			KonnectID: konnectID,
+		}
+	}
+
+	resp, err := sdk.ListConsumerGroupsForConsumer(ctx, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
+		ControlPlaneID: cpID,
+		ConsumerID:     konnectID,
+	})
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{
+			KonnectID: konnectID,
+			Err:       err,
+		}
+	}
+
+	respBody := lo.FromPtrOr(resp.Object, sdkkonnectops.ListConsumerGroupsForConsumerResponseBody{})
+	actualIDs := lo.Compact(lo.Map(respBody.Data, func(item sdkkonnectcomp.ConsumerGroup, _ int) string {
+		return lo.FromPtrOr(item.GetID(), "")
+	}))
+
+	if !lo.ElementsMatch(lo.Uniq(actualIDs), lo.Uniq(desiredConsumerGroupsIDs)) {
+		return KonnectEntityAdoptionNotMatchError{
+			KonnectID: konnectID,
+		}
 	}
 
 	return nil
