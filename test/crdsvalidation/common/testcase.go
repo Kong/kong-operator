@@ -138,10 +138,12 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 				// If the error message is expected, check if the error message contains the expected message and return.
 				if tc.ExpectedErrorMessage != nil {
 					if !assert.ErrorContains(c, err, *tc.ExpectedErrorMessage) {
+						t.Logf("Create error: %v; expected: %q", err, *tc.ExpectedErrorMessage)
 						return
 					}
 				} else {
 					if !assert.NoError(c, err) {
+						t.Logf("Create error: %v", err)
 						return
 					}
 				}
