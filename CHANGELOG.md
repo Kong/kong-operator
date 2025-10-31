@@ -109,6 +109,8 @@
     [#2490](https://github.com/Kong/kong-operator/pull/2490)
   - Implement adoption for `KongKey` and `KongKeySet` resources
     [#2487](https://github.com/Kong/kong-operator/pull/2487)
+  - Implement adoption support for `KongConsumer` and `KongConsumerGroup`
+    [#2493](https://github.com/Kong/kong-operator/pull/2493)
   - Implement adoption for `KongPluginBinding`.
     [#2492](https://github.com/Kong/kong-operator/pull/2492)
 - HybridGateway:
