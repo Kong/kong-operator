@@ -167,7 +167,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	gateway := helpers.GenerateGateway(gatewayNSN, gatewayClass, func(gateway *gatewayv1.Gateway) {
 		gateway.Spec.Listeners[0].Protocol = gatewayv1.HTTPSProtocolType
 		gateway.Spec.Listeners[0].Port = gatewayv1.PortNumber(443)
-		gateway.Spec.Listeners[0].TLS = &gatewayv1.GatewayTLSConfig{
+		gateway.Spec.Listeners[0].TLS = &gatewayv1.ListenerTLSConfig{
 			CertificateRefs: []gatewayv1.SecretObjectReference{
 				{
 					Name:      gatewayv1.ObjectName(secret.Name),

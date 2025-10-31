@@ -36,7 +36,7 @@ func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 	}
 
 	fmt.Printf("INFO: deploying Gateway CRDs to cluster\n")
-	if err := clusters.KustomizeDeployForCluster(ctx, cluster, consts.GatewayExperimentalCRDsKustomizeURL); err != nil {
+	if err := clusters.KustomizeDeployForCluster(ctx, cluster, consts.GatewayExperimentalCRDsKustomizeURL, "--server-side"); err != nil {
 		return err
 	}
 
