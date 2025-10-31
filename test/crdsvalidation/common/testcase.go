@@ -141,7 +141,7 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 						return
 					}
 				} else {
-					if !assert.NoError(t, err) {
+					if !assert.NoError(c, err) {
 						return
 					}
 				}
