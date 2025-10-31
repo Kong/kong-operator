@@ -77,14 +77,16 @@ JUNIT_REPORT ?= /dev/null
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
-	$(SETUP_ENVTEST) use
+	$(SETUP_ENVTEST) use -v info $(CLUSTER_VERSION)
 
 ENVTEST_TIMEOUT ?= 8m
 
 .PHONY: _test.envtest
 .ONESHELL: _test.envtest
-_test.envtest: gotestsum setup-envtest use-setup-envtest
-	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
+_test.envtest: gotestsum setup-envtest
+	$(MAKE) use-setup-envtest CLUSTER_VERSION=$(CLUSTER_VERSION)
+	KUBECONFIG=$(KUBECONFIG) \
+	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(CLUSTER_VERSION) -p path)" \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) \
 		--hide-summary output \
