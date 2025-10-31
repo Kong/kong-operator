@@ -127,7 +127,7 @@ gotestsum: mise yq ## Download gotestsum locally if necessary.
 CRD_REF_DOCS_VERSION = $(shell $(YQ) -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
 CRD_REF_DOCS = $(PROJECT_DIR)/bin/crd-ref-docs
 .PHONY: crd-ref-docs
-crd-ref-docs: ## Download crd-ref-docs locally if necessary.
+crd-ref-docs: yq ## Download crd-ref-docs locally if necessary.
 	GOBIN=$(PROJECT_DIR)/bin go install -v \
 		github.com/elastic/crd-ref-docs@v$(CRD_REF_DOCS_VERSION)
 
@@ -148,7 +148,7 @@ mockery: mise yq ## Download mockery locally if necessary.
 SETUP_ENVTEST_VERSION = $(shell $(YQ) -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
 SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
 .PHONY: setup-envtest
-setup-envtest: mise ## Download setup-envtest locally if necessary.
+setup-envtest: mise yq ## Download setup-envtest locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=setup-envtest URL=https://github.com/pmalek/mise-setup-envtest.git
 	@$(MAKE) mise-install DEP_VER=setup-envtest@$(SETUP_ENVTEST_VERSION)
 
@@ -173,15 +173,15 @@ download.govulncheck: mise yq ## Download govulncheck locally if necessary.
 	@$(MISE) plugin install --yes -q govulncheck https://github.com/wizzardich/asdf-govulncheck.git
 	@$(MISE) install -q govulncheck@$(GOVULNCHECK_VERSION)
 
-CHARTSNAP_VERSION = $(shell yq -ojson -r '.chartsnap' < $(TOOLS_VERSIONS_FILE))
+CHARTSNAP_VERSION = $(shell $(YQ) -ojson -r '.chartsnap' < $(TOOLS_VERSIONS_FILE))
 .PHONY: download.chartsnap
-download.chartsnap:
+download.chartsnap: yq
 	CHARTSNAP_VERSION=${CHARTSNAP_VERSION} ./scripts/install-chartsnap.sh
 
-KUBE_LINTER_VERSION = $(shell yq -ojson -r '.kube-linter' < $(TOOLS_VERSIONS_FILE))
+KUBE_LINTER_VERSION = $(shell $(YQ) -ojson -r '.kube-linter' < $(TOOLS_VERSIONS_FILE))
 KUBE_LINTER = $(PROJECT_DIR)/bin/installs/kube-linter/v$(KUBE_LINTER_VERSION)/bin/kube-linter
 .PHONY: kube-linter
-download.kube-linter:
+download.kube-linter: mise yq
 	@$(MAKE) mise-plugin-install DEP=kube-linter
 	@$(MAKE) mise-install DEP_VER=kube-linter@v$(KUBE_LINTER_VERSION)
 
@@ -201,7 +201,7 @@ download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if nec
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
-	$(SETUP_ENVTEST) use
+	$(SETUP_ENVTEST) use -v info $(CLUSTER_VERSION)
 
 # ------------------------------------------------------------------------------
 # Build
@@ -544,6 +544,8 @@ GOTESTSUM_FORMAT ?= standard-verbose
 INTEGRATION_TEST_TIMEOUT ?= "30m"
 CONFORMANCE_TEST_TIMEOUT ?= "20m"
 E2E_TEST_TIMEOUT ?= "20m"
+_CLUSTER_VERSION ?= $(shell $(YQ) eval -r -o=json '.[0] | sub("^v"; "")' .github/supported_k8s_node_versions.yaml)
+CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))
 
 .PHONY: test
 test: test.unit
@@ -572,9 +574,10 @@ ENVTEST_TIMEOUT ?= 5m
 PKG_LIST=./controller/...,./internal/...,./pkg/...,./modules/...
 
 .PHONY: _test.envtest
-_test.envtest: gotestsum setup-envtest use-setup-envtest
+_test.envtest: gotestsum setup-envtest
+	$(MAKE) use-setup-envtest CLUSTER_VERSION=$(CLUSTER_VERSION)
 	KUBECONFIG=$(KUBECONFIG) \
-	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
+	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(CLUSTER_VERSION) -p path)" \
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-race \
