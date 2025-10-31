@@ -821,7 +821,10 @@ func TestPluginNullInConfig(t *testing.T) {
 		}
 
 		configJSON, err := json.Marshal(datadogPlugin.Config)
-		require.NoError(t, err)
+		if err != nil {
+			t.Logf("failed to encode plugin config to JSON: %v", err)
+			return false
+		}
 		t.Logf("Configuration of datadog plugin: %s", string(configJSON))
 
 		configPrefix, ok := datadogPlugin.Config["prefix"]
