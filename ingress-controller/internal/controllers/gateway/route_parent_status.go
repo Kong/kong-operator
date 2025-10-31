@@ -82,14 +82,20 @@ func (p parentRef) GetSectionName() mo.Option[string] {
 // getParentRef serves as glue code to generically get parentRef from either
 // gatewayapi.RouteParentStatus or gatewayapi.RouteParentStatus.
 func getParentRef(parentStatus gatewayapi.RouteParentStatus) parentRef {
-	var sectionName *string
-
-	if parentStatus.ParentRef.SectionName != nil {
-		sectionName = lo.ToPtr(string(*parentStatus.ParentRef.SectionName))
+	var (
+		sectionName *string
+		namespace   *string
+		ref         = parentStatus.ParentRef
+	)
+	if ref.SectionName != nil {
+		sectionName = lo.ToPtr(string(*ref.SectionName))
+	}
+	if ref.Namespace != nil {
+		namespace = lo.ToPtr(string(*ref.Namespace))
 	}
 	return parentRef{
-		Namespace:   lo.ToPtr(string(*parentStatus.ParentRef.Namespace)),
-		Name:        string(parentStatus.ParentRef.Name),
+		Namespace:   namespace,
+		Name:        string(ref.Name),
 		SectionName: sectionName,
 	}
 }

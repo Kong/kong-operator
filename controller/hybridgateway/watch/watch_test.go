@@ -4,16 +4,16 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
-// fakeClient is a minimal stub for client.Client, not used for actual List calls here.
-type fakeClient struct{ client.Client }
-
 func TestWatches(t *testing.T) {
-	cl := &fakeClient{}
+	cl := fake.NewClientBuilder().Build()
 	tests := []struct {
 		name     string
 		obj      client.Object
@@ -23,15 +23,32 @@ func TestWatches(t *testing.T) {
 		{
 			name:    "HTTPRoute",
 			obj:     &gwtypes.HTTPRoute{},
-			wantLen: 2,
+			wantLen: 4,
 			wantType: []any{
 				&gwtypes.Gateway{},
 				&gwtypes.GatewayClass{},
+				&corev1.Service{},
+				&discoveryv1.EndpointSlice{},
 			},
 		},
 		{
-			name:    "OtherType",
+			name:    "Gateway",
 			obj:     &gwtypes.Gateway{},
+			wantLen: 0,
+		},
+		{
+			name:    "GatewayClass",
+			obj:     &gwtypes.GatewayClass{},
+			wantLen: 0,
+		},
+		{
+			name:    "Service",
+			obj:     &corev1.Service{},
+			wantLen: 0,
+		},
+		{
+			name:    "EndpointSlice",
+			obj:     &discoveryv1.EndpointSlice{},
 			wantLen: 0,
 		},
 	}

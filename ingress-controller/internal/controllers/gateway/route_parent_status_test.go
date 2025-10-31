@@ -55,6 +55,39 @@ func TestGetParentStatuses(t *testing.T) {
 					},
 				},
 			},
+			{
+				name: "nil namespace",
+				route: &gatewayapi.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      uuid.NewString(),
+						Namespace: "object-namespace",
+					},
+					Status: gatewayapi.HTTPRouteStatus{
+						RouteStatus: gatewayapi.RouteStatus{
+							Parents: []gatewayapi.RouteParentStatus{
+								{
+									ParentRef: builder.NewParentReference().
+										Group("group").
+										Kind("kind").
+										Name("name").
+										SectionName("section1").
+										Build(),
+								},
+							},
+						},
+					},
+				},
+				want: map[string]*gatewayapi.RouteParentStatus{
+					"object-namespace/name/section1": {
+						ParentRef: builder.NewParentReference().
+							Group("group").
+							Kind("kind").
+							Name("name").
+							SectionName("section1").
+							Build(),
+					},
+				},
+			},
 		}
 
 		for _, tt := range tests {
