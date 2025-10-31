@@ -149,7 +149,10 @@ jobs:
         with:
           # Specify version to get https://github.com/helm/chart-testing/pull/721
           # --wait flag to helm uninstall
-          version: "3.13.0"
+          # Can be removed when action is updated to use chart-testing >= 3.13.0
+          #
+          # renovate: datasource=github-releases depName=helm/chart-testing
+          version: "3.14.0"
 
       - name: Run chart-testing (lint)
         run: ct lint --target-branch main --check-version-increment=false
