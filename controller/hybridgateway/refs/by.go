@@ -5,12 +5,14 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/go-logr/logr"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	hybridgatewayerrors "github.com/kong/kong-operator/controller/hybridgateway/errors"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 )
@@ -33,28 +35,18 @@ func GetNamespacedRefs(ctx context.Context, cl client.Client, obj runtime.Object
 }
 
 // GetControlPlaneRefByParentRef retrieves the control plane reference for a given parent reference.
-func GetControlPlaneRefByParentRef(ctx context.Context, cl client.Client, route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference) (*commonv1alpha1.ControlPlaneRef, error) {
-	var namespace string
-	if pRef.Group == nil || *pRef.Group != "gateway.networking.k8s.io" {
-		return nil, nil
-	}
-	if pRef.Kind == nil || *pRef.Kind != "Gateway" {
-		return nil, nil
-	}
+func GetControlPlaneRefByParentRef(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute,
+	pRef gwtypes.ParentReference) (*commonv1alpha1.ControlPlaneRef, error) {
 
-	if pRef.Namespace == nil || *pRef.Namespace == "" {
-		namespace = route.Namespace
-	} else {
-		namespace = string(*pRef.Namespace)
-	}
-
-	gw := &gwtypes.Gateway{}
-	err := cl.Get(ctx, client.ObjectKey{
-		Namespace: namespace,
-		Name:      string(pRef.Name),
-	}, gw)
+	// Validate and get the supported Gateway for the ParentReference.
+	gw, err := GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, route.Namespace)
 	if err != nil {
-		return nil, fmt.Errorf("unable to get ControlPlaneRef for ParentRef %+v in route %q: %w", pRef, client.ObjectKeyFromObject(route), err)
+		return nil, err
+	}
+
+	// If the gateway is nil, it means the ParentRef is not supported (wrong group/kind).
+	if gw == nil {
+		return nil, nil
 	}
 
 	konnectNamespacedRef, err := byGateway(ctx, cl, *gw)
@@ -146,7 +138,6 @@ func byGateway(ctx context.Context, cl client.Client, gateway gwtypes.Gateway) (
 		return byKonnectExtension(ctx, cl, extensions[0])
 	default:
 		return nil, errors.New("multiple KonnectExtensions found for a single Gateway, which is not supported")
-
 	}
 }
 
@@ -165,7 +156,7 @@ func byKonnectExtension(ctx context.Context, cl client.Client, konnectExtension 
 
 	if ns != konnectExtension.Namespace {
 		// cross-namespace references are not supported
-		return nil, errors.New("cross-namespace references between KonnectExtension and ControlPlane are not supported")
+		return nil, hybridgatewayerrors.ErrKonnectExtensionCrossNamespaceReference
 	}
 
 	konnectGatewayControlPlane := konnectv1alpha2.KonnectGatewayControlPlane{}
