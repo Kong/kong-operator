@@ -52,25 +52,23 @@ func (b *KongTargetBuilder) WithLabels(route *gwtypes.HTTPRoute, parentRef *gwty
 	return b
 }
 
-// WithBackendRef sets the target specification based on the given HTTPRoute and backend reference.
-func (b *KongTargetBuilder) WithBackendRef(httpRoute *gwtypes.HTTPRoute, bRef *gwtypes.HTTPBackendRef) *KongTargetBuilder {
-	// Build the dns name of the service for the backendRef.
-	// TODO(alacuku): We need to handle the cluster domain properly for the cluster where we are running.
-	var namespace string
-	if bRef.Namespace == nil || *bRef.Namespace == "" {
-		namespace = httpRoute.Namespace
+// WithTarget sets the target address for the KongTarget.
+// It combines the host and port into a single target string in the format "host:port".
+// The host can be an IP address, hostname, or FQDN, and the port must be a valid port number.
+func (b *KongTargetBuilder) WithTarget(host string, port int) *KongTargetBuilder {
+	b.target.Spec.Target = net.JoinHostPort(host, strconv.Itoa(port))
+	return b
+}
+
+// WithWeight sets the weight for the KongTarget, which determines the proportion of traffic
+// this target will receive relative to other targets in the same upstream.
+// If weight is nil, it defaults to 100. Higher weights receive more traffic.
+func (b *KongTargetBuilder) WithWeight(weight *int32) *KongTargetBuilder {
+	// Weight is optional, default to 100 if not specified.
+	if weight != nil {
+		b.target.Spec.Weight = int(*weight)
 	} else {
-		namespace = string(*bRef.Namespace)
-	}
-
-	host := string(bRef.Name) + "." + namespace + ".svc.cluster.local"
-	port := strconv.Itoa(int(*bRef.Port))
-	target := net.JoinHostPort(host, port)
-	b.target.Spec.Target = target
-
-	// Weight is optional, default to 100 if not specified
-	if bRef.Weight != nil {
-		b.target.Spec.Weight = int(*bRef.Weight)
+		b.target.Spec.Weight = 100
 	}
 	return b
 }

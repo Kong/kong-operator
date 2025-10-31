@@ -19,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/controller/hybridgateway/target"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/vars"
@@ -34,15 +35,19 @@ type httpRouteConverter struct {
 	outputStore           []client.Object
 	expectedGVKs          []schema.GroupVersionKind
 	referenceGrantEnabled bool
+	fqdnMode              bool
+	clusterDomain         string
 }
 
 // NewHTTPRouteConverter returns a new instance of httpRouteConverter.
-func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client, referenceGrantEnabled bool) APIConverter[gwtypes.HTTPRoute] {
+func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client, referenceGrantEnabled bool, fqdnMode bool, clusterDomain string) APIConverter[gwtypes.HTTPRoute] {
 	return &httpRouteConverter{
 		Client:                cl,
 		outputStore:           []client.Object{},
 		route:                 httpRoute,
 		referenceGrantEnabled: referenceGrantEnabled,
+		fqdnMode:              fqdnMode,
+		clusterDomain:         clusterDomain,
 		expectedGVKs: []schema.GroupVersionKind{
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongRoute"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongService"},
@@ -216,23 +221,26 @@ func (c *httpRouteConverter) translate(ctx context.Context) error {
 			}
 			c.outputStore = append(c.outputStore, &upstream)
 
-			// Build the KongTarget resources.
-			for _, bRef := range rule.BackendRefs {
-				targetName := upstreamName + "." + utils.Hash32(bRef)
-				target, err := builder.NewKongTarget().
-					WithName(targetName).
-					WithNamespace(c.route.Namespace).
-					WithLabels(c.route, &pRef).
-					WithAnnotations(c.route, &pRef).
-					WithUpstreamRef(upstreamName).
-					WithBackendRef(c.route, &bRef).
-					WithOwner(c.route).Build()
-				if err != nil {
-					// TODO: decide how to handle build errors in converter
-					// For now, skip this resource
-					continue
-				}
-				c.outputStore = append(c.outputStore, &target)
+			// Build the KongTarget resources using the new rule-based approach.
+			targets, err := target.TargetsForBackendRefs(
+				ctx,
+				logr.Discard(), // TODO: pass proper logger.
+				c.Client,
+				c.route,
+				rule.BackendRefs,
+				&pRef,
+				upstreamName,
+				c.referenceGrantEnabled,
+				c.fqdnMode,
+				c.clusterDomain,
+			)
+			if err != nil {
+				// TODO: decide how to handle target creation errors in converter
+				// For now, skip this rule
+				continue
+			}
+			for _, tgt := range targets {
+				c.outputStore = append(c.outputStore, &tgt)
 			}
 
 			// Build the KongService resource.
