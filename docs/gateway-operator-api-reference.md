@@ -47,6 +47,7 @@ unique-ness, e.t.c.<br /><br />See: https://kubernetes.io/docs/reference/using-a
 | `kind` _string_ | `AIGateway`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewaySpec](#aigatewayspec)_ | Spec is the desired state of the AIGateway. |
+| `status` _[AIGatewayStatus](#aigatewaystatus)_ | Status is the observed state of the AIGateway. |
 
 
 
@@ -68,6 +69,7 @@ enriched with metadata required for in-cluster Kubernetes autoscaling.
 | `kind` _string_ | `DataPlaneMetricsExtension`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[DataPlaneMetricsExtensionSpec](#dataplanemetricsextensionspec)_ |  |
+| `status` _[DataPlaneMetricsExtensionStatus](#dataplanemetricsextensionstatus)_ |  |
 
 
 
@@ -86,6 +88,7 @@ and configured with KongPlugin CRD.
 | `kind` _string_ | `KongPluginInstallation`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongPluginInstallationSpec](#kongplugininstallationspec)_ |  |
+| `status` _[KongPluginInstallationStatus](#kongplugininstallationstatus)_ |  |
 
 
 
@@ -209,7 +212,21 @@ AIGatewaySpec defines the desired state of an AIGateway.
 _Appears in:_
 - [AIGateway](#aigateway)
 
+#### AIGatewayStatus
 
+
+AIGatewayStatus defines the observed state of AIGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `endpoints` _[AIGatewayEndpoint](#aigatewayendpoint) array_ | Endpoints are collections of the URL, credentials and metadata needed in order to access models served by the AIGateway for inference. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the AIGateway.<br /><br />Known condition types are:<br /><br />  - "Accepted"   - "Provisioning"   - "EndpointsReady" |
+
+
+_Appears in:_
+- [AIGateway](#aigateway)
 
 #### CloudHostedLargeLanguageModel
 
@@ -249,7 +266,20 @@ DataPlaneMetricsExtensionSpec defines the spec for the DataPlaneMetricsExtension
 _Appears in:_
 - [DataPlaneMetricsExtension](#dataplanemetricsextension)
 
+#### DataPlaneMetricsExtensionStatus
 
+
+DataPlaneMetricsExtensionStatus defines the status of the DataPlaneMetricsExtension.
+
+
+
+| Field | Description |
+| --- | --- |
+| `controlPlaneRef` _[NamespacedRef](#namespacedref)_ | ControlPlaneRef is a reference to the ControlPlane that this is associated with. This field is set by the operator when this extension is associated with a ControlPlane through its extensions spec. There can only be one ControlPlane associated with a given DataPlaneMetricsExtension. When this is unset it means that the association has been removed. |
+
+
+_Appears in:_
+- [DataPlaneMetricsExtension](#dataplanemetricsextension)
 
 #### EndpointNetworkAccessHint
 _Underlying type:_ `string`
@@ -286,7 +316,21 @@ KongPluginInstallationSpec provides the information necessary to retrieve and in
 _Appears in:_
 - [KongPluginInstallation](#kongplugininstallation)
 
+#### KongPluginInstallationStatus
 
+
+KongPluginInstallationStatus defines the observed state of KongPluginInstallation.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of this KongPluginInstallation. |
+| `underlyingConfigMapName` _string_ | UnderlyingConfigMapName is the name of the ConfigMap that contains the plugin's content. It is set when the plugin is successfully fetched and unpacked. |
+
+
+_Appears in:_
+- [KongPluginInstallation](#kongplugininstallation)
 
 #### LLMPrompt
 
@@ -469,6 +513,7 @@ ControlPlane is the Schema for the controlplanes API
 | `kind` _string_ | `ControlPlane`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[ControlPlaneSpec](#controlplanespec)_ |  |
+| `status` _[ControlPlaneStatus](#controlplanestatus)_ |  |
 
 
 
@@ -485,6 +530,7 @@ DataPlane is the Schema for the dataplanes API
 | `kind` _string_ | `DataPlane`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[DataPlaneSpec](#dataplanespec)_ |  |
+| `status` _[DataPlaneStatus](#dataplanestatus)_ |  |
 
 
 
@@ -501,6 +547,7 @@ GatewayConfiguration is the Schema for the gatewayconfigurations API.
 | `kind` _string_ | `GatewayConfiguration`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[GatewayConfigurationSpec](#gatewayconfigurationspec)_ |  |
+| `status` _[GatewayConfigurationStatus](#gatewayconfigurationstatus)_ |  |
 
 
 
@@ -630,7 +677,20 @@ ControlPlaneSpec defines the desired state of ControlPlane
 _Appears in:_
 - [ControlPlane](#controlplane)
 
+#### ControlPlaneStatus
 
+
+ControlPlaneStatus defines the observed state of ControlPlane
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the Gateway. |
+
+
+_Appears in:_
+- [ControlPlane](#controlplane)
 
 #### DataPlaneDeploymentOptions
 
@@ -828,7 +888,26 @@ DataPlaneSpec defines the desired state of DataPlane
 _Appears in:_
 - [DataPlane](#dataplane)
 
+#### DataPlaneStatus
 
+
+DataPlaneStatus defines the observed state of DataPlane
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the DataPlane. |
+| `service` _string_ | Service indicates the Service that exposes the DataPlane's configured routes |
+| `addresses` _[Address](#address) array_ | Addresses lists the addresses that have actually been bound to the DataPlane. |
+| `selector` _string_ | Selector contains a unique DataPlane identifier used as a deterministic label selector that is used throughout its dependent resources. This is used e.g. as a label selector for DataPlane's Services, Deployments and PodDisruptionBudgets. |
+| `readyReplicas` _integer_ | ReadyReplicas indicates how many replicas have reported to be ready. |
+| `replicas` _integer_ | Replicas indicates how many replicas have been set for the DataPlane. |
+| `rollout` _[DataPlaneRolloutStatus](#dataplanerolloutstatus)_ | RolloutStatus contains information about the rollout. It is set only if a rollout strategy was configured in the spec. |
+
+
+_Appears in:_
+- [DataPlane](#dataplane)
 
 #### DeploymentOptions
 
@@ -975,7 +1054,20 @@ GatewayConfigurationSpec defines the desired state of GatewayConfiguration
 _Appears in:_
 - [GatewayConfiguration](#gatewayconfiguration)
 
+#### GatewayConfigurationStatus
 
+
+GatewayConfigurationStatus defines the observed state of GatewayConfiguration
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the GatewayConfigurationStatus. |
+
+
+_Appears in:_
+- [GatewayConfiguration](#gatewayconfiguration)
 
 
 
@@ -1282,6 +1374,7 @@ ControlPlane is the Schema for the controlplanes API
 | `kind` _string_ | `ControlPlane`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[ControlPlaneSpec](#controlplanespec)_ | Spec is the specification of the ControlPlane resource. |
+| `status` _[ControlPlaneStatus](#controlplanestatus)_ | Status is the status of the ControlPlane resource. |
 
 
 
@@ -1298,6 +1391,7 @@ GatewayConfiguration is the Schema for the gatewayconfigurations API.
 | `kind` _string_ | `GatewayConfiguration`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[GatewayConfigurationSpec](#gatewayconfigurationspec)_ | Spec defines the desired state of GatewayConfiguration. |
+| `status` _[GatewayConfigurationStatus](#gatewayconfigurationstatus)_ | Status defines the observed state of GatewayConfiguration. |
 
 
 
@@ -1722,7 +1816,23 @@ ControlPlaneSpec defines the desired state of ControlPlane
 _Appears in:_
 - [ControlPlane](#controlplane)
 
+#### ControlPlaneStatus
 
+
+ControlPlaneStatus defines the observed state of ControlPlane
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the Gateway. |
+| `dataPlane` _[ControlPlaneDataPlaneStatus](#controlplanedataplanestatus)_ | DataPlane describes the status of the DataPlane that the ControlPlane is responsible for configuring. |
+| `featureGates` _[ControlPlaneFeatureGate](#controlplanefeaturegate) array_ | FeatureGates is a list of effective feature gates for this ControlPlane. |
+| `controllers` _[ControlPlaneController](#controlplanecontroller) array_ | Controllers is a list of enabled and disabled controllers for this ControlPlane. |
+
+
+_Appears in:_
+- [ControlPlane](#controlplane)
 
 #### ControlPlaneTranslationOptions
 
@@ -1958,7 +2068,20 @@ GatewayConfigurationSpec defines the desired state of GatewayConfiguration
 _Appears in:_
 - [GatewayConfiguration](#gatewayconfiguration)
 
+#### GatewayConfigurationStatus
 
+
+GatewayConfigurationStatus defines the observed state of GatewayConfiguration
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the GatewayConfigurationStatus. |
+
+
+_Appears in:_
+- [GatewayConfiguration](#gatewayconfiguration)
 
 
 

@@ -35,6 +35,7 @@ KongClusterPlugin is the Schema for the kongclusterplugins API.
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
 | `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
+| `status` _[KongClusterPluginStatus](#kongclusterpluginstatus)_ | Status represents the current status of the KongClusterPlugin resource. |
 
 
 
@@ -55,6 +56,7 @@ KongConsumer is the Schema for the kongconsumers API.
 | `credentials` _string array_ | Credentials are references to secrets containing a credential to be provisioned in Kong. |
 | `consumerGroups` _string array_ | ConsumerGroups are references to consumer groups (that consumer wants to be part of) provisioned in Kong. |
 | `spec` _[KongConsumerSpec](#kongconsumerspec)_ |  |
+| `status` _[KongConsumerStatus](#kongconsumerstatus)_ | Status represents the current status of the KongConsumer resource. |
 
 
 
@@ -80,6 +82,7 @@ KongPlugin is the Schema for the kongplugins API.
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
 | `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
+| `status` _[KongPluginStatus](#kongpluginstatus)_ | Status represents the current status of the KongPlugin resource. |
 
 
 
@@ -124,7 +127,20 @@ _Appears in:_
 - [ConfigPatch](#configpatch)
 - [KongPlugin](#kongplugin)
 
+#### KongClusterPluginStatus
 
+
+KongClusterPluginStatus represents the current status of the KongClusterPlugin resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongClusterPluginStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+
+
+_Appears in:_
+- [KongClusterPlugin](#kongclusterplugin)
 
 #### KongConsumerSpec
 
@@ -143,9 +159,36 @@ KongConsumerSpec defines the specification of the KongConsumer.
 _Appears in:_
 - [KongConsumer](#kongconsumer)
 
+#### KongConsumerStatus
+
+
+KongConsumerStatus represents the current status of the KongConsumer resource.
 
 
 
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongConsumer.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+
+
+_Appears in:_
+- [KongConsumer](#kongconsumer)
+
+#### KongPluginStatus
+
+
+KongPluginStatus represents the current status of the KongPlugin resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongPluginStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+
+
+_Appears in:_
+- [KongPlugin](#kongplugin)
 
 #### KongProtocol
 _Underlying type:_ `string`
@@ -281,6 +324,7 @@ KongCACertificate is the schema for CACertificate API which defines a Kong CA Ce
 | `kind` _string_ | `KongCACertificate`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCACertificateSpec](#kongcacertificatespec)_ |  |
+| `status` _[KongCACertificateStatus](#kongcacertificatestatus)_ |  |
 
 
 
@@ -297,6 +341,7 @@ KongCertificate is the schema for Certificate API which defines a Kong Certifica
 | `kind` _string_ | `KongCertificate`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCertificateSpec](#kongcertificatespec)_ |  |
+| `status` _[KongCertificateStatus](#kongcertificatestatus)_ |  |
 
 
 
@@ -313,6 +358,7 @@ KongCredentialACL is the schema for ACL credentials API which defines a ACL cred
 | `kind` _string_ | `KongCredentialACL`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCredentialACLSpec](#kongcredentialaclspec)_ | Spec contains the ACL credential specification. |
+| `status` _[KongCredentialACLStatus](#kongcredentialaclstatus)_ | Status contains the ACL credential status. |
 
 
 
@@ -329,6 +375,7 @@ KongCredentialAPIKey is the schema for API key credentials API which defines a A
 | `kind` _string_ | `KongCredentialAPIKey`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCredentialAPIKeySpec](#kongcredentialapikeyspec)_ | Spec contains the API Key credential specification. |
+| `status` _[KongCredentialAPIKeyStatus](#kongcredentialapikeystatus)_ | Status contains the API Key credential status. |
 
 
 
@@ -345,6 +392,7 @@ KongCredentialBasicAuth is the schema for BasicAuth credentials API which define
 | `kind` _string_ | `KongCredentialBasicAuth`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCredentialBasicAuthSpec](#kongcredentialbasicauthspec)_ | Spec contains the BasicAuth credential specification. |
+| `status` _[KongCredentialBasicAuthStatus](#kongcredentialbasicauthstatus)_ | Status contains the BasicAuth credential status. |
 
 
 
@@ -361,6 +409,7 @@ KongCredentialHMAC is the schema for HMAC credentials API which defines a HMAC c
 | `kind` _string_ | `KongCredentialHMAC`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCredentialHMACSpec](#kongcredentialhmacspec)_ | Spec contains the HMAC credential specification. |
+| `status` _[KongCredentialHMACStatus](#kongcredentialhmacstatus)_ | Status contains the HMAC credential status. |
 
 
 
@@ -377,6 +426,7 @@ KongCredentialJWT is the schema for JWT credentials API which defines a JWT cred
 | `kind` _string_ | `KongCredentialJWT`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCredentialJWTSpec](#kongcredentialjwtspec)_ | Spec contains the JWT credential specification. |
+| `status` _[KongCredentialJWTStatus](#kongcredentialjwtstatus)_ | Status contains the JWT credential status. |
 
 
 
@@ -393,6 +443,7 @@ KongCustomEntity defines a "custom" Kong entity that KIC cannot support the enti
 | `kind` _string_ | `KongCustomEntity`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCustomEntitySpec](#kongcustomentityspec)_ |  |
+| `status` _[KongCustomEntityStatus](#kongcustomentitystatus)_ | Status stores the reconciling status of the resource. |
 
 
 
@@ -409,6 +460,7 @@ KongDataPlaneClientCertificate is the schema for KongDataPlaneClientCertificate 
 | `kind` _string_ | `KongDataPlaneClientCertificate`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongDataPlaneClientCertificateSpec](#kongdataplaneclientcertificatespec)_ |  |
+| `status` _[KongDataPlaneClientCertificateStatus](#kongdataplaneclientcertificatestatus)_ |  |
 
 
 
@@ -425,6 +477,7 @@ KongKey is the schema for KongKey API which defines a KongKey entity.
 | `kind` _string_ | `KongKey`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongKeySpec](#kongkeyspec)_ |  |
+| `status` _[KongKeyStatus](#kongkeystatus)_ |  |
 
 
 
@@ -441,6 +494,7 @@ KongKeySet is the schema for KongKeySet API which defines a KongKeySet entity.
 | `kind` _string_ | `KongKeySet`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongKeySetSpec](#kongkeysetspec)_ |  |
+| `status` _[KongKeySetStatus](#kongkeysetstatus)_ |  |
 
 
 
@@ -458,6 +512,7 @@ KongLicense stores a Kong enterprise license to apply to managed Kong gateway in
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `rawLicenseString` _string_ | RawLicenseString is a string with the raw content of the license. |
 | `enabled` _boolean_ | Enabled is set to true to let controllers (like KIC or KGO) to reconcile it. Default value is true to apply the license by default. |
+| `status` _[KongLicenseStatus](#konglicensestatus)_ | Status is the status of the KongLicense being processed by controllers. |
 
 
 
@@ -474,6 +529,7 @@ KongPluginBinding is the schema for Plugin Bindings API which defines a Kong Plu
 | `kind` _string_ | `KongPluginBinding`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongPluginBindingSpec](#kongpluginbindingspec)_ |  |
+| `status` _[KongPluginBindingStatus](#kongpluginbindingstatus)_ |  |
 
 
 
@@ -490,6 +546,7 @@ KongRoute is the schema for Routes API which defines a Kong Route.
 | `kind` _string_ | `KongRoute`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongRouteSpec](#kongroutespec)_ |  |
+| `status` _[KongRouteStatus](#kongroutestatus)_ |  |
 
 
 
@@ -506,6 +563,7 @@ KongSNI is the schema for SNI API which defines a Kong SNI.
 | `kind` _string_ | `KongSNI`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongSNISpec](#kongsnispec)_ |  |
+| `status` _[KongSNIStatus](#kongsnistatus)_ |  |
 
 
 
@@ -522,6 +580,7 @@ KongService is the schema for Services API which defines a Kong Service.
 | `kind` _string_ | `KongService`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongServiceSpec](#kongservicespec)_ |  |
+| `status` _[KongServiceStatus](#kongservicestatus)_ |  |
 
 
 
@@ -538,6 +597,7 @@ KongTarget is the schema for Target API which defines a Kong Target attached to 
 | `kind` _string_ | `KongTarget`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongTargetSpec](#kongtargetspec)_ |  |
+| `status` _[KongTargetStatus](#kongtargetstatus)_ |  |
 
 
 
@@ -554,6 +614,7 @@ KongUpstream is the schema for Upstream API which defines a Kong Upstream.
 | `kind` _string_ | `KongUpstream`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongUpstreamSpec](#kongupstreamspec)_ |  |
+| `status` _[KongUpstreamStatus](#kongupstreamstatus)_ |  |
 
 
 
@@ -572,6 +633,7 @@ See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 | `kind` _string_ | `KongVault`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongVaultSpec](#kongvaultspec)_ |  |
+| `status` _[KongVaultStatus](#kongvaultstatus)_ |  |
 
 
 
@@ -703,7 +765,21 @@ KongCACertificateSpec contains the specification for the KongCACertificate.
 _Appears in:_
 - [KongCACertificate](#kongcacertificate)
 
+#### KongCACertificateStatus
 
+
+KongCACertificateStatus defines the observed state of KongCACertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongCACertificate](#kongcacertificate)
 
 #### KongCertificateAPISpec
 
@@ -745,7 +821,21 @@ KongCertificateSpec contains the specification for the KongCertificate.
 _Appears in:_
 - [KongCertificate](#kongcertificate)
 
+#### KongCertificateStatus
 
+
+KongCertificateStatus defines the observed state of KongCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongCertificate](#kongcertificate)
 
 #### KongCredentialACLAPISpec
 
@@ -781,7 +871,21 @@ KongCredentialACLSpec defines specification of Kong ACL.
 _Appears in:_
 - [KongCredentialACL](#kongcredentialacl)
 
+#### KongCredentialACLStatus
 
+
+KongCredentialACLStatus represents the current status of the ACL credential resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongCredentialACL](#kongcredentialacl)
 
 #### KongCredentialAPIKeyAPISpec
 
@@ -817,7 +921,21 @@ KongCredentialAPIKeySpec defines specification of a Kong API key credential.
 _Appears in:_
 - [KongCredentialAPIKey](#kongcredentialapikey)
 
+#### KongCredentialAPIKeyStatus
 
+
+KongCredentialAPIKeyStatus represents the current status of the API Key credential resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongCredentialAPIKey](#kongcredentialapikey)
 
 #### KongCredentialBasicAuthAPISpec
 
@@ -855,7 +973,21 @@ KongCredentialBasicAuthSpec defines specification of a Kong BasicAuth credential
 _Appears in:_
 - [KongCredentialBasicAuth](#kongcredentialbasicauth)
 
+#### KongCredentialBasicAuthStatus
 
+
+KongCredentialBasicAuthStatus represents the current status of the BasicAuth credential resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongCredentialBasicAuth](#kongcredentialbasicauth)
 
 #### KongCredentialHMACAPISpec
 
@@ -895,7 +1027,21 @@ KongCredentialHMACSpec defines specification of a Kong HMAC credential.
 _Appears in:_
 - [KongCredentialHMAC](#kongcredentialhmac)
 
+#### KongCredentialHMACStatus
 
+
+KongCredentialHMACStatus represents the current status of the HMAC credential resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongCredentialHMAC](#kongcredentialhmac)
 
 #### KongCredentialJWTAPISpec
 
@@ -939,7 +1085,21 @@ KongCredentialJWTSpec defines specification of a Kong JWT credential.
 _Appears in:_
 - [KongCredentialJWT](#kongcredentialjwt)
 
+#### KongCredentialJWTStatus
 
+
+KongCredentialJWTStatus represents the current status of the JWT credential resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongCredentialJWT](#kongcredentialjwt)
 
 #### KongCustomEntitySpec
 
@@ -959,7 +1119,20 @@ KongCustomEntitySpec defines the specification of the KongCustomEntity.
 _Appears in:_
 - [KongCustomEntity](#kongcustomentity)
 
+#### KongCustomEntityStatus
 
+
+KongCustomEntityStatus defines the status of the KongCustomEntity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongCustomEntityStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+
+
+_Appears in:_
+- [KongCustomEntity](#kongcustomentity)
 
 #### KongDataPlaneClientCertificateAPISpec
 
@@ -992,7 +1165,21 @@ KongDataPlaneClientCertificateSpec defines the spec for a KongDataPlaneClientCer
 _Appears in:_
 - [KongDataPlaneClientCertificate](#kongdataplaneclientcertificate)
 
+#### KongDataPlaneClientCertificateStatus
 
+
+KongDataPlaneClientCertificateStatus defines the status for a KongDataPlaneClientCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongDataPlaneClientCertificate](#kongdataplaneclientcertificate)
 
 
 
@@ -1049,7 +1236,21 @@ KongKeySetSpec defines the spec for a KongKeySet.
 _Appears in:_
 - [KongKeySet](#kongkeyset)
 
+#### KongKeySetStatus
 
+
+KongKeySetStatus defines the status for a KongKeySet.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongKeySet](#kongkeyset)
 
 #### KongKeySpec
 
@@ -1073,7 +1274,21 @@ KongKeySpec defines the spec for a KongKey.
 _Appears in:_
 - [KongKey](#kongkey)
 
+#### KongKeyStatus
 
+
+KongKeyStatus defines the status for a KongKey.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndKeySetRef](#konnectentitystatuswithcontrolplaneandkeysetref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongKey](#kongkey)
 
 #### KongLicenseControllerStatus
 
@@ -1093,7 +1308,20 @@ identified by the controllerName field.
 _Appears in:_
 - [KongLicenseStatus](#konglicensestatus)
 
+#### KongLicenseStatus
 
+
+KongLicenseStatus stores the status of the KongLicense being processesed in each controller that reconciles it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `controllers` _[KongLicenseControllerStatus](#konglicensecontrollerstatus) array_ |  |
+
+
+_Appears in:_
+- [KongLicense](#konglicense)
 
 #### KongPluginBindingScope
 _Underlying type:_ `string`
@@ -1129,7 +1357,21 @@ KongPluginBindingSpec defines specification of a KongPluginBinding.
 _Appears in:_
 - [KongPluginBinding](#kongpluginbinding)
 
+#### KongPluginBindingStatus
 
+
+KongPluginBindingStatus represents the current status of the KongBinding resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongPluginBinding](#kongpluginbinding)
 
 #### KongPluginBindingTargets
 
@@ -1215,7 +1457,21 @@ KongRouteSpec defines spec of a Kong Route.
 _Appears in:_
 - [KongRoute](#kongroute)
 
+#### KongRouteStatus
 
+
+KongRouteStatus represents the current status of the Kong Route resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndServiceRefs](#konnectentitystatuswithcontrolplaneandservicerefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongRoute](#kongroute)
 
 #### KongSNIAPISpec
 
@@ -1251,7 +1507,21 @@ KongSNISpec defines specification of a Kong SNI.
 _Appears in:_
 - [KongSNI](#kongsni)
 
+#### KongSNIStatus
 
+
+KongSNIStatus defines the status for a KongSNI.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnectentitystatuswithcontrolplaneandcertificaterefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongSNI](#kongsni)
 
 #### KongServiceAPISpec
 
@@ -1311,7 +1581,21 @@ KongServiceSpec defines specification of a Kong Service.
 _Appears in:_
 - [KongService](#kongservice)
 
+#### KongServiceStatus
 
+
+KongServiceStatus represents the current status of the Kong Service resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongService](#kongservice)
 
 #### KongTargetAPISpec
 
@@ -1349,7 +1633,21 @@ KongTargetSpec defines the spec of KongTarget.
 _Appears in:_
 - [KongTarget](#kongtarget)
 
+#### KongTargetStatus
 
+
+KongTargetStatus defines the observed state of KongTarget.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndUpstreamRefs](#konnectentitystatuswithcontrolplaneandupstreamrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongTarget](#kongtarget)
 
 #### KongUpstreamAPISpec
 
@@ -1417,7 +1715,21 @@ KongUpstreamSpec defines the spec of Kong Upstream.
 _Appears in:_
 - [KongUpstream](#kongupstream)
 
+#### KongUpstreamStatus
 
+
+KongUpstreamStatus represents the current status of the Kong Upstream resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongUpstream](#kongupstream)
 
 #### KongVaultSpec
 
@@ -1440,7 +1752,21 @@ KongVaultSpec defines specification of a custom Kong vault.
 _Appears in:_
 - [KongVault](#kongvault)
 
+#### KongVaultStatus
 
+
+KongVaultStatus represents the current status of the KongVault resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongVaultStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+
+
+_Appears in:_
+- [KongVault](#kongvault)
 
 
 
@@ -1589,6 +1915,7 @@ KongConsumerGroup is the Schema for the kongconsumergroups API.
 | `kind` _string_ | `KongConsumerGroup`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongConsumerGroupSpec](#kongconsumergroupspec)_ |  |
+| `status` _[KongConsumerGroupStatus](#kongconsumergroupstatus)_ | Status represents the current status of the KongConsumerGroup resource. |
 
 
 
@@ -1612,6 +1939,7 @@ used instead. This is to allow reusing the same KongUpstreamPolicy for multiple 
 | `kind` _string_ | `KongUpstreamPolicy`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongUpstreamPolicySpec](#kongupstreampolicyspec)_ | Spec contains the configuration of the Kong upstream. |
+| `status` _[PolicyStatus](#policystatus)_ | Status defines the current state of KongUpstreamPolicy |
 
 
 
@@ -1662,7 +1990,21 @@ KongConsumerGroupSpec defines the desired state of KongConsumerGroup.
 _Appears in:_
 - [KongConsumerGroup](#kongconsumergroup)
 
+#### KongConsumerGroupStatus
 
+
+KongConsumerGroupStatus represents the current status of the KongConsumerGroup resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongConsumerGroup.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+
+
+_Appears in:_
+- [KongConsumerGroup](#kongconsumergroup)
 
 #### KongUpstreamActiveHealthcheck
 
