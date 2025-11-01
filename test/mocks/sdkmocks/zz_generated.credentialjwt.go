@@ -204,6 +204,89 @@ func (_c *MockKongCredentialJWTSDK_DeleteJwtWithConsumer_Call) RunAndReturn(run 
 	return _c
 }
 
+// GetJwtWithConsumer provides a mock function for the type MockKongCredentialJWTSDK
+func (_mock *MockKongCredentialJWTSDK) GetJwtWithConsumer(ctx context.Context, request operations.GetJwtWithConsumerRequest, opts ...operations.Option) (*operations.GetJwtWithConsumerResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, request, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, request)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetJwtWithConsumer")
+	}
+
+	var r0 *operations.GetJwtWithConsumerResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.GetJwtWithConsumerRequest, ...operations.Option) (*operations.GetJwtWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.GetJwtWithConsumerRequest, ...operations.Option) *operations.GetJwtWithConsumerResponse); ok {
+		r0 = returnFunc(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.GetJwtWithConsumerResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, operations.GetJwtWithConsumerRequest, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockKongCredentialJWTSDK_GetJwtWithConsumer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetJwtWithConsumer'
+type MockKongCredentialJWTSDK_GetJwtWithConsumer_Call struct {
+	*mock.Call
+}
+
+// GetJwtWithConsumer is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request operations.GetJwtWithConsumerRequest
+//   - opts ...operations.Option
+func (_e *MockKongCredentialJWTSDK_Expecter) GetJwtWithConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialJWTSDK_GetJwtWithConsumer_Call {
+	return &MockKongCredentialJWTSDK_GetJwtWithConsumer_Call{Call: _e.mock.On("GetJwtWithConsumer",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockKongCredentialJWTSDK_GetJwtWithConsumer_Call) Run(run func(ctx context.Context, request operations.GetJwtWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialJWTSDK_GetJwtWithConsumer_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.GetJwtWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.GetJwtWithConsumerRequest)
+		}
+		var arg2 []operations.Option
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockKongCredentialJWTSDK_GetJwtWithConsumer_Call) Return(getJwtWithConsumerResponse *operations.GetJwtWithConsumerResponse, err error) *MockKongCredentialJWTSDK_GetJwtWithConsumer_Call {
+	_c.Call.Return(getJwtWithConsumerResponse, err)
+	return _c
+}
+
+func (_c *MockKongCredentialJWTSDK_GetJwtWithConsumer_Call) RunAndReturn(run func(ctx context.Context, request operations.GetJwtWithConsumerRequest, opts ...operations.Option) (*operations.GetJwtWithConsumerResponse, error)) *MockKongCredentialJWTSDK_GetJwtWithConsumer_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListJwt provides a mock function for the type MockKongCredentialJWTSDK
 func (_mock *MockKongCredentialJWTSDK) ListJwt(ctx context.Context, request operations.ListJwtRequest, opts ...operations.Option) (*operations.ListJwtResponse, error) {
 	var tmpRet mock.Arguments
@@ -366,89 +449,6 @@ func (_c *MockKongCredentialJWTSDK_UpsertJwtWithConsumer_Call) Return(upsertJwtW
 }
 
 func (_c *MockKongCredentialJWTSDK_UpsertJwtWithConsumer_Call) RunAndReturn(run func(ctx context.Context, request operations.UpsertJwtWithConsumerRequest, opts ...operations.Option) (*operations.UpsertJwtWithConsumerResponse, error)) *MockKongCredentialJWTSDK_UpsertJwtWithConsumer_Call {
-	_c.Call.Return(run)
-	return _c
-}
-
-// GetJwtWithConsumer provides a mock function for the type MockKongCredentialJWTSDK
-func (_mock *MockKongCredentialJWTSDK) GetJwtWithConsumer(ctx context.Context, request operations.GetJwtWithConsumerRequest, opts ...operations.Option) (*operations.GetJwtWithConsumerResponse, error) {
-	var tmpRet mock.Arguments
-	if len(opts) > 0 {
-		tmpRet = _mock.Called(ctx, request, opts)
-	} else {
-		tmpRet = _mock.Called(ctx, request)
-	}
-	ret := tmpRet
-
-	if len(ret) == 0 {
-		panic("no return value specified for GetJwtWithConsumer")
-	}
-
-	var r0 *operations.GetJwtWithConsumerResponse
-	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.GetJwtWithConsumerRequest, ...operations.Option) (*operations.GetJwtWithConsumerResponse, error)); ok {
-		return returnFunc(ctx, request, opts...)
-	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.GetJwtWithConsumerRequest, ...operations.Option) *operations.GetJwtWithConsumerResponse); ok {
-		r0 = returnFunc(ctx, request, opts...)
-	} else {
-		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(*operations.GetJwtWithConsumerResponse)
-		}
-	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, operations.GetJwtWithConsumerRequest, ...operations.Option) error); ok {
-		r1 = returnFunc(ctx, request, opts...)
-	} else {
-		r1 = ret.Error(1)
-	}
-	return r0, r1
-}
-
-// MockKongCredentialJWTSDK_GetJwtWithConsumer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetJwtWithConsumer'
-type MockKongCredentialJWTSDK_GetJwtWithConsumer_Call struct {
-	*mock.Call
-}
-
-// GetJwtWithConsumer is a helper method to define mock.On call
-//   - ctx context.Context
-//   - request operations.GetJwtWithConsumerRequest
-//   - opts ...operations.Option
-func (_e *MockKongCredentialJWTSDK_Expecter) GetJwtWithConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialJWTSDK_GetJwtWithConsumer_Call {
-	return &MockKongCredentialJWTSDK_GetJwtWithConsumer_Call{Call: _e.mock.On("GetJwtWithConsumer",
-		append([]interface{}{ctx, request}, opts...)...)}
-}
-
-func (_c *MockKongCredentialJWTSDK_GetJwtWithConsumer_Call) Run(run func(ctx context.Context, request operations.GetJwtWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialJWTSDK_GetJwtWithConsumer_Call {
-	_c.Call.Run(func(args mock.Arguments) {
-		var arg0 context.Context
-		if args[0] != nil {
-			arg0 = args[0].(context.Context)
-		}
-		var arg1 operations.GetJwtWithConsumerRequest
-		if args[1] != nil {
-			arg1 = args[1].(operations.GetJwtWithConsumerRequest)
-		}
-		var arg2 []operations.Option
-		var variadicArgs []operations.Option
-		if len(args) > 2 {
-			variadicArgs = args[2].([]operations.Option)
-		}
-		arg2 = variadicArgs
-		run(
-			arg0,
-			arg1,
-			arg2...,
-		)
-	})
-	return _c
-}
-
-func (_c *MockKongCredentialJWTSDK_GetJwtWithConsumer_Call) Return(getJwtWithConsumerResponse *operations.GetJwtWithConsumerResponse, err error) *MockKongCredentialJWTSDK_GetJwtWithConsumer_Call {
-	_c.Call.Return(getJwtWithConsumerResponse, err)
-	return _c
-}
-
-func (_c *MockKongCredentialJWTSDK_GetJwtWithConsumer_Call) RunAndReturn(run func(ctx context.Context, request operations.GetJwtWithConsumerRequest, opts ...operations.Option) (*operations.GetJwtWithConsumerResponse, error)) *MockKongCredentialJWTSDK_GetJwtWithConsumer_Call {
 	_c.Call.Return(run)
 	return _c
 }
