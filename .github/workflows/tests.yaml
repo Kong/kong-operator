@@ -234,7 +234,7 @@ jobs:
         ) >> "${GITHUB_OUTPUT}"
 
     - name: Create k8s KinD Cluster
-      uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
+      uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab # v1.13.0
       with:
         # NOTE: default is 0.29.0 https://github.com/helm/kind-action/blob/a1b0e391336a6ee6713a0583f8c6240d70863de3/kind.sh#L21
         # so bump this manually
@@ -290,7 +290,7 @@ jobs:
         ) >> "${GITHUB_OUTPUT}"
 
     - name: Create k8s KinD Cluster
-      uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
+      uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab # v1.13.0
       with:
         cluster_name: ${{ env.CLUSTER_NAME }}
         # NOTE: default is 0.29.0 https://github.com/helm/kind-action/blob/a1b0e391336a6ee6713a0583f8c6240d70863de3/kind.sh#L21
@@ -417,7 +417,7 @@ jobs:
     
     # TODO: https://github.com/Kong/kong-operator/issues/2386
     - name: Create k8s KinD Cluster
-      uses: helm/kind-action@a1b0e391336a6ee6713a0583f8c6240d70863de3 # v1.12.0
+      uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab # v1.13.0
       with:
         # NOTE: default is 0.26.0 https://github.com/helm/kind-action/blob/a1b0e391336a6ee6713a0583f8c6240d70863de3/kind.sh#L21
         # so bump this manually
