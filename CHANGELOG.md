@@ -113,6 +113,8 @@
     [#2493](https://github.com/Kong/kong-operator/pull/2493)
   - Implement adoption for `KongPluginBinding`.
     [#2492](https://github.com/Kong/kong-operator/pull/2492)
+  - Implement adoption support for `KongCredentialAPIKey`, `KongCredentialBasicAuth`, `KongCredentialACL`, `KongCredentialJWT`, and `KongCredentialHMAC`
+    [#2494](https://github.com/Kong/kong-operator/pull/2494)
 - HybridGateway:
   - Added controller-runtime watches for Gateway and GatewayClass resources to the hybridgateway controller.
   - HTTPRoutes are now reconciled when related Gateway or GatewayClass resources change.
