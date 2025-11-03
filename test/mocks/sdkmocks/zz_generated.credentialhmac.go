@@ -204,6 +204,89 @@ func (_c *MockKongCredentialHMACSDK_DeleteHmacAuthWithConsumer_Call) RunAndRetur
 	return _c
 }
 
+// GetHmacAuthWithConsumer provides a mock function for the type MockKongCredentialHMACSDK
+func (_mock *MockKongCredentialHMACSDK) GetHmacAuthWithConsumer(ctx context.Context, request operations.GetHmacAuthWithConsumerRequest, opts ...operations.Option) (*operations.GetHmacAuthWithConsumerResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, request, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, request)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetHmacAuthWithConsumer")
+	}
+
+	var r0 *operations.GetHmacAuthWithConsumerResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.GetHmacAuthWithConsumerRequest, ...operations.Option) (*operations.GetHmacAuthWithConsumerResponse, error)); ok {
+		return returnFunc(ctx, request, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.GetHmacAuthWithConsumerRequest, ...operations.Option) *operations.GetHmacAuthWithConsumerResponse); ok {
+		r0 = returnFunc(ctx, request, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.GetHmacAuthWithConsumerResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, operations.GetHmacAuthWithConsumerRequest, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, request, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockKongCredentialHMACSDK_GetHmacAuthWithConsumer_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetHmacAuthWithConsumer'
+type MockKongCredentialHMACSDK_GetHmacAuthWithConsumer_Call struct {
+	*mock.Call
+}
+
+// GetHmacAuthWithConsumer is a helper method to define mock.On call
+//   - ctx context.Context
+//   - request operations.GetHmacAuthWithConsumerRequest
+//   - opts ...operations.Option
+func (_e *MockKongCredentialHMACSDK_Expecter) GetHmacAuthWithConsumer(ctx interface{}, request interface{}, opts ...interface{}) *MockKongCredentialHMACSDK_GetHmacAuthWithConsumer_Call {
+	return &MockKongCredentialHMACSDK_GetHmacAuthWithConsumer_Call{Call: _e.mock.On("GetHmacAuthWithConsumer",
+		append([]interface{}{ctx, request}, opts...)...)}
+}
+
+func (_c *MockKongCredentialHMACSDK_GetHmacAuthWithConsumer_Call) Run(run func(ctx context.Context, request operations.GetHmacAuthWithConsumerRequest, opts ...operations.Option)) *MockKongCredentialHMACSDK_GetHmacAuthWithConsumer_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 operations.GetHmacAuthWithConsumerRequest
+		if args[1] != nil {
+			arg1 = args[1].(operations.GetHmacAuthWithConsumerRequest)
+		}
+		var arg2 []operations.Option
+		var variadicArgs []operations.Option
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
+		}
+		arg2 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockKongCredentialHMACSDK_GetHmacAuthWithConsumer_Call) Return(getHmacAuthWithConsumerResponse *operations.GetHmacAuthWithConsumerResponse, err error) *MockKongCredentialHMACSDK_GetHmacAuthWithConsumer_Call {
+	_c.Call.Return(getHmacAuthWithConsumerResponse, err)
+	return _c
+}
+
+func (_c *MockKongCredentialHMACSDK_GetHmacAuthWithConsumer_Call) RunAndReturn(run func(ctx context.Context, request operations.GetHmacAuthWithConsumerRequest, opts ...operations.Option) (*operations.GetHmacAuthWithConsumerResponse, error)) *MockKongCredentialHMACSDK_GetHmacAuthWithConsumer_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListHmacAuth provides a mock function for the type MockKongCredentialHMACSDK
 func (_mock *MockKongCredentialHMACSDK) ListHmacAuth(ctx context.Context, request operations.ListHmacAuthRequest, opts ...operations.Option) (*operations.ListHmacAuthResponse, error) {
 	var tmpRet mock.Arguments
