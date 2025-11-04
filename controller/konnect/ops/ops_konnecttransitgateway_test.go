@@ -19,6 +19,35 @@ import (
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
+func TestTransitGatewaySpecToInput_AzureDNSConfig(t *testing.T) {
+	spec := konnectv1alpha1.KonnectTransitGatewayAPISpec{
+		Type: konnectv1alpha1.TransitGatewayTypeAzureTransitGateway,
+		AzureTransitGateway: &konnectv1alpha1.AzureTransitGateway{
+			Name: "az-tg",
+			DNSConfig: []konnectv1alpha1.TransitGatewayDNSConfig{
+				{RemoteDNSServerIPAddresses: []string{"10.1.0.1", "10.1.0.2"}, DomainProxyList: []string{"internal.example.com", "corp.local"}},
+			},
+			AttachmentConfig: konnectv1alpha1.AzureVNETPeeringAttachmentConfig{
+				TenantID:          "tenant-1",
+				SubscriptionID:    "sub-1",
+				ResourceGroupName: "rg-1",
+				VnetName:          "vnet-1",
+			},
+		},
+	}
+
+	req := transitGatewaySpecToTransitGatewayInput(spec)
+
+	assert.NotNil(t, req.AzureTransitGateway)
+	az := req.AzureTransitGateway
+	if assert.Len(t, az.DNSConfig, 1) {
+		cfg := az.DNSConfig[0]
+		assert.ElementsMatch(t, []string{"10.1.0.1", "10.1.0.2"}, cfg.RemoteDNSServerIPAddresses)
+		assert.ElementsMatch(t, []string{"internal.example.com", "corp.local"}, cfg.DomainProxyList)
+	}
+	assert.Equal(t, sdkkonnectcomp.CreateTransitGatewayRequestTypeAzureTransitGateway, req.Type)
+}
+
 func TestAdoptMatchTransitGatewaySuccess(t *testing.T) {
 	t.Parallel()
 

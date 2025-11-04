@@ -142,7 +142,7 @@ func getKonnectTransitGatewayMatchingSpecName(
 	return getMatchingEntryFromListResponseData(listTransitGatewayResponseDataToEntityWithIDSlice(resp.ListTransitGatewaysResponse.Data), tg)
 }
 
-var trasitGatewayTypeToSDKTransitGatewayType = map[konnectv1alpha1.TransitGatewayType]sdkkonnectcomp.CreateTransitGatewayRequestType{
+var transitGatewayTypeToSDKTransitGatewayType = map[konnectv1alpha1.TransitGatewayType]sdkkonnectcomp.CreateTransitGatewayRequestType{
 	konnectv1alpha1.TransitGatewayTypeAWSTransitGateway:   sdkkonnectcomp.CreateTransitGatewayRequestTypeAWSTransitGateway,
 	konnectv1alpha1.TransitGatewayTypeAzureTransitGateway: sdkkonnectcomp.CreateTransitGatewayRequestTypeAzureTransitGateway,
 }
@@ -150,7 +150,7 @@ var trasitGatewayTypeToSDKTransitGatewayType = map[konnectv1alpha1.TransitGatewa
 func transitGatewaySpecToTransitGatewayInput(
 	spec konnectv1alpha1.KonnectTransitGatewayAPISpec,
 ) sdkkonnectcomp.CreateTransitGatewayRequest {
-	typ := trasitGatewayTypeToSDKTransitGatewayType[spec.Type]
+	typ := transitGatewayTypeToSDKTransitGatewayType[spec.Type]
 
 	req := sdkkonnectcomp.CreateTransitGatewayRequest{
 		Type: typ,
@@ -176,7 +176,7 @@ func transitGatewaySpecToTransitGatewayInput(
 	case konnectv1alpha1.TransitGatewayTypeAzureTransitGateway:
 		req.AzureTransitGateway = &sdkkonnectcomp.AzureTransitGateway{
 			Name: spec.AzureTransitGateway.Name,
-			DNSConfig: lo.Map(spec.AWSTransitGateway.DNSConfig, func(dnsConf konnectv1alpha1.TransitGatewayDNSConfig, _ int) sdkkonnectcomp.TransitGatewayDNSConfig {
+			DNSConfig: lo.Map(spec.AzureTransitGateway.DNSConfig, func(dnsConf konnectv1alpha1.TransitGatewayDNSConfig, _ int) sdkkonnectcomp.TransitGatewayDNSConfig {
 				return sdkkonnectcomp.TransitGatewayDNSConfig{
 					RemoteDNSServerIPAddresses: dnsConf.RemoteDNSServerIPAddresses,
 					DomainProxyList:            dnsConf.DomainProxyList,
