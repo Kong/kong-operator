@@ -21,8 +21,8 @@ const (
 )
 
 // Translate performs the full translation process using the provided APIConverter.
-func Translate[t converter.RootObject](conv converter.APIConverter[t], ctx context.Context) error {
-	return conv.Translate()
+func Translate[t converter.RootObject](conv converter.APIConverter[t], ctx context.Context, logger logr.Logger) error {
+	return conv.Translate(ctx, logger)
 }
 
 // EnforceState ensures that the desired state of Kubernetes resources, as provided by the APIConverter,
