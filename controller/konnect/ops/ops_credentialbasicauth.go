@@ -213,6 +213,7 @@ func credentialBasicAuthMatch(
 		return false
 	}
 
-	return konnectBasicAuth.Username == cred.Spec.Username &&
-		konnectBasicAuth.Password == cred.Spec.Password
+	// TODO(pmalek): temporary until https://github.com/Kong/kong-operator/issues/2535
+	return konnectBasicAuth.Username == cred.Spec.Username // &&
+	// konnectBasicAuth.Password == cred.Spec.Password
 }
