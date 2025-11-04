@@ -1,0 +1,65 @@
+# This example shows how to use cert-manager to provision a Konnect Data Plane client certificate.
+# Prerequisites:
+# - cert-manager installed in the cluster (https://cert-manager.io/docs/installation/)
+# - Update the <YOUR_CP_ID> placeholders below to your Konnect Control Plane ID
+#
+# 1) Ensure there is an Issuer/ClusterIssuer available (example below is commented out
+#    to keep this sample can be applied without cert-manager CRDs pre-installed).
+#    For production, replace with an issuer backed by a CA trusted by Konnect.
+#
+# apiVersion: cert-manager.io/v1
+# kind: ClusterIssuer
+# metadata:
+#   name: konnect-dp-selfsigned
+# spec:
+#   selfSigned: {}
+#
+# 2) Create a DataPlane that references the cert-manager issuer. The kong-operator will:
+#    - create a cert-manager Certificate owned by this DataPlane
+#    - mount the issued Secret into the proxy container
+#    - set KONG_CLUSTER_CERT and KONG_CLUSTER_CERT_KEY automatically
+---
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: konnect-cert-manager-example
+spec:
+  network:
+    konnectCertificate:
+      issuer:
+        # Namespace omitted -> use ClusterIssuer with this name
+        name: konnect-dp-selfsigned
+  deployment:
+    replicas: 3
+    podTemplateSpec:
+      spec:
+        containers:
+          - name: proxy
+            # renovate: datasource=docker versioning=docker
+            image: kong:3.9
+            env:
+              - name: KONG_ROLE
+                value: data_plane
+              - name: KONG_DATABASE
+                value: "off"
+              - name: KONG_CLUSTER_MTLS
+                value: pki
+              - name: KONG_CLUSTER_CONTROL_PLANE
+                value: <YOUR_CP_ID>.cp.konghq.tech:443
+              - name: KONG_CLUSTER_SERVER_NAME
+                value: <YOUR_CP_ID>.cp.konghq.tech
+              - name: KONG_CLUSTER_TELEMETRY_ENDPOINT
+                value: <YOUR_CP_ID>.tp.konghq.tech:443
+              - name: KONG_CLUSTER_TELEMETRY_SERVER_NAME
+                value: <YOUR_CP_ID>.tp.konghq.tech
+              - name: KONG_LUA_SSL_TRUSTED_CERTIFICATE
+                value: system
+              - name: KONG_KONNECT_MODE
+                value: "on"
+              - name: KONG_VITALS
+                value: "off"
+              - name: KONG_CLUSTER_DP_LABELS
+                value: "type:k8s"
+            readinessProbe:
+              initialDelaySeconds: 1
+              periodSeconds: 1
