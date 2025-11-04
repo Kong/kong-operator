@@ -23,7 +23,7 @@ import (
 	"github.com/kong/kong-operator/test/helpers/deploy"
 )
 
-func TestKonnectEntityAdoption(t *testing.T) {
+func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	// A cleaner is created underneath anyway, and a whole namespace is deleted eventually.
 	// We can't use a cleaner to delete objects because it handles deletes in FIFO order and that won't work in this
 	// case: KonnectAPIAuthConfiguration shouldn't be deleted before any other object as that is required for others to
@@ -82,8 +82,9 @@ func TestKonnectEntityAdoption(t *testing.T) {
 	serviceOutput := resp.GetService()
 	require.NotNil(t, serviceOutput, "Should get a non-nil service in response")
 	require.NotNil(t, serviceOutput.ID, "Should get a non-nil ID in the service")
+	serviceKonnectID := *serviceOutput.ID
 
-	t.Logf("Create a KongService to adopt the service %s in Konnect", *serviceOutput.ID)
+	t.Logf("Create a KongService to adopt the service %s in Konnect", serviceKonnectID)
 	kongService := deploy.KongService(t, GetCtx(), clientNamespaced,
 		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 		func(obj client.Object) {
@@ -93,7 +94,7 @@ func TestKonnectEntityAdoption(t *testing.T) {
 				From: commonv1alpha1.AdoptSourceKonnect,
 				Mode: commonv1alpha1.AdoptModeOverride,
 				Konnect: &commonv1alpha1.AdoptKonnectOptions{
-					ID: *serviceOutput.ID,
+					ID: serviceKonnectID,
 				},
 			}
 			svc.Spec.Name = lo.ToPtr("test-adoption")
@@ -106,8 +107,8 @@ func TestKonnectEntityAdoption(t *testing.T) {
 		require.NoError(t, err)
 
 		assertKonnectEntityProgrammed(collect, kongService)
-		assert.Equalf(collect, *serviceOutput.ID, kongService.GetKonnectID(),
-			"KongService should set Konnect ID %s as the adopted service in status", *serviceOutput.ID,
+		assert.Equalf(collect, serviceKonnectID, kongService.GetKonnectID(),
+			"KongService should set Konnect ID %s as the adopted service in status", serviceKonnectID,
 		)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick,
 		"Did not see KongService set Konnect ID and Programmed condition to True")
@@ -120,7 +121,7 @@ func TestKonnectEntityAdoption(t *testing.T) {
 
 	t.Log("Verifying that the service in Konnect is overridden by the KongService when KongService updated")
 	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		resp, err := sdk.GetServicesSDK().GetService(GetCtx(), *serviceOutput.ID, cp.GetKonnectID())
+		resp, err := sdk.GetServicesSDK().GetService(GetCtx(), serviceKonnectID, cp.GetKonnectID())
 		require.NoError(collect, err, "Should get service from Konnect successfully")
 
 		serviceOutput := resp.GetService()
@@ -135,4 +136,65 @@ func TestKonnectEntityAdoption(t *testing.T) {
 		assertKonnectEntityProgrammed(t, kongService)
 	}, testutils.ObjectUpdateTimeout, time.Second,
 		"Did not see service in Konnect updated")
+
+	t.Logf("Creating a route attached to service %s by SDK for adoption", serviceKonnectID)
+	routeResp, err := sdk.GetRoutesSDK().CreateRoute(GetCtx(), cpKonnectID, sdkkonnectcomp.Route{
+		Type: sdkkonnectcomp.RouteTypeRouteJSON,
+		RouteJSON: &sdkkonnectcomp.RouteJSON{
+			Name: lo.ToPtr("route-test-adopt"),
+			Paths: []string{
+				"/example",
+			},
+			Service: &sdkkonnectcomp.RouteJSONService{
+				ID: lo.ToPtr(serviceKonnectID),
+			},
+		},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, routeResp, "Should get a non-nil response for creating route")
+	require.NotNil(t, routeResp.Route, "Should get a non-nil route in response of creating the route")
+	require.NotNil(t, routeResp.Route.RouteJSON, "Should get a non-nil JSON formatted route")
+	require.NotNil(t, routeResp.Route.RouteJSON.ID, "Should get a non-nil route ID")
+	routeKonnectID := *routeResp.Route.RouteJSON.ID
+
+	t.Logf("Adopting the route %s in override mode", routeKonnectID)
+	kongRoute := deploy.KongRoute(t, GetCtx(), clientNamespaced,
+		deploy.WithNamespacedKongServiceRef(kongService),
+		func(obj client.Object) {
+			kr, ok := obj.(*configurationv1alpha1.KongRoute)
+			require.True(t, ok)
+			kr.Spec.Name = lo.ToPtr("route-test-adopt")
+			kr.Spec.Paths = []string{"/example-2"}
+			kr.Spec.Adopt = &commonv1alpha1.AdoptOptions{
+				From: commonv1alpha1.AdoptSourceKonnect,
+				Mode: commonv1alpha1.AdoptModeOverride,
+				Konnect: &commonv1alpha1.AdoptKonnectOptions{
+					ID: routeKonnectID,
+				},
+			}
+		})
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kongRoute.DeepCopy()))
+
+	t.Logf("Waiting for the KongRoute to be programmed and set Konnect ID")
+	require.EventuallyWithT(t, func(collect *assert.CollectT) {
+		err = clientNamespaced.Get(GetCtx(), client.ObjectKeyFromObject(kongRoute), kongRoute)
+		require.NoError(t, err)
+
+		assertKonnectEntityProgrammed(collect, kongRoute)
+		assert.Equalf(collect, routeKonnectID, kongRoute.GetKonnectID(),
+			"KongRoute should set Konnect ID %s as the adopted route in status", routeKonnectID,
+		)
+	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick,
+		"Did not see KongRoute set Konnect ID and Programmed condition to True")
+
+	// When the KongRoute is marked Programmed, the route in Konnect should be updated
+	// to match the spec of the KongRoute.
+	t.Log("Verifying that the route in Konnect is modified as the spec of the KongRoute")
+	getRouteResp, err := sdk.GetRoutesSDK().GetRoute(GetCtx(), routeKonnectID, cpKonnectID)
+	require.NoError(t, err)
+	require.NotNil(t, getRouteResp, "Should get a non-nil response for creating route")
+	require.NotNil(t, getRouteResp.Route, "Should get a non-nil route in response of creating the route")
+	require.NotNil(t, getRouteResp.Route.RouteJSON, "Should get a non-nil JSON formatted route")
+	require.True(t, lo.ElementsMatch([]string{"/example-2"}, getRouteResp.Route.RouteJSON.Paths),
+		"Should have the same paths as in the spec of the KongRoute, actual:", getRouteResp.Route.RouteJSON.Paths)
 }
