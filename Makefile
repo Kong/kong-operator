@@ -861,6 +861,7 @@ _run:
 		-enable-controller-konnect-hybrid \
 		-enable-controller-controlplaneextensions \
 		-enable-conversion-webhook=false \
+		-enable-validating-webhook=false \
 		-zap-time-encoding iso8601 \
 		-zap-log-level 2 \
 		-zap-devel true \
