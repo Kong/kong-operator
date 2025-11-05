@@ -23,6 +23,11 @@ import (
 	"github.com/kong/kong-operator/test/helpers/deploy"
 )
 
+const (
+	// checkKonnectAPITick is the interval to check entity status in Konnect by Konnect APIs.
+	checkKonnectAPITick = time.Second
+)
+
 func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	// A cleaner is created underneath anyway, and a whole namespace is deleted eventually.
 	// We can't use a cleaner to delete objects because it handles deletes in FIFO order and that won't work in this
@@ -134,8 +139,8 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 		err = clientNamespaced.Get(GetCtx(), client.ObjectKeyFromObject(kongService), kongService)
 		require.NoError(t, err)
 		assertKonnectEntityProgrammed(t, kongService)
-	}, testutils.ObjectUpdateTimeout, time.Second,
-		"Did not see service in Konnect updated")
+	}, testutils.ObjectUpdateTimeout, checkKonnectAPITick,
+		"Did not see service in Konnect updated to match spec of KongService")
 
 	t.Logf("Creating a route attached to service %s by SDK for adoption", serviceKonnectID)
 	routeResp, err := sdk.GetRoutesSDK().CreateRoute(GetCtx(), cpKonnectID, sdkkonnectcomp.Route{
@@ -190,11 +195,17 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	// When the KongRoute is marked Programmed, the route in Konnect should be updated
 	// to match the spec of the KongRoute.
 	t.Log("Verifying that the route in Konnect is modified as the spec of the KongRoute")
-	getRouteResp, err := sdk.GetRoutesSDK().GetRoute(GetCtx(), routeKonnectID, cpKonnectID)
-	require.NoError(t, err)
-	require.NotNil(t, getRouteResp, "Should get a non-nil response for creating route")
-	require.NotNil(t, getRouteResp.Route, "Should get a non-nil route in response of creating the route")
-	require.NotNil(t, getRouteResp.Route.RouteJSON, "Should get a non-nil JSON formatted route")
-	require.True(t, lo.ElementsMatch([]string{"/example-2"}, getRouteResp.Route.RouteJSON.Paths),
-		"Should have the same paths as in the spec of the KongRoute, actual:", getRouteResp.Route.RouteJSON.Paths)
+	require.EventuallyWithT(t, func(collect *assert.CollectT) {
+		getRouteResp, err := sdk.GetRoutesSDK().GetRoute(GetCtx(), routeKonnectID, cpKonnectID)
+		assert.NoError(collect, err)
+		assert.NotNil(collect, getRouteResp, "Should get a non-nil response for creating route")
+		if getRouteResp.Route != nil && getRouteResp.Route.RouteJSON != nil {
+			assert.True(collect, lo.ElementsMatch([]string{"/example-2"}, getRouteResp.Route.RouteJSON.Paths),
+				"Should have the same paths as in the spec of the KongRoute, actual:", getRouteResp.Route.RouteJSON.Paths)
+		} else {
+			assert.Fail(collect, "route in response is empty")
+		}
+	}, testutils.ObjectUpdateTimeout, checkKonnectAPITick,
+		"Did not see route in Konnect to be updated to match the spec of KongRoute")
+
 }
