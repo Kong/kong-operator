@@ -210,5 +210,62 @@ func CalculateEndpointWeights(backends []BackendRef) map[string]uint32 {
 		results[f.id] = unsimplifiedWeights[i] / overallGCD
 	}
 
+	// Step 6: Apply Kong weight limit enforcement (max weight = 65535).
+	results = enforceKongWeightLimits(results)
+
 	return results
+}
+
+// enforceKongWeightLimits applies post-processing scaling to ensure all weights are within Kong's limit of 65535.
+// If any weight exceeds this limit, all weights are proportionally scaled down while preserving:
+// 1. The relative weight ratios between backends.
+// 2. Non-zero participation (weights of 0 stay 0, others become at least 1).
+//
+// Algorithm:
+// 1. Find the maximum weight among all calculated weights.
+// 2. If max_weight > 65535, calculate scale factor: 65535 / max_weight.
+// 3. Apply scaling: multiply all weights by scale factor and truncate to integer.
+// 4. Preserve participation: set any resulting non-zero weight that became 0 to 1.
+func enforceKongWeightLimits(weights map[string]uint32) map[string]uint32 {
+	const maxKongWeight = 65535
+
+	if len(weights) == 0 {
+		return weights
+	}
+
+	// Step 1: Find the maximum weight.
+	var maxWeight uint32 = 0
+	for _, weight := range weights {
+		if weight > maxWeight {
+			maxWeight = weight
+		}
+	}
+
+	// Step 2: If all weights are within the limit, no scaling needed.
+	if maxWeight <= maxKongWeight {
+		return weights
+	}
+
+	// Step 3: Calculate scale factor and apply scaling.
+	scaleFactor := float64(maxKongWeight) / float64(maxWeight)
+	scaledWeights := make(map[string]uint32)
+
+	for name, originalWeight := range weights {
+		if originalWeight == 0 {
+			// Preserve zero weights.
+			scaledWeights[name] = 0
+		} else {
+			// Scale the weight down.
+			scaledWeight := uint32(float64(originalWeight) * scaleFactor)
+
+			// Step 4: Preserve participation - ensure non-zero weights don't become 0.
+			if scaledWeight == 0 {
+				scaledWeight = 1
+			}
+
+			scaledWeights[name] = scaledWeight
+		}
+	}
+
+	return scaledWeights
 }

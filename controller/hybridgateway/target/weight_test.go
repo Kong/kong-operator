@@ -507,3 +507,219 @@ func TestCalculateEndpointWeights_EdgeCaseCombinations(t *testing.T) {
 		assert.Greater(t, largeWeight, smallWeight*100, "large-weight should be significantly larger than small")
 	})
 }
+
+func TestEnforceKongWeightLimits(t *testing.T) {
+	tests := []struct {
+		name     string
+		weights  map[string]uint32
+		expected map[string]uint32
+	}{
+		{
+			name:     "empty weights",
+			weights:  map[string]uint32{},
+			expected: map[string]uint32{},
+		},
+		{
+			name: "all weights within limit",
+			weights: map[string]uint32{
+				"service-a": 1000,
+				"service-b": 2000,
+				"service-c": 3000,
+			},
+			expected: map[string]uint32{
+				"service-a": 1000,
+				"service-b": 2000,
+				"service-c": 3000,
+			},
+		},
+		{
+			name: "weights exactly at limit",
+			weights: map[string]uint32{
+				"service-a": 65535,
+				"service-b": 32767,
+			},
+			expected: map[string]uint32{
+				"service-a": 65535,
+				"service-b": 32767,
+			},
+		},
+		{
+			name: "single weight exceeds limit",
+			weights: map[string]uint32{
+				"service-a": 90000,
+				"service-b": 1,
+			},
+			expected: map[string]uint32{
+				"service-a": 65535,
+				// Scaled but preserved at minimum.
+				"service-b": 1,
+			},
+		},
+		{
+			name: "multiple weights exceed limit",
+			weights: map[string]uint32{
+				"service-a": 100000,
+				"service-b": 200000,
+				"service-c": 50000,
+			},
+			expected: map[string]uint32{
+				// 100000 * (65535/200000) = 32767.5 -> 32767.
+				"service-a": 32767,
+				// 200000 * (65535/200000) = 65535.
+				"service-b": 65535,
+				// 50000 * (65535/200000) = 16383.75 -> 16383.
+				"service-c": 16383,
+			},
+		},
+		{
+			name: "preserve zero weights",
+			weights: map[string]uint32{
+				"service-a": 90000,
+				"service-b": 0,
+				"service-c": 30000,
+			},
+			expected: map[string]uint32{
+				// 90000 * (65535/90000) = 65535.
+				"service-a": 65535,
+				// Zero preserved.
+				"service-b": 0,
+				// 30000 * (65535/90000) = 21845.
+				"service-c": 21845,
+			},
+		},
+		{
+			name: "ensure participation preservation",
+			weights: map[string]uint32{
+				"service-a": 100000,
+				"service-b": 1,
+			},
+			expected: map[string]uint32{
+				"service-a": 65535,
+				// Very small weight preserved as 1.
+				"service-b": 1,
+			},
+		},
+		{
+			name: "high ratio: 30000:1 with multiple pods",
+			weights: map[string]uint32{
+				// Would be too large for Kong.
+				"backend-a": 90000,
+				"backend-b": 3,
+			},
+			expected: map[string]uint32{
+				// Scaled down to max allowed.
+				"backend-a": 65535,
+				// Scaled proportionally: 3 * (65535/90000) = 2.18 -> 2.
+				"backend-b": 2,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := enforceKongWeightLimits(tt.weights)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestCalculateEndpointWeights_WithKongLimits(t *testing.T) {
+	tests := []struct {
+		name            string
+		backends        []BackendRef
+		expectedLimitOK bool
+		minRatioFactor  uint32
+		description     string
+	}{
+		{
+			name: "high weight ratio requires scaling",
+			backends: []BackendRef{
+				{Name: "backend-a", Weight: 30000, Endpoints: 1},
+				{Name: "backend-b", Weight: 1, Endpoints: 3},
+			},
+			expectedLimitOK: true,
+			minRatioFactor:  1000,
+			description:     "High weight, single pod vs low weight, multiple pods",
+		},
+		{
+			name: "extreme large weights",
+			backends: []BackendRef{
+				{Name: "large", Weight: 1000000, Endpoints: 1},
+				{Name: "small", Weight: 1, Endpoints: 100},
+			},
+			expectedLimitOK: true,
+			minRatioFactor:  100,
+			description:     "Very large weights that require significant scaling",
+		},
+		{
+			name: "30000:1 ratio with multiple pods",
+			backends: []BackendRef{
+				{Name: "high-weight", Weight: 30000, Endpoints: 1},
+				{Name: "low-weight", Weight: 1, Endpoints: 3},
+			},
+			expectedLimitOK: true,
+			minRatioFactor:  10000,
+			description:     "Scenario with very high weight ratio between backends",
+		},
+		{
+			name: "moderate weights within limits",
+			backends: []BackendRef{
+				{Name: "service-a", Weight: 5000, Endpoints: 2},
+				{Name: "service-b", Weight: 1000, Endpoints: 5},
+			},
+			expectedLimitOK: true,
+			minRatioFactor:  2,
+			description:     "Moderate weights that should not require scaling",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := CalculateEndpointWeights(tt.backends)
+
+			// Verify that no weight exceeds Kong's limit.
+			for name, weight := range result {
+				assert.LessOrEqual(t, weight, uint32(65535), "Weight for %s exceeds Kong limit", name)
+				if weight > 0 {
+					assert.GreaterOrEqual(t, weight, uint32(1), "Non-zero weight for %s should be at least 1", name)
+				}
+			}
+
+			// Verify all non-zero weight backends have positive weights (participation preserved).
+			for _, backend := range tt.backends {
+				if backend.Weight > 0 && backend.Endpoints > 0 {
+					assert.Greater(t, result[backend.Name], uint32(0), "Backend %s should have non-zero weight", backend.Name)
+				}
+			}
+
+			// Verify relative ratios are maintained for backends with significant weight differences.
+			if len(tt.backends) >= 2 && tt.minRatioFactor > 1 {
+				// Find the backend with highest and lowest expected weights.
+				var highBackend, lowBackend BackendRef
+				maxRatio := float64(0)
+				for i, b1 := range tt.backends {
+					for j, b2 := range tt.backends {
+						if i != j && b1.Endpoints > 0 && b2.Endpoints > 0 {
+							ratio1 := float64(b1.Weight) / float64(b1.Endpoints)
+							ratio2 := float64(b2.Weight) / float64(b2.Endpoints)
+							if ratio1 > ratio2 && ratio1/ratio2 > maxRatio {
+								maxRatio = ratio1 / ratio2
+								highBackend = b1
+								lowBackend = b2
+							}
+						}
+					}
+				}
+
+				if maxRatio > 1 {
+					highWeight := result[highBackend.Name]
+					lowWeight := result[lowBackend.Name]
+					if lowWeight > 0 {
+						assert.Greater(t, highWeight, lowWeight*tt.minRatioFactor,
+							"Backend %s should be significantly larger than %s", highBackend.Name, lowBackend.Name)
+					}
+				}
+			}
+		})
+	}
+}
