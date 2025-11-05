@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -105,7 +106,7 @@ func TestHostnamesIntersection(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
 			converter := newHTTPRouteConverter(tt.route, fakeClient, true, false, "")
-			err := converter.Translate()
+			err := converter.Translate(t.Context(), logr.Discard())
 			require.NoError(t, err)
 
 			output := converter.GetOutputStore(context.TODO())
@@ -289,7 +290,7 @@ func newKonnectGatewayStandardObjects(gateway *gwtypes.Gateway) []client.Object 
 				Name: "test-gateway-class",
 			},
 			Spec: gwtypes.GatewayClassSpec{
-				ControllerName: "konghq.com/gateway-controller",
+				ControllerName: "konghq.com/gateway-operator",
 				ParametersRef: &gwtypes.ParametersReference{
 					Group:     "gateway-operator.konghq.com",
 					Kind:      gwtypes.Kind("GatewayConfiguration"),

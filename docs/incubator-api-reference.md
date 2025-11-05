@@ -27,6 +27,7 @@ matching the ingressClass of the Kong Ingress Controller (`kong` by default) to 
 | `kind` _string_ | `KongServiceFacade`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongServiceFacadeSpec](#kongservicefacadespec)_ |  |
+| `status` _[KongServiceFacadeStatus](#kongservicefacadestatus)_ |  |
 
 
 
@@ -65,5 +66,18 @@ KongServiceFacadeSpec defines the desired state of KongServiceFacade.
 _Appears in:_
 - [KongServiceFacade](#kongservicefacade)
 
+#### KongServiceFacadeStatus
 
+
+KongServiceFacadeStatus defines the observed state of KongServiceFacade.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongServiceFacade.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+
+
+_Appears in:_
+- [KongServiceFacade](#kongservicefacade)
 

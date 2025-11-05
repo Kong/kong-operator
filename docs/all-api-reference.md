@@ -41,6 +41,7 @@ KongClusterPlugin is the Schema for the kongclusterplugins API.
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
 | `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
+| `status` _[KongClusterPluginStatus](#kongclusterpluginstatus)_ | Status represents the current status of the KongClusterPlugin resource. |
 
 
 
@@ -61,6 +62,7 @@ KongConsumer is the Schema for the kongconsumers API.
 | `credentials` _string array_ | Credentials are references to secrets containing a credential to be provisioned in Kong. |
 | `consumerGroups` _string array_ | ConsumerGroups are references to consumer groups (that consumer wants to be part of) provisioned in Kong. |
 | `spec` _[KongConsumerSpec](#kongconsumerspec)_ |  |
+| `status` _[KongConsumerStatus](#kongconsumerstatus)_ | Status represents the current status of the KongConsumer resource. |
 
 
 
@@ -86,6 +88,7 @@ KongPlugin is the Schema for the kongplugins API.
 | `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
 | `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
+| `status` _[KongPluginStatus](#kongpluginstatus)_ | Status represents the current status of the KongPlugin resource. |
 
 
 
@@ -130,7 +133,20 @@ _Appears in:_
 - [ConfigPatch](#configpatch)
 - [KongPlugin](#kongplugin)
 
+#### KongClusterPluginStatus
 
+
+KongClusterPluginStatus represents the current status of the KongClusterPlugin resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongClusterPluginStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+
+
+_Appears in:_
+- [KongClusterPlugin](#kongclusterplugin)
 
 #### KongConsumerSpec
 
@@ -149,9 +165,36 @@ KongConsumerSpec defines the specification of the KongConsumer.
 _Appears in:_
 - [KongConsumer](#kongconsumer)
 
+#### KongConsumerStatus
+
+
+KongConsumerStatus represents the current status of the KongConsumer resource.
 
 
 
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongConsumer.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+
+
+_Appears in:_
+- [KongConsumer](#kongconsumer)
+
+#### KongPluginStatus
+
+
+KongPluginStatus represents the current status of the KongPlugin resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongPluginStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+
+
+_Appears in:_
+- [KongPlugin](#kongplugin)
 
 #### KongProtocol
 _Underlying type:_ `string`
@@ -287,6 +330,7 @@ KongCACertificate is the schema for CACertificate API which defines a Kong CA Ce
 | `kind` _string_ | `KongCACertificate`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCACertificateSpec](#kongcacertificatespec)_ |  |
+| `status` _[KongCACertificateStatus](#kongcacertificatestatus)_ |  |
 
 
 
@@ -303,6 +347,7 @@ KongCertificate is the schema for Certificate API which defines a Kong Certifica
 | `kind` _string_ | `KongCertificate`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCertificateSpec](#kongcertificatespec)_ |  |
+| `status` _[KongCertificateStatus](#kongcertificatestatus)_ |  |
 
 
 
@@ -319,6 +364,7 @@ KongCredentialACL is the schema for ACL credentials API which defines a ACL cred
 | `kind` _string_ | `KongCredentialACL`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCredentialACLSpec](#kongcredentialaclspec)_ | Spec contains the ACL credential specification. |
+| `status` _[KongCredentialACLStatus](#kongcredentialaclstatus)_ | Status contains the ACL credential status. |
 
 
 
@@ -335,6 +381,7 @@ KongCredentialAPIKey is the schema for API key credentials API which defines a A
 | `kind` _string_ | `KongCredentialAPIKey`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCredentialAPIKeySpec](#kongcredentialapikeyspec)_ | Spec contains the API Key credential specification. |
+| `status` _[KongCredentialAPIKeyStatus](#kongcredentialapikeystatus)_ | Status contains the API Key credential status. |
 
 
 
@@ -351,6 +398,7 @@ KongCredentialBasicAuth is the schema for BasicAuth credentials API which define
 | `kind` _string_ | `KongCredentialBasicAuth`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCredentialBasicAuthSpec](#kongcredentialbasicauthspec)_ | Spec contains the BasicAuth credential specification. |
+| `status` _[KongCredentialBasicAuthStatus](#kongcredentialbasicauthstatus)_ | Status contains the BasicAuth credential status. |
 
 
 
@@ -367,6 +415,7 @@ KongCredentialHMAC is the schema for HMAC credentials API which defines a HMAC c
 | `kind` _string_ | `KongCredentialHMAC`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCredentialHMACSpec](#kongcredentialhmacspec)_ | Spec contains the HMAC credential specification. |
+| `status` _[KongCredentialHMACStatus](#kongcredentialhmacstatus)_ | Status contains the HMAC credential status. |
 
 
 
@@ -383,6 +432,7 @@ KongCredentialJWT is the schema for JWT credentials API which defines a JWT cred
 | `kind` _string_ | `KongCredentialJWT`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCredentialJWTSpec](#kongcredentialjwtspec)_ | Spec contains the JWT credential specification. |
+| `status` _[KongCredentialJWTStatus](#kongcredentialjwtstatus)_ | Status contains the JWT credential status. |
 
 
 
@@ -399,6 +449,7 @@ KongCustomEntity defines a "custom" Kong entity that KIC cannot support the enti
 | `kind` _string_ | `KongCustomEntity`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongCustomEntitySpec](#kongcustomentityspec)_ |  |
+| `status` _[KongCustomEntityStatus](#kongcustomentitystatus)_ | Status stores the reconciling status of the resource. |
 
 
 
@@ -415,6 +466,7 @@ KongDataPlaneClientCertificate is the schema for KongDataPlaneClientCertificate 
 | `kind` _string_ | `KongDataPlaneClientCertificate`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongDataPlaneClientCertificateSpec](#kongdataplaneclientcertificatespec)_ |  |
+| `status` _[KongDataPlaneClientCertificateStatus](#kongdataplaneclientcertificatestatus)_ |  |
 
 
 
@@ -431,6 +483,7 @@ KongKey is the schema for KongKey API which defines a KongKey entity.
 | `kind` _string_ | `KongKey`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongKeySpec](#kongkeyspec)_ |  |
+| `status` _[KongKeyStatus](#kongkeystatus)_ |  |
 
 
 
@@ -447,6 +500,7 @@ KongKeySet is the schema for KongKeySet API which defines a KongKeySet entity.
 | `kind` _string_ | `KongKeySet`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongKeySetSpec](#kongkeysetspec)_ |  |
+| `status` _[KongKeySetStatus](#kongkeysetstatus)_ |  |
 
 
 
@@ -464,6 +518,7 @@ KongLicense stores a Kong enterprise license to apply to managed Kong gateway in
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `rawLicenseString` _string_ | RawLicenseString is a string with the raw content of the license. |
 | `enabled` _boolean_ | Enabled is set to true to let controllers (like KIC or KGO) to reconcile it. Default value is true to apply the license by default. |
+| `status` _[KongLicenseStatus](#konglicensestatus)_ | Status is the status of the KongLicense being processed by controllers. |
 
 
 
@@ -480,6 +535,7 @@ KongPluginBinding is the schema for Plugin Bindings API which defines a Kong Plu
 | `kind` _string_ | `KongPluginBinding`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongPluginBindingSpec](#kongpluginbindingspec)_ |  |
+| `status` _[KongPluginBindingStatus](#kongpluginbindingstatus)_ |  |
 
 
 
@@ -496,6 +552,7 @@ KongRoute is the schema for Routes API which defines a Kong Route.
 | `kind` _string_ | `KongRoute`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongRouteSpec](#kongroutespec)_ |  |
+| `status` _[KongRouteStatus](#kongroutestatus)_ |  |
 
 
 
@@ -512,6 +569,7 @@ KongSNI is the schema for SNI API which defines a Kong SNI.
 | `kind` _string_ | `KongSNI`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongSNISpec](#kongsnispec)_ |  |
+| `status` _[KongSNIStatus](#kongsnistatus)_ |  |
 
 
 
@@ -528,6 +586,7 @@ KongService is the schema for Services API which defines a Kong Service.
 | `kind` _string_ | `KongService`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongServiceSpec](#kongservicespec)_ |  |
+| `status` _[KongServiceStatus](#kongservicestatus)_ |  |
 
 
 
@@ -544,6 +603,7 @@ KongTarget is the schema for Target API which defines a Kong Target attached to 
 | `kind` _string_ | `KongTarget`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongTargetSpec](#kongtargetspec)_ |  |
+| `status` _[KongTargetStatus](#kongtargetstatus)_ |  |
 
 
 
@@ -560,6 +620,7 @@ KongUpstream is the schema for Upstream API which defines a Kong Upstream.
 | `kind` _string_ | `KongUpstream`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongUpstreamSpec](#kongupstreamspec)_ |  |
+| `status` _[KongUpstreamStatus](#kongupstreamstatus)_ |  |
 
 
 
@@ -578,6 +639,7 @@ See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 | `kind` _string_ | `KongVault`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongVaultSpec](#kongvaultspec)_ |  |
+| `status` _[KongVaultStatus](#kongvaultstatus)_ |  |
 
 
 
@@ -709,7 +771,21 @@ KongCACertificateSpec contains the specification for the KongCACertificate.
 _Appears in:_
 - [KongCACertificate](#kongcacertificate)
 
+#### KongCACertificateStatus
 
+
+KongCACertificateStatus defines the observed state of KongCACertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongCACertificate](#kongcacertificate)
 
 #### KongCertificateAPISpec
 
@@ -751,7 +827,21 @@ KongCertificateSpec contains the specification for the KongCertificate.
 _Appears in:_
 - [KongCertificate](#kongcertificate)
 
+#### KongCertificateStatus
 
+
+KongCertificateStatus defines the observed state of KongCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongCertificate](#kongcertificate)
 
 #### KongCredentialACLAPISpec
 
@@ -787,7 +877,21 @@ KongCredentialACLSpec defines specification of Kong ACL.
 _Appears in:_
 - [KongCredentialACL](#kongcredentialacl)
 
+#### KongCredentialACLStatus
 
+
+KongCredentialACLStatus represents the current status of the ACL credential resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongCredentialACL](#kongcredentialacl)
 
 #### KongCredentialAPIKeyAPISpec
 
@@ -823,7 +927,21 @@ KongCredentialAPIKeySpec defines specification of a Kong API key credential.
 _Appears in:_
 - [KongCredentialAPIKey](#kongcredentialapikey)
 
+#### KongCredentialAPIKeyStatus
 
+
+KongCredentialAPIKeyStatus represents the current status of the API Key credential resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongCredentialAPIKey](#kongcredentialapikey)
 
 #### KongCredentialBasicAuthAPISpec
 
@@ -861,7 +979,21 @@ KongCredentialBasicAuthSpec defines specification of a Kong BasicAuth credential
 _Appears in:_
 - [KongCredentialBasicAuth](#kongcredentialbasicauth)
 
+#### KongCredentialBasicAuthStatus
 
+
+KongCredentialBasicAuthStatus represents the current status of the BasicAuth credential resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongCredentialBasicAuth](#kongcredentialbasicauth)
 
 #### KongCredentialHMACAPISpec
 
@@ -901,7 +1033,21 @@ KongCredentialHMACSpec defines specification of a Kong HMAC credential.
 _Appears in:_
 - [KongCredentialHMAC](#kongcredentialhmac)
 
+#### KongCredentialHMACStatus
 
+
+KongCredentialHMACStatus represents the current status of the HMAC credential resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongCredentialHMAC](#kongcredentialhmac)
 
 #### KongCredentialJWTAPISpec
 
@@ -945,7 +1091,21 @@ KongCredentialJWTSpec defines specification of a Kong JWT credential.
 _Appears in:_
 - [KongCredentialJWT](#kongcredentialjwt)
 
+#### KongCredentialJWTStatus
 
+
+KongCredentialJWTStatus represents the current status of the JWT credential resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongCredentialJWT](#kongcredentialjwt)
 
 #### KongCustomEntitySpec
 
@@ -965,7 +1125,20 @@ KongCustomEntitySpec defines the specification of the KongCustomEntity.
 _Appears in:_
 - [KongCustomEntity](#kongcustomentity)
 
+#### KongCustomEntityStatus
 
+
+KongCustomEntityStatus defines the status of the KongCustomEntity.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongCustomEntityStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+
+
+_Appears in:_
+- [KongCustomEntity](#kongcustomentity)
 
 #### KongDataPlaneClientCertificateAPISpec
 
@@ -998,7 +1171,21 @@ KongDataPlaneClientCertificateSpec defines the spec for a KongDataPlaneClientCer
 _Appears in:_
 - [KongDataPlaneClientCertificate](#kongdataplaneclientcertificate)
 
+#### KongDataPlaneClientCertificateStatus
 
+
+KongDataPlaneClientCertificateStatus defines the status for a KongDataPlaneClientCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongDataPlaneClientCertificate](#kongdataplaneclientcertificate)
 
 
 
@@ -1055,7 +1242,21 @@ KongKeySetSpec defines the spec for a KongKeySet.
 _Appears in:_
 - [KongKeySet](#kongkeyset)
 
+#### KongKeySetStatus
 
+
+KongKeySetStatus defines the status for a KongKeySet.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongKeySet](#kongkeyset)
 
 #### KongKeySpec
 
@@ -1079,7 +1280,21 @@ KongKeySpec defines the spec for a KongKey.
 _Appears in:_
 - [KongKey](#kongkey)
 
+#### KongKeyStatus
 
+
+KongKeyStatus defines the status for a KongKey.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndKeySetRef](#konnectentitystatuswithcontrolplaneandkeysetref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongKey](#kongkey)
 
 #### KongLicenseControllerStatus
 
@@ -1099,7 +1314,20 @@ identified by the controllerName field.
 _Appears in:_
 - [KongLicenseStatus](#konglicensestatus)
 
+#### KongLicenseStatus
 
+
+KongLicenseStatus stores the status of the KongLicense being processesed in each controller that reconciles it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `controllers` _[KongLicenseControllerStatus](#konglicensecontrollerstatus) array_ |  |
+
+
+_Appears in:_
+- [KongLicense](#konglicense)
 
 #### KongPluginBindingScope
 _Underlying type:_ `string`
@@ -1135,7 +1363,21 @@ KongPluginBindingSpec defines specification of a KongPluginBinding.
 _Appears in:_
 - [KongPluginBinding](#kongpluginbinding)
 
+#### KongPluginBindingStatus
 
+
+KongPluginBindingStatus represents the current status of the KongBinding resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongPluginBinding](#kongpluginbinding)
 
 #### KongPluginBindingTargets
 
@@ -1221,7 +1463,21 @@ KongRouteSpec defines spec of a Kong Route.
 _Appears in:_
 - [KongRoute](#kongroute)
 
+#### KongRouteStatus
 
+
+KongRouteStatus represents the current status of the Kong Route resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndServiceRefs](#konnectentitystatuswithcontrolplaneandservicerefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongRoute](#kongroute)
 
 #### KongSNIAPISpec
 
@@ -1257,7 +1513,21 @@ KongSNISpec defines specification of a Kong SNI.
 _Appears in:_
 - [KongSNI](#kongsni)
 
+#### KongSNIStatus
 
+
+KongSNIStatus defines the status for a KongSNI.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnectentitystatuswithcontrolplaneandcertificaterefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongSNI](#kongsni)
 
 #### KongServiceAPISpec
 
@@ -1317,7 +1587,21 @@ KongServiceSpec defines specification of a Kong Service.
 _Appears in:_
 - [KongService](#kongservice)
 
+#### KongServiceStatus
 
+
+KongServiceStatus represents the current status of the Kong Service resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongService](#kongservice)
 
 #### KongTargetAPISpec
 
@@ -1355,7 +1639,21 @@ KongTargetSpec defines the spec of KongTarget.
 _Appears in:_
 - [KongTarget](#kongtarget)
 
+#### KongTargetStatus
 
+
+KongTargetStatus defines the observed state of KongTarget.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndUpstreamRefs](#konnectentitystatuswithcontrolplaneandupstreamrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongTarget](#kongtarget)
 
 #### KongUpstreamAPISpec
 
@@ -1423,7 +1721,21 @@ KongUpstreamSpec defines the spec of Kong Upstream.
 _Appears in:_
 - [KongUpstream](#kongupstream)
 
+#### KongUpstreamStatus
 
+
+KongUpstreamStatus represents the current status of the Kong Upstream resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+
+
+_Appears in:_
+- [KongUpstream](#kongupstream)
 
 #### KongVaultSpec
 
@@ -1446,7 +1758,21 @@ KongVaultSpec defines specification of a custom Kong vault.
 _Appears in:_
 - [KongVault](#kongvault)
 
+#### KongVaultStatus
 
+
+KongVaultStatus represents the current status of the KongVault resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongVaultStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+
+
+_Appears in:_
+- [KongVault](#kongvault)
 
 
 
@@ -1595,6 +1921,7 @@ KongConsumerGroup is the Schema for the kongconsumergroups API.
 | `kind` _string_ | `KongConsumerGroup`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongConsumerGroupSpec](#kongconsumergroupspec)_ |  |
+| `status` _[KongConsumerGroupStatus](#kongconsumergroupstatus)_ | Status represents the current status of the KongConsumerGroup resource. |
 
 
 
@@ -1618,6 +1945,7 @@ used instead. This is to allow reusing the same KongUpstreamPolicy for multiple 
 | `kind` _string_ | `KongUpstreamPolicy`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongUpstreamPolicySpec](#kongupstreampolicyspec)_ | Spec contains the configuration of the Kong upstream. |
+| `status` _[PolicyStatus](#policystatus)_ | Status defines the current state of KongUpstreamPolicy |
 
 
 
@@ -1668,7 +1996,21 @@ KongConsumerGroupSpec defines the desired state of KongConsumerGroup.
 _Appears in:_
 - [KongConsumerGroup](#kongconsumergroup)
 
+#### KongConsumerGroupStatus
 
+
+KongConsumerGroupStatus represents the current status of the KongConsumerGroup resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongConsumerGroup.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+
+
+_Appears in:_
+- [KongConsumerGroup](#kongconsumergroup)
 
 #### KongUpstreamActiveHealthcheck
 
@@ -1867,6 +2209,7 @@ unique-ness, e.t.c.<br /><br />See: https://kubernetes.io/docs/reference/using-a
 | `kind` _string_ | `AIGateway`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewaySpec](#aigatewayspec)_ | Spec is the desired state of the AIGateway. |
+| `status` _[AIGatewayStatus](#aigatewaystatus)_ | Status is the observed state of the AIGateway. |
 
 
 
@@ -1888,6 +2231,7 @@ enriched with metadata required for in-cluster Kubernetes autoscaling.
 | `kind` _string_ | `DataPlaneMetricsExtension`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[DataPlaneMetricsExtensionSpec](#dataplanemetricsextensionspec)_ |  |
+| `status` _[DataPlaneMetricsExtensionStatus](#dataplanemetricsextensionstatus)_ |  |
 
 
 
@@ -1906,6 +2250,7 @@ and configured with KongPlugin CRD.
 | `kind` _string_ | `KongPluginInstallation`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongPluginInstallationSpec](#kongplugininstallationspec)_ |  |
+| `status` _[KongPluginInstallationStatus](#kongplugininstallationstatus)_ |  |
 
 
 
@@ -2029,7 +2374,21 @@ AIGatewaySpec defines the desired state of an AIGateway.
 _Appears in:_
 - [AIGateway](#aigateway)
 
+#### AIGatewayStatus
 
+
+AIGatewayStatus defines the observed state of AIGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `endpoints` _[AIGatewayEndpoint](#aigatewayendpoint) array_ | Endpoints are collections of the URL, credentials and metadata needed in order to access models served by the AIGateway for inference. |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the AIGateway.<br /><br />Known condition types are:<br /><br />  - "Accepted"   - "Provisioning"   - "EndpointsReady" |
+
+
+_Appears in:_
+- [AIGateway](#aigateway)
 
 #### CloudHostedLargeLanguageModel
 
@@ -2069,7 +2428,20 @@ DataPlaneMetricsExtensionSpec defines the spec for the DataPlaneMetricsExtension
 _Appears in:_
 - [DataPlaneMetricsExtension](#dataplanemetricsextension)
 
+#### DataPlaneMetricsExtensionStatus
 
+
+DataPlaneMetricsExtensionStatus defines the status of the DataPlaneMetricsExtension.
+
+
+
+| Field | Description |
+| --- | --- |
+| `controlPlaneRef` _[NamespacedRef](#namespacedref)_ | ControlPlaneRef is a reference to the ControlPlane that this is associated with. This field is set by the operator when this extension is associated with a ControlPlane through its extensions spec. There can only be one ControlPlane associated with a given DataPlaneMetricsExtension. When this is unset it means that the association has been removed. |
+
+
+_Appears in:_
+- [DataPlaneMetricsExtension](#dataplanemetricsextension)
 
 #### EndpointNetworkAccessHint
 _Underlying type:_ `string`
@@ -2106,7 +2478,21 @@ KongPluginInstallationSpec provides the information necessary to retrieve and in
 _Appears in:_
 - [KongPluginInstallation](#kongplugininstallation)
 
+#### KongPluginInstallationStatus
 
+
+KongPluginInstallationStatus defines the observed state of KongPluginInstallation.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of this KongPluginInstallation. |
+| `underlyingConfigMapName` _string_ | UnderlyingConfigMapName is the name of the ConfigMap that contains the plugin's content. It is set when the plugin is successfully fetched and unpacked. |
+
+
+_Appears in:_
+- [KongPluginInstallation](#kongplugininstallation)
 
 #### LLMPrompt
 
@@ -2289,6 +2675,7 @@ ControlPlane is the Schema for the controlplanes API
 | `kind` _string_ | `ControlPlane`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[ControlPlaneSpec](#controlplanespec)_ |  |
+| `status` _[ControlPlaneStatus](#controlplanestatus)_ |  |
 
 
 
@@ -2305,6 +2692,7 @@ DataPlane is the Schema for the dataplanes API
 | `kind` _string_ | `DataPlane`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[DataPlaneSpec](#dataplanespec)_ |  |
+| `status` _[DataPlaneStatus](#dataplanestatus)_ |  |
 
 
 
@@ -2321,6 +2709,7 @@ GatewayConfiguration is the Schema for the gatewayconfigurations API.
 | `kind` _string_ | `GatewayConfiguration`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[GatewayConfigurationSpec](#gatewayconfigurationspec)_ |  |
+| `status` _[GatewayConfigurationStatus](#gatewayconfigurationstatus)_ |  |
 
 
 
@@ -2450,7 +2839,20 @@ ControlPlaneSpec defines the desired state of ControlPlane
 _Appears in:_
 - [ControlPlane](#controlplane)
 
+#### ControlPlaneStatus
 
+
+ControlPlaneStatus defines the observed state of ControlPlane
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the Gateway. |
+
+
+_Appears in:_
+- [ControlPlane](#controlplane)
 
 #### DataPlaneDeploymentOptions
 
@@ -2648,7 +3050,26 @@ DataPlaneSpec defines the desired state of DataPlane
 _Appears in:_
 - [DataPlane](#dataplane)
 
+#### DataPlaneStatus
 
+
+DataPlaneStatus defines the observed state of DataPlane
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the DataPlane. |
+| `service` _string_ | Service indicates the Service that exposes the DataPlane's configured routes |
+| `addresses` _[Address](#address) array_ | Addresses lists the addresses that have actually been bound to the DataPlane. |
+| `selector` _string_ | Selector contains a unique DataPlane identifier used as a deterministic label selector that is used throughout its dependent resources. This is used e.g. as a label selector for DataPlane's Services, Deployments and PodDisruptionBudgets. |
+| `readyReplicas` _integer_ | ReadyReplicas indicates how many replicas have reported to be ready. |
+| `replicas` _integer_ | Replicas indicates how many replicas have been set for the DataPlane. |
+| `rollout` _[DataPlaneRolloutStatus](#dataplanerolloutstatus)_ | RolloutStatus contains information about the rollout. It is set only if a rollout strategy was configured in the spec. |
+
+
+_Appears in:_
+- [DataPlane](#dataplane)
 
 #### DeploymentOptions
 
@@ -2795,7 +3216,20 @@ GatewayConfigurationSpec defines the desired state of GatewayConfiguration
 _Appears in:_
 - [GatewayConfiguration](#gatewayconfiguration)
 
+#### GatewayConfigurationStatus
 
+
+GatewayConfigurationStatus defines the observed state of GatewayConfiguration
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the GatewayConfigurationStatus. |
+
+
+_Appears in:_
+- [GatewayConfiguration](#gatewayconfiguration)
 
 
 
@@ -3102,6 +3536,7 @@ ControlPlane is the Schema for the controlplanes API
 | `kind` _string_ | `ControlPlane`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[ControlPlaneSpec](#controlplanespec)_ | Spec is the specification of the ControlPlane resource. |
+| `status` _[ControlPlaneStatus](#controlplanestatus)_ | Status is the status of the ControlPlane resource. |
 
 
 
@@ -3118,6 +3553,7 @@ GatewayConfiguration is the Schema for the gatewayconfigurations API.
 | `kind` _string_ | `GatewayConfiguration`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[GatewayConfigurationSpec](#gatewayconfigurationspec)_ | Spec defines the desired state of GatewayConfiguration. |
+| `status` _[GatewayConfigurationStatus](#gatewayconfigurationstatus)_ | Status defines the observed state of GatewayConfiguration. |
 
 
 
@@ -3542,7 +3978,23 @@ ControlPlaneSpec defines the desired state of ControlPlane
 _Appears in:_
 - [ControlPlane](#controlplane)
 
+#### ControlPlaneStatus
 
+
+ControlPlaneStatus defines the observed state of ControlPlane
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the Gateway. |
+| `dataPlane` _[ControlPlaneDataPlaneStatus](#controlplanedataplanestatus)_ | DataPlane describes the status of the DataPlane that the ControlPlane is responsible for configuring. |
+| `featureGates` _[ControlPlaneFeatureGate](#controlplanefeaturegate) array_ | FeatureGates is a list of effective feature gates for this ControlPlane. |
+| `controllers` _[ControlPlaneController](#controlplanecontroller) array_ | Controllers is a list of enabled and disabled controllers for this ControlPlane. |
+
+
+_Appears in:_
+- [ControlPlane](#controlplane)
 
 #### ControlPlaneTranslationOptions
 
@@ -3778,7 +4230,20 @@ GatewayConfigurationSpec defines the desired state of GatewayConfiguration
 _Appears in:_
 - [GatewayConfiguration](#gatewayconfiguration)
 
+#### GatewayConfigurationStatus
 
+
+GatewayConfigurationStatus defines the observed state of GatewayConfiguration
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the GatewayConfigurationStatus. |
+
+
+_Appears in:_
+- [GatewayConfiguration](#gatewayconfiguration)
 
 
 
@@ -4067,6 +4532,7 @@ matching the ingressClass of the Kong Ingress Controller (`kong` by default) to 
 | `kind` _string_ | `KongServiceFacade`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KongServiceFacadeSpec](#kongservicefacadespec)_ |  |
+| `status` _[KongServiceFacadeStatus](#kongservicefacadestatus)_ |  |
 
 
 
@@ -4105,7 +4571,20 @@ KongServiceFacadeSpec defines the desired state of KongServiceFacade.
 _Appears in:_
 - [KongServiceFacade](#kongservicefacade)
 
+#### KongServiceFacadeStatus
 
+
+KongServiceFacadeStatus defines the observed state of KongServiceFacade.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongServiceFacade.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+
+
+_Appears in:_
+- [KongServiceFacade](#kongservicefacade)
 
 
 ## konnect.konghq.com/v1alpha1
@@ -4131,6 +4610,7 @@ KonnectAPIAuthConfiguration is the Schema for the Konnect configuration type.
 | `kind` _string_ | `KonnectAPIAuthConfiguration`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectAPIAuthConfigurationSpec](#konnectapiauthconfigurationspec)_ | Spec is the specification of the KonnectAPIAuthConfiguration resource. |
+| `status` _[KonnectAPIAuthConfigurationStatus](#konnectapiauthconfigurationstatus)_ | Status is the status of the KonnectAPIAuthConfiguration resource. |
 
 
 
@@ -4147,6 +4627,7 @@ KonnectCloudGatewayDataPlaneGroupConfiguration is the Schema for the Konnect Net
 | `kind` _string_ | `KonnectCloudGatewayDataPlaneGroupConfiguration`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectCloudGatewayDataPlaneGroupConfigurationSpec](#konnectcloudgatewaydataplanegroupconfigurationspec)_ | Spec defines the desired state of KonnectCloudGatewayDataPlaneGroupConfiguration. |
+| `status` _[KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnectcloudgatewaydataplanegroupconfigurationstatus)_ | Status defines the observed state of KonnectCloudGatewayDataPlaneGroupConfiguration. |
 
 
 
@@ -4163,6 +4644,7 @@ KonnectCloudGatewayNetwork is the Schema for the Konnect Network API.
 | `kind` _string_ | `KonnectCloudGatewayNetwork`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectCloudGatewayNetworkSpec](#konnectcloudgatewaynetworkspec)_ | Spec defines the desired state of KonnectCloudGatewayNetwork. |
+| `status` _[KonnectCloudGatewayNetworkStatus](#konnectcloudgatewaynetworkstatus)_ | Status defines the observed state of KonnectCloudGatewayNetwork. |
 
 
 
@@ -4179,6 +4661,7 @@ KonnectCloudGatewayTransitGateway is the Schema for the Konnect Transit Gateway 
 | `kind` _string_ | `KonnectCloudGatewayTransitGateway`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectCloudGatewayTransitGatewaySpec](#konnectcloudgatewaytransitgatewayspec)_ | Spec defines the desired state of KonnectCloudGatewayTransitGateway. |
+| `status` _[KonnectCloudGatewayTransitGatewayStatus](#konnectcloudgatewaytransitgatewaystatus)_ | Status defines the observed state of KonnectCloudGatewayTransitGateway. |
 
 
 
@@ -4198,6 +4681,7 @@ deployment(s) spec gets customized to include the konnect-related configuration.
 | `kind` _string_ | `KonnectExtension`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectExtensionSpec](#konnectextensionspec)_ | Spec is the specification of the KonnectExtension resource. |
+| `status` _[KonnectExtensionStatus](#konnectextensionstatus)_ | Status is the status of the KonnectExtension resource. |
 
 
 
@@ -4214,6 +4698,7 @@ KonnectGatewayControlPlane is the Schema for the KonnectGatewayControlplanes API
 | `kind` _string_ | `KonnectGatewayControlPlane`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectGatewayControlPlaneSpec](#konnectgatewaycontrolplanespec)_ | Spec defines the desired state of KonnectGatewayControlPlane. |
+| `status` _[KonnectGatewayControlPlaneStatus](#konnectgatewaycontrolplanestatus)_ | Status defines the observed state of KonnectGatewayControlPlane. |
 
 
 
@@ -4452,7 +4937,22 @@ KonnectAPIAuthConfigurationSpec is the specification of the KonnectAPIAuthConfig
 _Appears in:_
 - [KonnectAPIAuthConfiguration](#konnectapiauthconfiguration)
 
+#### KonnectAPIAuthConfigurationStatus
 
+
+KonnectAPIAuthConfigurationStatus is the status of the KonnectAPIAuthConfiguration resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect configuration. |
+| `organizationID` _string_ | OrganizationID is the unique identifier of the organization in Konnect. |
+| `serverURL` _string_ | ServerURL is configured server URL. |
+
+
+_Appears in:_
+- [KonnectAPIAuthConfiguration](#konnectapiauthconfiguration)
 
 #### KonnectAPIAuthType
 _Underlying type:_ `string`
@@ -4485,7 +4985,25 @@ KonnectCloudGatewayDataPlaneGroupConfigurationSpec defines the desired state of 
 _Appears in:_
 - [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnectcloudgatewaydataplanegroupconfiguration)
 
+#### KonnectCloudGatewayDataPlaneGroupConfigurationStatus
 
+
+KonnectCloudGatewayDataPlaneGroupConfigurationStatus defines the observed state of KonnectCloudGatewayDataPlaneGroupConfiguration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
+| `dataplane_groups` _[KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup](#konnectcloudgatewaydataplanegroupconfigurationstatusgroup) array_ | DataPlaneGroups is a list of deployed data-plane groups. |
+
+
+_Appears in:_
+- [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnectcloudgatewaydataplanegroupconfiguration)
 
 #### KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup
 
@@ -4530,7 +5048,24 @@ KonnectCloudGatewayNetworkSpec defines the desired state of KonnectCloudGatewayN
 _Appears in:_
 - [KonnectCloudGatewayNetwork](#konnectcloudgatewaynetwork)
 
+#### KonnectCloudGatewayNetworkStatus
 
+
+KonnectCloudGatewayNetworkStatus defines the observed state of KonnectCloudGatewayNetwork.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectCloudGatewayNetwork.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `state` _string_ | State is the current state of the network. Can be e.g. initializing, ready, terminating. |
+
+
+_Appears in:_
+- [KonnectCloudGatewayNetwork](#konnectcloudgatewaynetwork)
 
 #### KonnectCloudGatewayTransitGatewaySpec
 
@@ -4551,7 +5086,25 @@ KonnectCloudGatewayTransitGatewaySpec defines the desired state of KonnectCloudG
 _Appears in:_
 - [KonnectCloudGatewayTransitGateway](#konnectcloudgatewaytransitgateway)
 
+#### KonnectCloudGatewayTransitGatewayStatus
 
+
+KonnectCloudGatewayTransitGatewayStatus defines the current state of KonnectCloudGatewayTransitGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `networkID` _string_ | NetworkID is the Konnect ID of the Konnect cloud gateway network this entity is associated with. |
+| `state` _[TransitGatewayState](#transitgatewaystate)_ | State is the state of the transit gateway on Konnect side. |
+
+
+_Appears in:_
+- [KonnectCloudGatewayTransitGateway](#konnectcloudgatewaytransitgateway)
 
 #### KonnectConfigurationDataPlaneGroup
 
@@ -4698,7 +5251,24 @@ KonnectExtensionSpec defines the desired state of KonnectExtension.
 _Appears in:_
 - [KonnectExtension](#konnectextension)
 
+#### KonnectExtensionStatus
 
+
+KonnectExtensionStatus defines the observed state of KonnectExtension.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectExtensionStatus. Known condition types are: |
+| `dataPlaneRefs` _[NamespacedRef](#namespacedref) array_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
+| `controlPlaneRefs` _[NamespacedRef](#namespacedref) array_ | ControlPlaneRefs is the array  of ControlPlane references this is associated with. A new reference is set by the operator when this extension is associated with a ControlPlane through its extensions spec. |
+| `dataPlaneClientAuth` _[DataPlaneClientAuthStatus](#dataplaneclientauthstatus)_ | DataPlaneClientAuth contains the configuration for the client certificate authentication for the DataPlane. |
+| `konnect` _[KonnectExtensionControlPlaneStatus](#konnectextensioncontrolplanestatus)_ | Konnect contains the status information related to the Konnect Control Plane. |
+
+
+_Appears in:_
+- [KonnectExtension](#konnectextension)
 
 #### KonnectGatewayControlPlaneSpec
 
@@ -4725,7 +5295,24 @@ KonnectGatewayControlPlaneSpec defines the desired state of KonnectGatewayContro
 _Appears in:_
 - [KonnectGatewayControlPlane](#konnectgatewaycontrolplane)
 
+#### KonnectGatewayControlPlaneStatus
 
+
+KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectGatewayControlPlane.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `konnectEndpoints` _[KonnectEndpoints](#konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. They are required by the DataPlane to be properly configured in Konnect and connect to the control plane. |
+
+
+_Appears in:_
+- [KonnectGatewayControlPlane](#konnectgatewaycontrolplane)
 
 #### KonnectTransitGatewayAPISpec
 
@@ -4857,6 +5444,7 @@ deployment(s) spec gets customized to include the konnect-related configuration.
 | `kind` _string_ | `KonnectExtension`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectExtensionSpec](#konnectextensionspec)_ | Spec is the specification of the KonnectExtension resource. |
+| `status` _[KonnectExtensionStatus](#konnectextensionstatus)_ | Status is the status of the KonnectExtension resource. |
 
 
 
@@ -4873,6 +5461,7 @@ KonnectGatewayControlPlane is the Schema for the KonnectGatewayControlplanes API
 | `kind` _string_ | `KonnectGatewayControlPlane`
 | `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectGatewayControlPlaneSpec](#konnectgatewaycontrolplanespec)_ | Spec defines the desired state of KonnectGatewayControlPlane. |
+| `status` _[KonnectGatewayControlPlaneStatus](#konnectgatewaycontrolplanestatus)_ | Status defines the observed state of KonnectGatewayControlPlane. |
 
 
 
@@ -5256,7 +5845,24 @@ KonnectExtensionSpec defines the desired state of KonnectExtension.
 _Appears in:_
 - [KonnectExtension](#konnectextension)
 
+#### KonnectExtensionStatus
 
+
+KonnectExtensionStatus defines the observed state of KonnectExtension.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectExtensionStatus. Known condition types are: |
+| `dataPlaneRefs` _[NamespacedRef](#namespacedref) array_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
+| `controlPlaneRefs` _[NamespacedRef](#namespacedref) array_ | ControlPlaneRefs is the array  of ControlPlane references this is associated with. A new reference is set by the operator when this extension is associated with a ControlPlane through its extensions spec. |
+| `dataPlaneClientAuth` _[DataPlaneClientAuthStatus](#dataplaneclientauthstatus)_ | DataPlaneClientAuth contains the configuration for the client certificate authentication for the DataPlane. |
+| `konnect` _[KonnectExtensionControlPlaneStatus](#konnectextensioncontrolplanestatus)_ | Konnect contains the status information related to the Konnect Control Plane. |
+
+
+_Appears in:_
+- [KonnectExtension](#konnectextension)
 
 #### KonnectGatewayControlPlaneSpec
 
@@ -5277,7 +5883,25 @@ KonnectGatewayControlPlaneSpec defines the desired state of KonnectGatewayContro
 _Appears in:_
 - [KonnectGatewayControlPlane](#konnectgatewaycontrolplane)
 
+#### KonnectGatewayControlPlaneStatus
 
+
+KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectGatewayControlPlane.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
+| `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
+| `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
+| `clusterType` _[ControlPlaneClusterType](#controlplaneclustertype)_ | ClusterType is the cluster type of the Konnect control plane. When the KonnectGatewayControlPlane is attached to a control plane in Konnect, ClusterType is filled with the cluster type of the control plane. |
+| `konnectEndpoints` _[KonnectEndpoints](#konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. They are required by the DataPlane to be properly configured in Konnect and connect to the control plane. |
+
+
+_Appears in:_
+- [KonnectGatewayControlPlane](#konnectgatewaycontrolplane)
 
 #### MirrorKonnect
 
