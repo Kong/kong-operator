@@ -33,9 +33,14 @@ If the troubleshooting section does not contain the answer to the problem you en
     This will add the necessary skaffolding so that the reference is rendered correctly on docs.konghq.com.
 
     Example:
-    ```
+
+    ```sh
     ${KUBERNETES_CONFIGURATION_REPO}/scripts/apidocs-gen/post-process-for-konghq.sh ${KUBERNETES_CONFIGURATION_REPO}/docs/gateway-operator-api-reference.md ${KONGHQ_DOCS_REPO}/app/_src/gateway-operator/reference/custom-resources/1.2.x.md
     ```
+
+## Conformance tests report
+
+Trigger for released version CI workflow [Generate Kubernetes Gateway API conformance tests report](https://github.com/Kong/kong-operator/actions/workflows/conformance_tests_report.yaml), verify artifacts and submit them via pull request to [Kubernetes Gateway API Conformance Reports](https://github.com/kubernetes-sigs/gateway-api/tree/main/conformance/reports).
 
 **Only for major and minor releases**:
 
