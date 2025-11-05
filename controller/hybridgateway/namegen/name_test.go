@@ -22,9 +22,9 @@ func TestNewName(t *testing.T) {
 			parentRefID: "cp123456",
 			sectionID:   "res789",
 			expected: &Name{
-				httpRouteID: "test-ns-test-route",
-				parentRefID: "cp123456",
-				sectionID:   "res789",
+				httpRouteID:    "test-ns-test-route",
+				controlPlaneID: "cp123456",
+				sectionID:      "res789",
 			},
 		},
 		{
@@ -33,9 +33,9 @@ func TestNewName(t *testing.T) {
 			parentRefID: "cp123456",
 			sectionID:   "",
 			expected: &Name{
-				httpRouteID: "test-ns-test-route",
-				parentRefID: "cp123456",
-				sectionID:   "",
+				httpRouteID:    "test-ns-test-route",
+				controlPlaneID: "cp123456",
+				sectionID:      "",
 			},
 		},
 		{
@@ -44,9 +44,9 @@ func TestNewName(t *testing.T) {
 			parentRefID: "",
 			sectionID:   "",
 			expected: &Name{
-				httpRouteID: "",
-				parentRefID: "",
-				sectionID:   "",
+				httpRouteID:    "",
+				controlPlaneID: "",
+				sectionID:      "",
 			},
 		},
 	}
@@ -69,9 +69,9 @@ func TestName_String(t *testing.T) {
 		{
 			name: "short name with section",
 			nameObj: &Name{
-				httpRouteID: "test-ns-route",
-				parentRefID: "cp123",
-				sectionID:   "res456",
+				httpRouteID:    "test-ns-route",
+				controlPlaneID: "cp123",
+				sectionID:      "res456",
 			},
 			expected:    "test-ns-route.cp123.res456",
 			description: "should join all parts with dots when length is acceptable",
@@ -79,9 +79,9 @@ func TestName_String(t *testing.T) {
 		{
 			name: "short name without http route",
 			nameObj: &Name{
-				httpRouteID: "",
-				parentRefID: "cp123",
-				sectionID:   "res456",
+				httpRouteID:    "",
+				controlPlaneID: "cp123",
+				sectionID:      "res456",
 			},
 			expected:    "cp123.res456",
 			description: "should join only non-empty parts with dots",
@@ -89,9 +89,9 @@ func TestName_String(t *testing.T) {
 		{
 			name: "short name without parent reference",
 			nameObj: &Name{
-				httpRouteID: "test-ns-route",
-				parentRefID: "",
-				sectionID:   "res456",
+				httpRouteID:    "test-ns-route",
+				controlPlaneID: "",
+				sectionID:      "res456",
 			},
 			expected:    "test-ns-route.res456",
 			description: "should join only non-empty parts with dots",
@@ -99,9 +99,9 @@ func TestName_String(t *testing.T) {
 		{
 			name: "short name without section",
 			nameObj: &Name{
-				httpRouteID: "test-ns-route",
-				parentRefID: "cp123",
-				sectionID:   "",
+				httpRouteID:    "test-ns-route",
+				controlPlaneID: "cp123",
+				sectionID:      "",
 			},
 			expected:    "test-ns-route.cp123",
 			description: "should join only non-empty parts with dots",
@@ -109,9 +109,9 @@ func TestName_String(t *testing.T) {
 		{
 			name: "short name with just httproute",
 			nameObj: &Name{
-				httpRouteID: "test-ns-route",
-				parentRefID: "",
-				sectionID:   "",
+				httpRouteID:    "test-ns-route",
+				controlPlaneID: "",
+				sectionID:      "",
 			},
 			expected:    "test-ns-route",
 			description: "should join only non-empty parts with dots",
@@ -119,9 +119,9 @@ func TestName_String(t *testing.T) {
 		{
 			name: "short name with just parentref",
 			nameObj: &Name{
-				httpRouteID: "",
-				parentRefID: "cp123",
-				sectionID:   "",
+				httpRouteID:    "",
+				controlPlaneID: "cp123",
+				sectionID:      "",
 			},
 			expected:    "cp123",
 			description: "should join only non-empty parts with dots",
@@ -129,9 +129,9 @@ func TestName_String(t *testing.T) {
 		{
 			name: "short name with just section",
 			nameObj: &Name{
-				httpRouteID: "",
-				parentRefID: "",
-				sectionID:   "res456",
+				httpRouteID:    "",
+				controlPlaneID: "",
+				sectionID:      "res456",
 			},
 			expected:    "res456",
 			description: "should join only non-empty parts with dots",
@@ -139,9 +139,9 @@ func TestName_String(t *testing.T) {
 		{
 			name: "empty name",
 			nameObj: &Name{
-				httpRouteID: "",
-				parentRefID: "",
-				sectionID:   "",
+				httpRouteID:    "",
+				controlPlaneID: "",
+				sectionID:      "",
 			},
 			expected:    "",
 			description: "should handle empty strings gracefully",
@@ -149,9 +149,9 @@ func TestName_String(t *testing.T) {
 		{
 			name: "very long names that need hashing",
 			nameObj: &Name{
-				httpRouteID: strings.Repeat("a", 100),
-				parentRefID: strings.Repeat("b", 100),
-				sectionID:   strings.Repeat("c", 100),
+				httpRouteID:    strings.Repeat("a", 100),
+				controlPlaneID: strings.Repeat("b", 100),
+				sectionID:      strings.Repeat("c", 100),
 			},
 			expected:    "", // Will be set dynamically in test
 			description: "should hash long components and stay within length limits",
