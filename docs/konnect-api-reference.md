@@ -300,10 +300,10 @@ CreateControlPlaneRequest - The request schema for the create control plane requ
 | --- | --- |
 | `name` _string_ | The name of the control plane. |
 | `description` _string_ | The description of the control plane in Konnect. |
-| `cluster_type` _[CreateControlPlaneRequestClusterType](#createcontrolplanerequestclustertype)_ | The ClusterType value of the cluster associated with the Control Plane. |
-| `auth_type` _[AuthType](#authtype)_ | The auth type value of the cluster associated with the Runtime Group. |
+| `cluster_type` _string_ | The ClusterType value of the cluster associated with the Control Plane. |
+| `auth_type` _string_ | The auth type value of the cluster associated with the Runtime Group. |
 | `cloud_gateway` _boolean_ | Whether this control-plane can be used for cloud-gateways. |
-| `proxy_urls` _[ProxyURL](#proxyurl) array_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
+| `proxy_urls` _object array_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
 | `labels` _object (keys:string, values:string)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 
 
@@ -699,10 +699,10 @@ KonnectGatewayControlPlaneSpec defines the desired state of KonnectGatewayContro
 | --- | --- |
 | `name` _string_ | The name of the control plane. |
 | `description` _string_ | The description of the control plane in Konnect. |
-| `cluster_type` _[CreateControlPlaneRequestClusterType](#createcontrolplanerequestclustertype)_ | The ClusterType value of the cluster associated with the Control Plane. |
-| `auth_type` _[AuthType](#authtype)_ | The auth type value of the cluster associated with the Runtime Group. |
+| `cluster_type` _string_ | The ClusterType value of the cluster associated with the Control Plane. |
+| `auth_type` _string_ | The auth type value of the cluster associated with the Runtime Group. |
 | `cloud_gateway` _boolean_ | Whether this control-plane can be used for cloud-gateways. |
-| `proxy_urls` _[ProxyURL](#proxyurl) array_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
+| `proxy_urls` _object array_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
 | `labels` _object (keys:string, values:string)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `mirror` _[MirrorSpec](#mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
 | `source` _[EntitySource](#entitysource)_ | Source represents the source type of the Konnect entity. |
@@ -1213,7 +1213,7 @@ KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayCon
 | `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
-| `clusterType` _[ControlPlaneClusterType](#controlplaneclustertype)_ | ClusterType is the cluster type of the Konnect control plane. When the KonnectGatewayControlPlane is attached to a control plane in Konnect, ClusterType is filled with the cluster type of the control plane. |
+| `clusterType` _string_ | ClusterType is the cluster type of the Konnect control plane. When the KonnectGatewayControlPlane is attached to a control plane in Konnect, ClusterType is filled with the cluster type of the control plane. |
 | `konnectEndpoints` _[KonnectEndpoints](#konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. They are required by the DataPlane to be properly configured in Konnect and connect to the control plane. |
 
 
