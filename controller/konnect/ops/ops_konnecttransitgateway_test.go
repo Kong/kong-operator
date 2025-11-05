@@ -38,7 +38,7 @@ func TestTransitGatewaySpecToInput_AzureDNSConfig(t *testing.T) {
 
 	req := transitGatewaySpecToTransitGatewayInput(spec)
 
-	assert.NotNil(t, req.AzureTransitGateway)
+	require.NotNil(t, req.AzureTransitGateway)
 	az := req.AzureTransitGateway
 	if assert.Len(t, az.DNSConfig, 1) {
 		cfg := az.DNSConfig[0]
