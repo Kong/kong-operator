@@ -20,9 +20,9 @@ type Name struct {
 }
 
 const (
-  defaultHTTPRoutePrefix = "http"
-  defaultCPPrefix = "cp"
-  defaultResPrefix = "res"
+	defaultHTTPRoutePrefix = "http"
+	defaultCPPrefix        = "cp"
+	defaultResPrefix       = "res"
 )
 
 // String returns the full name as a dot-separated string.
@@ -71,8 +71,8 @@ func (h *Name) String() string {
 	return fullName
 }
 
-// NewName creates a new Name instance with the given components.
-func NewName(httpRouteID, controlPlaneID, sectionID string) *Name {
+// newName creates a new Name instance with the given components.
+func newName(httpRouteID, controlPlaneID, sectionID string) *Name {
 	return &Name{
 		httpRouteID:    httpRouteID,
 		controlPlaneID: controlPlaneID,
@@ -82,7 +82,7 @@ func NewName(httpRouteID, controlPlaneID, sectionID string) *Name {
 
 // NewKongUpstreamName generates a KongUpstream name based on the ControlPlaneRef and HTTPRouteRule.
 func NewKongUpstreamName(cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
-	return NewName(
+	return newName(
 		"",
 		defaultCPPrefix+utils.Hash32(cp),
 		utils.Hash32(rule.BackendRefs),
@@ -91,7 +91,7 @@ func NewKongUpstreamName(cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTP
 
 // NewKongServiceName generates a KongService name based on the ControlPlaneRef and HTTPRouteRule.
 func NewKongServiceName(cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
-	return NewName(
+	return newName(
 		"",
 		defaultCPPrefix+utils.Hash32(cp),
 		utils.Hash32(rule.BackendRefs),
@@ -100,7 +100,7 @@ func NewKongServiceName(cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPR
 
 // NewKongRouteName generates a KongRoute name based on the HTTPRoute, ControlPlaneRef, and HTTPRouteRule.
 func NewKongRouteName(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
-	return NewName(
+	return newName(
 		route.Namespace+"-"+route.Name,
 		defaultCPPrefix+utils.Hash32(cp),
 		utils.Hash32(rule.Matches),
@@ -109,17 +109,17 @@ func NewKongRouteName(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneR
 
 // NewKongPluginName generates a KongPlugin name based on the HTTPRouteFilter.
 func NewKongPluginName(filter gatewayv1.HTTPRouteFilter) string {
-	return NewName("", "", "pl"+utils.Hash32(filter)).String()
+	return newName("", "", "pl"+utils.Hash32(filter)).String()
 }
 
 // NewKongPluginBindingName generates a KongPlugin name based on the HTTPRoute, ControlPlaneRef and HTTPRouteFilter.
 func NewKongPluginBindingName(routeID, pluginId string) string {
-	return NewName(routeID, "", pluginId).String()
+	return newName(routeID, "", pluginId).String()
 }
 
 // NewKongTargetName generates a KongTarget name based on the KongUpstream name, the Service Endpoint ip,
 // the service port and the HTTPBackendRef.
 func NewKongTargetName(upstreamID, endpointID string, port int, br *gwtypes.HTTPBackendRef) string {
-	return NewName(upstreamID, "",
+	return newName(upstreamID, "",
 		utils.Hash32(utils.Hash32(br)+fmt.Sprintf("%s:%d", endpointID, port))).String()
 }

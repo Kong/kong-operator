@@ -58,7 +58,7 @@ func TestNewName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := NewName(tt.httpRouteID, tt.parentRefID, tt.sectionID)
+			result := newName(tt.httpRouteID, tt.parentRefID, tt.sectionID)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
@@ -188,7 +188,7 @@ func TestName_String_Hashing(t *testing.T) {
 	longParentRef := strings.Repeat("parentref", 50)
 	longSection := strings.Repeat("section", 50)
 
-	nameObj := NewName(longHTTPRoute, longParentRef, longSection)
+	nameObj := newName(longHTTPRoute, longParentRef, longSection)
 	result := nameObj.String()
 
 	// Should be hashed and within limits
@@ -231,8 +231,8 @@ func TestName_String_Consistency(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			nameObj1 := NewName(tt.httpRouteID, tt.parentRefID, tt.sectionID)
-			nameObj2 := NewName(tt.httpRouteID, tt.parentRefID, tt.sectionID)
+			nameObj1 := newName(tt.httpRouteID, tt.parentRefID, tt.sectionID)
+			nameObj2 := newName(tt.httpRouteID, tt.parentRefID, tt.sectionID)
 
 			result1 := nameObj1.String()
 			result2 := nameObj2.String()
