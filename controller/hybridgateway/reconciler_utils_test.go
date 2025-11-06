@@ -266,8 +266,8 @@ type fakeHTTPRouteConverter struct {
 	root    gwtypes.HTTPRoute
 }
 
-func (f *fakeHTTPRouteConverter) GetOutputStore(ctx context.Context) []unstructured.Unstructured {
-	return f.desired
+func (f *fakeHTTPRouteConverter) GetOutputStore(ctx context.Context, logger logr.Logger) ([]unstructured.Unstructured, error) {
+	return f.desired, nil
 }
 func (f *fakeHTTPRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind { return f.gvks }
 func (f *fakeHTTPRouteConverter) GetRootObject() gwtypes.HTTPRoute           { return f.root }

@@ -32,7 +32,10 @@ func Translate[t converter.RootObject](conv converter.APIConverter[t], ctx conte
 // trigger a requeue for optimistic concurrency. All other errors are wrapped with resource kind and name for context.
 func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (requeue bool, stop bool, err error) {
 	// Get the desired state from the converter.
-	desiredObjects := conv.GetOutputStore(ctx)
+	desiredObjects, err := conv.GetOutputStore(ctx, logger)
+	if err != nil {
+		return false, false, fmt.Errorf("failed to get desired objects from converter: %w", err)
+	}
 	if len(desiredObjects) == 0 {
 		logger.V(1).Info("No desired objects to enforce")
 		return false, false, nil
@@ -144,7 +147,10 @@ func EnforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logg
 
 // CleanOrphanedResources deletes resources previously managed by the converter but no longer present in the desired output.
 func CleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr[t]](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) error {
-	desiredObjects := conv.GetOutputStore(ctx)
+	desiredObjects, err := conv.GetOutputStore(ctx, logger)
+	if err != nil {
+		return fmt.Errorf("failed to get desired objects from converter for cleanup: %w", err)
+	}
 	desiredSet := make(map[string]struct{})
 	expectedGVKs := conv.GetExpectedGVKs()
 

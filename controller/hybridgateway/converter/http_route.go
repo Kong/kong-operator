@@ -71,16 +71,68 @@ func (c *httpRouteConverter) Translate(ctx context.Context, logger logr.Logger) 
 }
 
 // GetOutputStore implements APIConverter.
-func (c *httpRouteConverter) GetOutputStore(ctx context.Context) []unstructured.Unstructured {
+//
+// Converts all objects in the outputStore to unstructured format for use by the caller.
+// This method performs the final conversion step after translation, transforming the typed Kong
+// resources into unstructured.Unstructured objects that can be applied to the Kubernetes cluster.
+//
+// The function performs the following operations:
+// 1. Iterates through all objects in the outputStore (populated by translate())
+// 2. Converts each typed object to unstructured format using the runtime scheme
+// 3. Collects conversion errors instead of failing fast to maximize error visibility
+// 4. Returns both successfully converted objects and aggregated conversion errors
+//
+// Error Handling Strategy:
+// - Individual conversion failures are logged and collected but don't stop processing
+// - Failed objects are excluded from the returned slice but processing continues
+// - This provides complete error visibility rather than failing on the first conversion error
+// - Returns aggregated errors using errors.Join for proper error chaining
+//
+// Parameters:
+//   - ctx: The context for the conversion operation
+//   - logger: Logger for structured logging with output-store-conversion phase
+//
+// Returns:
+//   - []unstructured.Unstructured: Successfully converted objects ready for use by the caller
+//   - error: Aggregated conversion errors or nil if all conversions succeeded
+//
+// The function prioritizes complete error visibility over fail-fast behavior, allowing
+// the user to see all conversion issues at once rather than fixing them one by one.
+func (c *httpRouteConverter) GetOutputStore(ctx context.Context, logger logr.Logger) ([]unstructured.Unstructured, error) {
+	logger = logger.WithValues("phase", "output-store-conversion")
+	logger.V(1).Info("Starting output store conversion")
+
+	var conversionErrors []error
+
 	objects := make([]unstructured.Unstructured, 0, len(c.outputStore))
 	for _, obj := range c.outputStore {
 		unstr, err := utils.ToUnstructured(obj, c.Scheme())
 		if err != nil {
+			conversionErr := fmt.Errorf("failed to convert %T %s to unstructured: %w", obj, obj.GetName(), err)
+			conversionErrors = append(conversionErrors, conversionErr)
+			logger.Error(err, "Failed to convert object to unstructured",
+				"objectName", obj.GetName())
 			continue
 		}
 		objects = append(objects, unstr)
 	}
-	return objects
+
+	// Check if any conversion errors occurred and return aggregated error.
+	if len(conversionErrors) > 0 {
+		logger.Error(nil, "Output store conversion completed with errors",
+			"totalObjectsAttempted", len(c.outputStore),
+			"successfulConversions", len(objects),
+			"conversionErrors", len(conversionErrors))
+
+		// Join all errors using errors.Join for better error handling.
+		return objects, fmt.Errorf("output store conversion failed with %d errors: %w", len(conversionErrors), errors.Join(conversionErrors...))
+	}
+
+	logger.V(1).Info("Successfully converted all objects in output store",
+		"totalObjectsConverted", len(objects))
+
+	logger.V(1).Info("Finished output store conversion", "totalObjectsConverted", len(objects))
+	return objects, nil
 }
 
 // GetExpectedGVKs returns the list of GroupVersionKinds that this converter expects to manage for HTTPRoute resources.

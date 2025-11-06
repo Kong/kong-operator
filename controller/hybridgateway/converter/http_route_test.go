@@ -109,7 +109,8 @@ func TestHostnamesIntersection(t *testing.T) {
 			err := converter.Translate(t.Context(), logr.Discard())
 			require.NoError(t, err)
 
-			output := converter.GetOutputStore(context.TODO())
+			output, err := converter.GetOutputStore(context.TODO(), logr.Discard())
+			require.NoError(t, err)
 
 			// Extract KongRoute objects from the output
 			var kongRoutes []*configurationv1alpha1.KongRoute

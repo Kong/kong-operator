@@ -23,7 +23,7 @@ type APIConverter[t RootObject] interface {
 	// GetRootObject returns the current root object of type t.
 	GetRootObject() t
 	// GetOutputStore returns a slice of unstructured.Unstructured objects representing the current state of the store, using the provided context.
-	GetOutputStore(ctx context.Context) []unstructured.Unstructured
+	GetOutputStore(ctx context.Context, logger logr.Logger) ([]unstructured.Unstructured, error)
 	// UpdateRootObjectStatus updates the status for the root object.
 	UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error)
 }
