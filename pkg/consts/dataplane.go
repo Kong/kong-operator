@@ -141,10 +141,10 @@ const (
 	DataPlaneAdminAPIPort = 8444
 
 	// DataPlaneProxyPort is the port that the dataplane uses for HTTP.
-	DataPlaneProxyPort = 8000
+	DataPlaneProxyPort = 8888
 
 	// DataPlaneProxySSLPort is the port that the dataplane uses for HTTPS.
-	DataPlaneProxySSLPort = 8443
+	DataPlaneProxySSLPort = 9999
 
 	// DataPlaneMetricsPort is the port that the dataplane uses for metrics.
 	DataPlaneMetricsPort = 8100
