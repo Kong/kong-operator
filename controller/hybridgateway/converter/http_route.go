@@ -186,15 +186,54 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 	return updated, nil
 }
 
-// translate converts the HTTPRoute to KongRoute(s) and stores them in outputStore.
+// translate converts the HTTPRoute to Kong resources and stores them in outputStore.
+//
+// The function performs the following operations:
+// 1. Retrieves and validates supported parent references (Gateways).
+// 2. For each parent reference and rule combination, creates Kong resources:
+//   - KongUpstream: Manages backend service endpoints.
+//   - KongTarget: Individual backend targets with weight calculations.
+//   - KongService: Kong service configuration pointing to upstream.
+//   - KongRoute: Route matching and routing configuration.
+//   - KongPlugin: Filter-based plugins for request/response processing.
+//   - KongPluginBinding: Binds plugins to specific routes.
+//
+// 3. Collects translation errors instead of failing fast to maximize error visibility.
+// 4. Returns aggregated errors using errors.Join for proper error chaining.
+//
+// Error Handling Strategy:
+// - Individual resource creation failures are logged and collected but don't stop processing.
+// - Failed resources are skipped and not created, but translation continues for remaining resources.
+// - This provides complete error visibility rather than failing fast on the first error.
+// - Only critical failures (like parent reference resolution) cause immediate return.
+//
+// Parameters:
+//   - ctx: The context for API calls and cancellation.
+//   - logger: Logger for structured logging with httproute-translate phase.
+//
+// Returns:
+//   - error: Aggregated translation errors or nil if successful.
+//
+// The function prioritizes complete error visibility over fail-fast behavior, allowing
+// users to see all translation issues at once rather than fixing them one by one.
 func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) error {
+	logger = logger.WithValues("phase", "httproute-translate")
+	logger.V(1).Info("Starting HTTPRoute translation")
+
+	var translationErrors []error
+
 	supportedParentRefs, err := c.getHybridGatewayParents(ctx, logger)
 	if err != nil {
+		logger.Error(err, "Failed to get supported parent references")
 		return err
 	}
 	if len(supportedParentRefs) == 0 {
+		logger.Info("No supported parent references found, skipping translation")
 		return nil
 	}
+
+	logger.V(1).Info("Found supported parent references",
+		"parentRefCount", len(supportedParentRefs))
 
 	httpRouteName := c.route.Namespace + "-" + c.route.Name
 
@@ -204,9 +243,23 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 		hostnames := pRefData.hostnames
 		cpRefName := "cp" + utils.Hash32(cp)
 
-		for _, rule := range c.route.Spec.Rules {
+		logger.V(1).Info("Processing parent reference",
+			"parentRef", pRef,
+			"hostnames", hostnames,
+			"ruleCount", len(c.route.Spec.Rules))
+
+		for ruleIndex, rule := range c.route.Spec.Rules {
+			logger.V(2).Info("Processing rule",
+				"ruleIndex", ruleIndex,
+				"backendRefCount", len(rule.BackendRefs),
+				"matchCount", len(rule.Matches),
+				"filterCount", len(rule.Filters))
 			// Build the KongUpstream resource.
 			upstreamName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.BackendRefs)).String()
+			logger.V(2).Info("Building KongUpstream resource",
+				"upstream", upstreamName,
+				"controlPlane", cp.KonnectNamespacedRef)
+
 			upstream, err := builder.NewKongUpstream().
 				WithName(upstreamName).
 				WithNamespace(c.route.Namespace).
@@ -216,16 +269,20 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				WithControlPlaneRef(*cp).
 				WithOwner(c.route).Build()
 			if err != nil {
-				// TODO: decide how to handle build errors in converter
-				// For now, skip this resource
+				logger.Error(err, "Failed to build KongUpstream resource, skipping rule",
+					"upstream", upstreamName,
+					"controlPlane", cp.KonnectNamespacedRef)
+				translationErrors = append(translationErrors, fmt.Errorf("failed to build KongUpstream %s: %w", upstreamName, err))
 				continue
 			}
 			c.outputStore = append(c.outputStore, &upstream)
+			logger.V(2).Info("Successfully built KongUpstream resource",
+				"upstream", upstreamName)
 
 			// Build the KongTarget resources using the new rule-based approach.
 			targets, err := target.TargetsForBackendRefs(
 				ctx,
-				logr.Discard(), // TODO: pass proper logger.
+				logger.WithValues("upstream", upstreamName, "rule", utils.Hash32(rule.BackendRefs)),
 				c.Client,
 				c.route,
 				rule.BackendRefs,
@@ -236,16 +293,26 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				c.clusterDomain,
 			)
 			if err != nil {
-				// TODO: decide how to handle target creation errors in converter
-				// For now, skip this rule
+				logger.Error(err, "Failed to create KongTarget resources for rule, skipping rule",
+					"upstream", upstreamName,
+					"backendRefs", rule.BackendRefs,
+					"parentRef", pRef)
+				translationErrors = append(translationErrors, fmt.Errorf("failed to create KongTarget resources for upstream %s: %w", upstreamName, err))
 				continue
 			}
+			logger.V(2).Info("Successfully created KongTarget resources",
+				"upstream", upstreamName,
+				"targetCount", len(targets))
 			for _, tgt := range targets {
 				c.outputStore = append(c.outputStore, &tgt)
 			}
 
 			// Build the KongService resource.
 			serviceName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.BackendRefs)).String()
+			logger.V(2).Info("Building KongService resource",
+				"service", serviceName,
+				"upstream", upstreamName)
+
 			service, err := builder.NewKongService().
 				WithName(serviceName).
 				WithNamespace(c.route.Namespace).
@@ -256,14 +323,24 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				WithControlPlaneRef(*cp).
 				WithOwner(c.route).Build()
 			if err != nil {
-				// TODO: decide how to handle build errors in converter
-				// For now, skip this resource
+				logger.Error(err, "Failed to build KongService resource, skipping rule",
+					"service", serviceName,
+					"upstream", upstreamName)
+				translationErrors = append(translationErrors, fmt.Errorf("failed to build KongService %s: %w", serviceName, err))
 				continue
 			}
 			c.outputStore = append(c.outputStore, &service)
+			logger.V(2).Info("Successfully built KongService resource",
+				"service", serviceName)
 
 			// Build the kong route resource.
 			routeName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.Matches)).String()
+			logger.V(2).Info("Building KongRoute resource",
+				"kongRoute", routeName,
+				"service", serviceName,
+				"hostnames", hostnames,
+				"matchCount", len(rule.Matches))
+
 			routeBuilder := builder.NewKongRoute().
 				WithName(routeName).
 				WithNamespace(c.route.Namespace).
@@ -279,16 +356,30 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			}
 			route, err := routeBuilder.Build()
 			if err != nil {
-				// TODO: decide how to handle build errors in converter
-				// For now, skip this resource
+				logger.Error(err, "Failed to build KongRoute resource, skipping rule",
+					"kongRoute", routeName,
+					"service", serviceName,
+					"hostnames", hostnames)
+				translationErrors = append(translationErrors, fmt.Errorf("failed to build KongRoute %s: %w", routeName, err))
 				continue
 			}
 			c.outputStore = append(c.outputStore, &route)
+			logger.V(2).Info("Successfully built KongRoute resource",
+				"kongRoute", routeName)
 
 			// Build the kong plugin and kong plugin binding resources.
+			logger.V(2).Info("Processing filters for rule",
+				"kongRoute", routeName,
+				"filterCount", len(rule.Filters))
+
 			for _, filter := range rule.Filters {
 				filterHash := utils.Hash32(filter)
 				pluginName := namegen.NewName(httpRouteName, cpRefName, filterHash).String()
+
+				logger.V(3).Info("Building KongPlugin resource",
+					"plugin", pluginName,
+					"filterType", filter.Type)
+
 				plugin, err := builder.NewKongPlugin().
 					WithName(pluginName).
 					WithNamespace(c.route.Namespace).
@@ -297,13 +388,23 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					WithFilter(filter).
 					WithOwner(c.route).Build()
 				if err != nil {
+					logger.Error(err, "Failed to build KongPlugin resource, skipping filter",
+						"plugin", pluginName,
+						"filterType", filter.Type)
+					translationErrors = append(translationErrors, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err))
 					continue
 				}
 				c.outputStore = append(c.outputStore, &plugin)
 
 				// Create a KongPluginBinding to bind the KongPlugin to each rule match.
+				bindingName := routeName + "." + filterHash
+				logger.V(3).Info("Building KongPluginBinding resource",
+					"binding", bindingName,
+					"plugin", pluginName,
+					"kongRoute", routeName)
+
 				binding, err := builder.NewKongPluginBinding().
-					WithName(routeName+"."+filterHash).
+					WithName(bindingName).
 					WithNamespace(c.route.Namespace).
 					WithLabels(c.route, &pRef).
 					WithAnnotations(c.route, &pRef).
@@ -312,12 +413,34 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					WithOwner(c.route).
 					WithRouteRef(routeName).Build()
 				if err != nil {
+					logger.Error(err, "Failed to build KongPluginBinding resource, skipping binding",
+						"binding", bindingName,
+						"plugin", pluginName,
+						"kongRoute", routeName)
+					translationErrors = append(translationErrors, fmt.Errorf("failed to build KongPluginBinding %s: %w", bindingName, err))
 					continue
 				}
 				c.outputStore = append(c.outputStore, &binding)
+
+				logger.V(3).Info("Successfully built KongPlugin and KongPluginBinding resources",
+					"plugin", pluginName,
+					"binding", bindingName)
 			}
 		}
 	}
+
+	// Check if any translation errors occurred
+	if len(translationErrors) > 0 {
+		logger.Error(nil, "HTTPRoute translation completed with errors",
+			"totalResourcesCreated", len(c.outputStore),
+			"errorCount", len(translationErrors))
+
+		// Join all errors using errors.Join for better error handling
+		return fmt.Errorf("translation failed with %d errors: %w", len(translationErrors), errors.Join(translationErrors...))
+	}
+
+	logger.V(1).Info("Successfully completed HTTPRoute translation",
+		"totalResourcesCreated", len(c.outputStore))
 
 	return nil
 }
