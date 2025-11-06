@@ -5,7 +5,7 @@ go 1.25.3
 require (
 	cloud.google.com/go/container v1.44.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/sdk-konnect-go v0.10.1
+	github.com/Kong/sdk-konnect-go v0.13.2-0.20251031165438-8391441ae149
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/blang/semver/v4 v4.0.0
@@ -253,7 +253,7 @@ require (
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/spf13/cobra v1.10.1 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/spyzhov/ajson v0.8.0 // indirect
+	github.com/spyzhov/ajson v0.9.6 // indirect
 	github.com/ssgelm/cookiejarparser v1.0.1 // indirect
 	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
@@ -354,5 +354,3 @@ replace (
 	k8s.io/sample-cli-plugin => k8s.io/sample-cli-plugin v0.33.4
 	k8s.io/sample-controller => k8s.io/sample-controller v0.33.4
 )
-
-replace github.com/Kong/sdk-konnect-go => ../sdk-konnect-go
