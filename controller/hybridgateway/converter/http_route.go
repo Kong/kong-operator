@@ -110,17 +110,18 @@ func (c *httpRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 // The function respects controller ownership and only manages ParentStatus entries
 // for Gateways controlled by this controller, leaving other controllers' entries untouched.
 func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error) {
+	logger = logger.WithValues("phase", "httproute-status")
+	logger.V(1).Info("Starting UpdateRootObjectStatus")
 	updated := false
 
 	// First, build the resolvedRefs conditons for the HTTPRoute since it is the same for all ParentRefs.
-	logger.V(1).Info("Building ResolvedRefs condition for HTTPRoute", "route", c.route.Name)
+	logger.V(1).Info("Building ResolvedRefs condition for HTTPRoute")
 	resolvedRefsCond, err := route.BuildResolvedRefsCondition(ctx, logger, c.Client, c.route, c.referenceGrantEnabled)
 	if err != nil {
 		return false, fmt.Errorf("failed to build resolvedRefs condition for HTTPRoute %s: %w", c.route.Name, err)
 	}
 
 	// For each parentRef in the HTTPRoute, build the conditions and set them in the status.
-	logger.V(1).Info("Starting UpdateRootObjectStatus", "route", c.route.Name)
 	for _, pRef := range c.route.Spec.ParentRefs {
 		logger.V(2).Info("Processing ParentReference", "parentRef", pRef)
 		// Check if the parentRef belongs to a Gateway managed by us.
@@ -165,24 +166,24 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 		}
 	}
 
-	logger.V(2).Info("Cleaning up orphaned ParentStatus entries", "route", c.route.Name)
+	logger.V(2).Info("Cleaning up orphaned ParentStatus entries")
 	if route.CleanupOrphanedParentStatus(logger, c.route, vars.ControllerName()) {
-		logger.V(1).Info("Orphaned ParentStatus entries cleaned up", "route", c.route.Name)
+		logger.V(1).Info("Orphaned ParentStatus entries cleaned up")
 		updated = true
 	}
 
 	// Update the status in the cluster if there are changes.
 	if updated {
-		logger.V(1).Info("Updating HTTPRoute status in cluster", "route", c.route.Name, "status", c.route.Status)
+		logger.V(1).Info("Updating HTTPRoute status in cluster", "status", c.route.Status)
 		if err := c.Status().Update(ctx, c.route); err != nil {
-			logger.Error(err, "Failed to update HTTPRoute status in cluster", "route", c.route.Name)
+			logger.Error(err, "Failed to update HTTPRoute status in cluster")
 			return false, fmt.Errorf("failed to update HTTPRoute status: %w", err)
 		}
 	} else {
-		logger.V(1).Info("No status update required for HTTPRoute", "route", c.route.Name)
+		logger.V(1).Info("No status update required for HTTPRoute")
 	}
 
-	logger.V(1).Info("Finished UpdateRootObjectStatus", "route", c.route.Name, "updated", updated)
+	logger.V(1).Info("Finished UpdateRootObjectStatus", "updated", updated)
 	return updated, nil
 }
 
