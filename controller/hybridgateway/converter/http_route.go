@@ -61,11 +61,34 @@ func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client, refer
 }
 
 // GetRootObject implements APIConverter.
+//
+// Returns the HTTPRoute resource that this converter is managing. This method provides
+// access to the original HTTPRoute object that was passed to the converter during creation.
+//
+// Returns:
+//   - gwtypes.HTTPRoute: A copy of the HTTPRoute resource being converted
+//
+// This method is typically used by the reconciler to access metadata, labels, and other
+// properties of the original HTTPRoute resource for status updates and resource management.
 func (c *httpRouteConverter) GetRootObject() gwtypes.HTTPRoute {
 	return *c.route
 }
 
 // Translate implements APIConverter.
+//
+// Performs the complete translation of an HTTPRoute resource into Kong-specific resources.
+// This is the main entry point for the conversion process, delegating to the internal
+// translate() method for the actual implementation.
+//
+// See the translate() method documentation for detailed information about the translation
+// process, error handling strategy, and the specific Kong resources that are created.
+//
+// Parameters:
+//   - ctx: The context for API calls and cancellation
+//   - logger: Logger for structured logging with httproute-translate phase
+//
+// Returns:
+//   - error: Aggregated translation errors or nil if successful
 func (c *httpRouteConverter) Translate(ctx context.Context, logger logr.Logger) error {
 	return c.translate(ctx, logger)
 }
