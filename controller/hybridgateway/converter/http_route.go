@@ -527,9 +527,14 @@ type hybridGatewayParent struct {
 	hostnames []string
 }
 
+// getHybridGatewayParents returns parent references that are supported by this controller.
 func (c *httpRouteConverter) getHybridGatewayParents(ctx context.Context, logger logr.Logger) ([]hybridGatewayParent, error) {
+	logger.V(1).Info("Getting hybrid gateway parents", "parentRefCount", len(c.route.Spec.ParentRefs))
+
 	result := []hybridGatewayParent{}
-	for _, pRef := range c.route.Spec.ParentRefs {
+	for i, pRef := range c.route.Spec.ParentRefs {
+		logger.V(2).Info("Processing parent reference", "index", i, "parentRef", pRef)
+
 		cp, err := refs.GetControlPlaneRefByParentRef(ctx, logger, c.Client, c.route, pRef)
 		if err != nil {
 			switch {
@@ -551,14 +556,19 @@ func (c *httpRouteConverter) getHybridGatewayParents(ctx context.Context, logger
 			continue
 		}
 
-		hostnames, err := c.getHostnamesByParentRef(ctx, pRef)
+		logger.V(2).Info("Found ControlPlaneRef for ParentRef", "parentRef", pRef, "controlPlane", cp.KonnectNamespacedRef)
+
+		hostnames, err := c.getHostnamesByParentRef(ctx, logger, pRef)
 		if err != nil {
+			logger.Error(err, "Failed to get hostnames for ParentRef", "parentRef", pRef)
 			return nil, err
 		}
 		if hostnames == nil {
+			logger.V(2).Info("No hostnames found for ParentRef, skipping", "parentRef", pRef)
 			continue
 		}
 
+		logger.V(2).Info("Adding parent reference to result", "parentRef", pRef, "hostnames", hostnames)
 		result = append(result, hybridGatewayParent{
 			parentRef: pRef,
 			cpRef:     cp,
@@ -566,17 +576,25 @@ func (c *httpRouteConverter) getHybridGatewayParents(ctx context.Context, logger
 		})
 	}
 
+	logger.V(1).Info("Finished processing parent references", "supportedParents", len(result))
 	return result, nil
 }
 
-func (c *httpRouteConverter) getHostnamesByParentRef(ctx context.Context, pRef gwtypes.ParentReference) ([]string, error) {
+// getHostnamesByParentRef returns the hostnames that match between the HTTPRoute and the Gateway listeners.
+func (c *httpRouteConverter) getHostnamesByParentRef(ctx context.Context, logger logr.Logger, pRef gwtypes.ParentReference) ([]string, error) {
+	logger = logger.WithValues("parentRef", pRef.Name)
+	logger.V(2).Info("Getting hostnames for ParentRef")
+
 	var err error
 	var hostnames []string
 
 	listeners, err := refs.GetListenersByParentRef(ctx, c.Client, c.route, pRef)
 	if err != nil {
+		logger.Error(err, "Failed to get listeners for ParentRef")
 		return nil, err
 	}
+
+	logger.V(2).Info("Found listeners for ParentRef", "listenerCount", len(listeners))
 
 	for _, listener := range listeners {
 		// Check section reference if present
@@ -595,20 +613,26 @@ func (c *httpRouteConverter) getHostnamesByParentRef(ctx context.Context, pRef g
 		// If the listener has no hostname, it means it accepts all HTTPRoute hostnames.
 		// No need to do further checks.
 		if listener.Hostname == nil || *listener.Hostname == "" {
+			logger.V(2).Info("Listener accepts all hostnames", "listener", listener.Name)
 			hostnames = []string{}
 			for _, host := range c.route.Spec.Hostnames {
 				hostnames = append(hostnames, string(host))
 			}
+			logger.V(2).Info("Returning all HTTPRoute hostnames", "hostnames", hostnames)
 			return hostnames, nil
 		}
 
 		// Handle wildcard hostnames - get intersection
+		logger.V(2).Info("Processing listener with hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname)
 		for _, host := range c.route.Spec.Hostnames {
 			routeHostname := string(host)
 			if intersection := utils.HostnameIntersection(string(*listener.Hostname), routeHostname); intersection != "" {
+				logger.V(3).Info("Found hostname intersection", "listenerHostname", *listener.Hostname, "routeHostname", routeHostname, "intersection", intersection)
 				hostnames = append(hostnames, intersection)
 			}
 		}
 	}
+
+	logger.V(2).Info("Finished processing hostnames", "finalHostnames", hostnames)
 	return hostnames, nil
 }
