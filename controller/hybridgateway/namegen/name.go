@@ -19,9 +19,11 @@ type Name struct {
 	sectionID      string
 }
 
-const defaultHTTPRoutePrefix = "http"
-const defaultCPPrefix = "cp"
-const defaultResPrefix = "res"
+const (
+  defaultHTTPRoutePrefix = "http"
+  defaultCPPrefix = "cp"
+  defaultResPrefix = "res"
+)
 
 // String returns the full name as a dot-separated string.
 func (h *Name) String() string {
