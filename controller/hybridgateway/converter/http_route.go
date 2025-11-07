@@ -499,7 +499,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				}
 				c.outputStore = append(c.outputStore, &binding)
 
-				log.Trace(logger, "Successfully built KongPlugin and KongPluginBinding resources",
+				log.Debug(logger, "Successfully built KongPlugin and KongPluginBinding resources",
 					"plugin", pluginName,
 					"binding", bindingName)
 			}
