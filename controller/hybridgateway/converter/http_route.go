@@ -333,7 +333,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				"filterCount", len(rule.Filters))
 			// Build the KongUpstream resource.
 			upstreamName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.BackendRefs)).String()
-			log.Debug(logger, "Building KongUpstream resource",
+			log.Trace(logger, "Building KongUpstream resource",
 				"upstream", upstreamName,
 				"controlPlane", cp.KonnectNamespacedRef)
 
