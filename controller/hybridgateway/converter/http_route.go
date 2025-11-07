@@ -386,7 +386,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 
 			// Build the KongService resource.
 			serviceName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.BackendRefs)).String()
-			log.Debug(logger, "Building KongService resource",
+			log.Trace(logger, "Building KongService resource",
 				"service", serviceName,
 				"upstream", upstreamName)
 
