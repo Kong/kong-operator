@@ -9,6 +9,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	hybridgatewayerrors "github.com/kong/kong-operator/controller/hybridgateway/errors"
+	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/vars"
 )
@@ -71,13 +72,13 @@ func GetSupportedGatewayForParentRef(ctx context.Context, logger logr.Logger, cl
 	routeNamespace string) (*gwtypes.Gateway, error) {
 	// Only support Gateway kind.
 	if pRef.Kind != nil && *pRef.Kind != "Gateway" {
-		logger.V(1).Info("Ignoring ParentRef, unsupported kind", "pRef", pRef, "kind", *pRef.Kind)
+		log.Debug(logger, "Ignoring ParentRef, unsupported kind", "pRef", pRef, "kind", *pRef.Kind)
 		return nil, nil
 	}
 
 	// Only support gateway.networking.k8s.io group (or empty group which defaults to this).
 	if pRef.Group != nil && *pRef.Group != "gateway.networking.k8s.io" {
-		logger.V(1).Info("Ignoring ParentRef, unsupported group", "pRef", pRef, "group", *pRef.Group)
+		log.Debug(logger, "Ignoring ParentRef, unsupported group", "pRef", pRef, "group", *pRef.Group)
 		return nil, nil
 	}
 

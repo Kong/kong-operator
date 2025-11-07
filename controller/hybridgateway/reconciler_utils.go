@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/managedfields"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
+	"github.com/kong/kong-operator/controller/pkg/log"
 )
 
 const (
@@ -30,15 +31,52 @@ func Translate[t converter.RootObject](conv converter.APIConverter[t], ctx conte
 // structured merge. The function returns requeue and stop flags to control reconciliation flow, and an error
 // for any unrecoverable or transient issues. Resources marked for deletion are skipped. Conflict errors
 // trigger a requeue for optimistic concurrency. All other errors are wrapped with resource kind and name for context.
+//
+// The function performs the following operations:
+// 1. Retrieves the desired state from the converter's output store
+// 2. For each desired resource, checks if it exists in the cluster
+// 3. Creates new resources using server-side apply if they don't exist
+// 4. Skips resources that are marked for deletion
+// 5. Updates existing resources if changes are detected using managed fields comparison
+// 6. Handles conflicts by returning requeue=true for optimistic concurrency
+//
+// Parameters:
+//   - ctx: The context for API calls and cancellation
+//   - cl: The Kubernetes client for CRUD operations
+//   - logger: Logger for structured logging with state-enforcement phase
+//   - conv: The APIConverter that provides the desired state
+//
+// Returns:
+//   - requeue: true if the reconciliation should be retried due to conflicts
+//   - stop: true if reconciliation should stop (currently always false)
+//   - err: Any error that occurred during state enforcement
+//
+// The function uses server-side apply with the "gateway-operator" field manager to ensure
+// proper ownership and conflict resolution when multiple controllers manage the same resources.
 func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (requeue bool, stop bool, err error) {
+	logger = logger.WithValues("phase", "state-enforcement")
+	log.Debug(logger, "Starting state enforcement")
+
 	// Get the desired state from the converter.
-	desiredObjects := conv.GetOutputStore(ctx)
+	desiredObjects, err := conv.GetOutputStore(ctx, logger)
+	if err != nil {
+		return false, false, fmt.Errorf("failed to get desired objects from converter: %w", err)
+	}
 	if len(desiredObjects) == 0 {
-		logger.V(1).Info("No desired objects to enforce")
+		log.Debug(logger, "No desired objects to enforce")
 		return false, false, nil
 	}
 
-	for _, desired := range desiredObjects {
+	log.Debug(logger, "Retrieved desired objects for enforcement", "objectCount", len(desiredObjects))
+
+	var (
+		objectsCreated = 0
+		objectsUpdated = 0
+		objectsSkipped = 0
+	)
+
+	for i, desired := range desiredObjects {
+		log.Debug(logger, "Processing desired object", "index", i, "kind", desired.GetKind(), "name", desired.GetName())
 		// Get the existing object by name from the API server.
 		existing := &unstructured.Unstructured{}
 		existing.SetGroupVersionKind(desired.GetObjectKind().GroupVersionKind())
@@ -54,7 +92,7 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		if err != nil {
 			if errors.IsNotFound(err) {
 				// Object doesn't exist, create it using server-side apply.
-				logger.V(1).Info("Creating new object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
+				log.Debug(logger, "Creating new object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
 
 				// Set field manager for server-side apply
 				if err := cl.Patch(ctx, &desired, client.Apply, client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
@@ -63,6 +101,8 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 					}
 					return true, false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
+				objectsCreated++
+				log.Debug(logger, "Successfully created object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
 				continue
 			} else {
 				// Other error getting the object.
@@ -72,7 +112,8 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 
 		// Handle the case when resource are marked for deletion.
 		if !existing.GetDeletionTimestamp().IsZero() {
-			logger.V(1).Info("Existing object is marked for deletion, will not enforce state", "kind", existing.GetKind(), "obj", namespacedNameDesired)
+			log.Debug(logger, "Existing object is marked for deletion, will not enforce state", "kind", existing.GetKind(), "obj", namespacedNameDesired)
+			objectsSkipped++
 			continue
 		}
 
@@ -83,13 +124,15 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		}
 		if managedFieldsObj == nil {
 			// No managed fields for our field manager, we should update.
-			logger.V(1).Info("No managed fields found for our field manager, will apply desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting)
+			log.Debug(logger, "No managed fields found for our field manager, will apply desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting)
 			if err := cl.Patch(ctx, &desired, client.Apply, client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
 				if errors.IsConflict(err) {
 					return true, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
 				return true, false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 			}
+			objectsUpdated++
+			log.Debug(logger, "Successfully applied desired state (no managed fields)", "kind", existing.GetKind(), "obj", namespacedNameExisting)
 			continue
 		}
 
@@ -106,9 +149,9 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		}
 
 		if compare.IsSame() {
-			logger.V(3).Info("No changes detected for obj", "kind", existing.GetKind(), "obj", namespacedNameExisting)
+			log.Trace(logger, "No changes detected for obj", "kind", existing.GetKind(), "obj", namespacedNameExisting)
 		} else {
-			logger.Info("Changes detected for obj, applying desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting, "changes", compare.String())
+			log.Info(logger, "Changes detected for obj, applying desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting, "changes", compare.String())
 			// Changes detected, apply the desired state using server-side apply.
 			if err := cl.Patch(ctx, &desired, client.Apply, client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
 				if errors.IsConflict(err) {
@@ -116,8 +159,16 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 				}
 				return true, false, fmt.Errorf("failed to update object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 			}
+			objectsUpdated++
+			log.Debug(logger, "Successfully applied changes to object", "kind", existing.GetKind(), "obj", namespacedNameExisting)
 		}
 	}
+
+	log.Debug(logger, "Finished state enforcement",
+		"totalObjects", len(desiredObjects),
+		"created", objectsCreated,
+		"updated", objectsUpdated,
+		"skipped", objectsSkipped)
 
 	return false, false, nil
 }
@@ -143,10 +194,43 @@ func EnforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logg
 }
 
 // CleanOrphanedResources deletes resources previously managed by the converter but no longer present in the desired output.
+//
+// The function performs the following operations:
+// 1. Retrieves the current desired state from the converter's output store
+// 2. Builds a set of desired resource keys for quick lookup
+// 3. For each expected GroupVersionKind, lists existing resources owned by the root object
+// 4. Compares existing resources against the desired set and deletes orphans
+// 5. Handles deletion errors gracefully, ignoring NotFound errors
+//
+// This cleanup process ensures that resources that were previously created by the converter
+// but are no longer needed (due to configuration changes) are properly removed from the cluster.
+//
+// Parameters:
+//   - ctx: The context for API calls and cancellation
+//   - cl: The Kubernetes client for listing and deleting resources
+//   - logger: Logger for debugging and status information
+//   - conv: The APIConverter that manages the root object and its desired state
+//
+// Returns:
+//   - error: Any error that occurred during the cleanup process
+//
+// The function uses ownership labels to identify resources managed by the root object
+// and only deletes resources that are no longer present in the converter's desired output.
 func CleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr[t]](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) error {
-	desiredObjects := conv.GetOutputStore(ctx)
+	logger = logger.WithValues("phase", "orphan-cleanup")
+	log.Debug(logger, "Starting orphaned resource cleanup")
+
+	desiredObjects, err := conv.GetOutputStore(ctx, logger)
+	if err != nil {
+		return fmt.Errorf("failed to get desired objects from converter for cleanup: %w", err)
+	}
+
 	desiredSet := make(map[string]struct{})
 	expectedGVKs := conv.GetExpectedGVKs()
+
+	log.Debug(logger, "Retrieved desired objects and expected GVKs",
+		"desiredObjectCount", len(desiredObjects),
+		"expectedGVKCount", len(expectedGVKs))
 
 	// Extract the root object for label selector.
 	rootObj := conv.GetRootObject()
@@ -159,13 +243,19 @@ func CleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	}
 
 	// Build a set of desired resource keys.
+	log.Debug(logger, "Building desired resource key set")
 	for _, obj := range desiredObjects {
 		key := fmt.Sprintf("%s/%s/%s", obj.GetNamespace(), obj.GetName(), obj.GetObjectKind().GroupVersionKind().String())
 		desiredSet[key] = struct{}{}
+		log.Trace(logger, "Added desired resource key", "key", key, "kind", obj.GetKind(), "name", obj.GetName())
 	}
+	log.Debug(logger, "Finished building desired resource key set", "totalKeys", len(desiredSet))
 
 	// For each expected GVK, list resources and delete orphans.
+	totalOrphansDeleted := 0
 	for _, gvk := range expectedGVKs {
+		log.Debug(logger, "Processing GVK for orphan cleanup", "gvk", gvk.String())
+
 		list := &unstructured.UnstructuredList{}
 		list.SetGroupVersionKind(gvk)
 		selector := metadata.LabelSelectorForOwnedResources(rootObjPtr, nil)
@@ -177,17 +267,32 @@ func CleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 			return fmt.Errorf("unable to list objects with gvk %s in namespace %s: %w", gvk.String(), ns, err)
 		}
 
+		log.Debug(logger, "Found existing resources for GVK", "gvk", gvk.String(), "resourceCount", len(list.Items))
+
+		orphansForGVK := 0
 		for _, item := range list.Items {
 			key := fmt.Sprintf("%s/%s/%s", item.GetNamespace(), item.GetName(), gvk.String())
 			if _, found := desiredSet[key]; !found {
 				// Not in desired output, delete it.
-				logger.Info("Deleting orphaned resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+				log.Info(logger, "Deleting orphaned resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
 				if err := cl.Delete(ctx, &item); err != nil && !errors.IsNotFound(err) {
 					return fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
 				}
+				orphansForGVK++
+				totalOrphansDeleted++
+			} else {
+				log.Trace(logger, "Resource still desired, keeping", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
 			}
 		}
+
+		if orphansForGVK > 0 {
+			log.Debug(logger, "Deleted orphaned resources for GVK", "gvk", gvk.String(), "orphansDeleted", orphansForGVK)
+		} else {
+			log.Debug(logger, "No orphaned resources found for GVK", "gvk", gvk.String())
+		}
 	}
+
+	log.Debug(logger, "Finished orphaned resource cleanup", "totalOrphansDeleted", totalOrphansDeleted)
 	return nil
 }
 

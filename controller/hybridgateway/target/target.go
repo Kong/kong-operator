@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
+	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
@@ -53,7 +54,7 @@ func TargetsForBackendRefs(
 	}
 
 	if len(validBackendRefs) == 0 {
-		logger.V(1).Info("no valid BackendRefs found for rule")
+		log.Debug(logger, "no valid BackendRefs found for rule")
 		return []configurationv1alpha1.KongTarget{}, nil
 	}
 
@@ -66,7 +67,7 @@ func TargetsForBackendRefs(
 		return nil, fmt.Errorf("failed to create targets from valid BackendRefs: %w", err)
 	}
 
-	logger.V(1).Info("created targets for BackendRefs",
+	log.Debug(logger, "created targets for BackendRefs",
 		"totalBackendRefs", len(backendRefs),
 		"validBackendRefs", len(validBackendRefs),
 		"createdTargets", len(targets))
@@ -178,7 +179,7 @@ func resolveExternalNameEndpoints(logger logr.Logger, svc *corev1.Service) ([]st
 	if svc.Spec.ExternalName != "" {
 		return []string{svc.Spec.ExternalName}, false, nil
 	}
-	logger.V(1).Info("skipping ExternalName service with empty externalName", "service", fmt.Sprintf("%s/%s", svc.Namespace, svc.Name))
+	log.Debug(logger, "skipping ExternalName service with empty externalName", "service", fmt.Sprintf("%s/%s", svc.Namespace, svc.Name))
 	return nil, true, nil
 }
 
@@ -197,7 +198,7 @@ func resolveEndpointSliceEndpoints(
 		if client.IgnoreNotFound(err) != nil {
 			return nil, false, fmt.Errorf("error fetching EndpointSlices for service %s/%s: %w", svc.Namespace, svc.Name, err)
 		}
-		logger.V(1).Info("skipping service with no EndpointSlices found", "service", fmt.Sprintf("%s/%s", svc.Namespace, svc.Name))
+		log.Debug(logger, "skipping service with no EndpointSlices found", "service", fmt.Sprintf("%s/%s", svc.Namespace, svc.Name))
 		return nil, true, nil
 	}
 
@@ -206,7 +207,7 @@ func resolveEndpointSliceEndpoints(
 
 	// Skip services with no ready endpoints.
 	if len(readyEndpoints) == 0 {
-		logger.V(1).Info("skipping service with no ready endpoints", "service", fmt.Sprintf("%s/%s", svc.Namespace, svc.Name))
+		log.Debug(logger, "skipping service with no ready endpoints", "service", fmt.Sprintf("%s/%s", svc.Namespace, svc.Name))
 		return nil, true, nil
 	}
 
@@ -257,7 +258,7 @@ func filterValidBackendRefs(
 	for _, bRef := range backendRefs {
 		// Check if the backendRef is supported.
 		if !route.IsBackendRefSupported(bRef.Group, bRef.Kind) {
-			logger.Info("skipping unsupported backendRef", "group", bRef.Group, "kind", bRef.Kind)
+			log.Info(logger, "skipping unsupported backendRef", "group", bRef.Group, "kind", bRef.Kind)
 			continue
 		}
 
@@ -271,14 +272,14 @@ func filterValidBackendRefs(
 		svc := &corev1.Service{}
 		err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(bRef.Name)}, svc)
 		if err != nil {
-			logger.Info("skipping nonexistent Service", "group", bRef.Group, "kind", bRef.Kind, "name", bRef.Name)
+			log.Info(logger, "skipping nonexistent Service", "group", bRef.Group, "kind", bRef.Kind, "name", bRef.Name)
 			continue
 		}
 
 		// Find and validate the port in the Service.
 		svcPort, err := findBackendRefPortInService(&bRef, svc)
 		if err != nil {
-			logger.Info("skipping backendRef with invalid port", "group", bRef.Group, "kind", bRef.Kind, "name", bRef.Name, "error", err)
+			log.Info(logger, "skipping backendRef with invalid port", "group", bRef.Group, "kind", bRef.Kind, "name", bRef.Name, "error", err)
 			continue
 		}
 
@@ -290,9 +291,9 @@ func filterValidBackendRefs(
 			}
 			if !permitted {
 				if found {
-					logger.Info("skipping backendRef not permitted by ReferenceGrant", "group", bRef.Group, "kind", bRef.Kind, "name", bRef.Name)
+					log.Info(logger, "skipping backendRef not permitted by ReferenceGrant", "group", bRef.Group, "kind", bRef.Kind, "name", bRef.Name)
 				} else {
-					logger.Info("skipping backendRef in different namespace without ReferenceGrant", "group", bRef.Group, "kind", bRef.Kind, "name", bRef.Name)
+					log.Info(logger, "skipping backendRef in different namespace without ReferenceGrant", "group", bRef.Group, "kind", bRef.Kind, "name", bRef.Name)
 				}
 				continue
 			}

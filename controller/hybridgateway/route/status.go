@@ -15,6 +15,7 @@ import (
 
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
+	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
@@ -142,7 +143,7 @@ func CleanupOrphanedParentStatus(logger logr.Logger, route *gwtypes.HTTPRoute, c
 			filteredParents = append(filteredParents, parentStatus)
 		} else {
 			// Mark as removed (orphaned entry).
-			logger.V(1).Info("Removing orphaned ParentStatus entry", "parentRef", parentStatus.ParentRef, "controller", controllerName)
+			log.Debug(logger, "Removing orphaned ParentStatus entry", "parentRef", parentStatus.ParentRef, "controller", controllerName)
 			removed = true
 		}
 	}
@@ -176,7 +177,7 @@ func RemoveStatusForParentRef(logger logr.Logger, route *gwtypes.HTTPRoute, pRef
 	for _, parentStatus := range route.Status.Parents {
 		if string(parentStatus.ControllerName) == controllerName && isParentRefEqual(parentStatus.ParentRef, pRef) {
 			// Skip this entry (remove it).
-			logger.V(1).Info("Removing ParentStatus entry for ParentReference", "parentRef", parentStatus.ParentRef, "controller", controllerName)
+			log.Debug(logger, "Removing ParentStatus entry for ParentReference", "parentRef", parentStatus.ParentRef, "controller", controllerName)
 			removed = true
 			continue
 		}
@@ -302,7 +303,7 @@ func BuildAcceptedCondition(ctx context.Context, logger logr.Logger, cl client.C
 	// Begin by excluding listeners that do not match the specified section name.
 	listeners, cond := FilterMatchingListeners(logger, gateway, pRef, gateway.Spec.Listeners)
 	if cond != nil {
-		logger.V(1).Info("No matching listeners for ParentReference", "parentRef", pRef, "gateway", gateway.Name)
+		log.Debug(logger, "No matching listeners for ParentReference", "parentRef", pRef, "gateway", gateway.Name)
 		// Return the condition indicating no matching listeners.
 		return SetConditionMeta(*cond, route), nil
 	}
@@ -322,19 +323,19 @@ func BuildAcceptedCondition(ctx context.Context, logger logr.Logger, cl client.C
 		return nil, err
 	}
 	if cond != nil {
-		logger.V(1).Info("Listeners do not allow route", "parentRef", pRef, "gateway", gateway.Name, "reason", cond.Reason)
+		log.Debug(logger, "Listeners do not allow route", "parentRef", pRef, "gateway", gateway.Name, "reason", cond.Reason)
 		return SetConditionMeta(*cond, route), nil
 	}
 
 	// If we have listeners that allow the route, we check the hostnames.
 	_, cond = FilterListenersByHostnames(logger, listeners, route.Spec.Hostnames)
 	if cond != nil {
-		logger.V(1).Info("Listeners do not match hostnames", "parentRef", pRef, "gateway", gateway.Name, "reason", cond.Reason)
+		log.Debug(logger, "Listeners do not match hostnames", "parentRef", pRef, "gateway", gateway.Name, "reason", cond.Reason)
 		return SetConditionMeta(*cond, route), nil
 	}
 
 	// If we have listeners that match the hostnames, we can accept the route.
-	logger.V(1).Info("Route accepted by gateway", "route", route.Name, "gateway", gateway.Name)
+	log.Debug(logger, "Route accepted by gateway", "route", route.Name, "gateway", gateway.Name)
 	cond = &metav1.Condition{
 		Type:    string(gwtypes.RouteConditionAccepted),
 		Status:  metav1.ConditionTrue,
@@ -386,7 +387,7 @@ func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client
 		for _, item := range list.Items {
 			// Check if the item is programmed.
 			prog := isProgrammed(&item)
-			logger.V(1).Info("Resource programmed status", "gvk", gvk.String(), "name", item.GetName(), "namespace", item.GetNamespace(), "programmed", prog)
+			log.Debug(logger, "Resource programmed status", "gvk", gvk.String(), "name", item.GetName(), "namespace", item.GetNamespace(), "programmed", prog)
 			conditions = append(conditions, *SetConditionMeta(GetProgrammedConditionForGVK(gvk, prog), route))
 		}
 	}
@@ -437,7 +438,7 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 
 			// Check if the group kind is supported for the reference.
 			if !IsBackendRefSupported(bRef.Group, bRef.Kind) {
-				logger.V(1).Info("Unsupported BackendRef group/kind", "group", bRef.Group, "kind", bRef.Kind)
+				log.Debug(logger, "Unsupported BackendRef group/kind", "group", bRef.Group, "kind", bRef.Kind)
 				cond.Reason = string(gwtypes.RouteReasonInvalidKind)
 				cond.Status = metav1.ConditionFalse
 				cond.Message = fmt.Sprintf("Unsupported BackendRef %s/%s group/kind: %s", bRefNamespace, bRef.Name, bRefGK)
@@ -450,7 +451,7 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 			err := cl.Get(ctx, client.ObjectKey{Namespace: bRefNamespace, Name: string(bRef.Name)}, service)
 			if err != nil {
 				if k8serrors.IsNotFound(err) {
-					logger.V(1).Info("BackendRef not found", "namespace", bRefNamespace, "name", bRef.Name)
+					log.Debug(logger, "BackendRef not found", "namespace", bRefNamespace, "name", bRef.Name)
 					cond.Reason = string(gwtypes.RouteReasonBackendNotFound)
 					cond.Status = metav1.ConditionFalse
 					cond.Message = fmt.Sprintf("BackendRef %s/%s not found", bRefNamespace, bRef.Name)
@@ -463,7 +464,7 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 			// Check if the referenced object is permitted by the reference grant if in a different namespace.
 			if bRefNamespace != route.Namespace {
 				if !referenceGrantEnabled {
-					logger.V(1).Info("BackendRef in different namespace but ReferenceGrant support is disabled", "namespace", bRefNamespace, "name", bRef.Name)
+					log.Debug(logger, "BackendRef in different namespace but ReferenceGrant support is disabled", "namespace", bRefNamespace, "name", bRef.Name)
 					cond.Reason = string(gwtypes.RouteReasonRefNotPermitted)
 					cond.Status = metav1.ConditionFalse
 					cond.Message = fmt.Sprintf("BackendRef %s/%s in different namespace and ReferenceGrant support is disabled", bRefNamespace, bRef.Name)
@@ -478,7 +479,7 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 				}
 
 				if !found {
-					logger.V(1).Info("No ReferenceGrants found in backend ref namespace", "namespace", bRefNamespace)
+					log.Debug(logger, "No ReferenceGrants found in backend ref namespace", "namespace", bRefNamespace)
 					cond.Reason = string(gwtypes.RouteReasonRefNotPermitted)
 					cond.Status = metav1.ConditionFalse
 					cond.Message = fmt.Sprintf("No ReferenceGrants found in namespace %s for BackendRef %s/%s", bRefNamespace, bRefNamespace, bRef.Name)
@@ -487,7 +488,7 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 				}
 
 				if !permitted {
-					logger.V(1).Info("BackendRef not permitted by ReferenceGrant", "namespace", bRefNamespace, "name", bRef.Name)
+					log.Debug(logger, "BackendRef not permitted by ReferenceGrant", "namespace", bRefNamespace, "name", bRef.Name)
 					cond.Reason = string(gwtypes.RouteReasonRefNotPermitted)
 					cond.Status = metav1.ConditionFalse
 					cond.Message = fmt.Sprintf("BackendRef %s/%s not permitted by any ReferenceGrant", bRefNamespace, bRef.Name)
@@ -599,17 +600,17 @@ func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, pRef gwtyp
 		}
 
 		// At this point, the listener matches the parent reference.
-		logger.V(1).Info("Listener matches ParentReference criteria", "listener", listener.Name, "parentRef", pRef)
+		log.Debug(logger, "Listener matches ParentReference criteria", "listener", listener.Name, "parentRef", pRef)
 		// Now check if the listener is ready.
 		for _, ls := range gw.Status.Listeners {
 			if ls.Name == listener.Name {
 				for _, cond := range ls.Conditions {
 					if cond.Type == string(gwtypes.ListenerConditionProgrammed) {
 						if cond.Status == metav1.ConditionTrue {
-							logger.V(1).Info("Listener is ready (programmed)", "listener", listener.Name)
+							log.Debug(logger, "Listener is ready (programmed)", "listener", listener.Name)
 							matchingListeners = append(matchingListeners, listener)
 						} else {
-							logger.V(1).Info("Listener matched but is not ready", "listener", listener.Name)
+							log.Debug(logger, "Listener matched but is not ready", "listener", listener.Name)
 							// Listener is not ready, and we track that at least one listener matched but is not ready.
 							matchedNotReady = true
 						}
@@ -626,7 +627,7 @@ func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, pRef gwtyp
 		if matchedNotReady {
 			msg = "A Gateway Listener matches this route but is not ready"
 		}
-		logger.V(1).Info("No matching listeners found for ParentReference", "parentRef", pRef, "matchedNotReady", matchedNotReady)
+		log.Debug(logger, "No matching listeners found for ParentReference", "parentRef", pRef, "matchedNotReady", matchedNotReady)
 		return nil, &metav1.Condition{
 			Type:    string(gwtypes.RouteConditionAccepted),
 			Status:  metav1.ConditionFalse,
@@ -635,7 +636,7 @@ func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, pRef gwtyp
 		}
 	}
 	// Return the list of matching and ready listeners that can be used for further processing.
-	logger.V(1).Info("Matching and ready listeners found", "parentRef", pRef, "count", len(matchingListeners))
+	log.Debug(logger, "Matching and ready listeners found", "parentRef", pRef, "count", len(matchingListeners))
 	return matchingListeners, nil
 }
 
@@ -665,7 +666,7 @@ func FilterListenersByAllowedRoutes(logger logr.Logger, gw *gwtypes.Gateway, pRe
 	for _, listener := range listeners {
 		if listener.AllowedRoutes == nil {
 			// If AllowedRoutes is nil, all routes are allowed.
-			logger.V(1).Info("Listener allows all routes (AllowedRoutes is nil)", "listener", listener.Name)
+			log.Debug(logger, "Listener allows all routes (AllowedRoutes is nil)", "listener", listener.Name)
 			matchingListeners = append(matchingListeners, listener)
 			continue
 		}
@@ -677,13 +678,13 @@ func FilterListenersByAllowedRoutes(logger logr.Logger, gw *gwtypes.Gateway, pRe
 				if (allowedKind.Group != nil && *allowedKind.Group != *rgk.Group) || allowedKind.Kind != rgk.Kind {
 					continue
 				} else {
-					logger.V(1).Info("Listener allows route kind", "listener", listener.Name, "allowedKind", allowedKind, "routeKind", rgk)
+					log.Debug(logger, "Listener allows route kind", "listener", listener.Name, "allowedKind", allowedKind, "routeKind", rgk)
 					matched = true
 					break
 				}
 			}
 			if !matched {
-				logger.V(1).Info("Listener does not allow route kind", "listener", listener.Name, "routeKind", rgk)
+				log.Debug(logger, "Listener does not allow route kind", "listener", listener.Name, "routeKind", rgk)
 				// If no allowed kind matched, we can't use this listener.
 				continue
 			}
@@ -692,7 +693,7 @@ func FilterListenersByAllowedRoutes(logger logr.Logger, gw *gwtypes.Gateway, pRe
 		// Check if the route namespace is allowed.
 		if listener.AllowedRoutes.Namespaces == nil || listener.AllowedRoutes.Namespaces.From == nil {
 			// If Namespaces or From is nil, all namespaces are allowed.
-			logger.V(1).Info("Listener allows all namespaces (Namespaces or From is nil)", "listener", listener.Name)
+			log.Debug(logger, "Listener allows all namespaces (Namespaces or From is nil)", "listener", listener.Name)
 			matchingListeners = append(matchingListeners, listener)
 			continue
 		}
@@ -700,31 +701,31 @@ func FilterListenersByAllowedRoutes(logger logr.Logger, gw *gwtypes.Gateway, pRe
 		switch *listener.AllowedRoutes.Namespaces.From {
 		case gwtypes.NamespacesFromAll:
 			// All namespaces are allowed.
-			logger.V(1).Info("Listener allows all namespaces (NamespacesFromAll)", "listener", listener.Name)
+			log.Debug(logger, "Listener allows all namespaces (NamespacesFromAll)", "listener", listener.Name)
 			matchingListeners = append(matchingListeners, listener)
 		case gwtypes.NamespacesFromSame:
 			// Only the same namespace as the gateway is allowed.
 			if (pRef.Namespace != nil && string(*pRef.Namespace) == routeNamespace.Name) || (pRef.Namespace == nil && gw.Namespace == routeNamespace.Name) {
-				logger.V(1).Info("Listener allows same namespace as gateway", "listener", listener.Name, "routeNamespace", routeNamespace.Name)
+				log.Debug(logger, "Listener allows same namespace as gateway", "listener", listener.Name, "routeNamespace", routeNamespace.Name)
 				matchingListeners = append(matchingListeners, listener)
 			}
 		case gwtypes.NamespacesFromSelector:
 			// Only namespaces matching the selector are allowed.
 			if listener.AllowedRoutes.Namespaces.Selector == nil {
-				logger.V(1).Info("Listener has NamespacesFromSelector but selector is nil", "listener", listener.Name)
+				log.Debug(logger, "Listener has NamespacesFromSelector but selector is nil", "listener", listener.Name)
 				// If Selector is nil, no namespaces are allowed.
 				continue
 			}
 
 			selector, err := metav1.LabelSelectorAsSelector(listener.AllowedRoutes.Namespaces.Selector)
 			if err != nil {
-				logger.Error(err, "Failed to convert AllowedRoutes.Namespaces.Selector", "listener", listener.Name, "selector", listener.AllowedRoutes.Namespaces.Selector)
+				log.Error(logger, err, "Failed to convert AllowedRoutes.Namespaces.Selector", "listener", listener.Name, "selector", listener.AllowedRoutes.Namespaces.Selector)
 				return nil, nil, fmt.Errorf("failed to convert AllowedRoutes.Namespaces.Selector %s to selector for listener %s for gateway %s: %w",
 					listener.AllowedRoutes.Namespaces.Selector, listener.Name, client.ObjectKeyFromObject(gw), err)
 			}
 
 			if selector.Matches(labels.Set(routeNamespace.Labels)) {
-				logger.V(1).Info("Listener allows route namespace by selector", "listener", listener.Name, "routeNamespace", routeNamespace.Name)
+				log.Debug(logger, "Listener allows route namespace by selector", "listener", listener.Name, "routeNamespace", routeNamespace.Name)
 				matchingListeners = append(matchingListeners, listener)
 			}
 		default:
@@ -736,7 +737,7 @@ func FilterListenersByAllowedRoutes(logger logr.Logger, gw *gwtypes.Gateway, pRe
 
 	// If we found no matching listeners, return a condition indicating the reason.
 	if len(matchingListeners) == 0 {
-		logger.V(1).Info("No listeners allow this route", "parentRef", pRef, "routeKind", rgk, "routeNamespace", routeNamespace.Name)
+		log.Debug(logger, "No listeners allow this route", "parentRef", pRef, "routeKind", rgk, "routeNamespace", routeNamespace.Name)
 		return nil, &metav1.Condition{
 			Type:    string(gwtypes.RouteConditionAccepted),
 			Status:  metav1.ConditionFalse,
@@ -746,7 +747,7 @@ func FilterListenersByAllowedRoutes(logger logr.Logger, gw *gwtypes.Gateway, pRe
 	}
 
 	// Return the list of matching listeners that can be used for further processing.
-	logger.V(1).Info("Listeners found that allow this route", "parentRef", pRef, "count", len(matchingListeners))
+	log.Debug(logger, "Listeners found that allow this route", "parentRef", pRef, "count", len(matchingListeners))
 	return matchingListeners, nil, nil
 }
 
@@ -775,7 +776,7 @@ func FilterListenersByHostnames(logger logr.Logger, listeners []gwtypes.Listener
 	for _, listener := range listeners {
 		// If the listener has no hostname, it matches all hostnames.
 		if listener.Hostname == nil || *listener.Hostname == "" {
-			logger.V(1).Info("Listener matches all hostnames (wildcard)", "listener", listener.Name)
+			log.Debug(logger, "Listener matches all hostnames (wildcard)", "listener", listener.Name)
 			matchingListeners = append(matchingListeners, listener)
 			continue
 		}
@@ -784,15 +785,15 @@ func FilterListenersByHostnames(logger logr.Logger, listeners []gwtypes.Listener
 		for _, hostname := range hostnames {
 			routeHostname := string(hostname)
 			if intersection := utils.HostnameIntersection(string(*listener.Hostname), routeHostname); intersection != "" {
-				logger.V(1).Info("Listener matches route hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname, "routeHostname", routeHostname)
+				log.Debug(logger, "Listener matches route hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname, "routeHostname", routeHostname)
 				matchingListeners = append(matchingListeners, listener)
 				break
 			}
-			logger.V(1).Info("Listener does not match route hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname, "routeHostname", routeHostname)
+			log.Debug(logger, "Listener does not match route hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname, "routeHostname", routeHostname)
 		}
 	}
 	if len(matchingListeners) == 0 {
-		logger.V(1).Info("No listeners match route hostnames", "hostnames", hostnames)
+		log.Debug(logger, "No listeners match route hostnames", "hostnames", hostnames)
 		return nil, &metav1.Condition{
 			Type:    string(gwtypes.RouteConditionAccepted),
 			Status:  metav1.ConditionFalse,
@@ -801,7 +802,7 @@ func FilterListenersByHostnames(logger logr.Logger, listeners []gwtypes.Listener
 		}
 	}
 
-	logger.V(1).Info("Listeners found that match route hostnames", "count", len(matchingListeners), "hostnames", hostnames)
+	log.Debug(logger, "Listeners found that match route hostnames", "count", len(matchingListeners), "hostnames", hostnames)
 	return matchingListeners, nil
 }
 
