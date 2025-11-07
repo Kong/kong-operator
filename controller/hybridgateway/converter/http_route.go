@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/controller/hybridgateway/target"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
+	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/vars"
 )
@@ -123,7 +124,7 @@ func (c *httpRouteConverter) Translate(ctx context.Context, logger logr.Logger) 
 // the user to see all conversion issues at once rather than fixing them one by one.
 func (c *httpRouteConverter) GetOutputStore(ctx context.Context, logger logr.Logger) ([]unstructured.Unstructured, error) {
 	logger = logger.WithValues("phase", "output-store-conversion")
-	logger.V(1).Info("Starting output store conversion")
+	log.Debug(logger, "Starting output store conversion")
 
 	var conversionErrors []error
 
@@ -133,7 +134,7 @@ func (c *httpRouteConverter) GetOutputStore(ctx context.Context, logger logr.Log
 		if err != nil {
 			conversionErr := fmt.Errorf("failed to convert %T %s to unstructured: %w", obj, obj.GetName(), err)
 			conversionErrors = append(conversionErrors, conversionErr)
-			logger.Error(err, "Failed to convert object to unstructured",
+			log.Error(logger, err, "Failed to convert object to unstructured",
 				"objectName", obj.GetName())
 			continue
 		}
@@ -142,7 +143,7 @@ func (c *httpRouteConverter) GetOutputStore(ctx context.Context, logger logr.Log
 
 	// Check if any conversion errors occurred and return aggregated error.
 	if len(conversionErrors) > 0 {
-		logger.Error(nil, "Output store conversion completed with errors",
+		log.Error(logger, nil, "Output store conversion completed with errors",
 			"totalObjectsAttempted", len(c.outputStore),
 			"successfulConversions", len(objects),
 			"conversionErrors", len(conversionErrors))
@@ -151,10 +152,10 @@ func (c *httpRouteConverter) GetOutputStore(ctx context.Context, logger logr.Log
 		return objects, fmt.Errorf("output store conversion failed with %d errors: %w", len(conversionErrors), errors.Join(conversionErrors...))
 	}
 
-	logger.V(1).Info("Successfully converted all objects in output store",
+	log.Debug(logger, "Successfully converted all objects in output store",
 		"totalObjectsConverted", len(objects))
 
-	logger.V(1).Info("Finished output store conversion", "totalObjectsConverted", len(objects))
+	log.Debug(logger, "Finished output store conversion", "totalObjectsConverted", len(objects))
 	return objects, nil
 }
 
@@ -186,11 +187,11 @@ func (c *httpRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 // for Gateways controlled by this controller, leaving other controllers' entries untouched.
 func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error) {
 	logger = logger.WithValues("phase", "httproute-status")
-	logger.V(1).Info("Starting UpdateRootObjectStatus")
+	log.Debug(logger, "Starting UpdateRootObjectStatus")
 	updated := false
 
 	// First, build the resolvedRefs conditons for the HTTPRoute since it is the same for all ParentRefs.
-	logger.V(1).Info("Building ResolvedRefs condition for HTTPRoute")
+	log.Debug(logger, "Building ResolvedRefs condition for HTTPRoute")
 	resolvedRefsCond, err := route.BuildResolvedRefsCondition(ctx, logger, c.Client, c.route, c.referenceGrantEnabled)
 	if err != nil {
 		return false, fmt.Errorf("failed to build resolvedRefs condition for HTTPRoute %s: %w", c.route.Name, err)
@@ -198,7 +199,7 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 
 	// For each parentRef in the HTTPRoute, build the conditions and set them in the status.
 	for _, pRef := range c.route.Spec.ParentRefs {
-		logger.V(2).Info("Processing ParentReference", "parentRef", pRef)
+		log.Debug(logger, "Processing ParentReference", "parentRef", pRef)
 		// Check if the parentRef belongs to a Gateway managed by us.
 		gateway, err := refs.GetSupportedGatewayForParentRef(ctx, logger, c.Client, pRef, c.route.Namespace)
 		if err != nil {
@@ -206,26 +207,26 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 				errors.Is(err, hybridgatewayerrors.ErrNoGatewayController) ||
 				errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound) {
 				// If the gateway is not managed by us or not found we skip setting conditions.
-				logger.V(1).Info("Skipping status update for unsupported or non-existent Gateway", "parentRef", pRef)
+				log.Debug(logger, "Skipping status update for unsupported or non-existent Gateway", "parentRef", pRef)
 				if route.RemoveStatusForParentRef(logger, c.route, pRef, vars.ControllerName()) {
 					// If we removed the status, we need to mark the update as true.
-					logger.V(2).Info("Removed ParentStatus for unsupported ParentReference", "parentRef", pRef)
+					log.Debug(logger, "Removed ParentStatus for unsupported ParentReference", "parentRef", pRef)
 					updated = true
 				}
 				continue
 			} else {
-				logger.Error(err, "Failed to get supported gateway for ParentReference", "parentRef", pRef)
+				log.Error(logger, err, "Failed to get supported gateway for ParentReference", "parentRef", pRef)
 				return false, fmt.Errorf("failed to get supported gateway for parentRef %s: %w", pRef.Name, err)
 			}
 		}
 
-		logger.V(2).Info("Building Accepted condition", "parentRef", pRef, "gateway", gateway.Name)
+		log.Debug(logger, "Building Accepted condition", "parentRef", pRef, "gateway", gateway.Name)
 		acceptedCondition, err := route.BuildAcceptedCondition(ctx, logger, c.Client, gateway, c.route, pRef)
 		if err != nil {
 			return false, fmt.Errorf("failed to build accepted condition for parentRef %s: %w", pRef.Name, err)
 		}
 
-		logger.V(2).Info("Building Programmed conditions", "parentRef", pRef, "gateway", gateway.Name)
+		log.Debug(logger, "Building Programmed conditions", "parentRef", pRef, "gateway", gateway.Name)
 		programmedConditions, err := route.BuildProgrammedCondition(ctx, logger, c.Client, c.route, pRef, c.expectedGVKs)
 		if err != nil {
 			return false, fmt.Errorf("failed to build programmed condition for parentRef %s: %w", pRef.Name, err)
@@ -234,31 +235,31 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 		// Combine all conditions.
 		programmedConditions = append(programmedConditions, *acceptedCondition, *resolvedRefsCond)
 
-		logger.V(2).Info("Setting status conditions", "parentRef", pRef, "conditionsCount", len(programmedConditions))
+		log.Debug(logger, "Setting status conditions", "parentRef", pRef, "conditionsCount", len(programmedConditions))
 		if route.SetStatusConditions(c.route, pRef, vars.ControllerName(), programmedConditions...) {
-			logger.V(1).Info("Status conditions updated for ParentReference", "parentRef", pRef)
+			log.Debug(logger, "Status conditions updated for ParentReference", "parentRef", pRef)
 			updated = true
 		}
 	}
 
-	logger.V(2).Info("Cleaning up orphaned ParentStatus entries")
+	log.Debug(logger, "Cleaning up orphaned ParentStatus entries")
 	if route.CleanupOrphanedParentStatus(logger, c.route, vars.ControllerName()) {
-		logger.V(1).Info("Orphaned ParentStatus entries cleaned up")
+		log.Debug(logger, "Orphaned ParentStatus entries cleaned up")
 		updated = true
 	}
 
 	// Update the status in the cluster if there are changes.
 	if updated {
-		logger.V(1).Info("Updating HTTPRoute status in cluster", "status", c.route.Status)
+		log.Debug(logger, "Updating HTTPRoute status in cluster", "status", c.route.Status)
 		if err := c.Status().Update(ctx, c.route); err != nil {
-			logger.Error(err, "Failed to update HTTPRoute status in cluster")
+			log.Error(logger, err, "Failed to update HTTPRoute status in cluster")
 			return false, fmt.Errorf("failed to update HTTPRoute status: %w", err)
 		}
 	} else {
-		logger.V(1).Info("No status update required for HTTPRoute")
+		log.Debug(logger, "No status update required for HTTPRoute")
 	}
 
-	logger.V(1).Info("Finished UpdateRootObjectStatus", "updated", updated)
+	log.Debug(logger, "Finished UpdateRootObjectStatus", "updated", updated)
 	return updated, nil
 }
 
@@ -294,21 +295,21 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 // users to see all translation issues at once rather than fixing them one by one.
 func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) error {
 	logger = logger.WithValues("phase", "httproute-translate")
-	logger.V(1).Info("Starting HTTPRoute translation")
+	log.Debug(logger, "Starting HTTPRoute translation")
 
 	var translationErrors []error
 
 	supportedParentRefs, err := c.getHybridGatewayParents(ctx, logger)
 	if err != nil {
-		logger.Error(err, "Failed to get supported parent references")
+		log.Error(logger, err, "Failed to get supported parent references")
 		return err
 	}
 	if len(supportedParentRefs) == 0 {
-		logger.Info("No supported parent references found, skipping translation")
+		log.Info(logger, "No supported parent references found, skipping translation")
 		return nil
 	}
 
-	logger.V(1).Info("Found supported parent references",
+	log.Debug(logger, "Found supported parent references",
 		"parentRefCount", len(supportedParentRefs))
 
 	httpRouteName := c.route.Namespace + "-" + c.route.Name
@@ -319,20 +320,20 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 		hostnames := pRefData.hostnames
 		cpRefName := "cp" + utils.Hash32(cp)
 
-		logger.V(1).Info("Processing parent reference",
+		log.Debug(logger, "Processing parent reference",
 			"parentRef", pRef,
 			"hostnames", hostnames,
 			"ruleCount", len(c.route.Spec.Rules))
 
 		for ruleIndex, rule := range c.route.Spec.Rules {
-			logger.V(2).Info("Processing rule",
+			log.Debug(logger, "Processing rule",
 				"ruleIndex", ruleIndex,
 				"backendRefCount", len(rule.BackendRefs),
 				"matchCount", len(rule.Matches),
 				"filterCount", len(rule.Filters))
 			// Build the KongUpstream resource.
 			upstreamName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.BackendRefs)).String()
-			logger.V(2).Info("Building KongUpstream resource",
+			log.Debug(logger, "Building KongUpstream resource",
 				"upstream", upstreamName,
 				"controlPlane", cp.KonnectNamespacedRef)
 
@@ -345,14 +346,14 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				WithControlPlaneRef(*cp).
 				WithOwner(c.route).Build()
 			if err != nil {
-				logger.Error(err, "Failed to build KongUpstream resource, skipping rule",
+				log.Error(logger, err, "Failed to build KongUpstream resource, skipping rule",
 					"upstream", upstreamName,
 					"controlPlane", cp.KonnectNamespacedRef)
 				translationErrors = append(translationErrors, fmt.Errorf("failed to build KongUpstream %s: %w", upstreamName, err))
 				continue
 			}
 			c.outputStore = append(c.outputStore, &upstream)
-			logger.V(2).Info("Successfully built KongUpstream resource",
+			log.Debug(logger, "Successfully built KongUpstream resource",
 				"upstream", upstreamName)
 
 			// Build the KongTarget resources using the new rule-based approach.
@@ -369,14 +370,14 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				c.clusterDomain,
 			)
 			if err != nil {
-				logger.Error(err, "Failed to create KongTarget resources for rule, skipping rule",
+				log.Error(logger, err, "Failed to create KongTarget resources for rule, skipping rule",
 					"upstream", upstreamName,
 					"backendRefs", rule.BackendRefs,
 					"parentRef", pRef)
 				translationErrors = append(translationErrors, fmt.Errorf("failed to create KongTarget resources for upstream %s: %w", upstreamName, err))
 				continue
 			}
-			logger.V(2).Info("Successfully created KongTarget resources",
+			log.Debug(logger, "Successfully created KongTarget resources",
 				"upstream", upstreamName,
 				"targetCount", len(targets))
 			for _, tgt := range targets {
@@ -385,7 +386,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 
 			// Build the KongService resource.
 			serviceName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.BackendRefs)).String()
-			logger.V(2).Info("Building KongService resource",
+			log.Debug(logger, "Building KongService resource",
 				"service", serviceName,
 				"upstream", upstreamName)
 
@@ -399,19 +400,19 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				WithControlPlaneRef(*cp).
 				WithOwner(c.route).Build()
 			if err != nil {
-				logger.Error(err, "Failed to build KongService resource, skipping rule",
+				log.Error(logger, err, "Failed to build KongService resource, skipping rule",
 					"service", serviceName,
 					"upstream", upstreamName)
 				translationErrors = append(translationErrors, fmt.Errorf("failed to build KongService %s: %w", serviceName, err))
 				continue
 			}
 			c.outputStore = append(c.outputStore, &service)
-			logger.V(2).Info("Successfully built KongService resource",
+			log.Debug(logger, "Successfully built KongService resource",
 				"service", serviceName)
 
 			// Build the kong route resource.
 			routeName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.Matches)).String()
-			logger.V(2).Info("Building KongRoute resource",
+			log.Debug(logger, "Building KongRoute resource",
 				"kongRoute", routeName,
 				"service", serviceName,
 				"hostnames", hostnames,
@@ -432,7 +433,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			}
 			route, err := routeBuilder.Build()
 			if err != nil {
-				logger.Error(err, "Failed to build KongRoute resource, skipping rule",
+				log.Error(logger, err, "Failed to build KongRoute resource, skipping rule",
 					"kongRoute", routeName,
 					"service", serviceName,
 					"hostnames", hostnames)
@@ -440,11 +441,11 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				continue
 			}
 			c.outputStore = append(c.outputStore, &route)
-			logger.V(2).Info("Successfully built KongRoute resource",
+			log.Debug(logger, "Successfully built KongRoute resource",
 				"kongRoute", routeName)
 
 			// Build the kong plugin and kong plugin binding resources.
-			logger.V(2).Info("Processing filters for rule",
+			log.Debug(logger, "Processing filters for rule",
 				"kongRoute", routeName,
 				"filterCount", len(rule.Filters))
 
@@ -452,7 +453,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				filterHash := utils.Hash32(filter)
 				pluginName := namegen.NewName(httpRouteName, cpRefName, filterHash).String()
 
-				logger.V(3).Info("Building KongPlugin resource",
+				log.Trace(logger, "Building KongPlugin resource",
 					"plugin", pluginName,
 					"filterType", filter.Type)
 
@@ -464,7 +465,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					WithFilter(filter).
 					WithOwner(c.route).Build()
 				if err != nil {
-					logger.Error(err, "Failed to build KongPlugin resource, skipping filter",
+					log.Error(logger, err, "Failed to build KongPlugin resource, skipping filter",
 						"plugin", pluginName,
 						"filterType", filter.Type)
 					translationErrors = append(translationErrors, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err))
@@ -474,7 +475,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 
 				// Create a KongPluginBinding to bind the KongPlugin to each rule match.
 				bindingName := routeName + "." + filterHash
-				logger.V(3).Info("Building KongPluginBinding resource",
+				log.Trace(logger, "Building KongPluginBinding resource",
 					"binding", bindingName,
 					"plugin", pluginName,
 					"kongRoute", routeName)
@@ -489,7 +490,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					WithOwner(c.route).
 					WithRouteRef(routeName).Build()
 				if err != nil {
-					logger.Error(err, "Failed to build KongPluginBinding resource, skipping binding",
+					log.Error(logger, err, "Failed to build KongPluginBinding resource, skipping binding",
 						"binding", bindingName,
 						"plugin", pluginName,
 						"kongRoute", routeName)
@@ -498,7 +499,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				}
 				c.outputStore = append(c.outputStore, &binding)
 
-				logger.V(3).Info("Successfully built KongPlugin and KongPluginBinding resources",
+				log.Trace(logger, "Successfully built KongPlugin and KongPluginBinding resources",
 					"plugin", pluginName,
 					"binding", bindingName)
 			}
@@ -507,7 +508,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 
 	// Check if any translation errors occurred
 	if len(translationErrors) > 0 {
-		logger.Error(nil, "HTTPRoute translation completed with errors",
+		log.Error(logger, nil, "HTTPRoute translation completed with errors",
 			"totalResourcesCreated", len(c.outputStore),
 			"errorCount", len(translationErrors))
 
@@ -515,7 +516,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 		return fmt.Errorf("translation failed with %d errors: %w", len(translationErrors), errors.Join(translationErrors...))
 	}
 
-	logger.V(1).Info("Successfully completed HTTPRoute translation",
+	log.Debug(logger, "Successfully completed HTTPRoute translation",
 		"totalResourcesCreated", len(c.outputStore))
 
 	return nil
@@ -529,11 +530,11 @@ type hybridGatewayParent struct {
 
 // getHybridGatewayParents returns parent references that are supported by this controller.
 func (c *httpRouteConverter) getHybridGatewayParents(ctx context.Context, logger logr.Logger) ([]hybridGatewayParent, error) {
-	logger.V(1).Info("Getting hybrid gateway parents", "parentRefCount", len(c.route.Spec.ParentRefs))
+	log.Debug(logger, "Getting hybrid gateway parents", "parentRefCount", len(c.route.Spec.ParentRefs))
 
 	result := []hybridGatewayParent{}
 	for i, pRef := range c.route.Spec.ParentRefs {
-		logger.V(2).Info("Processing parent reference", "index", i, "parentRef", pRef)
+		log.Debug(logger, "Processing parent reference", "index", i, "parentRef", pRef)
 
 		cp, err := refs.GetControlPlaneRefByParentRef(ctx, logger, c.Client, c.route, pRef)
 		if err != nil {
@@ -543,7 +544,7 @@ func (c *httpRouteConverter) getHybridGatewayParents(ctx context.Context, logger
 				errors.Is(err, hybridgatewayerrors.ErrNoGatewayController),
 				errors.Is(err, hybridgatewayerrors.ErrKonnectExtensionCrossNamespaceReference):
 				// These are expected errors to be handled gracefully. Log and skip this ParentRef, continue with others.
-				logger.V(1).Info("Skipping ParentRef due to expected error", "parentRef", pRef, "error", err)
+				log.Debug(logger, "Skipping ParentRef due to expected error", "parentRef", pRef, "error", err)
 				continue
 			default:
 				// Unexpected system error, fail the entire translation.
@@ -552,23 +553,23 @@ func (c *httpRouteConverter) getHybridGatewayParents(ctx context.Context, logger
 		}
 
 		if cp == nil {
-			logger.V(1).Info("No ControlPlaneRef found for ParentRef, skipping", "parentRef", pRef)
+			log.Debug(logger, "No ControlPlaneRef found for ParentRef, skipping", "parentRef", pRef)
 			continue
 		}
 
-		logger.V(2).Info("Found ControlPlaneRef for ParentRef", "parentRef", pRef, "controlPlane", cp.KonnectNamespacedRef)
+		log.Debug(logger, "Found ControlPlaneRef for ParentRef", "parentRef", pRef, "controlPlane", cp.KonnectNamespacedRef)
 
 		hostnames, err := c.getHostnamesByParentRef(ctx, logger, pRef)
 		if err != nil {
-			logger.Error(err, "Failed to get hostnames for ParentRef", "parentRef", pRef)
+			log.Error(logger, err, "Failed to get hostnames for ParentRef", "parentRef", pRef)
 			return nil, err
 		}
 		if hostnames == nil {
-			logger.V(2).Info("No hostnames found for ParentRef, skipping", "parentRef", pRef)
+			log.Debug(logger, "No hostnames found for ParentRef, skipping", "parentRef", pRef)
 			continue
 		}
 
-		logger.V(2).Info("Adding parent reference to result", "parentRef", pRef, "hostnames", hostnames)
+		log.Debug(logger, "Adding parent reference to result", "parentRef", pRef, "hostnames", hostnames)
 		result = append(result, hybridGatewayParent{
 			parentRef: pRef,
 			cpRef:     cp,
@@ -576,25 +577,25 @@ func (c *httpRouteConverter) getHybridGatewayParents(ctx context.Context, logger
 		})
 	}
 
-	logger.V(1).Info("Finished processing parent references", "supportedParents", len(result))
+	log.Debug(logger, "Finished processing parent references", "supportedParents", len(result))
 	return result, nil
 }
 
 // getHostnamesByParentRef returns the hostnames that match between the HTTPRoute and the Gateway listeners.
 func (c *httpRouteConverter) getHostnamesByParentRef(ctx context.Context, logger logr.Logger, pRef gwtypes.ParentReference) ([]string, error) {
 	logger = logger.WithValues("parentRef", pRef.Name)
-	logger.V(2).Info("Getting hostnames for ParentRef")
+	log.Debug(logger, "Getting hostnames for ParentRef")
 
 	var err error
 	var hostnames []string
 
 	listeners, err := refs.GetListenersByParentRef(ctx, c.Client, c.route, pRef)
 	if err != nil {
-		logger.Error(err, "Failed to get listeners for ParentRef")
+		log.Error(logger, err, "Failed to get listeners for ParentRef")
 		return nil, err
 	}
 
-	logger.V(2).Info("Found listeners for ParentRef", "listenerCount", len(listeners))
+	log.Debug(logger, "Found listeners for ParentRef", "listenerCount", len(listeners))
 
 	for _, listener := range listeners {
 		// Check section reference if present
@@ -613,26 +614,26 @@ func (c *httpRouteConverter) getHostnamesByParentRef(ctx context.Context, logger
 		// If the listener has no hostname, it means it accepts all HTTPRoute hostnames.
 		// No need to do further checks.
 		if listener.Hostname == nil || *listener.Hostname == "" {
-			logger.V(2).Info("Listener accepts all hostnames", "listener", listener.Name)
+			log.Debug(logger, "Listener accepts all hostnames", "listener", listener.Name)
 			hostnames = []string{}
 			for _, host := range c.route.Spec.Hostnames {
 				hostnames = append(hostnames, string(host))
 			}
-			logger.V(2).Info("Returning all HTTPRoute hostnames", "hostnames", hostnames)
+			log.Debug(logger, "Returning all HTTPRoute hostnames", "hostnames", hostnames)
 			return hostnames, nil
 		}
 
 		// Handle wildcard hostnames - get intersection
-		logger.V(2).Info("Processing listener with hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname)
+		log.Debug(logger, "Processing listener with hostname", "listener", listener.Name, "listenerHostname", *listener.Hostname)
 		for _, host := range c.route.Spec.Hostnames {
 			routeHostname := string(host)
 			if intersection := utils.HostnameIntersection(string(*listener.Hostname), routeHostname); intersection != "" {
-				logger.V(3).Info("Found hostname intersection", "listenerHostname", *listener.Hostname, "routeHostname", routeHostname, "intersection", intersection)
+				log.Trace(logger, "Found hostname intersection", "listenerHostname", *listener.Hostname, "routeHostname", routeHostname, "intersection", intersection)
 				hostnames = append(hostnames, intersection)
 			}
 		}
 	}
 
-	logger.V(2).Info("Finished processing hostnames", "finalHostnames", hostnames)
+	log.Debug(logger, "Finished processing hostnames", "finalHostnames", hostnames)
 	return hostnames, nil
 }
