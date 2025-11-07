@@ -359,7 +359,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			// Build the KongTarget resources using the new rule-based approach.
 			targets, err := target.TargetsForBackendRefs(
 				ctx,
-				logger.WithValues("upstream", upstreamName, "rule", utils.Hash32(rule.BackendRefs)),
+				logger.WithValues("upstream", upstreamName),
 				c.Client,
 				c.route,
 				rule.BackendRefs,
