@@ -7,12 +7,14 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/google/uuid"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/modules/manager/logging"
@@ -139,5 +141,135 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 
 		t.Log("Waiting for the expected calls called in SDK")
 		eventuallyAssertSDKExpectations(t, factory.SDK.CloudGatewaysSDK, waitTime, tickTime)
+	})
+
+	t.Run("Adopting a network with match mode", func(t *testing.T) {
+		t.Log("Setting up a watch for KonnectCloudGatewayNetwork events")
+		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayNetworkList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		networkName := "cloud-gateway-network-test-adopt-" + uuid.NewString()[:8]
+		networkID := uuid.NewString()
+
+		t.Log("Setting up SDK expectation on getting")
+		sdk.CloudGatewaysSDK.EXPECT().GetNetwork(mock.Anything, networkID).Return(
+			&sdkkonnectops.GetNetworkResponse{
+				Network: &sdkkonnectcomp.Network{
+					ID:                            networkID,
+					Name:                          networkName,
+					CloudGatewayProviderAccountID: "aws:1234",
+					Region:                        "us-east-1",
+					AvailabilityZones: []string{
+						"us-east-1",
+					},
+					CidrBlock: "10.0.0.0/24",
+					State:     sdkkonnectcomp.NetworkStateInitializing,
+					ProviderMetadata: sdkkonnectcomp.NetworkProviderMetadata{
+						VpcID: lo.ToPtr("vpc-1234"),
+					},
+				},
+			}, nil,
+		)
+
+		t.Log("Creating KonnectAPIAuthConfiguration")
+		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+
+		t.Log("Creating a KonnectCloudGatewayNetwork to adopt the existing network")
+		createdNetwork := deploy.KonnectCloudGatewayNetwork(t, ctx, clientNamespaced, apiAuth, func(o client.Object) {
+			n, ok := o.(*konnectv1alpha1.KonnectCloudGatewayNetwork)
+			if !ok {
+				return
+			}
+
+			n.Spec.Adopt = &commonv1alpha1.AdoptOptions{
+				From: commonv1alpha1.AdoptSourceKonnect,
+				Mode: commonv1alpha1.AdoptModeMatch,
+				Konnect: &commonv1alpha1.AdoptKonnectOptions{
+					ID: networkID,
+				},
+			}
+			n.Spec.Name = networkName
+			n.Spec.CloudGatewayProviderAccountID = "aws:1234"
+			n.Spec.Region = "us-east-1"
+			n.Spec.AvailabilityZones = []string{"us-east-1"}
+			n.Spec.CidrBlock = "10.0.0.0/24"
+		})
+
+		t.Log("Waiting for KonnectCloudGatewayNetwork to be marked as programmed and get Konnect ID")
+		watchFor(t, t.Context(), w, apiwatch.Modified, func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) bool {
+			return n.Name == createdNetwork.Name &&
+				conditionsContainProgrammedTrue(n.GetConditions()) &&
+				n.GetKonnectID() == networkID
+		},
+			"Did not see KonnectCloudGatewayNetwork turn Programmed and set Konnect ID",
+		)
+
+	})
+
+	t.Run("Adopting a network with match mode but not matching the network in Konnect", func(t *testing.T) {
+		t.Log("Setting up a watch for KonnectCloudGatewayNetwork events")
+		w := setupWatch[konnectv1alpha1.KonnectCloudGatewayNetworkList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		networkName := "cloud-gateway-network-test-adopt-" + uuid.NewString()[:8]
+		networkID := uuid.NewString()
+
+		t.Log("Setting up SDK expectation on getting")
+		sdk.CloudGatewaysSDK.EXPECT().GetNetwork(mock.Anything, networkID).Return(
+			&sdkkonnectops.GetNetworkResponse{
+				Network: &sdkkonnectcomp.Network{
+					ID:                            networkID,
+					Name:                          networkName,
+					CloudGatewayProviderAccountID: "aws:1234",
+					Region:                        "us-east-1",
+					AvailabilityZones: []string{
+						"us-east-1",
+					},
+					CidrBlock: "10.0.0.0/24",
+					State:     sdkkonnectcomp.NetworkStateInitializing,
+					ProviderMetadata: sdkkonnectcomp.NetworkProviderMetadata{
+						VpcID: lo.ToPtr("vpc-1234"),
+					},
+				},
+			}, nil,
+		)
+
+		t.Log("Creating KonnectAPIAuthConfiguration")
+		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+
+		t.Log("Creating a KonnectCloudGatewayNetwork to adopt the existing network but not matching the configuration")
+		createdNetwork := deploy.KonnectCloudGatewayNetwork(t, ctx, clientNamespaced, apiAuth, func(o client.Object) {
+			n, ok := o.(*konnectv1alpha1.KonnectCloudGatewayNetwork)
+			if !ok {
+				return
+			}
+
+			n.Spec.Adopt = &commonv1alpha1.AdoptOptions{
+				From: commonv1alpha1.AdoptSourceKonnect,
+				Mode: commonv1alpha1.AdoptModeMatch,
+				Konnect: &commonv1alpha1.AdoptKonnectOptions{
+					ID: networkID,
+				},
+			}
+			n.Spec.Name = networkName
+			n.Spec.CloudGatewayProviderAccountID = "aws:1234"
+			n.Spec.Region = "us-east-1"
+			n.Spec.AvailabilityZones = []string{"us-east-1"}
+			n.Spec.CidrBlock = "10.1.0.0/24" // different CIDRs with the existing network
+		})
+
+		t.Log("Waiting for KonnectCloudGatewayNetwork to be marked as not programmed")
+		watchFor(t, t.Context(), w, apiwatch.Modified, func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) bool {
+			return n.Name == createdNetwork.Name &&
+				conditionsContainProgrammedFalse(n.GetConditions()) && lo.ContainsBy(
+				n.GetConditions(), func(c metav1.Condition) bool {
+					return c.Type == konnectv1alpha1.KonnectEntityAdoptedConditionType &&
+						c.Status == metav1.ConditionFalse &&
+						c.Reason == konnectv1alpha1.KonnectEntityAdoptedReasonNotMatch
+
+				},
+			)
+		},
+			"Did not see KonnectCloudGatewayNetwork marked as not Programmed and not Adopted",
+		)
+
 	})
 }
