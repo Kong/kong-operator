@@ -21,7 +21,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test"
-	"github.com/kong/kong-operator/test/helpers"
+	inthelpers "github.com/kong/kong-operator/test/integration/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -102,11 +102,11 @@ func TestMain(m *testing.M) {
 		exitOnErr(testutils.DeployCRDs(ctx, path.Join(configPath, "/crd"), clients.OperatorClient, env.Cluster()))
 	}
 
-	cleanupTelepresence, err := helpers.SetupTelepresence(ctx)
+	cleanupTelepresence, err := inthelpers.SetupTelepresence(ctx)
 	exitOnErr(err)
 	defer cleanupTelepresence()
 
-	cleanupIntercept, err := helpers.SetupNetworkIntercepts(ctx, clients)
+	cleanupIntercept, err := inthelpers.SetupNetworkIntercepts(ctx, clients)
 	exitOnErr(err)
 	defer cleanupIntercept()
 

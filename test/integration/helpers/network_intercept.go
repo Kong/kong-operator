@@ -298,8 +298,8 @@ func applyTelepresenceEnvFile(path string) error {
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
-		if strings.HasPrefix(line, "export ") {
-			line = strings.TrimSpace(strings.TrimPrefix(line, "export "))
+		if after, ok := strings.CutPrefix(line, "export "); ok {
+			line = strings.TrimSpace(after)
 		}
 		key, value, found := strings.Cut(line, "=")
 		if !found || key == "" {
@@ -344,7 +344,7 @@ func writePodLabelsOverride(labels map[string]string) (string, error) {
 		lines = append(lines, fmt.Sprintf("%s=%q", key, labels[key]))
 	}
 
-	if err := os.WriteFile(file.Name(), []byte(strings.Join(lines, "\n")), 0o644); err != nil {
+	if err := os.WriteFile(file.Name(), []byte(strings.Join(lines, "\n")), 0o600); err != nil {
 		return "", fmt.Errorf("failed to write pod labels temp file: %w", err)
 	}
 	return file.Name(), nil
