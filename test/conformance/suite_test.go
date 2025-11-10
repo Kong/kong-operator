@@ -106,6 +106,10 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 	defer cleanupTelepresence()
 
+	cleanupIntercept, err := helpers.SetupNetworkIntercepts(ctx, clients)
+	exitOnErr(err)
+	defer cleanupIntercept()
+
 	fmt.Println("INFO: starting the operator's controller manager")
 	// startControllerManager will spawn the controller manager in a separate
 	// goroutine and will report whether that succeeded.
