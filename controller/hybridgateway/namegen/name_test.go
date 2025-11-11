@@ -1,6 +1,7 @@
 package namegen
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -185,8 +186,9 @@ func TestNewKongServiceName(t *testing.T) {
 			result := NewKongServiceName(tt.cp, tt.rule)
 			assert.NotEmpty(t, result)
 			parts := strings.Split(result, ".")
-			assert.GreaterOrEqual(t, len(parts), 2)
-			assert.True(t, strings.HasPrefix(parts[0], "cp"))
+			assert.GreaterOrEqual(t, len(parts), 3, fmt.Sprintf("should have at least 3 parts: %q, cp hash, and backend refs hash", httpProcolPrefix))
+			assert.Equal(t, httpProcolPrefix, parts[0], fmt.Sprintf("first part should be %q", httpProcolPrefix))
+			assert.True(t, strings.HasPrefix(parts[1], defaultCPPrefix), fmt.Sprintf("second part should start with %q", defaultCPPrefix))
 		})
 	}
 }
@@ -266,14 +268,15 @@ func TestNewKongRouteName(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := NewKongRouteName(tt.route, tt.cp, tt.rule)
 			assert.NotEmpty(t, result)
-			// Result should contain namespace and name as separate dot-separated parts
+			// Result should be: http.<namespace>-<name>.cp<hash>.<matches_hash>
 			assert.Contains(t, result, tt.route.Namespace)
 			assert.Contains(t, result, tt.route.Name)
 			// Result should have multiple parts (namespace.name.cp<hash>.<matches_hash>)
 			parts := strings.Split(result, ".")
-			assert.GreaterOrEqual(t, len(parts), 3, "should have at least 4 parts: namespace + name, cp hash, and matches hash")
-			assert.Equal(t, tt.route.Namespace+"-"+tt.route.Name, parts[0], "name prefix should be route namespace-name")
-			assert.True(t, strings.HasPrefix(parts[1], "cp"), "second part should be the control plane hash")
+			assert.GreaterOrEqual(t, len(parts), 4, fmt.Sprintf("should have at least 4 parts: %q, namespace-name, cp hash, and matches hash", httpProcolPrefix))
+			assert.Equal(t, httpProcolPrefix, parts[0], fmt.Sprintf("first part should be %q", httpProcolPrefix))
+			assert.Equal(t, tt.route.Namespace+"-"+tt.route.Name, parts[1], "second part should be route <namespace>-<name>")
+			assert.True(t, strings.HasPrefix(parts[2], defaultCPPrefix), fmt.Sprintf("third part should start with %q", defaultCPPrefix))
 		})
 	}
 }

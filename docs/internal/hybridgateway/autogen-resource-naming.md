@@ -7,12 +7,12 @@ A KongRoute is created for each HTTPRoute rule. It is uniquely identified by HTT
 
 Auto-generated name (HR stands for HTTPRoute):
 
-`<HR namespace>-<HR name>.cp<HASH(<Control Plane>).HASH(HR.spec.rule[x].matches)>`
+`http.<HR namespace>-<HR name>.cp<HASH(<Control Plane>).HASH(HR.spec.rule[x].matches)>`
 
 example (HTTPRoute name: default/httproute-echo):
 
 ```
-default-httproute-echo.cp431ef96.1b69eced
+<GatewayAPI protocol>.default-httproute-echo.cp431ef96.1b69eced
 ```
 
 ## KongService
@@ -22,11 +22,11 @@ A KongService is uniquely identified from a set of BackendRefs of an HTTPRoute. 
 
 Auto-generated name:
 
-`cp<HASH(<Conrol Plane>).HASH(HR.spec.rule[x].backendRefs)>`
+`<GatewayAPI protocol>.cp<HASH(<Conrol Plane>).HASH(HR.spec.rule[x].backendRefs)>`
 
 example:
 ```
-cp431ef96.5a7cc34c
+http.cp431ef96.5a7cc34c
 ```
 
 ## KongUpstream
@@ -88,5 +88,5 @@ Auto-generated name:
 
 example:
 ```
-default-httproute-echo.cp431ef96.1b69eced.pl72ae1b9a
+http.default-httproute-echo.cp431ef96.1b69eced.pl72ae1b9a
 ```

@@ -11,9 +11,10 @@ import (
 )
 
 const (
-	defaultCPPrefix = "cp"
-	namegenPrefix   = "ngn"
-	maxLen          = 253
+	httpProcolPrefix = "http"
+	defaultCPPrefix  = "cp"
+	namegenPrefix    = "ngn"
+	maxLen           = 253
 )
 
 // newName generates a name by concatenating the given components if the length is within the limit of
@@ -38,6 +39,7 @@ func NewKongUpstreamName(cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTP
 // NewKongServiceName generates a KongService name based on the ControlPlaneRef and HTTPRouteRule passed as arguments.
 func NewKongServiceName(cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
 	return newName(
+		httpProcolPrefix,
 		defaultCPPrefix+utils.Hash32(cp),
 		utils.Hash32(rule.BackendRefs),
 	)
@@ -46,6 +48,7 @@ func NewKongServiceName(cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPR
 // NewKongRouteName generates a KongRoute name based on the HTTPRoute, ControlPlaneRef, and HTTPRouteRule passed as arguments.
 func NewKongRouteName(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
 	return newName(
+		httpProcolPrefix,
 		route.Namespace+"-"+route.Name,
 		defaultCPPrefix+utils.Hash32(cp),
 		utils.Hash32(rule.Matches),
