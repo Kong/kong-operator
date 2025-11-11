@@ -312,13 +312,10 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 	log.Debug(logger, "Found supported parent references",
 		"parentRefCount", len(supportedParentRefs))
 
-	httpRouteName := c.route.Namespace + "-" + c.route.Name
-
 	for _, pRefData := range supportedParentRefs {
 		pRef := pRefData.parentRef
 		cp := pRefData.cpRef
 		hostnames := pRefData.hostnames
-		cpRefName := "cp" + utils.Hash32(cp)
 
 		log.Debug(logger, "Processing parent reference",
 			"parentRef", pRef,
@@ -331,8 +328,9 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				"backendRefCount", len(rule.BackendRefs),
 				"matchCount", len(rule.Matches),
 				"filterCount", len(rule.Filters))
+
 			// Build the KongUpstream resource.
-			upstreamName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.BackendRefs)).String()
+			upstreamName := namegen.NewKongUpstreamName(cp, rule)
 			log.Trace(logger, "Building KongUpstream resource",
 				"upstream", upstreamName,
 				"controlPlane", cp.KonnectNamespacedRef)
@@ -385,7 +383,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			}
 
 			// Build the KongService resource.
-			serviceName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.BackendRefs)).String()
+			serviceName := namegen.NewKongServiceName(cp, rule)
 			log.Trace(logger, "Building KongService resource",
 				"service", serviceName,
 				"upstream", upstreamName)
@@ -411,7 +409,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				"service", serviceName)
 
 			// Build the kong route resource.
-			routeName := namegen.NewName(httpRouteName, cpRefName, utils.Hash32(rule.Matches)).String()
+			routeName := namegen.NewKongRouteName(c.route, cp, rule)
 			log.Trace(logger, "Building KongRoute resource",
 				"kongRoute", routeName,
 				"service", serviceName,
@@ -450,8 +448,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				"filterCount", len(rule.Filters))
 
 			for _, filter := range rule.Filters {
-				filterHash := utils.Hash32(filter)
-				pluginName := namegen.NewName(httpRouteName, cpRefName, filterHash).String()
+				pluginName := namegen.NewKongPluginName(filter)
 
 				log.Trace(logger, "Building KongPlugin resource",
 					"plugin", pluginName,
@@ -474,7 +471,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				c.outputStore = append(c.outputStore, &plugin)
 
 				// Create a KongPluginBinding to bind the KongPlugin to each rule match.
-				bindingName := routeName + "." + filterHash
+				bindingName := namegen.NewKongPluginBindingName(routeName, pluginName)
 				log.Trace(logger, "Building KongPluginBinding resource",
 					"binding", bindingName,
 					"plugin", pluginName,

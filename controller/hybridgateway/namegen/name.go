@@ -3,71 +3,79 @@ package namegen
 import (
 	"strings"
 
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
-// Name represents a structured naming scheme for Kong entities to be identified by the HTTPRoute, ParentReference,
-// and HTTPRoute section from which the resource is derived.
-type Name struct {
-	httpRouteID string
-	parentRefID string
-	sectionID   string
+const (
+	httpProcolPrefix = "http"
+	defaultCPPrefix  = "cp"
+	namegenPrefix    = "ngn"
+	maxLen           = 253
+)
+
+// newName generates a name by concatenating the given components if the length is within the limit of
+// Kubernetes resource names, otherwise it returns a hashed version of the concatenated elements.
+func newName(elements ...string) string {
+	if name := strings.Join(elements, "."); len(name) <= maxLen {
+		return name
+	}
+
+	// If the name exceeds the max length, return a hashed version of the concatenated elements
+	return namegenPrefix + utils.Hash64(elements)
 }
 
-// String returns the full name as a dot-separated string.
-func (h *Name) String() string {
-	const maxLen = 253 - len("faf385ae") - 1 // reserve space for one extra hash (+ 1 dot) for child resources (e.g., KongTargets)
-
-	parts := []string{}
-	if h.httpRouteID != "" {
-		parts = append(parts, h.httpRouteID)
-	}
-	if h.parentRefID != "" {
-		parts = append(parts, h.parentRefID)
-	}
-	if h.sectionID != "" {
-		parts = append(parts, h.sectionID)
-	}
-	fullName := strings.Join(parts, ".")
-
-	if len(fullName) <= maxLen {
-		return fullName
-	}
-
-	// If the full name exceeds the max length, we fallback to a hashed version of each component
-	const DefaultHTTPRoutePrefix = "http"
-	const DefaultParentRefPrefix = "cp"
-	const DefaultSectPrefix = "res"
-	const maxCompLen = (maxLen - 2) / 3
-
-	httpRouteID := h.httpRouteID
-	parentRefID := h.parentRefID
-	sectionID := h.sectionID
-
-	if len(httpRouteID) > maxCompLen {
-		httpRouteID = DefaultHTTPRoutePrefix + utils.Hash32(httpRouteID)
-	}
-	if len(parentRefID) > maxCompLen {
-		parentRefID = DefaultParentRefPrefix + utils.Hash32(parentRefID)
-	}
-	if len(sectionID) > maxCompLen {
-		sectionID = DefaultSectPrefix + utils.Hash32(sectionID)
-	}
-
-	parts = []string{httpRouteID, parentRefID}
-	if sectionID != "" {
-		parts = append(parts, sectionID)
-	}
-	fullName = strings.Join(parts, ".")
-
-	return fullName
+// NewKongUpstreamName generates a KongUpstream name based on the ControlPlaneRef and HTTPRouteRule passed as arguments.
+func NewKongUpstreamName(cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
+	return newName(
+		defaultCPPrefix+utils.Hash32(cp),
+		utils.Hash32(rule.BackendRefs),
+	)
 }
 
-// NewName creates a new Name instance with the given components.
-func NewName(httpRouteID, parentRefID, sectionID string) *Name {
-	return &Name{
-		httpRouteID: httpRouteID,
-		parentRefID: parentRefID,
-		sectionID:   sectionID,
+// NewKongServiceName generates a KongService name based on the ControlPlaneRef and HTTPRouteRule passed as arguments.
+func NewKongServiceName(cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
+	return newName(
+		httpProcolPrefix,
+		defaultCPPrefix+utils.Hash32(cp),
+		utils.Hash32(rule.BackendRefs),
+	)
+}
+
+// NewKongRouteName generates a KongRoute name based on the HTTPRoute, ControlPlaneRef, and HTTPRouteRule passed as arguments.
+func NewKongRouteName(route *gwtypes.HTTPRoute, cp *commonv1alpha1.ControlPlaneRef, rule gatewayv1.HTTPRouteRule) string {
+	return newName(
+		httpProcolPrefix,
+		route.Namespace+"-"+route.Name,
+		defaultCPPrefix+utils.Hash32(cp),
+		utils.Hash32(rule.Matches),
+	)
+}
+
+// NewKongPluginName generates a KongPlugin name based on the HTTPRouteFilter passed as argument.
+func NewKongPluginName(filter gatewayv1.HTTPRouteFilter) string {
+	return newName("pl" + utils.Hash32(filter))
+}
+
+// NewKongPluginBindingName generates a KongPlugin name based on the KongRoute and the KongPlugin names.
+func NewKongPluginBindingName(routeID, pluginId string) string {
+	return newName(routeID, pluginId)
+}
+
+// NewKongTargetName generates a KongTarget name based on the KongUpstream name, the Service Endpoint ip,
+// the service port and the HTTPBackendRef.
+func NewKongTargetName(upstreamID, endpointID string, port int, br *gwtypes.HTTPBackendRef) string {
+	obj := struct {
+		endpointID string
+		port       int
+		backend    *gwtypes.HTTPBackendRef
+	}{
+		endpointID: endpointID,
+		port:       port,
+		backend:    br,
 	}
+	return newName(upstreamID, utils.Hash32(obj))
 }

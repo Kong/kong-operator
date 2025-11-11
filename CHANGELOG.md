@@ -133,6 +133,8 @@
 - For Hybrid `Gateway`s the operator does not run the `ControlPlane` anymore, as
   the `DataPlane` is configured to use `Koko` as Konnect control plane.
   [#2253](https://github.com/Kong/kong-operator/pull/2253)
+- HybridGateway auto-generated resource names has been revised.
+  [#2566](https://github.com/Kong/kong-operator/pull/2566)
 
 ### Fixes
 
