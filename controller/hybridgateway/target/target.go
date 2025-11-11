@@ -14,8 +14,8 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
+	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
-	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
@@ -392,7 +392,7 @@ func createTargetsFromValidBackendRefs(httpRoute *gwtypes.HTTPRoute, pRef *gwtyp
 
 			// Create target with explicit endpoint address (works for all cases: real endpoints, FQDN, external names).
 			target, err := builder.NewKongTarget().
-				WithName(fmt.Sprintf("%s.%s", upstreamName, utils.Hash32(utils.Hash32(vbRef.backendRef)+endpoint))).
+				WithName(namegen.NewKongTargetName(upstreamName, endpoint, port, vbRef.backendRef)).
 				WithNamespace(httpRoute.Namespace).
 				WithLabels(httpRoute, pRef).
 				WithAnnotations(httpRoute, pRef).
