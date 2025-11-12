@@ -177,8 +177,27 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 	// If a type has a KongService ref, handle it.
 	res, err = handleKongServiceRef(ctx, r.Client, ent)
 	if err != nil {
-		if !errors.As(err, &ReferencedKongServiceIsBeingDeleted{}) {
+		switch {
+		// in case the referenced KongService is being deleted, disregard the error
+		// and continue
+		case errors.As(err, &ReferencedKongServiceIsBeingDeleted{}):
+			log.Info(logger, "referenced KongService is being deleted, proceeding with reconciliation", err.Error())
+		case errors.As(err, &ReferencedObjectDoesNotExist{}):
+			if ent.GetDeletionTimestamp().IsZero() {
+				log.Info(logger, "referenced KongService does not exist, proceeding with reconciliation", err.Error())
+			}
+			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
+				if err := r.Client.Update(ctx, ent); err != nil {
+					if k8serrors.IsConflict(err) {
+						return ctrl.Result{Requeue: true}, nil
+					}
+					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
+				}
+			}
+			return ctrl.Result{}, nil
+		default:
 			log.Error(logger, err, "error handling KongService ref")
+			return ctrl.Result{}, err
 		}
 	} else if !res.IsZero() {
 		return res, nil

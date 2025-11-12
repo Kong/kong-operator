@@ -93,7 +93,7 @@ func kongRouteRefersToKonnectGatewayControlPlane(cl client.Client) func(obj clie
 			Name:      scvRef.NamespacedRef.Name,
 		}
 		kongSvc := configurationv1alpha1.KongService{}
-		if err := cl.Get(context.Background(), nn, &kongSvc); client.IgnoreNotFound(err) != nil {
+		if err := cl.Get(context.Background(), nn, &kongSvc); err != nil {
 			return true
 		}
 		return objHasControlPlaneRef(&kongSvc)
