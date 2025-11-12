@@ -135,7 +135,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	}
 
 	// Phase 1: Status Update.
-	statusChanged, err := EnforceStatus(ctx, logger, conv)
+	statusChanged, err := enforceStatus(ctx, logger, conv)
 	if err != nil && !k8serrors.IsConflict(err) {
 		// Record status update failure event.
 		r.eventRecorder.Event(
@@ -162,7 +162,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	}
 
 	// Phase 2: Translation.
-	resourceCount, err := Translate(conv, ctx, logger)
+	resourceCount, err := translate(conv, ctx, logger)
 	if err != nil {
 		// Record translation failure event.
 		r.eventRecorder.Event(
@@ -183,7 +183,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	)
 
 	// Phase 3: State Enforcement.
-	stateChanged, err := EnforceState(ctx, r.Client, logger, conv)
+	stateChanged, err := enforceState(ctx, r.Client, logger, conv)
 	if err != nil {
 		// Record state enforcement failure event.
 		r.eventRecorder.Event(
@@ -208,7 +208,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	}
 
 	// Phase 4: Orphan Cleanup.
-	orphansDeleted, err := CleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)
+	orphansDeleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)
 	if err != nil {
 		// Record orphan cleanup failure event.
 		r.eventRecorder.Event(

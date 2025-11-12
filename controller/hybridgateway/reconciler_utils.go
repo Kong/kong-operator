@@ -21,13 +21,13 @@ const (
 	FieldManager = "gateway-operator"
 )
 
-// Translate performs the full translation process using the provided APIConverter.
+// translate performs the full translation process using the provided APIConverter.
 // Returns the number of Kong resources created and an error if the translation fails.
-func Translate[t converter.RootObject](conv converter.APIConverter[t], ctx context.Context, logger logr.Logger) (int, error) {
+func translate[t converter.RootObject](conv converter.APIConverter[t], ctx context.Context, logger logr.Logger) (int, error) {
 	return conv.Translate(ctx, logger)
 }
 
-// EnforceState ensures that the desired state of Kubernetes resources, as provided by the APIConverter,
+// enforceState ensures that the desired state of Kubernetes resources, as provided by the APIConverter,
 // is reflected in the cluster. It attempts to create or update resources using server-side apply and
 // structured merge. The function returns a boolean indicating if any changes were made and an error
 // for any unrecoverable or transient issues. Resources marked for deletion are skipped. Conflict errors
@@ -53,7 +53,7 @@ func Translate[t converter.RootObject](conv converter.APIConverter[t], ctx conte
 //
 // The function uses server-side apply with the "gateway-operator" field manager to ensure
 // proper ownership and conflict resolution when multiple controllers manage the same resources.
-func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (bool, error) {
+func enforceState[t converter.RootObject](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (bool, error) {
 	logger = logger.WithValues("phase", "state-enforcement")
 	log.Debug(logger, "Starting state enforcement")
 
@@ -175,7 +175,7 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 	return stateChanged, nil
 }
 
-// EnforceStatus updates the status of the root object managed by the provided APIConverter.
+// enforceStatus updates the status of the root object managed by the provided APIConverter.
 // This function delegates to the converter's UpdateRootObjectStatus method to handle
 // status condition management and cluster updates.
 //
@@ -191,11 +191,11 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 // This is a generic wrapper function that works with any converter implementing
 // the APIConverter interface, providing a consistent interface for status enforcement
 // across different resource types.
-func EnforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logger, conv converter.APIConverter[t]) (bool, error) {
+func enforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logger, conv converter.APIConverter[t]) (bool, error) {
 	return conv.UpdateRootObjectStatus(ctx, logger)
 }
 
-// CleanOrphanedResources deletes resources previously managed by the converter but no longer present in the desired output.
+// cleanOrphanedResources deletes resources previously managed by the converter but no longer present in the desired output.
 //
 // The function performs the following operations:
 // 1. Retrieves the current desired state from the converter's output store
@@ -219,7 +219,7 @@ func EnforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logg
 //
 // The function uses ownership labels to identify resources managed by the root object
 // and only deletes resources that are no longer present in the converter's desired output.
-func CleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr[t]](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (bool, error) {
+func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr[t]](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (bool, error) {
 	logger = logger.WithValues("phase", "orphan-cleanup")
 	log.Debug(logger, "Starting orphaned resource cleanup")
 
@@ -296,7 +296,7 @@ func CleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	}
 
 	log.Debug(logger, "Finished orphaned resource cleanup", "totalOrphansDeleted", totalOrphansDeleted)
-	// Return true if any orphans were deleted
+	// Return true if any orphans were deleted.
 	orphansDeleted := totalOrphansDeleted > 0
 	return orphansDeleted, nil
 }

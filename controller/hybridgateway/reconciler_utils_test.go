@@ -229,7 +229,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 				root:    *root,
 			}
 			logger := logr.Discard()
-			_, err := CleanOrphanedResources(context.Background(), cl, logger, fakeConv)
+			_, err := cleanOrphanedResources(context.Background(), cl, logger, fakeConv)
 			assert.NoError(t, err)
 			for _, gvk := range tt.gvks {
 				list := &unstructured.UnstructuredList{}
