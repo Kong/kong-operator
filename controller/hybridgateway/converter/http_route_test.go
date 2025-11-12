@@ -106,7 +106,7 @@ func TestHostnamesIntersection(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
 			converter := newHTTPRouteConverter(tt.route, fakeClient, true, false, "")
-			err := converter.Translate(t.Context(), logr.Discard())
+			_, err := converter.Translate(t.Context(), logr.Discard())
 			require.NoError(t, err)
 
 			output, err := converter.GetOutputStore(context.TODO(), logr.Discard())

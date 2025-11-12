@@ -229,7 +229,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 				root:    *root,
 			}
 			logger := logr.Discard()
-			err := CleanOrphanedResources(context.Background(), cl, logger, fakeConv)
+			_, err := cleanOrphanedResources(context.Background(), cl, logger, fakeConv)
 			assert.NoError(t, err)
 			for _, gvk := range tt.gvks {
 				list := &unstructured.UnstructuredList{}
@@ -271,8 +271,8 @@ func (f *fakeHTTPRouteConverter) GetOutputStore(ctx context.Context, logger logr
 }
 func (f *fakeHTTPRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind { return f.gvks }
 func (f *fakeHTTPRouteConverter) GetRootObject() gwtypes.HTTPRoute           { return f.root }
-func (f *fakeHTTPRouteConverter) Translate(ctx context.Context, logger logr.Logger) error {
-	return nil
+func (f *fakeHTTPRouteConverter) Translate(ctx context.Context, logger logr.Logger) (int, error) {
+	return len(f.desired), nil
 }
 func (f *fakeHTTPRouteConverter) ListExistingObjects(ctx context.Context) ([]unstructured.Unstructured, error) {
 	return nil, nil

@@ -21,16 +21,17 @@ const (
 	FieldManager = "gateway-operator"
 )
 
-// Translate performs the full translation process using the provided APIConverter.
-func Translate[t converter.RootObject](conv converter.APIConverter[t], ctx context.Context, logger logr.Logger) error {
+// translate performs the full translation process using the provided APIConverter.
+// Returns the number of Kong resources created and an error if the translation fails.
+func translate[t converter.RootObject](conv converter.APIConverter[t], ctx context.Context, logger logr.Logger) (int, error) {
 	return conv.Translate(ctx, logger)
 }
 
-// EnforceState ensures that the desired state of Kubernetes resources, as provided by the APIConverter,
+// enforceState ensures that the desired state of Kubernetes resources, as provided by the APIConverter,
 // is reflected in the cluster. It attempts to create or update resources using server-side apply and
-// structured merge. The function returns requeue and stop flags to control reconciliation flow, and an error
+// structured merge. The function returns a boolean indicating if any changes were made and an error
 // for any unrecoverable or transient issues. Resources marked for deletion are skipped. Conflict errors
-// trigger a requeue for optimistic concurrency. All other errors are wrapped with resource kind and name for context.
+// are returned as errors. All other errors are wrapped with resource kind and name for context.
 //
 // The function performs the following operations:
 // 1. Retrieves the desired state from the converter's output store
@@ -38,7 +39,7 @@ func Translate[t converter.RootObject](conv converter.APIConverter[t], ctx conte
 // 3. Creates new resources using server-side apply if they don't exist
 // 4. Skips resources that are marked for deletion
 // 5. Updates existing resources if changes are detected using managed fields comparison
-// 6. Handles conflicts by returning requeue=true for optimistic concurrency
+// 6. Handles conflicts by returning an error for proper error handling
 //
 // Parameters:
 //   - ctx: The context for API calls and cancellation
@@ -47,24 +48,23 @@ func Translate[t converter.RootObject](conv converter.APIConverter[t], ctx conte
 //   - conv: The APIConverter that provides the desired state
 //
 // Returns:
-//   - requeue: true if the reconciliation should be retried due to conflicts
-//   - stop: true if reconciliation should stop (currently always false)
-//   - err: Any error that occurred during state enforcement
+//   - bool: true if any resources were created or updated in the cluster
+//   - error: Any error that occurred during state enforcement
 //
 // The function uses server-side apply with the "gateway-operator" field manager to ensure
 // proper ownership and conflict resolution when multiple controllers manage the same resources.
-func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (requeue bool, stop bool, err error) {
+func enforceState[t converter.RootObject](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (bool, error) {
 	logger = logger.WithValues("phase", "state-enforcement")
 	log.Debug(logger, "Starting state enforcement")
 
 	// Get the desired state from the converter.
 	desiredObjects, err := conv.GetOutputStore(ctx, logger)
 	if err != nil {
-		return false, false, fmt.Errorf("failed to get desired objects from converter: %w", err)
+		return false, fmt.Errorf("failed to get desired objects from converter: %w", err)
 	}
 	if len(desiredObjects) == 0 {
 		log.Debug(logger, "No desired objects to enforce")
-		return false, false, nil
+		return false, nil
 	}
 
 	log.Debug(logger, "Retrieved desired objects for enforcement", "objectCount", len(desiredObjects))
@@ -97,16 +97,16 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 				// Set field manager for server-side apply
 				if err := cl.Patch(ctx, &desired, client.Apply, client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
 					if errors.IsConflict(err) {
-						return true, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+						return false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 					}
-					return true, false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+					return false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
 				objectsCreated++
 				log.Debug(logger, "Successfully created object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
 				continue
 			} else {
 				// Other error getting the object.
-				return true, false, fmt.Errorf("failed to get object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+				return false, fmt.Errorf("failed to get object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 			}
 		}
 
@@ -120,16 +120,16 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		// Object exists, check if we need to update it.
 		managedFieldsObj, err := managedfields.ExtractAsUnstructured(existing, FieldManager, "")
 		if err != nil {
-			return true, false, fmt.Errorf("failed to extract managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
+			return false, fmt.Errorf("failed to extract managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
 		}
 		if managedFieldsObj == nil {
 			// No managed fields for our field manager, we should update.
 			log.Debug(logger, "No managed fields found for our field manager, will apply desired state", "kind", existing.GetKind(), "obj", namespacedNameExisting)
 			if err := cl.Patch(ctx, &desired, client.Apply, client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
 				if errors.IsConflict(err) {
-					return true, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+					return false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
-				return true, false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+				return false, fmt.Errorf("failed to create object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 			}
 			objectsUpdated++
 			log.Debug(logger, "Successfully applied desired state (no managed fields)", "kind", existing.GetKind(), "obj", namespacedNameExisting)
@@ -139,13 +139,13 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		// Convert desired resource to unstructured.
 		desiredU, err := utils.ToUnstructured(&desired, cl.Scheme())
 		if err != nil {
-			return true, false, fmt.Errorf("failed to convert to unstructured desired obj for kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+			return false, fmt.Errorf("failed to convert to unstructured desired obj for kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 		}
 
 		// Compare the two states.
 		compare, err := managedfields.Compare(managedFieldsObj, pruneDesiredObj(desiredU))
 		if err != nil {
-			return true, false, fmt.Errorf("failed to compare managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
+			return false, fmt.Errorf("failed to compare managed fields for kind %s obj %s: %w", existing.GetKind(), namespacedNameExisting, err)
 		}
 
 		if compare.IsSame() {
@@ -155,9 +155,9 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			// Changes detected, apply the desired state using server-side apply.
 			if err := cl.Patch(ctx, &desired, client.Apply, client.FieldOwner(FieldManager), client.ForceOwnership); err != nil {
 				if errors.IsConflict(err) {
-					return true, false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+					return false, fmt.Errorf("conflict during create of object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 				}
-				return true, false, fmt.Errorf("failed to update object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
+				return false, fmt.Errorf("failed to update object kind %s obj %s: %w", desired.GetKind(), namespacedNameDesired, err)
 			}
 			objectsUpdated++
 			log.Debug(logger, "Successfully applied changes to object", "kind", existing.GetKind(), "obj", namespacedNameExisting)
@@ -170,10 +170,12 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		"updated", objectsUpdated,
 		"skipped", objectsSkipped)
 
-	return false, false, nil
+	// Return true if any resources were created or updated
+	stateChanged := (objectsCreated + objectsUpdated) > 0
+	return stateChanged, nil
 }
 
-// EnforceStatus updates the status of the root object managed by the provided APIConverter.
+// enforceStatus updates the status of the root object managed by the provided APIConverter.
 // This function delegates to the converter's UpdateRootObjectStatus method to handle
 // status condition management and cluster updates.
 //
@@ -183,17 +185,17 @@ func EnforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 //   - conv: The APIConverter that manages the root object and its status
 //
 // Returns:
-//   - stop: true if reconciliation should stop, false to continue
-//   - err: Any error that occurred during status processing
+//   - bool: true if the status was actually updated in the cluster
+//   - error: Any error that occurred during status processing
 //
 // This is a generic wrapper function that works with any converter implementing
 // the APIConverter interface, providing a consistent interface for status enforcement
 // across different resource types.
-func EnforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logger, conv converter.APIConverter[t]) (stop bool, err error) {
+func enforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logger, conv converter.APIConverter[t]) (bool, error) {
 	return conv.UpdateRootObjectStatus(ctx, logger)
 }
 
-// CleanOrphanedResources deletes resources previously managed by the converter but no longer present in the desired output.
+// cleanOrphanedResources deletes resources previously managed by the converter but no longer present in the desired output.
 //
 // The function performs the following operations:
 // 1. Retrieves the current desired state from the converter's output store
@@ -212,17 +214,18 @@ func EnforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logg
 //   - conv: The APIConverter that manages the root object and its desired state
 //
 // Returns:
+//   - bool: true if any orphaned resources were deleted from the cluster
 //   - error: Any error that occurred during the cleanup process
 //
 // The function uses ownership labels to identify resources managed by the root object
 // and only deletes resources that are no longer present in the converter's desired output.
-func CleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr[t]](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) error {
+func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr[t]](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (bool, error) {
 	logger = logger.WithValues("phase", "orphan-cleanup")
 	log.Debug(logger, "Starting orphaned resource cleanup")
 
 	desiredObjects, err := conv.GetOutputStore(ctx, logger)
 	if err != nil {
-		return fmt.Errorf("failed to get desired objects from converter for cleanup: %w", err)
+		return false, fmt.Errorf("failed to get desired objects from converter for cleanup: %w", err)
 	}
 
 	desiredSet := make(map[string]struct{})
@@ -239,7 +242,7 @@ func CleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	case tPtr:
 		rootObjPtr = v
 	default:
-		return fmt.Errorf("failed to convert root object to pointer type: got %T, expected %T", &rootObj, rootObjPtr)
+		return false, fmt.Errorf("failed to convert root object to pointer type: got %T, expected %T", &rootObj, rootObjPtr)
 	}
 
 	// Build a set of desired resource keys.
@@ -264,7 +267,7 @@ func CleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 		ns := rootObjPtr.GetNamespace()
 
 		if err := cl.List(ctx, list, selector, client.InNamespace(ns)); err != nil {
-			return fmt.Errorf("unable to list objects with gvk %s in namespace %s: %w", gvk.String(), ns, err)
+			return false, fmt.Errorf("unable to list objects with gvk %s in namespace %s: %w", gvk.String(), ns, err)
 		}
 
 		log.Debug(logger, "Found existing resources for GVK", "gvk", gvk.String(), "resourceCount", len(list.Items))
@@ -276,7 +279,7 @@ func CleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 				// Not in desired output, delete it.
 				log.Info(logger, "Deleting orphaned resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
 				if err := cl.Delete(ctx, &item); err != nil && !errors.IsNotFound(err) {
-					return fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
+					return false, fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
 				}
 				orphansForGVK++
 				totalOrphansDeleted++
@@ -293,7 +296,9 @@ func CleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	}
 
 	log.Debug(logger, "Finished orphaned resource cleanup", "totalOrphansDeleted", totalOrphansDeleted)
-	return nil
+	// Return true if any orphans were deleted.
+	orphansDeleted := totalOrphansDeleted > 0
+	return orphansDeleted, nil
 }
 
 // pruneDesiredObj removes fields that should not be compared when checking for differences.
