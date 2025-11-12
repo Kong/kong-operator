@@ -36,6 +36,29 @@
       ]
     },
     {
+      "description": "Match dependencies in .custom-gcl.yml that are properly annotated with `# renovate: datasource={} depName={}.`",
+      "customType": "regex",
+      "fileMatch": [
+        "\\.custom-gcl\\.yml$"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\nversion: v(?<currentValue>.*)"
+      ]
+    },
+    {
+      "description": "Match kube-api-linter git commit digests in .custom-gcl.yml",
+      "customType": "regex",
+      "fileMatch": [
+        ".custom-gcl\\.yml$"
+      ],
+      "matchStrings": [
+        "version:\\s*(?<currentValue>)(?<currentDigest>[a-f0-9]{7,40})"
+      ],
+      "currentValueTemplate": "main",
+      "datasourceTemplate": "git-refs",
+      "lookupNameTemplate": "https://github.com/kubernetes-sigs/kube-api-linter"
+    },
+    {
       "description": "Match dependencies in Makefile that are properly annotated with `# renovate: datasource={} depName={}.`",
       "customType": "regex",
       "fileMatch": [
