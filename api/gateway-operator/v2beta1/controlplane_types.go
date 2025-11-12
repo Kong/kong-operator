@@ -143,6 +143,7 @@ type ControlPlaneOptions struct {
 	// Translation defines the configuration for translating Kong configuration.
 	//
 	// +optional
+	// +kubebuilder:default={{combinedServicesFromDifferentHTTPRoutes: "enabled", drainSupport: "enabled"}}
 	Translation *ControlPlaneTranslationOptions `json:"translation,omitempty"`
 
 	// ConfigDump defines the options for dumping generated Kong configuration from a diagnostics server.
