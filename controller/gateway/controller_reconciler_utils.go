@@ -455,6 +455,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
 	dataplane *operatorv1beta1.DataPlane,
+	controlplane *gwtypes.ControlPlane,
 ) (createdOrUpdate bool, err error) {
 	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway)
 	if err != nil {
@@ -469,8 +470,8 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 		return false, errors.New("number of networkPolicies reduced")
 	}
 
-	// generate the network policy that allows the KO pod to access the admin APIs of dataplane pods.
-	generatedPolicy, err := generateDataPlaneNetworkPolicy(r.Namespace, dataplane, r.PodLabels)
+	// generate the network policy that allows the ControlPlane pod to access the admin APIs of dataplane pods.
+	generatedPolicy, err := generateDataPlaneNetworkPolicy(dataplane, controlplane)
 	if err != nil {
 		return false, fmt.Errorf("failed generating network policy for DataPlane %s: %w", dataplane.Name, err)
 	}
@@ -497,12 +498,13 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 	return true, r.Create(ctx, generatedPolicy)
 }
 
-// generateDataPlaneNetworkPolicy generates the NetworkPolicy that allows the KO pod to access admin API of dataplane pods.
-// the params `namespace` and `podLabels` are namespace and labels of the KO pod itself, and `dataplane` is the target dataplane.
+// generateDataPlaneNetworkPolicy generates the NetworkPolicy that allows the ControlPlane pod to access admin API of dataplane pods.
+// The ControlPlane (KIC) is the component that actually communicates with the DataPlane admin API, not the operator directly.
+// In hybrid mode (Konnect), controlplane may be nil since there's no local ControlPlane - in that case,
+// the admin API access restriction is omitted.
 func generateDataPlaneNetworkPolicy(
-	namespace string,
 	dataplane *operatorv1beta1.DataPlane,
-	podLabels map[string]string,
+	controlplane *gwtypes.ControlPlane,
 ) (*networkingv1.NetworkPolicy, error) {
 	var (
 		protocolTCP     = corev1.ProtocolTCP
@@ -510,16 +512,6 @@ func generateDataPlaneNetworkPolicy(
 		proxyPort       = intstr.FromInt(consts.DataPlaneProxyPort)
 		proxySSLPort    = intstr.FromInt(consts.DataPlaneProxySSLPort)
 		metricsPort     = intstr.FromInt(consts.DataPlaneMetricsPort)
-		// The label keys to match Kong operator pod.
-		// To not create new NetworkPolicy on upgrade of , we just keep the keys marking the application
-		// and remove the keys related to versions such as `version`,`pod-template-hash`,`helm.sh/chart`.
-		podLabelSelectorKeys = []string{
-			"app",
-			"app.kubernetes.io/component",
-			"app.kubernetes.io/instance",
-			"app.kubernetes.io/name",
-			"control-plane",
-		}
 	)
 
 	// Check if KONG_PROXY_LISTEN and/or KONG_ADMIN_LISTEN are set in
@@ -553,34 +545,30 @@ func generateDataPlaneNetworkPolicy(
 		}
 	}
 
-	// Construct the policy to allow the KO pod to access DataPlane admin APIs.
-	policyPeerForControllerPod := networkingv1.NetworkPolicyPeer{
-		NamespaceSelector: &metav1.LabelSelector{
-			MatchLabels: map[string]string{
-				"kubernetes.io/metadata.name": namespace,
+	// Construct the policy to allow the ControlPlane pod to access DataPlane admin APIs.
+	// For hybrid mode (Konnect), there's no local ControlPlane, so we don't add admin API restrictions.
+	var limitAdminAPIIngress networkingv1.NetworkPolicyIngressRule
+	if controlplane != nil {
+		policyPeerForControlPlanePod := networkingv1.NetworkPolicyPeer{
+			PodSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": controlplane.Name,
+				},
 			},
-		},
-	}
-
-	if len(podLabels) > 0 {
-		matchPodLabels := map[string]string{}
-		for _, key := range podLabelSelectorKeys {
-			value, ok := podLabels[key]
-			if ok {
-				matchPodLabels[key] = value
-			}
+			NamespaceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"kubernetes.io/metadata.name": dataplane.Namespace,
+				},
+			},
 		}
-		policyPeerForControllerPod.PodSelector = &metav1.LabelSelector{
-			MatchLabels: matchPodLabels,
+		limitAdminAPIIngress = networkingv1.NetworkPolicyIngressRule{
+			Ports: []networkingv1.NetworkPolicyPort{
+				{Protocol: &protocolTCP, Port: &adminAPISSLPort},
+			},
+			From: []networkingv1.NetworkPolicyPeer{
+				policyPeerForControlPlanePod,
+			},
 		}
-	}
-	limitAdminAPIIngress := networkingv1.NetworkPolicyIngressRule{
-		Ports: []networkingv1.NetworkPolicyPort{
-			{Protocol: &protocolTCP, Port: &adminAPISSLPort},
-		},
-		From: []networkingv1.NetworkPolicyPeer{
-			policyPeerForControllerPod,
-		},
 	}
 
 	allowProxyIngress := networkingv1.NetworkPolicyIngressRule{
@@ -594,6 +582,15 @@ func generateDataPlaneNetworkPolicy(
 		Ports: []networkingv1.NetworkPolicyPort{
 			{Protocol: &protocolTCP, Port: &metricsPort},
 		},
+	}
+
+	ingressRules := []networkingv1.NetworkPolicyIngressRule{
+		allowProxyIngress,
+		allowMetricsIngress,
+	}
+	// Only add admin API restriction when there's a local ControlPlane (not hybrid mode)
+	if controlplane != nil {
+		ingressRules = append([]networkingv1.NetworkPolicyIngressRule{limitAdminAPIIngress}, ingressRules...)
 	}
 
 	return &networkingv1.NetworkPolicy{
@@ -610,11 +607,7 @@ func generateDataPlaneNetworkPolicy(
 			PolicyTypes: []networkingv1.PolicyType{
 				networkingv1.PolicyTypeIngress,
 			},
-			Ingress: []networkingv1.NetworkPolicyIngressRule{
-				limitAdminAPIIngress,
-				allowProxyIngress,
-				allowMetricsIngress,
-			},
+			Ingress: ingressRules,
 		},
 	}, nil
 }
