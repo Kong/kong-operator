@@ -147,6 +147,9 @@
   [#2427](https://github.com/Kong/kong-operator/pull/2427)
 - Hybrid Gateway: attach KongService generation to BackendRefs and fix filter/plugin conversion.
   [#2456](https://github.com/Kong/kong-operator/pull/2456)
+- Fix the default values of `combinedServicesFromDifferentHTTPRoutes` and
+  `drainSupport` in `ControlPlaneTranslationOptions` not being set correctly.
+  [#2589](https://github.com/Kong/kong-operator/pull/2589)
 
 ## [v2.0.5]
 
