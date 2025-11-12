@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 
+	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -12,14 +14,21 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	routeconst "github.com/kong/kong-operator/controller/hybridgateway/const/route"
 	"github.com/kong/kong-operator/controller/hybridgateway/converter"
 	"github.com/kong/kong-operator/controller/hybridgateway/watch"
 	"github.com/kong/kong-operator/controller/pkg/log"
 )
 
+const (
+	// ControllerName is the name used for logging and event recording in the hybrid gateway controller.
+	ControllerName = "hybridgateway"
+)
+
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongroutes/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongservices,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=core,resources=events,verbs=create;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongservices/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongupstreams,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongupstreams/status,verbs=get;update;patch
@@ -35,6 +44,8 @@ import (
 // RootObjectPtr interfaces, allowing flexible reconciliation logic for different resource types.
 type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]] struct {
 	client.Client
+	// EventRecorder is used to record Kubernetes events for HTTPRoute operations.
+	eventRecorder record.EventRecorder
 	// ReferenceGrantEnabled indicates whether ReferenceGrants are enabled in the cluster (i.e., the CRD is available)
 	referenceGrantEnabled bool
 	// FQDNMode indicates whether to use FQDN endpoints for service discovery.
@@ -48,6 +59,7 @@ type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPt
 func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, referenceGrantEnabled bool, fqdnMode bool, clusterDomain string) *HybridGatewayReconciler[t, tPtr] {
 	return &HybridGatewayReconciler[t, tPtr]{
 		Client:                mgr.GetClient(),
+		eventRecorder:         mgr.GetEventRecorderFor(ControllerName),
 		referenceGrantEnabled: referenceGrantEnabled,
 		fqdnMode:              fqdnMode,
 		clusterDomain:         clusterDomain,
@@ -103,7 +115,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context,
 func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	var obj tPtr = new(t)
 
-	logger := ctrllog.FromContext(ctx).WithName("HybridGateway")
+	logger := ctrllog.FromContext(ctx).WithName(ControllerName)
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -122,25 +134,100 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 
-	if stop, err := EnforceStatus(ctx, logger, conv); err != nil && !k8serrors.IsConflict(err) {
+	// Phase 1: Status Update.
+	statusChanged, err := enforceStatus(ctx, logger, conv)
+	if err != nil && !k8serrors.IsConflict(err) {
+		// Record status update failure event.
+		r.eventRecorder.Event(
+			obj,
+			corev1.EventTypeWarning,
+			routeconst.EventReasonHTTPRouteStatusUpdateFailed,
+			fmt.Sprintf("Status update failed: %v", err),
+		)
 		return ctrl.Result{}, err
 	} else if k8serrors.IsConflict(err) {
 		return ctrl.Result{Requeue: true}, nil
-	} else if stop {
-		return ctrl.Result{}, nil
 	}
 
-	if err := Translate(conv, ctx, logger); err != nil {
+	// Only emit success event if status was actually changed.
+	if statusChanged {
+		r.eventRecorder.Event(
+			obj,
+			corev1.EventTypeNormal,
+			routeconst.EventReasonHTTPRouteStatusUpdateSucceeded,
+			"HTTPRoute status successfully updated",
+		)
+		log.Trace(logger, "Status updated, requeueing")
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// Phase 2: Translation.
+	resourceCount, err := translate(conv, ctx, logger)
+	if err != nil {
+		// Record translation failure event.
+		r.eventRecorder.Event(
+			obj,
+			corev1.EventTypeWarning,
+			routeconst.EventReasonHTTPRouteTranslationFailed,
+			fmt.Sprintf("Translation failed: %v", err),
+		)
 		return ctrl.Result{}, err
 	}
 
-	requeue, _, err := EnforceState(ctx, r.Client, logger, conv)
-	if err != nil || requeue {
-		return ctrl.Result{Requeue: true}, err
+	// Record translation success event.
+	r.eventRecorder.Event(
+		obj,
+		corev1.EventTypeNormal,
+		routeconst.EventReasonHTTPRouteTranslationSucceeded,
+		fmt.Sprintf("HTTPRoute successfully translated to %d Kong resources", resourceCount),
+	)
+
+	// Phase 3: State Enforcement.
+	stateChanged, err := enforceState(ctx, r.Client, logger, conv)
+	if err != nil {
+		// Record state enforcement failure event.
+		r.eventRecorder.Event(
+			obj,
+			corev1.EventTypeWarning,
+			routeconst.EventReasonStateEnforcementFailed,
+			fmt.Sprintf("State enforcement failed: %v", err),
+		)
+		return ctrl.Result{}, err
 	}
 
-	if err := CleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv); err != nil {
+	// Only emit success event if state was actually changed.
+	if stateChanged {
+		r.eventRecorder.Event(
+			obj,
+			corev1.EventTypeNormal,
+			routeconst.EventReasonStateEnforcementSucceeded,
+			fmt.Sprintf("Kong resources successfully enforced: %d total", resourceCount),
+		)
+		log.Trace(logger, "State changed, requeueing")
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// Phase 4: Orphan Cleanup.
+	orphansDeleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)
+	if err != nil {
+		// Record orphan cleanup failure event.
+		r.eventRecorder.Event(
+			obj,
+			corev1.EventTypeWarning,
+			routeconst.EventReasonOrphanCleanupFailed,
+			fmt.Sprintf("Orphan cleanup failed: %v", err),
+		)
 		return ctrl.Result{}, err
+	}
+
+	// Only emit success event if orphans were actually deleted.
+	if orphansDeleted {
+		r.eventRecorder.Event(
+			obj,
+			corev1.EventTypeNormal,
+			routeconst.EventReasonOrphanCleanupSucceeded,
+			"Orphan cleanup completed successfully",
+		)
 	}
 
 	log.Debug(logger, "Object reconciliation completed", "Group", gvk.Group, "Kind", gvk.Kind)
