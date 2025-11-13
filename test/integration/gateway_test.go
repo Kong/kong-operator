@@ -23,7 +23,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
@@ -374,28 +373,6 @@ func TestGatewayHybridFull(t *testing.T) {
 	}
 	t.Log("verify HTTPRoute routing")
 	verifyHTTPRoute(t, gatewayIPAddress)
-
-	// When Gateway is deleted before or KonnectGatewayControlPlane recreated,
-	// old KongRoutes are not deleted, the finalizer on KongRoute blocks deletion forever.
-	// Hence it's deleted now (with assurance) before deleting Gateway or underlying KonnectGatewayControlPlane.
-	// TODO: https://github.com/Kong/kong-operator/issues/2468
-	t.Log("deleting HTTPRoute")
-	require.NoError(t, GetClients().GatewayClient.GatewayV1().HTTPRoutes(httpRoute.Namespace).Delete(GetCtx(), httpRoute.Name, metav1.DeleteOptions{}))
-	require.Eventually(t, func() bool {
-		krList := &configurationv1alpha1.KongRouteList{}
-		err := GetClients().MgrClient.List(GetCtx(), krList, client.InNamespace(namespace.Name))
-		if err != nil {
-			t.Logf("error listing KongRoutes: %v", err)
-			return false
-		}
-		if len(krList.Items) > 0 {
-			t.Logf("waiting for KongRoutes to be deleted, still present: %s", lo.Map(krList.Items, func(item configurationv1alpha1.KongRoute, _ int) string {
-				return item.Name
-			}))
-			return false
-		}
-		return true
-	}, 2*time.Minute, 2*time.Second, true)
 
 	t.Log("deleting KonnectGatewayControlPlane")
 	require.NoError(t, konnectGatewayControlPlaneClient.Delete(GetCtx(), konnectGatewayControlPlane.Name, metav1.DeleteOptions{}))
