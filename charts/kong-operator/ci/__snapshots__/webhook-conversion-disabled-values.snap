@@ -912,6 +912,9 @@ spec:
                     type: object
                 type: object
               translation:
+                default:
+                - combinedServicesFromDifferentHTTPRoutes: enabled
+                  drainSupport: enabled
                 description: Translation defines the configuration for translating Kong configuration.
                 properties:
                   combinedServicesFromDifferentHTTPRoutes:
@@ -10567,6 +10570,9 @@ spec:
                         type: object
                     type: object
                   translation:
+                    default:
+                    - combinedServicesFromDifferentHTTPRoutes: enabled
+                      drainSupport: enabled
                     description: Translation defines the configuration for translating Kong configuration.
                     properties:
                       combinedServicesFromDifferentHTTPRoutes:
