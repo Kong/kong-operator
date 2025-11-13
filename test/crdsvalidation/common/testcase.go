@@ -35,7 +35,9 @@ func (g TestCasesGroup[T]) Run(t *testing.T) {
 
 const (
 	// DefaultEventuallyTimeout is the default timeout for EventuallyConfig.
-	DefaultEventuallyTimeout = 1 * time.Second
+	// Increased to 5 seconds to handle parallel test execution and CI environments
+	// where the API server may be under heavier load.
+	DefaultEventuallyTimeout = 5 * time.Second
 	// DefaultEventuallyPeriod is the default period for EventuallyConfig.
 	DefaultEventuallyPeriod = 10 * time.Millisecond
 )
@@ -138,12 +140,14 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 				// If the error message is expected, check if the error message contains the expected message and return.
 				if tc.ExpectedErrorMessage != nil {
 					if !assert.ErrorContains(c, err, *tc.ExpectedErrorMessage) {
-						t.Logf("Create error: %v; expected: %q", err, *tc.ExpectedErrorMessage)
+						// Provide diagnostic information when the assertion fails
+						assert.Failf(c, "error message mismatch", "Create error: %v; expected: %q", err, *tc.ExpectedErrorMessage)
 						return
 					}
 				} else {
 					if !assert.NoError(c, err) {
-						t.Logf("Create error: %v", err)
+						// Provide diagnostic information when the assertion fails
+						assert.Failf(c, "unexpected error on create", "Create error: %v", err)
 						return
 					}
 				}
