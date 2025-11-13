@@ -8,7 +8,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/labels"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
 func TestPopulateTypeMeta(t *testing.T) {

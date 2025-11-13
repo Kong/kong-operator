@@ -10,7 +10,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
 	"github.com/kong/kong-operator/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
 const (

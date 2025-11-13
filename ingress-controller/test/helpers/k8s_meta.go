@@ -7,7 +7,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
 // WithTypeMeta adds type meta to the given object based on its Go type.

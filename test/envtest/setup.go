@@ -25,8 +25,18 @@ import (
 	testutil "github.com/kong/kong-operator/pkg/utils/test"
 )
 
+var once sync.Once = sync.Once{}
+
 // Setup sets up a test k8s API server environment and returned the configuration.
 func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.Config, *corev1.Namespace) {
+	once.Do(func() {
+		f, err := testutil.SetupControllerLogger("stdout")
+		require.NoError(t, err)
+		t.Cleanup(func() {
+			require.NoError(t, f())
+		})
+	})
+
 	t.Helper()
 
 	// GatewayAPIModuleName is the name of the module where we import and install Gateway API CRDs from.
@@ -40,13 +50,11 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.
 
 	// Use local CRDs from the repository instead of external module
 	// Note: the local CRDs live under config/crd/kong-operator
-	kongCRDPath := filepath.Join(
-		testutil.ProjectRootPath(),
-		"config", "crd", "kong-operator",
-	)
+	kongCRDPath := filepath.Join(testutil.ProjectRootPath(), "config", "crd", "kong-operator")
 
 	testEnv := &envtest.Environment{
 		ControlPlaneStopTimeout: time.Second * 60,
+		Scheme:                  scheme,
 		CRDInstallOptions: envtest.CRDInstallOptions{
 			Paths: []string{
 				gwAPICRDPath,
