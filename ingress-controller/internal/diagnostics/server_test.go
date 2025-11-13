@@ -221,7 +221,7 @@ func setupTestServer(ctx context.Context, t *testing.T) (Client, int) {
 		if !assert.NoError(c, err) {
 			return
 		}
-		conn.Close() //nolint:errcheck
+		conn.Close()
 	}, 5*time.Second, 100*time.Millisecond, "Server should be ready")
 
 	return client, port
