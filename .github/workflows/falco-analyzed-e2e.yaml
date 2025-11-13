@@ -3,6 +3,9 @@ name: falco-analyzed-e2e
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   MISE_VERBOSE: 1
 
