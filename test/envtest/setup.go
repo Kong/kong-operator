@@ -21,6 +21,8 @@ import (
 	"k8s.io/client-go/util/flowcontrol"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/conversion"
 
 	testutil "github.com/kong/kong-operator/pkg/utils/test"
 )
@@ -69,6 +71,16 @@ func Setup(t *testing.T, ctx context.Context, scheme *k8sruntime.Scheme) (*rest.
 	t.Logf("starting envtest environment for test %s...", t.Name())
 	cfg, err := testEnv.Start()
 	require.NoError(t, err)
+
+	ws := webhook.NewServer(webhook.Options{
+		Port:    testEnv.WebhookInstallOptions.LocalServingPort,
+		Host:    testEnv.WebhookInstallOptions.LocalServingHost,
+		CertDir: testEnv.WebhookInstallOptions.LocalServingCertDir,
+	})
+	ws.Register("/convert", conversion.NewWebhookHandler(scheme))
+	go func() {
+		require.NoError(t, ws.Start(ctx))
+	}()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
