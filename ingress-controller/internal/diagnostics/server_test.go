@@ -102,17 +102,14 @@ func TestDiagnosticsServer_Diffs(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		b := new(bytes.Buffer)
-		_, err = b.ReadFrom(resp.Body)
-		require.NoError(t, err)
 		got := DiffResponse{}
-		require.NoError(t, json.Unmarshal(b.Bytes(), &got))
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&got))
 
-		// Check that all sent diffs have been processed
+		// Check that all sent diffs have been processed.
 		require.Len(t, got.Available, configDumpsToWrite, "expected all %d diffs to be available", configDumpsToWrite)
 	}, time.Second*5, time.Millisecond*10, "all diffs should be processed")
 
-	// request the diff report
+	// Request the diff report.
 	resp, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/diff-report", port))
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -143,7 +140,7 @@ func TestDiagnosticsServer_Diffs(t *testing.T) {
 	configDiffs[extra.Hash] = extra
 	diffCh <- extra
 
-	// Wait for the extra diff to be processed before checking the results
+	// Wait for the extra diff to be processed before checking the results.
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		resp, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/diff-report?hash=%s", port, extra.Hash))
 		require.NoError(t, err)
