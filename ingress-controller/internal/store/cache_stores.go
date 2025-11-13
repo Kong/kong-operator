@@ -7,7 +7,7 @@ import (
 	yamlserializer "k8s.io/apimachinery/pkg/runtime/serializer/yaml"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
-	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
 //go:generate go run ../../hack/generators/cache-stores
