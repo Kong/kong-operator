@@ -64,7 +64,7 @@ const (
 // TestKongClient_GoldenTests runs the golden tests for the KongClient.
 //
 // Command to update the golden files:
-// $ make test.golden.update
+// $ make test.charts.golden.update
 //
 // Data for the test cases is stored in the "./testdata/golden" directory. Test cases are grouped into subdirectories
 // based on the Kubernetes input that they run against so that each of the subdirectories has:
@@ -81,7 +81,7 @@ const (
 //  1. Add a new directory ./testdata/golden/<your-dir> with the "in.yaml" that you want to test against.
 //  2. (Optional) Define a set of "<settings-name>_settings.yaml" files that define the translator configuration you want to
 //     test. If you don't define any settings files, the test will run with default settings.
-//  3. Run `make test.golden.update` to generate the golden files.
+//  3. Run `make test.charts.golden.update` to generate the golden files.
 //  4. Inspect the generated golden files and make sure they're correct. If they are, commit them.
 //
 // If you introduce a change that may affect many test cases, and you're sure about it correctness, you can run the

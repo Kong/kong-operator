@@ -757,7 +757,7 @@ test.charts.ct.install:
 # Defining multi-line strings to echo: https://stackoverflow.com/a/649462/7958339
 define GOLDEN_TEST_FAILURE_MSG
 >> Golden tests have failed.
->> Please run 'make test.golden.update' to update golden files and commit the changes if they're expected.
+>> Please run 'make test.charts.golden.update' to update golden files and commit the changes if they're expected.
 endef
 export GOLDEN_TEST_FAILURE_MSG
 
