@@ -4,8 +4,6 @@ import (
 	"testing"
 
 	"github.com/samber/lo"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 )
@@ -22,13 +20,7 @@ const (
 
 // NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes returns a test cases group for testing control plane ref change to KIC unsupported types
 func NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes[
-	T interface {
-		client.Object
-		DeepCopy() T
-		SetConditions([]metav1.Condition)
-		SetControlPlaneRef(*commonv1alpha1.ControlPlaneRef)
-		GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef
-	},
+	T ObjectWithControlPlaneRef[T],
 ](
 	t *testing.T,
 	obj T,
