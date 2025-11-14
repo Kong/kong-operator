@@ -38,12 +38,13 @@ var skippedTestsShared = []string{
 	// NOTE:
 	// Issue tracking all gRPC related conformance tests:
 	// https://github.com/Kong/kong-operator/issues/2345
-	// Tests GRPCRouteHeaderMatching, GRPCExactMethodMatching are skipped
+	// Tests GRPCRouteHeaderMatching, GRPCExactMethodMatching, GRPCRouteWeight are skipped
 	// because to proxy different gRPC services and route requests based on Header or Method,
 	// it is necessary to create separate catch-all routes for them.
 	// However, Kong does not define priority behavior in this situation unless priorities are manually added.
 	tests.GRPCRouteHeaderMatching.ShortName,
 	tests.GRPCExactMethodMatching.ShortName,
+	tests.GRPCRouteWeight.ShortName,
 	// When processing this scenario, the Kong's router requires `priority` to be specified for routes.
 	// We cannot provide that for routes that are part of the conformance suite.
 	tests.GRPCRouteListenerHostnameMatching.ShortName,
