@@ -131,5 +131,10 @@ func NameFromT(t *testing.T) string {
 	name = strings.ReplaceAll(name, "_", "-")
 	name = strings.ReplaceAll(name, "/", "-")
 
+	// This is used as k8s label so we need to truncate it to 63.
+	if len(name) > 63 {
+		return name[:63]
+	}
+
 	return name
 }
