@@ -36,7 +36,7 @@ func TestKongKey(t *testing.T) {
 			},
 		}
 
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefNotRequired).
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, cfg, obj, common.NotSupportedByKIC, common.ControlPlaneRefNotRequired).
 			RunWithConfig(t, cfg, scheme)
 	})
 
@@ -58,7 +58,7 @@ func TestKongKey(t *testing.T) {
 			},
 		}
 
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefNotRequired).
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, cfg, obj, common.NotSupportedByKIC, common.ControlPlaneRefNotRequired).
 			RunWithConfig(t, cfg, scheme)
 	})
 

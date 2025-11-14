@@ -56,7 +56,7 @@ func TestKongCACertificate(t *testing.T) {
 			},
 		}
 
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired).
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, cfg, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired).
 			RunWithConfig(t, cfg, scheme)
 	})
 }
