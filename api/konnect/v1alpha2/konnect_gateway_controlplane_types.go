@@ -34,6 +34,8 @@ type KonnectGatewayControlPlane struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec defines the desired state of KonnectGatewayControlPlane.
+	//
+	// +required
 	Spec KonnectGatewayControlPlaneSpec `json:"spec,omitempty"`
 
 	// Status defines the observed state of KonnectGatewayControlPlane.

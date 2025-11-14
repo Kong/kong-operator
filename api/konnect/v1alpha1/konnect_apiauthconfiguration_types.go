@@ -30,6 +30,8 @@ type KonnectAPIAuthConfiguration struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec is the specification of the KonnectAPIAuthConfiguration resource.
+	//
+	// +required
 	Spec KonnectAPIAuthConfigurationSpec `json:"spec,omitempty"`
 
 	// Status is the status of the KonnectAPIAuthConfiguration resource.
