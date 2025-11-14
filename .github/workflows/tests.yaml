@@ -598,6 +598,8 @@ jobs:
         GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
+        DOCKERHUB_PULL_TOKEN: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
+        DOCKERHUB_PULL_USERNAME: ${{ vars.DOCKERHUB_PULL_USERNAME }}
 
     - name: upload diagnostics
       if: always()
@@ -650,6 +652,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
+        DOCKERHUB_PULL_TOKEN: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
+        DOCKERHUB_PULL_USERNAME: ${{ vars.DOCKERHUB_PULL_USERNAME }}
 
     - name: upload diagnostics
       if: always()
@@ -672,6 +676,47 @@ jobs:
         name: tests-report-integration-bluegreen
         path: integration-tests-bluegreen.xml
 
+    - name: setup golang
+      uses: actions/setup-go@v5
+      with:
+        go-version-file: go.mod
+
+    - uses: jdx/mise-action@5083fe46898c414b2475087cc79da59e7da859e8 # v2.1.11
+      with:
+        install: false
+
+    - name: run integration tests
+      run: make test.integration_provision_dataplane_fail
+      env:
+        KONG_TEST_DISABLE_CERTMANAGER: "true"
+        KONG_CONTROLLER_OUT: stdout
+        KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
+        GOTESTSUM_JUNITFILE: integration-tests-provision-dataplane-fail.xml
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DOCKERHUB_PULL_TOKEN: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
+        DOCKERHUB_PULL_USERNAME: ${{ vars.DOCKERHUB_PULL_USERNAME }}
+    
+    - name: upload diagnostics
+      if: always()
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+      with:
+        name: diagnostics-integration-provision-fail
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
+    - name: collect test coverage
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+      with:
+        name: coverage-integration-tests-provision-fail
+        path: coverage.integration-provision-dataplane-fail.out
+
+    - name: collect test report
+      if: always()
+      uses: actions/upload-artifact@6f51ac03b9356f520e9adb1b1b7802705f340c2b # v4.5.0
+      with:
+        name: tests-report-integration-tests-provision-fail
+        path: integration-tests-provision-dataplane-fail.xml
+  
   e2e-tests:
     runs-on: ubuntu-latest
     needs: [check-docs-only]
@@ -707,6 +752,8 @@ jobs:
         KONG_TEST_KONG_OPERATOR_IMAGE_LOAD: kong-operator:e2e-${{ github.sha }}
         GOTESTSUM_JUNITFILE: "e2e-tests.xml"
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        DOCKERHUB_PULL_TOKEN: ${{ secrets.DOCKERHUB_PULL_TOKEN }}
+        DOCKERHUB_PULL_USERNAME: ${{ vars.DOCKERHUB_PULL_USERNAME }}
 
     - name: upload diagnostics
       if: always()
