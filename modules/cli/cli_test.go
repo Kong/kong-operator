@@ -291,5 +291,6 @@ func expectedDefaultCfg() manager.Config {
 		EmitKubernetesEvents:                    true,
 		ConversionWebhookEnabled:                true,
 		ValidatingWebhookEnabled:                true,
+		FQDNModeEnabled:                         false,
 	}
 }

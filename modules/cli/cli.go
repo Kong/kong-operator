@@ -57,6 +57,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.IntVar(&cfg.ClusterCAKeySize, "cluster-ca-key-size", mgrconfig.DefaultClusterCAKeySize, "Size (in bits) of the key used for the cluster CA certificate. Only used for RSA keys.")
 	flagSet.DurationVar(&cfg.CacheSyncTimeout, "cache-sync-timeout", 0, "Sets the time limit for syncing controller caches. Defaults to the controller-runtime value if set to `0`.")
 	flagSet.StringVar(&cfg.ClusterDomain, "cluster-domain", ingressmgrconfig.DefaultClusterDomain, "The cluster domain. This is used e.g. in generating addresses for upstream services.")
+	flagSet.BoolVar(&cfg.FQDNModeEnabled, "enable-fqdn-mode", ingressmgrconfig.DefaultFQDNModeEnabled, "Enable FQDN mode for the operator. FQDNMode indicates whether to use FQDN endpoints for service discovery.")
 	flagSet.DurationVar(&cfg.CacheSyncPeriod, "cache-sync-period", 0, "Sets the minimum frequency for reconciling watched resources. Defaults to the controller-runtime value if unspecified or set to 0s.")
 	flagSet.BoolVar(&cfg.EmitKubernetesEvents, "emit-kubernetes-events", ingressmgrconfig.DefaultEmitKubernetesEvents, "Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects.")
 	flagSet.Var(newValidatedValue(&cfg.WatchNamespaces, manager.NewWatchNamespaces), "watch-namespaces", "Comma-separated list of namespaces to watch. If empty (default), all namespaces are watched.")
@@ -79,7 +80,6 @@ func New(m metadata.Info) *CLI {
 
 	// controllers for Konnect APIs
 	flagSet.BoolVar(&cfg.KonnectControllersEnabled, "enable-controller-konnect", false, "Enable the Konnect controllers.")
-	flagSet.BoolVar(&cfg.KonnectHybridControllersEnabled, "enable-controller-konnect-hybrid", false, "Enable the Konnect Hybrid controllers.")
 	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
 	flagSet.UintVar(&cfg.KonnectMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultKonnectMaxConcurrentReconciles, "Maximum number of concurrent reconciles for Konnect entities.")
 
