@@ -32,7 +32,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator"
 	"github.com/kong/kong-operator/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
-	managerscheme "github.com/kong/kong-operator/modules/manager/scheme"
+	managerscheme "github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 )
 
 type fakePluginSvc struct {

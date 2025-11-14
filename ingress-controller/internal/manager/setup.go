@@ -43,7 +43,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
 	ingresserrors "github.com/kong/kong-operator/ingress-controller/pkg/errors"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 )
 
 // -----------------------------------------------------------------------------

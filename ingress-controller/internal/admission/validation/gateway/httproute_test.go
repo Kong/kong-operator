@@ -17,7 +17,7 @@ import (
 	gatewaycontroller "github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane/translator"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 )
 
 func TestValidateHTTPRoute(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
-	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 )
 
 // Setup is a test helper function which:
