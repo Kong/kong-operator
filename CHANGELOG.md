@@ -126,6 +126,8 @@
   [#2457](https://github.com/Kong/kong-operator/pull/2457)
 - Add support to HTTPRoute RequestRedirect filter
   [#2470](https://github.com/Kong/kong-operator/pull/2470)
+- Add CLI flag `--enable-fqdn-mode` to indicate whether to use FQDN endpoints for service discovery.
+  [#2607](https://github.com/Kong/kong-operator/pull/2607)
 
 ### Changed
 
