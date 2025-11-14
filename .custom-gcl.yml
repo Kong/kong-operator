@@ -1,7 +1,7 @@
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-version: v2.4.0
+version: v2.6.1
 name: golangci-kube-api-linter
 destination: ./bin
 plugins:
 - module: 'sigs.k8s.io/kube-api-linter'
-  version: 65a570bd22aac3fe2eb0c3721b1cc4ea6ec41e48
+  version: d94382a24f067e0663d733cf503e4965a000c529

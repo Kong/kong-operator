@@ -417,6 +417,8 @@ spec:
                 - endpoints
                 type: object
             type: object
+        required:
+        - spec
         type: object
         x-kubernetes-validations:
         - message: spec.konnect.controlPlane.ref is immutable.
@@ -785,6 +787,8 @@ spec:
                 - endpoints
                 type: object
             type: object
+        required:
+        - spec
         type: object
         x-kubernetes-validations:
         - message: spec.konnect.controlPlane.ref is immutable.
