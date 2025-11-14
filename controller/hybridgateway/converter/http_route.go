@@ -21,6 +21,7 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/controller/hybridgateway/target"
+	"github.com/kong/kong-operator/controller/hybridgateway/upstream"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -333,29 +334,17 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				"matchCount", len(rule.Matches),
 				"filterCount", len(rule.Filters))
 
-			// Build the KongUpstream resource.
-			upstreamName := namegen.NewKongUpstreamName(cp, rule)
-			log.Trace(logger, "Building KongUpstream resource",
-				"upstream", upstreamName,
-				"controlPlane", cp.KonnectNamespacedRef)
-
-			upstream, err := builder.NewKongUpstream().
-				WithName(upstreamName).
-				WithNamespace(c.route.Namespace).
-				WithLabels(c.route, &pRef).
-				WithAnnotations(c.route, &pRef).
-				WithSpecName(upstreamName).
-				WithControlPlaneRef(*cp).
-				WithOwner(c.route).Build()
+			// Build the KongUpstream resource using the upstream package.
+			upstreamPtr, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
+			upstreamName := upstreamPtr.Name
 			if err != nil {
-				log.Error(logger, err, "Failed to build KongUpstream resource, skipping rule",
-					"upstream", upstreamName,
+				log.Error(logger, err, "Failed to create or update KongUpstream resource, skipping rule",
 					"controlPlane", cp.KonnectNamespacedRef)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to build KongUpstream %s: %w", upstreamName, err))
+				translationErrors = append(translationErrors, fmt.Errorf("failed to create or update KongUpstream for rule: %w", err))
 				continue
 			}
-			c.outputStore = append(c.outputStore, &upstream)
-			log.Debug(logger, "Successfully built KongUpstream resource",
+			c.outputStore = append(c.outputStore, upstreamPtr)
+			log.Debug(logger, "Successfully processed KongUpstream resource",
 				"upstream", upstreamName)
 
 			// Build the KongTarget resources using the new rule-based approach.
@@ -399,8 +388,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				WithAnnotations(c.route, &pRef).
 				WithSpecName(serviceName).
 				WithSpecHost(upstreamName).
-				WithControlPlaneRef(*cp).
-				WithOwner(c.route).Build()
+				WithControlPlaneRef(*cp).Build()
 			if err != nil {
 				log.Error(logger, err, "Failed to build KongService resource, skipping rule",
 					"service", serviceName,
@@ -463,8 +451,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					WithNamespace(c.route.Namespace).
 					WithLabels(c.route, &pRef).
 					WithAnnotations(c.route, &pRef).
-					WithFilter(filter).
-					WithOwner(c.route).Build()
+					WithFilter(filter).Build()
 				if err != nil {
 					log.Error(logger, err, "Failed to build KongPlugin resource, skipping filter",
 						"plugin", pluginName,

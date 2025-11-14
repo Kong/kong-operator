@@ -24,7 +24,7 @@ Main function that creates or updates a KongUpstream for a given HTTPRoute and r
 - Returns the upstream resource for use by the caller
 
 ### appendHTTPRouteToAnnotations  
-Internal function that adds an HTTPRoute reference to the hybrid-route annotation if it's not already present. The annotation format is: `HTTPRoute|namespace/name,HTTPRoute|namespace2/name2,...`
+Internal function that adds an HTTPRoute reference to the hybrid-route annotation if it's not already present. The annotation format is: `namespace/name,namespace2/name2,...`
 
 ### RemoveHTTPRouteFromAnnotations
 Utility function for cleanup scenarios - removes a specific HTTPRoute reference from the hybrid-route annotation. Useful when HTTPRoutes are deleted or no longer reference the upstream.
