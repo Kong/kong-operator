@@ -1,18 +1,23 @@
 package envtest
 
 import (
+	"fmt"
 	"slices"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/scheme"
@@ -142,5 +147,185 @@ func TestKongRoute(t *testing.T) {
 		require.NoError(t, clientNamespaced.Delete(ctx, createdRoute))
 
 		eventually.WaitForObjectToNotExist(t, ctx, cl, createdRoute, waitTime, tickTime)
+	})
+
+	t.Run("Adopting a route attached to a service", func(t *testing.T) {
+		routeID := uuid.NewString()
+		routeName := "test-adoption-" + uuid.NewString()[:8]
+
+		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating routes")
+		sdk.RoutesSDK.EXPECT().GetRoute(
+			mock.Anything,
+			routeID,
+			cp.GetKonnectID(),
+		).Return(&sdkkonnectops.GetRouteResponse{
+			Route: &sdkkonnectcomp.Route{
+				Type: sdkkonnectcomp.RouteTypeRouteJSON,
+				RouteJSON: &sdkkonnectcomp.RouteJSON{
+					ID:    &routeID,
+					Name:  &routeName,
+					Paths: []string{"/path"},
+					Service: &sdkkonnectcomp.RouteJSONService{
+						ID: lo.ToPtr(svc.GetKonnectID()),
+					},
+				},
+			},
+		}, nil)
+		sdk.RoutesSDK.EXPECT().UpsertRoute(
+			mock.Anything,
+			mock.MatchedBy(
+				func(req sdkkonnectops.UpsertRouteRequest) bool {
+					return req.RouteID == routeID
+				},
+			),
+		).Return(nil, nil)
+
+		t.Logf("Creating a KongRoute to adopt the existing route (ID: %s)", routeID)
+		createdRoute := deploy.KongRoute(t, ctx, clientNamespaced,
+			deploy.WithNamespacedKongServiceRef(svc),
+			func(obj client.Object) {
+				r, ok := obj.(*configurationv1alpha1.KongRoute)
+				require.True(t, ok)
+				r.Spec.Adopt = &commonv1alpha1.AdoptOptions{
+					From: commonv1alpha1.AdoptSourceKonnect,
+					Mode: commonv1alpha1.AdoptModeOverride,
+					Konnect: &commonv1alpha1.AdoptKonnectOptions{
+						ID: routeID,
+					},
+				}
+				r.Spec.Name = &routeName
+				r.Spec.Paths = []string{"/path-2"}
+			},
+		)
+
+		t.Log("Waiting for the KongRoute to get KonnectID and marked as programmed")
+		watchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
+			return r.Name == createdRoute.Name && r.GetKonnectID() == routeID && k8sutils.IsProgrammed(r)
+		},
+			fmt.Sprintf("KongRoute did not get programmed and set KonnectID to %s", routeID),
+		)
+
+		t.Log("Setting up SDK expectations for route deletion")
+		sdk.RoutesSDK.EXPECT().DeleteRoute(mock.Anything, cp.GetKonnectID(), routeID).Return(nil, nil)
+
+		t.Log("Deleting KongRoute")
+		require.NoError(t, clientNamespaced.Delete(ctx, createdRoute))
+
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdRoute, waitTime, tickTime)
+	})
+
+	t.Run("Adopting a standalone route", func(t *testing.T) {
+		routeID := uuid.NewString()
+		routeName := "test-adoption-" + uuid.NewString()[:8]
+
+		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating routes")
+		sdk.RoutesSDK.EXPECT().GetRoute(
+			mock.Anything,
+			routeID,
+			cp.GetKonnectID(),
+		).Return(&sdkkonnectops.GetRouteResponse{
+			Route: &sdkkonnectcomp.Route{
+				Type: sdkkonnectcomp.RouteTypeRouteJSON,
+				RouteJSON: &sdkkonnectcomp.RouteJSON{
+					ID:    &routeID,
+					Name:  &routeName,
+					Paths: []string{"/path"},
+				},
+			},
+		}, nil)
+		sdk.RoutesSDK.EXPECT().UpsertRoute(
+			mock.Anything,
+			mock.MatchedBy(
+				func(req sdkkonnectops.UpsertRouteRequest) bool {
+					return req.RouteID == routeID
+				},
+			),
+		).Return(nil, nil)
+
+		t.Logf("Creating a KongRoute to adopt the existing route (ID: %s)", routeID)
+		createdRoute := deploy.KongRoute(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				r, ok := obj.(*configurationv1alpha1.KongRoute)
+				require.True(t, ok)
+				r.Spec.Adopt = &commonv1alpha1.AdoptOptions{
+					From: commonv1alpha1.AdoptSourceKonnect,
+					Mode: commonv1alpha1.AdoptModeOverride,
+					Konnect: &commonv1alpha1.AdoptKonnectOptions{
+						ID: routeID,
+					},
+				}
+				r.Spec.Name = &routeName
+				r.Spec.Paths = []string{"/path-2"}
+			},
+		)
+
+		t.Log("Waiting for the KongRoute to get KonnectID and marked as programmed")
+		watchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
+			return r.Name == createdRoute.Name && r.GetKonnectID() == routeID && k8sutils.IsProgrammed(r)
+		},
+			fmt.Sprintf("KongRoute did not get programmed and set KonnectID to %s", routeID),
+		)
+	})
+
+	t.Run("adopting a route with not matched service should fail", func(t *testing.T) {
+		routeID := uuid.NewString()
+		routeName := "test-adoption-" + uuid.NewString()[:8]
+
+		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for gettingroutes")
+		sdk.RoutesSDK.EXPECT().GetRoute(
+			mock.Anything,
+			routeID,
+			cp.GetKonnectID(),
+		).Return(&sdkkonnectops.GetRouteResponse{
+			Route: &sdkkonnectcomp.Route{
+				Type: sdkkonnectcomp.RouteTypeRouteJSON,
+				RouteJSON: &sdkkonnectcomp.RouteJSON{
+					ID:    &routeID,
+					Name:  &routeName,
+					Paths: []string{"/path"},
+					Service: &sdkkonnectcomp.RouteJSONService{
+						ID: lo.ToPtr("another-service-id"),
+					},
+				},
+			},
+		}, nil)
+
+		t.Logf("Creating a KongRoute to adopt the existing route (ID: %s)", routeID)
+		createdRoute := deploy.KongRoute(t, ctx, clientNamespaced,
+			deploy.WithNamespacedKongServiceRef(svc),
+			func(obj client.Object) {
+				r, ok := obj.(*configurationv1alpha1.KongRoute)
+				require.True(t, ok)
+				r.Spec.Adopt = &commonv1alpha1.AdoptOptions{
+					From: commonv1alpha1.AdoptSourceKonnect,
+					Mode: commonv1alpha1.AdoptModeOverride,
+					Konnect: &commonv1alpha1.AdoptKonnectOptions{
+						ID: routeID,
+					},
+				}
+				r.Spec.Name = &routeName
+				r.Spec.Paths = []string{"/path-2"}
+			},
+		)
+
+		t.Log("Waiting for the KongRoute to be marked as not programmed and not adopted")
+		watchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongRoute) bool {
+			return r.Name == createdRoute.Name &&
+				conditionsContainProgrammedFalse(r.GetConditions()) &&
+				lo.ContainsBy(r.GetConditions(), func(c metav1.Condition) bool {
+					return c.Type == konnectv1alpha1.KonnectEntityAdoptedConditionType &&
+						c.Status == metav1.ConditionFalse
+				})
+		},
+			fmt.Sprintf("KongRoute did not get programmed and set KonnectID to %s", routeID),
+		)
+
 	})
 }
