@@ -126,7 +126,10 @@
   [#2457](https://github.com/Kong/kong-operator/pull/2457)
 - Add support to HTTPRoute RequestRedirect filter
   [#2470](https://github.com/Kong/kong-operator/pull/2470)
-- Add CLI flag `--enable-fqdn-mode` to indicate whether to use FQDN endpoints for service discovery.
+- Add CLI flag `--enable-fqdn-mode` to enable Fully Qualified Domain Name (FQDN)
+  mode for service discovery. When enabled, Kong targets are configured to use
+  service FQDNs (e.g., `service.namespace.svc.cluster.local`) instead of
+  individual pod endpoint IPs.
   [#2607](https://github.com/Kong/kong-operator/pull/2607)
 
 ### Changed
