@@ -9,7 +9,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -36,13 +35,9 @@ const (
 
 func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 	var (
-		ctx              = t.Context()
-		scheme           = scheme.Get()
-		cfg, ns          = envtest.Setup(t, ctx, scheme)
-		commonObjectMeta = metav1.ObjectMeta{
-			GenerateName: "dp-",
-			Namespace:    ns.Name,
-		}
+		ctx    = t.Context()
+		scheme = scheme.Get()
+		cfg, _ = envtest.Setup(t, ctx, scheme)
 	)
 
 	logger := zapr.NewLogger(zap.New(zapcore.NewNopCore()))
@@ -97,13 +92,9 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 	t.Parallel()
 
 	var (
-		ctx              = t.Context()
-		scheme           = scheme.Get()
-		cfg, ns          = envtest.Setup(t, ctx, scheme)
-		commonObjectMeta = metav1.ObjectMeta{
-			GenerateName: "dp-",
-			Namespace:    ns.Name,
-		}
+		ctx    = t.Context()
+		scheme = scheme.Get()
+		cfg, _ = envtest.Setup(t, ctx, scheme)
 	)
 
 	chartPath := path.Join(test.ProjectRootPath(), ChartPath)
