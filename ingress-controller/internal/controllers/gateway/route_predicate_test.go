@@ -14,7 +14,7 @@ import (
 
 	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
-	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 )
 
 func TestIsRouteAttachedToReconciledGateway(t *testing.T) {

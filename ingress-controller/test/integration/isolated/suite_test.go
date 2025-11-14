@@ -31,6 +31,7 @@ import (
 
 	"github.com/kong/kong-operator/ingress-controller/internal/admission"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/consts"
 	testhelpers "github.com/kong/kong-operator/ingress-controller/test/helpers"
@@ -38,7 +39,6 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
 	testutils "github.com/kong/kong-operator/ingress-controller/test/util"
-	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
 var tenv env.Environment
@@ -437,10 +437,10 @@ func startControllerManager(
 
 	t.Logf("starting the controller manager")
 	cert, key := certificate.GetKongSystemSelfSignedCerts()
-	require.NoError(t, os.MkdirAll(filepath.Dir(admission.DefaultAdmissionWebhookCertPath), 0o755))
-	require.NoError(t, os.WriteFile(admission.DefaultAdmissionWebhookCertPath, cert, 0o600))
-	require.NoError(t, os.MkdirAll(filepath.Dir(admission.DefaultAdmissionWebhookKeyPath), 0o755))
-	require.NoError(t, os.WriteFile(admission.DefaultAdmissionWebhookKeyPath, key, 0o600))
+	require.NoError(t, os.MkdirAll(filepath.Dir(admission.DefaultAdmissionWebhookCertPath), 0755))
+	require.NoError(t, os.WriteFile(admission.DefaultAdmissionWebhookCertPath, cert, 0600))
+	require.NoError(t, os.MkdirAll(filepath.Dir(admission.DefaultAdmissionWebhookKeyPath), 0755))
+	require.NoError(t, os.WriteFile(admission.DefaultAdmissionWebhookKeyPath, key, 0600))
 	t.Cleanup(func() {
 		require.NoError(t, os.Remove(admission.DefaultAdmissionWebhookCertPath))
 		require.NoError(t, os.Remove(admission.DefaultAdmissionWebhookKeyPath))
