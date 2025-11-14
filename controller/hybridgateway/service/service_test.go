@@ -1,0 +1,405 @@
+package service
+
+import (
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
+	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/pkg/consts"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+)
+
+func TestServiceForRule(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	// Create a scheme with the necessary types
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	// Create test HTTPRoute
+	httpRoute := &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+		Spec: gwapiv1.HTTPRouteSpec{
+			CommonRouteSpec: gwapiv1.CommonRouteSpec{
+				ParentRefs: []gwapiv1.ParentReference{
+					{Name: "test-gateway"},
+				},
+			},
+		},
+	}
+
+	// Create test rule
+	rule := gwtypes.HTTPRouteRule{
+		Matches: []gwapiv1.HTTPRouteMatch{
+			{Path: &gwapiv1.HTTPPathMatch{Type: &[]gwapiv1.PathMatchType{gwapiv1.PathMatchPathPrefix}[0], Value: &[]string{"/test"}[0]}},
+		},
+	}
+
+	// Create parent reference
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+
+	// Create control plane reference
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+
+	upstreamName := "test-upstream"
+
+	tests := []struct {
+		name               string
+		existingService    *configurationv1alpha1.KongService
+		expectedAnnotation string
+		expectUpdate       bool
+		expectedHost       string
+	}{
+		{
+			name:               "new service creation",
+			existingService:    nil,
+			expectedAnnotation: "test-namespace/test-route",
+			expectUpdate:       false,
+			expectedHost:       upstreamName,
+		},
+		{
+			name: "existing service with no annotation",
+			existingService: func() *configurationv1alpha1.KongService {
+				// We need to use the actual generated name for the existing service
+				serviceName := namegen.NewKongServiceName(cp, rule)
+				return &configurationv1alpha1.KongService{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      serviceName,
+						Namespace: "test-namespace",
+					},
+				}
+			}(),
+			expectedAnnotation: "test-namespace/test-route",
+			expectUpdate:       true,
+			expectedHost:       upstreamName,
+		},
+		{
+			name: "existing service with different route annotation",
+			existingService: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cp-test-rule",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRouteAnnotation: "other-namespace/other-route",
+					},
+				},
+			},
+			expectedAnnotation: "other-namespace/other-route,test-namespace/test-route",
+			expectUpdate:       true,
+			expectedHost:       upstreamName,
+		},
+		{
+			name: "existing service with same route annotation",
+			existingService: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cp-test-rule",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRouteAnnotation: "test-namespace/test-route",
+					},
+				},
+			},
+			expectedAnnotation: "test-namespace/test-route",
+			expectUpdate:       false,
+			expectedHost:       upstreamName,
+		},
+		{
+			name: "existing service with multiple routes",
+			existingService: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-cp-test-rule",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRouteAnnotation: "ns1/route1,ns2/route2",
+					},
+				},
+			},
+			expectedAnnotation: "ns1/route1,ns2/route2,test-namespace/test-route",
+			expectUpdate:       true,
+			expectedHost:       upstreamName,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create client with or without existing service
+			var objects []client.Object
+			if tt.existingService != nil {
+				objects = append(objects, tt.existingService)
+			}
+
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objects...).
+				Build()
+
+			service, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+
+			assert.NoError(t, err)
+			assert.NotNil(t, service)
+			assert.NotEmpty(t, service.Name) // Name is generated by namegen
+			assert.Equal(t, "test-namespace", service.Namespace)
+			assert.Equal(t, tt.expectedHost, service.Spec.Host)
+
+			// Check annotation
+			annotations := service.GetAnnotations()
+			assert.NotNil(t, annotations)
+			assert.Equal(t, tt.expectedAnnotation, annotations[consts.GatewayOperatorHybridRouteAnnotation])
+
+			// Verify the service was updated in the cluster if expected
+			if tt.expectUpdate && tt.existingService != nil {
+				updatedService := &configurationv1alpha1.KongService{}
+				err := cl.Get(ctx, types.NamespacedName{Name: service.Name, Namespace: service.Namespace}, updatedService)
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedAnnotation, updatedService.GetAnnotations()[consts.GatewayOperatorHybridRouteAnnotation])
+				assert.Equal(t, tt.expectedHost, updatedService.Spec.Host)
+			}
+		})
+	}
+}
+
+func TestRemoveHTTPRouteFromServiceAnnotation(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	// Create a scheme with the necessary types
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	// Create test HTTPRoute
+	httpRoute := &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+
+	tests := []struct {
+		name               string
+		existingService    *configurationv1alpha1.KongService
+		expectedAnnotation string
+		expectedError      bool
+	}{
+		{
+			name:            "service does not exist",
+			existingService: nil,
+			expectedError:   false,
+		},
+		{
+			name: "remove route from single route annotation",
+			existingService: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-service",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRouteAnnotation: "test-namespace/test-route",
+					},
+				},
+			},
+			expectedAnnotation: "",
+			expectedError:      false,
+		},
+		{
+			name: "remove route from multiple route annotation",
+			existingService: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-service",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRouteAnnotation: "test-namespace/test-route,ns2/route2",
+					},
+				},
+			},
+			expectedAnnotation: "ns2/route2",
+			expectedError:      false,
+		},
+		{
+			name: "remove route from middle of annotation",
+			existingService: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-service",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRouteAnnotation: "ns1/route1,test-namespace/test-route,ns3/route3",
+					},
+				},
+			},
+			expectedAnnotation: "ns1/route1,ns3/route3",
+			expectedError:      false,
+		},
+		{
+			name: "route not in annotation",
+			existingService: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-service",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						consts.GatewayOperatorHybridRouteAnnotation: "ns1/route1,ns2/route2",
+					},
+				},
+			},
+			expectedAnnotation: "ns1/route1,ns2/route2",
+			expectedError:      false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create client with or without existing service
+			var objects []client.Object
+			if tt.existingService != nil {
+				objects = append(objects, tt.existingService)
+			}
+
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objects...).
+				Build()
+
+			err := RemoveHTTPRouteFromServiceAnnotation(ctx, logger, cl, "test-service", "test-namespace", httpRoute)
+
+			if tt.expectedError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+
+				// If service existed, verify the annotation was updated correctly
+				if tt.existingService != nil {
+					updatedService := &configurationv1alpha1.KongService{}
+					err := cl.Get(ctx, types.NamespacedName{Name: "test-service", Namespace: "test-namespace"}, updatedService)
+					assert.NoError(t, err)
+
+					annotations := updatedService.GetAnnotations()
+					if tt.expectedAnnotation == "" {
+						// Annotation should be removed or empty
+						annotationValue, exists := annotations[consts.GatewayOperatorHybridRouteAnnotation]
+						if exists {
+							assert.Equal(t, "", annotationValue)
+						}
+					} else {
+						assert.Equal(t, tt.expectedAnnotation, annotations[consts.GatewayOperatorHybridRouteAnnotation])
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestServiceForRule_ErrorCases(t *testing.T) {
+	ctx := context.Background()
+	logger := zap.New()
+
+	// Create a scheme with the necessary types
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+
+	// Create test HTTPRoute
+	httpRoute := &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+		},
+	}
+
+	// Create test rule
+	rule := gwtypes.HTTPRouteRule{}
+
+	// Create parent reference
+	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
+
+	// Create control plane reference
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+			Name: "test-cp",
+		},
+	}
+
+	upstreamName := "test-upstream"
+
+	t.Run("client get error", func(t *testing.T) {
+		// Create a client that will return an error on Get operations
+		cl := &mockClient{
+			getError: assert.AnError,
+		}
+
+		service, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+		assert.Error(t, err)
+		assert.Nil(t, service)
+		assert.Contains(t, err.Error(), "failed to check for existing KongService")
+	})
+
+	t.Run("client update error", func(t *testing.T) {
+		existingService := &configurationv1alpha1.KongService{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-cp-test-rule",
+				Namespace: "test-namespace",
+			},
+		}
+
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(existingService).
+			Build()
+
+		// Wrap the client with a mock that fails on Update
+		mockCl := &mockClient{
+			Client:      cl,
+			updateError: assert.AnError,
+		}
+
+		service, err := ServiceForRule(ctx, logger, mockCl, httpRoute, rule, pRef, cp, upstreamName)
+		assert.Error(t, err)
+		assert.Nil(t, service)
+		assert.Contains(t, err.Error(), "failed to update existing KongService")
+	})
+}
+
+// mockClient is a test helper for simulating client errors
+type mockClient struct {
+	client.Client
+	getError    error
+	updateError error
+}
+
+func (m *mockClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	if m.getError != nil {
+		return m.getError
+	}
+	if m.Client != nil {
+		return m.Client.Get(ctx, key, obj, opts...)
+	}
+	return apierrors.NewNotFound(configurationv1alpha1.GroupVersion.WithResource("kongservices").GroupResource(), key.Name)
+}
+
+func (m *mockClient) Update(ctx context.Context, obj client.Object, opts ...client.UpdateOption) error {
+	if m.updateError != nil {
+		return m.updateError
+	}
+	if m.Client != nil {
+		return m.Client.Update(ctx, obj, opts...)
+	}
+	return nil
+}
