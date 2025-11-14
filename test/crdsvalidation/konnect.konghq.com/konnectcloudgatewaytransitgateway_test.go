@@ -319,6 +319,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				},
 				ExpectedUpdateErrorMessage: lo.ToPtr("spec.azureTransitGateway.name is immutable when transit gateway is already Programmed"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

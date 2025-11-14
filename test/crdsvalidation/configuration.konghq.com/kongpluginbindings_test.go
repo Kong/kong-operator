@@ -50,7 +50,8 @@ func TestKongPluginBindings(t *testing.T) {
 			},
 		}
 
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired).Run(t)
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired).
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("plugin ref", func(t *testing.T) {
@@ -151,7 +152,8 @@ func TestKongPluginBindings(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr(`spec.pluginRef.kind: Unsupported value: "WrongPluginKind"`),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("target combinations", func(t *testing.T) {
@@ -545,7 +547,8 @@ func TestKongPluginBindings(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("At least one target reference must be set when scope is 'OnlyTargets'"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("targets group/kind", func(t *testing.T) {
@@ -592,7 +595,8 @@ func TestKongPluginBindings(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("group/kind not allowed for the routeRef"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("cross targets validation", func(t *testing.T) {
@@ -649,7 +653,8 @@ func TestKongPluginBindings(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("KongService can be used only when routeRef is unset or set to KongRoute"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("scope=GlobalInControlPlane validation", func(t *testing.T) {
@@ -684,6 +689,7 @@ func TestKongPluginBindings(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("No targets must be set when scope is 'GlobalInControlPlane'"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

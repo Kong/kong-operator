@@ -151,7 +151,8 @@ func TestKonnectExtension(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr(`Unsupported value: "kic"`),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 	t.Run("dataPlane labels", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha2.KonnectExtension]{
@@ -376,6 +377,7 @@ func TestKonnectExtension(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("Too long: may not be more than 63 bytes"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

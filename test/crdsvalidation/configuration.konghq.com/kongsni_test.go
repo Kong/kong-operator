@@ -86,7 +86,8 @@ func TestKongSNI(t *testing.T) {
 				},
 				ExpectedUpdateErrorMessage: lo.ToPtr("spec.certificateRef is immutable when programmed"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("spec", func(t *testing.T) {
@@ -103,7 +104,8 @@ func TestKongSNI(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.name in body should be at least 1 chars long"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
@@ -169,6 +171,7 @@ func TestKongSNI(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

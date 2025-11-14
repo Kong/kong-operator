@@ -38,7 +38,8 @@ func TestKongCACertificate(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.cert: Required value"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("cp ref", func(t *testing.T) {
@@ -55,6 +56,7 @@ func TestKongCACertificate(t *testing.T) {
 			},
 		}
 
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired).Run(t)
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired).
+			RunWithConfig(t, cfg, scheme)
 	})
 }

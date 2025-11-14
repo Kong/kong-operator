@@ -113,7 +113,8 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("Extension not allowed for ControlPlane"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("dataplane", func(t *testing.T) {
@@ -209,7 +210,8 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("Ref cannot be provided when type is set to managedByOwner"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("feature gates", func(t *testing.T) {
@@ -303,7 +305,8 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.featureGates[0].state: Unsupported value: \"\": supported values: \"enabled\", \"disabled\""),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("controllers", func(t *testing.T) {
@@ -397,7 +400,8 @@ func TestControlPlaneV2(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.controllers[0].state: Unsupported value: \"\": supported values: \"enabled\", \"disabled\""),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("translation", func(t *testing.T) {
@@ -510,7 +514,8 @@ func TestControlPlaneV2(t *testing.T) {
 					},
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 
 		t.Run("fallbackConfiguration", func(t *testing.T) {
 			common.TestCasesGroup[*operatorv2beta1.ControlPlane]{
@@ -566,7 +571,8 @@ func TestControlPlaneV2(t *testing.T) {
 					},
 					ExpectedErrorMessage: lo.ToPtr("spec.translation.fallbackConfiguration.useLastValidConfig: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
 				},
-			}.RunWithConfig(t, cfg, scheme)
+			}.
+				RunWithConfig(t, cfg, scheme)
 		})
 
 		t.Run("configDump", func(t *testing.T) {
@@ -670,7 +676,8 @@ func TestControlPlaneV2(t *testing.T) {
 					},
 					ExpectedErrorMessage: lo.ToPtr(`spec.configDump.dumpSensitive: Unsupported value: "invalid": supported values: "enabled", "disabled"`),
 				},
-			}.RunWithConfig(t, cfg, scheme)
+			}.
+				RunWithConfig(t, cfg, scheme)
 		})
 
 		t.Run("objectFilters", func(t *testing.T) {
@@ -762,7 +769,8 @@ func TestControlPlaneV2(t *testing.T) {
 					},
 					ExpectedErrorMessage: lo.ToPtr("Maximum length of value in matchLabels is 63"),
 				},
-			}.RunWithConfig(t, cfg, scheme)
+			}.
+				RunWithConfig(t, cfg, scheme)
 		})
 	})
 
@@ -804,7 +812,8 @@ func TestControlPlaneV2(t *testing.T) {
 						},
 					},
 				},
-			}.RunWithConfig(t, cfg, scheme)
+			}.
+				RunWithConfig(t, cfg, scheme)
 		})
 
 		t.Run("consumersSync", func(t *testing.T) {
@@ -855,7 +864,8 @@ func TestControlPlaneV2(t *testing.T) {
 					},
 					ExpectedErrorMessage: lo.ToPtr("spec.konnect.consumersSync: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
 				},
-			}.RunWithConfig(t, cfg, scheme)
+			}.
+				RunWithConfig(t, cfg, scheme)
 		})
 
 		t.Run("licensing", func(t *testing.T) {
@@ -1029,7 +1039,8 @@ func TestControlPlaneV2(t *testing.T) {
 					},
 					ExpectedErrorMessage: lo.ToPtr("spec.konnect.licensing.state: Unsupported value: \"invalid\": supported values: \"enabled\", \"disabled\""),
 				},
-			}.RunWithConfig(t, cfg, scheme)
+			}.
+				RunWithConfig(t, cfg, scheme)
 		})
 
 		t.Run("periods", func(t *testing.T) {
@@ -1080,7 +1091,8 @@ func TestControlPlaneV2(t *testing.T) {
 						},
 					},
 				},
-			}.RunWithConfig(t, cfg, scheme)
+			}.
+				RunWithConfig(t, cfg, scheme)
 		})
 	})
 }

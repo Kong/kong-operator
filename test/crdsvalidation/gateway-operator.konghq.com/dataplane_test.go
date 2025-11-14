@@ -95,7 +95,8 @@ func TestDataplane(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("Extension not allowed for DataPlane"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 	t.Run("pod spec", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
@@ -193,7 +194,8 @@ func TestDataplane(t *testing.T) {
 					},
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 	t.Run("db mode", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
@@ -237,7 +239,8 @@ func TestDataplane(t *testing.T) {
 					},
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 	t.Run("service options", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
@@ -375,7 +378,8 @@ func TestDataplane(t *testing.T) {
 					},
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 	t.Run("service ingress type", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
@@ -460,7 +464,8 @@ func TestDataplane(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("Unsupported value: \"ExternalName\""),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("spec update", func(t *testing.T) {
@@ -562,7 +567,8 @@ func TestDataplane(t *testing.T) {
 					d.Spec.Deployment.PodTemplateSpec.Labels = map[string]string{"foo": "bar"}
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("spec", func(t *testing.T) {
@@ -911,6 +917,7 @@ func TestDataplane(t *testing.T) {
 				},
 				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

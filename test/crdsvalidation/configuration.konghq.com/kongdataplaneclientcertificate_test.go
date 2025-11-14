@@ -34,11 +34,13 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	}
 
 	t.Run("cp ref", func(t *testing.T) {
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired).Run(t)
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired).
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("cp ref, type=kic", func(t *testing.T) {
-		common.NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes(t, obj, common.EmptyControlPlaneRefNotAllowed).Run(t)
+		common.NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes(t, obj, common.EmptyControlPlaneRefNotAllowed).
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("spec", func(t *testing.T) {
@@ -128,6 +130,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 				},
 				ExpectedUpdateErrorMessage: lo.ToPtr("spec.cert is immutable when an entity is already Programmed"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

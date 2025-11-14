@@ -109,7 +109,8 @@ func TestKongClusterPlugin(t *testing.T) {
 					},
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("plugin field immutability", func(t *testing.T) {
@@ -135,6 +136,7 @@ func TestKongClusterPlugin(t *testing.T) {
 				},
 				ExpectedUpdateErrorMessage: lo.ToPtr("The plugin field is immutable"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

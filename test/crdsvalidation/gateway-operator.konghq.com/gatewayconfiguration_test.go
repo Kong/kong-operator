@@ -105,7 +105,8 @@ func TestGatewayConfiguration(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("KonnectExtension must be set at the Gateway level"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("DataPlaneOptions", func(t *testing.T) {
@@ -166,7 +167,8 @@ func TestGatewayConfiguration(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("You can specify only one of maxUnavailable and minAvailable in a single PodDisruptionBudgetSpec."),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("ControlPlaneOptions", func(t *testing.T) {
@@ -223,6 +225,7 @@ func TestGatewayConfiguration(t *testing.T) {
 					},
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

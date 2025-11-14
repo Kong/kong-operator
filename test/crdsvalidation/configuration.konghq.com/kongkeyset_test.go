@@ -35,11 +35,13 @@ func TestKongKeySet(t *testing.T) {
 	}
 
 	t.Run("cp ref", func(t *testing.T) {
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired).Run(t)
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired).
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("cp ref, type=kic", func(t *testing.T) {
-		common.NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes(t, obj, common.EmptyControlPlaneRefNotAllowed).Run(t)
+		common.NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes(t, obj, common.EmptyControlPlaneRefNotAllowed).
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("spec", func(t *testing.T) {
@@ -54,7 +56,8 @@ func TestKongKeySet(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.name in body should be at least 1 chars long"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
@@ -129,6 +132,7 @@ func TestKongKeySet(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

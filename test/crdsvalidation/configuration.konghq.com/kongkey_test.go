@@ -36,7 +36,8 @@ func TestKongKey(t *testing.T) {
 			},
 		}
 
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefNotRequired).Run(t)
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefNotRequired).
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("pem/cp ref", func(t *testing.T) {
@@ -57,7 +58,8 @@ func TestKongKey(t *testing.T) {
 			},
 		}
 
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefNotRequired).Run(t)
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefNotRequired).
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("spec", func(t *testing.T) {
@@ -98,7 +100,8 @@ func TestKongKey(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("Either 'jwk' or 'pem' must be set"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("key set ref", func(t *testing.T) {
@@ -185,7 +188,8 @@ func TestKongKey(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr(`Unsupported value: "unknown": supported values: "konnectID", "namespacedRef"`),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
@@ -263,6 +267,7 @@ func TestKongKey(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }
