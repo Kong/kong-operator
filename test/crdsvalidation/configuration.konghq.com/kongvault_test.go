@@ -34,7 +34,7 @@ func TestKongVault(t *testing.T) {
 			},
 		}
 
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.SupportedByKIC, common.ControlPlaneRefNotRequired).
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, cfg, obj, common.SupportedByKIC, common.ControlPlaneRefNotRequired).
 			RunWithConfig(t, cfg, scheme)
 	})
 

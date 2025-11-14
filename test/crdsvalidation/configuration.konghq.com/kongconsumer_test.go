@@ -32,7 +32,7 @@ func TestKongConsumer(t *testing.T) {
 			Username:   "username-1",
 		}
 
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.SupportedByKIC, common.ControlPlaneRefNotRequired).
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, cfg, obj, common.SupportedByKIC, common.ControlPlaneRefNotRequired).
 			RunWithConfig(t, cfg, scheme)
 	})
 
