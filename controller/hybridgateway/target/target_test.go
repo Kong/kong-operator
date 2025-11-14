@@ -126,6 +126,7 @@ func createTestScheme() *runtime.Scheme {
 	_ = corev1.AddToScheme(scheme)
 	_ = discoveryv1.AddToScheme(scheme)
 	_ = gatewayv1beta1.Install(scheme)
+	_ = configurationv1alpha1.AddToScheme(scheme)
 	return scheme
 }
 
@@ -2309,8 +2310,12 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Create test context and fake client
+			ctx := context.Background()
+			fakeClient := createTestFakeClient() // Empty client since we expect new targets to be created
+
 			// Call the function.
-			targets, err := createTargetsFromValidBackendRefs(tt.httpRoute, tt.pRef, tt.upstreamName, tt.validBackendRefs)
+			targets, err := createTargetsFromValidBackendRefs(ctx, logr.Discard(), fakeClient, tt.httpRoute, tt.pRef, tt.upstreamName, tt.validBackendRefs)
 
 			// Check error expectation.
 			if tt.expectedError {
