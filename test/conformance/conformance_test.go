@@ -21,6 +21,8 @@ import (
 	"sigs.k8s.io/gateway-api/pkg/features"
 
 	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/metadata"
 	"github.com/kong/kong-operator/pkg/consts"
@@ -86,18 +88,24 @@ func TestGatewayConformance(t *testing.T) {
 	t.Logf("using the following Kong router flavor for the conformance tests: %s", kongRouterFlavor)
 
 	t.Log("creating GatewayConfiguration and GatewayClass for gateway conformance tests")
-	gwconf := createGatewayConfiguration(ctx, t, kongRouterFlavor)
+
+	gatewayType := standardGateway
+	if test.KonnectAccessToken() != "" {
+		gatewayType = hybridGateway
+	}
+
+	gwconf := createGatewayConfiguration(ctx, t, kongRouterFlavor, gatewayType)
 	gwc := createGatewayClass(ctx, t, gwconf)
 
 	// There are no explicit conformance tests for GatewayClass, but we can
 	// still run the conformance test suite setup to ensure that the
 	// GatewayClass gets accepted.
-	t.Log("configuring the Gateway API conformance test suite")
+	t.Logf("configuring the Gateway API (%s) conformance test suite", gatewayType)
 	// Currently mode only relies on the KongRouterFlavor, but in the future
 	// we may want to add more modes.
 	mode := string(kongRouterFlavor)
 	metadata := metadata.Metadata()
-	reportFileName := fmt.Sprintf("experimental-%s-%s-report.yaml", metadata.Release, mode)
+	reportFileName := fmt.Sprintf("experimental-%s-%s-%s-report.yaml", metadata.Release, mode, gatewayType)
 
 	// Set looser timeouts to avoid flakiness.
 	timeoutConfig := conformanceconfig.DefaultTimeoutConfig()
@@ -134,11 +142,21 @@ func TestGatewayConformance(t *testing.T) {
 	conformance.RunConformanceWithOptions(t, opts)
 }
 
-func createGatewayConfiguration(ctx context.Context, t *testing.T, kongRouterFlavor consts.RouterFlavor) *operatorv2beta1.GatewayConfiguration {
+type gatewayType string
+
+const (
+	standardGateway gatewayType = "standard"
+	hybridGateway   gatewayType = "hybrid"
+)
+
+func createGatewayConfiguration(
+	ctx context.Context, t *testing.T, kongRouterFlavor consts.RouterFlavor, gatewayType gatewayType,
+) *operatorv2beta1.GatewayConfiguration {
+	const namespace = "default"
 	gwconf := operatorv2beta1.GatewayConfiguration{
 		ObjectMeta: metav1.ObjectMeta{
 			GenerateName: "ko-gwconf-conformance-",
-			Namespace:    "default",
+			Namespace:    namespace,
 		},
 		Spec: operatorv2beta1.GatewayConfigurationSpec{
 			DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
@@ -183,6 +201,33 @@ func createGatewayConfiguration(ctx context.Context, t *testing.T, kongRouterFla
 				},
 			},
 		},
+	}
+
+	if gatewayType == hybridGateway {
+		t.Log("configuring GatewayConfiguration with Konnect access token - Hybrid Gateway")
+		kapi := konnectv1alpha1.KonnectAPIAuthConfiguration{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "api-auth-config-",
+				Namespace:    namespace,
+			},
+			Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+				Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
+				Token:     test.KonnectAccessToken(),
+				ServerURL: test.KonnectServerURL(),
+			},
+		}
+		require.NoError(t, clients.MgrClient.Create(ctx, &kapi))
+		t.Cleanup(func() {
+			require.NoError(t, clients.MgrClient.Delete(ctx, &kapi))
+		})
+
+		gwconf.Spec.Konnect = &operatorv2beta1.KonnectOptions{
+			APIAuthConfigurationRef: &v1alpha2.KonnectAPIAuthConfigurationRef{
+				Name: kapi.Name,
+			},
+		}
+	} else {
+		t.Log("no Konnect access token provided - deploying GatewayConfiguration as a traditional Gateway")
 	}
 
 	require.NoError(t, clients.MgrClient.Create(ctx, &gwconf))
