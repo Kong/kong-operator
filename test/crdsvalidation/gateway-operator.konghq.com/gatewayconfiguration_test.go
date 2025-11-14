@@ -90,7 +90,7 @@ func TestGatewayConfiguration(t *testing.T) {
 				TestObject: &operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
-						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
+						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{ //nolint:forbidigo
 							Extensions: []commonv1alpha1.ExtensionRef{
 								{
 									Group: "konnect.konghq.com",
@@ -185,7 +185,7 @@ func TestGatewayConfiguration(t *testing.T) {
 				TestObject: &operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
-						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
+						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{ //nolint:forbidigo
 							WatchNamespaces: &operatorv1beta1.WatchNamespaces{
 								Type: operatorv1beta1.WatchNamespacesTypeAll,
 							},
@@ -198,7 +198,7 @@ func TestGatewayConfiguration(t *testing.T) {
 				TestObject: &operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
-						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
+						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{ //nolint:forbidigo
 							WatchNamespaces: &operatorv1beta1.WatchNamespaces{
 								Type: operatorv1beta1.WatchNamespacesTypeOwn,
 							},
@@ -211,7 +211,7 @@ func TestGatewayConfiguration(t *testing.T) {
 				TestObject: &operatorv1beta1.GatewayConfiguration{
 					ObjectMeta: common.CommonObjectMeta,
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
-						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
+						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{ //nolint:forbidigo
 							WatchNamespaces: &operatorv1beta1.WatchNamespaces{
 								Type: operatorv1beta1.WatchNamespacesTypeList,
 								List: []string{
