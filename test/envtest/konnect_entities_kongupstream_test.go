@@ -7,12 +7,14 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/modules/manager/logging"
@@ -222,5 +224,65 @@ func TestKongUpstream(t *testing.T) {
 		watchFor(t, ctx, w, apiwatch.Modified,
 			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongUpstream didn't get Programmed and/or ControlPlaneRefValid status condition set to False")
+	})
+
+	t.Run("Adopting an upstream", func(t *testing.T) {
+		upstreamID := uuid.NewString()
+		upstreamName := uuid.NewString()[:8] + ".example.test"
+
+		w := setupWatch[configurationv1alpha1.KongUpstreamList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating upstreams")
+		sdk.UpstreamsSDK.EXPECT().GetUpstream(
+			mock.Anything,
+			upstreamID,
+			cp.GetKonnectID(),
+		).Return(&sdkkonnectops.GetUpstreamResponse{
+			Upstream: &sdkkonnectcomp.Upstream{
+				ID:        &upstreamID,
+				Name:      upstreamName,
+				Algorithm: sdkkonnectcomp.UpstreamAlgorithmConsistentHashing.ToPointer(),
+			},
+		}, nil)
+		sdk.UpstreamsSDK.EXPECT().UpsertUpstream(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertUpstreamRequest) bool {
+				return req.UpstreamID == upstreamID
+			}),
+		).Return(nil, nil)
+
+		t.Logf("Creating a KongUpstream to adopt existing upstream (ID:%s)", upstreamID)
+		createdUpstream := deploy.KongUpstream(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			func(obj client.Object) {
+				kup, ok := obj.(*configurationv1alpha1.KongUpstream)
+				require.True(t, ok)
+				kup.Spec.Name = upstreamName
+				kup.Spec.Adopt = &commonv1alpha1.AdoptOptions{
+					From: commonv1alpha1.AdoptSourceKonnect,
+					Mode: commonv1alpha1.AdoptModeOverride,
+					Konnect: &commonv1alpha1.AdoptKonnectOptions{
+						ID: upstreamID,
+					},
+				}
+			})
+
+		t.Log("Waiting for KongUpstream to set Konnect ID and programmed condition")
+		watchFor(t, ctx, w, apiwatch.Modified, func(u *configurationv1alpha1.KongUpstream) bool {
+			return createdUpstream.Name == u.Name &&
+				u.GetKonnectID() == upstreamID && k8sutils.IsProgrammed(u)
+		},
+			fmt.Sprintf("KongUpstream didn't get Programmed status condition or didn't get the correct (%s) Konnect ID assigned", upstreamID),
+		)
+
+		t.Log("Setting up SDK expectations for upstream deletion")
+		sdk.UpstreamsSDK.EXPECT().DeleteUpstream(mock.Anything, cp.GetKonnectID(), upstreamID).Return(nil, nil)
+
+		t.Log("Deleting KongUpstream")
+		require.NoError(t, clientNamespaced.Delete(ctx, createdUpstream))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdUpstream, waitTime, tickTime)
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
+
 	})
 }

@@ -1,16 +1,19 @@
 package envtest
 
 import (
+	"fmt"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/modules/manager/logging"
@@ -116,6 +119,77 @@ func TestKongTarget(t *testing.T) {
 				return req.TargetID == targetID
 			}),
 		).Return(&sdkkonnectops.DeleteTargetWithUpstreamResponse{}, nil)
+
+		t.Log("Deleting KongTarget")
+		require.NoError(t, clientNamespaced.Delete(ctx, createdTarget))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdTarget, waitTime, tickTime)
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.TargetsSDK, waitTime, tickTime)
+	})
+
+	t.Run("Adopting a target with an upstream", func(t *testing.T) {
+		upstreamID := uuid.NewString()
+		targetID := uuid.NewString()
+		targetHost := "example.com"
+		targetWeight := 100
+
+		t.Log("Creating a KongUpstream and setting it to programmed")
+		upstream := deploy.KongUpstream(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		)
+		updateKongUpstreamStatusWithProgrammed(t, ctx, clientNamespaced, upstream, upstreamID, cp.GetKonnectID())
+
+		w := setupWatch[configurationv1alpha1.KongTargetList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating targets")
+		sdk.TargetsSDK.EXPECT().GetTargetWithUpstream(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.GetTargetWithUpstreamRequest) bool {
+				return req.UpstreamIDForTarget == upstreamID && req.TargetID == targetID
+			}),
+		).Return(&sdkkonnectops.GetTargetWithUpstreamResponse{
+			Target: &sdkkonnectcomp.Target{
+				ID:     &targetID,
+				Weight: lo.ToPtr(int64(targetWeight)),
+				Target: &targetHost,
+			},
+		}, nil)
+		sdk.TargetsSDK.EXPECT().UpsertTargetWithUpstream(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertTargetWithUpstreamRequest) bool {
+				return req.UpstreamIDForTarget == upstreamID && req.TargetID == targetID
+			}),
+		).Return(nil, nil)
+
+		t.Logf("Creating a KongTarget to adopt the existing target (ID:%s)", targetID)
+		createdTarget := deploy.KongTargetAttachedToUpstream(t, ctx, clientNamespaced, upstream,
+			func(obj client.Object) {
+				kt, ok := obj.(*configurationv1alpha1.KongTarget)
+				require.True(t, ok)
+				kt.Spec.Adopt = &commonv1alpha1.AdoptOptions{
+					From: commonv1alpha1.AdoptSourceKonnect,
+					Mode: commonv1alpha1.AdoptModeOverride,
+					Konnect: &commonv1alpha1.AdoptKonnectOptions{
+						ID: targetID,
+					},
+				}
+			})
+
+		t.Log("Waiting for KongTarget to set Konnect ID and programmed condition")
+		watchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongTarget) bool {
+			return createdTarget.Name == kt.Name &&
+				kt.GetKonnectID() == targetID && k8sutils.IsProgrammed(kt)
+		},
+			fmt.Sprintf("KongTarget didn't get Programmed status condition or didn't get the correct (%s) Konnect ID assigned", targetID),
+		)
+
+		t.Log("Setting up SDK expectations for target deletion")
+		sdk.TargetsSDK.EXPECT().DeleteTargetWithUpstream(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.DeleteTargetWithUpstreamRequest) bool {
+				return req.TargetID == targetID && req.UpstreamIDForTarget == upstreamID
+			}),
+		).Return(nil, nil)
 
 		t.Log("Deleting KongTarget")
 		require.NoError(t, clientNamespaced.Delete(ctx, createdTarget))
