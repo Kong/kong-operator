@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/controller/hybridgateway/service"
 	"github.com/kong/kong-operator/controller/hybridgateway/target"
 	"github.com/kong/kong-operator/controller/hybridgateway/upstream"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
@@ -375,29 +376,18 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				c.outputStore = append(c.outputStore, &tgt)
 			}
 
-			// Build the KongService resource.
-			serviceName := namegen.NewKongServiceName(cp, rule)
-			log.Trace(logger, "Building KongService resource",
-				"service", serviceName,
-				"upstream", upstreamName)
-
-			service, err := builder.NewKongService().
-				WithName(serviceName).
-				WithNamespace(c.route.Namespace).
-				WithLabels(c.route, &pRef).
-				WithAnnotations(c.route, &pRef).
-				WithSpecName(serviceName).
-				WithSpecHost(upstreamName).
-				WithControlPlaneRef(*cp).Build()
+			// Build the KongService resource using the service package.
+			servicePtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
+			serviceName := servicePtr.Name
 			if err != nil {
-				log.Error(logger, err, "Failed to build KongService resource, skipping rule",
-					"service", serviceName,
+				log.Error(logger, err, "Failed to create or update KongService resource, skipping rule",
+					"controlPlane", cp.KonnectNamespacedRef,
 					"upstream", upstreamName)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to build KongService %s: %w", serviceName, err))
+				translationErrors = append(translationErrors, fmt.Errorf("failed to create or update KongService for rule: %w", err))
 				continue
 			}
-			c.outputStore = append(c.outputStore, &service)
-			log.Debug(logger, "Successfully built KongService resource",
+			c.outputStore = append(c.outputStore, servicePtr)
+			log.Debug(logger, "Successfully processed KongService resource",
 				"service", serviceName)
 
 			// Build the kong route resource.
