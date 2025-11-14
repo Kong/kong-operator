@@ -11,7 +11,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	routeconst "github.com/kong/kong-operator/controller/hybridgateway/const/route"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
 )
@@ -99,7 +98,7 @@ func TestBuildAnnotations(t *testing.T) {
 				Namespace: func() *gwtypes.Namespace { ns := gwtypes.Namespace("gateway-namespace"); return &ns }(),
 			},
 			expected: map[string]string{
-				consts.GatewayOperatorHybridRouteAnnotation:    routeconst.HTTPRouteKey + "|" + "test-namespace/test-route",
+				consts.GatewayOperatorHybridRouteAnnotation:    "test-namespace/test-route",
 				consts.GatewayOperatorHybridGatewaysAnnotation: "gateway-namespace/test-gateway",
 			},
 			description: "should use explicit parent namespace when provided",
@@ -117,7 +116,7 @@ func TestBuildAnnotations(t *testing.T) {
 				Namespace: nil,
 			},
 			expected: map[string]string{
-				consts.GatewayOperatorHybridRouteAnnotation:    routeconst.HTTPRouteKey + "|" + "test-namespace/test-route",
+				consts.GatewayOperatorHybridRouteAnnotation:    "test-namespace/test-route",
 				consts.GatewayOperatorHybridGatewaysAnnotation: "test-namespace/test-gateway",
 			},
 			description: "should use HTTPRoute namespace when parent namespace is nil",
@@ -135,7 +134,7 @@ func TestBuildAnnotations(t *testing.T) {
 				Namespace: func() *gwtypes.Namespace { ns := gwtypes.Namespace(""); return &ns }(),
 			},
 			expected: map[string]string{
-				consts.GatewayOperatorHybridRouteAnnotation:    routeconst.HTTPRouteKey + "|" + "test-namespace/test-route",
+				consts.GatewayOperatorHybridRouteAnnotation:    "test-namespace/test-route",
 				consts.GatewayOperatorHybridGatewaysAnnotation: "test-namespace/test-gateway",
 			},
 			description: "should use HTTPRoute namespace when parent namespace is empty",
@@ -153,7 +152,7 @@ func TestBuildAnnotations(t *testing.T) {
 				Namespace: func() *gwtypes.Namespace { ns := gwtypes.Namespace("infrastructure"); return &ns }(),
 			},
 			expected: map[string]string{
-				consts.GatewayOperatorHybridRouteAnnotation:    routeconst.HTTPRouteKey + "|" + "apps/my-route",
+				consts.GatewayOperatorHybridRouteAnnotation:    "apps/my-route",
 				consts.GatewayOperatorHybridGatewaysAnnotation: "infrastructure/my-gateway",
 			},
 			description: "should handle different namespaces correctly",
@@ -202,8 +201,7 @@ func TestBuildAnnotationsObjectKeyCreation(t *testing.T) {
 		routeAnnotation := result[consts.GatewayOperatorHybridRouteAnnotation]
 
 		expectedRouteKey := client.ObjectKeyFromObject(httpRoute)
-		assert.Contains(t, routeAnnotation, expectedRouteKey.String())
-		assert.Equal(t, routeconst.HTTPRouteKey+"|"+expectedRouteKey.String(), routeAnnotation)
+		assert.Equal(t, expectedRouteKey.String(), routeAnnotation)
 	})
 }
 
