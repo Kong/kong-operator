@@ -6,6 +6,8 @@ import (
 
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/client-go/rest"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
@@ -23,35 +25,40 @@ func TestKonnectNetwork(t *testing.T) {
 
 	t.Run("mutability based on Programmed status condition", func(t *testing.T) {
 		t.Run("name", func(t *testing.T) {
-			fieldMutabilityBasedOnProgrammedTest(t, "name", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
-				n.Spec.Name = "new-name"
-			})
+			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme,
+				"name", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
+					n.Spec.Name = "new-name"
+				})
 		})
 
 		t.Run("availability_zones", func(t *testing.T) {
-			fieldMutabilityBasedOnProgrammedTest(t, "availability_zones", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
-				n.Spec.AvailabilityZones = []string{
-					"us-west-1b",
-				}
-			})
+			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme,
+				"availability_zones", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
+					n.Spec.AvailabilityZones = []string{
+						"us-west-1b",
+					}
+				})
 		})
 
 		t.Run("cidr_block", func(t *testing.T) {
-			fieldMutabilityBasedOnProgrammedTest(t, "cidr_block", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
-				n.Spec.CidrBlock = "10.0.0.2/16"
-			})
+			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme,
+				"cidr_block", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
+					n.Spec.CidrBlock = "10.0.0.2/16"
+				})
 		})
 
 		t.Run("cloud_gateway_provider_account_id", func(t *testing.T) {
-			fieldMutabilityBasedOnProgrammedTest(t, "cloud_gateway_provider_account_id", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
-				n.Spec.CloudGatewayProviderAccountID = "id-new-1234567890"
-			})
+			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme,
+				"cloud_gateway_provider_account_id", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
+					n.Spec.CloudGatewayProviderAccountID = "id-new-1234567890"
+				})
 		})
 
 		t.Run("region", func(t *testing.T) {
-			fieldMutabilityBasedOnProgrammedTest(t, "region", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
-				n.Spec.Region = "us-east"
-			})
+			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme,
+				"region", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
+					n.Spec.Region = "us-east"
+				})
 		})
 	})
 
@@ -84,6 +91,8 @@ func TestKonnectNetwork(t *testing.T) {
 
 func fieldMutabilityBasedOnProgrammedTest(
 	t *testing.T,
+	cfg *rest.Config,
+	scheme *runtime.Scheme,
 	field string,
 	update func(*konnectv1alpha1.KonnectCloudGatewayNetwork),
 ) {
@@ -157,5 +166,5 @@ func fieldMutabilityBasedOnProgrammedTest(
 			},
 			Update: update,
 		},
-	}.Run(t)
+	}.RunWithConfig(t, cfg, scheme)
 }
