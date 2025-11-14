@@ -4,7 +4,6 @@ import (
 	"crypto/x509"
 	"net/http"
 	"testing"
-	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -21,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	konnect2 "github.com/kong/kong-operator/api/konnect"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
@@ -33,6 +33,7 @@ import (
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
@@ -53,6 +54,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 
 	cl := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 	factory := sdkmocks.NewMockSDKFactory(t)
+	sdk := factory.SDK.DataPlaneCertificatesSDK
 
 	const (
 		clusterCASecretName = "cluster-ca"
@@ -74,10 +76,11 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		EnforceConfig:            true,
 	}
 	konnectExtensionReconciler := &konnect.KonnectExtensionReconciler{
-		Client:                   cl,
-		LoggingMode:              logging.DevelopmentMode,
-		SdkFactory:               factory,
-		SyncPeriod:               time.Hour * 24, // To ensure we don't resync in test. Reconciler will be called automatically on changes.
+		Client:      cl,
+		LoggingMode: logging.DevelopmentMode,
+		SdkFactory:  factory,
+		// To ensure we don't resync in test. Reconciler will be called automatically on changes.
+		SyncPeriod:               konnectInfiniteSyncTime,
 		ClusterCASecretName:      clusterCASecretName,
 		ClusterCASecretNamespace: ns.Name,
 		ClusterCAKeyConfig:       clusterCAKeyConfig,
@@ -86,6 +89,10 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 	StartReconcilers(ctx, t, mgr, logs,
 		dpReconciler,
 		konnectExtensionReconciler,
+		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongDataPlaneClientCertificate](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongDataPlaneClientCertificate](&metricsmocks.MockRecorder{}),
+		),
 	)
 
 	t.Logf("Creating cluster CA secret")
@@ -97,21 +104,24 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 	}, clusterCAKeyConfig))
 
 	t.Run("base", func(t *testing.T) {
-		const konnectControlPlaneID = "aee0667a-90c6-45a6-a2d8-575e1e487b86"
+		const (
+			konnectControlPlaneID = "aee0667a-90c6-45a6-a2d8-575e1e487b86"
+			dpCertID              = "111111111111111111111111111111111-2"
+		)
 
 		t.Logf("Setting up expected ListDpClientCertificates SDK call returning no certificates")
-		factory.SDK.DataPlaneCertificatesSDK.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneID).
+		// TODO: https://github.com/Kong/kong-operator/issues/2630 this call can be removed when 2630 is done.
+		sdk.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneID).
 			Return(&sdkkonnectops.ListDpClientCertificatesResponse{
 				StatusCode: http.StatusOK,
 			}, nil)
 
-		t.Logf("Setting up expected CreateDataplaneCertificate SDK call")
-		factory.SDK.DataPlaneCertificatesSDK.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneID, mock.Anything).
+		sdk.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneID, mock.Anything).
 			Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
-				StatusCode: http.StatusCreated,
 				DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
 					Item: &sdkkonnectcomp.DataPlaneClientCertificate{
-						ID: lo.ToPtr("dp-client-cert-id"),
+						ID:   lo.ToPtr(dpCertID),
+						Cert: lo.ToPtr(deploy.TestValidCACertPEM),
 					},
 				},
 			}, nil)
@@ -185,10 +195,10 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		t.Logf("Waiting for KonnectExtension to become ready")
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(&konnectExtension), &konnectExtension))
-			conditions := konnectExtension.Status.Conditions
-			require.True(t, lo.ContainsBy(conditions, func(c metav1.Condition) bool {
-				return c.Type == "Ready" && c.Status == metav1.ConditionTrue
-			}), "expected KonnectExtension to have a ready condition, got: %+v", conditions)
+			require.True(t,
+				k8sutils.HasConditionTrue("Ready", &konnectExtension),
+				"expected KonnectExtension to have a ready condition, got: %+v", konnectExtension.Status.Conditions,
+			)
 		}, waitTime, tickTime)
 
 		t.Logf("Waiting for Deployment to be created and verifying Deployment has KonnectExtension applied")
@@ -293,26 +303,28 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 	})
 
 	t.Run("DataPlane with custom volumes", func(t *testing.T) {
-		const konnectControlPlaneID = "aee0667a-90c6-45a6-a2d8-575e1e487b88"
-
-		t.Log("Check if user provided volumes and volume mounts are preserved when KonnectExtension is applied to DataPlane")
+		const (
+			konnectControlPlaneID = "aee0667a-90c6-45a6-a2d8-575e1e487b88"
+			dpCertID              = "111111111111111111111111111111111-1"
+		)
 
 		t.Logf("Setting up expected ListDpClientCertificates SDK call returning no certificates")
-		factory.SDK.DataPlaneCertificatesSDK.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneID).
+		sdk.EXPECT().ListDpClientCertificates(mock.Anything, konnectControlPlaneID).
 			Return(&sdkkonnectops.ListDpClientCertificatesResponse{
 				StatusCode: http.StatusOK,
 			}, nil)
 
-		t.Logf("Setting up expected CreateDataplaneCertificate SDK call")
-		factory.SDK.DataPlaneCertificatesSDK.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneID, mock.Anything).
+		sdk.EXPECT().CreateDataplaneCertificate(mock.Anything, konnectControlPlaneID, mock.Anything).
 			Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
-				StatusCode: http.StatusCreated,
 				DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
 					Item: &sdkkonnectcomp.DataPlaneClientCertificate{
-						ID: lo.ToPtr("dp-client-cert-id"),
+						ID:   lo.ToPtr(dpCertID),
+						Cert: lo.ToPtr(deploy.TestValidCACertPEM),
 					},
 				},
 			}, nil)
+
+		t.Log("Check if user provided volumes and volume mounts are preserved when KonnectExtension is applied to DataPlane")
 
 		t.Logf("Waiting for caches to sync as CA manager relies on it")
 		mgr.GetCache().WaitForCacheSync(ctx)
@@ -399,10 +411,10 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		t.Logf("Waiting for KonnectExtension to become ready")
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(&konnectExtension), &konnectExtension))
-			conditions := konnectExtension.Status.Conditions
-			require.True(t, lo.ContainsBy(conditions, func(c metav1.Condition) bool {
-				return c.Type == "Ready" && c.Status == metav1.ConditionTrue
-			}), "expected KonnectExtension to have a ready condition, got: %+v", conditions)
+			require.True(t,
+				k8sutils.HasConditionTrue("Ready", &konnectExtension),
+				"expected KonnectExtension to have a ready condition, got: %+v", konnectExtension.Status.Conditions,
+			)
 		}, waitTime, tickTime)
 
 		t.Logf("Waiting for Deployment to be created and verifying Deployment has KonnectExtension applied")
