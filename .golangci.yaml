@@ -196,6 +196,10 @@ linters:
           - forbidigo
         path: api/test
         text: use of `operatorv1beta1.(ControlPlane\w*)` forbidden
+      - linters:
+          - forbidigo
+        path: test/crdsvalidation/gateway-operator.konghq.com/controlplane_test.go
+        text: use of `operatorv1beta1.(ControlPlane\w*)` forbidden
     paths:
       - pkg/clientset
       - config/

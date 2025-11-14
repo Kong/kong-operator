@@ -10,7 +10,6 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	"github.com/kong/kong-operator/api/gateway-operator/dataplane"
-	kcfgdataplane "github.com/kong/kong-operator/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/test/crdsvalidation/common"
@@ -693,7 +692,7 @@ func TestDataplane(t *testing.T) {
 								{
 									Type:               "RolledOut",
 									Status:             "True",
-									Reason:             string(kcfgdataplane.DataPlaneConditionReasonRolloutPromotionInProgress),
+									Reason:             string(dataplane.DataPlaneConditionReasonRolloutPromotionInProgress),
 									LastTransitionTime: metav1.Now(),
 								},
 							},
@@ -740,7 +739,7 @@ func TestDataplane(t *testing.T) {
 								{
 									Type:               "RolledOut",
 									Status:             "True",
-									Reason:             string(kcfgdataplane.DataPlaneConditionReasonRolloutWaitingForChange),
+									Reason:             string(dataplane.DataPlaneConditionReasonRolloutWaitingForChange),
 									LastTransitionTime: metav1.Now(),
 								},
 							},
