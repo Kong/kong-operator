@@ -16,7 +16,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
 	hybridgatewayerrors "github.com/kong/kong-operator/controller/hybridgateway/errors"
-	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
+	"github.com/kong/kong-operator/controller/hybridgateway/kongroute"
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
@@ -390,39 +390,19 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			log.Debug(logger, "Successfully processed KongService resource",
 				"service", serviceName)
 
-			// Build the kong route resource.
-			routeName := namegen.NewKongRouteName(c.route, cp, rule)
-			log.Trace(logger, "Building KongRoute resource",
-				"kongRoute", routeName,
-				"service", serviceName,
-				"hostnames", hostnames,
-				"matchCount", len(rule.Matches))
-
-			routeBuilder := builder.NewKongRoute().
-				WithName(routeName).
-				WithNamespace(c.route.Namespace).
-				WithLabels(c.route, &pRef).
-				WithAnnotations(c.route, &pRef).
-				WithSpecName(routeName).
-				WithHosts(hostnames).
-				WithStripPath(metadata.ExtractStripPath(c.route.Annotations)).
-				WithKongService(serviceName).
-				WithOwner(c.route)
-			for _, match := range rule.Matches {
-				routeBuilder = routeBuilder.WithHTTPRouteMatch(match)
-			}
-			route, err := routeBuilder.Build()
+			// Create or update the KongRoute resource using the kongroute package.
+			routePtr, err := kongroute.RouteForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)
+			routeName := routePtr.Name
 			if err != nil {
-				log.Error(logger, err, "Failed to build KongRoute resource, skipping rule",
-					"kongRoute", routeName,
+				log.Error(logger, err, "Failed to create or update KongRoute resource, skipping rule",
 					"service", serviceName,
 					"hostnames", hostnames)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to build KongRoute %s: %w", routeName, err))
+				translationErrors = append(translationErrors, fmt.Errorf("failed to create or update KongRoute for rule: %w", err))
 				continue
 			}
-			c.outputStore = append(c.outputStore, &route)
-			log.Debug(logger, "Successfully built KongRoute resource",
-				"kongRoute", routeName)
+			c.outputStore = append(c.outputStore, routePtr)
+			log.Debug(logger, "Successfully processed KongRoute resource",
+				"route", routeName)
 
 			// Build the kong plugin and kong plugin binding resources.
 			log.Debug(logger, "Processing filters for rule",
