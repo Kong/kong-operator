@@ -114,7 +114,8 @@ func TestControlPlane(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("Extension not allowed for ControlPlane"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 	t.Run("pod spec", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.ControlPlane]{
@@ -204,7 +205,8 @@ func TestControlPlane(t *testing.T) {
 					},
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("watch namespaces", func(t *testing.T) {
@@ -296,6 +298,7 @@ func TestControlPlane(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("list must not be specified when type is not 'list'"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

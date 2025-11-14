@@ -32,7 +32,8 @@ func TestKongConsumer(t *testing.T) {
 			Username:   "username-1",
 		}
 
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.SupportedByKIC, common.ControlPlaneRefNotRequired).Run(t)
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.SupportedByKIC, common.ControlPlaneRefNotRequired).
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("required fields", func(t *testing.T) {
@@ -82,7 +83,8 @@ func TestKongConsumer(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("Need to provide either username or custom_id"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
@@ -151,6 +153,7 @@ func TestKongConsumer(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

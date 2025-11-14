@@ -34,7 +34,8 @@ func TestKongVault(t *testing.T) {
 			},
 		}
 
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.SupportedByKIC, common.ControlPlaneRefNotRequired).Run(t)
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.SupportedByKIC, common.ControlPlaneRefNotRequired).
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("spec", func(t *testing.T) {
@@ -73,7 +74,8 @@ func TestKongVault(t *testing.T) {
 				},
 				ExpectedUpdateErrorMessage: lo.ToPtr("The spec.prefix field is immutable"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
@@ -145,6 +147,7 @@ func TestKongVault(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

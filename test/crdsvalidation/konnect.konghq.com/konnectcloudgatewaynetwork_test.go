@@ -85,7 +85,8 @@ func TestKonnectNetwork(t *testing.T) {
 					},
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }
 
@@ -166,5 +167,6 @@ func fieldMutabilityBasedOnProgrammedTest(
 			},
 			Update: update,
 		},
-	}.RunWithConfig(t, cfg, scheme)
+	}.
+		RunWithConfig(t, cfg, scheme)
 }

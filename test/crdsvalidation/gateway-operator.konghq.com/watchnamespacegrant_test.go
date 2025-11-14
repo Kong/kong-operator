@@ -78,6 +78,7 @@ func TestWatchNamespaceGrant(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.from[0].kind: Unsupported value: \"invalid.kind\": supported values: \"ControlPlane\""),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

@@ -268,7 +268,8 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set."),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("consistent-hashing", func(t *testing.T) {
@@ -360,6 +361,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.hashOnFallback must not be set when spec.hashOn.cookie is set."),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

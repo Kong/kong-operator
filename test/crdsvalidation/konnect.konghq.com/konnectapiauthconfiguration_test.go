@@ -166,6 +166,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("Server URL must satisfy hostname (RFC 1123) regex if not a valid absolute URL"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

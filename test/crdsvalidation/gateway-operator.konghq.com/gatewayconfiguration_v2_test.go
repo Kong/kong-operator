@@ -141,7 +141,8 @@ func TestGatewayConfigurationV2(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("Extension not allowed for GatewayConfiguration"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("DataPlaneOptions", func(t *testing.T) {
@@ -202,7 +203,8 @@ func TestGatewayConfigurationV2(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("You can specify only one of maxUnavailable and minAvailable in a single PodDisruptionBudgetSpec."),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("ControlPlaneOptions", func(t *testing.T) {
@@ -265,7 +267,8 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					},
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("Konnect", func(t *testing.T) {
@@ -360,7 +363,8 @@ func TestGatewayConfigurationV2(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("mirror field must be set for type Mirror"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("ListenerOptions", func(t *testing.T) {
@@ -480,6 +484,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("Nodeport must be unique within the Gateway if specified"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

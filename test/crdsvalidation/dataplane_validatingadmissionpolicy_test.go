@@ -84,7 +84,8 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 				WarningCollector:              wc,
 				ExpectedWarningMessage:        lo.ToPtr("Value \"static\" in spec.dataplane_groups.autoscale.type is deprecated, use \"automatic\" instead."),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }
 
@@ -396,6 +397,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 				},
 				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

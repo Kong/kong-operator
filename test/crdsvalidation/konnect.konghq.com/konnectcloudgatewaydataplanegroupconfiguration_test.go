@@ -209,7 +209,8 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("Invalid value: \"RANDOM_ENV\": spec.dataplane_groups[0].environment[0].name in body should match '^KONG_."),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("networkRef", func(t *testing.T) {
@@ -337,6 +338,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("cross namespace references are not supported for networkRef of type namespacedRef"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

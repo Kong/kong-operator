@@ -231,6 +231,7 @@ func TestKongCustomEntity(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.parentRef.kind: Unsupported value: \"CustomKind\": supported values: \"KongPlugin\", \"KongClusterPlugin\""),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

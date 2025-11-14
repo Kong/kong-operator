@@ -31,7 +31,8 @@ func TestKongRoute(t *testing.T) {
 	}
 
 	t.Run("cp ref", func(t *testing.T) {
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefNotRequired).Run(t)
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefNotRequired).
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("service ref", func(t *testing.T) {
@@ -81,7 +82,8 @@ func TestKongRoute(t *testing.T) {
 					kr.Spec.ServiceRef = nil
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("protocols", func(t *testing.T) {
@@ -133,7 +135,8 @@ func TestKongRoute(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("service ref", func(t *testing.T) {
@@ -203,7 +206,8 @@ func TestKongRoute(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("when type is namespacedRef, namespacedRef must be set"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
@@ -275,6 +279,7 @@ func TestKongRoute(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

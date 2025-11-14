@@ -54,7 +54,8 @@ func TestKongTarget(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.weight: Invalid value: -1"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("upstream ref", func(t *testing.T) {
@@ -80,7 +81,8 @@ func TestKongTarget(t *testing.T) {
 				},
 				ExpectedUpdateErrorMessage: lo.ToPtr("spec.upstreamRef is immutable"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
@@ -149,6 +151,7 @@ func TestKongTarget(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

@@ -23,7 +23,8 @@ type TestCasesGroup[T client.Object] []TestCase[T]
 // RunWithConfig runs all test cases in the group against the provided rest.Config's cluster.
 func (g TestCasesGroup[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *runtime.Scheme) {
 	for _, tc := range g {
-		tc.RunWithConfig(t, cfg, scheme)
+		tc.
+			RunWithConfig(t, cfg, scheme)
 	}
 }
 

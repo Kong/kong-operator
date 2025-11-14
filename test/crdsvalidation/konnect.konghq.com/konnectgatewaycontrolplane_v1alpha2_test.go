@@ -116,7 +116,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.members is only applicable for ControlPlanes that are created as groups"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("updates not allowed for status conditions", func(t *testing.T) {
@@ -240,7 +241,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 				},
 				ExpectedUpdateErrorMessage: lo.ToPtr("spec.createControlPlaneRequest.cluster_type is immutable"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("labels constraints", func(t *testing.T) {
@@ -542,7 +544,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.createControlPlaneRequest.labels keys must satisfy the '^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$' pattern"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("restriction on cluster types", func(t *testing.T) {
@@ -784,7 +787,8 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 					})
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("controlPlane types", func(t *testing.T) {
@@ -934,6 +938,7 @@ func TestKonnectGatewayControlPlaneV1alpha2(t *testing.T) {
 					},
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

@@ -81,7 +81,8 @@ func TestKongCredentialAPIKey(t *testing.T) {
 					c.Spec.ConsumerRef.Name = "new-consumer"
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("required fields validation", func(t *testing.T) {
@@ -112,7 +113,8 @@ func TestKongCredentialAPIKey(t *testing.T) {
 				},
 				ExpectedUpdateErrorMessage: lo.ToPtr("key is required"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("tags validation", func(t *testing.T) {
@@ -178,6 +180,7 @@ func TestKongCredentialAPIKey(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

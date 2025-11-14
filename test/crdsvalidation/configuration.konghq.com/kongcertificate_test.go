@@ -36,7 +36,8 @@ func TestKongCertificate(t *testing.T) {
 			},
 		}
 
-		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired).Run(t)
+		common.NewCRDValidationTestCasesGroupCPRefChange(t, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired).
+			RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("required fields", func(t *testing.T) {
@@ -95,7 +96,8 @@ func TestKongCertificate(t *testing.T) {
 					},
 				},
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 
 		t.Run("tags validation", func(t *testing.T) {
 			common.TestCasesGroup[*configurationv1alpha1.KongCertificate]{
@@ -172,7 +174,8 @@ func TestKongCertificate(t *testing.T) {
 					},
 					ExpectedErrorMessage: lo.ToPtr("tags entries must not be longer than 128 characters"),
 				},
-			}.RunWithConfig(t, cfg, scheme)
+			}.
+				RunWithConfig(t, cfg, scheme)
 		})
 	})
 }
