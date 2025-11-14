@@ -23,6 +23,7 @@ import (
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test"
 	"github.com/kong/kong-operator/test/helpers"
+	inthelpers "github.com/kong/kong-operator/test/integration/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -129,9 +130,13 @@ func TestMain(m *testing.M) {
 		exitOnErr(testutils.DeployCRDs(GetCtx(), path.Join(configPath, "/crd"), GetClients().OperatorClient, GetEnv().Cluster()))
 	}
 
-	cleanupTelepresence, err := helpers.SetupTelepresence(ctx)
+	cleanupTelepresence, err := inthelpers.SetupTelepresence(ctx)
 	exitOnErr(err)
 	defer cleanupTelepresence()
+
+	cleanupIntercept, err := inthelpers.SetupNetworkIntercepts(ctx, GetClients())
+	exitOnErr(err)
+	defer cleanupIntercept()
 
 	fmt.Println("INFO: starting the operator's controller manager")
 	// Spawn the controller manager based on passed config in
