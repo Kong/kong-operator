@@ -49,3 +49,5 @@ telepresence: "2.25.1"
 markdownlint-cli2: "0.18.1"
 # renovate: datasource=github-releases depName=cert-manager/cert-manager
 cert-manager: "1.19.1"
+# renovate: datasource=github-releases depName=helm/helm
+helm: "4.0.0"
