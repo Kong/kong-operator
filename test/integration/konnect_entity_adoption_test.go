@@ -209,3 +209,83 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 		"Did not see route in Konnect to be updated to match the spec of KongRoute")
 
 }
+
+func TestKonnectEntityAdoption_KonnectCloudGatewayNetwork(t *testing.T) {
+	// TODO: enable it when our testing account in dev env has the permission to use cloud gateway.
+	t.Skip("Skipped the test because the testing account does not have the permission to use cloud gateway")
+
+	// A cleaner is created underneath anyway, and a whole namespace is deleted eventually.
+	// We can't use a cleaner to delete objects because it handles deletes in FIFO order and that won't work in this
+	// case: KonnectAPIAuthConfiguration shouldn't be deleted before any other object as that is required for others to
+	// complete their finalizer which is deleting a reflecting entity in Konnect. That's why we're only cleaning up a
+	// KonnectGatewayControlPlane and waiting for its deletion synchronously with deleteObjectAndWaitForDeletionFn to ensure it
+	// was successfully deleted along with its children. The KonnectAPIAuthConfiguration is implicitly deleted along
+	// with the namespace.
+	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+
+	// Let's generate a unique test ID that we can refer to in Konnect entities.
+	// Using only the first 8 characters of the UUID to keep the ID short enough for Konnect to accept it as a part
+	// of an entity name.
+	testID := uuid.NewString()[:8]
+	t.Logf("Running Konnect entities test with ID: %s", testID)
+
+	clientNamespaced := client.NewNamespacedClient(GetClients().MgrClient, ns.Name)
+
+	authCfg := deploy.KonnectAPIAuthConfiguration(t, GetCtx(), clientNamespaced,
+		deploy.WithTestIDLabel(testID),
+		func(obj client.Object) {
+			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
+			authCfg.Spec.Type = konnectv1alpha1.KonnectAPIAuthTypeToken
+			authCfg.Spec.Token = test.KonnectAccessToken()
+			authCfg.Spec.ServerURL = test.KonnectServerURL()
+		},
+	)
+
+	t.Logf("Create a network by SDK for adoption")
+	server, err := server.NewServer[struct{}](test.KonnectServerURL())
+	require.NoError(t, err, "Should create a server successfully")
+	sdk := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
+	require.NotNil(t, sdk)
+
+	networkName := "k8s-test-ko-adoption" + uuid.NewString()[:8]
+	cloudGatewayProviderID := "" // TODO: Use the real cloud gateway provider ID here
+	resp, err := sdk.GetCloudGatewaysSDK().CreateNetwork(t.Context(), sdkkonnectcomp.CreateNetworkRequest{
+		Name:                          networkName,
+		CloudGatewayProviderAccountID: cloudGatewayProviderID,
+		Region:                        "us-east-1",
+		CidrBlock:                     "10.0.0.0/16",
+		AvailabilityZones:             []string{"use1-az1", "use1-az2", "use1-az4", "use1-az5", "use1-az6"},
+	})
+	require.NoError(t, err)
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.GetNetwork())
+
+	t.Log("Creating a KonnectCloudGatewayNetwork to adopt a network in Konnect cloud gateway")
+	networkKonnectID := resp.GetNetwork().ID
+	n := deploy.KonnectCloudGatewayNetwork(t, t.Context(), clientNamespaced, authCfg, func(obj client.Object) {
+		n, ok := obj.(*konnectv1alpha1.KonnectCloudGatewayNetwork)
+		require.True(t, ok)
+		n.Spec.Adopt = &commonv1alpha1.AdoptOptions{
+			From: commonv1alpha1.AdoptSourceKonnect,
+			Mode: commonv1alpha1.AdoptModeMatch,
+			Konnect: &commonv1alpha1.AdoptKonnectOptions{
+				ID: networkKonnectID,
+			},
+		}
+		n.Spec.Name = networkName
+		n.Spec.Region = "us-east-1"
+		n.Spec.CidrBlock = "10.0.0.0/16"
+		n.Spec.CloudGatewayProviderAccountID = cloudGatewayProviderID
+		n.Spec.AvailabilityZones = []string{"use1-az1", "use1-az2", "use1-az4", "use1-az5", "use1-az6"}
+	})
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, n.DeepCopy()))
+
+	t.Log("Waiting for the KonnectCloudGatewayNetwork to get Programmed")
+	require.EventuallyWithT(t, func(collect *assert.CollectT) {
+		err := clientNamespaced.Get(t.Context(), client.ObjectKeyFromObject(n), n)
+		require.NoError(t, err)
+		t.Logf("Current status: %+v", n.Status)
+		assertKonnectEntityProgrammed(collect, n)
+	}, 5*time.Minute, 30*time.Second)
+
+}
