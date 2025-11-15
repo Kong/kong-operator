@@ -337,13 +337,13 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 
 			// Build the KongUpstream resource using the upstream package.
 			upstreamPtr, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
-			upstreamName := upstreamPtr.Name
 			if err != nil {
 				log.Error(logger, err, "Failed to create or update KongUpstream resource, skipping rule",
 					"controlPlane", cp.KonnectNamespacedRef)
 				translationErrors = append(translationErrors, fmt.Errorf("failed to create or update KongUpstream for rule: %w", err))
 				continue
 			}
+			upstreamName := upstreamPtr.Name
 			c.outputStore = append(c.outputStore, upstreamPtr)
 			log.Debug(logger, "Successfully processed KongUpstream resource",
 				"upstream", upstreamName)
@@ -378,7 +378,6 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 
 			// Build the KongService resource using the service package.
 			servicePtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
-			serviceName := servicePtr.Name
 			if err != nil {
 				log.Error(logger, err, "Failed to create or update KongService resource, skipping rule",
 					"controlPlane", cp.KonnectNamespacedRef,
@@ -386,13 +385,13 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				translationErrors = append(translationErrors, fmt.Errorf("failed to create or update KongService for rule: %w", err))
 				continue
 			}
+			serviceName := servicePtr.Name
 			c.outputStore = append(c.outputStore, servicePtr)
 			log.Debug(logger, "Successfully processed KongService resource",
 				"service", serviceName)
 
 			// Create or update the KongRoute resource using the kongroute package.
 			routePtr, err := kongroute.RouteForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)
-			routeName := routePtr.Name
 			if err != nil {
 				log.Error(logger, err, "Failed to create or update KongRoute resource, skipping rule",
 					"service", serviceName,
@@ -400,6 +399,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				translationErrors = append(translationErrors, fmt.Errorf("failed to create or update KongRoute for rule: %w", err))
 				continue
 			}
+			routeName := routePtr.Name
 			c.outputStore = append(c.outputStore, routePtr)
 			log.Debug(logger, "Successfully processed KongRoute resource",
 				"route", routeName)
