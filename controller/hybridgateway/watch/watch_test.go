@@ -15,15 +15,17 @@ import (
 func TestWatches(t *testing.T) {
 	cl := fake.NewClientBuilder().Build()
 	tests := []struct {
-		name     string
-		obj      client.Object
-		wantLen  int
-		wantType []any
+		name                  string
+		obj                   client.Object
+		referenceGrantEnabled bool
+		wantLen               int
+		wantType              []any
 	}{
 		{
-			name:    "HTTPRoute",
-			obj:     &gwtypes.HTTPRoute{},
-			wantLen: 4,
+			name:                  "HTTPRoute with ReferenceGrant disabled",
+			obj:                   &gwtypes.HTTPRoute{},
+			referenceGrantEnabled: false,
+			wantLen:               4,
 			wantType: []any{
 				&gwtypes.Gateway{},
 				&gwtypes.GatewayClass{},
@@ -32,30 +34,47 @@ func TestWatches(t *testing.T) {
 			},
 		},
 		{
-			name:    "Gateway",
-			obj:     &gwtypes.Gateway{},
-			wantLen: 0,
+			name:                  "HTTPRoute with ReferenceGrant enabled",
+			obj:                   &gwtypes.HTTPRoute{},
+			referenceGrantEnabled: true,
+			wantLen:               5,
+			wantType: []any{
+				&gwtypes.Gateway{},
+				&gwtypes.GatewayClass{},
+				&corev1.Service{},
+				&discoveryv1.EndpointSlice{},
+				&gwtypes.ReferenceGrant{},
+			},
 		},
 		{
-			name:    "GatewayClass",
-			obj:     &gwtypes.GatewayClass{},
-			wantLen: 0,
+			name:                  "Gateway",
+			obj:                   &gwtypes.Gateway{},
+			referenceGrantEnabled: false,
+			wantLen:               0,
 		},
 		{
-			name:    "Service",
-			obj:     &corev1.Service{},
-			wantLen: 0,
+			name:                  "GatewayClass",
+			obj:                   &gwtypes.GatewayClass{},
+			referenceGrantEnabled: false,
+			wantLen:               0,
 		},
 		{
-			name:    "EndpointSlice",
-			obj:     &discoveryv1.EndpointSlice{},
-			wantLen: 0,
+			name:                  "Service",
+			obj:                   &corev1.Service{},
+			referenceGrantEnabled: false,
+			wantLen:               0,
+		},
+		{
+			name:                  "EndpointSlice",
+			obj:                   &discoveryv1.EndpointSlice{},
+			referenceGrantEnabled: false,
+			wantLen:               0,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			watchers := Watches(tt.obj, cl)
+			watchers := Watches(tt.obj, cl, tt.referenceGrantEnabled)
 			if tt.wantLen == 0 {
 				require.Nil(t, watchers)
 			} else {

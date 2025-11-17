@@ -159,3 +159,63 @@ func MapHTTPRouteForEndpointSlice(cl client.Client) handler.MapFunc {
 		return requests
 	}
 }
+
+// MapHTTPRouteForReferenceGrant returns a handler.MapFunc that, given a ReferenceGrant object,
+// finds all HTTPRoutes in the "from" namespaces that have cross-namespace backend references
+// to the ReferenceGrant's namespace. It returns a slice of reconcile.Requests for each matching
+// HTTPRoute, enabling efficient event handling and reconciliation when a ReferenceGrant changes.
+func MapHTTPRouteForReferenceGrant(cl client.Client) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		rg, ok := obj.(*gwtypes.ReferenceGrant)
+		if !ok {
+			return nil
+		}
+
+		// For each from namespace in the ReferenceGrant, list all HTTPRoutes
+		// that have cross-namespace backend refs to the ReferenceGrant's namespace.
+		var requests []reconcile.Request
+		for _, from := range rg.Spec.From {
+			// Check that the from kind is HTTPRoute and group is gateway.networking.k8s.io.
+			if from.Kind != "HTTPRoute" || (from.Group != "" && from.Group != "gateway.networking.k8s.io") {
+				continue
+			}
+
+			httpRoutes := &gwtypes.HTTPRouteList{}
+			err := cl.List(ctx, httpRoutes, client.InNamespace(string(from.Namespace)))
+			if err != nil {
+				return nil
+			}
+
+			for _, httpRoute := range httpRoutes.Items {
+				// Check if the HTTPRoute has any backend refs to the ReferenceGrant's namespace.
+				hasCrossNamespaceRef := false
+				for _, rule := range httpRoute.Spec.Rules {
+					for _, backendRef := range rule.BackendRefs {
+						ns := httpRoute.Namespace
+						if backendRef.Namespace != nil {
+							ns = string(*backendRef.Namespace)
+						}
+						// The backend must be in the ReferenceGrant's namespace (target namespace).
+						if ns == rg.Namespace && ns != httpRoute.Namespace {
+							hasCrossNamespaceRef = true
+							break
+						}
+					}
+					if hasCrossNamespaceRef {
+						break
+					}
+				}
+
+				if hasCrossNamespaceRef {
+					requests = append(requests, reconcile.Request{
+						NamespacedName: client.ObjectKey{
+							Namespace: httpRoute.Namespace,
+							Name:      httpRoute.Name,
+						},
+					})
+				}
+			}
+		}
+		return requests
+	}
+}

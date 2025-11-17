@@ -103,7 +103,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context,
 	}
 
 	// Add watches for other resources.
-	for _, w := range watch.Watches(obj, r.Client) {
+	for _, w := range watch.Watches(obj, r.Client, r.referenceGrantEnabled) {
 		builder = builder.Watches(w.Object, handler.EnqueueRequestsFromMapFunc(w.MapFunc))
 	}
 

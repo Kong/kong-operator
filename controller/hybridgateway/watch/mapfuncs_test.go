@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/internal/utils/index"
@@ -601,5 +602,354 @@ func Test_MapHTTPRouteForEndpointSlice(t *testing.T) {
 		obj := epSlice
 		requests := mapFuncErrList(ctx, obj)
 		require.Nil(t, requests)
+	})
+}
+
+func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
+	scheme := runtime.NewScheme()
+	scheme.AddKnownTypes(
+		schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version},
+		&gwtypes.HTTPRoute{}, &gwtypes.ReferenceGrant{},
+	)
+	_ = gatewayv1.Install(scheme)
+
+	// HTTPRoute in source-ns that references a service in target-ns.
+	httpRouteWithCrossNsRef := &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "source-ns",
+			Name:      "route-1",
+		},
+		Spec: gwtypes.HTTPRouteSpec{
+			Rules: []gwtypes.HTTPRouteRule{{
+				BackendRefs: []gwtypes.HTTPBackendRef{{
+					BackendRef: gwtypes.BackendRef{
+						BackendObjectReference: gwtypes.BackendObjectReference{
+							Name:      gatewayv1.ObjectName("test-svc"),
+							Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("target-ns"); return &ns }(),
+						},
+					},
+				}},
+			}},
+		},
+	}
+
+	// HTTPRoute in source-ns that only references same-namespace services.
+	httpRouteSameNs := &gwtypes.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "source-ns",
+			Name:      "route-2",
+		},
+		Spec: gwtypes.HTTPRouteSpec{
+			Rules: []gwtypes.HTTPRouteRule{{
+				BackendRefs: []gwtypes.HTTPBackendRef{{
+					BackendRef: gwtypes.BackendRef{
+						BackendObjectReference: gwtypes.BackendObjectReference{
+							Name: gatewayv1.ObjectName("local-svc"),
+						},
+					},
+				}},
+			}},
+		},
+	}
+
+	// ReferenceGrant that allows HTTPRoutes from source-ns to reference resources in target-ns.
+	referenceGrant := &gwtypes.ReferenceGrant{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "target-ns",
+			Name:      "test-grant",
+		},
+		Spec: gwtypes.ReferenceGrantSpec{
+			From: []gatewayv1beta1.ReferenceGrantFrom{{
+				Group:     "gateway.networking.k8s.io",
+				Kind:      "HTTPRoute",
+				Namespace: "source-ns",
+			}},
+			To: []gatewayv1beta1.ReferenceGrantTo{{
+				Group: "",
+				Kind:  "Service",
+			}},
+		},
+	}
+
+	t.Run("success - finds HTTPRoute with cross-namespace ref", func(t *testing.T) {
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(referenceGrant, httpRouteWithCrossNsRef, httpRouteSameNs).
+			Build()
+
+		mapFunc := MapHTTPRouteForReferenceGrant(cl)
+		ctx := context.Background()
+		requests := mapFunc(ctx, referenceGrant)
+
+		require.Len(t, requests, 1)
+		require.Equal(t, "route-1", requests[0].Name)
+		require.Equal(t, "source-ns", requests[0].Namespace)
+	})
+
+	t.Run("wrong type", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+		mapFunc := MapHTTPRouteForReferenceGrant(cl)
+		ctx := context.Background()
+		obj := &gwtypes.Gateway{}
+		requests := mapFunc(ctx, obj)
+		require.Nil(t, requests)
+	})
+
+	t.Run("skip non-HTTPRoute kind", func(t *testing.T) {
+		rgWithWrongKind := &gwtypes.ReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "target-ns",
+				Name:      "wrong-kind-grant",
+			},
+			Spec: gwtypes.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{{
+					Group: "gateway.networking.k8s.io",
+					// Not HTTPRoute.
+					Kind:      "TCPRoute",
+					Namespace: "source-ns",
+				}},
+			},
+		}
+
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(rgWithWrongKind, httpRouteWithCrossNsRef).
+			Build()
+
+		mapFunc := MapHTTPRouteForReferenceGrant(cl)
+		ctx := context.Background()
+		requests := mapFunc(ctx, rgWithWrongKind)
+		require.Len(t, requests, 0)
+	})
+
+	t.Run("skip wrong group", func(t *testing.T) {
+		rgWithWrongGroup := &gwtypes.ReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "target-ns",
+				Name:      "wrong-group-grant",
+			},
+			Spec: gwtypes.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{{
+					Group:     "some.other.group",
+					Kind:      "HTTPRoute",
+					Namespace: "source-ns",
+				}},
+			},
+		}
+
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(rgWithWrongGroup, httpRouteWithCrossNsRef).
+			Build()
+
+		mapFunc := MapHTTPRouteForReferenceGrant(cl)
+		ctx := context.Background()
+		requests := mapFunc(ctx, rgWithWrongGroup)
+		require.Len(t, requests, 0)
+	})
+
+	t.Run("accept empty group", func(t *testing.T) {
+		rgWithEmptyGroup := &gwtypes.ReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "target-ns",
+				Name:      "empty-group-grant",
+			},
+			Spec: gwtypes.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{{
+					// Empty group should be accepted.
+					Group:     "",
+					Kind:      "HTTPRoute",
+					Namespace: "source-ns",
+				}},
+			},
+		}
+
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(rgWithEmptyGroup, httpRouteWithCrossNsRef).
+			Build()
+
+		mapFunc := MapHTTPRouteForReferenceGrant(cl)
+		ctx := context.Background()
+		requests := mapFunc(ctx, rgWithEmptyGroup)
+		require.Len(t, requests, 1)
+		require.Equal(t, "route-1", requests[0].Name)
+	})
+
+	t.Run("no cross-namespace refs", func(t *testing.T) {
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(referenceGrant, httpRouteSameNs).
+			Build()
+
+		mapFunc := MapHTTPRouteForReferenceGrant(cl)
+		ctx := context.Background()
+		requests := mapFunc(ctx, referenceGrant)
+		require.Len(t, requests, 0)
+	})
+
+	t.Run("error listing HTTPRoutes", func(t *testing.T) {
+		mapFunc := MapHTTPRouteForReferenceGrant(&fakeErrorClient{})
+		ctx := context.Background()
+		requests := mapFunc(ctx, referenceGrant)
+		require.Nil(t, requests)
+	})
+
+	t.Run("multiple from clauses", func(t *testing.T) {
+		httpRouteOtherNs := &gwtypes.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "other-ns",
+				Name:      "route-3",
+			},
+			Spec: gwtypes.HTTPRouteSpec{
+				Rules: []gwtypes.HTTPRouteRule{{
+					BackendRefs: []gwtypes.HTTPBackendRef{{
+						BackendRef: gwtypes.BackendRef{
+							BackendObjectReference: gwtypes.BackendObjectReference{
+								Name:      gatewayv1.ObjectName("test-svc"),
+								Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("target-ns"); return &ns }(),
+							},
+						},
+					}},
+				}},
+			},
+		}
+
+		rgMultipleFrom := &gwtypes.ReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "target-ns",
+				Name:      "multi-grant",
+			},
+			Spec: gwtypes.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{
+					{
+						Group:     "gateway.networking.k8s.io",
+						Kind:      "HTTPRoute",
+						Namespace: "source-ns",
+					},
+					{
+						Group:     "gateway.networking.k8s.io",
+						Kind:      "HTTPRoute",
+						Namespace: "other-ns",
+					},
+				},
+			},
+		}
+
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(rgMultipleFrom, httpRouteWithCrossNsRef, httpRouteOtherNs).
+			Build()
+
+		mapFunc := MapHTTPRouteForReferenceGrant(cl)
+		ctx := context.Background()
+		requests := mapFunc(ctx, rgMultipleFrom)
+		require.Len(t, requests, 2)
+		names := []string{requests[0].Name, requests[1].Name}
+		assert.Contains(t, names, "route-1")
+		assert.Contains(t, names, "route-3")
+	})
+
+	t.Run("multiple rules with mixed refs", func(t *testing.T) {
+		httpRouteMultiRules := &gwtypes.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "source-ns",
+				Name:      "route-multi",
+			},
+			Spec: gwtypes.HTTPRouteSpec{
+				Rules: []gwtypes.HTTPRouteRule{
+					{
+						BackendRefs: []gwtypes.HTTPBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name: gatewayv1.ObjectName("local-svc"),
+								},
+							},
+						}},
+					},
+					{
+						BackendRefs: []gwtypes.HTTPBackendRef{{
+							BackendRef: gwtypes.BackendRef{
+								BackendObjectReference: gwtypes.BackendObjectReference{
+									Name:      gatewayv1.ObjectName("remote-svc"),
+									Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("target-ns"); return &ns }(),
+								},
+							},
+						}},
+					},
+				},
+			},
+		}
+
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(referenceGrant, httpRouteMultiRules).
+			Build()
+
+		mapFunc := MapHTTPRouteForReferenceGrant(cl)
+		ctx := context.Background()
+		requests := mapFunc(ctx, referenceGrant)
+		require.Len(t, requests, 1)
+		require.Equal(t, "route-multi", requests[0].Name)
+	})
+
+	t.Run("empty from list", func(t *testing.T) {
+		rgEmptyFrom := &gwtypes.ReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "target-ns",
+				Name:      "empty-from-grant",
+			},
+			Spec: gwtypes.ReferenceGrantSpec{
+				From: []gatewayv1beta1.ReferenceGrantFrom{},
+			},
+		}
+
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(rgEmptyFrom, httpRouteWithCrossNsRef).
+			Build()
+
+		mapFunc := MapHTTPRouteForReferenceGrant(cl)
+		ctx := context.Background()
+		requests := mapFunc(ctx, rgEmptyFrom)
+		require.Len(t, requests, 0)
+	})
+
+	t.Run("multiple routes in from namespace but only cross-namespace ref returned", func(t *testing.T) {
+		// This HTTPRoute in source-ns references a different namespace (not target-ns).
+		httpRouteOtherTarget := &gwtypes.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "source-ns",
+				Name:      "route-other",
+			},
+			Spec: gwtypes.HTTPRouteSpec{
+				Rules: []gwtypes.HTTPRouteRule{{
+					BackendRefs: []gwtypes.HTTPBackendRef{{
+						BackendRef: gwtypes.BackendRef{
+							BackendObjectReference: gwtypes.BackendObjectReference{
+								Name:      gatewayv1.ObjectName("other-svc"),
+								Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("other-target-ns"); return &ns }(),
+							},
+						},
+					}},
+				}},
+			},
+		}
+
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(referenceGrant, httpRouteWithCrossNsRef, httpRouteSameNs, httpRouteOtherTarget).
+			Build()
+
+		mapFunc := MapHTTPRouteForReferenceGrant(cl)
+		ctx := context.Background()
+		requests := mapFunc(ctx, referenceGrant)
+
+		// Only route-1 should be returned (references target-ns).
+		// route-2 only references same namespace.
+		// route-other references a different target namespace.
+		require.Len(t, requests, 1)
+		require.Equal(t, "route-1", requests[0].Name)
+		require.Equal(t, "source-ns", requests[0].Namespace)
 	})
 }
