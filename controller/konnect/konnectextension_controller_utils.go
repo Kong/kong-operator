@@ -262,22 +262,26 @@ func enforceKonnectExtensionStatus(
 	ext *konnectv1alpha2.KonnectExtension,
 ) bool {
 	var toUpdate bool
-	expectedKonnectStatus := &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
-		ControlPlaneID: cp.Status.ID,
-		ClusterType:    konnectClusterTypeToCRDClusterType(cp.Status.ClusterType),
-		AuthRef:        &apiAuthRef,
-	}
 
-	if cp.Status.Endpoints != nil {
-		expectedKonnectStatus.Endpoints = konnectv1alpha2.KonnectEndpoints{
-			ControlPlaneEndpoint: cp.Status.Endpoints.ControlPlaneEndpoint,
-			TelemetryEndpoint:    cp.Status.Endpoints.TelemetryEndpoint,
+	// Only update KonnectExtension.Status.Konnect when Konnect endpoints are available.
+	// The Status schema requires non-empty endpoints; updating with empty values triggers validation errors.
+	if cp.Status.Endpoints != nil &&
+		cp.Status.Endpoints.ControlPlaneEndpoint != "" &&
+		cp.Status.Endpoints.TelemetryEndpoint != "" {
+		expectedKonnectStatus := &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
+			ControlPlaneID: cp.Status.ID,
+			ClusterType:    konnectClusterTypeToCRDClusterType(cp.Status.ClusterType),
+			AuthRef:        &apiAuthRef,
+			Endpoints: konnectv1alpha2.KonnectEndpoints{
+				ControlPlaneEndpoint: cp.Status.Endpoints.ControlPlaneEndpoint,
+				TelemetryEndpoint:    cp.Status.Endpoints.TelemetryEndpoint,
+			},
 		}
-	}
 
-	if !cmp.Equal(ext.Status.Konnect, expectedKonnectStatus) {
-		ext.Status.Konnect = expectedKonnectStatus
-		toUpdate = true
+		if !cmp.Equal(ext.Status.Konnect, expectedKonnectStatus) {
+			ext.Status.Konnect = expectedKonnectStatus
+			toUpdate = true
+		}
 	}
 
 	expectedDataPlaneClientAuth := &konnectv1alpha2.DataPlaneClientAuthStatus{
