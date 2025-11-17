@@ -148,24 +148,16 @@ func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) 
 	t.Helper()
 
 	root := repoRootFromThisFile()
-	kongCRDPath := filepath.Join(root, "ingress-controller", "config", "crd")
 	kongKOCRDPath := filepath.Join(root, "config", "crd", "kong-operator")
 	// IMPORTANT: point to the directory that contains the actual incubator CRD YAMLs.
 	// The "incubator" directory only contains a kustomization and no CRD files; envtest
 	// does not process kustomize. Use ingress-controller-incubator which holds the CRDs.
-	kongIncubatorCRDPath := filepath.Join(root, "ingress-controller", "config", "crd", "ingress-controller-incubator")
-	// Similarly, include the ingress-controller CRDs directory that contains the
-	// configuration.konghq.com CRDs (e.g., KongClusterPlugin), since envtest does not
-	// evaluate the parent kustomization.
-	kongIngressControllerCRDPath := filepath.Join(root, "ingress-controller", "config", "crd", "ingress-controller")
-
+	kongIncubatorCRDPath := filepath.Join(root, "config", "crd", "ingress-controller-incubator")
 	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme: scheme,
 		Paths: []string{
-			kongCRDPath,
 			kongKOCRDPath,
 			kongIncubatorCRDPath,
-			kongIngressControllerCRDPath,
 		},
 		ErrorIfPathMissing: true,
 	})
