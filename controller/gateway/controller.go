@@ -503,7 +503,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	// DataPlane NetworkPolicies
+	// First, ensure DataPlane connectivity and mark the Gateway as Programmed.
+	log.Trace(logger, "ensuring DataPlane connectivity for Gateway")
+	gateway.Status.Addresses, err = r.getGatewayAddresses(ctx, dataplane)
+	if err == nil {
+		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(kcfggateway.GatewayServiceType, metav1.ConditionTrue, kcfgdataplane.ResourceReadyReason, "", gateway.Generation),
+			gatewayConditionsAndListenersAware(&gateway))
+	} else {
+		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(kcfggateway.GatewayServiceType, metav1.ConditionFalse, kcfggateway.GatewayReasonServiceError, err.Error(), gateway.Generation),
+			gatewayConditionsAndListenersAware(&gateway))
+	}
+	gwConditionAware.setProgrammed(metav1.ConditionTrue)
+	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Then, ensure DataPlane NetworkPolicies. If created/updated, we'll requeue.
 	// Only create network policies if KO is running inside k8s.
 	// If the code is run outside of k8s (like in envtest or integration test), do not create network policies.
 	if k8sutils.RunningOnKubernetes() {
@@ -516,22 +532,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			log.Debug(logger, "networkPolicy updated")
 			return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
 		}
-	}
-
-	log.Trace(logger, "ensuring DataPlane connectivity for Gateway")
-	gateway.Status.Addresses, err = r.getGatewayAddresses(ctx, dataplane)
-	if err == nil {
-		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(kcfggateway.GatewayServiceType, metav1.ConditionTrue, kcfgdataplane.ResourceReadyReason, "", gateway.Generation),
-			gatewayConditionsAndListenersAware(&gateway))
-	} else {
-		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(kcfggateway.GatewayServiceType, metav1.ConditionFalse, kcfggateway.GatewayReasonServiceError, err.Error(), gateway.Generation),
-			gatewayConditionsAndListenersAware(&gateway))
-	}
-
-	gwConditionAware.setProgrammed(metav1.ConditionTrue)
-	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
-	if err != nil {
-		return ctrl.Result{}, err
 	}
 
 	if k8sutils.IsProgrammed(gwConditionAware) && !k8sutils.IsProgrammed(oldGwConditionsAware) {
