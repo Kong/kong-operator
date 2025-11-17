@@ -160,6 +160,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
+					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
 			}
@@ -183,6 +186,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{RequeueAfter: time.Second}, nil
+					}
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
@@ -217,6 +223,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
+					}
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
@@ -255,6 +264,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
+					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
 				log.Debug(logger, "finalizer removed as the owning KongUpstream is being deleted or is already gone",
@@ -291,6 +303,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
+					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
 				log.Debug(logger, "finalizer removed as the owning KongCertificate is being deleted or is already gone",
@@ -325,6 +340,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
+					}
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
@@ -418,6 +436,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			if err := r.Client.Update(ctx, ent); err != nil {
 				if k8serrors.IsConflict(err) {
 					return ctrl.Result{Requeue: true}, nil
+				}
+				if k8serrors.IsNotFound(err) {
+					return ctrl.Result{}, nil
 				}
 				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 			}

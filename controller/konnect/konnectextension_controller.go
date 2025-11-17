@@ -196,6 +196,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
+			if k8serrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
+			}
 			return ctrl.Result{}, err
 		}
 		log.Debug(logger, "Extension-in-use finalizer changed on KonnectExtension")
@@ -237,6 +240,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
+					}
 					return ctrl.Result{}, err
 				}
 				log.Debug(logger, "Konnect-cleanup finalizer removed from KonnectExtension")
@@ -263,6 +269,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			&ext,
 			readyCondition,
 		); err != nil || updated || !res.IsZero() {
+			if err != nil && k8serrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
+			}
 			return res, err
 		}
 	}
@@ -384,13 +393,17 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{}, err
 		}
 		if cleanup {
-			// In case if KonnectExtension is during deletion and respective KonnectGatewayControlPlane
-			// has been already deleted, take apiAuthRef from the status, because it contains the last
-			// known reference and it is needed to perform all reconciliation steps.
-			apiAuthRef = types.NamespacedName{
-				Name: ext.Status.Konnect.AuthRef.Name,
-				// For now the referenced KonnectAPIAuthConfiguration is in the same namespace as the KonnectExtension.
-				Namespace: ext.Namespace,
+			// In case KonnectExtension is during deletion and respective KonnectGatewayControlPlane
+			// has been already deleted, try to take apiAuthRef from the status (last known reference).
+			if ext.Status.Konnect != nil && ext.Status.Konnect.AuthRef != nil && ext.Status.Konnect.AuthRef.Name != "" {
+				apiAuthRef = types.NamespacedName{
+					Name: ext.Status.Konnect.AuthRef.Name,
+					// For now the referenced KonnectAPIAuthConfiguration is in the same namespace as the KonnectExtension.
+					Namespace: ext.Namespace,
+				}
+			} else {
+				// Status does not contain a usable API auth reference; skip remote cleanup to avoid blocking deletion.
+				return r.skipKonnectCleanup(ctx, logger, &ext)
 			}
 		} else {
 			// Requeue until the reference becomes valid.
@@ -423,6 +436,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			readyCondition,
 			apiAuthConfigValidCond,
 		); errStatus != nil || updated || !res.IsZero() {
+			if errStatus != nil && k8serrors.IsNotFound(errStatus) {
+				return ctrl.Result{}, nil
+			}
 			return res, errStatus
 		}
 		log.Debug(logger, "token retrieval failed")
@@ -492,6 +508,10 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 		certificateSecret.Annotations[consts.DataPlaneCertificateIDAnnotationKey] = newMappedIDsStr
 		if err := r.Update(ctx, certificateSecret); err != nil {
+			if k8serrors.IsConflict(err) {
+				log.Debug(logger, "conflict updating Secret annotations, requeueing")
+				return ctrl.Result{Requeue: true}, nil
+			}
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
@@ -817,22 +837,39 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		&ext,
 		certProvisionedCond,
 	); err != nil || updated || !res.IsZero() {
+		if err != nil && k8serrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
 		return res, err
 	}
 
-	authRef := konnectv1alpha2.KonnectAPIAuthConfigurationRef{
-		Name: apiAuth.Name,
-	}
-	if enforceKonnectExtensionStatus(*cp, authRef, *certificateSecret, &ext) {
-		log.Debug(logger, "updating KonnectExtension status")
-		err := r.Client.Status().Update(ctx, &ext)
-		if k8serrors.IsConflict(err) {
-			// in case the err is of type conflict, don't return it and instead trigger
-			// another reconciliation.
-			// This is just to prevent spamming of conflict errors.
-			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+	// Only update status when cp is available (not during cleanup with missing ControlPlane).
+	// During deletion, if the ControlPlane has been removed, we don't need to update the status.
+	if cp != nil {
+		authRef := konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+			Name: apiAuth.Name,
 		}
-		return ctrl.Result{}, err
+		if enforceKonnectExtensionStatus(*cp, authRef, *certificateSecret, &ext) {
+			log.Debug(logger, "updating KonnectExtension status")
+			// Ensure we don't write an incomplete Konnect status that fails CRD validation.
+			if ext.Status.Konnect != nil {
+				if ext.Status.Konnect.Endpoints.ControlPlaneEndpoint == "" || ext.Status.Konnect.Endpoints.TelemetryEndpoint == "" {
+					// Drop Konnect status until endpoints are available.
+					ext.Status.Konnect = nil
+				}
+			}
+			err := r.Client.Status().Update(ctx, &ext)
+			if k8serrors.IsConflict(err) {
+				// in case the err is of type conflict, don't return it and instead trigger
+				// another reconciliation.
+				// This is just to prevent spamming of conflict errors.
+				return ctrl.Result{Requeue: true}, nil
+			}
+			if k8serrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
+			}
+			return ctrl.Result{}, err
+		}
 	}
 
 	readyCondition = metav1.Condition{
@@ -848,6 +885,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		&ext,
 		readyCondition,
 	); err != nil || updated || !res.IsZero() {
+		if err != nil && k8serrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
 		return res, err
 	}
 
@@ -911,4 +951,56 @@ func enforceSecretInUseFinalizer(
 		"operation", enforce,
 	)
 	return true, ctrl.Result{}, nil
+}
+
+func (r *KonnectExtensionReconciler) skipKonnectCleanup(ctx context.Context, logger logr.Logger, ext *konnectv1alpha2.KonnectExtension) (ctrl.Result, error) {
+	log.Info(logger, "KonnectExtension cleanup proceeding without Konnect credentials; skipping remote operations")
+
+	res, certificateSecret, err := r.getCertificateSecret(ctx, *ext, true)
+	if client.IgnoreNotFound(err) != nil {
+		return ctrl.Result{}, err
+	}
+	if res != op.Noop {
+		return ctrl.Result{}, nil
+	}
+
+	if err == nil {
+		secretUpdated := false
+		if controllerutil.RemoveFinalizer(certificateSecret, KonnectCleanupFinalizer) {
+			secretUpdated = true
+		}
+		if controllerutil.RemoveFinalizer(certificateSecret, consts.KonnectExtensionSecretInUseFinalizer) {
+			secretUpdated = true
+		}
+		if secretUpdated {
+			if updateErr := r.Update(ctx, certificateSecret); updateErr != nil {
+				switch {
+				case k8serrors.IsConflict(updateErr):
+					return ctrl.Result{Requeue: true}, nil
+				case k8serrors.IsNotFound(updateErr):
+				default:
+					return ctrl.Result{}, updateErr
+				}
+			} else {
+				log.Info(logger, "removed finalizers from Konnect certificate Secret after skipping remote cleanup",
+					"secret", types.NamespacedName{Name: certificateSecret.Name, Namespace: certificateSecret.Namespace})
+			}
+		}
+	}
+
+	if controllerutil.RemoveFinalizer(ext, KonnectCleanupFinalizer) {
+		if err := r.Update(ctx, ext); err != nil {
+			switch {
+			case k8serrors.IsConflict(err):
+				return ctrl.Result{Requeue: true}, nil
+			case k8serrors.IsNotFound(err):
+				return ctrl.Result{}, nil
+			default:
+				return ctrl.Result{}, err
+			}
+		}
+		log.Info(logger, "removed konnect-cleanup finalizer after skipping remote cleanup")
+	}
+
+	return ctrl.Result{}, nil
 }
