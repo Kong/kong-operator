@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
@@ -419,6 +420,26 @@ func TestControlPlaneV2(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+			{
+				Name: "combinedServicesFromDifferentHTTPRoutes are set to enabled by default",
+				TestObject: &operatorv2beta1.ControlPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.ControlPlaneSpec{
+						DataPlane: validDataPlaneTarget,
+						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
+							IngressClass: lo.ToPtr("kong"),
+						},
+					},
+				},
+				Assert: func(t *testing.T, cp *operatorv2beta1.ControlPlane) {
+					require.NotNil(t, cp.Spec.Translation)
+					require.NotNil(t, cp.Spec.Translation.CombinedServicesFromDifferentHTTPRoutes)
+					require.Equal(t,
+						operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled,
+						*cp.Spec.Translation.CombinedServicesFromDifferentHTTPRoutes,
+					)
 				},
 			},
 			{

@@ -82,6 +82,10 @@ type TestCase[T client.Object] struct {
 
 	// ExpectedWarningMessage is the substring expected to be found in at least one collected warning.
 	ExpectedWarningMessage *string
+
+	// Assert is an optional function to perform additional assertions on the created object.
+	// It is called after the object is created and before an update (if specified).
+	Assert func(*testing.T, T)
 }
 
 // RunWithConfig runs the test case against the provided rest.Config's cluster.
@@ -173,6 +177,11 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 			timeout, period,
 		) {
 			return
+		}
+
+		if tc.Assert != nil {
+			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject))
+			tc.Assert(t, tc.TestObject)
 		}
 
 		// Check with reflect if the status field is set and Update the status if so before updating the object.
