@@ -175,8 +175,8 @@ download.govulncheck: mise yq ## Download govulncheck locally if necessary.
 
 CHARTSNAP_VERSION = $(shell $(YQ) -ojson -r '.chartsnap' < $(TOOLS_VERSIONS_FILE))
 .PHONY: download.chartsnap
-download.chartsnap: yq
-	CHARTSNAP_VERSION=${CHARTSNAP_VERSION} ./scripts/install-chartsnap.sh
+download.chartsnap: yq download.helm
+	HELM=$(HELM) CHARTSNAP_VERSION=$(CHARTSNAP_VERSION) ./scripts/install-chartsnap.sh
 
 KUBE_LINTER_VERSION = $(shell $(YQ) -ojson -r '.kube-linter' < $(TOOLS_VERSIONS_FILE))
 KUBE_LINTER = $(PROJECT_DIR)/bin/installs/kube-linter/v$(KUBE_LINTER_VERSION)/bin/kube-linter
@@ -198,6 +198,13 @@ MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/markdownlint-cli2/$(MARKDOWNLINT_VERS
 download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
 	@$(MISE) plugin install --yes -q markdownlint-cli2
 	@$(MISE) install -q markdownlint-cli2@$(MARKDOWNLINT_VERSION)
+
+HELM_VERSION = $(shell $(YQ) -r '.helm' < $(TOOLS_VERSIONS_FILE))
+HELM = $(PROJECT_DIR)/bin/installs/helm/$(HELM_VERSION)/bin/helm
+.PHONY: download.helm
+download.helm: mise yq ## Download helm locally if necessary.
+	@$(MISE) plugin install --yes -q helm
+	@$(MISE) install -q helm@$(HELM_VERSION)
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
@@ -761,8 +768,8 @@ endef
 export GOLDEN_TEST_FAILURE_MSG
 
 .PHONY: _chartsnap
-_chartsnap: download.chartsnap
-	helm chartsnap -c ./charts/$(CHART) -f ./charts/$(CHART)/ci/ $(CHARTSNAP_ARGS) \
+_chartsnap: download.chartsnap download.helm
+	$(HELM) chartsnap -c ./charts/$(CHART) -f ./charts/$(CHART)/ci/ $(CHARTSNAP_ARGS) \
 		-- \
 		--api-versions gateway.networking.k8s.io/v1 \
 		--api-versions admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy \
@@ -919,26 +926,24 @@ debug.skaffold.continuous: _ensure-kong-system-namespace
 
 CERT_MANAGER_VERSION = $(shell $(YQ) -r '.cert-manager' < $(TOOLS_VERSIONS_FILE))
 .PHONY: install.helm.cert-manager
-install.helm.cert-manager: yq
-	helm repo add jetstack https://charts.jetstack.io && \
-	helm repo update && \
-	helm upgrade --install \
-	  cert-manager jetstack/cert-manager \
-	  --namespace cert-manager \
-	  --create-namespace \
-	  --version $(CERT_MANAGER_VERSION) \
-	  --set crds.enabled=true
+install.helm.cert-manager: yq download.helm
+	$(HELM) repo add jetstack https://charts.jetstack.io && \
+	$(HELM) repo update && \
+	$(HELM) upgrade --install \
+		cert-manager jetstack/cert-manager \
+		--namespace cert-manager \
+		--create-namespace \
+		--version $(CERT_MANAGER_VERSION) \
+		--set crds.enabled=true
 
 .PHONY: uninstall.helm.cert-manager
-uninstall.helm.cert-manager:
-	helm uninstall cert-manager --namespace cert-manager
+uninstall.helm.cert-manager: download.helm
+	$(HELM) uninstall cert-manager --namespace cert-manager
 
 # Install CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install
 install: install.helm.cert-manager manifests kustomize install.gateway-api-crds
 	$(KUSTOMIZE) build config/crd | kubectl apply --server-side -f -
-
-
 
 # Install RBACs from config/rbac into the K8s cluster specified in ~/.kube/config.
 .PHONY: install.rbacs
