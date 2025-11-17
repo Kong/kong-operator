@@ -8,9 +8,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/restmapper"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 )
@@ -26,11 +26,8 @@ const (
 )
 
 // GetGroupKindScope returns the scope of the object
-func getGroupKindScope(t *testing.T, obj client.Object) meta.RESTScopeName {
-	config, err := config.GetConfig()
-	require.NoError(t, err)
-
-	dc := discovery.NewDiscoveryClientForConfigOrDie(config)
+func getGroupKindScope(t *testing.T, cfg *rest.Config, obj client.Object) meta.RESTScopeName {
+	dc := discovery.NewDiscoveryClientForConfigOrDie(cfg)
 	groupResources, err := restmapper.GetAPIGroupResources(dc)
 	require.NoError(t, err)
 
@@ -62,15 +59,10 @@ const (
 
 // NewCRDValidationTestCasesGroupCPRefChange creates a test cases group for control plane ref change
 func NewCRDValidationTestCasesGroupCPRefChange[
-	T interface {
-		client.Object
-		DeepCopy() T
-		SetConditions([]metav1.Condition)
-		SetControlPlaneRef(*commonv1alpha1.ControlPlaneRef)
-		GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef
-	},
+	T ObjectWithControlPlaneRef[T],
 ](
 	t *testing.T,
+	cfg *rest.Config,
 	obj T,
 	supportedByKIC SupportedByKicT,
 	controlPlaneRefRequired ControlPlaneRefRequiredT,
@@ -90,7 +82,7 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 			Reason:             "NotProgrammed",
 			LastTransitionTime: metav1.Now(),
 		}
-		objScope = getGroupKindScope(t, obj)
+		objScope = getGroupKindScope(t, cfg, obj)
 	)
 
 	{

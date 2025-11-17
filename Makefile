@@ -604,9 +604,6 @@ test.crds-validation:
 test.crds-validation.pretty:
 	$(MAKE) _test.envtest GOTESTSUM_FORMAT=testname ENVTEST_TEST_PATHS=./test/crdsvalidation/...
 
-# --- Section just to run tests that require CRDs to be installed in the cluste.r ---
-# TODO: https://github.com/Kong/kong-operator/issues/2386
-
 # Define a constant list of channels
 CHANNELS := ingress-controller-incubator gateway-operator kong-operator
 
@@ -616,9 +613,8 @@ install.only: kustomize
 		$(KUSTOMIZE) build config/crd/$$channel | kubectl apply --server-side -f -; \
 	done
 
-# Running this target requires to have a cluster with the CRDs installed (make install.only) available.
-.PHONY: test.crds
-test.crds: gotestsum
+.PHONY: test.api
+test.api: gotestsum
 	GOFLAGS=$(GOFLAGS) \
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 	$(GOTESTSUM) -- $(GOTESTFLAGS) \
@@ -627,7 +623,6 @@ test.crds: gotestsum
 	-race \
 	-coverprofile=$(COVERPROFILE) \
 	./api/test/...
-# --- End of section just to run tests that require CRDs to be installed in the cluster. ---
 
 .PHONY: _test.integration
 _test.integration: gotestsum download.telepresence

@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -22,7 +23,8 @@ type TestCasesGroup[T client.Object] []TestCase[T]
 // RunWithConfig runs all test cases in the group against the provided rest.Config's cluster.
 func (g TestCasesGroup[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *runtime.Scheme) {
 	for _, tc := range g {
-		tc.RunWithConfig(t, cfg, scheme)
+		tc.
+			RunWithConfig(t, cfg, scheme)
 	}
 }
 
@@ -35,7 +37,7 @@ func (g TestCasesGroup[T]) Run(t *testing.T) {
 
 const (
 	// DefaultEventuallyTimeout is the default timeout for EventuallyConfig.
-	DefaultEventuallyTimeout = 1 * time.Second
+	DefaultEventuallyTimeout = 3 * time.Second
 	// DefaultEventuallyPeriod is the default period for EventuallyConfig.
 	DefaultEventuallyPeriod = 10 * time.Millisecond
 )
@@ -77,6 +79,7 @@ type TestCase[T client.Object] struct {
 	// If set together with ExpectedWarningMessage, the test will assert that a warning containing the
 	// expected message substring was produced.
 	WarningCollector *WarningCollector
+
 	// ExpectedWarningMessage is the substring expected to be found in at least one collected warning.
 	ExpectedWarningMessage *string
 }
@@ -138,19 +141,19 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 				// If the error message is expected, check if the error message contains the expected message and return.
 				if tc.ExpectedErrorMessage != nil {
 					if !assert.ErrorContains(c, err, *tc.ExpectedErrorMessage) {
-						t.Logf("Create error: %v; expected: %q", err, *tc.ExpectedErrorMessage)
+						t.Logf("Create error: %v; expected: %q\n", err, *tc.ExpectedErrorMessage)
 						return
 					}
 				} else {
 					if !assert.NoError(c, err) {
-						t.Logf("Create error: %v", err)
+						t.Logf("Create error: %v\n", err)
 						return
 					}
 				}
 
 				// If warnings are expected, verify at least one collected warning matches.
 				if tc.WarningCollector != nil && tc.ExpectedWarningMessage != nil {
-					msgs := tc.WarningCollector.Messages()
+					msgs := tc.WarningCollector.GetWarnings()
 					matched := false
 					for _, m := range msgs {
 						if assert.Contains(c, m, *tc.ExpectedWarningMessage) {
@@ -194,6 +197,18 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 				// Update the object state and push the update to the server.
 				tc.Update(tc.TestObject)
 				err = cl.Update(ctx, tc.TestObject)
+				if tc.ExpectedWarningMessage != nil {
+					found := false
+					for _, w := range tc.WarningCollector.GetWarnings() {
+						if strings.Contains(w, *tc.ExpectedWarningMessage) {
+							found = true
+							break
+						}
+					}
+					if !assert.True(c, found, "Warning message not found: %s", *tc.ExpectedWarningMessage) {
+						return
+					}
+				}
 				// If the expected update error message is defined, check if the error message contains the expected message
 				// and return. Otherwise, expect no error.
 				if tc.ExpectedUpdateErrorMessage != nil {

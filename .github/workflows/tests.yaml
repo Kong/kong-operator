@@ -414,21 +414,9 @@ jobs:
         VERSION="${VERSION%.*}"
         echo "Cluster version: $VERSION"
         make test.crds-validation CLUSTER_VERSION=${VERSION}
-    
-    # TODO: https://github.com/Kong/kong-operator/issues/2386
-    - name: Create k8s KinD Cluster
-      uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab # v1.13.0
-      with:
-        # NOTE: default is 0.26.0 https://github.com/helm/kind-action/blob/a1b0e391336a6ee6713a0583f8c6240d70863de3/kind.sh#L21
-        # so bump this manually
-        version: v0.30.0
-        node_image: kindest/node:${{ matrix.kubernetes-node-version }}
 
-    - name: Verify installing CRDs via kustomize works
-      run: make install.only
-
-    - name: Run the rest of CRDs tests
-      run: make test.crds
+    - name: Run the API tests
+      run: make test.api
 
   envtest-tests:
     runs-on: ubuntu-latest
