@@ -71,7 +71,7 @@ export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
 
 # Do not store yq's version in .tools_versions.yaml as it is used to get tool versions.
 # renovate: datasource=github-releases depName=mikefarah/yq
-YQ_VERSION = 4.48.1
+YQ_VERSION = 4.48.2
 YQ = $(PROJECT_DIR)/bin/installs/yq/$(YQ_VERSION)/bin/yq
 .PHONY: yq
 yq: mise # Download yq locally if necessary.
