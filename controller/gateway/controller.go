@@ -497,6 +497,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, errors.New("unexpected error, controlplane is nil. Returning to avoid panic")
 		}
 	}
+	// Ensure DataPlane NetworkPolicies as early as possible to allow ControlPlane/Operator to reach Admin API.
+	// Only create NPs when running inside Kubernetes.
+	if k8sutils.RunningOnKubernetes() {
+		log.Trace(logger, "ensuring DataPlane's NetworkPolicy exists (early)")
+		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, dataplane, controlplane, r.Namespace, r.PodLabels)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if createdOrUpdated {
+			log.Debug(logger, "networkPolicy created/updated (early)")
+			return ctrl.Result{}, nil // requeue will be triggered; proceed in next loop
+		}
+	}
+
 	// If the dataplane has not been marked as ready yet, return and wait for the next reconciliation loop.
 	if !k8sutils.HasConditionTrue(kcfggateway.DataPlaneReadyType, gwConditionAware) {
 		log.Debug(logger, "dataplane is not ready yet")

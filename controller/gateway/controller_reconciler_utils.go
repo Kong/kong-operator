@@ -592,6 +592,17 @@ func generateDataPlaneNetworkPolicy(
 		}
 	}
 
+	// If we cannot determine any in-cluster source (no controlplane and no operator pod labels),
+	// create a temporary permissive rule for admin API to unblock initial configuration. It will be
+	// tightened in subsequent reconciliations once controlplane becomes available.
+	var allowAllAdminAPIIngress networkingv1.NetworkPolicyIngressRule
+	if controlplane == nil && len(operatorPodLabels) == 0 {
+		allowAllAdminAPIIngress = networkingv1.NetworkPolicyIngressRule{
+			Ports: []networkingv1.NetworkPolicyPort{{Protocol: &protocolTCP, Port: &adminAPISSLPort}},
+			// From omitted => all sources are allowed for the specified ports.
+		}
+	}
+
 	allowProxyIngress := networkingv1.NetworkPolicyIngressRule{
 		Ports: []networkingv1.NetworkPolicyPort{
 			{Protocol: &protocolTCP, Port: &proxyPort},
@@ -609,12 +620,16 @@ func generateDataPlaneNetworkPolicy(
 		allowProxyIngress,
 		allowMetricsIngress,
 	}
-	// Add admin API restrictions as separate rules so tests can match the CP-based rule exactly.
+	// Add admin API rules. Prefer the CP-based restriction when CP is present, also include operator rule when available.
 	if controlplane != nil {
 		ingressRules = append([]networkingv1.NetworkPolicyIngressRule{limitAdminAPIIngressFromCP}, ingressRules...)
 	}
 	if len(limitAdminAPIIngressFromOperator.From) > 0 {
 		ingressRules = append([]networkingv1.NetworkPolicyIngressRule{limitAdminAPIIngressFromOperator}, ingressRules...)
+	}
+	// As a last resort (no CP and no operator pod labels), allow all sources temporarily on admin API.
+	if controlplane == nil && len(operatorPodLabels) == 0 {
+		ingressRules = append([]networkingv1.NetworkPolicyIngressRule{allowAllAdminAPIIngress}, ingressRules...)
 	}
 
 	return &networkingv1.NetworkPolicy{
