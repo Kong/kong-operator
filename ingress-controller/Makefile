@@ -105,10 +105,6 @@ _test.envtest: gotestsum setup-envtest
 test.envtest:
 	$(MAKE) _test.envtest GOTESTSUM_FORMAT=standard-verbose
 
-.PHONY: _check.container.environment
-_check.container.environment:
-	@./scripts/check-container-environment.sh
-
 TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong' < ./test/test_dependencies.yaml)
 
 # Integration tests don't use gotestsum because there's a data race issue
@@ -119,22 +115,22 @@ TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong'
 #
 # Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/3754
 .PHONY: _test.integration
-_test.integration: _check.container.environment
+_test.integration:
 	KONG_CLUSTER_VERSION="$(KONG_CLUSTER_VERSION)" \
-		TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
-		TEST_DATABASE_MODE="$(DBMODE)" \
-		GOFLAGS="-tags=$(GOTAGS)" \
-		KONG_CONTROLLER_FEATURE_GATES="$(KONG_CONTROLLER_FEATURE_GATES)" \
-		go test $(GOTESTFLAGS) \
-		-v \
-		-timeout $(INTEGRATION_TEST_TIMEOUT) \
-		-parallel $(NCPU) \
-		-race \
-		-ldflags="$(LDFLAGS_COMMON)" \
-		-covermode=atomic \
-		-coverpkg=$(PKG_LIST) \
-		-coverprofile=$(COVERAGE_OUT) \
-		./test/integration
+	TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
+	TEST_DATABASE_MODE="$(DBMODE)" \
+	GOFLAGS="-tags=$(GOTAGS)" \
+	KONG_CONTROLLER_FEATURE_GATES="$(KONG_CONTROLLER_FEATURE_GATES)" \
+	go test $(GOTESTFLAGS) \
+	-v \
+	-timeout $(INTEGRATION_TEST_TIMEOUT) \
+	-parallel $(NCPU) \
+	-race \
+	-ldflags="$(LDFLAGS_COMMON)" \
+	-covermode=atomic \
+	-coverpkg=$(PKG_LIST) \
+	-coverprofile=$(COVERAGE_OUT) \
+	./test/integration
 
 .PHONY: test.integration.dbless
 test.integration.dbless:
