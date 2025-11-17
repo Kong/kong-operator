@@ -456,6 +456,8 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 	gateway *gwtypes.Gateway,
 	dataplane *operatorv1beta1.DataPlane,
 	controlplane *gwtypes.ControlPlane,
+	operatorNamespace string,
+	operatorPodLabels map[string]string,
 ) (createdOrUpdate bool, err error) {
 	networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(ctx, r.Client, gateway)
 	if err != nil {
@@ -471,11 +473,10 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 	}
 
 	// generate the network policy that allows the ControlPlane pod to access the admin APIs of dataplane pods.
-	generatedPolicy, err := generateDataPlaneNetworkPolicy(dataplane, controlplane)
+	generatedPolicy, err := generateDataPlaneNetworkPolicy(dataplane, controlplane, operatorNamespace, operatorPodLabels)
 	if err != nil {
 		return false, fmt.Errorf("failed generating network policy for DataPlane %s: %w", dataplane.Name, err)
 	}
-	k8sutils.SetOwnerForObject(generatedPolicy, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(generatedPolicy)
 
 	if count == 1 {
@@ -505,6 +506,8 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 func generateDataPlaneNetworkPolicy(
 	dataplane *operatorv1beta1.DataPlane,
 	controlplane *gwtypes.ControlPlane,
+	operatorNamespace string,
+	operatorPodLabels map[string]string,
 ) (*networkingv1.NetworkPolicy, error) {
 	var (
 		protocolTCP     = corev1.ProtocolTCP
@@ -546,8 +549,8 @@ func generateDataPlaneNetworkPolicy(
 	}
 
 	// Construct the policy to allow the ControlPlane pod to access DataPlane admin APIs.
-	// For hybrid mode (Konnect), there's no local ControlPlane, so we don't add admin API restrictions.
-	var limitAdminAPIIngress networkingv1.NetworkPolicyIngressRule
+	// For hybrid mode (Konnect), there's no local ControlPlane, so we don't add the CP-based admin API restriction.
+	var limitAdminAPIIngressFromCP networkingv1.NetworkPolicyIngressRule
 	if controlplane != nil {
 		policyPeerForControlPlanePod := networkingv1.NetworkPolicyPeer{
 			PodSelector: &metav1.LabelSelector{
@@ -561,13 +564,31 @@ func generateDataPlaneNetworkPolicy(
 				},
 			},
 		}
-		limitAdminAPIIngress = networkingv1.NetworkPolicyIngressRule{
+		limitAdminAPIIngressFromCP = networkingv1.NetworkPolicyIngressRule{
 			Ports: []networkingv1.NetworkPolicyPort{
 				{Protocol: &protocolTCP, Port: &adminAPISSLPort},
 			},
 			From: []networkingv1.NetworkPolicyPeer{
 				policyPeerForControlPlanePod,
 			},
+		}
+	}
+
+	// Additionally, allow the operator (which runs the KIC manager) to access the DataPlane admin API.
+	// This is required because the manager runs inside the operator Pod, not as a separate ControlPlane Pod.
+	var limitAdminAPIIngressFromOperator networkingv1.NetworkPolicyIngressRule
+	if operatorNamespace != "" && len(operatorPodLabels) > 0 {
+		policyPeerForOperatorPod := networkingv1.NetworkPolicyPeer{
+			PodSelector: &metav1.LabelSelector{MatchLabels: operatorPodLabels},
+			NamespaceSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"kubernetes.io/metadata.name": operatorNamespace,
+				},
+			},
+		}
+		limitAdminAPIIngressFromOperator = networkingv1.NetworkPolicyIngressRule{
+			Ports: []networkingv1.NetworkPolicyPort{{Protocol: &protocolTCP, Port: &adminAPISSLPort}},
+			From:  []networkingv1.NetworkPolicyPeer{policyPeerForOperatorPod},
 		}
 	}
 
@@ -588,9 +609,12 @@ func generateDataPlaneNetworkPolicy(
 		allowProxyIngress,
 		allowMetricsIngress,
 	}
-	// Only add admin API restriction when there's a local ControlPlane (not hybrid mode)
+	// Add admin API restrictions as separate rules so tests can match the CP-based rule exactly.
 	if controlplane != nil {
-		ingressRules = append([]networkingv1.NetworkPolicyIngressRule{limitAdminAPIIngress}, ingressRules...)
+		ingressRules = append([]networkingv1.NetworkPolicyIngressRule{limitAdminAPIIngressFromCP}, ingressRules...)
+	}
+	if len(limitAdminAPIIngressFromOperator.From) > 0 {
+		ingressRules = append([]networkingv1.NetworkPolicyIngressRule{limitAdminAPIIngressFromOperator}, ingressRules...)
 	}
 
 	return &networkingv1.NetworkPolicy{

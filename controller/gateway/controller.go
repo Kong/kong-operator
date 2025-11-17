@@ -508,7 +508,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// If the code is run outside of k8s (like in envtest or integration test), do not create network policies.
 	if k8sutils.RunningOnKubernetes() {
 		log.Trace(logger, "ensuring DataPlane's NetworkPolicy exists")
-		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, dataplane, controlplane)
+		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, dataplane, controlplane, r.Namespace, r.PodLabels)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
