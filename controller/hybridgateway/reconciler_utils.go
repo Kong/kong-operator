@@ -9,11 +9,13 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/kong/kong-operator/controller/hybridgateway/annotations"
 	"github.com/kong/kong-operator/controller/hybridgateway/converter"
 	"github.com/kong/kong-operator/controller/hybridgateway/managedfields"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/controller/pkg/log"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
 const (
@@ -276,7 +278,27 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 		for _, item := range list.Items {
 			key := fmt.Sprintf("%s/%s/%s", item.GetNamespace(), item.GetName(), gvk.String())
 			if _, found := desiredSet[key]; !found {
-				// Not in desired output, delete it.
+				// Check if the resource has the HTTPRoute annotation.
+				am := annotations.NewAnnotationManager(logger)
+				// TODO: make it ***Route generic!
+				httpRoute, ok := any(rootObjPtr).(*gwtypes.HTTPRoute)
+				if !ok {
+					return orphansForGVK > 0, fmt.Errorf("failed to cast rootObjPtr to *HTTPRoute, got %T", rootObjPtr)
+				}
+				if found, err := am.RemoveHTTPRouteFromAnnotation(&item, httpRoute); err != nil {
+					log.Error(logger, err, "Failed to remove HTTPRoute annotation from orphaned resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+					return orphansForGVK > 0, fmt.Errorf("failed to remove HTTPRoute annotation from orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
+				} else if !found {
+					log.Trace(logger, "HTTPRoute annotation not found, skipping resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+					continue
+				}
+
+				// Not in desired output and HTTPRoute annotation found.
+				if hybridAnnotations, _ := am.GetHTTPRoutes(&item); len(hybridAnnotations) > 0 {
+					log.Debug(logger, "Updating resource hybrid-route annotation", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+					continue
+				}
+
 				log.Info(logger, "Deleting orphaned resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
 				if err := cl.Delete(ctx, &item); err != nil && !errors.IsNotFound(err) {
 					return false, fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
