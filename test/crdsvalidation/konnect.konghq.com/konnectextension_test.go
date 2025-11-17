@@ -2,7 +2,6 @@ package crdsvalidation_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/samber/lo"
 
@@ -51,9 +50,6 @@ func TestKonnectExtension(t *testing.T) {
 			},
 			{
 				Name: "konnect controlplane, manual provisioning, secret",
-				ExpectedErrorEventuallyConfig: common.EventuallyConfig{
-					Timeout: 1 * time.Second,
-				},
 				TestObject: &konnectv1alpha2.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -80,9 +76,6 @@ func TestKonnectExtension(t *testing.T) {
 			},
 			{
 				Name: "konnect controlplane, manual provisioning, no secret",
-				ExpectedErrorEventuallyConfig: common.EventuallyConfig{
-					Timeout: 1 * time.Second,
-				},
 				TestObject: &konnectv1alpha2.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -107,9 +100,6 @@ func TestKonnectExtension(t *testing.T) {
 			},
 			{
 				Name: "konnect controlplane, automatic provisioning, secret",
-				ExpectedErrorEventuallyConfig: common.EventuallyConfig{
-					Timeout: 1 * time.Second,
-				},
 				TestObject: &konnectv1alpha2.KonnectExtension{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
