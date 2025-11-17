@@ -272,11 +272,28 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 
 		log.Debug(logger, "Found existing resources for GVK", "gvk", gvk.String(), "resourceCount", len(list.Items))
 
+		am := metadata.NewAnnotationManager(logger)
 		orphansForGVK := 0
 		for _, item := range list.Items {
 			key := fmt.Sprintf("%s/%s/%s", item.GetNamespace(), item.GetName(), gvk.String())
 			if _, found := desiredSet[key]; !found {
-				// Not in desired output, delete it.
+
+				// Check if the Route resource is present in the hybrid-routes annotation and remove it.
+				if !am.RemoveRouteFromAnnotation(&item, rootObjPtr) {
+					log.Trace(logger, "Route annotation not found, skipping resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+					continue
+				}
+
+				// Not in desired output, Route resource found and removed from the hybrid-routes annotation.
+				// If other Routes are still present in the annotation, update the resource.
+				if hybridAnnotations := am.GetRoutes(&item); len(hybridAnnotations) > 0 {
+					log.Debug(logger, "Updating hybrid-routes annotation", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+					if err := cl.Update(ctx, &item); err != nil && !errors.IsNotFound(err) {
+						return false, fmt.Errorf("failed to update resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
+					}
+					continue
+				}
+
 				log.Info(logger, "Deleting orphaned resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
 				if err := cl.Delete(ctx, &item); err != nil && !errors.IsNotFound(err) {
 					return false, fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
