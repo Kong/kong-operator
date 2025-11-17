@@ -18,8 +18,8 @@ import (
 
 func TestDataplane(t *testing.T) {
 	ctx := t.Context()
-	cfg, _ := envtest.Setup(t, ctx, scheme.Get())
 	scheme := scheme.Get()
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	validDataplaneOptions := operatorv1beta1.DataPlaneOptions{
 		Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -48,7 +48,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "no extensions",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: validDataplaneOptions,
 					},
@@ -57,7 +57,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "konnectExtension set",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -77,7 +77,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "invalid extension",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -103,7 +103,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "no deploymentSpec",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec:       operatorv1beta1.DataPlaneSpec{},
 				},
 				ExpectedErrorMessage: lo.ToPtr("DataPlane requires an image to be set on proxy container"),
@@ -111,7 +111,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "with deploymentSpec",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -125,7 +125,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "missing container",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -149,7 +149,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "proxy container, no image",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -173,7 +173,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "proxy container, image",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -202,7 +202,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "db mode on",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -233,7 +233,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "db mode off",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: validDataplaneOptions,
 					},
@@ -247,7 +247,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "nodePort can be specified when service type is set to NodePort",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -275,7 +275,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "can leave nodePort empty when when service type is not specified",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -299,7 +299,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "nodePort can be specified when service type is set to LoadBalancer",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -327,7 +327,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "cannot specify nodePort when service type is ClusterIP",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -356,7 +356,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "can specify nodePort when service type is not set (default LoadBalancer)",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -386,7 +386,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "service ingress type LoadBalancer",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -406,7 +406,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "service ingress type NodePort",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -426,7 +426,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "service ingress type ClusterIP",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -446,7 +446,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "service ingress type ExternalName",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -473,7 +473,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "cannot update spec when in the middle of promotion",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -500,7 +500,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "rollout status without conditions doesn't prevent spec updates",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -530,7 +530,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "can update spec when promotion complete",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -556,7 +556,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "can update spec when rollout is not in progress",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: validDataplaneOptions.Deployment,
@@ -576,7 +576,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "not providing image fails",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec:       operatorv1beta1.DataPlaneSpec{},
 				},
 				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
@@ -585,7 +585,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "providing image succeeds",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -610,7 +610,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "dbmode off is supported",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -641,7 +641,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "dbmode postgres is not supported",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -673,7 +673,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "can't update DataPlane when rollout in progress",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -720,7 +720,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "can update DataPlane when rollout not in progress",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -766,7 +766,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "BlueGreen promotion strategy AutomaticPromotion is not supported",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -807,7 +807,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "BlueGreen promotion strategy BreakBeforePromotion is supported",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -841,7 +841,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "BlueGreen rollout resource plan DeleteOnPromotionRecreateOnRollout in unsupported",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -881,7 +881,7 @@ func TestDataplane(t *testing.T) {
 			{
 				Name: "BlueGreen rollout resource plan ScaleDownOnPromotionScaleUpOnRollout in supported",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{

@@ -21,14 +21,14 @@ func TestKongCredentialJWT(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("updates not allowed for status conditions", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongCredentialJWT]{
 			{
 				Name: "consumerRef change is not allowed for Programmed=True",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -57,7 +57,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "consumerRef change is allowed when consumer is not Programmed=True nor APIAuthValid=True",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -91,7 +91,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "rsa_public_key is required when algorithm is RS256",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -107,7 +107,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "rsa_public_key is required when algorithm is RS384",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -123,7 +123,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "rsa_public_key is required when algorithm is RS512",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -139,7 +139,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "rsa_public_key is required when algorithm is PS256",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -155,7 +155,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "rsa_public_key is required when algorithm is PS384",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -171,7 +171,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "rsa_public_key is required when algorithm is PS512",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -187,7 +187,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "rsa_public_key is required when algorithm is ES256",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -203,7 +203,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "rsa_public_key is required when algorithm is ES384",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -219,7 +219,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "rsa_public_key is required when algorithm is ES512",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -235,7 +235,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "rsa_public_key is required when algorithm is EdDSA",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -251,7 +251,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "rsa_public_key is not required when algorithm is Hs256",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -266,7 +266,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "rsa_public_key is not required when algorithm is Hs384",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -281,7 +281,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "rsa_public_key is not required when algorithm is Hs512",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -302,7 +302,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -323,7 +323,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "more than 20 tags are not allowed",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -345,7 +345,7 @@ func TestKongCredentialJWT(t *testing.T) {
 			{
 				Name: "tags entries must not be longer than 128 characters",
 				TestObject: &configurationv1alpha1.KongCredentialJWT{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialJWTSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",

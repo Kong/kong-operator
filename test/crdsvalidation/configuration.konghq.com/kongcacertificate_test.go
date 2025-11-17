@@ -18,14 +18,14 @@ func TestKongCACertificate(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("required fields validation", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongCACertificate]{
 			{
 				Name: "cert field is required",
 				TestObject: &configurationv1alpha1.KongCACertificate{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCACertificateSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -48,7 +48,7 @@ func TestKongCACertificate(t *testing.T) {
 				Kind:       "KongCACertificate",
 				APIVersion: configurationv1alpha1.GroupVersion.String(),
 			},
-			ObjectMeta: common.CommonObjectMeta,
+			ObjectMeta: common.CommonObjectMeta(ns.Name),
 			Spec: configurationv1alpha1.KongCACertificateSpec{
 				KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
 					Cert: "cert",

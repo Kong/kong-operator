@@ -17,14 +17,14 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("spec", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.KonnectAPIAuthConfiguration]{
 			{
 				Name: "valid token type - spat prefix",
 				TestObject: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 						Token:     "spat_token",
@@ -35,7 +35,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			{
 				Name: "valid token type - kpat prefix",
 				TestObject: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 						Token:     "kpat_token",
@@ -46,7 +46,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			{
 				Name: "invalid token type - no prefix",
 				TestObject: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 						Token:     "token",
@@ -58,7 +58,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			{
 				Name: "invalid token type - missing token",
 				TestObject: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 						ServerURL: "api.us.konghq.com",
@@ -69,7 +69,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			{
 				Name: "token is required once set",
 				TestObject: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 						Token:     "kpat_token",
@@ -84,7 +84,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			{
 				Name: "valid secretRef type",
 				TestObject: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 						SecretRef: &corev1.SecretReference{
@@ -97,7 +97,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			{
 				Name: "invalid secretRef type - missing secretRef",
 				TestObject: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 						ServerURL: "api.us.konghq.com",
@@ -108,7 +108,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			{
 				Name: "server URL is required",
 				TestObject: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type:  konnectv1alpha1.KonnectAPIAuthTypeToken,
 						Token: "spat_token",
@@ -119,7 +119,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			{
 				Name: "server URL is immutable",
 				TestObject: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 						Token:     "spat_token",
@@ -134,7 +134,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			{
 				Name: "server URL is valid when using HTTPs scheme",
 				TestObject: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 						Token:     "spat_token",
@@ -145,7 +145,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			{
 				Name: "server URL must use HTTPs if specifying scheme",
 				TestObject: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 						Token:     "spat_token",
@@ -157,7 +157,7 @@ func TestKonnectAPIAuthConfiguration(t *testing.T) {
 			{
 				Name: "server URL must satisfy hostname (RFC 1123) regex if not a valid absolute URL",
 				TestObject: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 						Token:     "spat_token",

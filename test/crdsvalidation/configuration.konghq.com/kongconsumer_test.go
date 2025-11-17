@@ -20,7 +20,7 @@ func TestKongConsumer(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("cp ref", func(t *testing.T) {
 		obj := &configurationv1.KongConsumer{
@@ -28,7 +28,7 @@ func TestKongConsumer(t *testing.T) {
 				Kind:       "KongConsumer",
 				APIVersion: configurationv1.GroupVersion.String(),
 			},
-			ObjectMeta: common.CommonObjectMeta,
+			ObjectMeta: common.CommonObjectMeta(ns.Name),
 			Username:   "username-1",
 		}
 
@@ -41,7 +41,7 @@ func TestKongConsumer(t *testing.T) {
 			{
 				Name: "username or custom_id required (username provided)",
 				TestObject: &configurationv1.KongConsumer{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1.KongConsumerSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -56,7 +56,7 @@ func TestKongConsumer(t *testing.T) {
 			{
 				Name: "username or custom_id required (custom_id provided)",
 				TestObject: &configurationv1.KongConsumer{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1.KongConsumerSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -71,7 +71,7 @@ func TestKongConsumer(t *testing.T) {
 			{
 				Name: "username or custom_id required (none provided)",
 				TestObject: &configurationv1.KongConsumer{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1.KongConsumerSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -92,7 +92,7 @@ func TestKongConsumer(t *testing.T) {
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1.KongConsumer{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Username:   "username-1",
 					Spec: configurationv1.KongConsumerSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
@@ -114,7 +114,7 @@ func TestKongConsumer(t *testing.T) {
 			{
 				Name: "more than 20 tags are not allowed",
 				TestObject: &configurationv1.KongConsumer{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Username:   "username-1",
 					Spec: configurationv1.KongConsumerSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
@@ -137,7 +137,7 @@ func TestKongConsumer(t *testing.T) {
 			{
 				Name: "tags entries must not be longer than 128 characters",
 				TestObject: &configurationv1.KongConsumer{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Username:   "username-1",
 					Spec: configurationv1.KongConsumerSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{

@@ -18,7 +18,7 @@ func TestControlPlane(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	validDeploymentOptions := operatorv1beta1.ControlPlaneDeploymentOptions{
 		PodTemplateSpec: &corev1.PodTemplateSpec{
@@ -41,7 +41,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "no extensions",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: validControlPlaneOptions,
 					},
@@ -50,7 +50,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "konnectExtension set",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
 							Deployment: validControlPlaneOptions.Deployment,
@@ -70,7 +70,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "konnectExtension and DataPlaneMetricsExtension set",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
 							Deployment: validControlPlaneOptions.Deployment,
@@ -97,7 +97,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "invalid extension",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
 							Extensions: []commonv1alpha1.ExtensionRef{
@@ -122,7 +122,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "no deploymentSpec",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec:       operatorv1beta1.ControlPlaneSpec{},
 				},
 				ExpectedErrorMessage: lo.ToPtr("ControlPlane requires an image to be set on controller container"),
@@ -130,7 +130,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "with deploymentSpec",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
 							Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{},
@@ -142,7 +142,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "missing container",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
 							Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
@@ -164,7 +164,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "controller container, no image",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
 							Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
@@ -186,7 +186,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "controller container, image",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
 							Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
@@ -214,7 +214,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "no watch namespaces",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: validControlPlaneOptions,
 					},
@@ -223,7 +223,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "watch namespaces all",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
 							Deployment: validDeploymentOptions,
@@ -237,7 +237,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "watch namespaces list",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
 							Deployment: validDeploymentOptions,
@@ -254,7 +254,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "watch namespaces list, no list is an error",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
 							Deployment: validDeploymentOptions,
@@ -269,7 +269,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "watch namespaces own",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
 							Deployment: validDeploymentOptions,
@@ -283,7 +283,7 @@ func TestControlPlane(t *testing.T) {
 			{
 				Name: "watch namespaces list, list cannot be specified when type is not List",
 				TestObject: &operatorv1beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv1beta1.ControlPlaneOptions{
 							Deployment: validDeploymentOptions,

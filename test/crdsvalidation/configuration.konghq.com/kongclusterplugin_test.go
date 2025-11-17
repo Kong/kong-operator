@@ -17,14 +17,14 @@ func TestKongClusterPlugin(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("config and configFrom fields validation", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1.KongClusterPlugin]{
 			{
 				Name: "using both config and configFrom should fail",
 				TestObject: &configurationv1.KongClusterPlugin{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					PluginName: "rate-limiting",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"minute": 5}`),
@@ -42,7 +42,7 @@ func TestKongClusterPlugin(t *testing.T) {
 			{
 				Name: "using both configFrom and configPatches should fail",
 				TestObject: &configurationv1.KongClusterPlugin{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					PluginName: "rate-limiting",
 					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
@@ -69,7 +69,7 @@ func TestKongClusterPlugin(t *testing.T) {
 			{
 				Name: "using only config should succeed",
 				TestObject: &configurationv1.KongClusterPlugin{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					PluginName: "rate-limiting",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"minute": 5}`),
@@ -79,7 +79,7 @@ func TestKongClusterPlugin(t *testing.T) {
 			{
 				Name: "using only configFrom should succeed",
 				TestObject: &configurationv1.KongClusterPlugin{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					PluginName: "rate-limiting",
 					ConfigFrom: &configurationv1.NamespacedConfigSource{
 						SecretValue: configurationv1.NamespacedSecretValueFromSource{
@@ -93,7 +93,7 @@ func TestKongClusterPlugin(t *testing.T) {
 			{
 				Name: "using only configPatches should succeed",
 				TestObject: &configurationv1.KongClusterPlugin{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					PluginName: "rate-limiting",
 					ConfigPatches: []configurationv1.NamespacedConfigPatch{
 						{
@@ -121,14 +121,14 @@ func TestKongClusterPlugin(t *testing.T) {
 			{
 				Name: "plugin field should be present",
 				TestObject: &configurationv1.KongClusterPlugin{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					PluginName: "rate-limiting",
 				},
 			},
 			{
 				Name: "plugin field change should fail on update",
 				TestObject: &configurationv1.KongClusterPlugin{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					PluginName: "rate-limiting",
 				},
 				Update: func(obj *configurationv1.KongClusterPlugin) {

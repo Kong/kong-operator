@@ -21,7 +21,7 @@ func TestKongConsumerGroup(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("cp ref", func(t *testing.T) {
 		obj := &configurationv1beta1.KongConsumerGroup{
@@ -29,7 +29,7 @@ func TestKongConsumerGroup(t *testing.T) {
 				Kind:       "KongConsumerGroup",
 				APIVersion: configurationv1beta1.GroupVersion.String(),
 			},
-			ObjectMeta: common.CommonObjectMeta,
+			ObjectMeta: common.CommonObjectMeta(ns.Name),
 			Spec: configurationv1beta1.KongConsumerGroupSpec{
 				Name: "group1",
 			},
@@ -44,7 +44,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			{
 				Name: "cpRef change is not allowed for Programmed=True",
 				TestObject: &configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongConsumerGroupSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -73,7 +73,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			{
 				Name: "cpRef change is allowed when cp is not Programmed=True nor APIAuthValid=True",
 				TestObject: &configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongConsumerGroupSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -101,7 +101,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			{
 				Name: "updates with Programmed = True when no cpRef is allowed",
 				TestObject: &configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongConsumerGroupSpec{
 						Name: "group1",
 					},
@@ -129,7 +129,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			{
 				Name: "name field can be set",
 				TestObject: &configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongConsumerGroupSpec{
 						Name: "test-consumer-group",
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
@@ -150,7 +150,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongConsumerGroupSpec{
 						Name: "cg-1",
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
@@ -172,7 +172,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			{
 				Name: "more than 20 tags are not allowed",
 				TestObject: &configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongConsumerGroupSpec{
 						Name: "cg-1",
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
@@ -195,7 +195,7 @@ func TestKongConsumerGroup(t *testing.T) {
 			{
 				Name: "tags entries must not be longer than 128 characters",
 				TestObject: &configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongConsumerGroupSpec{
 						Name: "cg-1",
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{

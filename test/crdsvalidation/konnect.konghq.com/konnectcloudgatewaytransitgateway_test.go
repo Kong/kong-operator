@@ -18,7 +18,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	konnectTransitGatewayTypeMeta := metav1.TypeMeta{
 		APIVersion: konnectv1alpha1.GroupVersion.String(),
@@ -66,7 +66,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Name: "spec.networkRef can only use namespaced ref",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
 					TypeMeta:   konnectTransitGatewayTypeMeta,
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: commonv1alpha1.ObjectRef{
 							Type:      commonv1alpha1.ObjectRefTypeKonnectID,
@@ -84,7 +84,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Name: "spec.type must in supported value",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
 					TypeMeta:   konnectTransitGatewayTypeMeta,
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: namespacedNetworkRef,
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{
@@ -98,7 +98,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Name: "spec.awsTransitGateway.name cannot be empty",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
 					TypeMeta:   konnectTransitGatewayTypeMeta,
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: namespacedNetworkRef,
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{
@@ -122,7 +122,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Name: "spec.awsTransitGateway.cidr_blocks is required",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
 					TypeMeta:   konnectTransitGatewayTypeMeta,
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: namespacedNetworkRef,
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{
@@ -143,7 +143,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Name: "spec.azureTransitGateway.name cannot be empty",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
 					TypeMeta:   konnectTransitGatewayTypeMeta,
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: namespacedNetworkRef,
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{
@@ -167,7 +167,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Name: "Must set awsTransitGateway when type = awsTransitConfig",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
 					TypeMeta:   konnectTransitGatewayTypeMeta,
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: namespacedNetworkRef,
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{
@@ -181,7 +181,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Name: "Must not set awsTransitGateway when type != awsTransitConfig",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
 					TypeMeta:   konnectTransitGatewayTypeMeta,
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: namespacedNetworkRef,
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{
@@ -197,7 +197,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Name: "Must set azureTransitGatway when spec.type = azureTransitGateway",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
 					TypeMeta:   konnectTransitGatewayTypeMeta,
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: namespacedNetworkRef,
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{
@@ -211,7 +211,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Name: "Must not set azureTransitGateway when type != azureTransitGateway",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
 					TypeMeta:   konnectTransitGatewayTypeMeta,
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: namespacedNetworkRef,
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{
@@ -227,7 +227,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Name: "spec.type is immutable",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
 					TypeMeta:   konnectTransitGatewayTypeMeta,
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: namespacedNetworkRef,
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{
@@ -247,7 +247,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Name: "spec.awsTransitGateway.name is mutable when not programmed",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
 					TypeMeta:   konnectTransitGatewayTypeMeta,
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: namespacedNetworkRef,
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{
@@ -264,7 +264,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Name: "spec.awsTransitGateway.name is immutable when programmed",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
 					TypeMeta:   konnectTransitGatewayTypeMeta,
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: namespacedNetworkRef,
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{
@@ -285,7 +285,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Name: "spec.azureTransitGateway.name is mutable when not programmed",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
 					TypeMeta:   konnectTransitGatewayTypeMeta,
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: namespacedNetworkRef,
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{
@@ -302,7 +302,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 				Name: "spec.azureTransitGateway.name is immutable when programmed",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
 					TypeMeta:   konnectTransitGatewayTypeMeta,
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: namespacedNetworkRef,
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{

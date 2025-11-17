@@ -19,14 +19,14 @@ func TestKongService(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	obj := &configurationv1alpha1.KongService{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "KongService",
 			APIVersion: configurationv1alpha1.GroupVersion.String(),
 		},
-		ObjectMeta: common.CommonObjectMeta,
+		ObjectMeta: common.CommonObjectMeta(ns.Name),
 	}
 
 	t.Run("cp ref", func(t *testing.T) {
@@ -44,7 +44,7 @@ func TestKongService(t *testing.T) {
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongService{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongServiceSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -67,7 +67,7 @@ func TestKongService(t *testing.T) {
 			{
 				Name: "more than 20 tags are not allowed",
 				TestObject: &configurationv1alpha1.KongService{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongServiceSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -91,7 +91,7 @@ func TestKongService(t *testing.T) {
 			{
 				Name: "tags entries must not be longer than 128 characters",
 				TestObject: &configurationv1alpha1.KongService{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongServiceSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,

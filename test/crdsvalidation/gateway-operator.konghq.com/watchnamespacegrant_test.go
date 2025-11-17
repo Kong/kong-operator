@@ -17,14 +17,14 @@ func TestWatchNamespaceGrant(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("basic", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1alpha1.WatchNamespaceGrant]{
 			{
 				Name: "empty from is invalid",
 				TestObject: &operatorv1alpha1.WatchNamespaceGrant{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
 						From: []operatorv1alpha1.WatchNamespaceGrantFrom{},
 					},
@@ -34,7 +34,7 @@ func TestWatchNamespaceGrant(t *testing.T) {
 			{
 				Name: "valid",
 				TestObject: &operatorv1alpha1.WatchNamespaceGrant{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
 						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
 							{
@@ -49,7 +49,7 @@ func TestWatchNamespaceGrant(t *testing.T) {
 			{
 				Name: "unsupported group",
 				TestObject: &operatorv1alpha1.WatchNamespaceGrant{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
 						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
 							{
@@ -65,7 +65,7 @@ func TestWatchNamespaceGrant(t *testing.T) {
 			{
 				Name: "unsupported kind",
 				TestObject: &operatorv1alpha1.WatchNamespaceGrant{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
 						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
 							{

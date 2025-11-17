@@ -35,9 +35,9 @@ const (
 
 func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 	var (
-		ctx    = t.Context()
-		scheme = scheme.Get()
-		cfg, _ = envtest.Setup(t, ctx, scheme)
+		ctx     = t.Context()
+		scheme  = scheme.Get()
+		cfg, ns = envtest.Setup(t, ctx, scheme)
 	)
 
 	logger := zapr.NewLogger(zap.New(zapcore.NewNopCore()))
@@ -60,7 +60,7 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 			{
 				Name: "deprecate message with static autoscale type",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
@@ -93,9 +93,9 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 	t.Parallel()
 
 	var (
-		ctx    = t.Context()
-		scheme = scheme.Get()
-		cfg, _ = envtest.Setup(t, ctx, scheme)
+		ctx     = t.Context()
+		scheme  = scheme.Get()
+		cfg, ns = envtest.Setup(t, ctx, scheme)
 	)
 
 	chartPath := path.Join(test.ProjectRootPath(), ChartPath)
@@ -110,7 +110,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 			{
 				Name: "not providing spec fails",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec:       operatorv1beta1.DataPlaneSpec{},
 				},
 				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
@@ -119,7 +119,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 			{
 				Name: "providing correct ingress service ports and KONG_PORT_MAPS env succeeds",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -172,7 +172,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 			{
 				Name: "providing incorrect ingress service ports and KONG_PORT_MAPS env fails",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -227,7 +227,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 			{
 				Name: "providing correct ingress service ports and KONG_PROXY_LISTEN env succeeds",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -275,7 +275,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 			{
 				Name: "providing incorrect ingress service ports and KONG_PROXY_LISTEN env fails",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -325,7 +325,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 			{
 				Name: "providing network services ingress options without ports does not fail",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -361,7 +361,7 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 			{
 				Name: "providing network services ingress ports without matching envs does not fail (legacy webhook behavior)",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{

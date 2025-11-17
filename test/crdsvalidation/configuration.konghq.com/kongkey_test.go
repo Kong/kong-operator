@@ -19,7 +19,7 @@ func TestKongKey(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("jwk/cp ref", func(t *testing.T) {
 		obj := &configurationv1alpha1.KongKey{
@@ -27,7 +27,7 @@ func TestKongKey(t *testing.T) {
 				Kind:       "KongKey",
 				APIVersion: configurationv1alpha1.GroupVersion.String(),
 			},
-			ObjectMeta: common.CommonObjectMeta,
+			ObjectMeta: common.CommonObjectMeta(ns.Name),
 			Spec: configurationv1alpha1.KongKeySpec{
 				KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 					KID: "1",
@@ -46,7 +46,7 @@ func TestKongKey(t *testing.T) {
 				Kind:       "KongKey",
 				APIVersion: configurationv1alpha1.GroupVersion.String(),
 			},
-			ObjectMeta: common.CommonObjectMeta,
+			ObjectMeta: common.CommonObjectMeta(ns.Name),
 			Spec: configurationv1alpha1.KongKeySpec{
 				KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 					KID: "1",
@@ -67,7 +67,7 @@ func TestKongKey(t *testing.T) {
 			{
 				Name: "KID must be set",
 				TestObject: &configurationv1alpha1.KongKey{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongKeySpec{
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							JWK: lo.ToPtr("{}"),
@@ -85,7 +85,7 @@ func TestKongKey(t *testing.T) {
 			{
 				Name: "one of JWK or PEM must be set",
 				TestObject: &configurationv1alpha1.KongKey{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongKeySpec{
 						KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 							KID: "1",
@@ -109,7 +109,7 @@ func TestKongKey(t *testing.T) {
 			{
 				Name: "when type is 'namespacedRef', namespacedRef is required",
 				TestObject: &configurationv1alpha1.KongKey{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongKeySpec{
 						KeySetRef: &configurationv1alpha1.KeySetRef{
 							Type: configurationv1alpha1.KeySetRefNamespacedRef,
@@ -125,7 +125,7 @@ func TestKongKey(t *testing.T) {
 			{
 				Name: "'namespacedRef' type is accepted",
 				TestObject: &configurationv1alpha1.KongKey{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongKeySpec{
 						KeySetRef: &configurationv1alpha1.KeySetRef{
 							Type: configurationv1alpha1.KeySetRefNamespacedRef,
@@ -143,7 +143,7 @@ func TestKongKey(t *testing.T) {
 			{
 				Name: "'konnectID' type is accepted",
 				TestObject: &configurationv1alpha1.KongKey{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongKeySpec{
 						KeySetRef: &configurationv1alpha1.KeySetRef{
 							Type:      configurationv1alpha1.KeySetRefKonnectID,
@@ -159,7 +159,7 @@ func TestKongKey(t *testing.T) {
 			{
 				Name: "when type is 'konnectID', konnectID is required",
 				TestObject: &configurationv1alpha1.KongKey{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongKeySpec{
 						KeySetRef: &configurationv1alpha1.KeySetRef{
 							Type: configurationv1alpha1.KeySetRefKonnectID,
@@ -175,7 +175,7 @@ func TestKongKey(t *testing.T) {
 			{
 				Name: "unknown type is not accepted",
 				TestObject: &configurationv1alpha1.KongKey{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongKeySpec{
 						KeySetRef: &configurationv1alpha1.KeySetRef{
 							Type: configurationv1alpha1.KeySetRefType("unknown"),
@@ -197,7 +197,7 @@ func TestKongKey(t *testing.T) {
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongKey{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongKeySpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -222,7 +222,7 @@ func TestKongKey(t *testing.T) {
 			{
 				Name: "more than 20 tags are not allowed",
 				TestObject: &configurationv1alpha1.KongKey{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongKeySpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -248,7 +248,7 @@ func TestKongKey(t *testing.T) {
 			{
 				Name: "tags entries must not be longer than 128 characters",
 				TestObject: &configurationv1alpha1.KongKey{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongKeySpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,

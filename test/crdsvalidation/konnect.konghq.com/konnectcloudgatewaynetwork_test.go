@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/samber/lo"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
@@ -21,18 +22,18 @@ func TestKonnectNetwork(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("mutability based on Programmed status condition", func(t *testing.T) {
 		t.Run("name", func(t *testing.T) {
-			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme,
+			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme, ns,
 				"name", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
 					n.Spec.Name = "new-name"
 				})
 		})
 
 		t.Run("availability_zones", func(t *testing.T) {
-			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme,
+			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme, ns,
 				"availability_zones", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
 					n.Spec.AvailabilityZones = []string{
 						"us-west-1b",
@@ -41,21 +42,21 @@ func TestKonnectNetwork(t *testing.T) {
 		})
 
 		t.Run("cidr_block", func(t *testing.T) {
-			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme,
+			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme, ns,
 				"cidr_block", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
 					n.Spec.CidrBlock = "10.0.0.2/16"
 				})
 		})
 
 		t.Run("cloud_gateway_provider_account_id", func(t *testing.T) {
-			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme,
+			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme, ns,
 				"cloud_gateway_provider_account_id", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
 					n.Spec.CloudGatewayProviderAccountID = "id-new-1234567890"
 				})
 		})
 
 		t.Run("region", func(t *testing.T) {
-			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme,
+			fieldMutabilityBasedOnProgrammedTest(t, cfg, scheme, ns,
 				"region", func(n *konnectv1alpha1.KonnectCloudGatewayNetwork) {
 					n.Spec.Region = "us-east"
 				})
@@ -67,7 +68,7 @@ func TestKonnectNetwork(t *testing.T) {
 			{
 				Name: "all required fields are set",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayNetwork{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayNetworkSpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -94,6 +95,7 @@ func fieldMutabilityBasedOnProgrammedTest(
 	t *testing.T,
 	cfg *rest.Config,
 	scheme *runtime.Scheme,
+	ns *v1.Namespace,
 	field string,
 	update func(*konnectv1alpha1.KonnectCloudGatewayNetwork),
 ) {
@@ -133,7 +135,7 @@ func fieldMutabilityBasedOnProgrammedTest(
 		{
 			Name: "is immutable when Programmed=true",
 			TestObject: &konnectv1alpha1.KonnectCloudGatewayNetwork{
-				ObjectMeta: common.CommonObjectMeta,
+				ObjectMeta: common.CommonObjectMeta(ns.Name),
 				Spec:       spec,
 				Status: konnectv1alpha1.KonnectCloudGatewayNetworkStatus{
 					Conditions: []metav1.Condition{
@@ -149,7 +151,7 @@ func fieldMutabilityBasedOnProgrammedTest(
 		{
 			Name: "is mutable when Programmed=false",
 			TestObject: &konnectv1alpha1.KonnectCloudGatewayNetwork{
-				ObjectMeta: common.CommonObjectMeta,
+				ObjectMeta: common.CommonObjectMeta(ns.Name),
 				Spec:       spec,
 				Status: konnectv1alpha1.KonnectCloudGatewayNetworkStatus{
 					Conditions: []metav1.Condition{
@@ -162,7 +164,7 @@ func fieldMutabilityBasedOnProgrammedTest(
 		{
 			Name: "is mutable when Programmed status condition is missing",
 			TestObject: &konnectv1alpha1.KonnectCloudGatewayNetwork{
-				ObjectMeta: common.CommonObjectMeta,
+				ObjectMeta: common.CommonObjectMeta(ns.Name),
 				Spec:       spec,
 			},
 			Update: update,

@@ -18,14 +18,14 @@ func TestKongTarget(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("spec", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongTarget]{
 			{
 				Name: "weight must between 0 and 65535",
 				TestObject: &configurationv1alpha1.KongTarget{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongTargetSpec{
 						UpstreamRef: commonv1alpha1.NameRef{
 							Name: "upstream",
@@ -41,7 +41,7 @@ func TestKongTarget(t *testing.T) {
 			{
 				Name: "weight must between 0 and 65535",
 				TestObject: &configurationv1alpha1.KongTarget{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongTargetSpec{
 						UpstreamRef: commonv1alpha1.NameRef{
 							Name: "upstream",
@@ -63,7 +63,7 @@ func TestKongTarget(t *testing.T) {
 			{
 				Name: "upstream ref is immutable",
 				TestObject: &configurationv1alpha1.KongTarget{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongTargetSpec{
 						UpstreamRef: commonv1alpha1.NameRef{
 							Name: "upstream",
@@ -90,7 +90,7 @@ func TestKongTarget(t *testing.T) {
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongTarget{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongTargetSpec{
 						UpstreamRef: commonv1alpha1.NameRef{
 							Name: "upstream",
@@ -112,7 +112,7 @@ func TestKongTarget(t *testing.T) {
 			{
 				Name: "more than 20 tags are not allowed",
 				TestObject: &configurationv1alpha1.KongTarget{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongTargetSpec{
 						UpstreamRef: commonv1alpha1.NameRef{
 							Name: "upstream",
@@ -135,7 +135,7 @@ func TestKongTarget(t *testing.T) {
 			{
 				Name: "tags entries must not be longer than 128 characters",
 				TestObject: &configurationv1alpha1.KongTarget{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongTargetSpec{
 						UpstreamRef: commonv1alpha1.NameRef{
 							Name: "upstream",

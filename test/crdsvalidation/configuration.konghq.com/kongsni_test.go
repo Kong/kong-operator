@@ -19,14 +19,14 @@ func TestKongSNI(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("certificate ref", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongSNI]{
 			{
 				Name: "certificate ref name is required",
 				TestObject: &configurationv1alpha1.KongSNI{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongSNISpec{
 						CertificateRef: commonv1alpha1.NameRef{},
 						KongSNIAPISpec: configurationv1alpha1.KongSNIAPISpec{
@@ -39,7 +39,7 @@ func TestKongSNI(t *testing.T) {
 			{
 				Name: "certificate ref can be changed before programmed",
 				TestObject: &configurationv1alpha1.KongSNI{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongSNISpec{
 						CertificateRef: commonv1alpha1.NameRef{
 							Name: "cert1",
@@ -58,7 +58,7 @@ func TestKongSNI(t *testing.T) {
 			{
 				Name: "certiifacate ref is immutable after programmed",
 				TestObject: &configurationv1alpha1.KongSNI{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongSNISpec{
 						CertificateRef: commonv1alpha1.NameRef{
 							Name: "cert1",
@@ -95,7 +95,7 @@ func TestKongSNI(t *testing.T) {
 			{
 				Name: "spec.name must not be empty",
 				TestObject: &configurationv1alpha1.KongSNI{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongSNISpec{
 						CertificateRef: commonv1alpha1.NameRef{
 							Name: "cert1",
@@ -113,7 +113,7 @@ func TestKongSNI(t *testing.T) {
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongSNI{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongSNISpec{
 						CertificateRef: commonv1alpha1.NameRef{
 							Name: "cert1",
@@ -134,7 +134,7 @@ func TestKongSNI(t *testing.T) {
 			{
 				Name: "more than 20 tags are not allowed",
 				TestObject: &configurationv1alpha1.KongSNI{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongSNISpec{
 						CertificateRef: commonv1alpha1.NameRef{
 							Name: "cert1",
@@ -156,7 +156,7 @@ func TestKongSNI(t *testing.T) {
 			{
 				Name: "tags entries must not be longer than 128 characters",
 				TestObject: &configurationv1alpha1.KongSNI{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongSNISpec{
 						CertificateRef: commonv1alpha1.NameRef{
 							Name: "cert1",

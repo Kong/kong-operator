@@ -18,14 +18,14 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	obj := &configurationv1alpha1.KongDataPlaneClientCertificate{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "KongDataPlaneClientCertificate",
 			APIVersion: configurationv1alpha1.GroupVersion.String(),
 		},
-		ObjectMeta: common.CommonObjectMeta,
+		ObjectMeta: common.CommonObjectMeta(ns.Name),
 		Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 			KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 				Cert: "cert",
@@ -48,7 +48,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 			{
 				Name: "valid KongDataPlaneClientCertificate",
 				TestObject: &configurationv1alpha1.KongDataPlaneClientCertificate{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 						KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 							Cert: "cert",
@@ -65,14 +65,14 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 			{
 				Name: "cert is required",
 				TestObject: &configurationv1alpha1.KongDataPlaneClientCertificate{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.cert in body should be at least 1 chars long"),
 			},
 			{
 				Name: "cert can be altered before programmed",
 				TestObject: &configurationv1alpha1.KongDataPlaneClientCertificate{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 						KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 							Cert: "cert",
@@ -102,7 +102,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 			{
 				Name: "cert becomes immutable after programmed",
 				TestObject: &configurationv1alpha1.KongDataPlaneClientCertificate{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 						KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 							Cert: "cert",

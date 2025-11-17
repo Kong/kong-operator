@@ -19,7 +19,7 @@ func TestControlPlaneV2(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	validDataPlaneTarget := operatorv2beta1.ControlPlaneDataPlaneTarget{
 		Type: operatorv2beta1.ControlPlaneDataPlaneTargetRefType,
@@ -33,7 +33,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "no extensions",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -45,7 +45,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "konnectExtension set",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -66,7 +66,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "konnectExtension and DataPlaneMetricsExtension set",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -94,7 +94,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "invalid extension",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -122,7 +122,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "missing dataplane causes an error",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
 							IngressClass: lo.ToPtr("kong"),
@@ -134,7 +134,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "when dataplane.type is set to name, name must be specified",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: operatorv2beta1.ControlPlaneDataPlaneTarget{
 							Type: operatorv2beta1.ControlPlaneDataPlaneTargetRefType,
@@ -149,7 +149,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "specifying dataplane ref name when type is ref passes",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: operatorv2beta1.ControlPlaneDataPlaneTarget{
 							Type: operatorv2beta1.ControlPlaneDataPlaneTargetRefType,
@@ -167,7 +167,7 @@ func TestControlPlaneV2(t *testing.T) {
 				// NOTE: used by operator's Gateway controller
 				Name: "managedByOwner is allowed and doesn't require ingressClass to be set",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: operatorv2beta1.ControlPlaneDataPlaneTarget{
 							Type: operatorv2beta1.ControlPlaneDataPlaneTargetManagedByType,
@@ -180,7 +180,7 @@ func TestControlPlaneV2(t *testing.T) {
 				// NOTE: used by operator's Gateway controller
 				Name: "managedByOwner is allowed and ingressClass can be set",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: operatorv2beta1.ControlPlaneDataPlaneTarget{
 							Type: operatorv2beta1.ControlPlaneDataPlaneTargetManagedByType,
@@ -195,7 +195,7 @@ func TestControlPlaneV2(t *testing.T) {
 				// NOTE: used by operator's Gateway controller
 				Name: "can't set ref when type is managedByOwner",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: operatorv2beta1.ControlPlaneDataPlaneTarget{
 							Type: operatorv2beta1.ControlPlaneDataPlaneTargetManagedByType,
@@ -219,7 +219,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "no feature gates",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -231,7 +231,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "feature gate set",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -249,7 +249,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "feature gate disabled",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -267,7 +267,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "feature gate set and then removed",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -290,7 +290,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "cannot provide a feature gate with enabled unset",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -314,7 +314,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "no controller overrides specified",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -326,7 +326,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "controller overrides specified",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -344,7 +344,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "controller overrides specified - disabled",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -362,7 +362,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "controller overrides specified and then removed",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -385,7 +385,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "cannot provide a controller with enabled unset",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -409,7 +409,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "combinedServicesFromDifferentHTTPRoutes set to enabled",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -424,7 +424,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "combinedServicesFromDifferentHTTPRoutes set to disabled",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -439,7 +439,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "combinedServicesFromDifferentHTTPRoutes set to disallowed value",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -455,7 +455,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "drainSupport set to enabled",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -470,7 +470,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "drainSupport set to disabled",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -485,7 +485,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "drainSupport set to disallowed value",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -501,7 +501,7 @@ func TestControlPlaneV2(t *testing.T) {
 			{
 				Name: "both combinedServicesFromDifferentHTTPRoutes and drainSupport set",
 				TestObject: &operatorv2beta1.ControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.ControlPlaneSpec{
 						DataPlane: validDataPlaneTarget,
 						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -522,7 +522,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "fallbackConfiguration.useLastValidConfig set to enabled",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -539,7 +539,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "fallbackConfiguration.useLastValidConfig set to disabled",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -556,7 +556,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "fallbackConfiguration.useLastValidConfig set to disallowed value",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -580,7 +580,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "configDump.state and configDump.dumpsensitive set to enabled",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -596,7 +596,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "configDump.state and configDump.dumpSensitive set to disabled",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -612,7 +612,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "configDump.state set to enabled and configDump.dumpSensitive set to disabled",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -628,7 +628,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "configDump.state set to disabled and configDump.dumpSensitive set to enabled is invalid",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -645,7 +645,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "configDump.state set to disallowed value",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -662,7 +662,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "configDump.dumpSensitive is set to disallowed value",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -685,7 +685,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "objectFilters.secrets and objectFilters.configMaps are set",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -705,7 +705,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "maximum items in matchLabels is 8",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -733,7 +733,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "key of objectFilters.*.matchLabels must have minimum length 1",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -754,7 +754,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "value of objectFilters.*.matchLabels must have maximum length 63",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -780,7 +780,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "no konnect configuration",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -792,7 +792,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "konnect configuration with all options set",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -821,7 +821,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "consumersSync set to enabled",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -836,7 +836,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "consumersSync set to disabled",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -851,7 +851,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "consumersSync set to disallowed value",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -873,7 +873,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "licensing set to enabled without polling periods is allowed",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -890,7 +890,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "licensing set to disabled",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -908,7 +908,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "licensing with polling periods and storage",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -928,7 +928,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "licensing with storage disabled",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -948,7 +948,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "licensing storage set to disallowed value",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -967,7 +967,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "storageState set when licensing is disabled",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -986,7 +986,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "licensing set to disabled with initialPollingPeriod",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -1005,7 +1005,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "licensing set to disabled with pollingPeriod",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -1024,7 +1024,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "licensing set to disallowed value",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -1048,7 +1048,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "nodeRefreshPeriod set",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -1063,7 +1063,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "configUploadPeriod set",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -1078,7 +1078,7 @@ func TestControlPlaneV2(t *testing.T) {
 				{
 					Name: "both periods set",
 					TestObject: &operatorv2beta1.ControlPlane{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: operatorv2beta1.ControlPlaneSpec{
 							DataPlane: validDataPlaneTarget,
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{

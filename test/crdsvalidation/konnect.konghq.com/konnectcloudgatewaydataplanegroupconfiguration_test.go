@@ -19,7 +19,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	cpRef := commonv1alpha1.ControlPlaneRef{
 		Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -44,7 +44,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			{
 				Name: "all required fields are set",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
@@ -69,7 +69,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			{
 				Name: "autopilot: providing autopilot configuration when type is static should fail",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
@@ -94,7 +94,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			{
 				Name: "autopilot: providing static configuration when type is autopilot should fail",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
@@ -120,7 +120,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			{
 				Name: "can't provide both autopilot and static configuration",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
@@ -149,7 +149,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			{
 				Name: "envs have to start with KONG_",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
@@ -180,7 +180,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			{
 				Name: "envs that do not start with KONG_ cause errors",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
@@ -218,7 +218,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			{
 				Name: "networkRef konnectID is supported",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
@@ -240,7 +240,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			{
 				Name: "networkRef konnectID is required when type is konnectID",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
@@ -265,7 +265,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			{
 				Name: "networkRef namespacedRef is supported",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
@@ -289,7 +289,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 			{
 				Name: "networkRef namespacedRef is required when type is namespacedRef",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",
@@ -315,7 +315,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 					"is only allowed in Kubernetes 1.32+ (https://github.com/kubernetes/kubernetes/pull/126977). " +
 					"Re-enable this test and reintroduce the rule that enforces this when 1.32 becomes the oldest supported version.",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						ControlPlaneRef: cpRef,
 						Version:         "3.9",

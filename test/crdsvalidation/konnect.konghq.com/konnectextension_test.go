@@ -19,14 +19,14 @@ func TestKonnectExtension(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("spec", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha2.KonnectExtension]{
 			{
 				Name: "konnect controlplane, manual provisioning, valid secret",
 				TestObject: &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -55,7 +55,7 @@ func TestKonnectExtension(t *testing.T) {
 					Timeout: 1 * time.Second,
 				},
 				TestObject: &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -84,7 +84,7 @@ func TestKonnectExtension(t *testing.T) {
 					Timeout: 1 * time.Second,
 				},
 				TestObject: &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -111,7 +111,7 @@ func TestKonnectExtension(t *testing.T) {
 					Timeout: 1 * time.Second,
 				},
 				TestObject: &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -138,7 +138,7 @@ func TestKonnectExtension(t *testing.T) {
 			{
 				Name: "kic controlplane",
 				TestObject: &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -159,7 +159,7 @@ func TestKonnectExtension(t *testing.T) {
 			{
 				Name: "valid labels",
 				TestObject: &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -182,7 +182,7 @@ func TestKonnectExtension(t *testing.T) {
 			{
 				Name: "invalid label value 1",
 				TestObject: &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -206,7 +206,7 @@ func TestKonnectExtension(t *testing.T) {
 			{
 				Name: "invalid label value 2",
 				TestObject: &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -230,7 +230,7 @@ func TestKonnectExtension(t *testing.T) {
 			{
 				Name: "invalid label value 3",
 				TestObject: &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -254,7 +254,7 @@ func TestKonnectExtension(t *testing.T) {
 			{
 				Name: "invalid label value 4",
 				TestObject: &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -284,7 +284,7 @@ func TestKonnectExtension(t *testing.T) {
 			{
 				Name: "invalid label key 1",
 				TestObject: &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -308,7 +308,7 @@ func TestKonnectExtension(t *testing.T) {
 			{
 				Name: "invalid label value 2",
 				TestObject: &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -332,7 +332,7 @@ func TestKonnectExtension(t *testing.T) {
 			{
 				Name: "invalid label value 3",
 				TestObject: &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -356,7 +356,7 @@ func TestKonnectExtension(t *testing.T) {
 			{
 				Name: "invalid label value 4",
 				TestObject: &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{

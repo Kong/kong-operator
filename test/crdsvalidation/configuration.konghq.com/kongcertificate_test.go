@@ -19,7 +19,7 @@ func TestKongCertificate(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("cp ref", func(t *testing.T) {
 		obj := &configurationv1alpha1.KongCertificate{
@@ -27,7 +27,7 @@ func TestKongCertificate(t *testing.T) {
 				Kind:       "KongCertificate",
 				APIVersion: configurationv1alpha1.GroupVersion.String(),
 			},
-			ObjectMeta: common.CommonObjectMeta,
+			ObjectMeta: common.CommonObjectMeta(ns.Name),
 			Spec: configurationv1alpha1.KongCertificateSpec{
 				KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
 					Cert: "test-cert",
@@ -45,7 +45,7 @@ func TestKongCertificate(t *testing.T) {
 			{
 				Name: "cert field is required",
 				TestObject: &configurationv1alpha1.KongCertificate{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -63,7 +63,7 @@ func TestKongCertificate(t *testing.T) {
 			{
 				Name: "key field is required",
 				TestObject: &configurationv1alpha1.KongCertificate{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -81,7 +81,7 @@ func TestKongCertificate(t *testing.T) {
 			{
 				Name: "cert and key fields are required",
 				TestObject: &configurationv1alpha1.KongCertificate{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -104,7 +104,7 @@ func TestKongCertificate(t *testing.T) {
 				{
 					Name: "up to 20 tags are allowed",
 					TestObject: &configurationv1alpha1.KongCertificate{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: configurationv1alpha1.KongCertificateSpec{
 							ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -129,7 +129,7 @@ func TestKongCertificate(t *testing.T) {
 				{
 					Name: "more than 20 tags are not allowed",
 					TestObject: &configurationv1alpha1.KongCertificate{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: configurationv1alpha1.KongCertificateSpec{
 							ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -155,7 +155,7 @@ func TestKongCertificate(t *testing.T) {
 				{
 					Name: "tags entries must not be longer than 128 characters",
 					TestObject: &configurationv1alpha1.KongCertificate{
-						ObjectMeta: common.CommonObjectMeta,
+						ObjectMeta: common.CommonObjectMeta(ns.Name),
 						Spec: configurationv1alpha1.KongCertificateSpec{
 							ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,

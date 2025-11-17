@@ -16,14 +16,14 @@ func TestKongUpstreamPolicy(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("sticky sessions validation", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1beta1.KongUpstreamPolicy]{
 			{
 				Name: "valid sticky sessions with hashOn.input=none",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -38,7 +38,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "consistent-hashing with stickySessions should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -55,7 +55,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "sticky sessions without hashOn should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
 							Cookie: "session-cookie",
@@ -67,7 +67,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "sticky sessions with hashOn but no input should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -83,7 +83,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "sticky sessions with hashOn.input not 'none' should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -99,7 +99,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "sticky sessions with hashOn.input=none but other hash fields should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -116,7 +116,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "sticky sessions with hashOn.input=none but cookie field should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -133,7 +133,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "sticky sessions with hashOn.input=none but cookiePath field should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -150,7 +150,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "sticky sessions with hashOn.input=none but uriCapture field should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -167,7 +167,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "sticky sessions with hashOn.input=none but queryArg field should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -184,7 +184,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "sticky sessions without cookie should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -198,7 +198,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "valid configuration without sticky sessions",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("round-robin"),
 						Slots:     lo.ToPtr(100),
@@ -208,7 +208,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "valid configuration with hashOn but no sticky sessions",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -220,7 +220,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "valid configuration with sticky-sessions algorithm and hashOn",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("sticky-sessions"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -232,7 +232,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "invalid configuration with round-robin algorithm and hashOn should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("round-robin"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -245,7 +245,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "invalid configuration with least-connections algorithm and hashOn should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("least-connections"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -258,7 +258,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "invalid configuration with latency algorithm and hashOn should fail",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("latency"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -277,7 +277,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "hash on cookie with valid input",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -290,7 +290,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "hash on cookie requires cookiePath field to be set",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -303,7 +303,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "hash on cookiePath requires cookie field to be set",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -316,7 +316,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "hash on header with valid input",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -328,7 +328,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 			{
 				Name: "hash on header, hash on fallback cookie with valid input",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{
@@ -346,7 +346,7 @@ func TestKongUpstreamPolicy(t *testing.T) {
 				// > The hash_fallback setting is invalid and can’t be used if cookie is the primary hashing mechanism.
 				Name: "hash on fallback (cookie) cannot be set when hash on cookie is set",
 				TestObject: &configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("consistent-hashing"),
 						HashOn: &configurationv1beta1.KongUpstreamHash{

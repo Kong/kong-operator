@@ -22,21 +22,21 @@ func TestGatewayConfigurationV2(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("extensions", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv2beta1.GatewayConfiguration]{
 			{
 				Name: "it is valid to specify no extensions",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec:       operatorv2beta1.GatewayConfigurationSpec{},
 				},
 			},
 			{
 				Name: "valid konnectExtension at the gatewayConfiguration level",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
@@ -53,7 +53,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "valid DataPlaneMetricsExtension at the gatewayConfiguration level",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
@@ -70,7 +70,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "valid DataPlaneMetricsExtension and KonnectExtension at the gatewayConfiguration level",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
@@ -94,7 +94,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "invalid 3 extensions (max 2 are allowed) at the gatewayConfiguration level",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
@@ -126,7 +126,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "invalid konnectExtension",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
@@ -150,7 +150,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "it is valid to specify no DataPlaneOptions",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						DataPlaneOptions: nil,
 					},
@@ -159,7 +159,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "specifying resources.PodDisruptionBudget",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 							Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
@@ -182,7 +182,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "specifying resources.PodDisruptionBudget can only specify onf of maxUnavailable and minAvailable",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 							Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
@@ -212,7 +212,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "it is valid to specify no ControlPlaneOptions",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: nil,
 					},
@@ -221,7 +221,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "specifying watch namespaces, type=all",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -236,7 +236,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "specifying watch namespaces, type=own",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -251,7 +251,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "specifying watch namespaces, type=list",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
 							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
@@ -276,7 +276,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "it is valid to specify no Konnect options",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: nil,
 					},
@@ -285,7 +285,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "it is valid to specify APIAuthConfigurationRef without Source and Mirror",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
 							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -298,7 +298,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "it is valid to specify Mirror field when source is set to Mirror",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
 							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -317,7 +317,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "it is valid to have source set to Origin without Mirror field",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
 							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -331,7 +331,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "it is invalid to specify Mirror field when source is not set to Mirror",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
 							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -351,7 +351,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "it is invalid to have source set to Mirror without Mirror field",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
 							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -372,7 +372,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "specify nodeport for listeners with 'NodePort' dataplane ingress service",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
@@ -397,7 +397,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "nodePort out of range",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
@@ -423,7 +423,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "Cannot specify nodeport for listeners with 'ClusterIP' dataplane ingress service",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
@@ -449,7 +449,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "Name must be unique in listener options",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						ListenersOptions: []operatorv2beta1.GatewayConfigurationListenerOptions{
 							{
@@ -468,7 +468,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			{
 				Name: "Nodeport must be unique in listener options",
 				TestObject: &operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						ListenersOptions: []operatorv2beta1.GatewayConfigurationListenerOptions{
 							{

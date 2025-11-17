@@ -20,14 +20,14 @@ func TestKongUpstream(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	obj := &configurationv1alpha1.KongUpstream{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "KongUpstream",
 			APIVersion: configurationv1alpha1.GroupVersion.String(),
 		},
-		ObjectMeta: common.CommonObjectMeta,
+		ObjectMeta: common.CommonObjectMeta(ns.Name),
 	}
 
 	t.Run("cp ref", func(t *testing.T) {
@@ -45,7 +45,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "hash_fallback_header is required when hash_fallback is set to 'header'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -63,7 +63,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "validation fails when hash_fallback_header is not provided when hash_fallback is set to 'header'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -81,7 +81,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "hash_fallback_query_arg is required when hash_fallback is set to 'query_arg'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -99,7 +99,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "validation fails when hash_fallback_query_arg is not provided when hash_fallback is set to 'query_arg'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -117,7 +117,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "hash_fallback_uri_capture is required when hash_fallback is set to 'uri_capture'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -135,7 +135,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "validation fails when hash_fallback_uri_capture is not provided when hash_fallback is set to 'uri_capture'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -153,7 +153,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "hash_on_cookie and hash_on_cookie_path are required when hash_on is set to 'cookie'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -172,7 +172,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "hash_on_cookie and hash_on_cookie_path are required when hash_fallback is set to 'cookie'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -191,7 +191,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "validation fails when hash_on_cookie is not provided when hash_on is set to 'cookie'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -210,7 +210,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "validation fails when hash_on_cookie is not provided when hash_fallback is set to 'cookie'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -229,7 +229,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "validation fails when hash_on_cookie_path is not provided when hash_on is set to 'cookie'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -248,7 +248,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "validation fails when hash_on_cookie_path is not provided when hash_fallback is set to 'cookie'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -267,7 +267,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "validation fails when hash_on_cookie_path nor hash_on_cookie are provided when hash_fallback is set to 'cookie'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -285,7 +285,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "validation fails when hash_on_cookie_path nor hash_on_cookie are provided when hash_on is set to 'cookie'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -303,7 +303,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "validation fails when hash_on_header is not provided when hash_on is set to 'header'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -321,7 +321,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "hash_on_query_arg is required when hash_on is set to 'query_arg'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -339,7 +339,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "validation fails when hash_on_query_arg is not provided when hash_on is set to 'query_arg'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -357,7 +357,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "hash_on_uri_capture is required when hash_on is set to 'uri_capture'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -375,7 +375,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "validation fails when hash_on_uri_capture is not provided when hash_on is set to 'uri_capture'",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -399,7 +399,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -424,7 +424,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "more than 20 tags are not allowed",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -450,7 +450,7 @@ func TestKongUpstream(t *testing.T) {
 			{
 				Name: "tags entries must not be longer than 128 characters",
 				TestObject: &configurationv1alpha1.KongUpstream{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,

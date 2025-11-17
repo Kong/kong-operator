@@ -17,14 +17,14 @@ func TestKongCustomEntity(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("spec", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongCustomEntity]{
 			{
 				Name: "basic allowed spec",
 				TestObject: &configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						Fields: apiextensionsv1.JSON{
 							Raw: []byte(
@@ -40,7 +40,7 @@ func TestKongCustomEntity(t *testing.T) {
 			{
 				Name: "spec.fields is required",
 				TestObject: &configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec:       configurationv1alpha1.KongCustomEntitySpec{},
 				},
 				ExpectedErrorMessage: lo.ToPtr("spec.fields: Required value"),
@@ -48,7 +48,7 @@ func TestKongCustomEntity(t *testing.T) {
 			{
 				Name: "spec.type cannot be known Kong entity type - services",
 				TestObject: &configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType: "services",
 						Fields: apiextensionsv1.JSON{
@@ -63,7 +63,7 @@ func TestKongCustomEntity(t *testing.T) {
 			{
 				Name: "spec.type cannot be known Kong entity type - routes",
 				TestObject: &configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType: "routes",
 						Fields: apiextensionsv1.JSON{
@@ -78,7 +78,7 @@ func TestKongCustomEntity(t *testing.T) {
 			{
 				Name: "spec.type cannot be known Kong entity type - upstreams",
 				TestObject: &configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType: "upstreams",
 						Fields: apiextensionsv1.JSON{
@@ -93,7 +93,7 @@ func TestKongCustomEntity(t *testing.T) {
 			{
 				Name: "spec.type cannot be known Kong entity type - targets",
 				TestObject: &configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType: "targets",
 						Fields: apiextensionsv1.JSON{
@@ -108,7 +108,7 @@ func TestKongCustomEntity(t *testing.T) {
 			{
 				Name: "spec.type cannot be known Kong entity type - plugins",
 				TestObject: &configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType: "plugins",
 						Fields: apiextensionsv1.JSON{
@@ -123,7 +123,7 @@ func TestKongCustomEntity(t *testing.T) {
 			{
 				Name: "spec.type cannot be known Kong entity type - consumers",
 				TestObject: &configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType: "consumers",
 						Fields: apiextensionsv1.JSON{
@@ -138,7 +138,7 @@ func TestKongCustomEntity(t *testing.T) {
 			{
 				Name: "spec.type cannot be known Kong entity type - consumer_groups",
 				TestObject: &configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType: "consumer_groups",
 						Fields: apiextensionsv1.JSON{
@@ -153,7 +153,7 @@ func TestKongCustomEntity(t *testing.T) {
 			{
 				Name: "spec.type can be set",
 				TestObject: &configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType: "dummy",
 						Fields: apiextensionsv1.JSON{
@@ -167,7 +167,7 @@ func TestKongCustomEntity(t *testing.T) {
 			{
 				Name: "spec.type cannot be changed",
 				TestObject: &configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						EntityType: "dummy",
 						Fields: apiextensionsv1.JSON{
@@ -185,7 +185,7 @@ func TestKongCustomEntity(t *testing.T) {
 			{
 				Name: "spec.parentRef.kind KongPlugin is supported",
 				TestObject: &configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						Fields: apiextensionsv1.JSON{
 							Raw: []byte(
@@ -201,7 +201,7 @@ func TestKongCustomEntity(t *testing.T) {
 			{
 				Name: "spec.parentRef.kind KongClusterPlugin is supported",
 				TestObject: &configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						Fields: apiextensionsv1.JSON{
 							Raw: []byte(
@@ -217,7 +217,7 @@ func TestKongCustomEntity(t *testing.T) {
 			{
 				Name: "other types for spec.parentRef.kind are not allowed",
 				TestObject: &configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						Fields: apiextensionsv1.JSON{
 							Raw: []byte(

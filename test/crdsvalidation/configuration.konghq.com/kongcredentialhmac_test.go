@@ -20,14 +20,14 @@ func TestKongCredentialHMAC(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("updates not allowed for status conditions", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongCredentialHMAC]{
 			{
 				Name: "consumerRef change is not allowed for Programmed=True",
 				TestObject: &configurationv1alpha1.KongCredentialHMAC{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialHMACSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -57,7 +57,7 @@ func TestKongCredentialHMAC(t *testing.T) {
 			{
 				Name: "consumerRef change is allowed when consumer is not Programmed=True nor APIAuthValid=True",
 				TestObject: &configurationv1alpha1.KongCredentialHMAC{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialHMACSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -92,7 +92,7 @@ func TestKongCredentialHMAC(t *testing.T) {
 			{
 				Name: "username is required",
 				TestObject: &configurationv1alpha1.KongCredentialHMAC{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialHMACSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -107,7 +107,7 @@ func TestKongCredentialHMAC(t *testing.T) {
 			{
 				Name: "username is required and no error is expected when it is set",
 				TestObject: &configurationv1alpha1.KongCredentialHMAC{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialHMACSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -128,7 +128,7 @@ func TestKongCredentialHMAC(t *testing.T) {
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongCredentialHMAC{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialHMACSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -149,7 +149,7 @@ func TestKongCredentialHMAC(t *testing.T) {
 			{
 				Name: "more than 20 tags are not allowed",
 				TestObject: &configurationv1alpha1.KongCredentialHMAC{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialHMACSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",
@@ -171,7 +171,7 @@ func TestKongCredentialHMAC(t *testing.T) {
 			{
 				Name: "tags entries must not be longer than 128 characters",
 				TestObject: &configurationv1alpha1.KongCredentialHMAC{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCredentialHMACSpec{
 						ConsumerRef: corev1.LocalObjectReference{
 							Name: "test-kong-consumer",

@@ -22,14 +22,14 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("members can only be set on groups", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.KonnectGatewayControlPlane]{
 			{
 				Name: "members can be set on control-plane group",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cpg-1"),
@@ -51,7 +51,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "members cannot be set on regular control-planes",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cpg-1"),
@@ -74,7 +74,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "members cannot be set on a KIC control-planes",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cpg-1"),
@@ -97,7 +97,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "members cannot be set on serverless control-planes",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cpg-1"),
@@ -128,7 +128,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 				// Tracking issue: https://github.com/Kong/kubernetes-configuration/issues/504
 				SkipReason: "Fails when v1alpha2 is the storage version due to missing conversion logic. This test could be re-enabled by implementing conversion logic using a conversion webhook: https://github.com/Kong/kubernetes-configuration/issues/504",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -161,7 +161,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 				// Tracking issue: https://github.com/Kong/kubernetes-configuration/issues/504
 				SkipReason: "Fails when v1alpha2 is the storage version due to missing conversion logic. This test could be re-enabled by implementing conversion logic using a conversion webhook: https://github.com/Kong/kubernetes-configuration/issues/504",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -194,7 +194,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 				// Tracking issue: https://github.com/Kong/kubernetes-configuration/issues/504
 				SkipReason: "Fails when v1alpha2 is the storage version due to missing conversion logic. This test could be re-enabled by implementing conversion logic using a conversion webhook: https://github.com/Kong/kubernetes-configuration/issues/504",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -230,7 +230,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "cluster_type change is not allowed",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -257,7 +257,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "spec.labels of length 40 is allowed",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -281,7 +281,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "spec.labels length must not be greater than 40",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -306,7 +306,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "spec.labels keys' length must not be greater than 63",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -327,7 +327,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "spec.labels keys' length must at least 1 character long",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -349,7 +349,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "spec.labels values' length must not be greater than 63",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -370,7 +370,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "spec.labels values' length must at least 1 character long",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -391,7 +391,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "spec.labels keys must not start with k8s",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -412,7 +412,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "spec.labels keys must not start with kong",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -433,7 +433,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "spec.labels keys must not start with konnect",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -454,7 +454,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "spec.labels keys must not start with mesh",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -475,7 +475,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "spec.labels keys must not start with kic",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -496,7 +496,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "spec.labels keys must not start with insomnia",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -517,7 +517,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "spec.labels keys must not start with underscore",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -538,7 +538,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "spec.labels keys must satisfy the '^(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])?$' pattern",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -560,7 +560,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "unspecified cluster type (defaulting to CLUSTR_TYPE_CONTROL_PLANE) is allowed",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name: lo.ToPtr("cp-1"),
@@ -576,7 +576,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "CLUSTER_TYPE_CONTROL_PLANE_GROUP is supported",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -593,7 +593,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "CLUSTER_TYPE_CONTROL_PLANE is supported",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -610,7 +610,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "CLUSTER_TYPE_K8S_INGRESS_CONTROLLER is supported",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -627,7 +627,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "CLUSTER_TYPE_SERVERLESS is not supported",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -645,7 +645,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "CLUSTER_TYPE_CUSTOM is not supported",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -663,7 +663,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "cluster type is immutable",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name: lo.ToPtr("cp-1"),
@@ -685,7 +685,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 				// Tracking issue: https://github.com/Kong/kubernetes-configuration/issues/504
 				SkipReason: "Fails when v1alpha2 is the storage version due to missing conversion logic. This test could be re-enabled by implementing conversion logic using a conversion webhook: https://github.com/Kong/kubernetes-configuration/issues/504",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -706,7 +706,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "cannot set cloud_gateway to true for cluster_type CLUSTER_TYPE_K8S_INGRESS_CONTROLLER",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:         lo.ToPtr("cp-1"),
@@ -725,7 +725,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "cannot set cloud_gateway to false for cluster_type CLUSTER_TYPE_K8S_INGRESS_CONTROLLER",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:         lo.ToPtr("cp-1"),
@@ -744,7 +744,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "not setting cloud_gateway for cluster_type CLUSTER_TYPE_K8S_INGRESS_CONTROLLER passes",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name:        lo.ToPtr("cp-1"),
@@ -767,7 +767,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "no type specificed, no KonnectID specified",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{
 							Name: lo.ToPtr("cp-1"),
@@ -783,7 +783,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "mirror type, no KonnectID specified",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
@@ -798,7 +798,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "mirror type, well-formed KonnectID specified",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
 						Mirror: &konnectv1alpha1.MirrorSpec{
@@ -817,7 +817,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "mirror type, malformed KonnectID specified",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
 						Mirror: &konnectv1alpha1.MirrorSpec{
@@ -837,7 +837,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "mirror type, KonnectID specified, controlPlane spec specified",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
 						Mirror: &konnectv1alpha1.MirrorSpec{
@@ -860,7 +860,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "origin type, KonnectID specified",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 						Mirror: &konnectv1alpha1.MirrorSpec{
@@ -880,7 +880,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "origin type, no KonnectID specified, empty controlPlane spec",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
@@ -895,7 +895,7 @@ func TestKonnectGatewayControlPlane(t *testing.T) {
 			{
 				Name: "origin type, no KonnectID specified, with controlPlane name",
 				TestObject: &konnectv1alpha1.KonnectGatewayControlPlane{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectGatewayControlPlaneSpec{
 						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
 						CreateControlPlaneRequest: konnectv1alpha1.CreateControlPlaneRequest{

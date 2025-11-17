@@ -19,21 +19,21 @@ func TestGatewayConfiguration(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	t.Run("extensions", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.GatewayConfiguration]{
 			{
 				Name: "no extensions",
 				TestObject: &operatorv1beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec:       operatorv1beta1.GatewayConfigurationSpec{},
 				},
 			},
 			{
 				Name: "valid konnectExtension at the gatewayConfiguration level",
 				TestObject: &operatorv1beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
@@ -50,7 +50,7 @@ func TestGatewayConfiguration(t *testing.T) {
 			{
 				Name: "invalid konnectExtension",
 				TestObject: &operatorv1beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
@@ -68,7 +68,7 @@ func TestGatewayConfiguration(t *testing.T) {
 			{
 				Name: "konnectExtension at the DataPlane level",
 				TestObject: &operatorv1beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
 						DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
 							Extensions: []commonv1alpha1.ExtensionRef{
@@ -88,7 +88,7 @@ func TestGatewayConfiguration(t *testing.T) {
 			{
 				Name: "konnectExtension at the ControlPlane level",
 				TestObject: &operatorv1beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{ //nolint:forbidigo
 							Extensions: []commonv1alpha1.ExtensionRef{
@@ -114,7 +114,7 @@ func TestGatewayConfiguration(t *testing.T) {
 			{
 				Name: "no DataPlaneOptions",
 				TestObject: &operatorv1beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
 						DataPlaneOptions: nil,
 					},
@@ -123,7 +123,7 @@ func TestGatewayConfiguration(t *testing.T) {
 			{
 				Name: "specifying resources.PodDisruptionBudget",
 				TestObject: &operatorv1beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
 						DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -146,7 +146,7 @@ func TestGatewayConfiguration(t *testing.T) {
 			{
 				Name: "specifying resources.PodDisruptionBudget can only specify onf of maxUnavailable and minAvailable",
 				TestObject: &operatorv1beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
 						DataPlaneOptions: &operatorv1beta1.GatewayConfigDataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -176,7 +176,7 @@ func TestGatewayConfiguration(t *testing.T) {
 			{
 				Name: "no ControlPlaneOptions",
 				TestObject: &operatorv1beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: nil,
 					},
@@ -185,7 +185,7 @@ func TestGatewayConfiguration(t *testing.T) {
 			{
 				Name: "specifying watch namespaces, type=all",
 				TestObject: &operatorv1beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{ //nolint:forbidigo
 							WatchNamespaces: &operatorv1beta1.WatchNamespaces{
@@ -198,7 +198,7 @@ func TestGatewayConfiguration(t *testing.T) {
 			{
 				Name: "specifying watch namespaces, type=own",
 				TestObject: &operatorv1beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{ //nolint:forbidigo
 							WatchNamespaces: &operatorv1beta1.WatchNamespaces{
@@ -211,7 +211,7 @@ func TestGatewayConfiguration(t *testing.T) {
 			{
 				Name: "specifying watch namespaces, type=list",
 				TestObject: &operatorv1beta1.GatewayConfiguration{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{ //nolint:forbidigo
 							WatchNamespaces: &operatorv1beta1.WatchNamespaces{

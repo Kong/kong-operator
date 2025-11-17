@@ -18,7 +18,7 @@ func TestKongPluginBindings(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	validTestCPRef := func() commonv1alpha1.ControlPlaneRef {
 		return commonv1alpha1.ControlPlaneRef{
@@ -35,7 +35,7 @@ func TestKongPluginBindings(t *testing.T) {
 				Kind:       "KongPluginBinding",
 				APIVersion: configurationv1alpha1.GroupVersion.String(),
 			},
-			ObjectMeta: common.CommonObjectMeta,
+			ObjectMeta: common.CommonObjectMeta(ns.Name),
 			Spec: configurationv1alpha1.KongPluginBindingSpec{
 				PluginReference: configurationv1alpha1.PluginRef{
 					Name: "rate-limiting",
@@ -59,7 +59,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "no plugin reference",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						Targets: &configurationv1alpha1.KongPluginBindingTargets{
 							ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
@@ -76,7 +76,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "empty plugin reference",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{},
 						Targets: &configurationv1alpha1.KongPluginBindingTargets{
@@ -94,7 +94,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "valid KongPlugin reference",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -114,7 +114,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "valid KongClusterPlugin reference",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -134,7 +134,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "wrong plugin kind",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("WrongPluginKind"),
@@ -161,7 +161,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "consumer, route, service targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -189,7 +189,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "consumerGroup, route, service targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -217,7 +217,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "consumer, route targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -240,7 +240,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "consumer, service targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -263,7 +263,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "consumerGroup, route targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -286,7 +286,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "consumerGroup, service targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -309,7 +309,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "route, service targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -337,7 +337,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "consumer target",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -355,7 +355,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "consumerGroup target",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -373,7 +373,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "route target",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -393,7 +393,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "service target",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -413,7 +413,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "kongConsumer, kongConsumerGroup, service, route targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -445,7 +445,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "kongConsumer, kongConsumerGroup, route targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -472,7 +472,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "kongConsumer, kongConsumerGroup, service targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -499,7 +499,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "kongConsumer, kongConsumerGroup targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -521,7 +521,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "no targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -535,7 +535,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "empty targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -556,7 +556,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "networking.k8s.io/Ingress, as service target",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -577,7 +577,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "core/Service, as route target",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -604,7 +604,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "core/Service, configuration.konghq.com/KongRoute targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -630,7 +630,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "configuration.konghq.com/KongService, networking.k8s.io/Ingress targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Kind: lo.ToPtr("KongPlugin"),
@@ -662,7 +662,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "GlobalInControlPlane allow nil targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						Scope: configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane,
 						PluginReference: configurationv1alpha1.PluginRef{
@@ -676,7 +676,7 @@ func TestKongPluginBindings(t *testing.T) {
 			{
 				Name: "GlobalInControlPlane rejects non-nil targets",
 				TestObject: &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						Scope: configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane,
 						PluginReference: configurationv1alpha1.PluginRef{

@@ -20,14 +20,14 @@ func TestKongRoute(t *testing.T) {
 
 	ctx := t.Context()
 	scheme := scheme.Get()
-	cfg, _ := envtest.Setup(t, ctx, scheme)
+	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	obj := &configurationv1alpha1.KongRoute{
 		TypeMeta: metav1.TypeMeta{
 			Kind:       "KongRoute",
 			APIVersion: configurationv1alpha1.GroupVersion.String(),
 		},
-		ObjectMeta: common.CommonObjectMeta,
+		ObjectMeta: common.CommonObjectMeta(ns.Name),
 	}
 
 	t.Run("cp ref", func(t *testing.T) {
@@ -40,7 +40,7 @@ func TestKongRoute(t *testing.T) {
 			{
 				Name: "bind servicebound to controlplane too",
 				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -62,7 +62,7 @@ func TestKongRoute(t *testing.T) {
 			{
 				Name: "make serviceless",
 				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -91,7 +91,7 @@ func TestKongRoute(t *testing.T) {
 			{
 				Name: "no http in protocols implies no other requirements",
 				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type:          configurationv1alpha1.ServiceRefNamespacedRef,
@@ -106,7 +106,7 @@ func TestKongRoute(t *testing.T) {
 			{
 				Name: "http in protocols with hosts set yields no error",
 				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type:          configurationv1alpha1.ServiceRefNamespacedRef,
@@ -122,7 +122,7 @@ func TestKongRoute(t *testing.T) {
 			{
 				Name: "http in protocols no hosts, methods, paths or headers yields an error",
 				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type:          configurationv1alpha1.ServiceRefNamespacedRef,
@@ -144,7 +144,7 @@ func TestKongRoute(t *testing.T) {
 			{
 				Name: "NamespacedRef reference is valid",
 				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -161,7 +161,7 @@ func TestKongRoute(t *testing.T) {
 			{
 				Name: "NamespacedRef reference is invalid when empty name is provided",
 				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -179,7 +179,7 @@ func TestKongRoute(t *testing.T) {
 			{
 				Name: "NamespacedRef reference is invalid when name is not provided",
 				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -194,7 +194,7 @@ func TestKongRoute(t *testing.T) {
 			{
 				Name: "not providing namespacedRef when type is namespacedRef yields an error",
 				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ServiceRef: &configurationv1alpha1.ServiceRef{
 							Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -215,7 +215,7 @@ func TestKongRoute(t *testing.T) {
 			{
 				Name: "up to 20 tags are allowed",
 				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -238,7 +238,7 @@ func TestKongRoute(t *testing.T) {
 			{
 				Name: "more than 20 tags are not allowed",
 				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -262,7 +262,7 @@ func TestKongRoute(t *testing.T) {
 			{
 				Name: "tags entries must not be longer than 128 characters",
 				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
