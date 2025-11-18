@@ -297,7 +297,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			// has been already deleted, try to take apiAuthRef from the status (last known reference).
 			if ext.Status.Konnect != nil && ext.Status.Konnect.AuthRef != nil && ext.Status.Konnect.AuthRef.Name != "" {
 				apiAuthRef = types.NamespacedName{
-					Name:      ext.Status.Konnect.AuthRef.Name,
+					Name: ext.Status.Konnect.AuthRef.Name,
 					// For now the referenced KonnectAPIAuthConfiguration is in the same namespace as the KonnectExtension.
 					Namespace: ext.Namespace,
 				}
@@ -474,6 +474,10 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 		certificateSecret.Annotations[consts.DataPlaneCertificateIDAnnotationKey] = newMappedIDsStr
 		if err := r.Update(ctx, certificateSecret); err != nil {
+			if k8serrors.IsConflict(err) {
+				log.Debug(logger, "conflict updating Secret annotations, requeueing")
+				return ctrl.Result{Requeue: true}, nil
+			}
 			return ctrl.Result{}, err
 		}
 		return ctrl.Result{}, nil
