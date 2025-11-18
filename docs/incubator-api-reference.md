@@ -8,8 +8,9 @@
 
 Package v1alpha1 contains API Schema definitions for the incubator.ingress-controller.konghq.com v1alpha1 API group.
 
-- [KongServiceFacade](#kongservicefacade)
-### KongServiceFacade
+- [KongServiceFacade](#github-com-kong-kong-operator-api-incubator-v1alpha1-kongservicefacade)
+
+### <a id="github-com-kong-kong-operator-api-incubator-v1alpha1-kongservicefacade">KongServiceFacade</a>
 
 
 KongServiceFacade allows creating separate Kong Services for a single Kubernetes

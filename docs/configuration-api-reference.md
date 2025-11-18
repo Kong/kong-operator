@@ -10,10 +10,11 @@
 
 Package v1 contains API Schema definitions for the konghq.com v1 API group.
 
-- [KongClusterPlugin](#kongclusterplugin)
-- [KongConsumer](#kongconsumer)
-- [KongPlugin](#kongplugin)
-### KongClusterPlugin
+- [KongClusterPlugin](#github-com-kong-kong-operator-api-configuration-v1-kongclusterplugin)
+- [KongConsumer](#github-com-kong-kong-operator-api-configuration-v1-kongconsumer)
+- [KongPlugin](#github-com-kong-kong-operator-api-configuration-v1-kongplugin)
+
+### <a id="github-com-kong-kong-operator-api-configuration-v1-kongclusterplugin">KongClusterPlugin</a>
 
 
 KongClusterPlugin is the Schema for the kongclusterplugins API.
@@ -39,7 +40,7 @@ KongClusterPlugin is the Schema for the kongclusterplugins API.
 
 
 
-### KongConsumer
+### <a id="github-com-kong-kong-operator-api-configuration-v1-kongconsumer">KongConsumer</a>
 
 
 KongConsumer is the Schema for the kongconsumers API.
@@ -60,7 +61,7 @@ KongConsumer is the Schema for the kongconsumers API.
 
 
 
-### KongPlugin
+### <a id="github-com-kong-kong-operator-api-configuration-v1-kongplugin">KongPlugin</a>
 
 
 KongPlugin is the Schema for the kongplugins API.
@@ -275,27 +276,28 @@ _Appears in:_
 
 Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
 
-- [IngressClassParameters](#ingressclassparameters)
-- [KongCACertificate](#kongcacertificate)
-- [KongCertificate](#kongcertificate)
-- [KongCredentialACL](#kongcredentialacl)
-- [KongCredentialAPIKey](#kongcredentialapikey)
-- [KongCredentialBasicAuth](#kongcredentialbasicauth)
-- [KongCredentialHMAC](#kongcredentialhmac)
-- [KongCredentialJWT](#kongcredentialjwt)
-- [KongCustomEntity](#kongcustomentity)
-- [KongDataPlaneClientCertificate](#kongdataplaneclientcertificate)
-- [KongKey](#kongkey)
-- [KongKeySet](#kongkeyset)
-- [KongLicense](#konglicense)
-- [KongPluginBinding](#kongpluginbinding)
-- [KongRoute](#kongroute)
-- [KongSNI](#kongsni)
-- [KongService](#kongservice)
-- [KongTarget](#kongtarget)
-- [KongUpstream](#kongupstream)
-- [KongVault](#kongvault)
-### IngressClassParameters
+- [IngressClassParameters](#github-com-kong-kong-operator-api-configuration-v1alpha1-ingressclassparameters)
+- [KongCACertificate](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcacertificate)
+- [KongCertificate](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcertificate)
+- [KongCredentialACL](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialacl)
+- [KongCredentialAPIKey](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialapikey)
+- [KongCredentialBasicAuth](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialbasicauth)
+- [KongCredentialHMAC](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialhmac)
+- [KongCredentialJWT](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialjwt)
+- [KongCustomEntity](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcustomentity)
+- [KongDataPlaneClientCertificate](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongdataplaneclientcertificate)
+- [KongKey](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongkey)
+- [KongKeySet](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongkeyset)
+- [KongLicense](#github-com-kong-kong-operator-api-configuration-v1alpha1-konglicense)
+- [KongPluginBinding](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongpluginbinding)
+- [KongRoute](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongroute)
+- [KongSNI](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongsni)
+- [KongService](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongservice)
+- [KongTarget](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongtarget)
+- [KongUpstream](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongupstream)
+- [KongVault](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongvault)
+
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-ingressclassparameters">IngressClassParameters</a>
 
 
 IngressClassParameters is the Schema for the IngressClassParameters API.
@@ -311,7 +313,7 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 
 
 
-### KongCACertificate
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcacertificate">KongCACertificate</a>
 
 
 KongCACertificate is the schema for CACertificate API which defines a Kong CA Certificate.
@@ -328,7 +330,7 @@ KongCACertificate is the schema for CACertificate API which defines a Kong CA Ce
 
 
 
-### KongCertificate
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcertificate">KongCertificate</a>
 
 
 KongCertificate is the schema for Certificate API which defines a Kong Certificate.
@@ -345,7 +347,7 @@ KongCertificate is the schema for Certificate API which defines a Kong Certifica
 
 
 
-### KongCredentialACL
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialacl">KongCredentialACL</a>
 
 
 KongCredentialACL is the schema for ACL credentials API which defines a ACL credential for consumers.
@@ -362,7 +364,7 @@ KongCredentialACL is the schema for ACL credentials API which defines a ACL cred
 
 
 
-### KongCredentialAPIKey
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialapikey">KongCredentialAPIKey</a>
 
 
 KongCredentialAPIKey is the schema for API key credentials API which defines a API key credential for consumers.
@@ -379,7 +381,7 @@ KongCredentialAPIKey is the schema for API key credentials API which defines a A
 
 
 
-### KongCredentialBasicAuth
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialbasicauth">KongCredentialBasicAuth</a>
 
 
 KongCredentialBasicAuth is the schema for BasicAuth credentials API which defines a BasicAuth credential for consumers.
@@ -396,7 +398,7 @@ KongCredentialBasicAuth is the schema for BasicAuth credentials API which define
 
 
 
-### KongCredentialHMAC
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialhmac">KongCredentialHMAC</a>
 
 
 KongCredentialHMAC is the schema for HMAC credentials API which defines a HMAC credential for consumers.
@@ -413,7 +415,7 @@ KongCredentialHMAC is the schema for HMAC credentials API which defines a HMAC c
 
 
 
-### KongCredentialJWT
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialjwt">KongCredentialJWT</a>
 
 
 KongCredentialJWT is the schema for JWT credentials API which defines a JWT credential for consumers.
@@ -430,7 +432,7 @@ KongCredentialJWT is the schema for JWT credentials API which defines a JWT cred
 
 
 
-### KongCustomEntity
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcustomentity">KongCustomEntity</a>
 
 
 KongCustomEntity defines a "custom" Kong entity that KIC cannot support the entity type directly.
@@ -447,7 +449,7 @@ KongCustomEntity defines a "custom" Kong entity that KIC cannot support the enti
 
 
 
-### KongDataPlaneClientCertificate
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongdataplaneclientcertificate">KongDataPlaneClientCertificate</a>
 
 
 KongDataPlaneClientCertificate is the schema for KongDataPlaneClientCertificate API which defines a KongDataPlaneClientCertificate entity.
@@ -464,7 +466,7 @@ KongDataPlaneClientCertificate is the schema for KongDataPlaneClientCertificate 
 
 
 
-### KongKey
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongkey">KongKey</a>
 
 
 KongKey is the schema for KongKey API which defines a KongKey entity.
@@ -481,7 +483,7 @@ KongKey is the schema for KongKey API which defines a KongKey entity.
 
 
 
-### KongKeySet
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongkeyset">KongKeySet</a>
 
 
 KongKeySet is the schema for KongKeySet API which defines a KongKeySet entity.
@@ -498,7 +500,7 @@ KongKeySet is the schema for KongKeySet API which defines a KongKeySet entity.
 
 
 
-### KongLicense
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-konglicense">KongLicense</a>
 
 
 KongLicense stores a Kong enterprise license to apply to managed Kong gateway instances.
@@ -516,7 +518,7 @@ KongLicense stores a Kong enterprise license to apply to managed Kong gateway in
 
 
 
-### KongPluginBinding
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongpluginbinding">KongPluginBinding</a>
 
 
 KongPluginBinding is the schema for Plugin Bindings API which defines a Kong Plugin Binding.
@@ -533,7 +535,7 @@ KongPluginBinding is the schema for Plugin Bindings API which defines a Kong Plu
 
 
 
-### KongRoute
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongroute">KongRoute</a>
 
 
 KongRoute is the schema for Routes API which defines a Kong Route.
@@ -550,7 +552,7 @@ KongRoute is the schema for Routes API which defines a Kong Route.
 
 
 
-### KongSNI
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongsni">KongSNI</a>
 
 
 KongSNI is the schema for SNI API which defines a Kong SNI.
@@ -567,7 +569,7 @@ KongSNI is the schema for SNI API which defines a Kong SNI.
 
 
 
-### KongService
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongservice">KongService</a>
 
 
 KongService is the schema for Services API which defines a Kong Service.
@@ -584,7 +586,7 @@ KongService is the schema for Services API which defines a Kong Service.
 
 
 
-### KongTarget
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongtarget">KongTarget</a>
 
 
 KongTarget is the schema for Target API which defines a Kong Target attached to a Kong Upstream.
@@ -601,7 +603,7 @@ KongTarget is the schema for Target API which defines a Kong Target attached to 
 
 
 
-### KongUpstream
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongupstream">KongUpstream</a>
 
 
 KongUpstream is the schema for Upstream API which defines a Kong Upstream.
@@ -618,7 +620,7 @@ KongUpstream is the schema for Upstream API which defines a Kong Upstream.
 
 
 
-### KongVault
+### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongvault">KongVault</a>
 
 
 KongVault is the schema for kongvaults API which defines a custom Kong vault.
@@ -1900,9 +1902,10 @@ _Appears in:_
 
 Package v1beta1 contains API Schema definitions for the configuration.konghq.com v1beta1 API group.
 
-- [KongConsumerGroup](#kongconsumergroup)
-- [KongUpstreamPolicy](#kongupstreampolicy)
-### KongConsumerGroup
+- [KongConsumerGroup](#github-com-kong-kong-operator-api-configuration-v1beta1-kongconsumergroup)
+- [KongUpstreamPolicy](#github-com-kong-kong-operator-api-configuration-v1beta1-kongupstreampolicy)
+
+### <a id="github-com-kong-kong-operator-api-configuration-v1beta1-kongconsumergroup">KongConsumerGroup</a>
 
 
 KongConsumerGroup is the Schema for the kongconsumergroups API.
@@ -1919,7 +1922,7 @@ KongConsumerGroup is the Schema for the kongconsumergroups API.
 
 
 
-### KongUpstreamPolicy
+### <a id="github-com-kong-kong-operator-api-configuration-v1beta1-kongupstreampolicy">KongUpstreamPolicy</a>
 
 
 KongUpstreamPolicy allows configuring algorithm that should be used for load balancing traffic between Kong

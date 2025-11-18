@@ -9,13 +9,14 @@
 
 Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1alpha1 API group.
 
-- [KonnectAPIAuthConfiguration](#konnectapiauthconfiguration)
-- [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnectcloudgatewaydataplanegroupconfiguration)
-- [KonnectCloudGatewayNetwork](#konnectcloudgatewaynetwork)
-- [KonnectCloudGatewayTransitGateway](#konnectcloudgatewaytransitgateway)
-- [KonnectExtension](#konnectextension)
-- [KonnectGatewayControlPlane](#konnectgatewaycontrolplane)
-### KonnectAPIAuthConfiguration
+- [KonnectAPIAuthConfiguration](#github-com-kong-kong-operator-api-konnect-v1alpha1-konnectapiauthconfiguration)
+- [KonnectCloudGatewayDataPlaneGroupConfiguration](#github-com-kong-kong-operator-api-konnect-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
+- [KonnectCloudGatewayNetwork](#github-com-kong-kong-operator-api-konnect-v1alpha1-konnectcloudgatewaynetwork)
+- [KonnectCloudGatewayTransitGateway](#github-com-kong-kong-operator-api-konnect-v1alpha1-konnectcloudgatewaytransitgateway)
+- [KonnectExtension](#github-com-kong-kong-operator-api-konnect-v1alpha1-konnectextension)
+- [KonnectGatewayControlPlane](#github-com-kong-kong-operator-api-konnect-v1alpha1-konnectgatewaycontrolplane)
+
+### <a id="github-com-kong-kong-operator-api-konnect-v1alpha1-konnectapiauthconfiguration">KonnectAPIAuthConfiguration</a>
 
 
 KonnectAPIAuthConfiguration is the Schema for the Konnect configuration type.
@@ -32,7 +33,7 @@ KonnectAPIAuthConfiguration is the Schema for the Konnect configuration type.
 
 
 
-### KonnectCloudGatewayDataPlaneGroupConfiguration
+### <a id="github-com-kong-kong-operator-api-konnect-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration">KonnectCloudGatewayDataPlaneGroupConfiguration</a>
 
 
 KonnectCloudGatewayDataPlaneGroupConfiguration is the Schema for the Konnect Network API.
@@ -49,7 +50,7 @@ KonnectCloudGatewayDataPlaneGroupConfiguration is the Schema for the Konnect Net
 
 
 
-### KonnectCloudGatewayNetwork
+### <a id="github-com-kong-kong-operator-api-konnect-v1alpha1-konnectcloudgatewaynetwork">KonnectCloudGatewayNetwork</a>
 
 
 KonnectCloudGatewayNetwork is the Schema for the Konnect Network API.
@@ -66,7 +67,7 @@ KonnectCloudGatewayNetwork is the Schema for the Konnect Network API.
 
 
 
-### KonnectCloudGatewayTransitGateway
+### <a id="github-com-kong-kong-operator-api-konnect-v1alpha1-konnectcloudgatewaytransitgateway">KonnectCloudGatewayTransitGateway</a>
 
 
 KonnectCloudGatewayTransitGateway is the Schema for the Konnect Transit Gateway API.
@@ -83,7 +84,7 @@ KonnectCloudGatewayTransitGateway is the Schema for the Konnect Transit Gateway 
 
 
 
-### KonnectExtension
+### <a id="github-com-kong-kong-operator-api-konnect-v1alpha1-konnectextension">KonnectExtension</a>
 
 
 KonnectExtension is the Schema for the KonnectExtension API, and is intended to be referenced as
@@ -103,7 +104,7 @@ deployment(s) spec gets customized to include the konnect-related configuration.
 
 
 
-### KonnectGatewayControlPlane
+### <a id="github-com-kong-kong-operator-api-konnect-v1alpha1-konnectgatewaycontrolplane">KonnectGatewayControlPlane</a>
 
 
 KonnectGatewayControlPlane is the Schema for the KonnectGatewayControlplanes API.
@@ -843,9 +844,10 @@ _Appears in:_
 
 Package v1alpha2 contains API Schema definitions for the konnect.konghq.com v1alpha2 API group.
 
-- [KonnectExtension](#konnectextension)
-- [KonnectGatewayControlPlane](#konnectgatewaycontrolplane)
-### KonnectExtension
+- [KonnectExtension](#github-com-kong-kong-operator-api-konnect-v1alpha2-konnectextension)
+- [KonnectGatewayControlPlane](#github-com-kong-kong-operator-api-konnect-v1alpha2-konnectgatewaycontrolplane)
+
+### <a id="github-com-kong-kong-operator-api-konnect-v1alpha2-konnectextension">KonnectExtension</a>
 
 
 KonnectExtension is the Schema for the KonnectExtension API, and is intended to be referenced as
@@ -865,7 +867,7 @@ deployment(s) spec gets customized to include the konnect-related configuration.
 
 
 
-### KonnectGatewayControlPlane
+### <a id="github-com-kong-kong-operator-api-konnect-v1alpha2-konnectgatewaycontrolplane">KonnectGatewayControlPlane</a>
 
 
 KonnectGatewayControlPlane is the Schema for the KonnectGatewayControlplanes API.

@@ -5,10 +5,12 @@
 
 {{ $gv.Doc }}
 
-{{- if $gv.Kinds  }}
+{{- if $gv.Kinds }}
 {{- range $gv.SortedKinds }}
-- {{ $gv.TypeForKind . | markdownRenderTypeLink }}
+{{- $typ := $gv.TypeForKind . }}
+- [{{ $typ.Name }}](#{{ markdownTypeID $typ | markdownSafeID }})
 {{- end }}
+
 {{ end }}
 
 {{- /* Display exported Kinds first */ -}}
