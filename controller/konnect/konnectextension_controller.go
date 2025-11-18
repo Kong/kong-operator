@@ -293,13 +293,18 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{}, err
 		}
 		if cleanup {
-			// In case if KonnectExtension is during deletion and respective KonnectGatewayControlPlane
-			// has been already deleted, take apiAuthRef from the status, because it contains the last
-			// known reference and it is needed to perform all reconciliation steps.
-			apiAuthRef = types.NamespacedName{
-				Name: ext.Status.Konnect.AuthRef.Name,
-				// For now the referenced KonnectAPIAuthConfiguration is in the same namespace as the KonnectExtension.
-				Namespace: ext.Namespace,
+			// In case KonnectExtension is during deletion and respective KonnectGatewayControlPlane
+			// has been already deleted, try to take apiAuthRef from the status (last known reference).
+			if ext.Status.Konnect != nil && ext.Status.Konnect.AuthRef != nil && ext.Status.Konnect.AuthRef.Name != "" {
+				apiAuthRef = types.NamespacedName{
+					Name:      ext.Status.Konnect.AuthRef.Name,
+					// For now the referenced KonnectAPIAuthConfiguration is in the same namespace as the KonnectExtension.
+					Namespace: ext.Namespace,
+				}
+			} else {
+				// Status does not contain a usable API auth reference; skip remote cleanup for now.
+				log.Debug(logger, "KonnectExtension status lacks APIAuth reference, requeueing until available")
+				return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, nil
 			}
 		} else {
 			// Requeue until the reference becomes valid.
@@ -599,19 +604,23 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return res, err
 	}
 
-	authRef := konnectv1alpha2.KonnectAPIAuthConfigurationRef{
-		Name: apiAuth.Name,
-	}
-	if enforceKonnectExtensionStatus(*cp, authRef, *certificateSecret, &ext) {
-		log.Debug(logger, "updating KonnectExtension status")
-		err := r.Client.Status().Update(ctx, &ext)
-		if k8serrors.IsConflict(err) {
-			// in case the err is of type conflict, don't return it and instead trigger
-			// another reconciliation.
-			// This is just to prevent spamming of conflict errors.
-			return ctrl.Result{Requeue: true}, nil
+	// Only update status when cp is available (not during cleanup with missing ControlPlane).
+	// During deletion, if the ControlPlane has been removed, we don't need to update the status.
+	if cp != nil {
+		authRef := konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+			Name: apiAuth.Name,
 		}
-		return ctrl.Result{}, err
+		if enforceKonnectExtensionStatus(*cp, authRef, *certificateSecret, &ext) {
+			log.Debug(logger, "updating KonnectExtension status")
+			err := r.Client.Status().Update(ctx, &ext)
+			if k8serrors.IsConflict(err) {
+				// in case the err is of type conflict, don't return it and instead trigger
+				// another reconciliation.
+				// This is just to prevent spamming of conflict errors.
+				return ctrl.Result{Requeue: true}, nil
+			}
+			return ctrl.Result{}, err
+		}
 	}
 
 	readyCondition = metav1.Condition{
