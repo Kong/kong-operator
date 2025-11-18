@@ -10,11 +10,12 @@
 
 Package v1alpha1 contains API Schema definitions for the gateway-operator.konghq.com v1alpha1 API group.
 
-- [AIGateway](#aigateway)
-- [DataPlaneMetricsExtension](#dataplanemetricsextension)
-- [KongPluginInstallation](#kongplugininstallation)
-- [WatchNamespaceGrant](#watchnamespacegrant)
-### AIGateway
+- [AIGateway](#github-com-kong-kong-operator-api-gateway-operator-v1alpha1-aigateway)
+- [DataPlaneMetricsExtension](#github-com-kong-kong-operator-api-gateway-operator-v1alpha1-dataplanemetricsextension)
+- [KongPluginInstallation](#github-com-kong-kong-operator-api-gateway-operator-v1alpha1-kongplugininstallation)
+- [WatchNamespaceGrant](#github-com-kong-kong-operator-api-gateway-operator-v1alpha1-watchnamespacegrant)
+
+### <a id="github-com-kong-kong-operator-api-gateway-operator-v1alpha1-aigateway">AIGateway</a>
 
 
 AIGateway is a network Gateway enabling access and management for AI &
@@ -51,7 +52,7 @@ unique-ness, e.t.c.<br /><br />See: https://kubernetes.io/docs/reference/using-a
 
 
 
-### DataPlaneMetricsExtension
+### <a id="github-com-kong-kong-operator-api-gateway-operator-v1alpha1-dataplanemetricsextension">DataPlaneMetricsExtension</a>
 
 
 DataPlaneMetricsExtension holds the configuration for the DataPlane metrics extension.
@@ -73,7 +74,7 @@ enriched with metadata required for in-cluster Kubernetes autoscaling.
 
 
 
-### KongPluginInstallation
+### <a id="github-com-kong-kong-operator-api-gateway-operator-v1alpha1-kongplugininstallation">KongPluginInstallation</a>
 
 
 KongPluginInstallation allows using a custom Kong Plugin distributed as a container image available in a registry.
@@ -92,7 +93,7 @@ and configured with KongPlugin CRD.
 
 
 
-### WatchNamespaceGrant
+### <a id="github-com-kong-kong-operator-api-gateway-operator-v1alpha1-watchnamespacegrant">WatchNamespaceGrant</a>
 
 
 WatchNamespaceGrant is a grant that allows a trusted namespace to watch
@@ -527,10 +528,11 @@ _Appears in:_
 
 Package v1beta1 contains API Schema definitions for the gateway-operator.konghq.com v1beta1 API group.
 
-- [ControlPlane](#controlplane)
-- [DataPlane](#dataplane)
-- [GatewayConfiguration](#gatewayconfiguration)
-### ControlPlane
+- [ControlPlane](#github-com-kong-kong-operator-api-gateway-operator-v1beta1-controlplane)
+- [DataPlane](#github-com-kong-kong-operator-api-gateway-operator-v1beta1-dataplane)
+- [GatewayConfiguration](#github-com-kong-kong-operator-api-gateway-operator-v1beta1-gatewayconfiguration)
+
+### <a id="github-com-kong-kong-operator-api-gateway-operator-v1beta1-controlplane">ControlPlane</a>
 
 
 ControlPlane is the Schema for the controlplanes API
@@ -547,7 +549,7 @@ ControlPlane is the Schema for the controlplanes API
 
 
 
-### DataPlane
+### <a id="github-com-kong-kong-operator-api-gateway-operator-v1beta1-dataplane">DataPlane</a>
 
 
 DataPlane is the Schema for the dataplanes API
@@ -564,7 +566,7 @@ DataPlane is the Schema for the dataplanes API
 
 
 
-### GatewayConfiguration
+### <a id="github-com-kong-kong-operator-api-gateway-operator-v1beta1-gatewayconfiguration">GatewayConfiguration</a>
 
 
 GatewayConfiguration is the Schema for the gatewayconfigurations API.
@@ -1425,11 +1427,10 @@ Allowed values:
 
 Package v2beta1 contains API Schema definitions for the gateway-operator.konghq.com v2beta1 API group.
 
-Package v2beta1 contains API Schema definitions for the gateway-operator.konghq.com v2beta1 API group
+- [ControlPlane](#github-com-kong-kong-operator-api-gateway-operator-v2beta1-controlplane)
+- [GatewayConfiguration](#github-com-kong-kong-operator-api-gateway-operator-v2beta1-gatewayconfiguration)
 
-- [ControlPlane](#controlplane)
-- [GatewayConfiguration](#gatewayconfiguration)
-### ControlPlane
+### <a id="github-com-kong-kong-operator-api-gateway-operator-v2beta1-controlplane">ControlPlane</a>
 
 
 ControlPlane is the Schema for the controlplanes API
@@ -1446,7 +1447,7 @@ ControlPlane is the Schema for the controlplanes API
 
 
 
-### GatewayConfiguration
+### <a id="github-com-kong-kong-operator-api-gateway-operator-v2beta1-gatewayconfiguration">GatewayConfiguration</a>
 
 
 GatewayConfiguration is the Schema for the gatewayconfigurations API.

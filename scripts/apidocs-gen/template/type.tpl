@@ -4,7 +4,7 @@
 {{- if markdownShouldRenderType $type -}}
 
 {{- if $isKind -}}
-### {{ $type.Name }}
+### <a id="{{ markdownTypeID $type | markdownSafeID }}">{{ $type.Name }}</a>
 {{ else -}}
 #### {{ $type.Name }}
 {{ end -}}
@@ -49,5 +49,6 @@ Allowed values:
 {{- end }}
 {{- end }}
 
+{{- end -}}
 {{- end -}}
 {{- end -}}
