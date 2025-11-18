@@ -802,8 +802,8 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 	// If we continue, there is only one konnect gateway controlplane.
 	konnectControlPlane := konnectControlPlanes[0].DeepCopy()
 
-	// For now, we don't update the KonnectGatewayControlPlane spec as it's managed by Konnect.
-	// In the future, we might want to support updating certain fields.
+	// TODO: https://github.com/Kong/kong-operator/issues/2639
+	// enforce KonnectGatewayControlPlane spec
 
 	log.Trace(logger, "Waiting for KonnectGatewayControlPlane readiness")
 	if !k8sutils.IsProgrammed(konnectControlPlane) {
