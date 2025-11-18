@@ -88,6 +88,7 @@ func ensureHPAForDataPlane(
 		if err := k8sreduce.ReduceHPAs(ctx, cl, hpas, k8sreduce.FilterHPAs); err != nil {
 			return op.Noop, nil, fmt.Errorf("failed reducing HPAs for DataPlane %s/%s: %w", dataplane.Namespace, dataplane.Name, err)
 		}
+		// Reduced redundant HPAs; nothing else to do this cycle.
 		return op.Noop, nil, nil
 	}
 
@@ -222,6 +223,7 @@ func ensureAdminServiceForDataPlane(
 		if err := k8sreduce.ReduceServices(ctx, cl, services, dataplane.OwnedObjectPreDeleteHook); err != nil {
 			return op.Noop, nil, err
 		}
+		// Reduced duplicate Admin services; surface a transient error to stop subsequent steps.
 		return op.Noop, nil, errors.New("number of DataPlane Admin API services reduced")
 	}
 
@@ -300,12 +302,14 @@ func ensureIngressServiceForDataPlane(
 			if err := k8sreduce.ReduceServicesByName(ctx, cl, services, serviceName, dataplane.OwnedObjectPreDeleteHook); err != nil {
 				return op.Noop, nil, err
 			}
+			// Reduced ingress services to match desired name; return transient error as before.
 			return op.Noop, nil, errors.New("DataPlane ingress services with different names reduced")
 		}
 	} else if count > 1 {
 		if err := k8sreduce.ReduceServices(ctx, cl, services, dataplane.OwnedObjectPreDeleteHook); err != nil {
 			return op.Noop, nil, err
 		}
+		// Reduced duplicate ingress services; return transient error as before.
 		return op.Noop, nil, errors.New("number of DataPlane ingress services reduced")
 	}
 

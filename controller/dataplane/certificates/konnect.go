@@ -2,6 +2,7 @@ package certificates
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -40,6 +41,11 @@ const (
 	ClusterCertEnvKey = "KONG_CLUSTER_CERT"
 	// ClusterCertKeyEnvKey is the environment variable name for cluster certificate keys.
 	ClusterCertKeyEnvKey = "KONG_CLUSTER_CERT_KEY"
+)
+
+var (
+	// ErrKonnectSecretMissing is returned when the Konnect secret is missing.
+	ErrKonnectSecretMissing = errors.New("no konnect-dataplane Secrets found")
 )
 
 var certificateGVR = schema.GroupVersionResource{

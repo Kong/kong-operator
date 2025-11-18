@@ -186,6 +186,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
+			if k8serrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
+			}
 			return ctrl.Result{}, err
 		}
 		log.Debug(logger, "Extension-in-use finalizer changed on KonnectExtension")
@@ -235,6 +238,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
+					}
 					return ctrl.Result{}, err
 				}
 				log.Debug(logger, "Konnect-cleanup finalizer removed from KonnectExtension")
@@ -261,6 +267,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			&ext,
 			readyCondition,
 		); err != nil || updated || !res.IsZero() {
+			if err != nil && k8serrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
+			}
 			return res, err
 		}
 	}
@@ -344,6 +353,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			readyCondition,
 			apiAuthConfigValidCond,
 		); errStatus != nil || updated || !res.IsZero() {
+			if errStatus != nil && k8serrors.IsNotFound(errStatus) {
+				return ctrl.Result{}, nil
+			}
 			return res, errStatus
 		}
 		log.Debug(logger, "token retrieval failed")
@@ -386,6 +398,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			readyCondition,
 			certProvisionedCond,
 		); err != nil || updated || !res.IsZero() {
+			if err != nil && k8serrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
+			}
 			return res, err
 		}
 		log.Debug(logger, "certificate secret retrieval failed")
@@ -605,6 +620,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		&ext,
 		certProvisionedCond,
 	); err != nil || updated || !res.IsZero() {
+		if err != nil && k8serrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
 		return res, err
 	}
 
@@ -616,12 +634,22 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 		if enforceKonnectExtensionStatus(*cp, authRef, *certificateSecret, &ext) {
 			log.Debug(logger, "updating KonnectExtension status")
+			// Ensure we don't write an incomplete Konnect status that fails CRD validation.
+			if ext.Status.Konnect != nil {
+				if ext.Status.Konnect.Endpoints.ControlPlaneEndpoint == "" || ext.Status.Konnect.Endpoints.TelemetryEndpoint == "" {
+					// Drop Konnect status until endpoints are available.
+					ext.Status.Konnect = nil
+				}
+			}
 			err := r.Client.Status().Update(ctx, &ext)
 			if k8serrors.IsConflict(err) {
 				// in case the err is of type conflict, don't return it and instead trigger
 				// another reconciliation.
 				// This is just to prevent spamming of conflict errors.
 				return ctrl.Result{Requeue: true}, nil
+			}
+			if k8serrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
 			}
 			return ctrl.Result{}, err
 		}
@@ -640,6 +668,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		&ext,
 		readyCondition,
 	); err != nil || updated || !res.IsZero() {
+		if err != nil && k8serrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
 		return res, err
 	}
 

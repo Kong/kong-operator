@@ -179,6 +179,9 @@ func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 			// Gracefully requeue in case of conflict.
 			return ctrl.Result{Requeue: true}, nil
 		}
+		if k8serrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
 		return ctrl.Result{}, fmt.Errorf("failed to update KonnectExtension ControlPlane and DataPlane references in status: %w", err)
 	}
 	return ctrl.Result{Requeue: true}, nil

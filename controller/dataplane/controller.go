@@ -2,6 +2,7 @@ package dataplane
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	kcfgkonnect "github.com/kong/kong-operator/api/konnect"
+	"github.com/kong/kong-operator/controller/dataplane/certificates"
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
 	extensionskonnect "github.com/kong/kong-operator/controller/pkg/extensions/konnect"
@@ -220,6 +222,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.ValidateDataPlaneImage)
 	if err != nil {
+		// If Konnect cert Secret isn't ready yet, requeue instead of logging an error stack.
+		if errors.Is(err, certificates.ErrKonnectSecretMissing) {
+			log.Debug(logger, "Konnect certificate Secret not ready yet; requeuing", "dataplane", dpNn)
+			return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+		}
 		return ctrl.Result{}, fmt.Errorf("could not build Deployment for DataPlane %s: %w", dpNn, err)
 	}
 	if res != op.Noop {
