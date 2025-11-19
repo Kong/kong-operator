@@ -9,7 +9,7 @@ golangci-lint: "2.6.2"
 # TODO: Renovate comment is missing. This needs to be added at some point.
 modernize: "v0.19.1"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
-skaffold: "2.16.1"
+skaffold: "2.17.0"
 # renovate: datasource=github-releases depName=go-delve/delve
 dlv: "1.25.2"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
