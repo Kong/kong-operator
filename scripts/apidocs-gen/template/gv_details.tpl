@@ -1,7 +1,7 @@
 {{- define "gvDetails" -}}
 {{- $gv := . -}}
 
-## {{ $gv.GroupVersionString }}
+## <a id="{{ .Group | replace "." "-" }}-{{ .Version }}">{{ $gv.GroupVersionString }}</a>
 
 {{ $gv.Doc }}
 
