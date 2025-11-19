@@ -5,7 +5,7 @@
 
 ## Packages
 {{- range $groupVersions }}
-- {{ markdownRenderGVLink . }}
+- [{{ . }}](#{{ .Group | replace "." "-" }}-{{ .Version }})
 {{- end }}
 
 {{ range $groupVersions }}
