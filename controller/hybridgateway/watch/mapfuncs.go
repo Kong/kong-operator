@@ -191,12 +191,8 @@ func MapHTTPRouteForReferenceGrant(cl client.Client) handler.MapFunc {
 				hasCrossNamespaceRef := false
 				for _, rule := range httpRoute.Spec.Rules {
 					for _, backendRef := range rule.BackendRefs {
-						ns := httpRoute.Namespace
-						if backendRef.Namespace != nil {
-							ns = string(*backendRef.Namespace)
-						}
 						// The backend must be in the ReferenceGrant's namespace (target namespace).
-						if ns == rg.Namespace && ns != httpRoute.Namespace {
+						if backendRef.Namespace != nil && string(*backendRef.Namespace) == rg.Namespace && httpRoute.Namespace != rg.Namespace {
 							hasCrossNamespaceRef = true
 							break
 						}
