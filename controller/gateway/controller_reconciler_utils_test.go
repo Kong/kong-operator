@@ -1906,7 +1906,7 @@ func TestIsGatewayHybrid(t *testing.T) {
 					Name: "test-auth",
 				},
 			},
-			expectHybrid: false,
+			expectHybrid: true,
 		},
 		{
 			name: "konnect with default source (Origin) and auth ref",
