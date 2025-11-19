@@ -53,14 +53,6 @@ func (e ErrNotAcceptedGatewayClass) Error() string {
 }
 
 // -----------------------------------------------------------------------------
-// GatewayClass - Errors
-// -----------------------------------------------------------------------------
-
-// ErrObjectMissingParametersRef is a custom error that must be used when the
-// .spec.ParametersRef field of the given object is nil
-var ErrObjectMissingParametersRef = errors.New("no reference to related objects")
-
-// -----------------------------------------------------------------------------
 // ControlPlane - Errors
 // -----------------------------------------------------------------------------
 
