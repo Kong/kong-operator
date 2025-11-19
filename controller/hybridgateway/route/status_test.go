@@ -871,10 +871,44 @@ func Test_SetStatusConditions(t *testing.T) {
 		{
 			name:       "adds new condition if type not present",
 			init:       &gwtypes.HTTPRoute{Status: gatewayv1.HTTPRouteStatus{RouteStatus: gatewayv1.RouteStatus{Parents: []gatewayv1.RouteParentStatus{{ParentRef: pRef, ControllerName: gwtypes.GatewayController(controllerName), Conditions: []metav1.Condition{baseCond}}}}}},
-			conds:      []metav1.Condition{{Type: "Other", Status: metav1.ConditionTrue}},
+			conds:      []metav1.Condition{baseCond, {Type: "Other", Status: metav1.ConditionTrue}},
 			wantUpdate: true,
 			verify: func(t *testing.T, route *gwtypes.HTTPRoute) {
 				require.Len(t, route.Status.Parents[0].Conditions, 2)
+			},
+		},
+		{
+			name:       "removes stale conditions not in new set",
+			init:       &gwtypes.HTTPRoute{Status: gatewayv1.HTTPRouteStatus{RouteStatus: gatewayv1.RouteStatus{Parents: []gatewayv1.RouteParentStatus{{ParentRef: pRef, ControllerName: gwtypes.GatewayController(controllerName), Conditions: []metav1.Condition{baseCond, {Type: "Stale", Status: metav1.ConditionTrue}}}}}}},
+			conds:      []metav1.Condition{baseCond},
+			wantUpdate: true,
+			verify: func(t *testing.T, route *gwtypes.HTTPRoute) {
+				require.Len(t, route.Status.Parents[0].Conditions, 1)
+				require.Equal(t, "Ready", route.Status.Parents[0].Conditions[0].Type)
+			},
+		},
+		{
+			name: "removes multiple stale Programmed conditions when resources deleted",
+			init: &gwtypes.HTTPRoute{Status: gatewayv1.HTTPRouteStatus{RouteStatus: gatewayv1.RouteStatus{Parents: []gatewayv1.RouteParentStatus{{
+				ParentRef:      pRef,
+				ControllerName: gwtypes.GatewayController(controllerName),
+				Conditions: []metav1.Condition{
+					{Type: "Accepted", Status: metav1.ConditionTrue},
+					{Type: "ResolvedRefs", Status: metav1.ConditionTrue},
+					{Type: "Programmed-KongRoute-1", Status: metav1.ConditionTrue},
+					{Type: "Programmed-KongRoute-2", Status: metav1.ConditionTrue},
+					{Type: "Programmed-KongTarget-1", Status: metav1.ConditionTrue},
+				},
+			}}}}},
+			conds: []metav1.Condition{
+				{Type: "Accepted", Status: metav1.ConditionTrue},
+				{Type: "ResolvedRefs", Status: metav1.ConditionTrue},
+			},
+			wantUpdate: true,
+			verify: func(t *testing.T, route *gwtypes.HTTPRoute) {
+				require.Len(t, route.Status.Parents[0].Conditions, 2)
+				require.Equal(t, "Accepted", route.Status.Parents[0].Conditions[0].Type)
+				require.Equal(t, "ResolvedRefs", route.Status.Parents[0].Conditions[1].Type)
 			},
 		},
 		{
