@@ -187,7 +187,6 @@ type SecretRef struct {
 // KonnectExtensionStatus defines the observed state of KonnectExtension.
 type KonnectExtensionStatus struct {
 	// Conditions describe the current conditions of the KonnectExtensionStatus.
-	// Known condition types are:
 	//
 	// +optional
 	// +listType=map

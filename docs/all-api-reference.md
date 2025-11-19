@@ -2218,7 +2218,7 @@ AIGatewayEndpoint is a network endpoint for accessing an AIGateway.
 | `url` _string_ | URL is the URL to access the endpoint from the network indicated by the NetworkAccessHint. |
 | `models` _string array_ | AvailableModels is a list of the identifiers of all the AI models that are accessible from this endpoint. |
 | `consumer` _[AIGatewayConsumerRef](#aigatewayconsumerref)_ | Consumer is a reference to the Secret that contains the credentials for the Kong consumer that is allowed to access this endpoint. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the AIGatewayEndpoint.<br /><br />Known condition types are:<br /><br />  - "Provisioning"   - "EndpointReady" |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the AIGatewayEndpoint.<br /><br />Known condition types are:<br /><br /><br />  - "Provisioning" <br />  - "EndpointReady" |
 
 _Appears in:_
 - [AIGatewayStatus](#aigatewaystatus)
@@ -2249,7 +2249,7 @@ AIGatewayStatus defines the observed state of AIGateway.
 | Field | Description |
 | --- | --- |
 | `endpoints` _[AIGatewayEndpoint](#aigatewayendpoint) array_ | Endpoints are collections of the URL, credentials and metadata needed in order to access models served by the AIGateway for inference. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the AIGateway.<br /><br />Known condition types are:<br /><br />  - "Accepted"   - "Provisioning"   - "EndpointsReady" |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the AIGateway.<br /><br />Known condition types are:<br /><br /><br />  - "Accepted" <br />  - "Provisioning" <br />  - "EndpointsReady" |
 
 _Appears in:_
 - [AIGateway](#aigateway)
@@ -4995,7 +4995,7 @@ KonnectExtensionStatus defines the observed state of KonnectExtension.
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectExtensionStatus. Known condition types are: |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectExtensionStatus. |
 | `dataPlaneRefs` _[NamespacedRef](#namespacedref) array_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
 | `controlPlaneRefs` _[NamespacedRef](#namespacedref) array_ | ControlPlaneRefs is the array  of ControlPlane references this is associated with. A new reference is set by the operator when this extension is associated with a ControlPlane through its extensions spec. |
 | `dataPlaneClientAuth` _[DataPlaneClientAuthStatus](#dataplaneclientauthstatus)_ | DataPlaneClientAuth contains the configuration for the client certificate authentication for the DataPlane. |
