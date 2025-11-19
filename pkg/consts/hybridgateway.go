@@ -26,12 +26,12 @@ const (
 
 	// HybridRouteAnnotation is used to annotate resources created for hybrid gateways,
 	// indicating which route is associated with the resource.
-	HybridRouteAnnotation = "hybrid-route"
+	HybridRouteAnnotation = "hybrid-routes"
 
-	// GatewayOperatorHybridRouteAnnotation is the fully qualified annotation key
+	// GatewayOperatorHybridRoutesAnnotation is the fully qualified annotation key
 	// used to annotate resources created for hybrid gateways, indicating which route
 	// is associated with the resource.
-	GatewayOperatorHybridRouteAnnotation = OperatorAnnotationPrefix + HybridRouteAnnotation
+	GatewayOperatorHybridRoutesAnnotation = OperatorAnnotationPrefix + HybridRouteAnnotation
 
 	// GatewayOperatorHybridGatewaysNameLabel is the fully qualified label key
 	// used to label resources created for hybrid gateways, indicating the name of the gateway
