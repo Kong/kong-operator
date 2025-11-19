@@ -808,7 +808,7 @@ func FilterListenersByHostnames(logger logr.Logger, listeners []gwtypes.Listener
 
 // GetRouteGroupKind returns the RouteGroupKind for a given route object, ensuring the group is set to the Gateway API default if empty.
 // This function extracts the GroupVersionKind from the route object and converts it to the Gateway API RouteGroupKind format.
-// If the group is empty, it defaults to "gateway.networking.k8s.io" which is the standard Gateway API group.
+// If the group is empty, it defaults to  gwtypes.GroupName which is the standard Gateway API group.
 //
 // Parameters:
 //   - route: The route object (HTTPRoute, GRPCRoute, etc.) to extract GroupKind information from
@@ -821,7 +821,7 @@ func GetRouteGroupKind(route client.Object) gwtypes.RouteGroupKind {
 	gvk := route.GetObjectKind().GroupVersionKind()
 	group := gvk.Group
 	if group == "" {
-		group = "gateway.networking.k8s.io"
+		group = gwtypes.GroupName
 	}
 	grp := gwtypes.Group(group)
 	return gwtypes.RouteGroupKind{

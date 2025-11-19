@@ -375,7 +375,7 @@ func Test_GetRouteGroupKind(t *testing.T) {
 		{
 			name:  "empty group defaults to gateway.networking.k8s.io",
 			gvk:   schema.GroupVersionKind{Group: "", Kind: "HTTPRoute"},
-			wantG: "gateway.networking.k8s.io",
+			wantG: gwtypes.GroupName,
 			wantK: "HTTPRoute",
 		},
 	}
@@ -578,7 +578,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 		},
 	}
 
-	pRef := gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("gateway.networking.k8s.io"), Name: "gw"}
+	pRef := gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "gw"}
 
 	// Fake client with default namespace
 	s := runtime.NewScheme()
@@ -692,7 +692,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "nonexistent", Name: "route"},
 				Spec:       gwtypes.HTTPRouteSpec{},
 			},
-			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("gateway.networking.k8s.io"), Name: "gw", SectionName: sectionPtr("listener1")},
+			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "gw", SectionName: sectionPtr("listener1")},
 			client:     fake.NewClientBuilder().WithScheme(s).Build(), // no namespace object
 			wantType:   "",
 			wantStatus: "",
@@ -733,7 +733,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
 				Spec:       gwtypes.HTTPRouteSpec{},
 			},
-			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("gateway.networking.k8s.io"), Name: "gw", SectionName: sectionPtr("listener1")},
+			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "gw", SectionName: sectionPtr("listener1")},
 			client:     cl,
 			wantType:   "",
 			wantStatus: "",
@@ -1185,7 +1185,7 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 	gw := &gwtypes.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "gw", Namespace: "default"}}
 	pRef := gwtypes.ParentReference{Name: "listener1"}
 	listener := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPProtocolType}
-	kind := gwtypes.RouteGroupKind{Group: groupPtr("gateway.networking.k8s.io"), Kind: "HTTPRoute"}
+	kind := gwtypes.RouteGroupKind{Group: groupPtr(gwtypes.GroupName), Kind: "HTTPRoute"}
 	routeNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
 
 	selector := &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
@@ -1195,7 +1195,7 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 	listenerAll.AllowedRoutes = &gwtypes.AllowedRoutes{}
 
 	listenerKindMatch := listener
-	listenerKindMatch.AllowedRoutes = &gwtypes.AllowedRoutes{Kinds: []gwtypes.RouteGroupKind{{Group: groupPtr("gateway.networking.k8s.io"), Kind: "HTTPRoute"}}}
+	listenerKindMatch.AllowedRoutes = &gwtypes.AllowedRoutes{Kinds: []gwtypes.RouteGroupKind{{Group: groupPtr(gwtypes.GroupName), Kind: "HTTPRoute"}}}
 
 	listenerKindMismatch := listener
 	listenerKindMismatch.AllowedRoutes = &gwtypes.AllowedRoutes{Kinds: []gwtypes.RouteGroupKind{{Group: groupPtr("other"), Kind: "OtherRoute"}}}

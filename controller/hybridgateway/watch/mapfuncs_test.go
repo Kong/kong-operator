@@ -660,7 +660,7 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 		},
 		Spec: gwtypes.ReferenceGrantSpec{
 			From: []gatewayv1beta1.ReferenceGrantFrom{{
-				Group:     "gateway.networking.k8s.io",
+				Group:     gwtypes.GroupName,
 				Kind:      "HTTPRoute",
 				Namespace: "source-ns",
 			}},
@@ -703,7 +703,7 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 			},
 			Spec: gwtypes.ReferenceGrantSpec{
 				From: []gatewayv1beta1.ReferenceGrantFrom{{
-					Group: "gateway.networking.k8s.io",
+					Group: gwtypes.GroupName,
 					// Not HTTPRoute.
 					Kind:      "TCPRoute",
 					Namespace: "source-ns",
@@ -823,12 +823,12 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 			Spec: gwtypes.ReferenceGrantSpec{
 				From: []gatewayv1beta1.ReferenceGrantFrom{
 					{
-						Group:     "gateway.networking.k8s.io",
+						Group:     gwtypes.GroupName,
 						Kind:      "HTTPRoute",
 						Namespace: "source-ns",
 					},
 					{
-						Group:     "gateway.networking.k8s.io",
+						Group:     gwtypes.GroupName,
 						Kind:      "HTTPRoute",
 						Namespace: "other-ns",
 					},

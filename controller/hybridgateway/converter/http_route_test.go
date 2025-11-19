@@ -176,7 +176,7 @@ func newHTTPRouteWithHostnames(hostnames ...string) *gwtypes.HTTPRoute {
 					{
 						Name:  "test-gateway",
 						Kind:  lo.ToPtr(gwtypes.Kind("Gateway")),
-						Group: lo.ToPtr(gwtypes.Group("gateway.networking.k8s.io")),
+						Group: lo.ToPtr(gwtypes.Group(gwtypes.GroupName)),
 					},
 				},
 			},

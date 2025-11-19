@@ -176,7 +176,7 @@ func MapHTTPRouteForReferenceGrant(cl client.Client) handler.MapFunc {
 		var requests []reconcile.Request
 		for _, from := range rg.Spec.From {
 			// Check that the from kind is HTTPRoute and group is gateway.networking.k8s.io.
-			if from.Kind != "HTTPRoute" || (from.Group != "" && from.Group != "gateway.networking.k8s.io") {
+			if from.Kind != "HTTPRoute" || (from.Group != "" && from.Group != gwtypes.GroupName) {
 				continue
 			}
 
