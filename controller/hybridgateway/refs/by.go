@@ -71,7 +71,7 @@ func GetControlPlaneRefByParentRef(ctx context.Context, logger logr.Logger, cl c
 // GetListenersByParentRef retrieves the listeners for a given parent reference.
 func GetListenersByParentRef(ctx context.Context, cl client.Client, route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference) ([]gwtypes.Listener, error) {
 	var namespace string
-	if pRef.Group == nil || *pRef.Group != "gateway.networking.k8s.io" {
+	if pRef.Group == nil || *pRef.Group != gwtypes.GroupName {
 		return nil, nil
 	}
 	if pRef.Kind == nil || *pRef.Kind != "Gateway" {

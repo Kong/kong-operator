@@ -1767,7 +1767,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 				Spec: gatewayv1beta1.ReferenceGrantSpec{
 					From: []gatewayv1beta1.ReferenceGrantFrom{
 						{
-							Group:     "gateway.networking.k8s.io",
+							Group:     gwtypes.GroupName,
 							Kind:      "HTTPRoute",
 							Namespace: "wrong-namespace", // Wrong source namespace.
 						},
@@ -2623,7 +2623,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{Name: "allow-frontend-to-backend", Namespace: "backend-ns"},
 					Spec: gatewayv1beta1.ReferenceGrantSpec{
 						From: []gatewayv1beta1.ReferenceGrantFrom{
-							{Group: "gateway.networking.k8s.io", Kind: "HTTPRoute", Namespace: "frontend-ns"},
+							{Group: gwtypes.GroupName, Kind: "HTTPRoute", Namespace: "frontend-ns"},
 						},
 						To: []gatewayv1beta1.ReferenceGrantTo{
 							{Group: "", Kind: "Service"},
