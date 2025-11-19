@@ -51,7 +51,7 @@ func BuildAnnotations(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReferen
 	}
 
 	return map[string]string{
-		consts.GatewayOperatorHybridRouteAnnotation:    client.ObjectKeyFromObject(route).String(),
+		consts.GatewayOperatorHybridRoutesAnnotation:   client.ObjectKeyFromObject(route).String(),
 		consts.GatewayOperatorHybridGatewaysAnnotation: gwObjKey.String(),
 	}
 }
@@ -70,18 +70,18 @@ func NewAnnotationManager(logger logr.Logger) *AnnotationManager {
 	}
 }
 
-// AppendHTTPRouteToAnnotation appends the given HTTPRoute to the hybrid-route annotation.
-// The hybrid-route annotation format is: "namespace/name,namespace2/name2,..."
+// AppendRouteToAnnotation appends the given route to the hybrid-routes annotation.
+// The hybrid-routes annotation format is: "namespace/name,namespace2/name2,..."
 //
 // Parameters:
 //   - obj: Any Kubernetes object that implements metav1.Object (has GetAnnotations/SetAnnotations)
-//   - httpRoute: The HTTPRoute to add to the annotations
+//   - route: The Route to append to the hybrid-routes annotation
 //
 // Returns:
-//   - bool: true if the annotation was modified, false if no changes were made
-//   - error: Any error that occurred during processing
-func (am *AnnotationManager) AppendHTTPRouteToAnnotation(obj metav1.Object, httpRoute *gwtypes.HTTPRoute) (bool, error) {
-	currentRouteKey := client.ObjectKeyFromObject(httpRoute).String()
+//   - bool: true if the hybrid-routes annotation was modified, false if the annotation was already
+//     there and no changes were made
+func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route client.Object) bool {
+	currentRouteKey := client.ObjectKeyFromObject(route).String()
 	currentRouteAnnotation := currentRouteKey
 
 	log.Debug(am.logger, "Processing route annotation",
@@ -94,17 +94,17 @@ func (am *AnnotationManager) AppendHTTPRouteToAnnotation(obj metav1.Object, http
 		annotations = make(map[string]string)
 	}
 
-	// Get existing hybrid-route annotation
-	hybridRouteAnnotation, exists := annotations[consts.GatewayOperatorHybridRouteAnnotation]
+	// Get existing hybrid-routes annotation
+	hybridRouteAnnotation, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
 
 	if !exists || hybridRouteAnnotation == "" {
-		// No existing hybrid-route annotation, set it to the current route
-		annotations[consts.GatewayOperatorHybridRouteAnnotation] = currentRouteAnnotation
+		// No existing hybrid-routes annotation, set it to the current route
+		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = currentRouteAnnotation
 		obj.SetAnnotations(annotations)
-		log.Debug(am.logger, "Set new hybrid-route annotation",
+		log.Debug(am.logger, "Set new hybrid-routes annotation",
 			"annotation", currentRouteAnnotation,
 			"objectName", obj.GetName())
-		return true, nil
+		return true
 	}
 
 	existingRoutes := strings.Split(hybridRouteAnnotation, ",")
@@ -112,38 +112,37 @@ func (am *AnnotationManager) AppendHTTPRouteToAnnotation(obj metav1.Object, http
 	for _, route := range existingRoutes {
 		route = strings.TrimSpace(route)
 		if route == currentRouteAnnotation {
-			log.Debug(am.logger, "HTTPRoute already exists in annotation, no update needed",
+			log.Debug(am.logger, "Route already exists in annotation, no update needed",
 				"currentRoute", currentRouteAnnotation,
 				"objectName", obj.GetName())
-			return false, nil
+			return false
 		}
 	}
 
 	// Append current route to existing list
 	updatedAnnotation := hybridRouteAnnotation + "," + currentRouteAnnotation
-	annotations[consts.GatewayOperatorHybridRouteAnnotation] = updatedAnnotation
+	annotations[consts.GatewayOperatorHybridRoutesAnnotation] = updatedAnnotation
 	obj.SetAnnotations(annotations)
 
-	log.Debug(am.logger, "Appended HTTPRoute to existing annotation",
+	log.Debug(am.logger, "Appended Route to existing annotation",
 		"previousAnnotation", hybridRouteAnnotation,
 		"updatedAnnotation", updatedAnnotation,
 		"objectName", obj.GetName())
 
-	return true, nil
+	return true
 }
 
-// RemoveHTTPRouteFromAnnotation removes the given HTTPRoute from the hybrid-route annotation
+// RemoveRouteFromAnnotation removes the given route from the hybrid-routes annotation
 // of the provided Kubernetes object.
 //
 // Parameters:
 //   - obj: Any Kubernetes object that implements metav1.Object
-//   - httpRoute: The HTTPRoute to remove from the annotations
+//   - route: The Route to remove from the hybrid-routes annotation
 //
 // Returns:
 //   - bool: true if the annotation was modified, false if no changes were made
-//   - error: Any error that occurred during processing
-func (am *AnnotationManager) RemoveHTTPRouteFromAnnotation(obj metav1.Object, httpRoute *gwtypes.HTTPRoute) (bool, error) {
-	currentRouteKey := client.ObjectKeyFromObject(httpRoute).String()
+func (am *AnnotationManager) RemoveRouteFromAnnotation(obj metav1.Object, route client.Object) bool {
+	currentRouteKey := client.ObjectKeyFromObject(route).String()
 	currentRouteAnnotation := currentRouteKey
 
 	log.Debug(am.logger, "Removing route from annotation",
@@ -155,17 +154,17 @@ func (am *AnnotationManager) RemoveHTTPRouteFromAnnotation(obj metav1.Object, ht
 		log.Debug(am.logger, "No annotations present, nothing to remove",
 			"routeToRemove", currentRouteAnnotation,
 			"objectName", obj.GetName())
-		return false, nil
+		return false
 	}
 
-	// Get existing hybrid-route annotation
-	existingAnnotation, exists := annotations[consts.GatewayOperatorHybridRouteAnnotation]
+	// Get existing hybrid-routes annotation
+	existingAnnotation, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
 
 	if !exists || existingAnnotation == "" {
-		log.Debug(am.logger, "No hybrid-route annotation exists, nothing to remove",
+		log.Debug(am.logger, "No hybrid-routes annotation exists, nothing to remove",
 			"routeToRemove", currentRouteAnnotation,
 			"objectName", obj.GetName())
-		return false, nil
+		return false
 	}
 
 	existingRoutes := strings.Split(existingAnnotation, ",")
@@ -183,50 +182,50 @@ func (am *AnnotationManager) RemoveHTTPRouteFromAnnotation(obj metav1.Object, ht
 	}
 
 	if !found {
-		log.Debug(am.logger, "HTTPRoute not found in annotation, no changes made",
+		log.Debug(am.logger, "Route not found in annotation, no changes made",
 			"routeToRemove", currentRouteAnnotation,
 			"objectName", obj.GetName())
-		return false, nil
+		return false
 	}
 
 	// Update annotation
 	if len(remainingRoutes) == 0 {
 		// No routes left, remove the annotation entirely
-		delete(annotations, consts.GatewayOperatorHybridRouteAnnotation)
-		log.Debug(am.logger, "Removed hybrid-route annotation completely as no routes remain",
+		delete(annotations, consts.GatewayOperatorHybridRoutesAnnotation)
+		log.Debug(am.logger, "Removed hybrid-routes annotation completely as no routes remain",
 			"objectName", obj.GetName())
 	} else {
 		// Update with remaining routes
 		updatedAnnotation := strings.Join(remainingRoutes, ",")
-		annotations[consts.GatewayOperatorHybridRouteAnnotation] = updatedAnnotation
-		log.Debug(am.logger, "Updated hybrid-route annotation",
+		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = updatedAnnotation
+		log.Debug(am.logger, "Updated hybrid-routes annotation",
 			"previousAnnotation", existingAnnotation,
 			"updatedAnnotation", updatedAnnotation,
 			"objectName", obj.GetName())
 	}
 	obj.SetAnnotations(annotations)
-	return true, nil
+	return true
 }
 
-// ContainsHTTPRoute checks if the given HTTPRoute is present in the hybrid-route annotation
+// ContainsRoute checks if the given Route is present in the hybrid-routes annotation
 // of the provided Kubernetes object.
 //
 // Parameters:
 //   - obj: Any Kubernetes object that implements metav1.Object
-//   - httpRoute: The HTTPRoute to check for in the annotations
+//   - route: The route to check for in the annotations
 //
 // Returns:
-//   - bool: true if the HTTPRoute is found in the annotation, false otherwise
-func (am *AnnotationManager) ContainsHTTPRoute(obj metav1.Object, httpRoute *gwtypes.HTTPRoute) bool {
+//   - bool: true if the route is found in the annotation, false otherwise
+func (am *AnnotationManager) ContainsRoute(obj metav1.Object, route client.Object) bool {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		return false
 	}
 
-	currentRouteKey := client.ObjectKeyFromObject(httpRoute).String()
+	currentRouteKey := client.ObjectKeyFromObject(route).String()
 	currentRouteAnnotation := currentRouteKey
 
-	existingAnnotation, exists := annotations[consts.GatewayOperatorHybridRouteAnnotation]
+	existingAnnotation, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
 	if !exists || existingAnnotation == "" {
 		return false
 	}
@@ -243,29 +242,28 @@ func (am *AnnotationManager) ContainsHTTPRoute(obj metav1.Object, httpRoute *gwt
 	return false
 }
 
-// GetHTTPRoutes returns all HTTPRoute references from the hybrid-route annotation
+// GetRoutes returns all Route references from the hybrid-routes annotation
 // of the provided Kubernetes object.
 //
 // Parameters:
 //   - obj: Any Kubernetes object that implements metav1.Object
 //
 // Returns:
-//   - []string: List of HTTPRoute references in "namespace/name" format
-//   - error: Any error that occurred during parsing
-func (am *AnnotationManager) GetHTTPRoutes(obj metav1.Object) ([]string, error) {
+//   - []string: List of route references in "namespace/name" format
+func (am *AnnotationManager) GetRoutes(obj metav1.Object) []string {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
-		return []string{}, nil
+		return []string{}
 	}
 
-	existingAnnotation, exists := annotations[consts.GatewayOperatorHybridRouteAnnotation]
+	existingAnnotation, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
 	if !exists || existingAnnotation == "" {
-		return []string{}, nil
+		return []string{}
 	}
 
 	// Parse existing routes from the annotation
 	existingRoutes := strings.Split(existingAnnotation, ",")
-	var httpRoutes []string
+	var routes []string
 
 	for _, route := range existingRoutes {
 		route = strings.TrimSpace(route)
@@ -274,46 +272,64 @@ func (am *AnnotationManager) GetHTTPRoutes(obj metav1.Object) ([]string, error) 
 		}
 
 		// Format is now just "namespace/name"
-		httpRoutes = append(httpRoutes, route)
+		routes = append(routes, route)
 	}
 
-	return httpRoutes, nil
+	return routes
 }
 
-// SetHTTPRoutes sets the hybrid-route annotation to contain exactly the provided HTTPRoute references.
+// SetRoutes sets the hybrid-routes annotation to contain exactly the provided route references.
 //
 // Parameters:
 //   - obj: Any Kubernetes object that implements metav1.Object
-//   - httpRoutes: List of HTTPRoute objects to set in the annotation
+//   - routes: List of route references to set in the annotation
 //
 // Returns:
 //   - bool: true if the annotation was modified, false if no changes were made
-func (am *AnnotationManager) SetHTTPRoutes(obj metav1.Object, httpRoutes []*gwtypes.HTTPRoute) bool {
+func (am *AnnotationManager) SetRoutes(obj metav1.Object, routes []string) bool {
 	annotations := obj.GetAnnotations()
 	if annotations == nil {
 		annotations = make(map[string]string)
 		obj.SetAnnotations(annotations)
 	}
 
-	var routeAnnotations []string
-	for _, httpRoute := range httpRoutes {
-		routeKey := client.ObjectKeyFromObject(httpRoute).String()
-		routeAnnotations = append(routeAnnotations, routeKey)
-	}
-
-	newAnnotation := strings.Join(routeAnnotations, ",")
+	newAnnotation := strings.Join(routes, ",")
 
 	// Check if annotation needs to be updated
-	existingAnnotation := annotations[consts.GatewayOperatorHybridRouteAnnotation]
-	if existingAnnotation == newAnnotation {
-		return false
+	existingAnnotation := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	existingRoutes := strings.Split(existingAnnotation, ",")
+	if len(existingRoutes) == len(routes) {
+		same := true
+		for _, er := range existingRoutes {
+			er = strings.TrimSpace(er)
+			found := false
+			for _, r := range routes {
+				r = strings.TrimSpace(r)
+				if er == r {
+					found = true
+					break
+				}
+			}
+			if !found {
+				same = false
+				break
+			}
+		}
+		if same {
+			log.Debug(am.logger, "Hybrid-routes annotation already up to date",
+				"objectName", obj.GetName())
+			return false
+		}
 	}
 
 	if newAnnotation == "" {
-		delete(annotations, consts.GatewayOperatorHybridRouteAnnotation)
+		delete(annotations, consts.GatewayOperatorHybridRoutesAnnotation)
 	} else {
-		annotations[consts.GatewayOperatorHybridRouteAnnotation] = newAnnotation
+		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = newAnnotation
 	}
-
+	obj.SetAnnotations(annotations)
+	log.Debug(am.logger, "Set hybrid-routes annotation",
+		consts.GatewayOperatorHybridRoutesAnnotation, newAnnotation,
+		"objectName", obj.GetName())
 	return true
 }
