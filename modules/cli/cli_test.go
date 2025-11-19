@@ -287,6 +287,7 @@ func expectedDefaultCfg() manager.Config {
 		KongPluginInstallationControllerEnabled: false,
 		LoggerOpts:                              &zap.Options{},
 		KonnectMaxConcurrentReconciles:          consts.DefaultKonnectMaxConcurrentReconciles,
+		MaxConcurrentReconciles:                 consts.DefaultMaxConcurrentReconciles,
 		ClusterDomain:                           ingressmgrconfig.DefaultClusterDomain,
 		EmitKubernetesEvents:                    true,
 		ConversionWebhookEnabled:                true,

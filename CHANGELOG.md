@@ -131,6 +131,11 @@
   service FQDNs (e.g., `service.namespace.svc.cluster.local`) instead of
   individual pod endpoint IPs.
   [#2607](https://github.com/Kong/kong-operator/pull/2607)
+- Add `--max-concurrent-reconciles` flag to set the maximum number of concurrent
+  reconciliation requests that can be processed by each controller.
+  NOTE: Konnect entities controllers still respect the
+  `--konnect-controller-max-concurrent-reconciles` flag and there is not change in that.
+  [#2652](https://github.com/Kong/kong-operator/pull/2652)
 
 ### Changed
 

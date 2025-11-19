@@ -372,7 +372,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	}
 
 	ctrlOpts := controller.Options{
-		CacheSyncTimeout: c.CacheSyncTimeout,
+		CacheSyncTimeout:        c.CacheSyncTimeout,
+		MaxConcurrentReconciles: int(c.MaxConcurrentReconciles),
 	}
 
 	controllers := []ControllerDef{
@@ -380,7 +381,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.GatewayControllerEnabled,
 			Controller: &gatewayclass.Reconciler{
-				CacheSyncTimeout:              c.CacheSyncTimeout,
+				ControllerOptions:             ctrlOpts,
 				Client:                        mgr.GetClient(),
 				LoggingMode:                   c.LoggingMode,
 				GatewayAPIExperimentalEnabled: c.GatewayAPIExperimentalEnabled,
@@ -390,7 +391,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.GatewayControllerEnabled,
 			Controller: &gateway.Reconciler{
-				CacheSyncTimeout:        c.CacheSyncTimeout,
+				ControllerOptions:       ctrlOpts,
 				Client:                  mgr.GetClient(),
 				Scheme:                  mgr.GetScheme(),
 				Namespace:               c.ControllerNamespace,
@@ -405,8 +406,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.GatewayControllerEnabled || c.ControlPlaneControllerEnabled,
 			Controller: &controlplane.Reconciler{
-				CacheSyncPeriod:          c.CacheSyncPeriod,
-				CacheSyncTimeout:         c.CacheSyncTimeout,
+				ControllerOptions:        ctrlOpts,
 				AnonymousReportsEnabled:  c.AnonymousReports,
 				LoggingMode:              c.LoggingMode,
 				Client:                   mgr.GetClient(),
@@ -429,7 +429,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: (c.DataPlaneControllerEnabled || c.GatewayControllerEnabled) && !c.DataPlaneBlueGreenControllerEnabled,
 			Controller: &dataplane.Reconciler{
-				CacheSyncTimeout:         c.CacheSyncTimeout,
+				ControllerOptions:        ctrlOpts,
 				Client:                   mgr.GetClient(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
@@ -447,6 +447,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.DataPlaneBlueGreenControllerEnabled,
 			Controller: &dataplane.BlueGreenReconciler{
+				ControllerOptions:        ctrlOpts,
 				CacheSyncTimeout:         c.CacheSyncTimeout,
 				Client:                   mgr.GetClient(),
 				ClusterCASecretName:      c.ClusterCASecretName,
@@ -454,7 +455,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				SecretLabelSelector:      c.SecretLabelSelector,
 				DataPlaneController: &dataplane.Reconciler{
-					CacheSyncTimeout:         c.CacheSyncTimeout,
+					ControllerOptions:        ctrlOpts,
 					Client:                   mgr.GetClient(),
 					ClusterCASecretName:      c.ClusterCASecretName,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
@@ -505,16 +506,16 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.AIGatewayControllerEnabled,
 			Controller: &specialized.AIGatewayReconciler{
-				CacheSyncTimeout: c.CacheSyncTimeout,
-				Client:           mgr.GetClient(),
-				LoggingMode:      c.LoggingMode,
+				ControllerOptions: ctrlOpts,
+				Client:            mgr.GetClient(),
+				LoggingMode:       c.LoggingMode,
 			},
 		},
 		// KongPluginInstallation controller
 		{
 			Enabled: c.KongPluginInstallationControllerEnabled,
 			Controller: &kongplugininstallation.Reconciler{
-				CacheSyncTimeout:       c.CacheSyncTimeout,
+				ControllerOptions:      ctrlOpts,
 				Client:                 mgr.GetClient(),
 				Scheme:                 mgr.GetScheme(),
 				LoggingMode:            c.LoggingMode,
@@ -525,7 +526,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.ControlPlaneExtensionsControllerEnabled,
 			Controller: &controlplane_extensions.Reconciler{
-				CacheSyncTimeout:                c.CacheSyncTimeout,
+				ControllerOptions:               ctrlOpts,
 				Client:                          mgr.GetClient(),
 				LoggingMode:                     c.LoggingMode,
 				DataPlaneScraperManagerNotifier: scrapersMgr,
@@ -536,13 +537,17 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
 		sdkFactory := sdkops.NewSDKFactory()
+		ctrlOpts := controller.Options{
+			CacheSyncTimeout:        c.CacheSyncTimeout,
+			MaxConcurrentReconciles: int(c.KonnectMaxConcurrentReconciles),
+		}
 		controllerFactory := konnectControllerFactory{
-			sdkFactory:              sdkFactory,
-			loggingMode:             c.LoggingMode,
-			client:                  mgr.GetClient(),
-			syncPeriod:              c.KonnectSyncPeriod,
-			maxConcurrentReconciles: c.KonnectMaxConcurrentReconciles,
-			metricRecorder:          metricRecorder,
+			sdkFactory:        sdkFactory,
+			loggingMode:       c.LoggingMode,
+			client:            mgr.GetClient(),
+			syncPeriod:        c.KonnectSyncPeriod,
+			controllerOptions: ctrlOpts,
+			metricRecorder:    metricRecorder,
 		}
 
 		// Add additional Konnect controllers
@@ -552,6 +557,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			ControllerDef{
 				Enabled: c.KonnectControllersEnabled,
 				Controller: konnect.NewKonnectAPIAuthConfigurationReconciler(
+					ctrlOpts,
 					sdkFactory,
 					c.LoggingMode,
 					mgr.GetClient(),
@@ -561,6 +567,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			ControllerDef{
 				Enabled: c.KonnectControllersEnabled,
 				Controller: konnect.NewKongPluginReconciler(
+					ctrlOpts,
 					c.LoggingMode,
 					mgr.GetClient(),
 				),
@@ -569,6 +576,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			ControllerDef{
 				Enabled: c.KonnectControllersEnabled,
 				Controller: konnect.NewKongCredentialSecretReconciler(
+					ctrlOpts,
 					c.LoggingMode,
 					mgr.GetClient(),
 					mgr.GetScheme(),
@@ -578,6 +586,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			ControllerDef{
 				Enabled: (c.DataPlaneControllerEnabled || c.DataPlaneBlueGreenControllerEnabled) && c.KonnectControllersEnabled,
 				Controller: &konnect.KonnectExtensionReconciler{
+					ControllerOptions:        ctrlOpts,
 					SdkFactory:               sdkFactory,
 					LoggingMode:              c.LoggingMode,
 					Client:                   mgr.GetClient(),
@@ -655,12 +664,12 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 }
 
 type konnectControllerFactory struct {
-	sdkFactory              sdkops.SDKFactory
-	loggingMode             logging.Mode
-	client                  client.Client
-	syncPeriod              time.Duration
-	maxConcurrentReconciles uint
-	metricRecorder          metrics.Recorder
+	sdkFactory        sdkops.SDKFactory
+	loggingMode       logging.Mode
+	client            client.Client
+	syncPeriod        time.Duration
+	metricRecorder    metrics.Recorder
+	controllerOptions controller.Options
 }
 
 func newKonnectEntityController[
@@ -674,8 +683,8 @@ func newKonnectEntityController[
 			f.loggingMode,
 			f.client,
 			konnect.WithKonnectEntitySyncPeriod[T, TEnt](f.syncPeriod),
-			konnect.WithKonnectMaxConcurrentReconciles[T, TEnt](f.maxConcurrentReconciles),
 			konnect.WithMetricRecorder[T, TEnt](f.metricRecorder),
+			konnect.WithControllerOptions[T, TEnt](f.controllerOptions),
 		),
 	}
 }
@@ -687,6 +696,7 @@ func newKonnectPluginController[
 	return ControllerDef{
 		Enabled: true,
 		Controller: konnect.NewKonnectEntityPluginReconciler[T, TEnt](
+			f.controllerOptions,
 			f.loggingMode,
 			f.client,
 		),
