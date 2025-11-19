@@ -363,7 +363,7 @@ func (r *Reconciler) getOrCreateGatewayConfiguration(
 	gatewayClass *gatewayv1.GatewayClass,
 	gateway *gatewayv1.Gateway,
 ) (*GatewayConfiguration, error) {
-	gatewayConfig, err := r.getGatewayConfigForGatewayClass(ctx, gatewayClass.Spec.ParametersRef)
+	gatewayConfig, err := r.getGatewayConfigForParametersRef(ctx, gatewayClass.Spec.ParametersRef)
 	if err != nil {
 		return nil, fmt.Errorf("GatewayClass (%s): %w", gatewayClass.Name, err)
 	}
@@ -382,7 +382,7 @@ func (r *Reconciler) getOrCreateGatewayConfiguration(
 		namespace := gatewayv1.Namespace(gateway.Namespace)
 		localParametersRef.Namespace = &namespace
 
-		localGatewayConfig, err := r.getGatewayConfigForGatewayClass(ctx, localParametersRef)
+		localGatewayConfig, err := r.getGatewayConfigForParametersRef(ctx, localParametersRef)
 		if err != nil {
 			return nil, fmt.Errorf("Gateway (%s): spec.instrastructure %w", gateway.Name, err)
 		}
@@ -399,7 +399,7 @@ func (r *Reconciler) getOrCreateGatewayConfiguration(
 	return gatewayConfig, nil
 }
 
-func (r *Reconciler) getGatewayConfigForGatewayClass(
+func (r *Reconciler) getGatewayConfigForParametersRef(
 	ctx context.Context,
 	parametersRef *gatewayv1.ParametersReference,
 ) (*GatewayConfiguration, error) {
