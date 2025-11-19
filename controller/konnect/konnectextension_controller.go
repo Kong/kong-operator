@@ -16,6 +16,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -46,6 +47,7 @@ import (
 // KonnectExtensionReconciler reconciles a KonnectExtension object.
 type KonnectExtensionReconciler struct {
 	client.Client
+	ControllerOptions        controller.Options
 	LoggingMode              logging.Mode
 	SdkFactory               sdkops.SDKFactory
 	SyncPeriod               time.Duration
@@ -75,6 +77,7 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&konnectv1alpha2.KonnectExtension{}).
+		WithOptions(r.ControllerOptions).
 		Watches(
 			&operatorv1beta1.DataPlane{},
 			handler.EnqueueRequestsFromMapFunc(listExtendableReferencedExtensions[*operatorv1beta1.DataPlane]),

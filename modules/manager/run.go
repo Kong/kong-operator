@@ -114,6 +114,7 @@ type Config struct {
 	KonnectMaxConcurrentReconciles          uint
 	GatewayAPIExperimentalEnabled           bool
 	ControlPlaneExtensionsControllerEnabled bool
+	MaxConcurrentReconciles                 uint
 
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool

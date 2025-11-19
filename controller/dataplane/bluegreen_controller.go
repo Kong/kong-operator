@@ -48,6 +48,8 @@ import (
 type BlueGreenReconciler struct {
 	client.Client
 
+	ControllerOptions controller.Options
+
 	// DataPlaneController contains the DataPlaneReconciler to which we delegate
 	// the DataPlane reconciliation when it's not yet ready to accept BlueGreen
 	// rollout changes or BlueGreen rollout has not been configured.
@@ -83,9 +85,7 @@ func (r *BlueGreenReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 	}
 	delegate.eventRecorder = mgr.GetEventRecorderFor("dataplane")
 	return DataPlaneWatchBuilder(mgr, r.KonnectEnabled).
-		WithOptions(controller.Options{
-			CacheSyncTimeout: r.CacheSyncTimeout,
-		}).
+		WithOptions(r.ControllerOptions).
 		Complete(r)
 }
 

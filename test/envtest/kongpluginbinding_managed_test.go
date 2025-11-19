@@ -16,6 +16,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
@@ -60,7 +61,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	sdk := factory.SDK
 
 	reconcilers := []Reconciler{
-		konnect.NewKongPluginReconciler(logging.DevelopmentMode, mgr.GetClient()),
+		konnect.NewKongPluginReconciler(controller.Options{}, logging.DevelopmentMode, mgr.GetClient()),
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
 			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](konnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongPluginBinding](&metricsmocks.MockRecorder{}),

@@ -159,6 +159,11 @@
   The finalizer `konnect.konghq.com/konnectapiauth-in-use` is automatically added
   when references exist and removed when all referencing resources are deleted.
   [#2726](https://github.com/Kong/kong-operator/pull/2726)
+- Add `--max-concurrent-reconciles` flag to set the maximum number of concurrent
+  reconciliation requests that can be processed by each controller.
+  NOTE: Konnect entities controllers still respect the
+  `--konnect-controller-max-concurrent-reconciles` flag and there is not change in that.
+  [#2652](https://github.com/Kong/kong-operator/pull/2652)
 
 ### Changed
 

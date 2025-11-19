@@ -202,7 +202,6 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 		},
 			"Did not see KonnectCloudGatewayNetwork turn Programmed and set Konnect ID",
 		)
-
 	})
 
 	t.Run("Adopting a network with match mode but not matching the network in Konnect", func(t *testing.T) {
@@ -264,12 +263,10 @@ func TestKonnectCloudGatewayNetwork(t *testing.T) {
 					return c.Type == konnectv1alpha1.KonnectEntityAdoptedConditionType &&
 						c.Status == metav1.ConditionFalse &&
 						c.Reason == konnectv1alpha1.KonnectEntityAdoptedReasonNotMatch
-
 				},
 			)
 		},
 			"Did not see KonnectCloudGatewayNetwork marked as not Programmed and not Adopted",
 		)
-
 	})
 }

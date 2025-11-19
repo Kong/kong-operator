@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"time"
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
@@ -40,9 +39,10 @@ const kindKongPluginInstallation = gatewayv1.Kind("KongPluginInstallation")
 // Reconciler reconciles a KongPluginInstallation object.
 type Reconciler struct {
 	client.Client
-	CacheSyncTimeout time.Duration
-	Scheme           *runtime.Scheme
-	LoggingMode      logging.Mode
+
+	ControllerOptions controller.Options
+	Scheme            *runtime.Scheme
+	LoggingMode       logging.Mode
 	// ConfigMapLabelSelector is the label selector configured at the oprator level.
 	// When not empty, it is used as the config map label selector of all reconcilers.
 	ConfigMapLabelSelector string
@@ -51,9 +51,7 @@ type Reconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{
-			CacheSyncTimeout: r.CacheSyncTimeout,
-		}).
+		WithOptions(r.ControllerOptions).
 		For(&operatorv1alpha1.KongPluginInstallation{}).
 		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Owns(&corev1.ConfigMap{}, builder.WithPredicates(

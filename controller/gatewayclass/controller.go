@@ -3,7 +3,6 @@ package gatewayclass
 import (
 	"context"
 	"fmt"
-	"time"
 
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -30,7 +29,8 @@ import (
 // Reconciler reconciles a Gateway object
 type Reconciler struct {
 	client.Client
-	CacheSyncTimeout              time.Duration
+
+	ControllerOptions             controller.Options
 	GatewayAPIExperimentalEnabled bool
 	LoggingMode                   logging.Mode
 }
@@ -38,9 +38,7 @@ type Reconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{
-			CacheSyncTimeout: r.CacheSyncTimeout,
-		}).
+		WithOptions(r.ControllerOptions).
 		For(&gatewayv1.GatewayClass{},
 			builder.WithPredicates(predicate.NewPredicateFuncs(r.gatewayClassMatches))).
 		// watch for updates to GatewayConfigurations, if any configuration is
