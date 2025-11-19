@@ -15,6 +15,7 @@ import (
 	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	kcfgkonnect "github.com/kong/kong-operator/api/konnect"
 	extensionserrors "github.com/kong/kong-operator/controller/pkg/extensions/errors"
+	"github.com/kong/kong-operator/controller/pkg/extensions/processor"
 	"github.com/kong/kong-operator/controller/pkg/patch"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -47,7 +48,7 @@ type Extendable interface {
 //     of an API server error), the resource should be requeued. For misconfiguration errors, the resource does not
 //     need to be requeued, and feedback is provided via resource status conditions.
 //   - err: an error in case of failure.
-func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, o t, konnectEnabled bool, processor Processor) (stop bool, res ctrl.Result, err error) {
+func ApplyExtensions[t ExtendableT](ctx context.Context, cl client.Client, o t, konnectEnabled bool, processor processor.Processor) (stop bool, res ctrl.Result, err error) {
 	// extensionsCondition can be nil. In that case, no extensions are referenced by the object.
 	extensionsCondition := validateExtensions(o)
 	if extensionsCondition == nil {

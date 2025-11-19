@@ -204,7 +204,7 @@ func TestMergeExtensionsForType(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := MergeExtensionsForDataPlane(tt.defaultExtensions, tt.extensions)
+			result := mergeExtensionsForDataPlane(tt.defaultExtensions, tt.extensions)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
