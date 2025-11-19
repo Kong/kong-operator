@@ -118,11 +118,6 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 			Namespace:    gateway.Namespace,
 			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)),
 		},
-		Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
-			CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
-				Name: fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name),
-			},
-		},
 	}
 
 	if gatewayConfig.Spec.Konnect.APIAuthConfigurationRef != nil {
@@ -133,7 +128,11 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 		kgcp.Spec.Source = gatewayConfig.Spec.Konnect.Source
 	}
 
-	if gatewayConfig.Spec.Konnect.Mirror != nil {
+	if gatewayConfig.Spec.Konnect.Mirror == nil {
+		kgcp.Spec.CreateControlPlaneRequest = &sdkkonnectcomp.CreateControlPlaneRequest{
+			Name: fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name),
+		}
+	} else {
 		kgcp.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
 			Konnect: konnectv1alpha2.MirrorKonnect{
 				ID: gatewayConfig.Spec.Konnect.Mirror.Konnect.ID,
@@ -635,10 +634,7 @@ func (r *Reconciler) ensureOwnedNetworkPoliciesDeleted(ctx context.Context, gate
 
 // isGatewayHybrid checks if the given GatewayConfiguration is in konnect mode by inspecting its fields.
 func isGatewayHybrid(gatewayConfiguration *GatewayConfiguration) bool {
-	if k := gatewayConfiguration.Spec.Konnect; k != nil {
-		return lo.FromPtrOr(k.Source, commonv1alpha1.EntitySourceOrigin) == commonv1alpha1.EntitySourceOrigin && k.APIAuthConfigurationRef != nil
-	}
-	return false
+	return gatewayConfiguration.Spec.Konnect != nil && gatewayConfiguration.Spec.Konnect.APIAuthConfigurationRef != nil
 }
 
 // -----------------------------------------------------------------------------
