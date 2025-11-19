@@ -664,7 +664,7 @@ KonnectExtensionStatus defines the observed state of KonnectExtension.
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectExtensionStatus. Known condition types are: |
+| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectExtensionStatus. |
 | `dataPlaneRefs` _NamespacedRef array_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
 | `controlPlaneRefs` _NamespacedRef array_ | ControlPlaneRefs is the array  of ControlPlane references this is associated with. A new reference is set by the operator when this extension is associated with a ControlPlane through its extensions spec. |
 | `dataPlaneClientAuth` _[DataPlaneClientAuthStatus](#dataplaneclientauthstatus)_ | DataPlaneClientAuth contains the configuration for the client certificate authentication for the DataPlane. |
