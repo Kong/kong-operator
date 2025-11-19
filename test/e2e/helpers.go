@@ -4,13 +4,14 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/kong/kong-operator/config"
+	"github.com/kong/kong-operator/pkg/utils/test"
 )
 
 //go:embed config/tests/kustomization.yaml
@@ -72,9 +73,8 @@ func PrepareKustomizeDir(t *testing.T, image string) KustomizeDir {
 		}
 	}
 
-	tmp, cleaner, err := config.DumpKustomizeConfigToTempDir()
-	require.NoError(t, err)
-	t.Cleanup(cleaner)
+	tmp := t.TempDir()
+	require.NoError(t, os.CopyFS(tmp, os.DirFS(path.Join(test.ProjectRootPath(), "config"))))
 
 	// Create tests/ dir to contain the tests specific kustomization.
 	testsDir := filepath.Join(tmp, "tests")

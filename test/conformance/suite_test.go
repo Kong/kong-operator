@@ -16,7 +16,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
-	"github.com/kong/kong-operator/config"
 	"github.com/kong/kong-operator/modules/manager"
 	"github.com/kong/kong-operator/modules/manager/metadata"
 	"github.com/kong/kong-operator/modules/manager/scheme"
@@ -86,9 +85,7 @@ func TestMain(m *testing.M) {
 	clients, err = testutils.NewK8sClients(env)
 	exitOnErr(err)
 
-	configPath, cleaner, err := config.DumpKustomizeConfigToTempDir()
-	exitOnErr(err)
-	defer cleaner()
+	configPath := path.Join(testutils.ProjectRootPath(), "config")
 
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")
 	exitOnErr(clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
