@@ -41,12 +41,11 @@ const (
 // KonnectEntityReconciler reconciles a Konnect entities.
 // It uses the generic type constraints to constrain the supported types.
 type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]] struct {
-	sdkFactory              sdkops.SDKFactory
-	CacheSyncTimeout        time.Duration
-	Client                  client.Client
-	LoggingMode             logging.Mode
-	MaxConcurrentReconciles uint
-	SyncPeriod              time.Duration
+	sdkFactory        sdkops.SDKFactory
+	ControllerOptions controller.Options
+	Client            client.Client
+	LoggingMode       logging.Mode
+	SyncPeriod        time.Duration
 
 	MetricRecorder metrics.Recorder
 }
@@ -66,12 +65,12 @@ func WithKonnectEntitySyncPeriod[T constraints.SupportedKonnectEntityType, TEnt 
 	}
 }
 
-// WithKonnectMaxConcurrentReconciles sets the max concurrent reconciles for the reconciler.
-func WithKonnectMaxConcurrentReconciles[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
-	maxConcurrent uint,
+// WithControllerOptions sets the controller options for the reconciler.
+func WithControllerOptions[T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T]](
+	controllerOptions controller.Options,
 ) KonnectEntityReconcilerOption[T, TEnt] {
 	return func(r *KonnectEntityReconciler[T, TEnt]) {
-		r.MaxConcurrentReconciles = maxConcurrent
+		r.ControllerOptions = controllerOptions
 	}
 }
 
@@ -96,12 +95,11 @@ func NewKonnectEntityReconciler[
 	opts ...KonnectEntityReconcilerOption[T, TEnt],
 ) *KonnectEntityReconciler[T, TEnt] {
 	r := &KonnectEntityReconciler[T, TEnt]{
-		sdkFactory:              sdkFactory,
-		LoggingMode:             loggingMode,
-		Client:                  client,
-		SyncPeriod:              consts.DefaultKonnectSyncPeriod,
-		MaxConcurrentReconciles: consts.DefaultKonnectMaxConcurrentReconciles,
-		MetricRecorder:          nil,
+		sdkFactory:     sdkFactory,
+		LoggingMode:    loggingMode,
+		Client:         client,
+		SyncPeriod:     consts.DefaultKonnectSyncPeriod,
+		MetricRecorder: nil,
 	}
 	for _, opt := range opts {
 		opt(r)
@@ -118,12 +116,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(ctx context.Context,
 		b              = ctrl.
 				NewControllerManagedBy(mgr).
 				Named(entityTypeName).
-				WithOptions(
-				controller.Options{
-					CacheSyncTimeout:        r.CacheSyncTimeout,
-					MaxConcurrentReconciles: int(r.MaxConcurrentReconciles),
-				},
-			)
+				WithOptions(r.ControllerOptions)
 	)
 
 	for _, dep := range ReconciliationWatchOptionsForEntity(r.Client, ent) {

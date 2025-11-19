@@ -188,6 +188,10 @@ rows:
     type: '`string`'
     description: "Logging mode to use. Possible values: production, development."
     default: '`"production"`'
+  - flag: '`--max-concurrent-reconciles`'
+    type: '`string`'
+    description: "Maximum number of concurrent reconciles for controllers entities (except the Konnect controllers)."
+    default: '`1`'
   - flag: '`--metrics-access-filter`'
     type: '`string`'
     description: "Specifies the filter access function to be used for accessing the metrics endpoint (possible values: off, rbac). Default is off."

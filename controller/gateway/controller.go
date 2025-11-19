@@ -61,7 +61,8 @@ import (
 // Reconciler reconciles a Gateway object.
 type Reconciler struct {
 	client.Client
-	CacheSyncTimeout        time.Duration
+
+	ControllerOptions       controller.Options
 	Scheme                  *runtime.Scheme
 	Namespace               string
 	PodLabels               map[string]string
@@ -78,9 +79,7 @@ const provisionDataPlaneFailRetryAfter = 5 * time.Second
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{
-			CacheSyncTimeout: r.CacheSyncTimeout,
-		}).
+		WithOptions(r.ControllerOptions).
 		// watch Gateway objects, filtering out any Gateways which are not configured with
 		// a supported GatewayClass controller name.
 		For(&gwtypes.Gateway{},
