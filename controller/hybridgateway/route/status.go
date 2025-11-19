@@ -26,17 +26,17 @@ import (
 // The function performs intelligent condition management:
 // - Only updates conditions that have actually changed (ignoring LastTransitionTime)
 // - Automatically sets LastTransitionTime when conditions are modified
-// - Preserves existing conditions that are not being updated
+// - Removes stale conditions that are not in the provided set (e.g., when resources are deleted)
 // - Only manages ParentStatus entries owned by the specified controller
 //
 // Parameters:
 //   - route: The HTTPRoute to update
 //   - pRef: The ParentReference to match against
 //   - controllerName: The controller name that should own the ParentStatus entry
-//   - conditions: Variable number of conditions to set or update
+//   - conditions: Variable number of conditions to set or update (any existing conditions not in this list will be removed)
 //
 // Returns:
-//   - bool: true if any conditions were added or modified, false if no changes were made
+//   - bool: true if any conditions were added, modified, or removed, false if no changes were made
 //
 // This function respects controller ownership and will not modify ParentStatus entries
 // managed by other controllers, making it safe for use in multi-controller environments.
@@ -63,6 +63,25 @@ func SetStatusConditions(route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference,
 		// We are done, return.
 		return true
 	}
+
+	// Build a map of new condition types for quick lookup.
+	newConditionTypes := make(map[string]bool)
+	for _, cond := range conditions {
+		newConditionTypes[cond.Type] = true
+	}
+
+	// Remove conditions that are not in the new set (stale conditions).
+	filteredConditions := []metav1.Condition{}
+	for _, existingCondition := range targetParentStatus.Conditions {
+		if newConditionTypes[existingCondition.Type] {
+			// Keep this condition, it will be updated below.
+			filteredConditions = append(filteredConditions, existingCondition)
+		} else {
+			// Remove this stale condition.
+			updated = true
+		}
+	}
+	targetParentStatus.Conditions = filteredConditions
 
 	// Process each condition.
 	for _, newCondition := range conditions {
