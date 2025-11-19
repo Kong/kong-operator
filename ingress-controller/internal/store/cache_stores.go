@@ -10,7 +10,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 )
 
-//go:generate go run ../../hack/generators/cache-stores
+//go:generate go run ../../../hack/generators/cache-stores
 
 // NewCacheStoresFromObjYAML provides a new CacheStores object given any number of byte arrays containing
 // YAML Kubernetes objects. An error is returned if any provided YAML was not a valid Kubernetes object.
