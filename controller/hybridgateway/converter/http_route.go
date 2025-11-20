@@ -14,10 +14,10 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/controller/hybridgateway/builder"
 	hybridgatewayerrors "github.com/kong/kong-operator/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/controller/hybridgateway/kongroute"
-	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/controller/hybridgateway/plugin"
+	"github.com/kong/kong-operator/controller/hybridgateway/pluginbinding"
 	"github.com/kong/kong-operator/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/controller/hybridgateway/service"
@@ -404,60 +404,44 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			log.Debug(logger, "Successfully translated KongRoute resource",
 				"route", routeName)
 
-			// Build the kong plugin and kong plugin binding resources.
+			// Build the KongPlugin and KongPluginBinding resources.
 			log.Debug(logger, "Processing filters for rule",
 				"kongRoute", routeName,
 				"filterCount", len(rule.Filters))
 
 			for _, filter := range rule.Filters {
-				pluginName := namegen.NewKongPluginName(filter)
-
-				log.Trace(logger, "Building KongPlugin resource",
-					"plugin", pluginName,
-					"filterType", filter.Type)
-
-				plugin, err := builder.NewKongPlugin().
-					WithName(pluginName).
-					WithNamespace(c.route.Namespace).
-					WithLabels(c.route, &pRef).
-					WithAnnotations(c.route, &pRef).
-					WithFilter(filter).Build()
+				pluginPtr, err := plugin.PluginForFilter(ctx, logger, c.Client, c.route, filter, &pRef)
 				if err != nil {
-					log.Error(logger, err, "Failed to build KongPlugin resource, skipping filter",
-						"plugin", pluginName,
-						"filterType", filter.Type)
-					translationErrors = append(translationErrors, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err))
+					log.Error(logger, err, "Failed to translate KongPlugin resource, skipping filter",
+						"filter", filter.Type)
+					translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongPlugin for filter: %w", err))
 					continue
 				}
-				c.outputStore = append(c.outputStore, &plugin)
+				pluginName := pluginPtr.Name
+				c.outputStore = append(c.outputStore, pluginPtr)
 
-				// Create a KongPluginBinding to bind the KongPlugin to each rule match.
-				bindingName := namegen.NewKongPluginBindingName(routeName, pluginName)
-				log.Trace(logger, "Building KongPluginBinding resource",
-					"binding", bindingName,
-					"plugin", pluginName,
-					"kongRoute", routeName)
-
-				binding, err := builder.NewKongPluginBinding().
-					WithName(bindingName).
-					WithNamespace(c.route.Namespace).
-					WithLabels(c.route, &pRef).
-					WithAnnotations(c.route, &pRef).
-					WithPluginRef(pluginName).
-					WithControlPlaneRef(*cp).
-					WithOwner(c.route).
-					WithRouteRef(routeName).Build()
+				// Create a KongPluginBinding to bind the KongPlugin to each KongRoute.
+				bindingPtr, err := pluginbinding.BindingForPluginAndRoute(
+					ctx,
+					logger,
+					c.Client,
+					c.route,
+					&pRef,
+					cp,
+					pluginName,
+					routeName,
+				)
 				if err != nil {
 					log.Error(logger, err, "Failed to build KongPluginBinding resource, skipping binding",
-						"binding", bindingName,
 						"plugin", pluginName,
 						"kongRoute", routeName)
-					translationErrors = append(translationErrors, fmt.Errorf("failed to build KongPluginBinding %s: %w", bindingName, err))
+					translationErrors = append(translationErrors, fmt.Errorf("failed to build KongPluginBinding for plugin %s: %w", pluginName, err))
 					continue
 				}
-				c.outputStore = append(c.outputStore, &binding)
+				bindingName := bindingPtr.Name
+				c.outputStore = append(c.outputStore, bindingPtr)
 
-				log.Debug(logger, "Successfully built KongPlugin and KongPluginBinding resources",
+				log.Debug(logger, "Successfully translated KongPlugin and KongPluginBinding resources",
 					"plugin", pluginName,
 					"binding", bindingName)
 			}
