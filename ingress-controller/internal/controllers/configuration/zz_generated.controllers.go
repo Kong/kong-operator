@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Kong, Inc.
+Copyright 2022 Kong Inc.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -40,16 +40,16 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
+	kongv1 "github.com/kong/kong-operator/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kong-operator/api/incubator/v1alpha1"
 	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
 	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
 	ctrlutils "github.com/kong/kong-operator/ingress-controller/internal/controllers/utils"
 	"github.com/kong/kong-operator/ingress-controller/internal/dataplane"
 	"github.com/kong/kong-operator/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/ingress-controller/internal/util/kubernetes/object/status"
-	kongv1 "github.com/kong/kong-operator/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kong-operator/api/incubator/v1alpha1"
 )
 
 // -----------------------------------------------------------------------------

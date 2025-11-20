@@ -75,35 +75,35 @@ YQ_VERSION = 4.48.2
 YQ = $(PROJECT_DIR)/bin/installs/yq/$(YQ_VERSION)/bin/yq
 .PHONY: yq
 yq: mise # Download yq locally if necessary.
-	@$(MISE) plugin install --yes -q yq
+	$(MAKE) mise-plugin-install DEP=yq
 	@$(MISE) install -q yq@$(YQ_VERSION)
 
 CONTROLLER_GEN_VERSION = $(shell $(YQ) -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
 CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/kube-controller-tools/$(CONTROLLER_GEN_VERSION)/bin/controller-gen
 .PHONY: controller-gen
 controller-gen: mise yq ## Download controller-gen locally if necessary.
-	@$(MISE) plugin install --yes -q kube-controller-tools
+	$(MAKE) mise-plugin-install DEP=kube-controller-tools
 	@$(MISE) install -q kube-controller-tools@$(CONTROLLER_GEN_VERSION)
 
 KUSTOMIZE_VERSION = $(shell $(YQ) -r '.kustomize' < $(TOOLS_VERSIONS_FILE))
 KUSTOMIZE = $(PROJECT_DIR)/bin/installs/kustomize/$(KUSTOMIZE_VERSION)/bin/kustomize
 .PHONY: kustomize
 kustomize: mise yq ## Download kustomize locally if necessary.
-	@$(MISE) plugin install --yes -q kustomize
+	$(MAKE) mise-plugin-install DEP=kustomize
 	@$(MISE) install -q kustomize@$(KUSTOMIZE_VERSION)
 
 CLIENT_GEN_VERSION = $(shell $(YQ) -r '.code-generator' < $(TOOLS_VERSIONS_FILE))
 CLIENT_GEN = $(PROJECT_DIR)/bin/installs/kube-code-generator/$(CLIENT_GEN_VERSION)/bin/client-gen
 .PHONY: client-gen
 client-gen: mise yq ## Download client-gen locally if necessary.
-	@$(MISE) plugin install --yes -q kube-code-generator
+	$(MAKE) mise-plugin-install DEP=kube-code-generator
 	@$(MISE) install -q kube-code-generator@$(CLIENT_GEN_VERSION)
 
 GOLANGCI_LINT_VERSION = $(shell $(YQ) -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
 GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/golangci-lint/$(GOLANGCI_LINT_VERSION)/bin/golangci-lint
 .PHONY: golangci-lint
 golangci-lint: mise yq ## Download golangci-lint locally if necessary.
-	@$(MISE) plugin install --yes -q golangci-lint
+	$(MAKE) mise-plugin-install DEP=golangci-lint
 	@$(MISE) install -q golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
@@ -121,7 +121,7 @@ GOTESTSUM_VERSION = $(shell $(YQ) -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum
 .PHONY: gotestsum
 gotestsum: mise yq ## Download gotestsum locally if necessary.
-	@$(MISE) plugin install --yes -q gotestsum https://github.com/pmalek/mise-gotestsum.git
+	$(MAKE) mise-plugin-install DEP=gotestsum
 	@$(MISE) install -q gotestsum@$(GOTESTSUM_VERSION)
 
 CRD_REF_DOCS_VERSION = $(shell $(YQ) -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
@@ -135,42 +135,42 @@ SKAFFOLD_VERSION = $(shell $(YQ) -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
 SKAFFOLD = $(PROJECT_DIR)/bin/installs/skaffold/$(SKAFFOLD_VERSION)/bin/skaffold
 .PHONY: skaffold
 skaffold: mise yq ## Download skaffold locally if necessary.
-	@$(MISE) plugin install --yes -q skaffold
+	$(MAKE) mise-plugin-install DEP=skaffold
 	@$(MISE) install -q skaffold@$(SKAFFOLD_VERSION)
 
 MOCKERY_VERSION = $(shell $(YQ) -r '.mockery' < $(TOOLS_VERSIONS_FILE))
 MOCKERY = $(PROJECT_DIR)/bin/installs/mockery/$(MOCKERY_VERSION)/bin/mockery
 .PHONY: mockery
 mockery: mise yq ## Download mockery locally if necessary.
-	@$(MISE) plugin install --yes -q mockery https://github.com/cabify/asdf-mockery.git
+	$(MAKE) mise-plugin-install DEP=mockery
 	@$(MISE) install -q mockery@$(MOCKERY_VERSION)
 
 SETUP_ENVTEST_VERSION = $(shell $(YQ) -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
 SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
 .PHONY: setup-envtest
 setup-envtest: mise yq ## Download setup-envtest locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=setup-envtest URL=https://github.com/pmalek/mise-setup-envtest.git
+	$(MAKE) mise-plugin-install DEP=setup-envtest
 	@$(MAKE) mise-install DEP_VER=setup-envtest@$(SETUP_ENVTEST_VERSION)
 
 ACTIONLINT_VERSION = $(shell $(YQ) -r '.actionlint' < $(TOOLS_VERSIONS_FILE))
 ACTIONLINT = $(PROJECT_DIR)/bin/installs/actionlint/$(ACTIONLINT_VERSION)/bin/actionlint
 .PHONY: download.actionlint
 download.actionlint: mise yq ## Download actionlint locally if necessary.
-	@$(MISE) plugin install --yes -q actionlint
+	$(MAKE) mise-plugin-install DEP=actionlint
 	@$(MISE) install -q actionlint@$(ACTIONLINT_VERSION)
 
 SHELLCHECK_VERSION = $(shell $(YQ) -r '.shellcheck' < $(TOOLS_VERSIONS_FILE))
 SHELLCHECK = $(PROJECT_DIR)/bin/installs/shellcheck/$(SHELLCHECK_VERSION)/bin/shellcheck
 .PHONY: download.shellcheck
 download.shellcheck: mise yq ## Download shellcheck locally if necessary.
-	@$(MISE) plugin install --yes -q shellcheck
+	$(MAKE) mise-plugin-install DEP=shellcheck
 	@$(MISE) install -q shellcheck@$(SHELLCHECK_VERSION)
 
 GOVULNCHECK_VERSION = $(shell $(YQ) -r '.govulncheck' < $(TOOLS_VERSIONS_FILE))
 GOVULNCHECK = $(PROJECT_DIR)/bin/installs/govulncheck/$(GOVULNCHECK_VERSION)/bin/govulncheck
 .PHONY: download.govulncheck
 download.govulncheck: mise yq ## Download govulncheck locally if necessary.
-	@$(MISE) plugin install --yes -q govulncheck https://github.com/wizzardich/asdf-govulncheck.git
+	$(MAKE) mise-plugin-install DEP=govulncheck
 	@$(MISE) install -q govulncheck@$(GOVULNCHECK_VERSION)
 
 CHARTSNAP_VERSION = $(shell $(YQ) -ojson -r '.chartsnap' < $(TOOLS_VERSIONS_FILE))
@@ -182,28 +182,28 @@ KUBE_LINTER_VERSION = $(shell $(YQ) -ojson -r '.kube-linter' < $(TOOLS_VERSIONS_
 KUBE_LINTER = $(PROJECT_DIR)/bin/installs/kube-linter/v$(KUBE_LINTER_VERSION)/bin/kube-linter
 .PHONY: kube-linter
 download.kube-linter: mise yq
-	@$(MAKE) mise-plugin-install DEP=kube-linter
+	$(MAKE) mise-plugin-install DEP=kube-linter
 	@$(MAKE) mise-install DEP_VER=kube-linter@v$(KUBE_LINTER_VERSION)
 
 TELEPRESENCE_VERSION = $(shell $(YQ) -r '.telepresence' < $(TOOLS_VERSIONS_FILE))
 TELEPRESENCE= $(PROJECT_DIR)/bin/installs/telepresence/$(TELEPRESENCE_VERSION)/bin/telepresence
 .PHONY: download.telepresence
 download.telepresence: mise yq ## Download telepresence locally if necessary.
-	@$(MISE) plugin install --yes -q telepresence
+	$(MAKE) mise-plugin-install DEP=telepresence
 	@$(MISE) install -q telepresence@$(TELEPRESENCE_VERSION)
 
 MARKDOWNLINT_VERSION = $(shell $(YQ) -r '.markdownlint-cli2' < $(TOOLS_VERSIONS_FILE))
 MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/markdownlint-cli2/$(MARKDOWNLINT_VERSION)/bin/markdownlint-cli2
 .PHONY: download.markdownlint-cli2
 download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
-	@$(MISE) plugin install --yes -q markdownlint-cli2
+	$(MAKE) mise-plugin-install DEP=markdownlint-cli2
 	@$(MISE) install -q markdownlint-cli2@$(MARKDOWNLINT_VERSION)
 
 HELM_VERSION = $(shell $(YQ) -r '.helm' < $(TOOLS_VERSIONS_FILE))
 HELM = $(PROJECT_DIR)/bin/installs/helm/$(HELM_VERSION)/bin/helm
 .PHONY: download.helm
 download.helm: mise yq ## Download helm locally if necessary.
-	@$(MISE) plugin install --yes -q helm
+	$(MAKE) mise-plugin-install DEP=helm
 	@$(MISE) install -q helm@$(HELM_VERSION)
 
 .PHONY: use-setup-envtest
