@@ -1,7 +1,6 @@
 package envtest
 
 import (
-	"fmt"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -10,11 +9,9 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect"
@@ -32,7 +29,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 	ctx, cancel := Context(t, t.Context())
 	defer cancel()
 
-	// Setup up the envtest environment.
+	// Set up the envtest environment.
 	cfg, ns := Setup(t, ctx, scheme.Get())
 
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
@@ -88,18 +85,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 			WithPluginRef(proxyCacheKongPlugin.Name).
 			WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
 			Build(),
-			func(obj client.Object) {
-				kpb, ok := obj.(*configurationv1alpha1.KongPluginBinding)
-				require.True(t, ok)
-				kpb.Spec.Adopt = &commonv1alpha1.AdoptOptions{
-					From: commonv1alpha1.AdoptSourceKonnect,
-					Mode: commonv1alpha1.AdoptModeOverride,
-					Konnect: &commonv1alpha1.AdoptKonnectOptions{
-						ID: pluginID,
-					},
-				}
-
-			},
+			setKongPluginBindingAdoptOptions(t, pluginID),
 		)
 
 		t.Log("Waiting for KongPluginBinding being Programmed and set Konnect ID")
@@ -155,17 +141,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 			WithPluginRef(proxyCacheKongPlugin.Name).
 			WithServiceTarget(kongService.Name).
 			Build(),
-			func(obj client.Object) {
-				kpb, ok := obj.(*configurationv1alpha1.KongPluginBinding)
-				require.True(t, ok)
-				kpb.Spec.Adopt = &commonv1alpha1.AdoptOptions{
-					From: commonv1alpha1.AdoptSourceKonnect,
-					Mode: commonv1alpha1.AdoptModeOverride,
-					Konnect: &commonv1alpha1.AdoptKonnectOptions{
-						ID: pluginID,
-					},
-				}
-			},
+			setKongPluginBindingAdoptOptions(t, pluginID),
 		)
 
 		t.Log("Waiting for KongPluginBinding being Programmed and set Konnect ID")
@@ -207,18 +183,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 			WithPluginRef("non-exist-plugin").
 			WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
 			Build(),
-			func(obj client.Object) {
-				kpb, ok := obj.(*configurationv1alpha1.KongPluginBinding)
-				require.True(t, ok)
-				kpb.Spec.Adopt = &commonv1alpha1.AdoptOptions{
-					From: commonv1alpha1.AdoptSourceKonnect,
-					Mode: commonv1alpha1.AdoptModeOverride,
-					Konnect: &commonv1alpha1.AdoptKonnectOptions{
-						ID: pluginID,
-					},
-				}
-
-			},
+			setKongPluginBindingAdoptOptions(t, pluginID),
 		)
 
 		t.Log("Waiting for the KongPluginBinding to be marked as not programmed and not adopted")
@@ -227,11 +192,20 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
 				return kpb.Name == kpbGlobal.Name &&
 					conditionsContainProgrammedFalse(kpb.GetConditions()) &&
-					lo.ContainsBy(kpb.GetConditions(), func(c metav1.Condition) bool {
-						return c.Type == konnectv1alpha1.KonnectEntityAdoptedConditionType && c.Status == metav1.ConditionFalse
-					})
+					k8sutils.HasConditionFalse(konnectv1alpha1.KonnectEntityAdoptedConditionType, kpb)
 			},
-			fmt.Sprintf("Did not see KongPluginBinding marked as not programmed and not adopted in its conditions, conditions: %+v", kpbGlobal.GetConditions()),
+			"Did not see KongPluginBinding marked as not programmed and not adopted in its conditions.",
 		)
 	})
+}
+
+// setKongPluginBindingAdoptOptions returns a function to set the adopt options on a KongPluginBinding
+// to adopt a plugin from the existing one with the given ID.
+// TODO: Use a more generic way to set adopt options: https://github.com/Kong/kong-operator/issues/2660
+func setKongPluginBindingAdoptOptions(t *testing.T, id string) func(obj client.Object) {
+	return func(obj client.Object) {
+		kpb, ok := obj.(*configurationv1alpha1.KongPluginBinding)
+		require.True(t, ok)
+		kpb.Spec.Adopt = deploy.AdoptOptionsOverrideModeWithID(id)
+	}
 }
