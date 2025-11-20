@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
@@ -132,6 +133,30 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom)),
 		)
 	}
+
+	// Watch Secrets to immediately reconcile Gateways when referenced certificate Secrets change.
+	blder.WatchesRawSource(
+		source.Kind(
+			mgr.GetCache(),
+			&corev1.Secret{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, s *corev1.Secret) []reconcile.Request {
+				referrers, err := r.ReferenceIndexers.ListReferrerObjectsByReferent(s)
+				if err != nil {
+					r.Log.Error(err, "Failed to list referrers for Secret", "secret", client.ObjectKeyFromObject(s))
+					return nil
+				}
+				recs := make([]reconcile.Request, 0, len(referrers))
+				for _, obj := range referrers {
+					nn := k8stypes.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}
+					if !r.GatewayNN.MatchesNN(nn) { // respect --gateway-to-reconcile if set
+						continue
+					}
+					recs = append(recs, reconcile.Request{NamespacedName: nn})
+				}
+				return recs
+			}),
+		),
+	)
 
 	if err := blder.Complete(r); err != nil {
 		return err
