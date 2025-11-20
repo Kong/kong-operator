@@ -9,6 +9,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
@@ -25,24 +27,36 @@ func TestWatches(t *testing.T) {
 			name:                  "HTTPRoute with ReferenceGrant disabled",
 			obj:                   &gwtypes.HTTPRoute{},
 			referenceGrantEnabled: false,
-			wantLen:               4,
+			wantLen:               10,
 			wantType: []any{
 				&gwtypes.Gateway{},
 				&gwtypes.GatewayClass{},
 				&corev1.Service{},
 				&discoveryv1.EndpointSlice{},
+				&configurationv1alpha1.KongUpstream{},
+				&configurationv1alpha1.KongTarget{},
+				&configurationv1alpha1.KongService{},
+				&configurationv1alpha1.KongRoute{},
+				&configurationv1.KongPlugin{},
+				&configurationv1alpha1.KongPluginBinding{},
 			},
 		},
 		{
 			name:                  "HTTPRoute with ReferenceGrant enabled",
 			obj:                   &gwtypes.HTTPRoute{},
 			referenceGrantEnabled: true,
-			wantLen:               5,
+			wantLen:               11,
 			wantType: []any{
 				&gwtypes.Gateway{},
 				&gwtypes.GatewayClass{},
 				&corev1.Service{},
 				&discoveryv1.EndpointSlice{},
+				&configurationv1alpha1.KongUpstream{},
+				&configurationv1alpha1.KongTarget{},
+				&configurationv1alpha1.KongService{},
+				&configurationv1alpha1.KongRoute{},
+				&configurationv1.KongPlugin{},
+				&configurationv1alpha1.KongPluginBinding{},
 				&gwtypes.ReferenceGrant{},
 			},
 		},

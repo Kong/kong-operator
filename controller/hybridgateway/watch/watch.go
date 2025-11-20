@@ -6,6 +6,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
@@ -37,6 +39,30 @@ func Watches(obj client.Object, cl client.Client, referenceGrantEnabled bool) []
 			{
 				&discoveryv1.EndpointSlice{},
 				MapHTTPRouteForEndpointSlice(cl),
+			},
+			{
+				&configurationv1alpha1.KongUpstream{},
+				MapHTTPRouteForKongResource[*configurationv1alpha1.KongUpstream](cl),
+			},
+			{
+				&configurationv1alpha1.KongTarget{},
+				MapHTTPRouteForKongResource[*configurationv1alpha1.KongTarget](cl),
+			},
+			{
+				&configurationv1alpha1.KongService{},
+				MapHTTPRouteForKongResource[*configurationv1alpha1.KongService](cl),
+			},
+			{
+				&configurationv1alpha1.KongRoute{},
+				MapHTTPRouteForKongResource[*configurationv1alpha1.KongRoute](cl),
+			},
+			{
+				&configurationv1.KongPlugin{},
+				MapHTTPRouteForKongResource[*configurationv1.KongPlugin](cl),
+			},
+			{
+				&configurationv1alpha1.KongPluginBinding{},
+				MapHTTPRouteForKongResource[*configurationv1alpha1.KongPluginBinding](cl),
 			},
 		}
 

@@ -70,6 +70,23 @@ func NewAnnotationManager(logger logr.Logger) *AnnotationManager {
 	}
 }
 
+// ObjectToNameString converts a Kubernetes object to its string representation in the format "namespace/name".
+func ObjectToNameString(obj client.Object) string {
+	return client.ObjectKeyFromObject(obj).String()
+}
+
+// NameStringToObjectKey converts a string in the format "namespace/name" to a client.ObjectKey.
+func NameStringToObjectKey(s string) client.ObjectKey {
+	parts := strings.SplitN(s, "/", 2)
+	if len(parts) != 2 {
+		return client.ObjectKey{}
+	}
+	return client.ObjectKey{
+		Namespace: parts[0],
+		Name:      parts[1],
+	}
+}
+
 // AppendRouteToAnnotation appends the given route to the hybrid-routes annotation.
 // The hybrid-routes annotation format is: "namespace/name,namespace2/name2,..."
 //
@@ -81,7 +98,7 @@ func NewAnnotationManager(logger logr.Logger) *AnnotationManager {
 //   - bool: true if the hybrid-routes annotation was modified, false if the annotation was already
 //     there and no changes were made
 func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route client.Object) bool {
-	currentRouteKey := client.ObjectKeyFromObject(route).String()
+	currentRouteKey := ObjectToNameString(route)
 	currentRouteAnnotation := currentRouteKey
 
 	log.Debug(am.logger, "Processing route annotation",
