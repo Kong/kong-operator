@@ -91,6 +91,7 @@ func TestMain(m *testing.M) {
 	exitOnErr(clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))
 	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), path.Join(configPath, "/rbac/base")))
 	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), path.Join(configPath, "/rbac/role")))
+	exitOnErr(clusters.KustomizeDeployForCluster(ctx, env.Cluster(), path.Join(configPath, "/default/validating_policies")))
 
 	// Normally this is obtained from the downward API. The tests fake it.
 	err = os.Setenv("POD_NAMESPACE", "kong-system")

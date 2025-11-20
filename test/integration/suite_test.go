@@ -114,8 +114,7 @@ func TestMain(m *testing.M) {
 
 	exitOnErr(clusters.KustomizeDeployForCluster(GetCtx(), GetEnv().Cluster(), path.Join(configPath, "/rbac/base")))
 	exitOnErr(clusters.KustomizeDeployForCluster(GetCtx(), GetEnv().Cluster(), path.Join(configPath, "/rbac/role")))
-	fmt.Println(`WARN: skipping applying "/default/validating_policies" until https://github.com/Kong/kong-operator/issues/2176 is resolved`)
-	// exitOnErr(clusters.KustomizeDeployForCluster(GetCtx(), GetEnv().Cluster(), path.Join(configPath, "/default/validating_policies")))
+	exitOnErr(clusters.KustomizeDeployForCluster(GetCtx(), GetEnv().Cluster(), path.Join(configPath, "/default/validating_policies")))
 
 	// normally this is obtained from the downward API. the tests fake it.
 	err = os.Setenv("POD_NAMESPACE", "kong-system")
