@@ -24,10 +24,8 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 )
 
-// TODO(pmalek): expression field is not in OpenAPI spec but error message references it:
-//   when protocols has 'http', at least one of 'hosts', 'methods', 'paths', 'headers' or 'expression' must be set
-
 // KongRoute is the schema for Routes API which defines a Kong Route.
+// Currently, KongRoute supports only the JSON flavor of Route configuration.
 //
 // +genclient
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -54,6 +52,7 @@ type KongRoute struct {
 }
 
 // KongRouteSpec defines spec of a Kong Route.
+//
 // +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.serviceRef) || (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef'))", message="spec.adopt is allowed only when serviceRef exists or controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
@@ -78,10 +77,11 @@ type KongRouteSpec struct {
 	KongRouteAPISpec `json:",inline"`
 }
 
+// TODO: Support expressions routes: https://github.com/Kong/kong-operator/issues/2673
+
 // KongRouteAPISpec represents the configuration of a Route in Kong as defined by the Konnect API.
+// Currently, this only supports the JSON route fields.
 //
-// These fields are mostly copied from sdk-konnect-go but some modifications have been made
-// to make the code generation required for Kubernetes CRDs work.
 // +apireference:kgo:include
 type KongRouteAPISpec struct {
 	// A list of IP destinations of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port".
@@ -121,6 +121,7 @@ type KongRouteAPISpec struct {
 }
 
 // KongRouteStatus represents the current status of the Kong Route resource.
+//
 // +apireference:kgo:include
 type KongRouteStatus struct {
 	// Konnect contains the Konnect entity status.
@@ -136,6 +137,7 @@ type KongRouteStatus struct {
 }
 
 // KongRouteList contains a list of Kong Routes.
+//
 // +kubebuilder:object:root=true
 // +apireference:kgo:include
 type KongRouteList struct {

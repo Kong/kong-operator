@@ -543,6 +543,7 @@ KongPluginBinding is the schema for Plugin Bindings API which defines a Kong Plu
 
 
 KongRoute is the schema for Routes API which defines a Kong Route.
+Currently, KongRoute supports only the JSON flavor of Route configuration.
 
 <!-- kong_route description placeholder -->
 
@@ -1400,8 +1401,8 @@ _Appears in:_
 #### KongRouteAPISpec
 
 
-KongRouteAPISpec represents the configuration of a Route in Kong as defined by the Konnect API.<br /><br />These fields are mostly copied from sdk-konnect-go but some modifications have been made
-to make the code generation required for Kubernetes CRDs work.
+KongRouteAPISpec represents the configuration of a Route in Kong as defined by the Konnect API.
+Currently, this only supports the JSON route fields.
 
 
 
