@@ -9,7 +9,7 @@ golangci-lint: "2.6.2"
 # TODO: Renovate comment is missing. This needs to be added at some point.
 modernize: "v0.19.1"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
-skaffold: "2.16.1"
+skaffold: "2.17.0"
 # renovate: datasource=github-releases depName=go-delve/delve
 dlv: "1.25.2"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
@@ -46,7 +46,7 @@ kube-linter: "0.7.6"
 # renovate: datasource=github-releases depName=telepresenceio/telepresence
 telepresence: "2.25.1"
 # renovate: datasource=github-tags depName=DavidAnson/markdownlint-cli2
-markdownlint-cli2: "0.18.1"
+markdownlint-cli2: "0.19.0"
 # renovate: datasource=github-releases depName=cert-manager/cert-manager
 cert-manager: "1.19.1"
 # renovate: datasource=github-releases depName=helm/helm

@@ -375,7 +375,7 @@ func Test_GetRouteGroupKind(t *testing.T) {
 		{
 			name:  "empty group defaults to gateway.networking.k8s.io",
 			gvk:   schema.GroupVersionKind{Group: "", Kind: "HTTPRoute"},
-			wantG: "gateway.networking.k8s.io",
+			wantG: gwtypes.GroupName,
 			wantK: "HTTPRoute",
 		},
 	}
@@ -578,7 +578,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 		},
 	}
 
-	pRef := gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("gateway.networking.k8s.io"), Name: "gw"}
+	pRef := gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "gw"}
 
 	// Fake client with default namespace
 	s := runtime.NewScheme()
@@ -692,7 +692,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "nonexistent", Name: "route"},
 				Spec:       gwtypes.HTTPRouteSpec{},
 			},
-			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("gateway.networking.k8s.io"), Name: "gw", SectionName: sectionPtr("listener1")},
+			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "gw", SectionName: sectionPtr("listener1")},
 			client:     fake.NewClientBuilder().WithScheme(s).Build(), // no namespace object
 			wantType:   "",
 			wantStatus: "",
@@ -733,7 +733,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
 				Spec:       gwtypes.HTTPRouteSpec{},
 			},
-			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("gateway.networking.k8s.io"), Name: "gw", SectionName: sectionPtr("listener1")},
+			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "gw", SectionName: sectionPtr("listener1")},
 			client:     cl,
 			wantType:   "",
 			wantStatus: "",
@@ -871,10 +871,44 @@ func Test_SetStatusConditions(t *testing.T) {
 		{
 			name:       "adds new condition if type not present",
 			init:       &gwtypes.HTTPRoute{Status: gatewayv1.HTTPRouteStatus{RouteStatus: gatewayv1.RouteStatus{Parents: []gatewayv1.RouteParentStatus{{ParentRef: pRef, ControllerName: gwtypes.GatewayController(controllerName), Conditions: []metav1.Condition{baseCond}}}}}},
-			conds:      []metav1.Condition{{Type: "Other", Status: metav1.ConditionTrue}},
+			conds:      []metav1.Condition{baseCond, {Type: "Other", Status: metav1.ConditionTrue}},
 			wantUpdate: true,
 			verify: func(t *testing.T, route *gwtypes.HTTPRoute) {
 				require.Len(t, route.Status.Parents[0].Conditions, 2)
+			},
+		},
+		{
+			name:       "removes stale conditions not in new set",
+			init:       &gwtypes.HTTPRoute{Status: gatewayv1.HTTPRouteStatus{RouteStatus: gatewayv1.RouteStatus{Parents: []gatewayv1.RouteParentStatus{{ParentRef: pRef, ControllerName: gwtypes.GatewayController(controllerName), Conditions: []metav1.Condition{baseCond, {Type: "Stale", Status: metav1.ConditionTrue}}}}}}},
+			conds:      []metav1.Condition{baseCond},
+			wantUpdate: true,
+			verify: func(t *testing.T, route *gwtypes.HTTPRoute) {
+				require.Len(t, route.Status.Parents[0].Conditions, 1)
+				require.Equal(t, "Ready", route.Status.Parents[0].Conditions[0].Type)
+			},
+		},
+		{
+			name: "removes multiple stale Programmed conditions when resources deleted",
+			init: &gwtypes.HTTPRoute{Status: gatewayv1.HTTPRouteStatus{RouteStatus: gatewayv1.RouteStatus{Parents: []gatewayv1.RouteParentStatus{{
+				ParentRef:      pRef,
+				ControllerName: gwtypes.GatewayController(controllerName),
+				Conditions: []metav1.Condition{
+					{Type: "Accepted", Status: metav1.ConditionTrue},
+					{Type: "ResolvedRefs", Status: metav1.ConditionTrue},
+					{Type: "Programmed-KongRoute-1", Status: metav1.ConditionTrue},
+					{Type: "Programmed-KongRoute-2", Status: metav1.ConditionTrue},
+					{Type: "Programmed-KongTarget-1", Status: metav1.ConditionTrue},
+				},
+			}}}}},
+			conds: []metav1.Condition{
+				{Type: "Accepted", Status: metav1.ConditionTrue},
+				{Type: "ResolvedRefs", Status: metav1.ConditionTrue},
+			},
+			wantUpdate: true,
+			verify: func(t *testing.T, route *gwtypes.HTTPRoute) {
+				require.Len(t, route.Status.Parents[0].Conditions, 2)
+				require.Equal(t, "Accepted", route.Status.Parents[0].Conditions[0].Type)
+				require.Equal(t, "ResolvedRefs", route.Status.Parents[0].Conditions[1].Type)
 			},
 		},
 		{
@@ -1185,7 +1219,7 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 	gw := &gwtypes.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "gw", Namespace: "default"}}
 	pRef := gwtypes.ParentReference{Name: "listener1"}
 	listener := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPProtocolType}
-	kind := gwtypes.RouteGroupKind{Group: groupPtr("gateway.networking.k8s.io"), Kind: "HTTPRoute"}
+	kind := gwtypes.RouteGroupKind{Group: groupPtr(gwtypes.GroupName), Kind: "HTTPRoute"}
 	routeNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
 
 	selector := &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
@@ -1195,7 +1229,7 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 	listenerAll.AllowedRoutes = &gwtypes.AllowedRoutes{}
 
 	listenerKindMatch := listener
-	listenerKindMatch.AllowedRoutes = &gwtypes.AllowedRoutes{Kinds: []gwtypes.RouteGroupKind{{Group: groupPtr("gateway.networking.k8s.io"), Kind: "HTTPRoute"}}}
+	listenerKindMatch.AllowedRoutes = &gwtypes.AllowedRoutes{Kinds: []gwtypes.RouteGroupKind{{Group: groupPtr(gwtypes.GroupName), Kind: "HTTPRoute"}}}
 
 	listenerKindMismatch := listener
 	listenerKindMismatch.AllowedRoutes = &gwtypes.AllowedRoutes{Kinds: []gwtypes.RouteGroupKind{{Group: groupPtr("other"), Kind: "OtherRoute"}}}

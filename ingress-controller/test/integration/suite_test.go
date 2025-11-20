@@ -192,7 +192,7 @@ func TestMain(m *testing.M) {
 
 		fmt.Printf("INFO: feature gates enabled: %v\n", featureGates)
 
-		fmt.Println("preparing the environment to run the controller manager")
+		fmt.Println("Preparing the environment to run the controller manager")
 		helpers.ExitOnErr(ctx, testutils.PrepareClusterForRunningControllerManager(ctx, env.Cluster()))
 
 		fmt.Println("INFO: starting the controller manager")

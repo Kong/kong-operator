@@ -36,6 +36,7 @@ type (
 	ParametersReference    = gatewayv1.ParametersReference
 	ParentReference        = gatewayv1.ParentReference
 	PortNumber             = gatewayv1.PortNumber
+	ReferenceGrant         = gatewayv1beta1.ReferenceGrant
 	ReferenceGrantList     = gatewayv1beta1.ReferenceGrantList
 	ReferenceGrantSpec     = gatewayv1beta1.ReferenceGrantSpec
 	RouteGroupKind         = gatewayv1.RouteGroupKind

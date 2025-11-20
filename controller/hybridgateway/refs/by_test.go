@@ -82,7 +82,7 @@ func TestGetNamespacedRefs(t *testing.T) {
 }
 
 func TestGetControlPlaneRefByParentRef(t *testing.T) {
-	gatewayGroup := gwtypes.Group("gateway.networking.k8s.io")
+	gatewayGroup := gwtypes.Group(gwtypes.GroupName)
 	gatewayKind := gwtypes.Kind("Gateway")
 
 	tests := []struct {
@@ -482,7 +482,7 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 }
 
 func TestGetListenersByParentRef(t *testing.T) {
-	gatewayGroup := gwtypes.Group("gateway.networking.k8s.io")
+	gatewayGroup := gwtypes.Group(gwtypes.GroupName)
 	gatewayKind := gwtypes.Kind("Gateway")
 
 	tests := []struct {
