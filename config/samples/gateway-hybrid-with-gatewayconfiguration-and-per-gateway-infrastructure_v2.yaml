@@ -1,0 +1,81 @@
+# GEP-1867: Per-Gateway Infrastructure
+# https://gateway-api.sigs.k8s.io/geps/gep-1867/
+# This sample demonstrates how to configure a hybrid Kong Gateway with
+# per-Gateway infrastructure using GatewayConfiguration resources.
+# The GatewayConfiguration resource named "hybrid-kong" defines
+# the control plane connection details for the data plane.
+# The GatewayConfiguration resource named "gateway-infrastructure-kong"
+# defines the infrastructure details for the Gateway
+# setting the source to "Mirror" and specifying the Konnect Control Plane ID.
+---
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  serverURL: eu.api.konghq.com
+---
+kind: GatewayConfiguration
+apiVersion: gateway-operator.konghq.com/v2beta1
+metadata:
+  name: hybrid-kong
+  namespace: default
+spec:
+  konnect:
+    authRef:
+      name: konnect-api-auth
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+            - name: proxy
+              # renovate: datasource=docker versioning=docker
+              image: kong/kong-gateway:3.12
+              readinessProbe:
+                initialDelaySeconds: 1
+                periodSeconds: 1
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: hybrid-kong
+spec:
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: hybrid-kong
+    namespace: default
+---
+kind: GatewayConfiguration
+apiVersion: gateway-operator.konghq.com/v2beta1
+metadata:
+  name: gateway-infrastructure-kong
+  namespace: default
+spec:
+  konnect:
+    source: Mirror
+    mirror:
+      konnect:
+        id: 03b496a0-a38a-4370-8e50-9a9e71cef6df
+---
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: hybrid-kong
+  namespace: default
+spec:
+  gatewayClassName: hybrid-kong
+  infrastructure:
+    parametersRef:
+      group: gateway-operator.konghq.com
+      kind: GatewayConfiguration
+      name: gateway-infrastructure-kong
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
