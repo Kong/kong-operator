@@ -11,9 +11,19 @@ func (obj *KongKey) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
 }
 
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongKey) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
+}
+
 // Get the options to adopt the resource from an existing resource.
 func (obj *KongKeySet) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
+}
+
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongKeySet) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
 }
 
 // Get the options to adopt the resource from an existing resource.
@@ -21,9 +31,19 @@ func (obj *KongCredentialBasicAuth) GetAdoptOptions() *commonv1alpha1.AdoptOptio
 	return obj.Spec.Adopt
 }
 
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongCredentialBasicAuth) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
+}
+
 // Get the options to adopt the resource from an existing resource.
 func (obj *KongCredentialAPIKey) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
+}
+
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongCredentialAPIKey) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
 }
 
 // Get the options to adopt the resource from an existing resource.
@@ -31,9 +51,19 @@ func (obj *KongCredentialJWT) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
 }
 
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongCredentialJWT) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
+}
+
 // Get the options to adopt the resource from an existing resource.
 func (obj *KongCredentialACL) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
+}
+
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongCredentialACL) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
 }
 
 // Get the options to adopt the resource from an existing resource.
@@ -41,9 +71,19 @@ func (obj *KongCredentialHMAC) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
 }
 
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongCredentialHMAC) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
+}
+
 // Get the options to adopt the resource from an existing resource.
 func (obj *KongCACertificate) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
+}
+
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongCACertificate) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
 }
 
 // Get the options to adopt the resource from an existing resource.
@@ -51,9 +91,19 @@ func (obj *KongCertificate) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
 }
 
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongCertificate) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
+}
+
 // Get the options to adopt the resource from an existing resource.
 func (obj *KongPluginBinding) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
+}
+
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongPluginBinding) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
 }
 
 // Get the options to adopt the resource from an existing resource.
@@ -61,9 +111,19 @@ func (obj *KongService) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
 }
 
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongService) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
+}
+
 // Get the options to adopt the resource from an existing resource.
 func (obj *KongRoute) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
+}
+
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongRoute) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
 }
 
 // Get the options to adopt the resource from an existing resource.
@@ -71,9 +131,19 @@ func (obj *KongUpstream) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
 }
 
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongUpstream) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
+}
+
 // Get the options to adopt the resource from an existing resource.
 func (obj *KongTarget) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
+}
+
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongTarget) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
 }
 
 // Get the options to adopt the resource from an existing resource.
@@ -81,7 +151,17 @@ func (obj *KongVault) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
 }
 
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongVault) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
+}
+
 // Get the options to adopt the resource from an existing resource.
 func (obj *KongSNI) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
+}
+
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongSNI) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
 }

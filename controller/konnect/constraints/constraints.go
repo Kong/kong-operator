@@ -68,6 +68,7 @@ type SupportedKonnectEntityType interface {
 type KonnectEntityTypeSupportingAdoption interface {
 	GetTypeName() string
 	GetAdoptOptions() *commonv1alpha1.AdoptOptions
+	SetAdoptOptions(*commonv1alpha1.AdoptOptions)
 }
 
 // EntityTypeObject is an interface that allows non Konnect types to be used

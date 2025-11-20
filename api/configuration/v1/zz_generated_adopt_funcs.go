@@ -10,3 +10,8 @@ import (
 func (obj *KongConsumer) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
 }
+
+// Set the options to adopt the resource from an existing resource.
+func (obj *KongConsumer) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
+}
