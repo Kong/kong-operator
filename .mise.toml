@@ -1,3 +1,22 @@
 [env]
 
 MISE_DATA_DIR='bin/'
+
+[plugins]
+
+helm = "https://github.com/Antiarchitect/asdf-helm.git#00b6ead39b97536304042241f31242811ca39f74"
+govulncheck = "https://github.com/wizzardich/asdf-govulncheck.git#2e3e9ce0edbc6ec89097d221c9a04217bbe1f51b"
+markdownlint-cli2 = "https://github.com/paulo-ferraz-oliveira/asdf-markdownlint-cli2.git#6d14d9fb2f6f7572e7cbcbb818da9670ba4bef62"
+telepresence = "https://github.com/pirackr/asdf-telepresence.git#c9eeab4d28b9851bb904c4c67239a118c8dd384d"
+kubelinter = "https://github.com/the-cashman/asdf-kube-linter.git#14a55249ef69d5fe98b027b89f111aec2c30ee57"
+shellcheck = "https://github.com/luizm/asdf-shellcheck.git#8b954a95d44b8d8a6c6cd5a5a52ed643b7bb52e3"
+actionlint = "https://github.com/crazy-matt/asdf-actionlint.git#f8df3cfa05a1c875415b015808548bc8bac3b3a4"
+mockery = "https://github.com/cabify/asdf-mockery.git#1cb81d68720263709d8f24eb2dafd303c9097b1d"
+setup-envtest = "https://github.com/pmalek/mise-setup-envtest.git#061f3ab0bb3238d9425417cb6879dfd1f810d371"
+skaffold = "https://github.com/nklmilojevic/asdf-skaffold.git#bf2f9922ddfc4d8613a2d92f3fedc458464e36e6"
+gotestsum = "https://github.com/pmalek/mise-gotestsum.git#66845ffc7d0c1ecb0e344be4c66e9babe256c7b7"
+golangci-lint = "https://github.com/hypnoglow/asdf-golangci-lint.git#f02f2ee73bd6d1bc4d69d6aad583cf05879fc9ea"
+kube-code-generator = "https://github.com/mise-plugins/mise-kube-code-generator.git#e98effe0bda46523b4dee7217767457f7ca13fd4"
+kustomize = "https://github.com/Banno/asdf-kustomize.git#a5ecf778e74cbd7d118455c14c2d479d83be88c8"
+kube-controller-tools = "https://github.com/jimmidyson/asdf-kube-controller-tools.git#37526dcd7c92c60a6984459ba1f5144108e2978e"
+yq = "https://github.com/sudermanjr/asdf-yq.git#772992f66c49fe681b1cd02d14e8166930472bf1"
