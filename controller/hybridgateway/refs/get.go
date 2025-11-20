@@ -19,7 +19,7 @@ func GetGatewaysByHTTPRoute(ctx context.Context, cl client.Client, r gwtypes.HTT
 	gatewayRefs := []gwtypes.Gateway{}
 	for _, ref := range r.Spec.ParentRefs {
 		var namespace string
-		if ref.Group == nil || *ref.Group != "gateway.networking.k8s.io" {
+		if ref.Group == nil || *ref.Group != gwtypes.GroupName {
 			continue
 		}
 		if ref.Kind == nil || *ref.Kind != "Gateway" {
@@ -77,7 +77,7 @@ func GetSupportedGatewayForParentRef(ctx context.Context, logger logr.Logger, cl
 	}
 
 	// Only support gateway.networking.k8s.io group (or empty group which defaults to this).
-	if pRef.Group != nil && *pRef.Group != "gateway.networking.k8s.io" {
+	if pRef.Group != nil && *pRef.Group != gwtypes.GroupName {
 		log.Debug(logger, "Ignoring ParentRef, unsupported group", "pRef", pRef, "group", *pRef.Group)
 		return nil, nil
 	}

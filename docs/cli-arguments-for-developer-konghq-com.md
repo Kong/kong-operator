@@ -144,10 +144,6 @@ rows:
     type: '`bool`'
     description: "Enable the Konnect controllers."
     default: '`false`'
-  - flag: '`--enable-controller-konnect-hybrid`'
-    type: '`bool`'
-    description: "Enable the Konnect Hybrid controllers."
-    default: '`false`'
   - flag: '`--enable-controlplane-config-dump`'
     type: '`bool`'
     description: "Enable the server to dump generated Kong configuration from ControlPlanes. Only effective when ControlPlane controller is enabled."
@@ -156,6 +152,10 @@ rows:
     type: '`bool`'
     description: "Enable the conversion webhook."
     default: '`true`'
+  - flag: '`--enable-fqdn-mode`'
+    type: '`bool`'
+    description: "Enable FQDN mode for the operator. FQDNMode indicates whether to use FQDN endpoints for service discovery."
+    default: '`false`'
   - flag: '`--enable-gateway-api-experimental`'
     type: '`bool`'
     description: "Enable the Gateway API experimental features."

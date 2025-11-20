@@ -50,6 +50,8 @@ type KonnectExtension struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec is the specification of the KonnectExtension resource.
+	//
+	// +required
 	Spec KonnectExtensionSpec `json:"spec,omitempty"`
 
 	// Status is the status of the KonnectExtension resource.

@@ -627,7 +627,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			newKonnectEntityController[configurationv1alpha1.KongSNI](controllerFactory),
 		)
 
-		if c.KonnectHybridControllersEnabled {
+		if c.KonnectControllersEnabled {
 			var referenceGrantEnabled bool
 
 			logger := mgr.GetLogger().WithValues("component", "gatewayapi-hybrid-controller")
@@ -645,7 +645,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			}
 
 			controllers = append(controllers,
-				newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, referenceGrantEnabled, false, ""), // TODO: make FQDN mode and cluster domain configurable
+				newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, referenceGrantEnabled, c.FQDNModeEnabled, c.ClusterDomain),
 				// TODO: Add more Hybrid controllers here
 			)
 		}

@@ -691,6 +691,8 @@ spec:
                   entity exists.
                 type: string
             type: object
+        required:
+        - spec
         type: object
         x-kubernetes-validations:
         - message: spec.konnect.authRef is immutable when an entity is already Programmed

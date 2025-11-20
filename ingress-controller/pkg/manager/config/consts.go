@@ -32,4 +32,6 @@ const (
 	DefaultClusterDomain = "cluster.local"
 	// DefaultEmitKubernetesEvents is the default value for emitting Kubernetes events.
 	DefaultEmitKubernetesEvents = true
+	// DefaultFQDNModeEnabled is the default value for enabling FQDN mode.
+	DefaultFQDNModeEnabled = false
 )

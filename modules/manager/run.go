@@ -83,6 +83,7 @@ type Config struct {
 	LoggerOpts               *zap.Options
 	EnforceConfig            bool
 	ClusterDomain            string
+	FQDNModeEnabled          bool
 	EmitKubernetesEvents     bool
 	// SecretLabelSelector specifies the label which will be used to limit the ingestion of secrets. Only those that have this label set to "true" will be ingested.
 	SecretLabelSelector string
@@ -115,8 +116,7 @@ type Config struct {
 	ControlPlaneExtensionsControllerEnabled bool
 
 	// Controllers for Konnect APIs.
-	KonnectControllersEnabled       bool
-	KonnectHybridControllersEnabled bool
+	KonnectControllersEnabled bool
 
 	// Webhook options.
 	ConversionWebhookEnabled bool

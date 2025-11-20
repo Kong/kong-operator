@@ -18,10 +18,10 @@ type Watcher struct {
 }
 
 // Watches returns a list of Watcher objects for the given resource type.
-func Watches(obj client.Object, cl client.Client) []Watcher {
+func Watches(obj client.Object, cl client.Client, referenceGrantEnabled bool) []Watcher {
 	switch obj.(type) {
 	case *gwtypes.HTTPRoute:
-		return []Watcher{
+		watcher := []Watcher{
 			{
 				&gwtypes.Gateway{},
 				MapHTTPRouteForGateway(cl),
@@ -39,6 +39,14 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 				MapHTTPRouteForEndpointSlice(cl),
 			},
 		}
+
+		if referenceGrantEnabled {
+			watcher = append(watcher, Watcher{
+				&gwtypes.ReferenceGrant{},
+				MapHTTPRouteForReferenceGrant(cl),
+			})
+		}
+		return watcher
 	default:
 		return nil
 	}

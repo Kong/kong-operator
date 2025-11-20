@@ -18,7 +18,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/networking"
-	"github.com/kong/semver/v4"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -256,14 +255,6 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 		Cleaner:     cleaner,
 		Environment: env,
 	}
-}
-
-// getCRDsKustomizeURLForKIC returns the Kubernetes Ingress Controller CRDs Kustomization URL for a given version.
-func getCRDsKustomizeURLForKIC(t *testing.T, version string) string {
-	v, err := semver.Parse(version)
-	require.NoError(t, err)
-	const kicCRDsKustomizeURLTemplate = "https://github.com/Kong/kubernetes-ingress-controller/config/crd?ref=v%s"
-	return fmt.Sprintf(kicCRDsKustomizeURLTemplate, v)
 }
 
 func cleanupEnvironment(t *testing.T, ctx context.Context, env environments.Environment, kustomizePath string) {

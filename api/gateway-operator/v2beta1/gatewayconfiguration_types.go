@@ -47,6 +47,8 @@ type GatewayConfiguration struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec defines the desired state of GatewayConfiguration.
+	//
+	// +optional
 	Spec GatewayConfigurationSpec `json:"spec,omitempty"`
 
 	// Status defines the observed state of GatewayConfiguration.
@@ -213,6 +215,8 @@ type GatewayConfigDataPlaneResources struct {
 type PodDisruptionBudget struct {
 	// Spec defines the specification of the PodDisruptionBudget.
 	// Selector is managed by the controller and cannot be set by the user.
+	//
+	// +optional
 	Spec PodDisruptionBudgetSpec `json:"spec,omitempty"`
 }
 

@@ -3,14 +3,12 @@ package crdsvalidation
 import (
 	"path"
 	"testing"
-	"time"
 
 	"github.com/go-logr/zapr"
 	"github.com/samber/lo"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	ctrl "sigs.k8s.io/controller-runtime"
 
@@ -35,21 +33,11 @@ const (
 	ValidationPolicyKonnect = "templates/validation-policy-konnect.yaml"
 )
 
-var sharedEventuallyConfig = common.EventuallyConfig{
-	Timeout: 15 * time.Second,
-	Period:  100 * time.Millisecond,
-}
-
 func TestKonnectValidationAdmissionPolicy(t *testing.T) {
-
 	var (
-		ctx              = t.Context()
-		scheme           = scheme.Get()
-		cfg, ns          = envtest.Setup(t, ctx, scheme)
-		commonObjectMeta = metav1.ObjectMeta{
-			GenerateName: "dp-",
-			Namespace:    ns.Name,
-		}
+		ctx     = t.Context()
+		scheme  = scheme.Get()
+		cfg, ns = envtest.Setup(t, ctx, scheme)
 	)
 
 	logger := zapr.NewLogger(zap.New(zapcore.NewNopCore()))
@@ -72,7 +60,7 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 			{
 				Name: "deprecate message with static autoscale type",
 				TestObject: &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-					ObjectMeta: commonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 						DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
 							{
@@ -92,11 +80,12 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
 				WarningCollector:              wc,
 				ExpectedWarningMessage:        lo.ToPtr("Value \"static\" in spec.dataplane_groups.autoscale.type is deprecated, use \"automatic\" instead."),
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }
 
@@ -104,13 +93,9 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 	t.Parallel()
 
 	var (
-		ctx              = t.Context()
-		scheme           = scheme.Get()
-		cfg, ns          = envtest.Setup(t, ctx, scheme)
-		commonObjectMeta = metav1.ObjectMeta{
-			GenerateName: "dp-",
-			Namespace:    ns.Name,
-		}
+		ctx     = t.Context()
+		scheme  = scheme.Get()
+		cfg, ns = envtest.Setup(t, ctx, scheme)
 	)
 
 	chartPath := path.Join(test.ProjectRootPath(), ChartPath)
@@ -125,16 +110,16 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 			{
 				Name: "not providing spec fails",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: commonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec:       operatorv1beta1.DataPlaneSpec{},
 				},
-				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
 				ExpectedErrorMessage:          lo.ToPtr("DataPlane requires an image to be set on proxy container"),
 			},
 			{
 				Name: "providing correct ingress service ports and KONG_PORT_MAPS env succeeds",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: commonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -182,12 +167,12 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
 			},
 			{
 				Name: "providing incorrect ingress service ports and KONG_PORT_MAPS env fails",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: commonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -236,13 +221,13 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
 				ExpectedErrorMessage:          lo.ToPtr("is forbidden: ValidatingAdmissionPolicy 'ports.dataplane.gateway-operator.konghq.com' with binding 'binding-ports.dataplane.gateway-operator.konghq.com' denied request: Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PORT_MAPS env"),
 			},
 			{
 				Name: "providing correct ingress service ports and KONG_PROXY_LISTEN env succeeds",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: commonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -285,12 +270,12 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
 			},
 			{
 				Name: "providing incorrect ingress service ports and KONG_PROXY_LISTEN env fails",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: commonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -334,13 +319,13 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
 				ExpectedErrorMessage:          lo.ToPtr("is forbidden: ValidatingAdmissionPolicy 'ports.dataplane.gateway-operator.konghq.com' with binding 'binding-ports.dataplane.gateway-operator.konghq.com' denied request: Each port from spec.network.services.ingress.ports has to have an accompanying port in KONG_PORT_MAPS env"),
 			},
 			{
 				Name: "providing network services ingress options without ports does not fail",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: commonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -371,12 +356,12 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
 			},
 			{
 				Name: "providing network services ingress ports without matching envs does not fail (legacy webhook behavior)",
 				TestObject: &operatorv1beta1.DataPlane{
-					ObjectMeta: commonObjectMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -410,8 +395,9 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorEventuallyConfig: sharedEventuallyConfig,
+				ExpectedErrorEventuallyConfig: common.SharedEventuallyConfig,
 			},
-		}.RunWithConfig(t, cfg, scheme)
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

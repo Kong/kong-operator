@@ -239,7 +239,7 @@ func installKongOperatorCRDs(ctx context.Context, cluster clusters.Cluster) erro
 
 	localCRDDirs := []string{
 		filepath.Join(ProjectRootPath(), "config", "crd", "gateway-operator"),
-		filepath.Join(ProjectRootPath(), "ingress-controller", "config", "crd", "ingress-controller"),
+		filepath.Join(ProjectRootPath(), "config", "crd", "ingress-controller-incubator"),
 	}
 	for _, crdPath := range localCRDDirs {
 		fmt.Printf("INFO: deploying local CRDs: %s\n", crdPath)

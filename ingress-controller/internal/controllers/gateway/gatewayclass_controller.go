@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	ctrlconsts "github.com/kong/kong-operator/controller/consts"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
@@ -121,7 +122,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	log.V(logging.DebugLevel).Info("Processing gatewayclass", "name", req.Name)
+	log.V(logging.DebugLevel).Info("Processing gatewayclass")
 
 	if isGatewayClassControlled(gwc) {
 		alreadyAccepted := util.CheckCondition(
@@ -141,8 +142,21 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 				Reason:             string(gatewayapi.GatewayClassReasonAccepted),
 				Message:            "the gatewayclass has been accepted by the controller",
 			}
+			oldGwc := gwc.DeepCopy()
 			setGatewayClassCondition(gwc, acceptedCondtion)
-			return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayClassStatusConds(gwc))
+			gwc = pruneGatewayClassStatusConds(gwc)
+
+			if err := r.Status().Patch(ctx, gwc, client.MergeFrom(oldGwc)); err != nil {
+				if apierrors.IsConflict(err) {
+					log.V(logging.DebugLevel).Info("conflict found when updating GatewayClass, retrying")
+					return ctrl.Result{
+						RequeueAfter: ctrlconsts.RequeueWithoutBackoff,
+					}, nil
+				}
+				return ctrl.Result{}, fmt.Errorf("failed to update gatewayclass status to accepted: %w", err)
+			}
+
+			return ctrl.Result{}, nil
 		}
 	}
 

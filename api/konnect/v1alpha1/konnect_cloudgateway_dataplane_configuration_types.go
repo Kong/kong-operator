@@ -32,6 +32,8 @@ type KonnectCloudGatewayDataPlaneGroupConfiguration struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec defines the desired state of KonnectCloudGatewayDataPlaneGroupConfiguration.
+	//
+	// +required
 	Spec KonnectCloudGatewayDataPlaneGroupConfigurationSpec `json:"spec"`
 
 	// Status defines the observed state of KonnectCloudGatewayDataPlaneGroupConfiguration.

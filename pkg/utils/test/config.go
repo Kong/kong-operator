@@ -36,7 +36,6 @@ func DefaultControllerConfigForTests(opts ...ControllerConfigOption) manager.Con
 	cfg.AIGatewayControllerEnabled = true
 	cfg.AnonymousReports = false
 	cfg.KonnectControllersEnabled = true
-	cfg.KonnectHybridControllersEnabled = true
 	cfg.ClusterCAKeyType = mgrconfig.ECDSA
 	cfg.GatewayAPIExperimentalEnabled = true
 	cfg.EnforceConfig = true

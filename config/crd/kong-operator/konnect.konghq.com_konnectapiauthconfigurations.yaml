@@ -192,6 +192,8 @@ spec:
                 description: ServerURL is configured server URL.
                 type: string
             type: object
+        required:
+        - spec
         type: object
         x-kubernetes-validations:
         - message: Konnect tokens have to start with spat_ or kpat_

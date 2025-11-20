@@ -45,6 +45,8 @@ type ControlPlane struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec is the specification of the ControlPlane resource.
+	//
+	// +required
 	Spec ControlPlaneSpec `json:"spec,omitempty"`
 
 	// Status is the status of the ControlPlane resource.

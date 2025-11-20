@@ -35,6 +35,8 @@ type KonnectCloudGatewayTransitGateway struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	// Spec defines the desired state of KonnectCloudGatewayTransitGateway.
+	//
+	// +required
 	Spec KonnectCloudGatewayTransitGatewaySpec `json:"spec"`
 
 	// Status defines the observed state of KonnectCloudGatewayTransitGateway.

@@ -50,6 +50,10 @@ linters:
           - kubeapilinter
         path: .*
         text: "(optionalorrequired: field Spec must be marked as optional or required)"
+      - linters:
+          - kubeapilinter
+        path: .*
+        text: "(optionalorrequired: embedded field .*.metav1.ObjectMeta must be marked as optional or required)"
       # NOTE: kubeapilinter has been introduced after v1alpha1/konnect_gateway_controlplane_types.go
       #       has been created and to prevent changes in the API and docs we disable the rule.
       - linters:

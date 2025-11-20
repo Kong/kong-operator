@@ -41,7 +41,7 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 		},
 	}
 	gateway.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "gateway.networking.k8s.io",
+		Group:   gwtypes.GroupName,
 		Version: "v1",
 		Kind:    "Gateway",
 	})
@@ -54,7 +54,7 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 		},
 	}
 	gatewayClass.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   "gateway.networking.k8s.io",
+		Group:   gwtypes.GroupName,
 		Version: "v1",
 		Kind:    "GatewayClass",
 	})
@@ -85,21 +85,21 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 		},
 		{
 			name:    "gateway not found",
-			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("gateway.networking.k8s.io"), Name: "notfound"},
+			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "notfound"},
 			routeNS: "default",
 			objs:    []client.Object{},
 			wantErr: fmt.Errorf("no supported gateway found"),
 		},
 		{
 			name:    "gateway class not found",
-			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("gateway.networking.k8s.io"), Name: "my-gateway"},
+			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "my-gateway"},
 			routeNS: "default",
 			objs:    []client.Object{gateway},
 			wantErr: fmt.Errorf("no gatewayClass found for gateway"),
 		},
 		{
 			name:    "gateway class wrong controller",
-			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("gateway.networking.k8s.io"), Name: "my-gateway"},
+			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "my-gateway"},
 			routeNS: "default",
 			objs: []client.Object{gateway, &gwtypes.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{Name: "my-class"},
@@ -109,7 +109,7 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 		},
 		{
 			name:    "gateway class empty controller",
-			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("gateway.networking.k8s.io"), Name: "my-gateway"},
+			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "my-gateway"},
 			routeNS: "default",
 			objs: []client.Object{gateway, &gwtypes.GatewayClass{
 				ObjectMeta: metav1.ObjectMeta{Name: "my-class"},
@@ -119,14 +119,14 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 		},
 		{
 			name:    "supported parent ref",
-			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("gateway.networking.k8s.io"), Name: "my-gateway"},
+			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "my-gateway"},
 			routeNS: "default",
 			objs:    []client.Object{gateway, gatewayClass},
 			wantNil: false,
 		},
 		{
 			name:    "gateway get generic error",
-			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("gateway.networking.k8s.io"), Name: "my-gateway"},
+			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "my-gateway"},
 			routeNS: "default",
 			objs:    []client.Object{gateway, gatewayClass},
 			interceptorFunc: interceptor.Funcs{
@@ -141,7 +141,7 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 		},
 		{
 			name:    "gatewayclass get generic error",
-			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("gateway.networking.k8s.io"), Name: "my-gateway"},
+			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "my-gateway"},
 			routeNS: "default",
 			objs:    []client.Object{gateway, gatewayClass},
 			interceptorFunc: interceptor.Funcs{
@@ -156,7 +156,7 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 		},
 		{
 			name:    "parentRef with custom namespace",
-			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("gateway.networking.k8s.io"), Name: "my-gateway", Namespace: nsPtr("custom-ns")},
+			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "my-gateway", Namespace: nsPtr("custom-ns")},
 			routeNS: "default",
 			objs: []client.Object{
 				&gwtypes.Gateway{
