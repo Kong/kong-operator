@@ -58,13 +58,13 @@ func (t *Ticker) Reset(d time.Duration) {
 	default:
 	}
 
-	now := time.Now()
-
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
-	t.lastTick = now
-	t.time = now
+	// Use the logical time maintained by the ticker instead of time.Now() to
+	// keep the ticker deterministic in tests. This avoids mixing real wall
+	// clock time with the synthetic time advanced via Add().
+	t.lastTick = t.time
 	t.d = d
 }
 
