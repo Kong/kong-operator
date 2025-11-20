@@ -71,12 +71,6 @@ func (r *KongPluginReconciler) mapKongPluginBindings(ctx context.Context, obj cl
 		return []ctrl.Request{}
 	}
 
-	// If the KongPluginBinding is unmanaged (created not using an annotation,
-	// and thus not having KongPlugin as an owner), do not enqueue it.
-	if !ownerRefIsAnyKongPlugin(kongPluginBinding) {
-		return nil
-	}
-
 	return []ctrl.Request{
 		{
 			NamespacedName: types.NamespacedName{
