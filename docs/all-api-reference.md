@@ -1676,7 +1676,7 @@ KongUpstreamAPISpec defines specification of a Kong Upstream.
 | `hash_on_header` _string_ | The header name to take the value from as hash input. Only required when `hash_on` is set to `header`. |
 | `hash_on_query_arg` _string_ | The name of the query string argument to take the value from as hash input. Only required when `hash_on` is set to `query_arg`. |
 | `hash_on_uri_capture` _string_ | The name of the route URI capture to take the value from as hash input. Only required when `hash_on` is set to `uri_capture`. |
-| `healthchecks` _[Healthchecks](#healthchecks)_ |  |
+| `healthchecks` _[Healthchecks](#healthchecks)_ | Healthchecks is the configuration of upstream's healthchecks. |
 | `host_header` _string_ | The hostname to be used as `Host` header when proxying requests through Kong. |
 | `name` _string_ | This is a hostname, which must be equal to the `host` of a Service. |
 | `slots` _integer_ | The number of slots in the load balancer algorithm. If `algorithm` is set to `round-robin`, this setting determines the maximum number of slots. If `algorithm` is set to `consistent-hashing`, this setting determines the actual number of slots in the algorithm. Accepts an integer in the range `10`-`65536`. |
@@ -1710,7 +1710,7 @@ KongUpstreamSpec defines the spec of Kong Upstream.
 | `hash_on_header` _string_ | The header name to take the value from as hash input. Only required when `hash_on` is set to `header`. |
 | `hash_on_query_arg` _string_ | The name of the query string argument to take the value from as hash input. Only required when `hash_on` is set to `query_arg`. |
 | `hash_on_uri_capture` _string_ | The name of the route URI capture to take the value from as hash input. Only required when `hash_on` is set to `uri_capture`. |
-| `healthchecks` _[Healthchecks](#healthchecks)_ |  |
+| `healthchecks` _[Healthchecks](#healthchecks)_ | Healthchecks is the configuration of upstream's healthchecks. |
 | `host_header` _string_ | The hostname to be used as `Host` header when proxying requests through Kong. |
 | `name` _string_ | This is a hostname, which must be equal to the `host` of a Service. |
 | `slots` _integer_ | The number of slots in the load balancer algorithm. If `algorithm` is set to `round-robin`, this setting determines the maximum number of slots. If `algorithm` is set to `consistent-hashing`, this setting determines the actual number of slots in the algorithm. Accepts an integer in the range `10`-`65536`. |

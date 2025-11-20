@@ -174,8 +174,11 @@ type KongUpstreamHealthcheck struct {
 	// Passive configures passive health check probing.
 	Passive *KongUpstreamPassiveHealthcheck `json:"passive,omitempty"`
 
-	// Threshold is the minimum percentage of the upstream’s targets’ weight that must be available for the whole
-	// upstream to be considered healthy.
+	// Threshold is the minimum percentage of the upstream’s targets’ weight that
+	// must be available for the whole upstream to be considered healthy.
+	//
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=100
 	Threshold *int `json:"threshold,omitempty"`
 }
 

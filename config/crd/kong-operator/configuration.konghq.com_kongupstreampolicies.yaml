@@ -334,8 +334,10 @@ spec:
                     type: object
                   threshold:
                     description: |-
-                      Threshold is the minimum percentage of the upstream’s targets’ weight that must be available for the whole
-                      upstream to be considered healthy.
+                      Threshold is the minimum percentage of the upstream’s targets’ weight that
+                      must be available for the whole upstream to be considered healthy.
+                    maximum: 100
+                    minimum: 0
                     type: integer
                 type: object
               slots:

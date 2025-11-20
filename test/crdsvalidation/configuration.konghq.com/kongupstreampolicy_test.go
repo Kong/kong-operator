@@ -364,4 +364,44 @@ func TestKongUpstreamPolicy(t *testing.T) {
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
+
+	t.Run("healthchecks", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1beta1.KongUpstreamPolicy]{
+			{
+				Name: "healthchecks thresholds must be non-negative",
+				TestObject: &configurationv1beta1.KongUpstreamPolicy{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("consistent-hashing"),
+						HashOn: &configurationv1beta1.KongUpstreamHash{
+							Cookie:     lo.ToPtr("cookie"),
+							CookiePath: lo.ToPtr("/cookie-path"),
+						},
+						Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
+							Threshold: lo.ToPtr(-1),
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("Invalid value: -1: spec.healthchecks.threshold in body should be greater than or equal to 0"),
+			},
+			{
+				Name: "healthchecks thresholds must be less than or equal to 100",
+				TestObject: &configurationv1beta1.KongUpstreamPolicy{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("consistent-hashing"),
+						HashOn: &configurationv1beta1.KongUpstreamHash{
+							Cookie:     lo.ToPtr("cookie"),
+							CookiePath: lo.ToPtr("/cookie-path"),
+						},
+						Healthchecks: &configurationv1beta1.KongUpstreamHealthcheck{
+							Threshold: lo.ToPtr(101),
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("Invalid value: 101: spec.healthchecks.threshold in body should be less than or equal to 100"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
 }
