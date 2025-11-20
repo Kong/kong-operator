@@ -2,6 +2,7 @@ package upstream
 
 import (
 	"context"
+	"maps"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -210,9 +211,7 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 
 			// Copy existing annotations
 			if tt.existingAnnotations != nil {
-				for k, v := range tt.existingAnnotations {
-					upstream.Annotations[k] = v
-				}
+				maps.Copy(upstream.Annotations, tt.existingAnnotations)
 			}
 
 			am := metadata.NewAnnotationManager(logger)

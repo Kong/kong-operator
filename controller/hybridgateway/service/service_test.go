@@ -11,13 +11,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
 func TestServiceForRule(t *testing.T) {
@@ -34,9 +34,9 @@ func TestServiceForRule(t *testing.T) {
 			Name:      "test-route",
 			Namespace: "test-namespace",
 		},
-		Spec: gwapiv1.HTTPRouteSpec{
-			CommonRouteSpec: gwapiv1.CommonRouteSpec{
-				ParentRefs: []gwapiv1.ParentReference{
+		Spec: gatewayv1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{
 					{Name: "test-gateway"},
 				},
 			},
@@ -45,8 +45,8 @@ func TestServiceForRule(t *testing.T) {
 
 	// Create test rule
 	rule := gwtypes.HTTPRouteRule{
-		Matches: []gwapiv1.HTTPRouteMatch{
-			{Path: &gwapiv1.HTTPPathMatch{Type: &[]gwapiv1.PathMatchType{gwapiv1.PathMatchPathPrefix}[0], Value: &[]string{"/test"}[0]}},
+		Matches: []gatewayv1.HTTPRouteMatch{
+			{Path: &gatewayv1.HTTPPathMatch{Type: &[]gatewayv1.PathMatchType{gatewayv1.PathMatchPathPrefix}[0], Value: &[]string{"/test"}[0]}},
 		},
 	}
 

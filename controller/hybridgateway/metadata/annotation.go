@@ -107,9 +107,7 @@ func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route cl
 		return true
 	}
 
-	existingRoutes := strings.Split(hybridRouteAnnotation, ",")
-
-	for _, route := range existingRoutes {
+	for route := range strings.SplitSeq(hybridRouteAnnotation, ",") {
 		route = strings.TrimSpace(route)
 		if route == currentRouteAnnotation {
 			log.Debug(am.logger, "Route already exists in annotation, no update needed",
@@ -230,9 +228,7 @@ func (am *AnnotationManager) ContainsRoute(obj metav1.Object, route client.Objec
 		return false
 	}
 
-	existingRoutes := strings.Split(existingAnnotation, ",")
-
-	for _, route := range existingRoutes {
+	for route := range strings.SplitSeq(existingAnnotation, ",") {
 		route = strings.TrimSpace(route)
 		if route == currentRouteAnnotation {
 			return true
@@ -262,10 +258,9 @@ func (am *AnnotationManager) GetRoutes(obj metav1.Object) []string {
 	}
 
 	// Parse existing routes from the annotation
-	existingRoutes := strings.Split(existingAnnotation, ",")
 	var routes []string
 
-	for _, route := range existingRoutes {
+	for route := range strings.SplitSeq(existingAnnotation, ",") {
 		route = strings.TrimSpace(route)
 		if route == "" {
 			continue

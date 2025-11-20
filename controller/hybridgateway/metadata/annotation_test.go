@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"fmt"
+	"maps"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -297,9 +298,7 @@ func TestAppendRouteToAnnotation(t *testing.T) {
 
 			// Copy existing annotations
 			if tt.existingAnnotations != nil {
-				for k, v := range tt.existingAnnotations {
-					obj.Annotations[k] = v
-				}
+				maps.Copy(obj.Annotations, tt.existingAnnotations)
 			}
 
 			modified := am.AppendRouteToAnnotation(obj, tt.httpRoute)
@@ -406,9 +405,7 @@ func TestRemoveRouteFromAnnotation(t *testing.T) {
 
 			// Copy existing annotations
 			if tt.existingAnnotations != nil {
-				for k, v := range tt.existingAnnotations {
-					obj.Annotations[k] = v
-				}
+				maps.Copy(obj.Annotations, tt.existingAnnotations)
 			}
 
 			modified := am.RemoveRouteFromAnnotation(obj, tt.httpRoute)
@@ -614,9 +611,7 @@ func TestSetRoutes(t *testing.T) {
 
 			// Copy existing annotations
 			if tt.existingAnnotations != nil {
-				for k, v := range tt.existingAnnotations {
-					obj.Annotations[k] = v
-				}
+				maps.Copy(obj.Annotations, tt.existingAnnotations)
 			}
 
 			modified := am.SetRoutes(obj, tt.routes)
