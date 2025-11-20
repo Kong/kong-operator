@@ -25,6 +25,8 @@ import (
 	testutils "github.com/kong/kong-operator/ingress-controller/test/util"
 )
 
+const admissionWebhookPort = 5443
+
 // ensureAdmissionRegistration registers a validating webhook for the given configuration, it validates objects
 // only when applied to the given namespace.
 func ensureAdmissionRegistration(
@@ -32,7 +34,7 @@ func ensureAdmissionRegistration(
 ) {
 	t.Helper()
 
-	const svcPort = 443
+	const svcPort = admissionWebhookPort
 	webhookService := k8stypes.NamespacedName{
 		Namespace: consts.ControllerNamespace,
 		Name:      fmt.Sprintf("webhook-%s", webhookName),
@@ -86,7 +88,7 @@ func ensureWebhookService(ctx context.Context, t *testing.T, client *kubernetes.
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "default",
-					Port:       443,
+					Port:       admissionWebhookPort,
 					TargetPort: intstr.FromInt(testutils.AdmissionWebhookListenPort),
 				},
 			},

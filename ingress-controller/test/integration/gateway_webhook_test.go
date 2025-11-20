@@ -19,7 +19,6 @@ import (
 )
 
 func TestGatewayValidationWebhook(t *testing.T) {
-	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	ctx := t.Context()
 
 	ns := helpers.Namespace(ctx, t, env)
