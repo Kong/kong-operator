@@ -72,7 +72,6 @@ PKG_LIST = ./pkg/...,./internal/...
 INTEGRATION_TEST_TIMEOUT ?= "45m"
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
 GOTESTSUM_FORMAT ?= standard-verbose
-KONG_CLUSTER_VERSION ?= v1.28.0
 JUNIT_REPORT ?= /dev/null
 
 .PHONY: use-setup-envtest
@@ -116,7 +115,6 @@ TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong'
 # Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/3754
 .PHONY: _test.integration
 _test.integration:
-	KONG_CLUSTER_VERSION="$(KONG_CLUSTER_VERSION)" \
 	TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
 	TEST_DATABASE_MODE="$(DBMODE)" \
 	GOFLAGS="-tags=$(GOTAGS)" \
