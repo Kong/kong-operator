@@ -1432,7 +1432,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 		t.Log("Creating a KongCredentialJWT for adopting the existing JWT auth")
 		createdJWT := &configurationv1alpha1.KongCredentialJWT{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "hmac",
+				GenerateName: "jwt-",
 			},
 			Spec: configurationv1alpha1.KongCredentialJWTSpec{
 				Adopt: &commonv1alpha1.AdoptOptions{
