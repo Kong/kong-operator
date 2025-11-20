@@ -21,7 +21,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -136,7 +138,63 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			),
 		)
 	}
+
+	// Watch Secrets to requeue Gateways that reference them via listeners.tls.certificateRefs.
+	builder.WatchesRawSource(
+		source.Kind(
+			mgr.GetCache(),
+			&corev1.Secret{},
+			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, s *corev1.Secret) []reconcile.Request {
+				// List Gateways and select those that reference the Secret in any listener certificateRef.
+				var gwList gwtypes.GatewayList
+				if err := r.List(ctx, &gwList); err != nil {
+					ctrllog.FromContext(ctx).Error(err, "failed to list gateways for Secret watch", "secret", client.ObjectKeyFromObject(s))
+					return nil
+				}
+				recs := make([]reconcile.Request, 0, len(gwList.Items))
+				for i := range gwList.Items {
+					gw := gwList.Items[i]
+					// Optional pre-filter: only enqueue Gateways managed by this controller.
+					if !r.gatewayHasMatchingGatewayClass(&gw) {
+						continue
+					}
+					if secretReferencedByGateway(&gw, s.Namespace, s.Name) {
+						recs = append(recs, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&gw)})
+					}
+				}
+				return recs
+			}),
+		),
+	)
+
 	return builder.Complete(r)
+}
+
+// secretReferencedByGateway returns true if any listener in the Gateway references the Secret
+// identified by secretNS/secretName in its TLS certificateRefs.
+func secretReferencedByGateway(gw *gwtypes.Gateway, secretNS, secretName string) bool {
+	for _, l := range gw.Spec.Listeners {
+		if l.TLS == nil {
+			continue
+		}
+		for _, ref := range l.TLS.CertificateRefs {
+			// Only accept core Secret references when Group/Kind is specified.
+			if ref.Group != nil && string(*ref.Group) != corev1.GroupName {
+				continue
+			}
+			if ref.Kind != nil && string(*ref.Kind) != "Secret" {
+				continue
+			}
+			ns := gw.Namespace
+			if ref.Namespace != nil {
+				ns = string(*ref.Namespace)
+			}
+			if ns == secretNS && string(ref.Name) == secretName {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // Reconcile moves the current state of an object to the intended state.
