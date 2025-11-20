@@ -131,6 +131,10 @@
   service FQDNs (e.g., `service.namespace.svc.cluster.local`) instead of
   individual pod endpoint IPs.
   [#2607](https://github.com/Kong/kong-operator/pull/2607)
+- Gateway: support per-Gateway infrastructure configuration
+  [GEP-1867](https://gateway-api.sigs.k8s.io/geps/gep-1867/) via
+  `GatewayConfiguration` CRD.
+  [#2653](https://github.com/Kong/kong-operator/pull/2653)
 
 ### Changed
 
