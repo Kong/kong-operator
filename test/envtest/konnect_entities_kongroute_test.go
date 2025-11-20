@@ -278,7 +278,7 @@ func TestKongRoute(t *testing.T) {
 
 		w := setupWatch[configurationv1alpha1.KongRouteList](t, ctx, cl, client.InNamespace(ns.Name))
 
-		t.Log("Setting up SDK expectations for gettingroutes")
+		t.Log("Setting up SDK expectations for getting routes")
 		sdk.RoutesSDK.EXPECT().GetRoute(
 			mock.Anything,
 			routeID,
