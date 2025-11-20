@@ -2,12 +2,14 @@ package gateway
 
 import (
 	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -1933,6 +1935,638 @@ func TestIsGatewayHybrid(t *testing.T) {
 
 			isHybrid := isGatewayHybrid(gatewayConfig)
 			assert.Equal(t, tc.expectHybrid, isHybrid)
+		})
+	}
+}
+
+// test mergeGatewayConfigurations function
+func TestMergeGatewayConfigurations(t *testing.T) {
+	type testCase struct {
+		name           string
+		gatewayConfig1 *operatorv2beta1.GatewayConfiguration
+		gatewayConfig2 *operatorv2beta1.GatewayConfiguration
+		expectedConfig *operatorv2beta1.GatewayConfiguration
+	}
+
+	tests := []testCase{
+		{
+			name: "merge with non-overlapping fields",
+			gatewayConfig1: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway-config-1",
+					Namespace: "default",
+				},
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
+						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv2beta1.DeploymentOptions{
+								Replicas: lo.ToPtr[int32](3),
+							},
+						},
+					},
+				},
+			},
+			gatewayConfig2: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway-config-2",
+					Namespace: "default",
+				},
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
+						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+									ServiceOptions: operatorv2beta1.ServiceOptions{
+										Type: corev1.ServiceTypeNodePort,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedConfig: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway-config-2",
+					Namespace: "default",
+				},
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
+						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv2beta1.DeploymentOptions{
+								Replicas: lo.ToPtr[int32](3),
+							},
+						},
+						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+									ServiceOptions: operatorv2beta1.ServiceOptions{
+										Type: corev1.ServiceTypeNodePort,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "merge with overlapping fields (gatewayConfig2 overrides gatewayConfig1)",
+			gatewayConfig1: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway-config-1",
+					Namespace: "default",
+				},
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
+						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv2beta1.DeploymentOptions{
+								Replicas: lo.ToPtr[int32](3),
+							},
+						},
+						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+									ServiceOptions: operatorv2beta1.ServiceOptions{
+										Type: corev1.ServiceTypeNodePort,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			gatewayConfig2: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway-config-2",
+					Namespace: "default",
+				},
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
+						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv2beta1.DeploymentOptions{
+								Replicas: lo.ToPtr[int32](2),
+							},
+						},
+						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+									ServiceOptions: operatorv2beta1.ServiceOptions{
+										Type: corev1.ServiceTypeLoadBalancer,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedConfig: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway-config-2",
+					Namespace: "default",
+				},
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
+						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv2beta1.DeploymentOptions{
+								Replicas: lo.ToPtr[int32](2),
+							},
+						},
+						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+									ServiceOptions: operatorv2beta1.ServiceOptions{
+										Type: corev1.ServiceTypeLoadBalancer,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "merge when one config has nil DataPlaneOptions",
+			gatewayConfig1: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway-config-1",
+					Namespace: "default",
+				},
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: nil,
+				},
+			},
+			gatewayConfig2: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway-config-2",
+					Namespace: "default",
+				},
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
+						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+									ServiceOptions: operatorv2beta1.ServiceOptions{
+										Type: corev1.ServiceTypeNodePort,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedConfig: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway-config-2",
+					Namespace: "default",
+				},
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
+						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+									ServiceOptions: operatorv2beta1.ServiceOptions{
+										Type: corev1.ServiceTypeNodePort,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "merge when both configs have nil DataPlaneOptions",
+			gatewayConfig1: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway-config-1",
+					Namespace: "default",
+				},
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: nil,
+				},
+			},
+			gatewayConfig2: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway-config-2",
+					Namespace: "default",
+				},
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: nil,
+				},
+			},
+			expectedConfig: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "gateway-config-2",
+					Namespace: "default",
+				},
+				Spec: operatorv2beta1.GatewayConfigurationSpec{
+					DataPlaneOptions: nil,
+				},
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mergedConfig, err := mergeGatewayConfigurations(tc.gatewayConfig1, tc.gatewayConfig2)
+			require.NoError(t, err)
+			assert.Equal(t, tc.expectedConfig, mergedConfig)
+		})
+	}
+}
+
+// test getGatewayConfigForParametersRef function
+func TestGetGatewayConfigForParametersRef(t *testing.T) {
+	type testCase struct {
+		name                   string
+		parametersRef          *gwtypes.ParametersReference
+		existingGatewayConfigs []client.Object
+		expectedGatewayConfig  *operatorv2beta1.GatewayConfiguration
+		expectedError          error
+	}
+
+	tests := []testCase{
+		{
+			name:          "parameters ref is nil",
+			parametersRef: nil,
+			existingGatewayConfigs: []client.Object{
+				&operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "gateway-config-1",
+						Namespace: "default",
+					},
+				},
+			},
+			expectedGatewayConfig: new(GatewayConfiguration),
+			expectedError:         nil,
+		},
+		{
+			name: "gateway config exists for parameters ref",
+			parametersRef: &gwtypes.ParametersReference{
+				Group:     "gateway-operator.konghq.com",
+				Kind:      gwtypes.Kind("GatewayConfiguration"),
+				Name:      "gateway-config-1",
+				Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+			},
+			existingGatewayConfigs: []client.Object{
+				&operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "gateway-config-1",
+						Namespace:       "default",
+						ResourceVersion: "123",
+					},
+				},
+			},
+			expectedGatewayConfig: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "gateway-config-1",
+					Namespace:       "default",
+					ResourceVersion: "123",
+				},
+			},
+			expectedError: nil,
+		},
+		{
+			name: "gateway config does not exist for parameters ref",
+			parametersRef: &gwtypes.ParametersReference{
+				Group:     "gateway-operator.konghq.com",
+				Kind:      gwtypes.Kind("GatewayConfiguration"),
+				Name:      "non-existing-gateway-config",
+				Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+			},
+			existingGatewayConfigs: []client.Object{
+				&operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "gateway-config-1",
+						Namespace:       "default",
+						ResourceVersion: "123",
+					},
+				},
+			},
+			expectedGatewayConfig: nil,
+			expectedError: &k8serrors.StatusError{
+				ErrStatus: metav1.Status{
+					Status:  metav1.StatusFailure,
+					Code:    http.StatusNotFound,
+					Reason:  metav1.StatusReasonNotFound,
+					Message: "GatewayConfiguration.gateway-operator.konghq.com \"non-existing-gateway-config\" not found",
+				},
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			client := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(tc.existingGatewayConfigs...).
+				Build()
+
+			// Create a reconciler with the client
+			reconciler := &Reconciler{
+				Client: client,
+			}
+
+			ctx := t.Context()
+			gatewayConfig, err := reconciler.getGatewayConfigForParametersRef(ctx, tc.parametersRef)
+			// Check error matching
+			if tc.expectedError != nil {
+				assert.Error(t, err)
+				// For NotFound errors, check specific fields
+				statusErr := &k8serrors.StatusError{}
+				if errors.As(tc.expectedError, &statusErr) {
+					actualStatusErr := &k8serrors.StatusError{}
+					isActualStatusErr := errors.As(err, &actualStatusErr)
+					if isActualStatusErr {
+						assert.Equal(t, statusErr.Status().Reason, actualStatusErr.Status().Reason)
+					} else {
+						t.Errorf("Expected StatusError, got %T", err)
+					}
+				} else {
+					assert.Equal(t, tc.expectedError.Error(), err.Error())
+				}
+			} else {
+				assert.NoError(t, err)
+			}
+
+			// Check returned gateway config
+			assert.Equal(t, tc.expectedGatewayConfig, gatewayConfig)
+
+		})
+	}
+}
+
+// test getOrCreateGatewayConfiguration function
+func TestGetOrCreateGatewayConfiguration(t *testing.T) {
+	type testCase struct {
+		name                  string
+		gatewayClass          gwtypes.GatewayClass
+		gateway               *gwtypes.Gateway
+		existingGatewayConfig []*operatorv2beta1.GatewayConfiguration
+		expectedGatewayConfig *operatorv2beta1.GatewayConfiguration
+		expectedError         error
+	}
+
+	existingGatewayConfig := &operatorv2beta1.GatewayConfiguration{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            "existing-gateway-config",
+			Namespace:       "default",
+			ResourceVersion: "123",
+		},
+		Spec: GatewayConfigurationSpec{
+			Konnect: &operatorv2beta1.KonnectOptions{
+				Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+			},
+			DataPlaneOptions: &GatewayConfigDataPlaneOptions{
+				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv2beta1.DeploymentOptions{
+						Replicas: lo.ToPtr[int32](3),
+					},
+				},
+			},
+		},
+	}
+
+	tests := []testCase{
+		{
+			name: "create new gateway configuration when none exists",
+			gatewayClass: gwtypes.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gateway-class",
+				},
+				Spec: gwtypes.GatewayClassSpec{},
+			},
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+				},
+			},
+			existingGatewayConfig: nil,
+			expectedGatewayConfig: new(GatewayConfiguration),
+			expectedError:         nil,
+		},
+		{
+			name: "retrieve existing gateway configuration",
+			gatewayClass: gwtypes.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gateway-class",
+				},
+				Spec: gwtypes.GatewayClassSpec{
+					ParametersRef: &gwtypes.ParametersReference{
+						Group:     "gateway-operator.konghq.com",
+						Kind:      gwtypes.Kind("GatewayConfiguration"),
+						Name:      "existing-gateway-config",
+						Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+					},
+				},
+			},
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+				},
+			},
+			existingGatewayConfig: []*operatorv2beta1.GatewayConfiguration{
+				existingGatewayConfig,
+			},
+			expectedGatewayConfig: existingGatewayConfig,
+			expectedError:         nil,
+		},
+		{
+			name: "error when referenced gateway configuration does not exist",
+			gatewayClass: gwtypes.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gateway-class",
+				},
+				Spec: gwtypes.GatewayClassSpec{
+					ParametersRef: &gwtypes.ParametersReference{
+						Group:     "gateway-operator.konghq.com",
+						Kind:      gwtypes.Kind("GatewayConfiguration"),
+						Name:      "non-existing-gateway-config",
+						Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+					},
+				},
+			},
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+				},
+			},
+			existingGatewayConfig: nil,
+			expectedGatewayConfig: nil,
+			expectedError: &k8serrors.StatusError{
+				ErrStatus: metav1.Status{
+					Status:  metav1.StatusFailure,
+					Code:    http.StatusNotFound,
+					Reason:  metav1.StatusReasonNotFound,
+					Message: "GatewayClass (test-gateway-class): gatewayconfigurations.gateway-operator.konghq.com \"non-existing-gateway-config\" not found",
+				},
+			},
+		},
+		{
+			name: "no override existing GatewayClass ParametersRef with empty Gateway Infrastructure.ParametersRef",
+			gatewayClass: gwtypes.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gateway-class",
+				},
+				Spec: gwtypes.GatewayClassSpec{
+					ParametersRef: &gwtypes.ParametersReference{
+						Group:     "gateway-operator.konghq.com",
+						Kind:      gwtypes.Kind("GatewayConfiguration"),
+						Name:      "existing-gateway-config",
+						Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+					},
+				},
+			},
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+				},
+				Spec: gwtypes.GatewaySpec{
+					GatewayClassName: "test-gateway-class",
+					Infrastructure:   &gatewayv1.GatewayInfrastructure{},
+				},
+			},
+			existingGatewayConfig: []*operatorv2beta1.GatewayConfiguration{
+				existingGatewayConfig,
+			},
+			expectedGatewayConfig: existingGatewayConfig,
+			expectedError:         nil,
+		},
+		{
+			name: "override empty GatewayClass ParametersRef with Gateway Infrastructure.ParametersRef",
+			gatewayClass: gwtypes.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gateway-class",
+				},
+				Spec: gwtypes.GatewayClassSpec{},
+			},
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+				},
+				Spec: gwtypes.GatewaySpec{
+					GatewayClassName: "test-gateway-class",
+					Infrastructure: &gatewayv1.GatewayInfrastructure{
+						ParametersRef: &gatewayv1.LocalParametersReference{
+							Group: "gateway-operator.konghq.com",
+							Kind:  gwtypes.Kind("GatewayConfiguration"),
+							Name:  "existing-gateway-config",
+						},
+					},
+				},
+			},
+			existingGatewayConfig: []*operatorv2beta1.GatewayConfiguration{
+				existingGatewayConfig,
+			},
+			expectedGatewayConfig: existingGatewayConfig,
+			expectedError:         nil,
+		},
+		{
+			name: "override existing GatewayClass ParametersRef with Gateway Infrastructure.ParametersRef",
+			gatewayClass: gwtypes.GatewayClass{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "test-gateway-class",
+				},
+				Spec: gwtypes.GatewayClassSpec{
+					ParametersRef: &gwtypes.ParametersReference{
+						Group:     "gateway-operator.konghq.com",
+						Kind:      gwtypes.Kind("GatewayConfiguration"),
+						Name:      "existing-gateway-config",
+						Namespace: lo.ToPtr(gwtypes.Namespace("default")),
+					},
+				},
+			},
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+				},
+				Spec: gwtypes.GatewaySpec{
+					GatewayClassName: "test-gateway-class",
+					Infrastructure: &gatewayv1.GatewayInfrastructure{
+						ParametersRef: &gatewayv1.LocalParametersReference{
+							Group: "gateway-operator.konghq.com",
+							Kind:  gwtypes.Kind("GatewayConfiguration"),
+							Name:  "gw-gateway-config",
+						},
+					},
+				},
+			},
+			existingGatewayConfig: []*operatorv2beta1.GatewayConfiguration{
+				existingGatewayConfig,
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:            "gw-gateway-config",
+						Namespace:       "default",
+						ResourceVersion: "123",
+					},
+					Spec: GatewayConfigurationSpec{
+						DataPlaneOptions: &GatewayConfigDataPlaneOptions{
+							Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
+								DeploymentOptions: operatorv2beta1.DeploymentOptions{
+									Replicas: lo.ToPtr[int32](2),
+								},
+							},
+						},
+					},
+				},
+			},
+			expectedGatewayConfig: &operatorv2beta1.GatewayConfiguration{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:            "gw-gateway-config",
+					Namespace:       "default",
+					ResourceVersion: "123",
+				},
+				Spec: GatewayConfigurationSpec{
+					Konnect: &operatorv2beta1.KonnectOptions{
+						Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
+					},
+					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
+						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
+							DeploymentOptions: operatorv2beta1.DeploymentOptions{
+								Replicas: lo.ToPtr[int32](2),
+							},
+						},
+					},
+				},
+			},
+			expectedError: nil,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			clientBuilder := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get())
+			if tc.existingGatewayConfig != nil {
+				for _, gc := range tc.existingGatewayConfig {
+					clientBuilder = clientBuilder.WithObjects(gc)
+				}
+			}
+
+			client := clientBuilder.Build()
+			reconciler := &Reconciler{
+				Client: client,
+			}
+
+			ctx := t.Context()
+			gatewayConfig, err := reconciler.getOrCreateGatewayConfiguration(ctx, &tc.gatewayClass, tc.gateway)
+
+			// Check error matching
+			if tc.expectedError != nil {
+				assert.Error(t, err)
+				assert.Equal(t, tc.expectedError.Error(), err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+
+			// Check returned gateway config
+			assert.Equal(t, tc.expectedGatewayConfig, gatewayConfig)
 		})
 	}
 }
