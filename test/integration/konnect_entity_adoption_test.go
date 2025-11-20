@@ -360,7 +360,6 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.NoError(t, err)
 	require.NotNil(t, resp, "Should get a non-nil response for creating a plugin")
 	require.NotNil(t, resp.Plugin, "Should get a non-nil plugin in the response")
 	serviceResponseTransformerPlugin := resp.Plugin
