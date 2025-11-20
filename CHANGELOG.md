@@ -135,6 +135,10 @@
   [GEP-1867](https://gateway-api.sigs.k8s.io/geps/gep-1867/) via
   `GatewayConfiguration` CRD.
   [#2653](https://github.com/Kong/kong-operator/pull/2653)
+- HybridGateway: reworked generated resources lifecycle management. HTTPRoute ownership on the resources
+  is now tracked through the `gateway-operator.konghq.com/hybrid-routes` annotation. The same generated
+  resource can now be shared among different HTTPRoutes.
+  [#2656](https://github.com/Kong/kong-operator/pull/2656)
 
 ### Changed
 
