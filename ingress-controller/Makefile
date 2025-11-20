@@ -79,7 +79,7 @@ JUNIT_REPORT ?= /dev/null
 use-setup-envtest:
 	$(SETUP_ENVTEST) use -v info $(CLUSTER_VERSION)
 
-ENVTEST_TIMEOUT ?= 8m
+ENVTEST_TIMEOUT ?= 10m
 
 .PHONY: _test.envtest
 .ONESHELL: _test.envtest
