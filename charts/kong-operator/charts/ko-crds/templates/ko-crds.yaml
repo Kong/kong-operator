@@ -52356,9 +52356,6 @@ spec:
                         and 65535, inclusive.
                       format: int64
                       type: integer
-                  required:
-                  - ip
-                  - port
                   type: object
                 type: array
               headers:
@@ -52492,9 +52489,6 @@ spec:
                         and 65535, inclusive.
                       format: int64
                       type: integer
-                  required:
-                  - ip
-                  - port
                   type: object
                 type: array
               strip_path:
@@ -54581,7 +54575,6 @@ spec:
                     required:
                     - concurrency
                     - http_path
-                    - https_sni
                     - https_verify_certificate
                     - timeout
                     - type

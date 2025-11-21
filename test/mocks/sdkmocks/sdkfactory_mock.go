@@ -3,6 +3,8 @@ package sdkmocks
 import (
 	"testing"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 
@@ -12,7 +14,7 @@ import (
 )
 
 type MockSDKWrapper struct {
-	ControlPlaneSDK             *MockControlPlaneSDK
+	ControlPlaneSDK             *mocks.MockControlPlanesSDK
 	CloudGatewaysSDK            *MockCloudGatewaysSDK
 	ControlPlaneGroupSDK        *MockControlPlaneGroupSDK
 	ServicesSDK                 *MockServicesSDK
@@ -42,7 +44,7 @@ var _ sdkops.SDKWrapper = MockSDKWrapper{}
 
 func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 	return &MockSDKWrapper{
-		ControlPlaneSDK:             NewMockControlPlaneSDK(t),
+		ControlPlaneSDK:             mocks.NewMockControlPlanesSDK(t),
 		ControlPlaneGroupSDK:        NewMockControlPlaneGroupSDK(t),
 		CloudGatewaysSDK:            NewMockCloudGatewaysSDK(t),
 		ServicesSDK:                 NewMockServicesSDK(t),
@@ -83,7 +85,7 @@ func (m MockSDKWrapper) GetServer() server.Server {
 	return m.server
 }
 
-func (m MockSDKWrapper) GetControlPlaneSDK() sdkops.ControlPlaneSDK {
+func (m MockSDKWrapper) GetControlPlaneSDK() sdkkonnectgo.ControlPlanesSDK {
 	return m.ControlPlaneSDK
 }
 
