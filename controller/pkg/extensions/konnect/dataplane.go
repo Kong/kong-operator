@@ -11,7 +11,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/controller/pkg/extensions"
+	"github.com/kong/kong-operator/controller/pkg/extensions/processor"
 	"github.com/kong/kong-operator/internal/utils/config"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -21,8 +21,8 @@ import (
 // DataPlaneKonnectExtensionProcessor processes Konnect extensions for DataPlane resources.
 type DataPlaneKonnectExtensionProcessor struct{}
 
-// Compile-time check to ensure DataPlaneKonnectExtensionProcessor implements the extensions.ExtensionProcessor interface.
-var _ extensions.Processor = (*DataPlaneKonnectExtensionProcessor)(nil)
+// Compile-time check to ensure DataPlaneKonnectExtensionProcessor implements the processor.Processor interface.
+var _ processor.Processor = (*DataPlaneKonnectExtensionProcessor)(nil)
 
 // Process gets the DataPlane as argument, and in case it references a KonnectExtension, it
 // fetches the referenced extension and applies the necessary changes to the DataPlane spec.

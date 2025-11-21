@@ -6,6 +6,8 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/api/gateway-operator/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	konnectextensionpkg "github.com/kong/kong-operator/controller/pkg/extensions/konnect"
 )
 
 // MergeExtensions merges the default extensions with the extensions from the
@@ -58,7 +60,23 @@ func MergeExtensions[
 // MergeExtensionsForDataPlane is a wrapper around MergeExtensions for places where
 // we do not have an actual object to work on.
 func MergeExtensionsForDataPlane(
-	defaultExtensions, extensions []commonv1alpha1.ExtensionRef,
+	configExtensions []commonv1alpha1.ExtensionRef,
+	konnectExtension *konnectv1alpha2.KonnectExtension,
+) []commonv1alpha1.ExtensionRef {
+	// Initialize the Konnect Extension by using the provided konnectExtension parameter.
+	// In case the GatewayConfiguration statically defines a KonnectExtension in its
+	// extensions list, the provided one will take precedence and be used.
+	extensionList := []commonv1alpha1.ExtensionRef{}
+	konnectExtensionRef := konnectextensionpkg.KonnectExtensionToExtensionRef(konnectExtension)
+	if konnectExtensionRef != nil {
+		extensionList = append(extensionList, *konnectExtensionRef)
+	}
+	return mergeExtensionsForDataPlane(configExtensions, extensionList)
+}
+
+func mergeExtensionsForDataPlane(
+	configExtensions []commonv1alpha1.ExtensionRef,
+	extensions []commonv1alpha1.ExtensionRef,
 ) []commonv1alpha1.ExtensionRef {
 	dataplane := operatorv1beta1.DataPlane{
 		Spec: operatorv1beta1.DataPlaneSpec{
@@ -67,5 +85,5 @@ func MergeExtensionsForDataPlane(
 			},
 		},
 	}
-	return MergeExtensions(defaultExtensions, &dataplane)
+	return MergeExtensions(configExtensions, &dataplane)
 }

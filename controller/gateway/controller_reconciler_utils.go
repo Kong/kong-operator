@@ -51,6 +51,7 @@ func (r *Reconciler) createDataPlane(
 	ctx context.Context,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *GatewayConfiguration,
+	konnectExtension *konnectv1alpha2.KonnectExtension,
 ) (*operatorv1beta1.DataPlane, error) {
 	dataplane := &operatorv1beta1.DataPlane{
 		ObjectMeta: metav1.ObjectMeta{
@@ -66,7 +67,7 @@ func (r *Reconciler) createDataPlane(
 		return nil, err
 	}
 
-	dataplane.Spec.Extensions = extensions.MergeExtensions(gatewayConfig.Spec.Extensions, dataplane)
+	dataplane.Spec.Extensions = extensions.MergeExtensionsForDataPlane(gatewayConfig.Spec.Extensions, konnectExtension)
 
 	k8sutils.SetOwnerForObject(dataplane, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(dataplane)

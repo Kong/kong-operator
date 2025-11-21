@@ -11,7 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	"github.com/kong/kong-operator/controller/pkg/extensions"
+	"github.com/kong/kong-operator/controller/pkg/extensions/processor"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
@@ -29,7 +29,7 @@ type ControlPlaneKonnectExtensionProcessor struct {
 }
 
 // Compile-time check to ensure ControlPlaneKonnectExtensionProcessor implements the extensions.ExtensionProcessor interface.
-var _ extensions.Processor = (*ControlPlaneKonnectExtensionProcessor)(nil)
+var _ processor.Processor = (*ControlPlaneKonnectExtensionProcessor)(nil)
 
 // Process extracts the KonnectExtension from the ControlPlane and generates the KonnectExtensionConfig.
 // It returns true if a KonnectExtension was found and processed, false otherwise.
