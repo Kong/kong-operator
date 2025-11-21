@@ -147,7 +147,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				}
 				recs := make([]reconcile.Request, 0, len(referrers))
 				for _, obj := range referrers {
-					nn := k8stypes.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}
+					nn := client.ObjectKeyFromObject(obj)
 					if !r.GatewayNN.MatchesNN(nn) { // respect --gateway-to-reconcile if set
 						continue
 					}

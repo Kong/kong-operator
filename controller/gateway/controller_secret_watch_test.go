@@ -3,6 +3,7 @@ package gateway
 import (
 	"testing"
 
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -23,7 +24,7 @@ func gwWithListenerCertRef(name string, ref gatewayv1.SecretObjectReference) *gw
 					Port:     443,
 					Protocol: gwtypes.HTTPSProtocolType,
 					TLS: &gatewayv1.GatewayTLSConfig{
-						Mode:            gatewayTLSModePtr(gatewayv1.TLSModeTerminate),
+						Mode:            lo.ToPtr(gatewayv1.TLSModeTerminate),
 						CertificateRefs: []gatewayv1.SecretObjectReference{ref},
 					},
 				},
@@ -32,8 +33,6 @@ func gwWithListenerCertRef(name string, ref gatewayv1.SecretObjectReference) *gw
 	}
 	return gw
 }
-
-func gatewayTLSModePtr(m gatewayv1.TLSModeType) *gatewayv1.TLSModeType { return &m }
 
 func Test_secretReferencedByGateway_SameNamespace_DefaultGroupKind(t *testing.T) {
 	// No Group/Kind set => treated as core/v1 Secret

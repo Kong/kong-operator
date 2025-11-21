@@ -46,6 +46,7 @@ import (
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/internal/utils/gatewayclass"
+	idx "github.com/kong/kong-operator/internal/utils/index"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
@@ -145,10 +146,11 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			mgr.GetCache(),
 			&corev1.Secret{},
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, s *corev1.Secret) []reconcile.Request {
-				// List Gateways and select those that reference the Secret in any listener certificateRef.
+				// Use field index to list only Gateways that reference this Secret.
 				var gwList gwtypes.GatewayList
-				if err := r.List(ctx, &gwList); err != nil {
-					ctrllog.FromContext(ctx).Error(err, "failed to list gateways for Secret watch", "secret", client.ObjectKeyFromObject(s))
+				key := fmt.Sprintf("%s/%s", s.Namespace, s.Name)
+				if err := r.List(ctx, &gwList, client.MatchingFields{idx.TLSCertificateSecretsOnGatewayIndex: key}); err != nil {
+					ctrllog.FromContext(ctx).Error(err, "failed to list indexed gateways for Secret watch", "secret", client.ObjectKeyFromObject(s))
 					return nil
 				}
 				recs := make([]reconcile.Request, 0, len(gwList.Items))
@@ -158,9 +160,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 					if !r.gatewayHasMatchingGatewayClass(&gw) {
 						continue
 					}
-					if secretReferencedByGateway(&gw, s.Namespace, s.Name) {
-						recs = append(recs, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&gw)})
-					}
+					recs = append(recs, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&gw)})
 				}
 				return recs
 			}),
