@@ -11,7 +11,7 @@ type AdoptOptions struct {
 	// Now 'konnect' is supported.
 	// +required
 	// +kubebuilder:validation:Enum=konnect
-	From AdoptSource `json:"from"`
+	From AdoptSource `json:"from,omitempty"`
 	// Mode selects how the operator adopts an already-existing entity (for example,
 	// a Konnect resource) instead of creating a new one.
 	//
@@ -77,5 +77,6 @@ type AdoptKonnectOptions struct {
 	// ID is the Konnect ID of the entity.
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	ID string `json:"id"`
+	// +kubebuilder:validation:MaxLength=36
+	ID string `json:"id,omitempty"`
 }

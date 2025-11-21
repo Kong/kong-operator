@@ -19,6 +19,7 @@ import (
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers/deploy"
 	"github.com/kong/kong-operator/test/helpers/eventually"
+	"github.com/kong/kong-operator/test/helpers/generate"
 	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
@@ -71,8 +72,8 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 		)
 
 		var (
-			id        = "dpg-" + uuid.New().String()
-			networkID = "network-" + uuid.New().String()
+			id        = generate.KonnectID(t)
+			networkID = generate.KonnectID(t)
 		)
 
 		t.Log("Setting up a watch for KonnectCloudGatewayDataPlaneGroupConfiguration events")

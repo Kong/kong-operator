@@ -47,7 +47,7 @@ type ControlPlane struct {
 	// Spec is the specification of the ControlPlane resource.
 	//
 	// +required
-	Spec ControlPlaneSpec `json:"spec,omitempty"`
+	Spec ControlPlaneSpec `json:"spec,omitzero"`
 
 	// Status is the status of the ControlPlane resource.
 	//
@@ -77,7 +77,7 @@ type ControlPlaneSpec struct {
 	// - a DataPlane that is managed by the owner of the ControlPlane (e.g. a Gateway resource)
 	//
 	// +required
-	DataPlane ControlPlaneDataPlaneTarget `json:"dataplane"`
+	DataPlane ControlPlaneDataPlaneTarget `json:"dataplane,omitzero"`
 
 	ControlPlaneOptions `json:",inline"`
 

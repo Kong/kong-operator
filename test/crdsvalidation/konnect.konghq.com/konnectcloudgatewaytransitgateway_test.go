@@ -11,6 +11,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/test/crdsvalidation/common"
 	"github.com/kong/kong-operator/test/envtest"
+	"github.com/kong/kong-operator/test/helpers/generate"
 )
 
 func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
@@ -70,7 +71,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 					Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 						NetworkRef: commonv1alpha1.ObjectRef{
 							Type:      commonv1alpha1.ObjectRefTypeKonnectID,
-							KonnectID: lo.ToPtr("konnect-id"),
+							KonnectID: lo.ToPtr(generate.KonnectID(t)),
 						},
 						KonnectTransitGatewayAPISpec: konnectv1alpha1.KonnectTransitGatewayAPISpec{
 							Type:              konnectv1alpha1.TransitGatewayTypeAWSTransitGateway,

@@ -12,6 +12,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/test/crdsvalidation/common"
 	"github.com/kong/kong-operator/test/envtest"
+	"github.com/kong/kong-operator/test/helpers/generate"
 )
 
 func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
@@ -29,7 +30,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 	}
 	networkRefKonnectID := commonv1alpha1.ObjectRef{
 		Type:      "konnectID",
-		KonnectID: lo.ToPtr("12345"),
+		KonnectID: lo.ToPtr(generate.KonnectID(t)),
 	}
 	autoscaleConfiguration := konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
 		Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic,
@@ -229,7 +230,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 								Region:   "us-west-2",
 								NetworkRef: commonv1alpha1.ObjectRef{
 									Type:      "konnectID",
-									KonnectID: lo.ToPtr("12345"),
+									KonnectID: lo.ToPtr(generate.KonnectID(t)),
 								},
 								Autoscale: autoscaleConfiguration,
 							},
@@ -300,7 +301,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 								Region:   "us-west-2",
 								NetworkRef: commonv1alpha1.ObjectRef{
 									Type:      "namespacedRef",
-									KonnectID: lo.ToPtr("12345"),
+									KonnectID: lo.ToPtr(generate.KonnectID(t)),
 								},
 								Autoscale: autoscaleConfiguration,
 							},

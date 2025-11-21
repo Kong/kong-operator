@@ -34,12 +34,13 @@ type ObjectRef struct {
 	// - namespacedRef
 	//
 	// +required
-	Type ObjectRefType `json:"type"`
+	Type ObjectRefType `json:"type,omitempty"`
 
 	// KonnectID is the schema for the KonnectID type.
 	// This field is required when the Type is konnectID.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=36
 	KonnectID *string `json:"konnectID,omitempty"`
 
 	// NamespacedRef is a reference to a KeySet entity inside the cluster.
@@ -58,7 +59,7 @@ type NamespacedRef struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 
 	// TODO: Implement cross namespace references:
 	// https://github.com/Kong/kubernetes-configuration/issues/36
@@ -71,5 +72,6 @@ type NamespacedRef struct {
 	// This field MUST not be set when referring to cluster-scoped resources.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=253
 	Namespace *string `json:"namespace,omitempty"`
 }

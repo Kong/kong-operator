@@ -66,6 +66,7 @@ spec:
                     properties:
                       id:
                         description: ID is the Konnect ID of the entity.
+                        maxLength: 36
                         minLength: 1
                         type: string
                     required:
@@ -127,6 +128,7 @@ spec:
                 properties:
                   name:
                     description: Name is the name of the entity.
+                    maxLength: 253
                     minLength: 1
                     type: string
                 required:
