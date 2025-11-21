@@ -2,9 +2,11 @@ package ops
 
 import (
 	"context"
+	"fmt"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
@@ -72,5 +74,47 @@ func DeleteKongDataPlaneClientCertificate(
 		return handleDeleteError(ctx, err, cert)
 	}
 
+	return nil
+}
+
+// adoptKongDataPlaneCertificate adopts an existing datplane certificates in Konnect.
+func adoptKongDataPlaneCertificate(
+	ctx context.Context,
+	sdk sdkops.DataPlaneClientCertificatesSDK,
+	cert *configurationv1alpha1.KongDataPlaneClientCertificate,
+) error {
+	cpID := cert.GetControlPlaneID()
+	if cpID == "" {
+		return CantPerformOperationWithoutControlPlaneIDError{Entity: cert, Op: CreateOp}
+	}
+
+	adoptOptions := cert.GetAdoptOptions()
+	if adoptOptions.Konnect == nil || adoptOptions.Konnect.ID == "" {
+		return fmt.Errorf("konnect ID must be provided for adoption")
+	}
+	if adoptOptions.Mode != "" && adoptOptions.Mode != commonv1alpha1.AdoptModeMatch {
+		return fmt.Errorf("only match mode adoption is supported for DataPlane certificate, got mode: %q", adoptOptions.Mode)
+	}
+
+	konnectID := adoptOptions.Konnect.ID
+	resp, err := sdk.GetDataplaneCertificate(ctx, cpID, konnectID)
+
+	if err != nil {
+		return KonnectEntityAdoptionFetchError{KonnectID: konnectID, Err: err}
+	}
+	if resp == nil || resp.DataPlaneClientCertificateResponse == nil {
+		return fmt.Errorf("failed getting %s: %w", cert.GetTypeName(), ErrNilResponse)
+	}
+
+	// check if the cert in the CR matches the adopted DP cert.
+	if resp.DataPlaneClientCertificateResponse.Item == nil ||
+		resp.DataPlaneClientCertificateResponse.Item.Cert == nil ||
+		cert.Spec.Cert != *resp.DataPlaneClientCertificateResponse.Item.Cert {
+		return KonnectEntityAdoptionNotMatchError{
+			KonnectID: konnectID,
+		}
+	}
+
+	cert.SetKonnectID(konnectID)
 	return nil
 }

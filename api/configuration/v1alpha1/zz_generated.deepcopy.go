@@ -1304,6 +1304,11 @@ func (in *KongDataPlaneClientCertificateSpec) DeepCopyInto(out *KongDataPlaneCli
 		*out = new(commonv1alpha1.ControlPlaneRef)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Adopt != nil {
+		in, out := &in.Adopt, &out.Adopt
+		*out = new(commonv1alpha1.AdoptOptions)
+		(*in).DeepCopyInto(*out)
+	}
 	out.KongDataPlaneClientCertificateAPISpec = in.KongDataPlaneClientCertificateAPISpec
 }
 
