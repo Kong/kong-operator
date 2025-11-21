@@ -234,7 +234,7 @@ spec:
                   as hash input. Only required when `hash_on` is set to `uri_capture`.
                 type: string
               healthchecks:
-                description: Healthchecks - The array of healthchecks.
+                description: Healthchecks is the configuration of upstream's healthchecks.
                 properties:
                   active:
                     properties:
@@ -357,6 +357,9 @@ spec:
                 required:
                 - threshold
                 type: object
+                x-kubernetes-validations:
+                - message: healthcheck threshold must be between 0 and 100
+                  rule: self.threshold >= 0 && self.threshold <= 100
               host_header:
                 description: The hostname to be used as `Host` header when proxying
                   requests through Kong.

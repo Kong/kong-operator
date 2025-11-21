@@ -472,4 +472,54 @@ func TestKongUpstream(t *testing.T) {
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
+
+	t.Run("spec", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongUpstream]{
+			{
+				Name: "healthchecks thresholds must be non-negative",
+				TestObject: &configurationv1alpha1.KongUpstream{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+							HashOn:         lo.ToPtr(sdkkonnectcomp.HashOnQueryArg),
+							HashOnQueryArg: lo.ToPtr("arg"),
+							Healthchecks: &sdkkonnectcomp.Healthchecks{
+								Threshold: lo.ToPtr(-1.0),
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("healthcheck threshold must be between 0 and 100"),
+			},
+			{
+				Name: "healthchecks thresholds must be less than or equal to 100",
+				TestObject: &configurationv1alpha1.KongUpstream{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongUpstreamSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
+							HashOn:         lo.ToPtr(sdkkonnectcomp.HashOnQueryArg),
+							HashOnQueryArg: lo.ToPtr("arg"),
+							Healthchecks: &sdkkonnectcomp.Healthchecks{
+								Threshold: lo.ToPtr(101.0),
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("healthcheck threshold must be between 0 and 100"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
 }

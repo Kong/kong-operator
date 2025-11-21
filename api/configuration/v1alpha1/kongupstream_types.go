@@ -104,8 +104,11 @@ type KongUpstreamAPISpec struct {
 	// The name of the query string argument to take the value from as hash input. Only required when `hash_on` is set to `query_arg`.
 	HashOnQueryArg *string `json:"hash_on_query_arg,omitempty"`
 	// The name of the route URI capture to take the value from as hash input. Only required when `hash_on` is set to `uri_capture`.
-	HashOnURICapture *string                      `json:"hash_on_uri_capture,omitempty"`
-	Healthchecks     *sdkkonnectcomp.Healthchecks `json:"healthchecks,omitempty"`
+	HashOnURICapture *string `json:"hash_on_uri_capture,omitempty"`
+	// Healthchecks is the configuration of upstream's healthchecks.
+	//
+	// +kubebuilder:validation:XValidation:rule="self.threshold >= 0 && self.threshold <= 100", message="healthcheck threshold must be between 0 and 100"
+	Healthchecks *sdkkonnectcomp.Healthchecks `json:"healthchecks,omitempty"`
 	// The hostname to be used as `Host` header when proxying requests through Kong.
 	HostHeader *string `json:"host_header,omitempty"`
 	// This is a hostname, which must be equal to the `host` of a Service.
