@@ -8,16 +8,20 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
+	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/pkg/consts"
 )
 
 // validBackendRef represents a BackendRef that has passed all validation checks.
@@ -62,7 +66,7 @@ func TargetsForBackendRefs(
 	validBackendRefs = recalculateWeightsAcrossBackendRefs(validBackendRefs)
 
 	// Step 3: Create KongTargets from the processed ValidBackendRef structs.
-	targets, err := createTargetsFromValidBackendRefs(httpRoute, pRef, upstreamName, validBackendRefs)
+	targets, err := createTargetsFromValidBackendRefs(ctx, logger, cl, httpRoute, pRef, upstreamName, validBackendRefs)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create targets from valid BackendRefs: %w", err)
 	}
@@ -371,7 +375,7 @@ func recalculateWeightsAcrossBackendRefs(validBackendRefs []validBackendRef) []v
 
 // createTargetsFromValidBackendRefs creates KongTargets from validBackendRef structs.
 // This function handles all service types (ClusterIP, ExternalName, FQDN) using a unified approach.
-func createTargetsFromValidBackendRefs(httpRoute *gwtypes.HTTPRoute, pRef *gwtypes.ParentReference, upstreamName string,
+func createTargetsFromValidBackendRefs(ctx context.Context, logger logr.Logger, cl client.Client, httpRoute *gwtypes.HTTPRoute, pRef *gwtypes.ParentReference, upstreamName string,
 	validBackendRefs []validBackendRef) ([]configurationv1alpha1.KongTarget, error) {
 	var targets []configurationv1alpha1.KongTarget
 
@@ -390,20 +394,52 @@ func createTargetsFromValidBackendRefs(httpRoute *gwtypes.HTTPRoute, pRef *gwtyp
 			// Use the pre-calculated target port (already resolved based on service type and mode).
 			port := vbRef.targetPort
 
-			// Create target with explicit endpoint address (works for all cases: real endpoints, FQDN, external names).
+			targetName := namegen.NewKongTargetName(upstreamName, endpoint, port, vbRef.backendRef)
+			logger := logger.WithValues("kongtarget", targetName)
+			log.Debug(logger, "Creating KongTarget for BackendRef")
+
 			target, err := builder.NewKongTarget().
-				WithName(namegen.NewKongTargetName(upstreamName, endpoint, port, vbRef.backendRef)).
+				WithName(targetName).
 				WithNamespace(httpRoute.Namespace).
 				WithLabels(httpRoute, pRef).
 				WithAnnotations(httpRoute, pRef).
 				WithUpstreamRef(upstreamName).
 				WithTarget(endpoint, port).
-				WithOwner(httpRoute).
 				WithWeight(&weight).
 				Build()
 			if err != nil {
-				return nil, err
+				log.Error(logger, err, "Failed to build KongTarget resource")
+				return nil, fmt.Errorf("failed to build KongTarget %s: %w", targetName, err)
 			}
+
+			// Check if the KongTarget already exists
+			existingTarget := &configurationv1alpha1.KongTarget{}
+			namespacedName := types.NamespacedName{
+				Name:      targetName,
+				Namespace: httpRoute.Namespace,
+			}
+			if err = cl.Get(ctx, namespacedName, existingTarget); err != nil && !apierrors.IsNotFound(err) {
+				log.Error(logger, err, "Failed to check for existing KongTarget")
+				return nil, fmt.Errorf("failed to get existing KongTarget %s: %w", targetName, err)
+			}
+
+			if apierrors.IsNotFound(err) {
+				// Create target with explicit endpoint address (works for all cases: real endpoints, FQDN, external names).
+				log.Debug(logger, "New KongTarget generated successfully")
+				targets = append(targets, target)
+				continue
+			}
+
+			// KongTarget exists, update annotations to include current HTTPRoute
+			log.Debug(logger, "KongTarget found")
+			target.Annotations[consts.GatewayOperatorHybridRoutesAnnotation] = existingTarget.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+			annotationManager := metadata.NewAnnotationManager(logger)
+			annotationManager.AppendRouteToAnnotation(&target, httpRoute)
+
+			// TODO: we should check that the existingTarget.Spec matches what we expect
+			// https://github.com/Kong/kong-operator/issues/2687
+			log.Debug(logger, "Successfully updated existing KongTarget")
+
 			targets = append(targets, target)
 		}
 	}

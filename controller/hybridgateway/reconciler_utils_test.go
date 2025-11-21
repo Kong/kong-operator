@@ -14,6 +14,7 @@ import (
 
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/pkg/consts"
 )
 
 func newUnstructured(ns, name string, gvk schema.GroupVersionKind, labels map[string]string) unstructured.Unstructured {
@@ -207,8 +208,17 @@ func TestCleanOrphanedResources(t *testing.T) {
 					}
 					if _, exists := desiredSet[name]; !exists {
 						obj := newUnstructured(ns, name, gvk, labels)
+
+						annotations := obj.GetAnnotations()
+						if annotations == nil {
+							annotations = make(map[string]string)
+						}
+						annotations[consts.GatewayOperatorHybridRoutesAnnotation] = "ns/httproute-owner"
+						obj.SetAnnotations(annotations)
+
 						if extraFields {
-							obj.SetAnnotations(map[string]string{"extra": "field"})
+							annotations["extra"] = "field"
+							obj.SetAnnotations(annotations)
 						}
 						orphans = append(orphans, obj)
 					}

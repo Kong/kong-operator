@@ -3,12 +3,16 @@ package watch
 import (
 	"context"
 
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/internal/utils/index"
 )
@@ -211,6 +215,43 @@ func MapHTTPRouteForReferenceGrant(cl client.Client) handler.MapFunc {
 					})
 				}
 			}
+		}
+		return requests
+	}
+}
+
+// kongResource is a type constraint that encompasses all Kong resource types
+// that can be mapped back to HTTPRoutes via annotations.
+type kongResource interface {
+	*configurationv1alpha1.KongUpstream |
+		*configurationv1alpha1.KongTarget |
+		*configurationv1alpha1.KongService |
+		*configurationv1alpha1.KongRoute |
+		*configurationv1.KongPlugin |
+		*configurationv1alpha1.KongPluginBinding
+}
+
+// MapHTTPRouteForKongResource returns a handler.MapFunc that, given a Kong resource object of type T,
+// retrieves the HTTPRoutes referenced in its annotations. It returns a slice of reconcile.Requests
+// for each matching HTTPRoute.
+func MapHTTPRouteForKongResource[T kongResource](cl client.Client) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		_, ok := obj.(T)
+		if !ok {
+			return nil
+		}
+
+		am := metadata.NewAnnotationManager(logr.Discard())
+		routes := am.GetRoutes(obj)
+		if len(routes) == 0 {
+			return nil
+		}
+
+		var requests []reconcile.Request
+		for _, r := range routes {
+			requests = append(requests, reconcile.Request{
+				NamespacedName: metadata.NameStringToObjectKey(r),
+			})
 		}
 		return requests
 	}
