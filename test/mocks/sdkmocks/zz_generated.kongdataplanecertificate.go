@@ -217,6 +217,95 @@ func (_c *MockDataPlaneClientCertificatesSDK_DeleteDataplaneCertificate_Call) Ru
 	return _c
 }
 
+// GetDataplaneCertificate provides a mock function for the type MockDataPlaneClientCertificatesSDK
+func (_mock *MockDataPlaneClientCertificatesSDK) GetDataplaneCertificate(ctx context.Context, controlPlaneID string, certificateID string, opts ...operations.Option) (*operations.GetDataplaneCertificateResponse, error) {
+	var tmpRet mock.Arguments
+	if len(opts) > 0 {
+		tmpRet = _mock.Called(ctx, controlPlaneID, certificateID, opts)
+	} else {
+		tmpRet = _mock.Called(ctx, controlPlaneID, certificateID)
+	}
+	ret := tmpRet
+
+	if len(ret) == 0 {
+		panic("no return value specified for GetDataplaneCertificate")
+	}
+
+	var r0 *operations.GetDataplaneCertificateResponse
+	var r1 error
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.GetDataplaneCertificateResponse, error)); ok {
+		return returnFunc(ctx, controlPlaneID, certificateID, opts...)
+	}
+	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.GetDataplaneCertificateResponse); ok {
+		r0 = returnFunc(ctx, controlPlaneID, certificateID, opts...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(*operations.GetDataplaneCertificateResponse)
+		}
+	}
+	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, controlPlaneID, certificateID, opts...)
+	} else {
+		r1 = ret.Error(1)
+	}
+	return r0, r1
+}
+
+// MockDataPlaneClientCertificatesSDK_GetDataplaneCertificate_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'GetDataplaneCertificate'
+type MockDataPlaneClientCertificatesSDK_GetDataplaneCertificate_Call struct {
+	*mock.Call
+}
+
+// GetDataplaneCertificate is a helper method to define mock.On call
+//   - ctx context.Context
+//   - controlPlaneID string
+//   - certificateID string
+//   - opts ...operations.Option
+func (_e *MockDataPlaneClientCertificatesSDK_Expecter) GetDataplaneCertificate(ctx interface{}, controlPlaneID interface{}, certificateID interface{}, opts ...interface{}) *MockDataPlaneClientCertificatesSDK_GetDataplaneCertificate_Call {
+	return &MockDataPlaneClientCertificatesSDK_GetDataplaneCertificate_Call{Call: _e.mock.On("GetDataplaneCertificate",
+		append([]interface{}{ctx, controlPlaneID, certificateID}, opts...)...)}
+}
+
+func (_c *MockDataPlaneClientCertificatesSDK_GetDataplaneCertificate_Call) Run(run func(ctx context.Context, controlPlaneID string, certificateID string, opts ...operations.Option)) *MockDataPlaneClientCertificatesSDK_GetDataplaneCertificate_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		var arg0 context.Context
+		if args[0] != nil {
+			arg0 = args[0].(context.Context)
+		}
+		var arg1 string
+		if args[1] != nil {
+			arg1 = args[1].(string)
+		}
+		var arg2 string
+		if args[2] != nil {
+			arg2 = args[2].(string)
+		}
+		var arg3 []operations.Option
+		var variadicArgs []operations.Option
+		if len(args) > 3 {
+			variadicArgs = args[3].([]operations.Option)
+		}
+		arg3 = variadicArgs
+		run(
+			arg0,
+			arg1,
+			arg2,
+			arg3...,
+		)
+	})
+	return _c
+}
+
+func (_c *MockDataPlaneClientCertificatesSDK_GetDataplaneCertificate_Call) Return(getDataplaneCertificateResponse *operations.GetDataplaneCertificateResponse, err error) *MockDataPlaneClientCertificatesSDK_GetDataplaneCertificate_Call {
+	_c.Call.Return(getDataplaneCertificateResponse, err)
+	return _c
+}
+
+func (_c *MockDataPlaneClientCertificatesSDK_GetDataplaneCertificate_Call) RunAndReturn(run func(ctx context.Context, controlPlaneID string, certificateID string, opts ...operations.Option) (*operations.GetDataplaneCertificateResponse, error)) *MockDataPlaneClientCertificatesSDK_GetDataplaneCertificate_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // ListDpClientCertificates provides a mock function for the type MockDataPlaneClientCertificatesSDK
 func (_mock *MockDataPlaneClientCertificatesSDK) ListDpClientCertificates(ctx context.Context, controlPlaneID string, opts ...operations.Option) (*operations.ListDpClientCertificatesResponse, error) {
 	var tmpRet mock.Arguments

@@ -590,6 +590,8 @@ func Adopt[
 		err = adoptKongCredentialJWT(ctx, sdk.GetJWTCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCredentialHMAC:
 		err = adoptKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
+	case *configurationv1alpha1.KongDataPlaneClientCertificate:
+		err = adoptKongDataPlaneCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), ent)
 	// TODO: implement adoption for other types.
 	default:
 		return ctrl.Result{}, fmt.Errorf("unsupported entity type %T", ent)
