@@ -34,7 +34,7 @@ func TestKongSNI(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.certificateRef.name in body should be at least 1 chars long"),
+				ExpectedErrorMessage: lo.ToPtr("spec.certificateRef.name: Required value, <nil>: Invalid value:"),
 			},
 			{
 				Name: "certificate ref can be changed before programmed",

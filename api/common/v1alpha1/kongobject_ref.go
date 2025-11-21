@@ -8,5 +8,6 @@ type NameRef struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitempty"`
 }

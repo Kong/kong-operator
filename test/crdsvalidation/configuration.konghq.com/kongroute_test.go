@@ -38,7 +38,7 @@ func TestKongRoute(t *testing.T) {
 	t.Run("service ref", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongRoute]{
 			{
-				Name: "bind servicebound to controlplane too",
+				Name: "bind service to controlplane too",
 				TestObject: &configurationv1alpha1.KongRoute{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongRouteSpec{
@@ -81,6 +81,71 @@ func TestKongRoute(t *testing.T) {
 				Update: func(kr *configurationv1alpha1.KongRoute) {
 					kr.Spec.ServiceRef = nil
 				},
+			},
+			{
+				Name: "NamespacedRef reference is valid",
+				TestObject: &configurationv1alpha1.KongRoute{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongRouteSpec{
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type: configurationv1alpha1.ServiceRefNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NameRef{
+								Name: "test-konnect-service",
+							},
+						},
+						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+							Paths: []string{"/"},
+						},
+					},
+				},
+			},
+			{
+				Name: "NamespacedRef reference is invalid when empty name is provided",
+				TestObject: &configurationv1alpha1.KongRoute{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongRouteSpec{
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type: configurationv1alpha1.ServiceRefNamespacedRef,
+							NamespacedRef: &commonv1alpha1.NameRef{
+								Name: "",
+							},
+						},
+						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+							Paths: []string{"/"},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.serviceRef.namespacedRef.name: Required value, <nil>: Invalid value:"),
+			},
+			{
+				Name: "NamespacedRef reference is invalid when name is not provided",
+				TestObject: &configurationv1alpha1.KongRoute{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongRouteSpec{
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type: configurationv1alpha1.ServiceRefNamespacedRef,
+						},
+						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+							Paths: []string{"/"},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("when type is namespacedRef, namespacedRef must be set"),
+			},
+			{
+				Name: "not providing namespacedRef when type is namespacedRef yields an error",
+				TestObject: &configurationv1alpha1.KongRoute{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongRouteSpec{
+						ServiceRef: &configurationv1alpha1.ServiceRef{
+							Type: configurationv1alpha1.ServiceRefNamespacedRef,
+						},
+						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
+							Paths: []string{"/"},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("when type is namespacedRef, namespacedRef must be set"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -134,77 +199,6 @@ func TestKongRoute(t *testing.T) {
 					},
 				},
 				ExpectedErrorMessage: lo.ToPtr("If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set"),
-			},
-		}.
-			RunWithConfig(t, cfg, scheme)
-	})
-
-	t.Run("service ref", func(t *testing.T) {
-		common.TestCasesGroup[*configurationv1alpha1.KongRoute]{
-			{
-				Name: "NamespacedRef reference is valid",
-				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: configurationv1alpha1.KongRouteSpec{
-						ServiceRef: &configurationv1alpha1.ServiceRef{
-							Type: configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &commonv1alpha1.NameRef{
-								Name: "test-konnect-service",
-							},
-						},
-						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-							Paths: []string{"/"},
-						},
-					},
-				},
-			},
-			{
-				Name: "NamespacedRef reference is invalid when empty name is provided",
-				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: configurationv1alpha1.KongRouteSpec{
-						ServiceRef: &configurationv1alpha1.ServiceRef{
-							Type: configurationv1alpha1.ServiceRefNamespacedRef,
-							NamespacedRef: &commonv1alpha1.NameRef{
-								Name: "",
-							},
-						},
-						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-							Paths: []string{"/"},
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("spec.serviceRef.namespacedRef.name in body should be at least 1 chars long"),
-			},
-			{
-				Name: "NamespacedRef reference is invalid when name is not provided",
-				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: configurationv1alpha1.KongRouteSpec{
-						ServiceRef: &configurationv1alpha1.ServiceRef{
-							Type: configurationv1alpha1.ServiceRefNamespacedRef,
-						},
-						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-							Paths: []string{"/"},
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("when type is namespacedRef, namespacedRef must be set"),
-			},
-			{
-				Name: "not providing namespacedRef when type is namespacedRef yields an error",
-				TestObject: &configurationv1alpha1.KongRoute{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: configurationv1alpha1.KongRouteSpec{
-						ServiceRef: &configurationv1alpha1.ServiceRef{
-							Type: configurationv1alpha1.ServiceRefNamespacedRef,
-						},
-						KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
-							Paths: []string{"/"},
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("when type is namespacedRef, namespacedRef must be set"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

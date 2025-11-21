@@ -83,6 +83,7 @@ spec:
                     properties:
                       id:
                         description: ID is the Konnect ID of the entity.
+                        maxLength: 36
                         minLength: 1
                         type: string
                     required:
@@ -263,6 +264,7 @@ spec:
                     description: |-
                       KonnectID is the schema for the KonnectID type.
                       This field is required when the Type is konnectID.
+                    maxLength: 36
                     type: string
                   namespacedRef:
                     description: |-
@@ -282,6 +284,7 @@ spec:
                           namespace of the parent object MUST be used.
 
                           This field MUST not be set when referring to cluster-scoped resources.
+                        maxLength: 253
                         type: string
                     required:
                     - name

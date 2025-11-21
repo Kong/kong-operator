@@ -17,6 +17,7 @@ import (
 	kcfgkonnect "github.com/kong/kong-operator/api/konnect"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/test/helpers/generate"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
@@ -27,8 +28,8 @@ func TestAdoptMatchDataPlaneGroupConfigurationSuccess(t *testing.T) {
 	sdk := sdkmocks.NewMockSDKWrapperWithT(t)
 	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
-	controlPlaneID := "cp-1"
-	networkID := "net-1"
+	controlPlaneID := generate.KonnectID(t)
+	networkID := generate.KonnectID(t)
 	maxRps := int64(200)
 
 	cfg := &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
@@ -109,8 +110,8 @@ func TestAdoptMatchDataPlaneGroupConfigurationMismatch(t *testing.T) {
 	sdk := sdkmocks.NewMockSDKWrapperWithT(t)
 	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
-	controlPlaneID := "cp-1"
-	networkID := "net-1"
+	controlPlaneID := generate.KonnectID(t)
+	networkID := generate.KonnectID(t)
 	maxRps := int64(200)
 
 	cfg := &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{

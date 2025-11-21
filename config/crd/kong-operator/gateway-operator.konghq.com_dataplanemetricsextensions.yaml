@@ -137,6 +137,7 @@ spec:
                       namespace of the parent object MUST be used.
 
                       This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
                     type: string
                 required:
                 - name

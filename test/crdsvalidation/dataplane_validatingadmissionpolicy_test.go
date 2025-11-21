@@ -19,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test/crdsvalidation/common"
 	"github.com/kong/kong-operator/test/envtest"
+	"github.com/kong/kong-operator/test/helpers/generate"
 	"github.com/kong/kong-operator/test/helpers/helm"
 )
 
@@ -68,7 +69,7 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 								Region:   "us-west-2",
 								NetworkRef: commonv1alpha1.ObjectRef{
 									Type:      commonv1alpha1.ObjectRefTypeKonnectID,
-									KonnectID: lo.ToPtr("kpat_ABCDEFGHILMNOPQRSTUVZabcdefghilmnopqrstuvz0123456"),
+									KonnectID: lo.ToPtr(generate.KonnectID(t)),
 								},
 								Autoscale: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscale{
 									Type: konnectv1alpha1.ConfigurationDataPlaneGroupAutoscaleTypeStatic,

@@ -24,13 +24,15 @@ type ExtensionRef struct {
 	//
 	// +optional
 	// +kubebuilder:default=gateway-operator.konghq.com
+	// +kubebuilder:validation:MaxLength=253
 	Group string `json:"group"`
 
 	// Kind is kind of the extension resource.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	Kind string `json:"kind"`
+	// +kubebuilder:validation:MaxLength=253
+	Kind string `json:"kind,omitempty"`
 
 	// NamespacedRef is a reference to the extension resource.
 	NamespacedRef `json:",inline"`

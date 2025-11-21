@@ -129,7 +129,7 @@ func TestControlPlaneV2(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.dataplane.type: Unsupported value: \"\""),
+				ExpectedErrorMessage: lo.ToPtr("spec.dataplane: Required value, <nil>: Invalid value:"),
 			},
 			{
 				Name: "when dataplane.type is set to name, name must be specified",

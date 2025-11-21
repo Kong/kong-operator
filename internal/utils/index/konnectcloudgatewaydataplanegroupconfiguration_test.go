@@ -9,6 +9,7 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/test/helpers/generate"
 )
 
 func Test_konnectCloudGatewayNetworkDataPlaneGroupConfigurationRef(t *testing.T) {
@@ -76,7 +77,7 @@ func Test_konnectCloudGatewayNetworkDataPlaneGroupConfigurationRef(t *testing.T)
 						{
 							NetworkRef: commonv1alpha1.ObjectRef{
 								Type:      commonv1alpha1.ObjectRefTypeKonnectID,
-								KonnectID: lo.ToPtr("test-konnect-id"),
+								KonnectID: lo.ToPtr(generate.KonnectID(t)),
 							},
 						},
 					},

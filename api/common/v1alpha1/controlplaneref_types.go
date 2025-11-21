@@ -76,6 +76,7 @@ type KonnectExtensionControlPlaneRef struct {
 // KonnectIDType is the schema for the KonnectID type.
 //
 // +kubebuilder:validation:Pattern=`^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$`
+// +kubebuilder:validation:MaxLength=36
 type KonnectIDType string
 
 // KonnectNamespacedRef is the schema for the KonnectNamespacedRef type.
@@ -84,9 +85,11 @@ type KonnectIDType string
 // +apireference:kgo:include
 type KonnectNamespacedRef struct {
 	// Name is the name of the Konnect Control Plane.
-	// +kubebuilder:validation:MinLength=1
+	//
 	// +required
-	Name string `json:"name"`
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitempty"`
 
 	// TODO: Implement cross namespace references:
 	// https://github.com/Kong/kubernetes-configuration/issues/36
@@ -95,5 +98,6 @@ type KonnectNamespacedRef struct {
 	// Currently only cluster scoped resources (KongVault) are allowed to set `konnectNamespacedRef.namespace`.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxLength=253
 	Namespace string `json:"namespace,omitempty"`
 }

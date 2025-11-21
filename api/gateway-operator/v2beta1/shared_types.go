@@ -249,6 +249,7 @@ type NamespacedName struct {
 	// Name is the name of the resource.
 	//
 	// +required
+	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
 	// Namespace is the namespace of the resource.
