@@ -24454,7 +24454,9 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: KongRoute is the schema for Routes API which defines a Kong Route.
+        description: |-
+          KongRoute is the schema for Routes API which defines a Kong Route.
+          Currently, KongRoute supports only the JSON flavor of Route configuration.
         properties:
           apiVersion:
             description: |-
