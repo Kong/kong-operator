@@ -396,10 +396,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		if !k8sutils.HasConditionTrue(kcfggateway.KonnectGatewayControlPlaneProgrammedType, oldGwConditionsAware) {
 			log.Debug(logger, "KonnectGatewayControlplane is ready")
 		}
-		// This should never happen as the ControlPlane at this point is always != nil.
-		// Nevertheless, this kind of check makes the Gateway controller bulletproof.
+		// If konnectControlPlane is nil, it means provisionKonnectGatewayControlPlane
+		// already set the condition. Ensure the condition is set and return early.
 		if konnectControlPlane == nil {
-			return ctrl.Result{}, errors.New("unexpected error, KonnectGatewayControlPlane is nil. Returning to avoid panic")
+			// The condition should already be set by provisionKonnectGatewayControlPlane.
+			// Verify it's set, and if not, set it as a safety measure.
+			if condition, found := k8sutils.GetCondition(kcfggateway.KonnectGatewayControlPlaneProgrammedType, gwConditionAware); !found || condition.Status == metav1.ConditionTrue {
+				// Condition not found or is True when it shouldn't be. Set it properly.
+				k8sutils.SetCondition(
+					createKonnectGatewayControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, "KonnectGatewayControlPlane is not available", gateway.Generation),
+					gwConditionAware,
+				)
+				gwConditionAware.setProgrammed(metav1.ConditionFalse)
+				if err := r.patchStatus(ctx, &gateway, oldGateway); err != nil {
+					return ctrl.Result{}, err
+				}
+			}
+			// Requeue will be triggered by the update of the KonnectGatewayControlPlane status.
+			return ctrl.Result{}, nil
 		}
 
 		konnectExtension := r.provisionKonnectExtension(ctx, logger, &gateway, konnectControlPlane)
