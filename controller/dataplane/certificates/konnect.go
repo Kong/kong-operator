@@ -2,6 +2,7 @@ package certificates
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -40,6 +41,11 @@ const (
 	ClusterCertEnvKey = "KONG_CLUSTER_CERT"
 	// ClusterCertKeyEnvKey is the environment variable name for cluster certificate keys.
 	ClusterCertKeyEnvKey = "KONG_CLUSTER_CERT_KEY"
+)
+
+var (
+	// ErrKonnectSecretMissing is returned when the Konnect secret is missing.
+	ErrKonnectSecretMissing = errors.New("no konnect-dataplane Secrets found")
 )
 
 var certificateGVR = schema.GroupVersionResource{
@@ -236,8 +242,8 @@ func MountAndUseKonnectCert(ctx context.Context, logger logr.Logger, dataplane *
 			labels[ossconsts.CertPurposeLabel], desiredDeployment.GetNamespace(), dataplane.GetName())
 	}
 	if len(secrets) < 1 {
-		return fmt.Errorf("no %s Secrets for Deployment %s/%s",
-			labels[ossconsts.CertPurposeLabel], desiredDeployment.GetNamespace(), dataplane.GetName())
+		return fmt.Errorf("%w for Deployment %s/%s",
+			ErrKonnectSecretMissing, desiredDeployment.GetNamespace(), dataplane.GetName())
 	}
 	log.Debug(logger, "found Secret for Konnect Certificate",
 		"namespace", dataplane.Namespace, "dataplane", dataplane.Name, "secret", secrets[0].Name)
