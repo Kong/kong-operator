@@ -85,7 +85,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 	root := &gwtypes.HTTPRoute{}
 	root.SetName("httproute-owner")
 	root.SetNamespace("ns")
-	root.SetGroupVersionKind(schema.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1alpha2", Kind: "HTTPRoute"})
+	root.SetGroupVersionKind(schema.GroupVersionKind{Group: gwtypes.GroupName, Version: "v1alpha2", Kind: "HTTPRoute"})
 	ownerLabels := metadata.BuildLabels(root, nil)
 
 	tests := []struct {

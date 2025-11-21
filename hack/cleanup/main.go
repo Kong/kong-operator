@@ -28,16 +28,26 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"go.uber.org/zap"
 
 	"github.com/kong/kong-operator/test"
 )
 
 const (
+	cleanupModeAll     = "all"
+	cleanupModeGKE     = "gke"
 	cleanupModeKonnect = "konnect"
 
 	konnectAccessTokenVar = "KONG_TEST_KONNECT_ACCESS_TOKEN" //nolint:gosec
 	konnectServerURLVar   = "KONG_TEST_KONNECT_SERVER_URL"
+)
+
+var (
+	// GKE environment variables.
+	gkeCreds    = os.Getenv(gke.GKECredsVar)
+	gkeProject  = os.Getenv(gke.GKEProjectVar)
+	gkeLocation = os.Getenv(gke.GKELocationVar)
 )
 
 func main() {
@@ -70,10 +80,12 @@ func main() {
 
 func getCleanupMode() (string, error) {
 	if len(os.Args) < 2 {
-		return cleanupModeKonnect, nil
+		return cleanupModeAll, nil
 	}
 
 	switch os.Args[1] {
+	case cleanupModeAll:
+	case cleanupModeGKE:
 	case cleanupModeKonnect:
 	default:
 		return "", fmt.Errorf("invalid cleanup mode: %s", os.Args[1])
@@ -84,12 +96,17 @@ func getCleanupMode() (string, error) {
 
 func resolveCleanupFuncs(mode string) []func(context.Context, logr.Logger) error {
 	switch mode {
+	case cleanupModeGKE:
+		return []func(context.Context, logr.Logger) error{
+			cleanupGKEClusters,
+		}
 	case cleanupModeKonnect:
 		return []func(context.Context, logr.Logger) error{
 			cleanupKonnectControlPlanes,
 		}
 	default:
 		return []func(context.Context, logr.Logger) error{
+			cleanupGKEClusters,
 			cleanupKonnectControlPlanes,
 		}
 	}
@@ -97,9 +114,14 @@ func resolveCleanupFuncs(mode string) []func(context.Context, logr.Logger) error
 
 func validateVars(mode string) error {
 	switch mode {
+	case cleanupModeGKE:
+		return validateGKEVars()
 	case cleanupModeKonnect:
 		return validateKonnectVars()
 	default:
+		if err := validateGKEVars(); err != nil {
+			return err
+		}
 		if err := validateKonnectVars(); err != nil {
 			return err
 		}
@@ -112,6 +134,16 @@ func validateKonnectVars() error {
 		notEmpty(konnectAccessTokenVar, test.KonnectAccessToken()),
 		notEmpty(konnectServerURLVar, test.KonnectServerURL()),
 	)
+}
+
+func validateGKEVars() error {
+	if err := notEmpty(gke.GKECredsVar, gkeCreds); err != nil {
+		return err
+	}
+	if err := notEmpty(gke.GKEProjectVar, gkeProject); err != nil {
+		return err
+	}
+	return notEmpty(gke.GKELocationVar, gkeLocation)
 }
 
 func notEmpty(name, value string) error {

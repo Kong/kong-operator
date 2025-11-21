@@ -15,7 +15,6 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 
-	"github.com/kong/kong-operator/config"
 	"github.com/kong/kong-operator/modules/manager"
 	"github.com/kong/kong-operator/modules/manager/metadata"
 	"github.com/kong/kong-operator/modules/manager/scheme"
@@ -111,14 +110,11 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: creating system namespaces and serviceaccounts")
 	exitOnErr(clusters.CreateNamespace(GetCtx(), GetEnv().Cluster(), "kong-system"))
 
-	configPath, cleaner, err := config.DumpKustomizeConfigToTempDir()
-	exitOnErr(err)
-	defer cleaner()
+	configPath := path.Join(testutils.ProjectRootPath(), "config")
 
 	exitOnErr(clusters.KustomizeDeployForCluster(GetCtx(), GetEnv().Cluster(), path.Join(configPath, "/rbac/base")))
 	exitOnErr(clusters.KustomizeDeployForCluster(GetCtx(), GetEnv().Cluster(), path.Join(configPath, "/rbac/role")))
-	fmt.Println(`WARN: skipping applying "/default/validating_policies" until https://github.com/Kong/kong-operator/issues/2176 is resolved`)
-	// exitOnErr(clusters.KustomizeDeployForCluster(GetCtx(), GetEnv().Cluster(), path.Join(configPath, "/default/validating_policies")))
+	exitOnErr(clusters.KustomizeDeployForCluster(GetCtx(), GetEnv().Cluster(), path.Join(configPath, "/default/validating_policies")))
 
 	// normally this is obtained from the downward API. the tests fake it.
 	err = os.Setenv("POD_NAMESPACE", "kong-system")

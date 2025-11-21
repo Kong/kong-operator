@@ -17,6 +17,7 @@ import (
 
 const timeUntilClusterOrphaned = time.Hour
 
+// cleanupGKEClusters deletes orphaned GKE clusters created by tests.
 func cleanupGKEClusters(ctx context.Context, log logr.Logger) error {
 	var creds map[string]string
 	if err := json.Unmarshal([]byte(gkeCreds), &creds); err != nil {

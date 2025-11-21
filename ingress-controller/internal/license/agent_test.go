@@ -181,7 +181,12 @@ func TestAgent(t *testing.T) {
 				listCalls := upstreamClient.GetCalls()
 				lastListCall := listCalls[len(listCalls)-1]
 				lastButOneCall := listCalls[len(listCalls)-2]
-				return lastListCall.Sub(lastButOneCall).Abs() <= allowedDelta
+				// Verify that the agent uses the regular polling period once a
+				// license has been retrieved by checking that the time between the
+				// last two calls is approximately the regular polling period.
+				diff := lastListCall.Sub(lastButOneCall)
+				return diff >= regularPollingPeriod-allowedDelta &&
+					diff <= regularPollingPeriod+allowedDelta
 			}, time.Second, time.Millisecond)
 		})
 
