@@ -242,8 +242,8 @@ func MountAndUseKonnectCert(ctx context.Context, logger logr.Logger, dataplane *
 			labels[ossconsts.CertPurposeLabel], desiredDeployment.GetNamespace(), dataplane.GetName())
 	}
 	if len(secrets) < 1 {
-		return fmt.Errorf("no %s Secrets for Deployment %s/%s",
-			labels[ossconsts.CertPurposeLabel], desiredDeployment.GetNamespace(), dataplane.GetName())
+		return fmt.Errorf("%w for Deployment %s/%s",
+			ErrKonnectSecretMissing, desiredDeployment.GetNamespace(), dataplane.GetName())
 	}
 	log.Debug(logger, "found Secret for Konnect Certificate",
 		"namespace", dataplane.Namespace, "dataplane", dataplane.Name, "secret", secrets[0].Name)

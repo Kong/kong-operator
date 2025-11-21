@@ -8,6 +8,7 @@ import (
 	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -311,9 +312,8 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					Namespace: ext.Namespace,
 				}
 			} else {
-				// Status does not contain a usable API auth reference; skip remote cleanup for now.
-				log.Debug(logger, "KonnectExtension status lacks APIAuth reference, requeueing until available")
-				return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, nil
+				// Status does not contain a usable API auth reference; skip remote cleanup to avoid blocking deletion.
+				return r.skipKonnectCleanup(ctx, logger, &ext)
 			}
 		} else {
 			// Requeue until the reference becomes valid.
@@ -688,4 +688,57 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		Requeue:      true,
 		RequeueAfter: r.SyncPeriod,
 	}, nil
+}
+
+func (r *KonnectExtensionReconciler) skipKonnectCleanup(ctx context.Context, logger logr.Logger, ext *konnectv1alpha2.KonnectExtension) (ctrl.Result, error) {
+	log.Info(logger, "KonnectExtension cleanup proceeding without Konnect credentials; skipping remote operations")
+
+	res, certificateSecret, err := r.getCertificateSecret(ctx, *ext, true)
+	if client.IgnoreNotFound(err) != nil {
+		return ctrl.Result{}, err
+	}
+	if res != op.Noop {
+		return ctrl.Result{}, nil
+	}
+
+	if err == nil {
+		secretUpdated := false
+		if controllerutil.RemoveFinalizer(certificateSecret, KonnectCleanupFinalizer) {
+			secretUpdated = true
+		}
+		if controllerutil.RemoveFinalizer(certificateSecret, consts.KonnectExtensionSecretInUseFinalizer) {
+			secretUpdated = true
+		}
+		if secretUpdated {
+			if updateErr := r.Update(ctx, certificateSecret); updateErr != nil {
+				switch {
+				case k8serrors.IsConflict(updateErr):
+					return ctrl.Result{Requeue: true}, nil
+				case k8serrors.IsNotFound(updateErr):
+					// Secret already gone; nothing else to do.
+				default:
+					return ctrl.Result{}, updateErr
+				}
+			} else {
+				log.Info(logger, "removed finalizers from Konnect certificate Secret after skipping remote cleanup",
+					"secret", types.NamespacedName{Name: certificateSecret.Name, Namespace: certificateSecret.Namespace})
+			}
+		}
+	}
+
+	if controllerutil.RemoveFinalizer(ext, KonnectCleanupFinalizer) {
+		if err := r.Update(ctx, ext); err != nil {
+			switch {
+			case k8serrors.IsConflict(err):
+				return ctrl.Result{Requeue: true}, nil
+			case k8serrors.IsNotFound(err):
+				return ctrl.Result{}, nil
+			default:
+				return ctrl.Result{}, err
+			}
+		}
+		log.Info(logger, "removed konnect-cleanup finalizer after skipping remote cleanup")
+	}
+
+	return ctrl.Result{}, nil
 }

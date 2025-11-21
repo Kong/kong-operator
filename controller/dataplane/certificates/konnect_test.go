@@ -267,7 +267,8 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 	testCases := []struct {
 		name                  string
 		dataplane             *operatorv1beta1.DataPlane
-		wantErr               error
+		wantErrIs             error
+		wantErrMsg            string
 		deployment            *k8sresources.Deployment
 		dataplaneSubResources []controllerruntimeclient.Object
 		wantEnvVar            []corev1.EnvVar
@@ -315,7 +316,7 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 				},
 				Status: operatorv1beta1.DataPlaneStatus{},
 			},
-			wantErr: fmt.Errorf("too many %s Secrets for Deployment test-namespace/test-dataplane", KonnectDataPlaneCertPurpose),
+			wantErrMsg: fmt.Sprintf("too many %s Secrets for Deployment test-namespace/test-dataplane", KonnectDataPlaneCertPurpose),
 			dataplaneSubResources: []controllerruntimeclient.Object{
 				&corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -366,7 +367,8 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 				},
 				Status: operatorv1beta1.DataPlaneStatus{},
 			},
-			wantErr:               fmt.Errorf("no %s Secrets for Deployment test-namespace/test-dataplane", KonnectDataPlaneCertPurpose),
+			wantErrIs:             ErrKonnectSecretMissing,
+			wantErrMsg:            fmt.Sprintf("%s for Deployment test-namespace/test-dataplane", ErrKonnectSecretMissing.Error()),
 			dataplaneSubResources: []controllerruntimeclient.Object{},
 		},
 		{
@@ -498,7 +500,17 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 			}
 
 			err := MountAndUseKonnectCert(ctx, logr.Discard(), tc.dataplane, fakeClient, deployment)
-			require.Equal(t, tc.wantErr, err)
+			switch {
+			case tc.wantErrIs != nil:
+				require.ErrorIs(t, err, tc.wantErrIs)
+				if tc.wantErrMsg != "" {
+					require.EqualError(t, err, tc.wantErrMsg)
+				}
+			case tc.wantErrMsg != "":
+				require.EqualError(t, err, tc.wantErrMsg)
+			default:
+				require.NoError(t, err)
+			}
 
 			if len(tc.wantEnvVar) > 0 {
 				actual := map[string]string{}
