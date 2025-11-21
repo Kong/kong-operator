@@ -20,6 +20,7 @@ import (
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test"
 	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/test/helpers/conditions"
 	"github.com/kong/kong-operator/test/helpers/deploy"
 )
 
@@ -67,7 +68,7 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 		require.NoError(t, err)
-		assertKonnectEntityProgrammed(t, cp)
+		conditions.KonnectEntityIsProgrammed(t, cp)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	cpKonnectID := cp.GetKonnectID()
@@ -111,7 +112,7 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 		err = clientNamespaced.Get(GetCtx(), client.ObjectKeyFromObject(kongService), kongService)
 		require.NoError(t, err)
 
-		assertKonnectEntityProgrammed(collect, kongService)
+		conditions.KonnectEntityIsProgrammed(collect, kongService)
 		assert.Equalf(collect, serviceKonnectID, kongService.GetKonnectID(),
 			"KongService should set Konnect ID %s as the adopted service in status", serviceKonnectID,
 		)
@@ -138,7 +139,7 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 
 		err = clientNamespaced.Get(GetCtx(), client.ObjectKeyFromObject(kongService), kongService)
 		require.NoError(t, err)
-		assertKonnectEntityProgrammed(t, kongService)
+		conditions.KonnectEntityIsProgrammed(t, kongService)
 	}, testutils.ObjectUpdateTimeout, checkKonnectAPITick,
 		"Did not see service in Konnect updated to match spec of KongService")
 
@@ -185,7 +186,7 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 		err = clientNamespaced.Get(GetCtx(), client.ObjectKeyFromObject(kongRoute), kongRoute)
 		require.NoError(t, err)
 
-		assertKonnectEntityProgrammed(collect, kongRoute)
+		conditions.KonnectEntityIsProgrammed(collect, kongRoute)
 		assert.Equalf(collect, routeKonnectID, kongRoute.GetKonnectID(),
 			"KongRoute should set Konnect ID %s as the adopted route in status", routeKonnectID,
 		)
@@ -207,5 +208,4 @@ func TestKonnectEntityAdoption_ServiceAndRoute(t *testing.T) {
 		}
 	}, testutils.ObjectUpdateTimeout, checkKonnectAPITick,
 		"Did not see route in Konnect to be updated to match the spec of KongRoute")
-
 }
