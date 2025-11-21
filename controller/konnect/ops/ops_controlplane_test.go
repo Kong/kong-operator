@@ -8,6 +8,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -36,7 +37,7 @@ func TestCreateControlPlane(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
 		name                string
-		mockCPTuple         func(*testing.T) (*sdkmocks.MockControlPlaneSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane)
+		mockCPTuple         func(*testing.T) (*mocks.MockControlPlanesSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane)
 		objects             []client.Object
 		expectedErrContains string
 		expectedErrType     error
@@ -44,8 +45,8 @@ func TestCreateControlPlane(t *testing.T) {
 	}{
 		{
 			name: "success",
-			mockCPTuple: func(t *testing.T) (*sdkmocks.MockControlPlaneSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
-				sdk := sdkmocks.NewMockControlPlaneSDK(t)
+			mockCPTuple: func(t *testing.T) (*mocks.MockControlPlanesSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
+				sdk := mocks.NewMockControlPlanesSDK(t)
 				sdkGroups := sdkmocks.NewMockControlPlaneGroupSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
@@ -76,8 +77,8 @@ func TestCreateControlPlane(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockCPTuple: func(t *testing.T) (*sdkmocks.MockControlPlaneSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
-				sdk := sdkmocks.NewMockControlPlaneSDK(t)
+			mockCPTuple: func(t *testing.T) (*mocks.MockControlPlanesSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
+				sdk := mocks.NewMockControlPlanesSDK(t)
 				sdkGroups := sdkmocks.NewMockControlPlaneGroupSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
@@ -136,8 +137,8 @@ func TestCreateControlPlane(t *testing.T) {
 					},
 				},
 			},
-			mockCPTuple: func(t *testing.T) (*sdkmocks.MockControlPlaneSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
-				sdk := sdkmocks.NewMockControlPlaneSDK(t)
+			mockCPTuple: func(t *testing.T) (*mocks.MockControlPlanesSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
+				sdk := mocks.NewMockControlPlanesSDK(t)
 				sdkGroups := sdkmocks.NewMockControlPlaneGroupSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
@@ -212,8 +213,8 @@ func TestCreateControlPlane(t *testing.T) {
 					},
 				},
 			},
-			mockCPTuple: func(t *testing.T) (*sdkmocks.MockControlPlaneSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
-				sdk := sdkmocks.NewMockControlPlaneSDK(t)
+			mockCPTuple: func(t *testing.T) (*mocks.MockControlPlanesSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
+				sdk := mocks.NewMockControlPlanesSDK(t)
 				sdkGroups := sdkmocks.NewMockControlPlaneGroupSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
@@ -294,14 +295,14 @@ func TestDeleteControlPlane(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
 		name        string
-		mockCPPair  func(*testing.T) (*sdkmocks.MockControlPlaneSDK, *konnectv1alpha2.KonnectGatewayControlPlane)
+		mockCPPair  func(*testing.T) (*mocks.MockControlPlanesSDK, *konnectv1alpha2.KonnectGatewayControlPlane)
 		expectedErr bool
 		assertions  func(*testing.T, *konnectv1alpha2.KonnectGatewayControlPlane)
 	}{
 		{
 			name: "success",
-			mockCPPair: func(t *testing.T) (*sdkmocks.MockControlPlaneSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
-				sdk := sdkmocks.NewMockControlPlaneSDK(t)
+			mockCPPair: func(t *testing.T) (*mocks.MockControlPlanesSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
+				sdk := mocks.NewMockControlPlanesSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
@@ -330,8 +331,8 @@ func TestDeleteControlPlane(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockCPPair: func(t *testing.T) (*sdkmocks.MockControlPlaneSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
-				sdk := sdkmocks.NewMockControlPlaneSDK(t)
+			mockCPPair: func(t *testing.T) (*mocks.MockControlPlanesSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
+				sdk := mocks.NewMockControlPlanesSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cp-1",
@@ -366,8 +367,8 @@ func TestDeleteControlPlane(t *testing.T) {
 		},
 		{
 			name: "not found error is ignored and considered a success when trying to delete",
-			mockCPPair: func(t *testing.T) (*sdkmocks.MockControlPlaneSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
-				sdk := sdkmocks.NewMockControlPlaneSDK(t)
+			mockCPPair: func(t *testing.T) (*mocks.MockControlPlanesSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
+				sdk := mocks.NewMockControlPlanesSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "cp-1",
@@ -425,14 +426,14 @@ func TestUpdateControlPlane(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
 		name        string
-		mockCPTuple func(*testing.T) (*sdkmocks.MockControlPlaneSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane)
+		mockCPTuple func(*testing.T) (*mocks.MockControlPlanesSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane)
 		expectedErr bool
 		expectedID  string
 	}{
 		{
 			name: "success",
-			mockCPTuple: func(t *testing.T) (*sdkmocks.MockControlPlaneSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
-				sdk := sdkmocks.NewMockControlPlaneSDK(t)
+			mockCPTuple: func(t *testing.T) (*mocks.MockControlPlanesSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
+				sdk := mocks.NewMockControlPlanesSDK(t)
 				sdkGroups := sdkmocks.NewMockControlPlaneGroupSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
@@ -473,8 +474,8 @@ func TestUpdateControlPlane(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockCPTuple: func(t *testing.T) (*sdkmocks.MockControlPlaneSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
-				sdk := sdkmocks.NewMockControlPlaneSDK(t)
+			mockCPTuple: func(t *testing.T) (*mocks.MockControlPlanesSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
+				sdk := mocks.NewMockControlPlanesSDK(t)
 				sdkGroups := sdkmocks.NewMockControlPlaneGroupSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
@@ -519,8 +520,8 @@ func TestUpdateControlPlane(t *testing.T) {
 		},
 		{
 			name: "when not found then try to create",
-			mockCPTuple: func(t *testing.T) (*sdkmocks.MockControlPlaneSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
-				sdk := sdkmocks.NewMockControlPlaneSDK(t)
+			mockCPTuple: func(t *testing.T) (*mocks.MockControlPlanesSDK, *sdkmocks.MockControlPlaneGroupSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
+				sdk := mocks.NewMockControlPlanesSDK(t)
 				sdkGroups := sdkmocks.NewMockControlPlaneGroupSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{

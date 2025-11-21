@@ -23,6 +23,7 @@ type noOpMetricsRecorder struct{}
 
 func (noOpMetricsRecorder) RecordKonnectEntityOperationSuccess(string, metrics.KonnectEntityOperation, string, time.Duration) {
 }
+
 func (noOpMetricsRecorder) RecordKonnectEntityOperationFailure(string, metrics.KonnectEntityOperation, string, time.Duration, int) {
 }
 

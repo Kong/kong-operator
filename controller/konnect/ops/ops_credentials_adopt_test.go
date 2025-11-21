@@ -145,8 +145,9 @@ func TestAdoptKongCredentialBasicAuth(t *testing.T) {
 		sdk.EXPECT().GetBasicAuthWithConsumer(mock.Anything, mock.Anything).Return(&sdkkonnectops.GetBasicAuthWithConsumerResponse{
 			BasicAuth: &sdkkonnectcomp.BasicAuth{
 				Username: "user",
-				Password: "pass",
-				Tags:     []string{"k8s-uid:uid-2"},
+				// TODO(pmalek): Password field is write only and is not returned https://github.com/Kong/kong-operator/issues/2535
+				// Password: "pass",
+				Tags: []string{"k8s-uid:uid-2"},
 			},
 		}, nil)
 
