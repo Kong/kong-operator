@@ -1166,6 +1166,7 @@ KongDataPlaneClientCertificateSpec defines the spec for a KongDataPlaneClientCer
 | Field | Description |
 | --- | --- |
 | `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane this KongDataPlaneClientCertificate is associated with. |
+| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a key from an existing key in Konnect. |
 | `cert` _string_ | Cert is the certificate in PEM format. Once the certificate gets programmed this field becomes immutable. |
 
 

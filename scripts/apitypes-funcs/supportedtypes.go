@@ -359,6 +359,9 @@ var supportedConfigurationPackageTypesWithAdopt = []supportedTypesT{
 			{
 				Type: "KongSNI",
 			},
+			{
+				Type: "KongDataPlaneClientCertificate",
+			},
 		},
 	},
 }

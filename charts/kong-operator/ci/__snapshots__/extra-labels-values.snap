@@ -47058,6 +47058,67 @@ spec:
           spec:
             description: KongDataPlaneClientCertificateSpec defines the spec for a KongDataPlaneClientCertificate.
             properties:
+              adopt:
+                description: Adopt is the options for adopting a key from an existing key in Konnect.
+                properties:
+                  from:
+                    description: |-
+                      From is the source of the entity to adopt from.
+                      Now 'konnect' is supported.
+                    enum:
+                    - konnect
+                    type: string
+                  konnect:
+                    description: |-
+                      Konnect is the options for adopting the entity from Konnect.
+                      Required when from == 'konnect'.
+                    properties:
+                      id:
+                        description: ID is the Konnect ID of the entity.
+                        maxLength: 36
+                        minLength: 1
+                        type: string
+                    required:
+                    - id
+                    type: object
+                  mode:
+                    description: |-
+                      Mode selects how the operator adopts an already-existing entity (for example,
+                      a Konnect resource) instead of creating a new one.
+
+                      Supported values:
+                      - "match": the operator retrieves the remote entity referenced by the
+                        corresponding Adopt* options (for example, adopt.konnect.id) and performs a
+                        field-by-field comparison against this CR's spec (ignoring server-assigned
+                        metadata). If the specification matches the remote state, the operator
+                        adopts the entity: it sets the status identifier and marks the resource as
+                        ready/programmed without issuing any write operation to the remote system.
+                        If the specification does not match the remote state, adoption fails: the
+                        operator does not modify the remote entity and surfaces a failure
+                        condition, allowing the user to align the spec with the existing entity if
+                        adoption is desired.
+
+                      - "override": the operator overrides the remote entity by the CR's spec.
+                        If the entity with the ID and type exists, and it is not managed
+                        by another CR (matching by the metadata.uid of the CR and the "k8s-uid"
+                        label or tag of the Konnect entity), the operator updates the remote entity
+                        by the CR's spec.
+                    enum:
+                    - match
+                    - override
+                    type: string
+                required:
+                - from
+                type: object
+                x-kubernetes-validations:
+                - message: Only 'match' mode adoption is supported
+                  rule: self.mode == 'match'
+                - message: '''from''(adopt source) is immutable'
+                  rule: self.from == oldSelf.from
+                - message: Must specify Konnect options when from='konnect'
+                  rule: 'self.from == ''konnect'' ? has(self.konnect) : true'
+                - message: konnect.id is immutable
+                  rule: 'has(self.konnect) ? (self.konnect.id == oldSelf.konnect.id) : true'
               cert:
                 description: Cert is the certificate in PEM format. Once the certificate gets programmed this field becomes immutable.
                 minLength: 1
