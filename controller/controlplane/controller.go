@@ -60,8 +60,10 @@ const requeueAfterBoot = time.Second
 // Reconciler reconciles a ControlPlane object
 type Reconciler struct {
 	client.Client
+
+	ControllerOptions controller.Options
+
 	CacheSyncPeriod          time.Duration
-	CacheSyncTimeout         time.Duration
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
@@ -90,9 +92,7 @@ type Reconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
 	builder := ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{
-			CacheSyncTimeout: r.CacheSyncTimeout,
-		}).
+		WithOptions(r.ControllerOptions).
 		For(&ControlPlane{}).
 		// Watch for changes in Secret objects that are owned by ControlPlane objects.
 		Owns(&corev1.Secret{}).

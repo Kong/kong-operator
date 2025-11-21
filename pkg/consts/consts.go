@@ -160,6 +160,9 @@ const (
 
 	// DefaultKonnectMaxConcurrentReconciles is the default max concurrent reconciles for Konnect entities.
 	DefaultKonnectMaxConcurrentReconciles = uint(8)
+
+	// DefaultMaxConcurrentReconciles is the default max concurrent reconciles for the operator.
+	DefaultMaxConcurrentReconciles = uint(1)
 )
 
 const (

@@ -15,6 +15,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -35,18 +36,21 @@ import (
 
 // KongPluginReconciler reconciles a KongPlugin object.
 type KongPluginReconciler struct {
-	loggingMode logging.Mode
-	client      client.Client
+	controllerOptions controller.Options
+	loggingMode       logging.Mode
+	client            client.Client
 }
 
 // NewKongPluginReconciler creates a new KongPluginReconciler.
 func NewKongPluginReconciler(
+	ctrlOptions controller.Options,
 	loggingMode logging.Mode,
 	client client.Client,
 ) *KongPluginReconciler {
 	return &KongPluginReconciler{
-		loggingMode: loggingMode,
-		client:      client,
+		controllerOptions: ctrlOptions,
+		loggingMode:       loggingMode,
+		client:            client,
 	}
 }
 
@@ -54,6 +58,7 @@ func NewKongPluginReconciler(
 func (r *KongPluginReconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("KongPlugin").
+		WithOptions(r.controllerOptions).
 		For(&configurationv1.KongPlugin{}).
 		Watches(
 			&configurationv1alpha1.KongPluginBinding{},

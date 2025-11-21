@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -33,16 +32,14 @@ import (
 type AIGatewayReconciler struct {
 	client.Client
 
-	CacheSyncTimeout time.Duration
-	LoggingMode      logging.Mode
+	ControllerOptions controller.Options
+	LoggingMode       logging.Mode
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *AIGatewayReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{
-			CacheSyncTimeout: r.CacheSyncTimeout,
-		}).
+		WithOptions(r.ControllerOptions).
 		// watch AIGateway objects, filtering out any Gateways which are not
 		// configured with a supported GatewayClass controller name.
 		For(&operatorv1alpha1.AIGateway{},
