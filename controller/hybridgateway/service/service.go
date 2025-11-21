@@ -95,6 +95,7 @@ func ServiceForRule(
 	annotationManager.AppendRouteToAnnotation(&service, httpRoute)
 
 	// TODO: we should check that the existingService.Spec matches what we expect
+	// https://github.com/Kong/kong-operator/issues/2687
 	log.Debug(logger, "Successfully updated existing KongService")
 
 	return &service, nil

@@ -89,7 +89,8 @@ func UpstreamForRule(
 	annotationManager := metadata.NewAnnotationManager(logger)
 	annotationManager.AppendRouteToAnnotation(&upstream, httpRoute)
 
-	// TODO: we should check that the existingUpstream.Spec matches what we expect and error out if not
+	// TODO: we should check that the existingUpstream.Spec matches what we expect
+	// https://github.com/Kong/kong-operator/issues/2687
 	log.Debug(logger, "Successfully updated existing KongUpstream")
 
 	return &upstream, nil

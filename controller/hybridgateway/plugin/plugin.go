@@ -86,6 +86,7 @@ func PluginForFilter(
 	annotationManager.AppendRouteToAnnotation(&plugin, httpRoute)
 
 	// TODO: we should check that the existingPlugin.Spec matches what we expect
+	// https://github.com/Kong/kong-operator/issues/2687
 	log.Debug(logger, "Successfully updated existing KongPlugin")
 
 	return &plugin, nil

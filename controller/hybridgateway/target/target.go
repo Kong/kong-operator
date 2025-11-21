@@ -437,6 +437,7 @@ func createTargetsFromValidBackendRefs(ctx context.Context, logger logr.Logger, 
 			annotationManager.AppendRouteToAnnotation(&target, httpRoute)
 
 			// TODO: we should check that the existingTarget.Spec matches what we expect
+			// https://github.com/Kong/kong-operator/issues/2687
 			log.Debug(logger, "Successfully updated existing KongTarget")
 
 			targets = append(targets, target)
