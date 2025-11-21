@@ -27,6 +27,7 @@ import (
 	"github.com/kong/kong-operator/test"
 	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/certificate"
+	"github.com/kong/kong-operator/test/helpers/conditions"
 	"github.com/kong/kong-operator/test/helpers/deploy"
 )
 
@@ -95,7 +96,7 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 		require.NoError(t, err)
-		assertKonnectEntityProgrammed(t, cp)
+		conditions.KonnectEntityIsProgrammed(t, cp)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	konnectExtension := deploy.KonnectExtension(
@@ -134,7 +135,7 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 		require.NoError(t, err)
-		assertKonnectEntityProgrammed(t, cp)
+		conditions.KonnectEntityIsProgrammed(t, cp)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", konnectExtension.Namespace, konnectExtension.Name)
@@ -201,7 +202,7 @@ func TestKonnectExtension(t *testing.T) {
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 			require.NoError(t, err)
-			assertKonnectEntityProgrammed(t, cp)
+			conditions.KonnectEntityIsProgrammed(t, cp)
 		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 		t.Run("Origin ControlPlane", func(t *testing.T) {
@@ -236,7 +237,7 @@ func TestKonnectExtension(t *testing.T) {
 			require.EventuallyWithT(t, func(t *assert.CollectT) {
 				err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: mirrorCP.Name, Namespace: mirrorCP.Namespace}, mirrorCP)
 				require.NoError(t, err)
-				assertKonnectEntityProgrammed(t, mirrorCP)
+				conditions.KonnectEntityIsProgrammed(t, mirrorCP)
 			}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 			require.Eventually(t,
@@ -280,7 +281,7 @@ func TestKonnectExtension(t *testing.T) {
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 			require.NoError(t, err)
-			assertKonnectEntityProgrammed(t, cp)
+			conditions.KonnectEntityIsProgrammed(t, cp)
 		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 		konnectExtension := deploy.KonnectExtension(
@@ -409,7 +410,7 @@ func deployKonnectEntitiesForKonnectExtensionTest(
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: ks.Name, Namespace: ks.Namespace}, ks)
 		require.NoError(t, err)
-		assertKonnectEntityProgrammed(t, ks)
+		conditions.KonnectEntityIsProgrammed(t, ks)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, ks))
 
@@ -426,7 +427,7 @@ func deployKonnectEntitiesForKonnectExtensionTest(
 		err := GetClients().MgrClient.Get(GetCtx(), k8stypes.NamespacedName{Name: kr.Name, Namespace: kr.Namespace}, kr)
 		require.NoError(t, err)
 
-		assertKonnectEntityProgrammed(t, kr)
+		conditions.KonnectEntityIsProgrammed(t, kr)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kr))
 }
