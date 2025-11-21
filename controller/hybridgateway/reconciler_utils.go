@@ -279,16 +279,18 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 			if _, found := desiredSet[key]; !found {
 
 				// Check if the Route resource is present in the hybrid-routes annotation and remove it.
-				if !am.RemoveRouteFromAnnotation(&item, rootObjPtr) {
+				if !am.ContainsRoute(&item, rootObjPtr) {
 					log.Trace(logger, "Route annotation not found, skipping resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
 					continue
 				}
 
+				oldItem := item.DeepCopy()
+				am.RemoveRouteFromAnnotation(&item, rootObjPtr)
 				// Not in desired output, Route resource found and removed from the hybrid-routes annotation.
 				// If other Routes are still present in the annotation, update the resource.
 				if hybridAnnotations := am.GetRoutes(&item); len(hybridAnnotations) > 0 {
 					log.Debug(logger, "Updating hybrid-routes annotation", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
-					if err := cl.Update(ctx, &item); err != nil && !errors.IsNotFound(err) {
+					if err := cl.Patch(ctx, &item, client.MergeFrom(oldItem)); err != nil && !errors.IsNotFound(err) {
 						return false, fmt.Errorf("failed to update resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
 					}
 					continue

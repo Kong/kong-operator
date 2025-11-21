@@ -19,6 +19,7 @@ import (
 	routeconst "github.com/kong/kong-operator/controller/hybridgateway/const/route"
 	"github.com/kong/kong-operator/controller/hybridgateway/converter"
 	"github.com/kong/kong-operator/controller/hybridgateway/watch"
+	"github.com/kong/kong-operator/controller/pkg/finalizer"
 	"github.com/kong/kong-operator/controller/pkg/log"
 )
 
@@ -139,10 +140,11 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	// Ensure finalizer is present
 	if !controllerutil.ContainsFinalizer(obj, routeconst.RouteFinalizer) {
 		log.Debug(logger, "Adding finalizer")
+		old := obj.DeepCopyObject().(tPtr)
 		controllerutil.AddFinalizer(obj, routeconst.RouteFinalizer)
-		if err := r.Update(ctx, obj); err != nil {
+		if err := r.Patch(ctx, obj, client.MergeFrom(old)); err != nil {
 			log.Error(logger, err, "Failed to add finalizer")
-			return ctrl.Result{}, err
+			return finalizer.HandlePatchOrUpdateError(err, logger)
 		}
 		return ctrl.Result{Requeue: true}, nil
 	}
@@ -259,12 +261,6 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, logger logr.Logger, obj tPtr, rootObj t) (ctrl.Result, error) {
 	log.Debug(logger, "Handling Route deletion")
 
-	// Only process deletion if our finalizer is present
-	if !controllerutil.ContainsFinalizer(obj, routeconst.RouteFinalizer) {
-		log.Debug(logger, "Finalizer not present, skipping cleanup")
-		return ctrl.Result{}, nil
-	}
-
 	// Create converter to get the cleanup logic
 	conv, err := converter.NewConverter(rootObj, r.Client, r.referenceGrantEnabled, r.fqdnMode, r.clusterDomain)
 	if err != nil {
@@ -295,10 +291,12 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 		)
 	}
 
-	// Remove finalizer
-	controllerutil.RemoveFinalizer(obj, routeconst.RouteFinalizer)
-	if err := r.Update(ctx, obj); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+	// Remove finalizer using patch for safer concurrent updates
+	old := obj.DeepCopyObject().(tPtr)
+	if controllerutil.RemoveFinalizer(obj, routeconst.RouteFinalizer) {
+		if err := r.Patch(ctx, obj, client.MergeFrom(old)); err != nil {
+			return finalizer.HandlePatchOrUpdateError(err, logger)
+		}
 	}
 
 	log.Debug(logger, "Route deletion completed successfully")
