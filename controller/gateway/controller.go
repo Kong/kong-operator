@@ -231,7 +231,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	log.Trace(logger, "determining configuration")
-	gatewayConfig, err := r.getOrCreateGatewayConfiguration(ctx, gwc.GatewayClass)
+	gatewayConfig, err := r.getOrCreateGatewayConfiguration(ctx, gwc.GatewayClass, &gateway)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

@@ -21,6 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/apimachinery/pkg/util/strategicpatch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -34,7 +35,6 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/extensions"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/controller/pkg/secrets/ref"
-	operatorerrors "github.com/kong/kong-operator/internal/errors"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
@@ -325,38 +325,99 @@ func gatewayAddressesFromService(svc corev1.Service) ([]gwtypes.GatewayStatusAdd
 	return addresses, nil
 }
 
+// mergeGatewayConfigurations merges two GatewayConfiguration objects.
+func mergeGatewayConfigurations(gatewayConfig *GatewayConfiguration, localGatewayConfig *GatewayConfiguration) (*GatewayConfiguration, error) {
+	// If localGatewayConfig is nil, return the original gatewayConfig
+	if localGatewayConfig == nil {
+		return gatewayConfig, nil
+	}
+
+	// Marshal both configurations to JSON
+	baseBytes, err := json.Marshal(gatewayConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON for gatewayConfig %s: %w", gatewayConfig.Name, err)
+	}
+
+	patchBytes, err := json.Marshal(localGatewayConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal JSON for localGatewayConfig %s: %w", localGatewayConfig.Name, err)
+	}
+
+	// Perform the strategic merge patch
+	jsonResultBytes, err := strategicpatch.StrategicMergePatch(baseBytes, patchBytes, &GatewayConfiguration{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate merge patch for %s: %w", gatewayConfig.Name, err)
+	}
+
+	// Unmarshal the result back to a GatewayConfiguration
+	mergedConfig := gatewayConfig.DeepCopy()
+	if err := json.Unmarshal(jsonResultBytes, mergedConfig); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal merged %s: %w", gatewayConfig.Name, err)
+	}
+
+	return mergedConfig, nil
+}
+
 func (r *Reconciler) getOrCreateGatewayConfiguration(
 	ctx context.Context,
 	gatewayClass *gatewayv1.GatewayClass,
+	gateway *gatewayv1.Gateway,
 ) (*GatewayConfiguration, error) {
-	gatewayConfig, err := r.getGatewayConfigForGatewayClass(ctx, gatewayClass)
+	gatewayConfig, err := r.getGatewayConfigForParametersRef(ctx, gatewayClass.Spec.ParametersRef)
 	if err != nil {
-		if errors.Is(err, operatorerrors.ErrObjectMissingParametersRef) {
-			return new(GatewayConfiguration), nil
+		return nil, fmt.Errorf("GatewayClass (%s): %w", gatewayClass.Name, err)
+	}
+
+	// Create a new variable of type *gatewayv1.ParametersReference
+	localParametersRef := &gatewayv1.ParametersReference{}
+
+	// Copy fields from gateway.Spec.Infrastructure.ParametersRef
+	if gateway.Spec.Infrastructure != nil &&
+		gateway.Spec.Infrastructure.ParametersRef != nil {
+		localParametersRef.Group = gateway.Spec.Infrastructure.ParametersRef.Group
+		localParametersRef.Kind = gateway.Spec.Infrastructure.ParametersRef.Kind
+		localParametersRef.Name = gateway.Spec.Infrastructure.ParametersRef.Name
+
+		// Namespace will be set as the gateway's namespace
+		namespace := gatewayv1.Namespace(gateway.Namespace)
+		localParametersRef.Namespace = &namespace
+
+		localGatewayConfig, err := r.getGatewayConfigForParametersRef(ctx, localParametersRef)
+		if err != nil {
+			return nil, fmt.Errorf("Gateway (%s): spec.instrastructure %w", gateway.Name, err)
 		}
-		return nil, err
+
+		// Merge localGatewayConfig into gatewayConfig
+		mergedConfig, err := mergeGatewayConfigurations(gatewayConfig, localGatewayConfig)
+		if err != nil {
+			return nil, fmt.Errorf("Gateway (%s): spec.instrastructure %w", gateway.Name, err)
+		}
+
+		return mergedConfig, nil
 	}
 
 	return gatewayConfig, nil
 }
 
-func (r *Reconciler) getGatewayConfigForGatewayClass(
+func (r *Reconciler) getGatewayConfigForParametersRef(
 	ctx context.Context,
-	gatewayClass *gatewayv1.GatewayClass,
+	parametersRef *gatewayv1.ParametersReference,
 ) (*GatewayConfiguration, error) {
-	if gatewayClass.Spec.ParametersRef == nil {
-		return nil, fmt.Errorf("%w, gatewayClass = %s", operatorerrors.ErrObjectMissingParametersRef, gatewayClass.Name)
+	// No parametersRef means using default configuration.
+	// Return an empty GatewayConfiguration object.
+	if parametersRef == nil {
+		return new(GatewayConfiguration), nil
 	}
 
-	if string(gatewayClass.Spec.ParametersRef.Group) != operatorv1beta1.SchemeGroupVersion.Group ||
-		string(gatewayClass.Spec.ParametersRef.Kind) != "GatewayConfiguration" {
+	if string(parametersRef.Group) != operatorv1beta1.SchemeGroupVersion.Group ||
+		string(parametersRef.Kind) != "GatewayConfiguration" {
 		return nil, &k8serrors.StatusError{
 			ErrStatus: metav1.Status{
 				Status: metav1.StatusFailure,
 				Code:   http.StatusBadRequest,
 				Reason: metav1.StatusReasonInvalid,
 				Details: &metav1.StatusDetails{
-					Kind: string(gatewayClass.Spec.ParametersRef.Kind),
+					Kind: string(parametersRef.Kind),
 					Causes: []metav1.StatusCause{{
 						Type: metav1.CauseTypeFieldValueNotSupported,
 						Message: fmt.Sprintf("controller only supports %s %s resources for GatewayClass parametersRef",
@@ -367,17 +428,20 @@ func (r *Reconciler) getGatewayConfigForGatewayClass(
 		}
 	}
 
-	if gatewayClass.Spec.ParametersRef.Namespace == nil ||
-		*gatewayClass.Spec.ParametersRef.Namespace == "" ||
-		gatewayClass.Spec.ParametersRef.Name == "" {
-		return nil, fmt.Errorf("GatewayClass %s has invalid ParametersRef: both namespace and name must be provided", gatewayClass.Name)
+	if parametersRef.Namespace == nil ||
+		*parametersRef.Namespace == "" {
+		return nil, fmt.Errorf("ParametersRef: namespace must be provided")
+	}
+
+	if parametersRef.Name == "" {
+		return nil, fmt.Errorf("ParametersRef: name must be provided")
 	}
 
 	var (
 		gatewayConfig GatewayConfiguration
 		nn            = types.NamespacedName{
-			Namespace: string(*gatewayClass.Spec.ParametersRef.Namespace),
-			Name:      gatewayClass.Spec.ParametersRef.Name,
+			Namespace: string(*parametersRef.Namespace),
+			Name:      parametersRef.Name,
 		}
 	)
 
