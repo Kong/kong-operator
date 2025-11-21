@@ -155,6 +155,8 @@
 - Translate `healtchchecks.thershold` in `KongUpstreamPolicy` to the
   `healthchecks.thershold` field in Kong upstreams.
   [#2662](https://github.com/Kong/kong-operator/pull/2662)
+- Reject CA Secrets with multiple PEM certs.
+  [#2671](https://github.com/Kong/kong-operator/pull/2671)
 
 ## [v2.0.5]
 
