@@ -46,6 +46,8 @@
   for `Gateway`s configured in different namespaces with `GatewayConfiguration` that
   has field `spec.controlPlaneOptions.watchNamespaces.type` set to `own`.
   [#2717](https://github.com/Kong/kong-operator/pull/2717)
+- Reject CA Secrets with multiple PEM certs.
+  [#2671](https://github.com/Kong/kong-operator/pull/2671)
 
 ## [v2.0.5]
 
