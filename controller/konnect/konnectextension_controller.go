@@ -8,6 +8,7 @@ import (
 	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,6 +27,7 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	ctrlconsts "github.com/kong/kong-operator/controller/consts"
 	"github.com/kong/kong-operator/controller/konnect/ops"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/controller/konnect/server"
@@ -107,6 +109,10 @@ func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr c
 				enqueueKonnectExtensionsForKonnectGatewayControlPlane(mgr.GetClient()),
 			),
 		).
+		Watches(
+			&configurationv1alpha1.KongDataPlaneClientCertificate{},
+			handler.EnqueueRequestForOwner(r.Scheme(), mgr.GetRESTMapper(), &konnectv1alpha2.KonnectExtension{}),
+		).
 		Complete(r)
 }
 
@@ -148,21 +154,17 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	logger := log.GetLogger(ctx, konnectv1alpha2.KonnectExtensionKind, r.LoggingMode).WithValues("konnectExtension", req.NamespacedName)
 
-	var (
-		dataPlaneList    operatorv1beta1.DataPlaneList
-		controlPlaneList gwtypes.ControlPlaneList
-	)
 	ctx = ctrllog.IntoContext(ctx, logger)
 	log.Debug(logger, "reconciling")
 
-	if err := r.List(ctx, &dataPlaneList, client.MatchingFields{
-		index.KonnectExtensionIndex: client.ObjectKeyFromObject(&ext).String(),
-	}); err != nil {
+	nn := client.ObjectKeyFromObject(&ext)
+
+	dataplanes, err := listKonnectExtensionReferrers[operatorv1beta1.DataPlaneList](ctx, r.Client, nn)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if err := r.List(ctx, &controlPlaneList, client.MatchingFields{
-		index.KonnectExtensionIndex: client.ObjectKeyFromObject(&ext).String(),
-	}); err != nil {
+	controlplanes, err := listKonnectExtensionReferrers[gwtypes.ControlPlaneList](ctx, r.Client, nn)
+	if err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -171,12 +173,12 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// If the extension is marked for deletion and no object is using it, we can proceed with the cleanup.
 	if !ext.DeletionTimestamp.IsZero() &&
 		ext.DeletionTimestamp.Before(lo.ToPtr(metav1.Now())) &&
-		len(dataPlaneList.Items)+len(controlPlaneList.Items) == 0 {
+		len(dataplanes)+len(controlplanes) == 0 {
 		cleanup = true
 	}
 
 	switch {
-	case len(dataPlaneList.Items)+len(controlPlaneList.Items) == 0:
+	case len(dataplanes)+len(controlplanes) == 0:
 		updated = controllerutil.RemoveFinalizer(&ext, consts.ExtensionInUseFinalizer)
 	default:
 		updated = controllerutil.AddFinalizer(&ext, consts.ExtensionInUseFinalizer)
@@ -213,16 +215,8 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		// if the certificate exists and the cleanup in Konnect has been performed, we can remove the secret-in-use finalizer from the secret.
 		if certExists && !controllerutil.ContainsFinalizer(certificateSecret, KonnectCleanupFinalizer) {
 			// remove the secret-in-use finalizer from the secret.
-			updated = controllerutil.RemoveFinalizer(certificateSecret, consts.KonnectExtensionSecretInUseFinalizer)
-			if updated {
-				if err := r.Update(ctx, certificateSecret); err != nil {
-					if k8serrors.IsConflict(err) {
-						return ctrl.Result{Requeue: true}, nil
-					}
-					return ctrl.Result{}, err
-				}
-				log.Debug(logger, "Secret-in-use finalizer removed from Secret")
-				return ctrl.Result{}, nil
+			if op, res, err := enforceSecretInUseFinalizer(ctx, r.Client, certificateSecret, logger, false); err != nil || !res.IsZero() || op {
+				return res, err
 			}
 		}
 
@@ -265,6 +259,58 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		}
 	}
 
+	certProvisionedCond := metav1.Condition{
+		Type:    konnectv1alpha1.DataPlaneCertificateProvisionedConditionType,
+		Status:  metav1.ConditionFalse,
+		Reason:  konnectv1alpha1.DataPlaneCertificateProvisionedReasonProvisioning,
+		Message: "DataPlane client certificate is provisioning",
+	}
+	// get the Kubernetes secret holding the certificate.
+	opRes, certificateSecret, err := r.getCertificateSecret(ctx, ext, false)
+	if client.IgnoreNotFound(err) != nil {
+		return ctrl.Result{}, err
+	}
+	if opRes != op.Noop {
+		return ctrl.Result{}, nil
+	}
+	if err != nil {
+		certProvisionedCond.Status = metav1.ConditionFalse
+		certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonRefNotFound
+		certProvisionedCond.Message = err.Error()
+		if res, updated, err := patch.StatusWithConditions(
+			ctx,
+			r.Client,
+			&ext,
+			readyCondition,
+			certProvisionedCond,
+		); err != nil || updated || !res.IsZero() {
+			return res, err
+		}
+		log.Debug(logger, "certificate secret retrieval failed")
+		return ctrl.Result{}, err
+	}
+
+	// check if the secret contains a valid tls certificate
+	certData, ok := certificateSecret.Data[consts.TLSCRT]
+	if !ok {
+		certProvisionedCond.Status = metav1.ConditionFalse
+		certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonInvalidSecret
+		certProvisionedCond.Message = "the secret does not contain a valid tls secret"
+		if res, updated, err := patch.StatusWithConditions(
+			ctx,
+			r.Client,
+			&ext,
+			readyCondition,
+			certProvisionedCond,
+		); err != nil || updated || !res.IsZero() {
+			return res, err
+		}
+		log.Debug(logger, "referenced secret malformed")
+		return ctrl.Result{}, nil
+	}
+
+	log.Debug(logger, "DataPlane certificate validity checked")
+
 	// Get the GatewayKonnectControlPlane and set conditions accordingly, also
 	// obtain valid ControlPlane ID or requeue. When KonnectExtension is during deletion,
 	// we proceed with the cleanup even if the ControlPlane is not found.
@@ -274,8 +320,38 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		switch {
 		case !k8serrors.IsNotFound(err) && !errors.Is(err, extensionserrors.ErrKonnectGatewayControlPlaneNotProgrammed):
 			return res, err
-		case k8serrors.IsNotFound(err) && cleanup:
-			log.Debug(logger, "ControlPlane not found, for KonnectExtension during deletion, proceeding with cleanup")
+		case k8serrors.IsNotFound(err):
+			if cleanup {
+				log.Debug(logger, "ControlPlane not found, for KonnectExtension during deletion, proceeding with cleanup")
+			}
+
+			// When the referenced ControlPlane is not found, we need to cleanup
+			// all the KongDataPlaneClientCertificates referencing it as they don't exist
+			// in Konnect anymore.
+			var dpCerts configurationv1alpha1.KongDataPlaneClientCertificateList
+			err = r.List(ctx, &dpCerts,
+				client.InNamespace(ext.Namespace),
+				client.MatchingFields{
+					index.IndexFieldKongDataPlaneClientCertificateOnKonnectExtensionOwner: ext.Name,
+				},
+			)
+			if err != nil {
+				log.Debug(logger, "Couldn't delete all KongDataPlaneClientCertificates referencing not existing ControlPlane", "error", err)
+				// Continue with cleanup.
+			} else {
+				for _, dp := range dpCerts.Items {
+					if err := r.Delete(ctx, &dp); client.IgnoreNotFound(err) != nil {
+						log.Debug(logger, "Couldn't delete KongDataPlaneClientCertificate during ControlPlane not found cleanup", "dataPlaneClientCertificate", client.ObjectKeyFromObject(&dp), "error", err)
+					}
+				}
+			}
+
+			// Removed the secret in use finalizer from Secret as the ControlPlane so any
+			// certificate using this Secret has been already removed from Konnect along with the ControlPlane.
+			if op, res, err := enforceSecretInUseFinalizer(ctx, r.Client, certificateSecret, logger, false); err != nil || !res.IsZero() || op {
+				return res, err
+			}
+
 		default:
 			log.Debug(logger, "ControlPlane not ready yet")
 			return res, nil
@@ -283,6 +359,10 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	} else {
 		// Update the controlPlane ID to the value presented in the status by ControlPlane itself.
 		cpID = cp.Status.ID
+
+		if op, res, err := enforceSecretInUseFinalizer(ctx, r.Client, certificateSecret, logger, true); err != nil || !res.IsZero() || op {
+			return res, err
+		}
 	}
 
 	log.Debug(logger, "controlPlane reference validity checked")
@@ -349,80 +429,21 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	// NOTE: We need to create a new SDK instance for each reconciliation
 	// because the token is retrieved in runtime through KonnectAPIAuthConfiguration.
+	// TODO: remove SDK usage in https://github.com/Kong/kong-operator/issues/2630
 	server, err := server.NewServer[*konnectv1alpha2.KonnectExtension](apiAuth.Spec.ServerURL)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to parse server URL: %w", err)
 	}
 	sdk := r.SdkFactory.NewKonnectSDK(server, sdkops.SDKToken(token))
 
-	certProvisionedCond := metav1.Condition{
-		Type:    konnectv1alpha1.DataPlaneCertificateProvisionedConditionType,
-		Status:  metav1.ConditionTrue,
-		Reason:  konnectv1alpha1.DataPlaneCertificateProvisionedReasonProvisioned,
-		Message: "DataPlane client certificate is provisioned",
-	}
-
-	// get the Kubernetes secret holding the certificate.
-	opRes, certificateSecret, err := r.getCertificateSecret(ctx, ext, false)
-	if client.IgnoreNotFound(err) != nil {
-		return ctrl.Result{}, err
-	}
-	if opRes != op.Noop {
-		return ctrl.Result{}, nil
-	}
-	if err != nil {
-		certProvisionedCond.Status = metav1.ConditionFalse
-		certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonRefNotFound
-		certProvisionedCond.Message = err.Error()
-		if res, updated, err := patch.StatusWithConditions(
-			ctx,
-			r.Client,
-			&ext,
-			readyCondition,
-			certProvisionedCond,
-		); err != nil || updated || !res.IsZero() {
-			return res, err
-		}
-		log.Debug(logger, "certificate secret retrieval failed")
-		return ctrl.Result{}, err
-	}
-
-	// check if the secret contains a valid tls certificate
-	certData, ok := certificateSecret.Data[consts.TLSCRT]
-	if !ok {
-		certProvisionedCond.Status = metav1.ConditionFalse
-		certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonInvalidSecret
-		certProvisionedCond.Message = "the secret does not contain a valid tls secret"
-		if res, updated, err := patch.StatusWithConditions(
-			ctx,
-			r.Client,
-			&ext,
-			readyCondition,
-			certProvisionedCond,
-		); err != nil || updated || !res.IsZero() {
-			return res, err
-		}
-		log.Debug(logger, "referenced secret malformed")
-		return ctrl.Result{}, nil
-	}
-
-	// Enforce a finalizer on the secret to prevent it from being deleted while in use.
-	if controllerutil.AddFinalizer(certificateSecret, consts.KonnectExtensionSecretInUseFinalizer) {
-		if err := r.Update(ctx, certificateSecret); err != nil {
-			if k8serrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-			return ctrl.Result{}, err
-		}
-
-		log.Info(logger, "finalizer on the referenced secret updated")
-		return ctrl.Result{}, nil
-	}
-
-	log.Debug(logger, "DataPlane certificate validity checked")
-
-	// Get the list of DataPlane client certificates in Konnect.
-	dpCertificates, err := ops.ListKongDataPlaneClientCertificates(ctx, sdk.GetDataPlaneCertificatesSDK(), cpID)
+	// Get the list of in cluster DataPlane client certificates.
+	var dpCertificates configurationv1alpha1.KongDataPlaneClientCertificateList
+	err = r.List(ctx, &dpCertificates,
+		client.InNamespace(ext.Namespace),
+		client.MatchingFields{
+			index.IndexFieldKongDataPlaneClientCertificateOnKonnectExtensionOwner: ext.Name,
+		},
+	)
 	if err != nil && !ops.ErrIsNotFound(err) {
 		certProvisionedCond.Status = metav1.ConditionFalse
 		certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
@@ -437,25 +458,23 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return res, err
 		}
 
-		log.Debug(logger, "DataPlane client certificate list retrieval failed in Konnect")
-		// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
-		// if the syncPeriod is set to zero, the controller won't requeue.
-		return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
+		log.Debug(logger, "DataPlane client certificate list retrieval failed in Konnect", "error", err.Error())
+		return ctrl.Result{RequeueAfter: r.SyncPeriod}, err
 	}
 
 	var (
-		cert      sdkkonnectcomp.DataPlaneClientCertificate
-		certFound bool
+		cert        configurationv1alpha1.KongDataPlaneClientCertificate
+		certFound   bool
+		certDataStr = sanitizeCert(string(certData))
 	)
 	// retrieve all the konnect certificates bound to this secret
-	mappedIDs := lo.FilterMap(dpCertificates, func(c sdkkonnectcomp.DataPlaneClientCertificate, _ int) (k string, include bool) {
-		if c.Cert != nil && c.ID != nil {
-			certStr := sanitizeCert(*c.Cert)
-			certDataStr := sanitizeCert(string(certData))
+	mappedIDs := lo.FilterMap(dpCertificates.Items, func(c configurationv1alpha1.KongDataPlaneClientCertificate, _ int) (k string, include bool) {
+		if c.Spec.Cert != "" && c.GetKonnectID() != "" {
+			certStr := sanitizeCert(c.Spec.Cert)
 			if certStr == certDataStr {
 				cert = c
 				certFound = true
-				return *c.ID, true
+				return c.GetKonnectID(), true
 			}
 		}
 		return "", false
@@ -474,16 +493,68 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, nil
 	}
 
-	secretCleanup := certificateSecret.DeletionTimestamp != nil && certificateSecret.DeletionTimestamp.Before(&metav1.Time{Time: time.Now()})
+	var (
+		certSDK      sdkkonnectcomp.DataPlaneClientCertificate
+		certSDKFound bool
+	)
+
+	// If there are no mapped IDs from KongDataPlaneClientCertificates in cluster,
+	// then let's use the SDK to query Konnect directly to find any existing certificates.
+	// This is just to make sure that users migrating from older versions of the operator
+	// where the dataplane client certificates were not managed using
+	// KongDataPlaneClientCertificate CRs don't end up creating duplicate
+	// certificates in Konnect.
+	// TODO: https://github.com/Kong/kong-operator/issues/2630
+	// remove this block in future major release after several operator releases.
+	if len(mappedIDs) == 0 {
+		// Get the list of DataPlane client certificates in Konnect.
+		dpCertificates, err := ops.ListKongDataPlaneClientCertificates(ctx, sdk.GetDataPlaneCertificatesSDK(), cpID)
+		if err != nil && !ops.ErrIsNotFound(err) {
+			certProvisionedCond.Status = metav1.ConditionFalse
+			certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
+			certProvisionedCond.Message = err.Error()
+			if res, updated, err := patch.StatusWithConditions(
+				ctx,
+				r.Client,
+				&ext,
+				readyCondition,
+				certProvisionedCond,
+			); err != nil || updated || !res.IsZero() {
+				return res, err
+			}
+
+			log.Debug(logger, "DataPlane client certificate list retrieval failed in Konnect")
+			return ctrl.Result{RequeueAfter: r.SyncPeriod}, nil
+		}
+
+		// retrieve all the konnect certificates bound to this secret
+		mappedIDs = lo.FilterMap(dpCertificates, func(c sdkkonnectcomp.DataPlaneClientCertificate, _ int) (k string, include bool) {
+			if c.Cert != nil && c.ID != nil {
+				certStr := sanitizeCert(*c.Cert)
+				certDataStr := sanitizeCert(string(certData))
+				if certStr == certDataStr {
+					certSDK = c
+					certSDKFound = true
+					return *c.ID, true
+				}
+			}
+			return "", false
+		})
+	}
+
+	secretCleanup := certificateSecret.DeletionTimestamp != nil &&
+		certificateSecret.DeletionTimestamp.Before(&metav1.Time{Time: time.Now()})
 	switch {
 	case !cleanup && !secretCleanup:
-		if !certFound {
+
+		if !certFound && !certSDKFound {
 			log.Debug(logger, "DataPlane client certificate enforced in Konnect")
 			dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
 				certificateSecret.Name,
 				certificateSecret.Namespace,
 				&ext.Spec.Konnect.ControlPlane.Ref,
 				string(certificateSecret.Data[consts.TLSCRT]),
+				&ext,
 				func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) {
 					dpCert.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 						// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
@@ -492,53 +563,73 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					}
 				},
 			)
-			if err := ops.CreateKongDataPlaneClientCertificate(ctx, sdk.GetDataPlaneCertificatesSDK(), &dpCert); err != nil {
-				certProvisionedCond.Status = metav1.ConditionFalse
-				certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
-				certProvisionedCond.Message = err.Error()
-				if res, updated, err := patch.StatusWithConditions(
-					ctx,
-					r.Client,
-					&ext,
-					readyCondition,
-					certProvisionedCond,
-				); err != nil || updated || !res.IsZero() {
-					return res, err
-				}
-				// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
-				// if the syncPeriod is set to zero, the controller won't requeue.
-				return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
+
+			err := controllerutil.SetOwnerReference(&ext, &dpCert, r.Scheme(), controllerutil.WithBlockOwnerDeletion(true))
+			if err != nil {
+				return ctrl.Result{}, err
 			}
-			updated, res, err := patch.WithFinalizer(ctx, r.Client, client.Object(certificateSecret), KonnectCleanupFinalizer)
+
+			if err := r.Create(ctx, &dpCert); err != nil {
+				if errS := (&k8serrors.StatusError{}); errors.As(err, &errS) {
+					if errS.ErrStatus.Reason == metav1.StatusReasonAlreadyExists {
+						log.Debug(logger, "DataPlane client certificate already exists", "name", dpCert.Name, "namespace", dpCert.Namespace)
+					}
+				} else {
+					certProvisionedCond.Status = metav1.ConditionFalse
+					certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
+					certProvisionedCond.Message = err.Error()
+					if res, updated, err := patch.StatusWithConditions(
+						ctx,
+						r.Client,
+						&ext,
+						readyCondition,
+						certProvisionedCond,
+					); err != nil || updated || !res.IsZero() {
+						return res, err
+					}
+					// In case of an error when creating the object in Konnect, we requeue "immediately"
+					// so that the operation is retried without waiting for the resync period.
+					return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+				}
+			}
+			updated, res, err := patch.WithFinalizer(ctx, r.Client, certificateSecret, KonnectCleanupFinalizer)
 			if err != nil || !res.IsZero() {
 				return res, err
 			}
 			if updated {
 				log.Info(logger, "konnect-cleanup finalizer on the referenced secret updated")
-				// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
-				// if the syncPeriod is set to zero, the controller won't requeue.
-				return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 			}
 		}
+
 		updated, res, err := patch.WithFinalizer(ctx, r.Client, &ext, KonnectCleanupFinalizer)
 		if err != nil || !res.IsZero() {
 			return res, err
 		}
 		if updated {
 			log.Info(logger, "KonnectExtension finalizer added", "finalizer", KonnectCleanupFinalizer)
-			return ctrl.Result{}, nil
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 		}
 	case cleanup || secretCleanup:
-		if certFound {
-			// This should never happen, but checking to make the dereference below bullet-proof
-			if cert.ID == nil {
-				return ctrl.Result{}, errors.New("cannot cleanup certificate in Konnect without ID")
+		// If there are no mapped IDs from KongDataPlaneClientCertificates in cluster,
+		// then let's use the SDK to query Konnect directly to find any existing certificates.
+		// This is just to make sure that users migrating from older versions of the operator
+		// where the dataplane client certificates were not managed using
+		// KongDataPlaneClientCertificate CRs don't end up creating duplicate
+		// certificates in Konnect.
+		// TODO: https://github.com/Kong/kong-operator/issues/2630
+		// remove this block in future major release after several operator releases.
+		if certSDKFound {
+			if certSDK.ID == nil {
+				return ctrl.Result{}, errors.New("cannot cleanup DataPlane certificate in Konnect without ID")
 			}
+
 			dpCert := konnectresource.GenerateKongDataPlaneClientCertificate(
 				certificateSecret.Name,
 				certificateSecret.Namespace,
 				&ext.Spec.Konnect.ControlPlane.Ref,
 				string(certificateSecret.Data[consts.TLSCRT]),
+				&ext,
 				func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) {
 					dpCert.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 						// setting the controlPlane ID in the status as a workaround for the GetControlPlaneID method,
@@ -547,7 +638,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 						// setting the ID in the status as a workaround for the DeleteKongDataPlaneClientCertificate method,
 						// that expects the ID to be set in the status.
 						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-							ID: *cert.ID,
+							ID: *certSDK.ID,
 						},
 					}
 				},
@@ -565,10 +656,32 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				); err != nil || updated || !res.IsZero() {
 					return res, err
 				}
-				// In case of an error in the Konnect ops, the resync period will take care of a new creation attempt.
-				// Setting "Requeue: true" along with RequeueAfter makes the controller bulletproof, as
-				// if the syncPeriod is set to zero, the controller won't requeue.
-				return ctrl.Result{Requeue: true, RequeueAfter: r.SyncPeriod}, err
+				return ctrl.Result{RequeueAfter: r.SyncPeriod}, err
+			}
+
+		}
+
+		if certFound {
+			// This should never happen, but checking to make the dereference below bullet-proof
+			if cert.GetKonnectID() == "" {
+				return ctrl.Result{}, errors.New("cannot cleanup DataPlane certificate in Konnect without ID")
+			}
+			if err := r.Delete(ctx, &cert); err != nil {
+				certProvisionedCond.Status = metav1.ConditionFalse
+				certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed
+				certProvisionedCond.Message = err.Error()
+				if res, updated, err := patch.StatusWithConditions(
+					ctx,
+					r.Client,
+					&ext,
+					readyCondition,
+					certProvisionedCond,
+				); err != nil || updated || !res.IsZero() {
+					return res, err
+				}
+				// In case of an error in the Konnect ops, we requeue so that
+				// the operation is retried after the resync period.
+				return ctrl.Result{RequeueAfter: r.SyncPeriod}, err
 			}
 			return ctrl.Result{Requeue: true}, err
 		}
@@ -589,6 +702,49 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}
+
+	// If the KongDataPlaneClientCertificate exists in cluster, check if it's programmed in Konnect
+	// and proceed only after it is programmed.
+	if certFound {
+		var (
+			dpCert   configurationv1alpha1.KongDataPlaneClientCertificate
+			dpCertNN = types.NamespacedName{
+				Name:      certificateSecret.Name,
+				Namespace: certificateSecret.Namespace,
+			}
+		)
+		if err = r.Get(ctx, dpCertNN, &dpCert); err != nil {
+			if !k8serrors.IsNotFound(err) {
+				log.Debug(logger, "DataPlane client certificate retrieval failed in cluster",
+					"namespace", dpCertNN.Namespace,
+					"name", dpCertNN.Name,
+				)
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+			}
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
+		if !k8sutils.IsProgrammed(&dpCert) {
+			log.Debug(logger, "DataPlane client certificate not yet programmed in Konnect",
+				"namespace", dpCertNN.Namespace,
+				"name", dpCertNN.Name,
+			)
+			// set the certificateProvisioned condition to true
+			if res, updated, err := patch.StatusWithConditions(
+				ctx,
+				r.Client,
+				&ext,
+				certProvisionedCond,
+			); err != nil || updated || !res.IsZero() {
+				return res, err
+			}
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
+	}
+
+	certProvisionedCond.Status = metav1.ConditionTrue
+	certProvisionedCond.Reason = konnectv1alpha1.DataPlaneCertificateProvisionedReasonProvisioned
+	certProvisionedCond.Message = "DataPlane client certificate provisioned successfully"
+
 	// set the certificateProvisioned condition to true
 	if res, updated, err := patch.StatusWithConditions(
 		ctx,
@@ -609,7 +765,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			// in case the err is of type conflict, don't return it and instead trigger
 			// another reconciliation.
 			// This is just to prevent spamming of conflict errors.
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 		}
 		return ctrl.Result{}, err
 	}
@@ -630,7 +786,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return res, err
 	}
 
-	if res, err := r.ensureExtendablesReferencesInStatus(ctx, &ext, dataPlaneList, controlPlaneList); err != nil || !res.IsZero() {
+	if res, err := r.ensureExtendablesReferencesInStatus(ctx, &ext, dataplanes, controlplanes); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -644,4 +800,83 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		Requeue:      true,
 		RequeueAfter: r.SyncPeriod,
 	}, nil
+}
+
+// enforceSecretInUseFinalizer adds or removes the secret-in-use finalizer on the given secret.
+// Returns true if the reconciliation should return.
+func enforceSecretInUseFinalizer(
+	ctx context.Context,
+	cl client.Client,
+	certificateSecret *corev1.Secret,
+	logger logr.Logger,
+	add bool,
+) (bool, ctrl.Result, error) {
+	var updated bool
+	const finalizer = consts.KonnectExtensionSecretInUseFinalizer
+
+	if add {
+		updated = controllerutil.AddFinalizer(certificateSecret, finalizer)
+	} else {
+		updated = controllerutil.RemoveFinalizer(certificateSecret, finalizer)
+	}
+
+	if !updated {
+		return false, ctrl.Result{}, nil
+	}
+	if err := cl.Update(ctx, certificateSecret); err != nil {
+		if k8serrors.IsConflict(err) {
+			return true, ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
+		return true, ctrl.Result{}, err
+	}
+	log.Debug(logger,
+		finalizer+" finalizer enforced on Secret",
+		"name", certificateSecret.Name,
+		"namespace", certificateSecret.Namespace,
+	)
+	return true, ctrl.Result{}, nil
+}
+
+// listKonnectExtensionReferrers lists all objects that reference the given KonnectExtension.
+// It uses the KonnectExtensionIndex index for listing the objects which needs to
+// be set for the queried typed.
+func listKonnectExtensionReferrers[
+	TList interface {
+		operatorv1beta1.DataPlaneList | gwtypes.ControlPlaneList
+		GetItems() []T
+	},
+	TListPtr interface {
+		*TList
+		client.ObjectList
+		GetItems() []T
+	},
+	TT clientObject[T],
+	T any,
+](
+	ctx context.Context,
+	cl client.Client,
+	referencedKonnectExtension client.ObjectKey,
+) ([]T, error) {
+	listOpts := []client.ListOption{
+		client.MatchingFields{
+			index.KonnectExtensionIndex: referencedKonnectExtension.String(),
+		},
+	}
+
+	var (
+		list    TList
+		listPtr TListPtr = &list
+	)
+	if err := cl.List(ctx, listPtr, listOpts...); err != nil {
+		return nil, err
+	}
+	return list.GetItems(), nil
+}
+
+type clientObjectT[T any] interface {
+	*T
+}
+
+type clientObject[T any] interface {
+	clientObjectT[T]
 }
