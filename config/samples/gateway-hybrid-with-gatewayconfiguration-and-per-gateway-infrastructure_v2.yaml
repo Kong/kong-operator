@@ -2,10 +2,10 @@
 # https://gateway-api.sigs.k8s.io/geps/gep-1867/
 # This sample demonstrates how to configure a hybrid Kong Gateway with
 # per-Gateway infrastructure using GatewayConfiguration resources.
-# The GatewayConfiguration resource named "hybrid-kong" defines
+# The GatewayConfiguration resource named "common-infra-configuration-kong" defines
 # the control plane connection details for the data plane.
-# The GatewayConfiguration resource named "gateway-infrastructure-kong"
-# defines the infrastructure details for the Gateway
+# The GatewayConfiguration resource named "custom-infra-configuration-kong"
+# defines the infrastructure details for the Gateway with custom settings by
 # setting the source to "Mirror" and specifying the Konnect Control Plane ID.
 ---
 kind: KonnectAPIAuthConfiguration
@@ -21,7 +21,7 @@ spec:
 kind: GatewayConfiguration
 apiVersion: gateway-operator.konghq.com/v2beta1
 metadata:
-  name: hybrid-kong
+  name: common-infra-configuration-kong
   namespace: default
 spec:
   konnect:
@@ -48,13 +48,25 @@ spec:
   parametersRef:
     group: gateway-operator.konghq.com
     kind: GatewayConfiguration
-    name: hybrid-kong
+    name: common-infra-configuration-kong
     namespace: default
+---
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: common-hybrid-kong
+  namespace: default
+spec:
+  gatewayClassName: hybrid-kong
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
 ---
 kind: GatewayConfiguration
 apiVersion: gateway-operator.konghq.com/v2beta1
 metadata:
-  name: gateway-infrastructure-kong
+  name: custom-infra-configuration-kong
   namespace: default
 spec:
   konnect:
@@ -66,7 +78,7 @@ spec:
 kind: Gateway
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
-  name: hybrid-kong
+  name: custom-hybrid-kong
   namespace: default
 spec:
   gatewayClassName: hybrid-kong
@@ -74,7 +86,7 @@ spec:
     parametersRef:
       group: gateway-operator.konghq.com
       kind: GatewayConfiguration
-      name: gateway-infrastructure-kong
+      name: custom-infra-configuration-kong
   listeners:
     - name: http
       protocol: HTTP
