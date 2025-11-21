@@ -8,6 +8,7 @@ import (
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -256,6 +257,12 @@ func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj cli
 				log.Debug(logger, "gateway class not supported, ignoring")
 			case errors.As(err, &operatorerrors.ErrNotAcceptedGatewayClass{}):
 				log.Debug(logger, "gateway class not accepted, ignoring")
+			case apierrors.IsNotFound(err):
+				log.Debug(logger, "gateway class not found, ignoring (may have been deleted)",
+					"gatewayClass", objKey.Name,
+					"gateway", gateway.Name,
+					"namespace", gateway.Namespace,
+				)
 			default:
 				log.Error(logger, err, "failed to get Gateway's GatewayClass",
 					"gatewayClass", objKey.Name,

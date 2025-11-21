@@ -639,6 +639,7 @@ test.api: gotestsum
 _test.integration: gotestsum download.telepresence
 	KUBECONFIG=$(KUBECONFIG) \
 	TELEPRESENCE_BIN=$(TELEPRESENCE) \
+	XDG_CONFIG_HOME=$(PROJECT_DIR)/.config/telepresence \
 	GOFLAGS=$(GOFLAGS) \
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 	$(GOTESTSUM) -- $(GOTESTFLAGS) \
@@ -682,6 +683,7 @@ PARALLEL := $(if $(PARALLEL),$(PARALLEL),$(NCPU))
 _test.conformance: gotestsum download.telepresence
 		KUBECONFIG=$(KUBECONFIG) \
 		TELEPRESENCE_BIN=$(TELEPRESENCE) \
+		XDG_CONFIG_HOME=$(PROJECT_DIR)/.config/telepresence \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) -- $(GOTESTFLAGS) \
 		-timeout $(CONFORMANCE_TEST_TIMEOUT) \
@@ -851,9 +853,9 @@ KUBECONFIG ?= $(HOME)/.kube/config
 # etc didn't change in between the runs.
 .PHONY: _run
 _run:
-	@$(TELEPRESENCE) helm install
-	@$(TELEPRESENCE) connect
-	bash -c "trap \
+	@XDG_CONFIG_HOME=$(PROJECT_DIR)/.config/telepresence $(TELEPRESENCE) helm install
+	@XDG_CONFIG_HOME=$(PROJECT_DIR)/.config/telepresence $(TELEPRESENCE) connect
+	bash -c "export XDG_CONFIG_HOME=$(PROJECT_DIR)/.config/telepresence; trap \
 		'$(TELEPRESENCE) quit -s; $(TELEPRESENCE) helm uninstall; rm -rf $(TMP_KUBECONFIG) || 1' EXIT; \
 		KONG_OPERATOR_KUBECONFIG=$(or $(TMP_KUBECONFIG),$(KUBECONFIG)) \
 		KONG_OPERATOR_ANONYMOUS_REPORTS=false \
@@ -870,7 +872,7 @@ _run:
 		-zap-time-encoding iso8601 \
 		-zap-log-level 2 \
 		-zap-devel true \
-	"
+		"
 
 # Run the operator locally with impersonation of controller-manager service account from kong-system namespace.
 # The operator will use a temporary kubeconfig file and impersonate the real RBACs.
@@ -992,7 +994,7 @@ undeploy:
 # as if it were running inside the cluster itself.
 .PHONY: install.telepresence
 install.telepresence: download.telepresence
-	@$(PROJECT_DIR)/scripts/telepresence-manager.sh install "$(TELEPRESENCE)"
+	@XDG_CONFIG_HOME=$(PROJECT_DIR)/.config/telepresence $(PROJECT_DIR)/scripts/telepresence-manager.sh install "$(TELEPRESENCE)"
 
 # Disconnect and uninstall telepresence from the cluster.
 # This target cleans up the telepresence resources created by the install.telepresence target.
@@ -1000,7 +1002,7 @@ install.telepresence: download.telepresence
 # cleanup of network connections and cluster resources.
 .PHONY: uninstall.telepresence
 uninstall.telepresence: download.telepresence
-	@$(PROJECT_DIR)/scripts/telepresence-manager.sh uninstall "$(TELEPRESENCE)"
+	@XDG_CONFIG_HOME=$(PROJECT_DIR)/.config/telepresence $(PROJECT_DIR)/scripts/telepresence-manager.sh uninstall "$(TELEPRESENCE)"
 
 # Currently kube-api-linter can only be run with golangci-lint as custom linter.
 # There have been some discussions about making it possible to be run as a standalone tool

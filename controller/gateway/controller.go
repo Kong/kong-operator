@@ -460,10 +460,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 				return ctrl.Result{}, fmt.Errorf("failed to update DataPlane with KonnectExtension to make it work as Hybrid: %w", err)
 			}
 		}
-	} else {
+	}
+
+	var controlplane *gwtypes.ControlPlane
+	if !isGatewayHybrid(gatewayConfig) {
 		// Provision controlplane creates a controlplane and adds the ControlPlaneReady condition to the Gateway status
 		// if the controlplane is ready, the ControlPlaneReady status is set to true, otherwise false.
-		controlplane := r.provisionControlPlane(ctx, logger, &gateway, gatewayConfig)
+		controlplane = r.provisionControlPlane(ctx, logger, &gateway, gatewayConfig)
 		// Set the ControlPlaneReady Condition to False. This happens only if:
 		// * the new status is false and there was no ControlPlaneReady condition in the gateway
 		// * the new status is false and the previous status was true
@@ -500,21 +503,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, nil
 	}
 
-	// DataPlane NetworkPolicies
-	// Only create network policies if KO is running inside k8s.
-	// If the code is run outside of k8s (like in envtest or integration test), do not create network policies.
-	if k8sutils.RunningOnKubernetes() {
-		log.Trace(logger, "ensuring DataPlane's NetworkPolicy exists")
-		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, dataplane)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if createdOrUpdated {
-			log.Debug(logger, "networkPolicy updated")
-			return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
-		}
-	}
-
+	// First, ensure DataPlane connectivity and mark the Gateway as Programmed.
 	log.Trace(logger, "ensuring DataPlane connectivity for Gateway")
 	gateway.Status.Addresses, err = r.getGatewayAddresses(ctx, dataplane)
 	if err == nil {
@@ -524,11 +513,25 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		k8sutils.SetCondition(k8sutils.NewConditionWithGeneration(kcfggateway.GatewayServiceType, metav1.ConditionFalse, kcfggateway.GatewayReasonServiceError, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(&gateway))
 	}
-
 	gwConditionAware.setProgrammed(metav1.ConditionTrue)
 	_, err = patch.ApplyStatusPatchIfNotEmpty(ctx, r.Client, logger, &gateway, oldGateway)
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+
+	// Then, ensure DataPlane NetworkPolicies. If created/updated, we'll requeue.
+	// Only create network policies if KO is running inside k8s.
+	// If the code is run outside of k8s (like in envtest or integration test), do not create network policies.
+	if k8sutils.RunningOnKubernetes() {
+		log.Trace(logger, "ensuring DataPlane's NetworkPolicy exists")
+		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, dataplane, controlplane, r.Namespace, r.PodLabels)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if createdOrUpdated {
+			log.Debug(logger, "networkPolicy updated")
+			return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+		}
 	}
 
 	if k8sutils.IsProgrammed(gwConditionAware) && !k8sutils.IsProgrammed(oldGwConditionsAware) {

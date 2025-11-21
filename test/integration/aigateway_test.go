@@ -180,13 +180,8 @@ func TestAIGatewayCreation(t *testing.T) {
 	require.Len(t, controlplanes, 1)
 
 	t.Run("checking NetworkPolicies", func(t *testing.T) {
-		t.Skip("skipping as this requires adding network intercepts for integration tests: https://github.com/Kong/kong-operator/issues/2074")
-		// NOTE: We're not verifying if the NetworkPolicies are created
-		// in integration tests.
-		// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
-
-		// t.Log("verifying networkpolicies are created")
-		// require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
+		t.Log("verifying networkpolicies are created")
+		require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 	})
 
 	t.Log("verifying connectivity to the Gateway")
