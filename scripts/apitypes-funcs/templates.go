@@ -312,5 +312,10 @@ func (obj *{{.Type}}) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
 }
 
+// Set the options to adopt the resource from an existing resource.
+func (obj *{{.Type}}) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
+}
+
 {{- end }}`
 )

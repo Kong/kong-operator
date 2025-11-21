@@ -11,12 +11,27 @@ func (obj *KonnectCloudGatewayNetwork) GetAdoptOptions() *commonv1alpha1.AdoptOp
 	return obj.Spec.Adopt
 }
 
+// Set the options to adopt the resource from an existing resource.
+func (obj *KonnectCloudGatewayNetwork) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
+}
+
 // Get the options to adopt the resource from an existing resource.
 func (obj *KonnectCloudGatewayTransitGateway) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
 }
 
+// Set the options to adopt the resource from an existing resource.
+func (obj *KonnectCloudGatewayTransitGateway) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
+}
+
 // Get the options to adopt the resource from an existing resource.
 func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
+}
+
+// Set the options to adopt the resource from an existing resource.
+func (obj *KonnectCloudGatewayDataPlaneGroupConfiguration) SetAdoptOptions(opts *commonv1alpha1.AdoptOptions) {
+	obj.Spec.Adopt = opts
 }
