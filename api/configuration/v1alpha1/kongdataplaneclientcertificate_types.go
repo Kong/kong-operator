@@ -58,6 +58,11 @@ type KongDataPlaneClientCertificateSpec struct {
 	// +required
 	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
 
+	// Adopt is the options for adopting a key from an existing key in Konnect.
+	// +kubebuilder:validation:XValidation:message="Only 'match' mode adoption is supported", rule="self.mode == 'match'"
+	// +optional
+	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
+
 	// KongDataPlaneClientCertificateAPISpec are the attributes of the KongDataPlaneClientCertificate itself.
 	KongDataPlaneClientCertificateAPISpec `json:",inline"`
 }

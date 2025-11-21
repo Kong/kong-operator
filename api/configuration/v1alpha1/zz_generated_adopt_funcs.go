@@ -85,3 +85,8 @@ func (obj *KongVault) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 func (obj *KongSNI) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
 	return obj.Spec.Adopt
 }
+
+// Get the options to adopt the resource from an existing resource.
+func (obj *KongDataPlaneClientCertificate) GetAdoptOptions() *commonv1alpha1.AdoptOptions {
+	return obj.Spec.Adopt
+}
