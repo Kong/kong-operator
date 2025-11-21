@@ -477,6 +477,7 @@ func (r *Reconciler) ensureDataPlaneHasNetworkPolicy(
 	if err != nil {
 		return false, fmt.Errorf("failed generating network policy for DataPlane %s: %w", dataplane.Name, err)
 	}
+	k8sutils.SetOwnerForObject(generatedPolicy, gateway)
 	gatewayutils.LabelObjectAsGatewayManaged(generatedPolicy)
 
 	if count == 1 {

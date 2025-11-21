@@ -936,9 +936,9 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	require.Equal(t, map[string]string{"app": dataplane.Name}, networkPolicy.Spec.PodSelector.MatchLabels)
 
 	t.Log("verifying that the DataPlane's Pod Admin API is network restricted to ControlPlane Pods")
-	var expectLimitedAdminAPI networkPolicyIngressRuleDecorator
-	expectLimitedAdminAPI.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneAdminAPIPort)
-	expectLimitedAdminAPI.withPeerMatchLabels(
+	var expectLimitedAdminAPIFromCP networkPolicyIngressRuleDecorator
+	expectLimitedAdminAPIFromCP.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneAdminAPIPort)
+	expectLimitedAdminAPIFromCP.withPeerMatchLabels(
 		map[string]string{"app": controlplane.Name},
 		map[string]string{"kubernetes.io/metadata.name": dataplane.Namespace},
 	)
@@ -953,9 +953,24 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	expectAllowMetricsIngress.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneMetricsPort)
 
 	t.Log("verifying DataPlane's NetworkPolicies ingress rules correctness")
-	require.Contains(t, networkPolicy.Spec.Ingress, expectLimitedAdminAPI.Rule)
-	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowProxyIngress.Rule)
-	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowMetricsIngress.Rule)
+	// The NetworkPolicy should contain the ControlPlane admin API rule.
+	// It may also contain an operator admin API rule (when running with operator pod labels available).
+	require.Contains(t, networkPolicy.Spec.Ingress, expectLimitedAdminAPIFromCP.Rule,
+		"NetworkPolicy should contain ControlPlane admin API access rule")
+	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowProxyIngress.Rule,
+		"NetworkPolicy should contain proxy ingress rule")
+	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowMetricsIngress.Rule,
+		"NetworkPolicy should contain metrics ingress rule")
+	
+	// Verify we have the expected number of admin API rules (either 1 or 2 depending on whether operator labels are available)
+	adminAPIRules := 0
+	for _, rule := range networkPolicy.Spec.Ingress {
+		if len(rule.Ports) == 1 && rule.Ports[0].Port != nil && rule.Ports[0].Port.IntVal == consts.DataPlaneAdminAPIPort {
+			adminAPIRules++
+		}
+	}
+	require.GreaterOrEqual(t, adminAPIRules, 1, "NetworkPolicy should have at least 1 admin API rule")
+	require.LessOrEqual(t, adminAPIRules, 2, "NetworkPolicy should have at most 2 admin API rules (CP + operator)")
 
 	t.Log("deleting DataPlane's NetworkPolicies")
 	require.NoError(t,
@@ -971,10 +986,23 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	networkPolicy = networkpolicies[0]
 	t.Logf("NetworkPolicy generation %d", networkPolicy.Generation)
 
-	t.Log("verifying DataPlane's NetworkPolicies ingress rules correctness")
-	require.Contains(t, networkPolicy.Spec.Ingress, expectLimitedAdminAPI.Rule)
-	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowProxyIngress.Rule)
-	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowMetricsIngress.Rule)
+	t.Log("verifying DataPlane's NetworkPolicies ingress rules correctness after recreation")
+	require.Contains(t, networkPolicy.Spec.Ingress, expectLimitedAdminAPIFromCP.Rule,
+		"Recreated NetworkPolicy should contain ControlPlane admin API access rule")
+	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowProxyIngress.Rule,
+		"Recreated NetworkPolicy should contain proxy ingress rule")
+	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowMetricsIngress.Rule,
+		"Recreated NetworkPolicy should contain metrics ingress rule")
+	
+	// Verify admin API rules count again after recreation
+	adminAPIRules = 0
+	for _, rule := range networkPolicy.Spec.Ingress {
+		if len(rule.Ports) == 1 && rule.Ports[0].Port != nil && rule.Ports[0].Port.IntVal == consts.DataPlaneAdminAPIPort {
+			adminAPIRules++
+		}
+	}
+	require.GreaterOrEqual(t, adminAPIRules, 1, "Recreated NetworkPolicy should have at least 1 admin API rule")
+	require.LessOrEqual(t, adminAPIRules, 2, "Recreated NetworkPolicy should have at most 2 admin API rules (CP + operator)")
 
 	t.Run("verifying DataPlane's NetworkPolicies get updated after customizing kong proxy listen port through GatewayConfiguration", func(t *testing.T) {
 		// TODO: https://github.com/kong/kong-operator/issues/184

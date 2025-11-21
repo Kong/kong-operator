@@ -1,3 +1,2 @@
-client:
-  timeouts:
-    helm: 120s
+timeouts:
+  helm: 120s
