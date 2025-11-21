@@ -1,0 +1,211 @@
+package envtest
+
+import (
+	"testing"
+
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/google/uuid"
+	"github.com/samber/lo"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
+	apiwatch "k8s.io/apimachinery/pkg/watch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/controller/konnect"
+	"github.com/kong/kong-operator/modules/manager/logging"
+	"github.com/kong/kong-operator/modules/manager/scheme"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	"github.com/kong/kong-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/test/helpers/eventually"
+	"github.com/kong/kong-operator/test/mocks/metricsmocks"
+	"github.com/kong/kong-operator/test/mocks/sdkmocks"
+)
+
+func TestKongPluginBindingAdoption(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := Context(t, t.Context())
+	defer cancel()
+
+	// Set up the envtest environment.
+	cfg, ns := Setup(t, ctx, scheme.Get())
+
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+
+	t.Log("Setting up clients")
+	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
+		Scheme: scheme.Get(),
+	})
+	require.NoError(t, err)
+	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
+
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+
+	factory := sdkmocks.NewMockSDKFactory(t)
+	sdk := factory.SDK
+
+	reconcilers := []Reconciler{
+		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongPluginBinding](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongPluginBinding](&metricsmocks.MockRecorder{}),
+		),
+	}
+
+	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+
+	t.Run("Adopting a globally applied plugin", func(t *testing.T) {
+		pluginID := uuid.NewString()
+		w := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating plugins")
+		sdk.PluginSDK.EXPECT().GetPlugin(
+			mock.Anything,
+			pluginID,
+			cp.GetKonnectID(),
+		).Return(&sdkkonnectops.GetPluginResponse{
+			Plugin: &sdkkonnectcomp.Plugin{
+				ID:   lo.ToPtr(pluginID),
+				Name: "proxy-cache",
+			},
+		}, nil)
+		sdk.PluginSDK.EXPECT().UpsertPlugin(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertPluginRequest) bool {
+				return req.PluginID == pluginID
+			}),
+		).Return(nil, nil)
+
+		t.Log("Creating a KongPluginBinding and a KongPlugin to adopt the plugin")
+		proxyCacheKongPlugin := deploy.ProxyCachePlugin(t, ctx, clientNamespaced)
+		kpbGlobal := deploy.KongPluginBinding(t, ctx, clientNamespaced, konnect.NewKongPluginBindingBuilder().
+			WithControlPlaneRefKonnectNamespaced(cp.Name).
+			WithPluginRef(proxyCacheKongPlugin.Name).
+			WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
+			Build(),
+			setKongPluginBindingAdoptOptions(t, pluginID),
+		)
+
+		t.Log("Waiting for KongPluginBinding being Programmed and set Konnect ID")
+		watchFor(t, ctx, w,
+			apiwatch.Modified,
+			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+				return kpb.Name == kpbGlobal.Name &&
+					k8sutils.IsProgrammed(kpb) &&
+					kpb.GetKonnectID() == pluginID
+			}, "Did not see KongPluginBinding set Programmed and Konnect ID")
+
+		t.Log("Setting up SDK expectation for plugin deletion")
+		sdk.PluginSDK.EXPECT().DeletePlugin(mock.Anything, cp.GetKonnectID(), pluginID).Return(nil, nil)
+
+		t.Log("Deleting the KongPluginBinding")
+		require.NoError(t, clientNamespaced.Delete(ctx, kpbGlobal))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, kpbGlobal, waitTime, tickTime)
+	})
+
+	t.Run("Adopting a plugin attached to a service", func(t *testing.T) {
+		pluginID := uuid.NewString()
+		w := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Creating a service with ID")
+		kongService := deploy.KongServiceWithID(t, ctx, clientNamespaced, deploy.WithKonnectNamespacedRefControlPlaneRef(cp))
+		serviceID := kongService.GetKonnectID()
+
+		t.Log("Setting up SDK expectations for getting and updating plugins")
+		sdk.PluginSDK.EXPECT().GetPlugin(
+			mock.Anything,
+			pluginID,
+			cp.GetKonnectID(),
+		).Return(&sdkkonnectops.GetPluginResponse{
+			Plugin: &sdkkonnectcomp.Plugin{
+				ID:   lo.ToPtr(pluginID),
+				Name: "proxy-cache",
+				Service: &sdkkonnectcomp.PluginService{
+					ID: lo.ToPtr(serviceID),
+				},
+			},
+		}, nil)
+		sdk.PluginSDK.EXPECT().UpsertPlugin(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertPluginRequest) bool {
+				return req.PluginID == pluginID
+			}),
+		).Return(nil, nil)
+
+		t.Log("Creating a KongPluginBinding and a KongPlugin to adopt the plugin")
+		proxyCacheKongPlugin := deploy.ProxyCachePlugin(t, ctx, clientNamespaced)
+		kpbService := deploy.KongPluginBinding(t, ctx, clientNamespaced, konnect.NewKongPluginBindingBuilder().
+			WithControlPlaneRefKonnectNamespaced(cp.Name).
+			WithPluginRef(proxyCacheKongPlugin.Name).
+			WithServiceTarget(kongService.Name).
+			Build(),
+			setKongPluginBindingAdoptOptions(t, pluginID),
+		)
+
+		t.Log("Waiting for KongPluginBinding being Programmed and set Konnect ID")
+		watchFor(t, ctx, w,
+			apiwatch.Modified,
+			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+				return kpb.Name == kpbService.Name &&
+					k8sutils.IsProgrammed(kpb) &&
+					kpb.GetKonnectID() == pluginID
+			}, "Did not see KongPluginBinding set Programmed and Konnect ID")
+
+		t.Log("Setting up SDK expectation for plugin deletion")
+		sdk.PluginSDK.EXPECT().DeletePlugin(mock.Anything, cp.GetKonnectID(), pluginID).Return(nil, nil)
+
+		t.Log("Deleting the KongPluginBinding")
+		require.NoError(t, clientNamespaced.Delete(ctx, kpbService))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, kpbService, waitTime, tickTime)
+	})
+
+	t.Run("Adopting without KongPlugin reference should fail", func(t *testing.T) {
+		pluginID := uuid.NewString()
+		w := setupWatch[configurationv1alpha1.KongPluginBindingList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting plugins")
+		sdk.PluginSDK.EXPECT().GetPlugin(
+			mock.Anything,
+			pluginID,
+			cp.GetKonnectID(),
+		).Return(&sdkkonnectops.GetPluginResponse{
+			Plugin: &sdkkonnectcomp.Plugin{
+				ID:   lo.ToPtr(pluginID),
+				Name: "proxy-cache",
+			},
+		}, nil)
+
+		t.Log("Creating a KongPluginBinding without the KongPlugin to adopt the plugin")
+		kpbGlobal := deploy.KongPluginBinding(t, ctx, clientNamespaced, konnect.NewKongPluginBindingBuilder().
+			WithControlPlaneRefKonnectNamespaced(cp.Name).
+			WithPluginRef("non-exist-plugin").
+			WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
+			Build(),
+			setKongPluginBindingAdoptOptions(t, pluginID),
+		)
+
+		t.Log("Waiting for the KongPluginBinding to be marked as not programmed and not adopted")
+		watchFor(t, ctx, w,
+			apiwatch.Modified,
+			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
+				return kpb.Name == kpbGlobal.Name &&
+					conditionsContainProgrammedFalse(kpb.GetConditions()) &&
+					k8sutils.HasConditionFalse(konnectv1alpha1.KonnectEntityAdoptedConditionType, kpb)
+			},
+			"Did not see KongPluginBinding marked as not programmed and not adopted in its conditions.",
+		)
+	})
+}
+
+// setKongPluginBindingAdoptOptions returns a function to set the adopt options on a KongPluginBinding
+// to adopt a plugin from the existing one with the given ID.
+// TODO: Use a more generic way to set adopt options: https://github.com/Kong/kong-operator/issues/2660
+func setKongPluginBindingAdoptOptions(t *testing.T, id string) func(obj client.Object) {
+	return func(obj client.Object) {
+		kpb, ok := obj.(*configurationv1alpha1.KongPluginBinding)
+		require.True(t, ok)
+		kpb.Spec.Adopt = deploy.AdoptOptionsOverrideModeWithID(id)
+	}
+}

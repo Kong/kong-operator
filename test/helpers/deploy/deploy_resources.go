@@ -1243,6 +1243,28 @@ func WithKonnectConfiguration[T ObjectSupportingKonnectConfiguration](
 	}
 }
 
+// AdoptOptionsOverrideModeWithID returns the adopt option with the override mode and the given ID.
+func AdoptOptionsOverrideModeWithID(id string) *commonv1alpha1.AdoptOptions {
+	return &commonv1alpha1.AdoptOptions{
+		From: commonv1alpha1.AdoptSourceKonnect,
+		Mode: commonv1alpha1.AdoptModeOverride,
+		Konnect: &commonv1alpha1.AdoptKonnectOptions{
+			ID: id,
+		},
+	}
+}
+
+// AdoptOptionsMatchModeWithID returns the adopt option with the match mode and the given ID.
+func AdoptOptionsMatchModeWithID(id string) *commonv1alpha1.AdoptOptions {
+	return &commonv1alpha1.AdoptOptions{
+		From: commonv1alpha1.AdoptSourceKonnect,
+		Mode: commonv1alpha1.AdoptModeMatch,
+		Konnect: &commonv1alpha1.AdoptKonnectOptions{
+			ID: id,
+		},
+	}
+}
+
 func logObjectCreate[
 	T interface {
 		client.Object
