@@ -119,18 +119,21 @@ func TestMain(m *testing.M) {
 			if err == nil && apiURL.Host != "" {
 				fmt.Printf("INFO: setting KUBERNETES_SERVICE_HOST=%s for NetworkPolicy support\n", apiURL.Hostname())
 				os.Setenv("KUBERNETES_SERVICE_HOST", apiURL.Hostname())
+			}
+		}
+	}
 
-				// Create fake pod labels file for testing
-				// The controller expects this file when RunningOnKubernetes() is true
-				podLabelsDir := "/etc/podinfo"
-				podLabelsFile := path.Join(podLabelsDir, "labels")
-				if _, err := os.Stat(podLabelsFile); os.IsNotExist(err) {
-					if err := os.MkdirAll(podLabelsDir, 0755); err == nil {
-						// Write minimal pod labels for testing (without trailing newline to avoid empty label parsing)
-						if err := os.WriteFile(podLabelsFile, []byte("app=\"kong-operator\""), 0600); err != nil {
-							fmt.Printf("WARN: failed to create pod labels file: %v\n", err)
-						}
-					}
+	// Create fake pod labels file for testing.
+	// The controller expects this file when RunningOnKubernetes() is true
+	// (i.e., when KUBERNETES_SERVICE_HOST is set).
+	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
+		podLabelsDir := "/etc/podinfo"
+		podLabelsFile := path.Join(podLabelsDir, "labels")
+		if _, err := os.Stat(podLabelsFile); os.IsNotExist(err) {
+			if err := os.MkdirAll(podLabelsDir, 0755); err == nil {
+				// Write minimal pod labels for testing (without trailing newline to avoid empty label parsing)
+				if err := os.WriteFile(podLabelsFile, []byte("app=\"kong-operator\""), 0600); err != nil {
+					fmt.Printf("WARN: failed to create pod labels file: %v\n", err)
 				}
 			}
 		}
