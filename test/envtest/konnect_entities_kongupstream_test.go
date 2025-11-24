@@ -254,20 +254,10 @@ func TestKongUpstream(t *testing.T) {
 		t.Logf("Creating a KongUpstream to adopt existing upstream (ID:%s)", upstreamID)
 		createdUpstream := deploy.KongUpstream(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-			func(obj client.Object) {
-				kup, ok := obj.(*configurationv1alpha1.KongUpstream)
-				require.True(t, ok)
-				kup.Spec.Name = upstreamName
-				kup.Spec.Adopt = &commonv1alpha1.AdoptOptions{
-					From: commonv1alpha1.AdoptSourceKonnect,
-					Mode: commonv1alpha1.AdoptModeOverride,
-					Konnect: &commonv1alpha1.AdoptKonnectOptions{
-						ID: upstreamID,
-					},
-				}
-			})
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongUpstream](commonv1alpha1.AdoptModeOverride, upstreamID),
+		)
 
-		t.Log("Waiting for KongUpstream to set Konnect ID and programmed condition")
+		t.Logf("Waiting for KongUpstream %s/%s to set Konnect ID and programmed condition", ns.Name, createdUpstream.Name)
 		watchFor(t, ctx, w, apiwatch.Modified, func(u *configurationv1alpha1.KongUpstream) bool {
 			return createdUpstream.Name == u.Name &&
 				u.GetKonnectID() == upstreamID && k8sutils.IsProgrammed(u)
@@ -278,7 +268,7 @@ func TestKongUpstream(t *testing.T) {
 		t.Log("Setting up SDK expectations for upstream deletion")
 		sdk.UpstreamsSDK.EXPECT().DeleteUpstream(mock.Anything, cp.GetKonnectID(), upstreamID).Return(nil, nil)
 
-		t.Log("Deleting KongUpstream")
+		t.Logf("Deleting KongUpstream %s/%s", ns.Name, createdUpstream.Name)
 		require.NoError(t, clientNamespaced.Delete(ctx, createdUpstream))
 		eventually.WaitForObjectToNotExist(t, ctx, cl, createdUpstream, waitTime, tickTime)
 

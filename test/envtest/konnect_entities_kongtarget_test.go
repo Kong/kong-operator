@@ -163,19 +163,10 @@ func TestKongTarget(t *testing.T) {
 
 		t.Logf("Creating a KongTarget to adopt the existing target (ID:%s)", targetID)
 		createdTarget := deploy.KongTargetAttachedToUpstream(t, ctx, clientNamespaced, upstream,
-			func(obj client.Object) {
-				kt, ok := obj.(*configurationv1alpha1.KongTarget)
-				require.True(t, ok)
-				kt.Spec.Adopt = &commonv1alpha1.AdoptOptions{
-					From: commonv1alpha1.AdoptSourceKonnect,
-					Mode: commonv1alpha1.AdoptModeOverride,
-					Konnect: &commonv1alpha1.AdoptKonnectOptions{
-						ID: targetID,
-					},
-				}
-			})
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongTarget](commonv1alpha1.AdoptModeOverride, targetID),
+		)
 
-		t.Log("Waiting for KongTarget to set Konnect ID and programmed condition")
+		t.Logf("Waiting for KongTarget %s/%s to set Konnect ID and programmed condition", ns.Name, createdTarget.Name)
 		watchFor(t, ctx, w, apiwatch.Modified, func(kt *configurationv1alpha1.KongTarget) bool {
 			return createdTarget.Name == kt.Name &&
 				kt.GetKonnectID() == targetID && k8sutils.IsProgrammed(kt)
