@@ -447,20 +447,10 @@ func TestKongService(t *testing.T) {
 
 		t.Log("Creating a KongService to adopt the existing service")
 		createdService := deploy.KongService(t, t.Context(), clientNamespaced, deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-			func(obj client.Object) {
-				ks, ok := obj.(*configurationv1alpha1.KongService)
-				require.True(t, ok)
-				ks.Spec.URL = lo.ToPtr("https://example.com/example")
-				ks.Spec.Adopt = &commonv1alpha1.AdoptOptions{
-					From: commonv1alpha1.AdoptSourceKonnect,
-					Mode: commonv1alpha1.AdoptModeOverride,
-					Konnect: &commonv1alpha1.AdoptKonnectOptions{
-						ID: serviceKonnectID,
-					},
-				}
-			})
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongService](commonv1alpha1.AdoptModeOverride, serviceKonnectID),
+		)
 
-		t.Log("Waiting for the service to be programmed and get Konnect ID")
+		t.Logf("Waiting for the KongService %s/%s to be programmed and get Konnect ID", ns.Name, createdService.Name)
 		watchFor(t, t.Context(), w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
 			return ks.Name == createdService.Name &&
 				ks.GetKonnectID() == serviceKonnectID && k8sutils.IsProgrammed(ks)
@@ -475,7 +465,7 @@ func TestKongService(t *testing.T) {
 			serviceKonnectID,
 		).Return(&sdkkonnectops.DeleteServiceResponse{}, nil)
 
-		t.Log("Deleting the KongService")
+		t.Logf("Deleting the KongService %s/%s", ns.Name, createdService.Name)
 		require.NoError(t, clientNamespaced.Delete(t.Context(), createdService))
 
 		t.Log("Waiting for the SDK's DeleteService to be called")
@@ -502,20 +492,10 @@ func TestKongService(t *testing.T) {
 
 		t.Log("Creating a KongService to adopt the existing service")
 		createdService := deploy.KongService(t, t.Context(), clientNamespaced, deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-			func(obj client.Object) {
-				ks, ok := obj.(*configurationv1alpha1.KongService)
-				require.True(t, ok)
-				ks.Spec.URL = lo.ToPtr("https://example.com/example")
-				ks.Spec.Adopt = &commonv1alpha1.AdoptOptions{
-					From: commonv1alpha1.AdoptSourceKonnect,
-					Mode: commonv1alpha1.AdoptModeOverride,
-					Konnect: &commonv1alpha1.AdoptKonnectOptions{
-						ID: serviceKonnectID,
-					},
-				}
-			})
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongService](commonv1alpha1.AdoptModeOverride, serviceKonnectID),
+		)
 
-		t.Log("Waiting for the KongService to be marked as not programmed")
+		t.Logf("Waiting for the KongService %s/%s to be marked as not programmed", ns.Name, createdService.Name)
 		watchFor(t, t.Context(), w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
 			return ks.Name == createdService.Name &&
 				conditionsContainProgrammedFalse(ks.GetConditions()) &&
@@ -555,20 +535,10 @@ func TestKongService(t *testing.T) {
 
 		t.Log("Creating a KongService to adopt the existing service")
 		createdService := deploy.KongService(t, t.Context(), clientNamespaced, deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-			func(obj client.Object) {
-				ks, ok := obj.(*configurationv1alpha1.KongService)
-				require.True(t, ok)
-				ks.Spec.URL = lo.ToPtr("https://example.com/example")
-				ks.Spec.Adopt = &commonv1alpha1.AdoptOptions{
-					From: commonv1alpha1.AdoptSourceKonnect,
-					Mode: commonv1alpha1.AdoptModeOverride,
-					Konnect: &commonv1alpha1.AdoptKonnectOptions{
-						ID: serviceKonnectID,
-					},
-				}
-			})
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongService](commonv1alpha1.AdoptModeOverride, serviceKonnectID),
+		)
 
-		t.Log("Waiting for the KongService to be marked as not programmed")
+		t.Logf("Waiting for the KongService %s/%s to be marked as not programmed", ns.Name, createdService.Name)
 		watchFor(t, t.Context(), w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
 			return ks.Name == createdService.Name &&
 				conditionsContainProgrammedFalse(ks.GetConditions()) &&

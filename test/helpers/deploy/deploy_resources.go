@@ -1243,25 +1243,26 @@ func WithKonnectConfiguration[T ObjectSupportingKonnectConfiguration](
 	}
 }
 
-// AdoptOptionsOverrideModeWithID returns the adopt option with the override mode and the given ID.
-func AdoptOptionsOverrideModeWithID(id string) *commonv1alpha1.AdoptOptions {
-	return &commonv1alpha1.AdoptOptions{
-		From: commonv1alpha1.AdoptSourceKonnect,
-		Mode: commonv1alpha1.AdoptModeOverride,
-		Konnect: &commonv1alpha1.AdoptKonnectOptions{
-			ID: id,
-		},
-	}
+// ObjectSupportingAdoption defines the interface of types supporting adoption.
+type ObjectSupportingAdoption interface {
+	client.Object
+	SetAdoptOptions(*commonv1alpha1.AdoptOptions)
 }
 
-// AdoptOptionsMatchModeWithID returns the adopt option with the match mode and the given ID.
-func AdoptOptionsMatchModeWithID(id string) *commonv1alpha1.AdoptOptions {
-	return &commonv1alpha1.AdoptOptions{
-		From: commonv1alpha1.AdoptSourceKonnect,
-		Mode: commonv1alpha1.AdoptModeMatch,
-		Konnect: &commonv1alpha1.AdoptKonnectOptions{
-			ID: id,
-		},
+// WithKonnectAdoptOptions returns an option function that sets the adopt options to adopt from Konnect.
+func WithKonnectAdoptOptions[T ObjectSupportingAdoption](mode commonv1alpha1.AdoptMode, id string) ObjOption {
+	return func(obj client.Object) {
+		ent, ok := obj.(T)
+		if ok {
+			opts := &commonv1alpha1.AdoptOptions{
+				From: commonv1alpha1.AdoptSourceKonnect,
+				Mode: mode,
+				Konnect: &commonv1alpha1.AdoptKonnectOptions{
+					ID: id,
+				},
+			}
+			ent.SetAdoptOptions(opts)
+		}
 	}
 }
 

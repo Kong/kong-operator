@@ -12,6 +12,7 @@ import (
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect"
@@ -85,10 +86,10 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 			WithPluginRef(proxyCacheKongPlugin.Name).
 			WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
 			Build(),
-			setKongPluginBindingAdoptOptions(t, pluginID),
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongPluginBinding](commonv1alpha1.AdoptModeOverride, pluginID),
 		)
 
-		t.Log("Waiting for KongPluginBinding being Programmed and set Konnect ID")
+		t.Logf("Waiting for KongPluginBinding %s/%s being Programmed and set Konnect ID", ns.Name, kpbGlobal.Name)
 		watchFor(t, ctx, w,
 			apiwatch.Modified,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
@@ -100,7 +101,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 		t.Log("Setting up SDK expectation for plugin deletion")
 		sdk.PluginSDK.EXPECT().DeletePlugin(mock.Anything, cp.GetKonnectID(), pluginID).Return(nil, nil)
 
-		t.Log("Deleting the KongPluginBinding")
+		t.Logf("Deleting the KongPluginBinding %s/%s", ns.Name, kpbGlobal.Name)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpbGlobal))
 		eventually.WaitForObjectToNotExist(t, ctx, cl, kpbGlobal, waitTime, tickTime)
 	})
@@ -141,10 +142,10 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 			WithPluginRef(proxyCacheKongPlugin.Name).
 			WithServiceTarget(kongService.Name).
 			Build(),
-			setKongPluginBindingAdoptOptions(t, pluginID),
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongPluginBinding](commonv1alpha1.AdoptModeOverride, pluginID),
 		)
 
-		t.Log("Waiting for KongPluginBinding being Programmed and set Konnect ID")
+		t.Logf("Waiting for KongPluginBinding %s/%s being Programmed and set Konnect ID", ns.Name, kpbService.Name)
 		watchFor(t, ctx, w,
 			apiwatch.Modified,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
@@ -156,7 +157,7 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 		t.Log("Setting up SDK expectation for plugin deletion")
 		sdk.PluginSDK.EXPECT().DeletePlugin(mock.Anything, cp.GetKonnectID(), pluginID).Return(nil, nil)
 
-		t.Log("Deleting the KongPluginBinding")
+		t.Logf("Deleting the KongPluginBinding %s/%s", ns.Name, kpbService.Name)
 		require.NoError(t, clientNamespaced.Delete(ctx, kpbService))
 		eventually.WaitForObjectToNotExist(t, ctx, cl, kpbService, waitTime, tickTime)
 	})
@@ -183,10 +184,10 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 			WithPluginRef("non-exist-plugin").
 			WithScope(configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane).
 			Build(),
-			setKongPluginBindingAdoptOptions(t, pluginID),
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongPluginBinding](commonv1alpha1.AdoptModeOverride, pluginID),
 		)
 
-		t.Log("Waiting for the KongPluginBinding to be marked as not programmed and not adopted")
+		t.Logf("Waiting for the KongPluginBinding %s/%s to be marked as not programmed and not adopted", ns.Name, kpbGlobal.Name)
 		watchFor(t, ctx, w,
 			apiwatch.Modified,
 			func(kpb *configurationv1alpha1.KongPluginBinding) bool {
@@ -197,15 +198,4 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 			"Did not see KongPluginBinding marked as not programmed and not adopted in its conditions.",
 		)
 	})
-}
-
-// setKongPluginBindingAdoptOptions returns a function to set the adopt options on a KongPluginBinding
-// to adopt a plugin from the existing one with the given ID.
-// TODO: Use a more generic way to set adopt options: https://github.com/Kong/kong-operator/issues/2660
-func setKongPluginBindingAdoptOptions(t *testing.T, id string) func(obj client.Object) {
-	return func(obj client.Object) {
-		kpb, ok := obj.(*configurationv1alpha1.KongPluginBinding)
-		require.True(t, ok)
-		kpb.Spec.Adopt = deploy.AdoptOptionsOverrideModeWithID(id)
-	}
 }
