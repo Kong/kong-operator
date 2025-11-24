@@ -153,11 +153,20 @@ func TestMain(m *testing.M) {
 		podLabelsDir := "/etc/podinfo"
 		podLabelsFile := path.Join(podLabelsDir, "labels")
 		if _, err := os.Stat(podLabelsFile); os.IsNotExist(err) {
-			if err := os.MkdirAll(podLabelsDir, 0755); err == nil {
-				// Write minimal pod labels for testing (without trailing newline to avoid empty label parsing)
-				if err := os.WriteFile(podLabelsFile, []byte("app=\"kong-operator\""), 0600); err != nil {
-					fmt.Printf("WARN: failed to create pod labels file: %v\n", err)
-				}
+			fmt.Printf("INFO: creating pod labels file at %s\n", podLabelsFile)
+			if err := os.MkdirAll(podLabelsDir, 0755); err != nil {
+				exitOnErr(fmt.Errorf("failed to create directory %s: %w", podLabelsDir, err))
+			}
+			// Write minimal pod labels for testing (without trailing newline to avoid empty label parsing)
+			if err := os.WriteFile(podLabelsFile, []byte("app=\"kong-operator\""), 0600); err != nil {
+				exitOnErr(fmt.Errorf("failed to create pod labels file %s: %w", podLabelsFile, err))
+			}
+			fmt.Printf("INFO: successfully created pod labels file\n")
+			// Verify the file was actually created and is readable
+			if content, err := os.ReadFile(podLabelsFile); err != nil {
+				exitOnErr(fmt.Errorf("failed to verify pod labels file %s: %w", podLabelsFile, err))
+			} else {
+				fmt.Printf("INFO: verified pod labels file content: %s\n", string(content))
 			}
 		}
 	}
