@@ -109,7 +109,7 @@ func createGlobalTestHTTPBackendRef(name, namespace string, weight, port *int32,
 	}
 
 	if port != nil {
-		portNum := gwtypes.PortNumber(*port)
+		portNum := *port
 		ref.Port = &portNum
 	}
 
@@ -209,7 +209,7 @@ func TestFindBackendRefPortInService(t *testing.T) {
 	createTestHTTPBackendRef := func(port *int32) *gwtypes.HTTPBackendRef {
 		ref := &gwtypes.HTTPBackendRef{}
 		if port != nil {
-			ref.Port = (*gwtypes.PortNumber)(port)
+			ref.Port = port
 		}
 		return ref
 	}
@@ -1704,7 +1704,6 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 	// Test ReferenceGrant scenarios.
 	t.Run("ReferenceGrant enabled scenarios", func(t *testing.T) {
-
 		existingServices := []corev1.Service{
 			*createTestService("cross-ns-service", "other-namespace", corev1.ServiceTypeClusterIP, "10.0.0.1", "", []corev1.ServicePort{
 				{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)},

@@ -91,7 +91,7 @@ func findBackendRefPortInService(bRef *gwtypes.HTTPBackendRef, svc *corev1.Servi
 
 	// Find the port in the service that matches the port in the BackendRef.
 	svcPort, svcPortFound := lo.Find(svc.Spec.Ports, func(p corev1.ServicePort) bool {
-		return p.Port == int32(*bRef.Port)
+		return p.Port == *bRef.Port
 	})
 	if !svcPortFound {
 		// If the port is not found, return an error.
@@ -376,7 +376,8 @@ func recalculateWeightsAcrossBackendRefs(validBackendRefs []validBackendRef) []v
 // createTargetsFromValidBackendRefs creates KongTargets from validBackendRef structs.
 // This function handles all service types (ClusterIP, ExternalName, FQDN) using a unified approach.
 func createTargetsFromValidBackendRefs(ctx context.Context, logger logr.Logger, cl client.Client, httpRoute *gwtypes.HTTPRoute, pRef *gwtypes.ParentReference, upstreamName string,
-	validBackendRefs []validBackendRef) ([]configurationv1alpha1.KongTarget, error) {
+	validBackendRefs []validBackendRef,
+) ([]configurationv1alpha1.KongTarget, error) {
 	var targets []configurationv1alpha1.KongTarget
 
 	for _, vbRef := range validBackendRefs {
