@@ -126,6 +126,7 @@ func createTestScheme() *runtime.Scheme {
 	_ = corev1.AddToScheme(scheme)
 	_ = discoveryv1.AddToScheme(scheme)
 	_ = gatewayv1beta1.Install(scheme)
+	_ = configurationv1alpha1.AddToScheme(scheme)
 	return scheme
 }
 
@@ -2145,10 +2146,6 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 				// Verify labels and annotations exist.
 				assert.NotEmpty(t, target.Labels)
 				assert.NotEmpty(t, target.Annotations)
-
-				// Verify owner reference is set.
-				assert.Len(t, target.OwnerReferences, 1)
-				assert.Equal(t, "test-route", target.OwnerReferences[0].Name)
 			},
 		},
 		{
@@ -2309,8 +2306,12 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Create test context and fake client
+			ctx := context.Background()
+			fakeClient := createTestFakeClient() // Empty client since we expect new targets to be created
+
 			// Call the function.
-			targets, err := createTargetsFromValidBackendRefs(tt.httpRoute, tt.pRef, tt.upstreamName, tt.validBackendRefs)
+			targets, err := createTargetsFromValidBackendRefs(ctx, logr.Discard(), fakeClient, tt.httpRoute, tt.pRef, tt.upstreamName, tt.validBackendRefs)
 
 			// Check error expectation.
 			if tt.expectedError {
@@ -2343,10 +2344,6 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 
 				// Target should have an address:port format.
 				assert.Contains(t, target.Spec.Target, ":")
-
-				// Should have owner reference to the HTTPRoute.
-				require.Len(t, target.OwnerReferences, 1)
-				assert.Equal(t, tt.httpRoute.Name, target.OwnerReferences[0].Name)
 			}
 		})
 	}
@@ -2785,10 +2782,6 @@ func TestTargetsForBackendRefs(t *testing.T) {
 
 				// Target should have an address:port format.
 				assert.Contains(t, target.Spec.Target, ":")
-
-				// Should have owner reference to the HTTPRoute.
-				require.Len(t, target.OwnerReferences, 1)
-				assert.Equal(t, tt.httpRoute.Name, target.OwnerReferences[0].Name)
 			}
 		})
 	}

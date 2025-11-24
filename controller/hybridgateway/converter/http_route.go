@@ -14,13 +14,15 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	"github.com/kong/kong-operator/controller/hybridgateway/builder"
 	hybridgatewayerrors "github.com/kong/kong-operator/controller/hybridgateway/errors"
-	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
-	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/controller/hybridgateway/kongroute"
+	"github.com/kong/kong-operator/controller/hybridgateway/plugin"
+	"github.com/kong/kong-operator/controller/hybridgateway/pluginbinding"
 	"github.com/kong/kong-operator/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/controller/hybridgateway/service"
 	"github.com/kong/kong-operator/controller/hybridgateway/target"
+	"github.com/kong/kong-operator/controller/hybridgateway/upstream"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
@@ -334,31 +336,19 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				"filterCount", len(rule.Filters))
 
 			// Build the KongUpstream resource.
-			upstreamName := namegen.NewKongUpstreamName(cp, rule)
-			log.Trace(logger, "Building KongUpstream resource",
-				"upstream", upstreamName,
-				"controlPlane", cp.KonnectNamespacedRef)
-
-			upstream, err := builder.NewKongUpstream().
-				WithName(upstreamName).
-				WithNamespace(c.route.Namespace).
-				WithLabels(c.route, &pRef).
-				WithAnnotations(c.route, &pRef).
-				WithSpecName(upstreamName).
-				WithControlPlaneRef(*cp).
-				WithOwner(c.route).Build()
+			upstreamPtr, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
 			if err != nil {
-				log.Error(logger, err, "Failed to build KongUpstream resource, skipping rule",
-					"upstream", upstreamName,
+				log.Error(logger, err, "Failed to translate KongUpstream resource for rule, skipping rule",
 					"controlPlane", cp.KonnectNamespacedRef)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to build KongUpstream %s: %w", upstreamName, err))
+				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongUpstream resource: %w", err))
 				continue
 			}
-			c.outputStore = append(c.outputStore, &upstream)
-			log.Debug(logger, "Successfully built KongUpstream resource",
+			upstreamName := upstreamPtr.Name
+			c.outputStore = append(c.outputStore, upstreamPtr)
+			log.Debug(logger, "Successfully translated KongUpstream resource",
 				"upstream", upstreamName)
 
-			// Build the KongTarget resources using the new rule-based approach.
+			// Build the KongTarget resources.
 			targets, err := target.TargetsForBackendRefs(
 				ctx,
 				logger.WithValues("upstream", upstreamName),
@@ -372,14 +362,14 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				c.clusterDomain,
 			)
 			if err != nil {
-				log.Error(logger, err, "Failed to create KongTarget resources for rule, skipping rule",
+				log.Error(logger, err, "Failed to translate KongTarget resources for rule, skipping rule",
 					"upstream", upstreamName,
 					"backendRefs", rule.BackendRefs,
 					"parentRef", pRef)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to create KongTarget resources for upstream %s: %w", upstreamName, err))
+				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongTarget resources for upstream %s: %w", upstreamName, err))
 				continue
 			}
-			log.Debug(logger, "Successfully created KongTarget resources",
+			log.Debug(logger, "Successfully translated KongTarget resources",
 				"upstream", upstreamName,
 				"targetCount", len(targets))
 			for _, tgt := range targets {
@@ -387,120 +377,71 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			}
 
 			// Build the KongService resource.
-			serviceName := namegen.NewKongServiceName(cp, rule)
-			log.Trace(logger, "Building KongService resource",
-				"service", serviceName,
-				"upstream", upstreamName)
-
-			service, err := builder.NewKongService().
-				WithName(serviceName).
-				WithNamespace(c.route.Namespace).
-				WithLabels(c.route, &pRef).
-				WithAnnotations(c.route, &pRef).
-				WithSpecName(serviceName).
-				WithSpecHost(upstreamName).
-				WithControlPlaneRef(*cp).
-				WithOwner(c.route).Build()
+			servicePtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
 			if err != nil {
-				log.Error(logger, err, "Failed to build KongService resource, skipping rule",
-					"service", serviceName,
+				log.Error(logger, err, "Failed to translate KongService resource, skipping rule",
+					"controlPlane", cp.KonnectNamespacedRef,
 					"upstream", upstreamName)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to build KongService %s: %w", serviceName, err))
+				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongService for rule: %w", err))
 				continue
 			}
-			c.outputStore = append(c.outputStore, &service)
-			log.Debug(logger, "Successfully built KongService resource",
+			serviceName := servicePtr.Name
+			c.outputStore = append(c.outputStore, servicePtr)
+			log.Debug(logger, "Successfully translated KongService resource",
 				"service", serviceName)
 
-			// Build the kong route resource.
-			routeName := namegen.NewKongRouteName(c.route, cp, rule)
-			log.Trace(logger, "Building KongRoute resource",
-				"kongRoute", routeName,
-				"service", serviceName,
-				"hostnames", hostnames,
-				"matchCount", len(rule.Matches))
-
-			routeBuilder := builder.NewKongRoute().
-				WithName(routeName).
-				WithNamespace(c.route.Namespace).
-				WithLabels(c.route, &pRef).
-				WithAnnotations(c.route, &pRef).
-				WithSpecName(routeName).
-				WithHosts(hostnames).
-				WithStripPath(metadata.ExtractStripPath(c.route.Annotations)).
-				WithKongService(serviceName).
-				WithOwner(c.route)
-			for _, match := range rule.Matches {
-				routeBuilder = routeBuilder.WithHTTPRouteMatch(match)
-			}
-			route, err := routeBuilder.Build()
+			// Build the KongRoute resource.
+			routePtr, err := kongroute.RouteForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)
 			if err != nil {
-				log.Error(logger, err, "Failed to build KongRoute resource, skipping rule",
-					"kongRoute", routeName,
+				log.Error(logger, err, "Failed to translate KongRoute resource, skipping rule",
 					"service", serviceName,
 					"hostnames", hostnames)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to build KongRoute %s: %w", routeName, err))
+				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongRoute for rule: %w", err))
 				continue
 			}
-			c.outputStore = append(c.outputStore, &route)
-			log.Debug(logger, "Successfully built KongRoute resource",
-				"kongRoute", routeName)
+			routeName := routePtr.Name
+			c.outputStore = append(c.outputStore, routePtr)
+			log.Debug(logger, "Successfully translated KongRoute resource",
+				"route", routeName)
 
-			// Build the kong plugin and kong plugin binding resources.
+			// Build the KongPlugin and KongPluginBinding resources.
 			log.Debug(logger, "Processing filters for rule",
 				"kongRoute", routeName,
 				"filterCount", len(rule.Filters))
 
 			for _, filter := range rule.Filters {
-				pluginName := namegen.NewKongPluginName(filter)
-
-				log.Trace(logger, "Building KongPlugin resource",
-					"plugin", pluginName,
-					"filterType", filter.Type)
-
-				plugin, err := builder.NewKongPlugin().
-					WithName(pluginName).
-					WithNamespace(c.route.Namespace).
-					WithLabels(c.route, &pRef).
-					WithAnnotations(c.route, &pRef).
-					WithFilter(filter).
-					WithOwner(c.route).Build()
+				pluginPtr, err := plugin.PluginForFilter(ctx, logger, c.Client, c.route, filter, &pRef)
 				if err != nil {
-					log.Error(logger, err, "Failed to build KongPlugin resource, skipping filter",
-						"plugin", pluginName,
-						"filterType", filter.Type)
-					translationErrors = append(translationErrors, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err))
+					log.Error(logger, err, "Failed to translate KongPlugin resource, skipping filter",
+						"filter", filter.Type)
+					translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongPlugin for filter: %w", err))
 					continue
 				}
-				c.outputStore = append(c.outputStore, &plugin)
+				pluginName := pluginPtr.Name
+				c.outputStore = append(c.outputStore, pluginPtr)
 
-				// Create a KongPluginBinding to bind the KongPlugin to each rule match.
-				bindingName := namegen.NewKongPluginBindingName(routeName, pluginName)
-				log.Trace(logger, "Building KongPluginBinding resource",
-					"binding", bindingName,
-					"plugin", pluginName,
-					"kongRoute", routeName)
-
-				binding, err := builder.NewKongPluginBinding().
-					WithName(bindingName).
-					WithNamespace(c.route.Namespace).
-					WithLabels(c.route, &pRef).
-					WithAnnotations(c.route, &pRef).
-					WithPluginRef(pluginName).
-					WithControlPlaneRef(*cp).
-					WithOwner(c.route).
-					WithRouteRef(routeName).Build()
+				// Create a KongPluginBinding to bind the KongPlugin to each KongRoute.
+				bindingPtr, err := pluginbinding.BindingForPluginAndRoute(
+					ctx,
+					logger,
+					c.Client,
+					c.route,
+					&pRef,
+					cp,
+					pluginName,
+					routeName,
+				)
 				if err != nil {
 					log.Error(logger, err, "Failed to build KongPluginBinding resource, skipping binding",
-						"binding", bindingName,
 						"plugin", pluginName,
 						"kongRoute", routeName)
-					translationErrors = append(translationErrors, fmt.Errorf("failed to build KongPluginBinding %s: %w", bindingName, err))
+					translationErrors = append(translationErrors, fmt.Errorf("failed to build KongPluginBinding for plugin %s: %w", pluginName, err))
 					continue
 				}
-				c.outputStore = append(c.outputStore, &binding)
+				bindingName := bindingPtr.Name
+				c.outputStore = append(c.outputStore, bindingPtr)
 
-				log.Debug(logger, "Successfully built KongPlugin and KongPluginBinding resources",
+				log.Debug(logger, "Successfully translated KongPlugin and KongPluginBinding resources",
 					"plugin", pluginName,
 					"binding", bindingName)
 			}

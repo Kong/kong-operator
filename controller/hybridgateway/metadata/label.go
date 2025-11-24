@@ -20,9 +20,7 @@ func buildManagedByLabels(obj client.Object, pRef *gwtypes.ParentReference) map[
 	// If no ParentReference is provided, only include labels for the managing object.
 	if pRef == nil {
 		return map[string]string{
-			consts.GatewayOperatorManagedByLabel:          obj.GetObjectKind().GroupVersionKind().Kind,
-			consts.GatewayOperatorManagedByNameLabel:      obj.GetName(),
-			consts.GatewayOperatorManagedByNamespaceLabel: obj.GetNamespace(),
+			consts.GatewayOperatorManagedByLabel: obj.GetObjectKind().GroupVersionKind().Kind,
 		}
 	}
 
@@ -37,8 +35,6 @@ func buildManagedByLabels(obj client.Object, pRef *gwtypes.ParentReference) map[
 
 	return map[string]string{
 		consts.GatewayOperatorManagedByLabel:               obj.GetObjectKind().GroupVersionKind().Kind,
-		consts.GatewayOperatorManagedByNameLabel:           obj.GetName(),
-		consts.GatewayOperatorManagedByNamespaceLabel:      obj.GetNamespace(),
 		consts.GatewayOperatorHybridGatewaysNameLabel:      gwObjKey.Name,
 		consts.GatewayOperatorHybridGatewaysNamespaceLabel: gwObjKey.Namespace,
 	}
