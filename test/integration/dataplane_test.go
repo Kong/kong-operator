@@ -32,6 +32,7 @@ import (
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test"
 	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/test/helpers/conditions"
 	"github.com/kong/kong-operator/test/helpers/deploy"
 	"github.com/kong/kong-operator/test/helpers/eventually"
 )
@@ -1353,7 +1354,7 @@ func TestDataPlaneWithKonnectExtension(t *testing.T) {
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
 		require.NoError(t, err)
-		assertKonnectEntityProgrammed(t, cp)
+		conditions.KonnectEntityIsProgrammed(t, cp)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	// Creating a KonnectExtension that references the ControlPlane created above
