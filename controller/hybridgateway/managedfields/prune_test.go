@@ -145,6 +145,98 @@ func TestPruneEmptyFields_AllBranches(t *testing.T) {
 			input:  map[string]any{"a": []any{map[string]any{}, 1}},
 			expect: map[string]any{"a": []any{1}},
 		},
+		{
+			name:   "keeps false boolean value",
+			input:  map[string]any{"enabled": false, "disabled": false},
+			expect: map[string]any{"enabled": false, "disabled": false},
+		},
+		{
+			name:   "keeps true boolean value",
+			input:  map[string]any{"enabled": true},
+			expect: map[string]any{"enabled": true},
+		},
+		{
+			name:   "keeps pointer to zero integer",
+			input:  map[string]any{"retries": new(int)}, // pointer to 0
+			expect: map[string]any{"retries": new(int)},
+		},
+		{
+			name: "removes nil pointer",
+			input: map[string]any{
+				"timeout": (*int)(nil),
+			},
+			expect: map[string]any{},
+		},
+		{
+			name: "keeps pointer to zero int64",
+			input: func() map[string]any {
+				val := int64(0)
+				return map[string]any{"timeout": &val}
+			}(),
+			expect: func() map[string]any {
+				val := int64(0)
+				return map[string]any{"timeout": &val}
+			}(),
+		},
+		{
+			name: "keeps pointer to non-zero value",
+			input: func() map[string]any {
+				val := int64(5)
+				return map[string]any{"timeout": &val}
+			}(),
+			expect: func() map[string]any {
+				val := int64(5)
+				return map[string]any{"timeout": &val}
+			}(),
+		},
+		{
+			name: "mixed booleans and pointers",
+			input: func() map[string]any {
+				retries := 0
+				timeout := int64(100)
+				return map[string]any{
+					"enabled":  false,
+					"retries":  &retries,
+					"timeout":  &timeout,
+					"nilPtr":   (*int)(nil),
+					"emptyStr": "",
+					"keepThis": "value",
+				}
+			}(),
+			expect: func() map[string]any {
+				retries := 0
+				timeout := int64(100)
+				return map[string]any{
+					"enabled":  false,
+					"retries":  &retries,
+					"timeout":  &timeout,
+					"keepThis": "value",
+				}
+			}(),
+		},
+		{
+			name: "nested structure with booleans and pointers",
+			input: func() map[string]any {
+				zero := 0
+				return map[string]any{
+					"config": map[string]any{
+						"stripPath": false,
+						"retries":   &zero,
+						"emptyMap":  map[string]any{},
+						"name":      "",
+					},
+				}
+			}(),
+			expect: func() map[string]any {
+				zero := 0
+				return map[string]any{
+					"config": map[string]any{
+						"stripPath": false,
+						"retries":   &zero,
+					},
+				}
+			}(),
+		},
 	}
 
 	for _, tc := range cases {
