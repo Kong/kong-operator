@@ -24,7 +24,7 @@ import (
 // if the ControlPlane exists in Konnect and returns an error if it does not.
 func ensureControlPlane(
 	ctx context.Context,
-	sdk sdkops.ControlPlaneSDK,
+	sdk sdkkonnectgo.ControlPlanesSDK,
 	sdkGroups sdkops.ControlPlaneGroupSDK,
 	cl client.Client,
 	cp *konnectv1alpha2.KonnectGatewayControlPlane,
@@ -57,7 +57,7 @@ func ensureControlPlane(
 // is returned so it can be handled properly downstream.
 func createControlPlane(
 	ctx context.Context,
-	sdk sdkops.ControlPlaneSDK,
+	sdk sdkkonnectgo.ControlPlanesSDK,
 	sdkGroups sdkops.ControlPlaneGroupSDK,
 	cl client.Client,
 	cp *konnectv1alpha2.KonnectGatewayControlPlane,
@@ -96,7 +96,7 @@ func createControlPlane(
 // It is assumed that the Konnect ControlPlane has a Konnect ID.
 func deleteControlPlane(
 	ctx context.Context,
-	sdk sdkops.ControlPlaneSDK,
+	sdk sdkkonnectgo.ControlPlanesSDK,
 	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 ) error {
 	// if the source type is Mirror, don't touch the Konnect entity.
@@ -119,7 +119,7 @@ func deleteControlPlane(
 // be handled properly downstream.
 func updateControlPlane(
 	ctx context.Context,
-	sdk sdkops.ControlPlaneSDK,
+	sdk sdkkonnectgo.ControlPlanesSDK,
 	sdkGroups sdkops.ControlPlaneGroupSDK,
 	cl client.Client,
 	cp *konnectv1alpha2.KonnectGatewayControlPlane,
@@ -246,7 +246,7 @@ func (m membersByID) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
 // that matches the UID of the provided KonnectGatewayControlPlane.
 func getControlPlaneForUID(
 	ctx context.Context,
-	sdk sdkops.ControlPlaneSDK,
+	sdk sdkkonnectgo.ControlPlanesSDK,
 	sdkGroups sdkops.ControlPlaneGroupSDK,
 	cl client.Client,
 	cp *konnectv1alpha2.KonnectGatewayControlPlane,
@@ -288,7 +288,7 @@ func getControlPlaneForUID(
 // GetControlPlaneByID returns the Konnect ControlPlane that matches the provided ID.
 func GetControlPlaneByID(
 	ctx context.Context,
-	sdk sdkops.ControlPlaneSDK,
+	sdk sdkkonnectgo.ControlPlanesSDK,
 	id string,
 ) (*sdkkonnectcomp.ControlPlane, error) {
 	reqList := sdkkonnectops.ListControlPlanesRequest{
