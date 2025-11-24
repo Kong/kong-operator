@@ -3,6 +3,7 @@ package conformance
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"path"
 	"runtime/debug"
@@ -105,6 +106,35 @@ func TestMain(m *testing.M) {
 	cleanupTelepresence, err := helpers.SetupTelepresence(ctx)
 	exitOnErr(err)
 	defer cleanupTelepresence()
+
+	// Set KUBERNETES_SERVICE_HOST to enable NetworkPolicy creation in tests.
+	// When running with telepresence, the controller can access cluster services
+	// and should create NetworkPolicies just like it would when deployed in-cluster.
+	// See: https://github.com/Kong/kong-operator/issues/2074
+	if os.Getenv("KUBERNETES_SERVICE_HOST") == "" {
+		// Get the Kubernetes API server host from the cluster config
+		restConfig := env.Cluster().Config()
+		if restConfig.Host != "" {
+			apiURL, err := url.Parse(restConfig.Host)
+			if err == nil && apiURL.Host != "" {
+				fmt.Printf("INFO: setting KUBERNETES_SERVICE_HOST=%s for NetworkPolicy support\n", apiURL.Hostname())
+				os.Setenv("KUBERNETES_SERVICE_HOST", apiURL.Hostname())
+
+				// Create fake pod labels file for testing
+				// The controller expects this file when RunningOnKubernetes() is true
+				podLabelsDir := "/etc/podinfo"
+				podLabelsFile := path.Join(podLabelsDir, "labels")
+				if _, err := os.Stat(podLabelsFile); os.IsNotExist(err) {
+					if err := os.MkdirAll(podLabelsDir, 0755); err == nil {
+						// Write minimal pod labels for testing (without trailing newline to avoid empty label parsing)
+						if err := os.WriteFile(podLabelsFile, []byte("app=\"kong-operator\""), 0600); err != nil {
+							fmt.Printf("WARN: failed to create pod labels file: %v\n", err)
+						}
+					}
+				}
+			}
+		}
+	}
 
 	fmt.Println("INFO: starting the operator's controller manager")
 	// startControllerManager will spawn the controller manager in a separate

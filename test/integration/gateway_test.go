@@ -93,10 +93,8 @@ func TestGatewayEssentials(t *testing.T) {
 	controlplane := controlplanes[0]
 
 	t.Run("checking NetworkPolicies", func(t *testing.T) {
-		t.Skip("skipping as this requires adding network intercepts for integration tests: https://github.com/Kong/kong-operator/issues/2074")
-		// NOTE: We're not verifying if the NetworkPolicies are created
-		// in integration tests.
-		// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
+		t.Log("verifying networkpolicies are created")
+		require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 	})
 
 	t.Log("verifying connectivity to the Gateway")
@@ -198,10 +196,11 @@ func TestGatewayEssentials(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Run("checking NetworkPolicies", func(t *testing.T) {
-		t.Skip("skipping as this requires adding network intercepts for integration tests: https://github.com/Kong/kong-operator/issues/2074")
-		// NOTE: We're not verifying if the NetworkPolicies are created
-		// in integration tests.
-		// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
+		t.Log("verifying networkpolicies are deleted")
+		require.Eventually(t,
+			testutils.Not(testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients)),
+			time.Minute, time.Second,
+		)
 	})
 
 	t.Log("verifying that gateway itself is deleted")
@@ -299,10 +298,8 @@ func TestGatewayHybridFull(t *testing.T) {
 	konnectGatewayControlPlane := konnectGatewayControlPlanes[0]
 
 	t.Run("checking NetworkPolicies", func(t *testing.T) {
-		t.Skip("skipping as this requires adding network intercepts for integration tests: https://github.com/Kong/kong-operator/issues/2074")
-		// NOTE: We're not verifying if the NetworkPolicies are created
-		// in integration tests.
-		// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
+		t.Log("verifying networkpolicies are created")
+		require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 	})
 
 	t.Log("verifying connectivity to the Gateway")
@@ -457,10 +454,11 @@ func TestGatewayHybridFull(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Run("checking NetworkPolicies", func(t *testing.T) {
-		t.Skip("skipping as this requires adding network intercepts for integration tests: https://github.com/Kong/kong-operator/issues/2074")
-		// NOTE: We're not verifying if the NetworkPolicies are created
-		// in integration tests.
-		// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
+		t.Log("verifying networkpolicies are deleted")
+		require.Eventually(t,
+			testutils.Not(testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients)),
+			time.Minute, time.Second,
+		)
 	})
 
 	t.Log("verifying that gateway itself is deleted")
@@ -745,10 +743,8 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneNN, clients, 1), time.Minute, time.Second)
 
 	t.Run("checking NetworkPolicies", func(t *testing.T) {
-		t.Skip("skipping as this requires adding network intercepts for integration tests: https://github.com/Kong/kong-operator/issues/2074")
-		// NOTE: We're not verifying if the NetworkPolicies are created
-		// in integration tests.
-		// Code ref: https://github.com/Kong/kong-operator/blob/27e3c46cd201bf3d03d2e81000239b047da2b2ce/controller/gateway/controller.go#L397-L410
+		t.Log("verifying networkpolicies are created")
+		require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 	})
 
 	t.Log("verifying connectivity to the Gateway")
@@ -880,8 +876,6 @@ func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
 }
 
 func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
-	t.Skip("skipping as this requires adding network intercepts for integration tests: https://github.com/Kong/kong-operator/issues/2074")
-
 	t.Parallel()
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -931,7 +925,6 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	require.Eventually(t, testutils.GatewayControlPlaneIsProvisioned(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
 	controlplanes := testutils.MustListControlPlanesForGateway(t, GetCtx(), gateway, clients)
 	require.Len(t, controlplanes, 1)
-	controlplane := controlplanes[0]
 
 	t.Log("verifying DataPlane's NetworkPolicies is created")
 	require.Eventually(t, testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients), testutils.SubresourceReadinessWait, time.Second)
@@ -943,13 +936,11 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	t.Log("verifying that the DataPlane's Pod Admin API is network restricted to ControlPlane Pods")
 	var expectLimitedAdminAPI networkPolicyIngressRuleDecorator
 	expectLimitedAdminAPI.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneAdminAPIPort)
-
-	// TODO: https://github.com/Kong/kong-operator/issues/2074
-	// Re-enable/adjust once the dataplane's admin API is network restricted to KO.
-	// expectLimitedAdminAPI.withPeerMatchLabels(
-	// 	map[string]string{"app": controlplane.Name},
-	// 	map[string]string{"kubernetes.io/metadata.name": dataplane.Namespace},
-	// )
+	// The controller restricts admin API access to kong-operator pods in kong-system namespace
+	expectLimitedAdminAPI.withPeerMatchLabels(
+		map[string]string{"app": "kong-operator"},
+		map[string]string{"kubernetes.io/metadata.name": "kong-system"},
+	)
 
 	t.Log("verifying that the DataPlane's proxy ingress traffic is allowed")
 	var expectAllowProxyIngress networkPolicyIngressRuleDecorator
@@ -1017,8 +1008,8 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 		var expectedUpdatedLimitedAdminAPI networkPolicyIngressRuleDecorator
 		expectedUpdatedLimitedAdminAPI.withProtocolPort(corev1.ProtocolTCP, 8555)
 		expectedUpdatedLimitedAdminAPI.withPeerMatchLabels(
-			map[string]string{"app": controlplane.Name},
-			map[string]string{"kubernetes.io/metadata.name": controlplane.Namespace},
+			map[string]string{"app": "kong-operator"},
+			map[string]string{"kubernetes.io/metadata.name": "kong-system"},
 		)
 		if !assert.Eventually(t,
 			testutils.GatewayNetworkPolicyForGatewayContainsRules(t, GetCtx(), gateway, clients, expectedUpdatedLimitedAdminAPI.Rule),
@@ -1035,8 +1026,8 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 		var notExpectedUpdatedLimitedAdminAPI networkPolicyIngressRuleDecorator
 		notExpectedUpdatedLimitedAdminAPI.withProtocolPort(corev1.ProtocolTCP, consts.DataPlaneAdminAPIPort)
 		notExpectedUpdatedLimitedAdminAPI.withPeerMatchLabels(
-			map[string]string{"app": controlplane.Name},
-			map[string]string{"kubernetes.io/metadata.name": controlplane.Namespace},
+			map[string]string{"app": "kong-operator"},
+			map[string]string{"kubernetes.io/metadata.name": "kong-system"},
 		)
 		require.Eventually(t,
 			testutils.Not(testutils.GatewayNetworkPolicyForGatewayContainsRules(t, GetCtx(), gateway, clients, notExpectedUpdatedLimitedAdminAPI.Rule)),
