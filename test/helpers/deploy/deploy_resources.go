@@ -13,7 +13,6 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
@@ -345,7 +344,6 @@ func KonnectGatewayControlPlaneLabel(key, value string) ObjOption {
 func KonnectGatewayControlPlaneWithID(
 	t *testing.T,
 	ctx context.Context,
-	mgr manager.Manager,
 	cl client.Client,
 	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
 	opts ...ObjOption,
@@ -371,9 +369,6 @@ func KonnectGatewayControlPlaneWithID(
 		opt(cp)
 	}
 	require.NoError(t, cl.Status().Update(ctx, cp))
-	// Make sure we get the latest status in the cache to prevent watchers not
-	// being notified about Control Plane status changes.
-	require.True(t, mgr.GetCache().WaitForCacheSync(ctx))
 	return cp
 }
 

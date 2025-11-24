@@ -38,7 +38,7 @@ func TestKongPluginFinalizer(t *testing.T) {
 	clientNamespaced := client.NewNamespacedClient(cl, ns.Name)
 
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
 	StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityPluginReconciler[configurationv1alpha1.KongService](logging.DevelopmentMode, cl),
