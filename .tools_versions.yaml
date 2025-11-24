@@ -21,7 +21,7 @@ mockery: "3.6.1"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
 setup-envtest: "0.22.4"
 # renovate: datasource=github-releases depName=rhysd/actionlint
-actionlint: "1.7.8"
+actionlint: "1.7.9"
 # renovate: datasource=github-releases depName=koalaman/shellcheck
 shellcheck: "0.11.0"
 # NOTE: This does not work and requires further investigation.
