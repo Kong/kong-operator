@@ -52,7 +52,7 @@ func PluginForFilter(
 
 	plugin, err := builder.NewKongPlugin().
 		WithName(pluginName).
-		WithNamespace(httpRoute.Namespace).
+		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
 		WithLabels(httpRoute, pRef).
 		WithAnnotations(httpRoute, pRef).
 		WithFilter(filter).
