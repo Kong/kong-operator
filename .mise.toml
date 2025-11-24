@@ -7,16 +7,28 @@ MISE_DATA_DIR='bin/'
 helm = "https://github.com/Antiarchitect/asdf-helm.git#00b6ead39b97536304042241f31242811ca39f74"
 govulncheck = "https://github.com/wizzardich/asdf-govulncheck.git#2e3e9ce0edbc6ec89097d221c9a04217bbe1f51b"
 markdownlint-cli2 = "https://github.com/paulo-ferraz-oliveira/asdf-markdownlint-cli2.git#6d14d9fb2f6f7572e7cbcbb818da9670ba4bef62"
-telepresence = "https://github.com/pirackr/asdf-telepresence.git#c9eeab4d28b9851bb904c4c67239a118c8dd384d"
 kubelinter = "https://github.com/the-cashman/asdf-kube-linter.git#14a55249ef69d5fe98b027b89f111aec2c30ee57"
-shellcheck = "https://github.com/luizm/asdf-shellcheck.git#8b954a95d44b8d8a6c6cd5a5a52ed643b7bb52e3"
-actionlint = "https://github.com/crazy-matt/asdf-actionlint.git#f8df3cfa05a1c875415b015808548bc8bac3b3a4"
-mockery = "https://github.com/cabify/asdf-mockery.git#1cb81d68720263709d8f24eb2dafd303c9097b1d"
-setup-envtest = "https://github.com/pmalek/mise-setup-envtest.git#061f3ab0bb3238d9425417cb6879dfd1f810d371"
-skaffold = "https://github.com/nklmilojevic/asdf-skaffold.git#bf2f9922ddfc4d8613a2d92f3fedc458464e36e6"
-gotestsum = "https://github.com/pmalek/mise-gotestsum.git#66845ffc7d0c1ecb0e344be4c66e9babe256c7b7"
-golangci-lint = "https://github.com/hypnoglow/asdf-golangci-lint.git#f02f2ee73bd6d1bc4d69d6aad583cf05879fc9ea"
 kube-code-generator = "https://github.com/mise-plugins/mise-kube-code-generator.git#e98effe0bda46523b4dee7217767457f7ca13fd4"
-kustomize = "https://github.com/Banno/asdf-kustomize.git#a5ecf778e74cbd7d118455c14c2d479d83be88c8"
-kube-controller-tools = "https://github.com/jimmidyson/asdf-kube-controller-tools.git#37526dcd7c92c60a6984459ba1f5144108e2978e"
-yq = "https://github.com/sudermanjr/asdf-yq.git#772992f66c49fe681b1cd02d14e8166930472bf1"
+
+# NOTE: The reason for tool version being set here and not in .tools-versions.toml
+# is that mise requires the version to be specified when using version_prefix
+# and we need to set the latter for kustomize because its tags on GitHub are prefixed
+# with "kustomize/".
+
+# NOTE renovate's mise manager doesn't want to work with this for some reason
+# so we add renovate comments manually here.
+# Ref: https://docs.renovatebot.com/modules/manager/mise/
+
+[tools."github:kubernetes-sigs/kustomize"]
+# renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
+version = "v5.8.0"
+version_prefix = "kustomize/"
+
+[tools."github:telepresenceio/telepresence"]
+# renovate: datasource=github-releases depName=telepresenceio/telepresence
+version = "2.25.1"
+[tools."github:telepresenceio/telepresence".platforms]
+linux-x64 = { asset_pattern = "telepresence-linux-amd64" }
+linux-arm64 = { asset_pattern = "telepresence-linux-arm64" }
+darwin-arm64 = { asset_pattern = "telepresence-darwin-arm64" }
+macos-arm64 = { asset_pattern = "telepresence-darwin-arm64" }

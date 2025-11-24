@@ -23,6 +23,14 @@ on:
       - '*'
   workflow_dispatch: {}
 
+# NOTE: Some jobs add GITHUB_API_TOKEN env so that some mise plugins which
+# download GitHub release assets can access GitHub's API authenticated and thus
+# not get rate-limited (which causes failures).
+
+# NOTE: Some jobs require GITHUB_TOKEN env which is used by mise itself to access
+# GitHub's API authenticated and thus not get rate-limited (which causes failures).
+# Ref: https://mise.jdx.dev/getting-started.html#github-api-rate-limiting.
+
 env:
   MISE_VERBOSE: 1
 
@@ -96,10 +104,8 @@ jobs:
       env:
         # Our .golangci.yaml has fix: true, but we don't want that in CI therefore the below override.
         GOLANGCI_LINT_FLAGS: "--fix=false"
-        # Add GITHUB_TOKEN env so that mise plugins can can access GitHub's API
-        # authenticated and thus not get rate-limited (which causes failures).
-        # Source ref: https://github.com/hypnoglow/asdf-golangci-lint/blob/f02f2ee73bd6d1bc4d69d6aad583cf05879fc9ea/bin/list-all#L10C12-L12
         GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: make lint
 
     - name: run lint.api
@@ -174,9 +180,6 @@ jobs:
 
     - name: Verify generators consistency
       uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
-      # Add GITHUB_TOKEN env so that scripts/generate-crd-kustomize.sh can
-      # access GitHub's API authenticated and thus not get rate-limited (which
-      # causes failures).
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -367,6 +370,7 @@ jobs:
       env:
         KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
         GOTESTSUM_JUNITFILE: "unit-tests.xml"
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
@@ -519,10 +523,8 @@ jobs:
       env:
         GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}.xml
         TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
-        # Add GITHUB_TOKEN env so that mise plugins can can access GitHub's API
-        # authenticated and thus not get rate-limited (which causes failures).
-        # Source ref: https://github.com/pirackr/asdf-telepresence/blob/c9eeab4d28b9851bb904c4c67239a118c8dd384d/bin/list-all#L7-L9
         GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: upload diagnostics
       if: ${{ always() }}
@@ -582,9 +584,6 @@ jobs:
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: "${{ matrix.directory }}/integration-tests.xml"
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        # Add GITHUB_TOKEN env so that mise plugins can can access GitHub's API
-        # authenticated and thus not get rate-limited (which causes failures).
-        # Source ref: https://github.com/pirackr/asdf-telepresence/blob/c9eeab4d28b9851bb904c4c67239a118c8dd384d/bin/list-all#L7-L9
         GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
