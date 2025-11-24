@@ -215,24 +215,42 @@ func resolveEndpointSliceEndpoints(
 }
 
 // resolveTargetPort determines the appropriate target port based on service type and mode.
-func resolveTargetPort(svc *corev1.Service, svcPort *corev1.ServicePort, fqdn bool) int {
+func resolveTargetPort(ctx context.Context, cl client.Client, svc *corev1.Service, svcPort *corev1.ServicePort, fqdn bool) (int, error) {
 	switch {
 	case fqdn && svc.Spec.ClusterIP != "None":
 		// For FQDN mode with regular services, use service port (Kong will resolve via DNS).
-		return int(svcPort.Port)
+		return int(svcPort.Port), nil
 
 	case svc.Spec.Type == corev1.ServiceTypeExternalName:
 		// For ExternalName services, use service port (external service expectation).
-		return int(svcPort.Port)
+		return int(svcPort.Port), nil
 
 	default:
 		// For all other cases (headless services, regular services with endpoint discovery).
 		// Use target port since we're connecting directly to pod endpoints.
 		if svcPort.TargetPort.IntVal > 0 {
-			return int(svcPort.TargetPort.IntVal)
+			// TargetPort is explicitly set as a numeric value.
+			return int(svcPort.TargetPort.IntVal), nil
 		}
-		// Default to service port if target port is not specified.
-		return int(svcPort.Port)
+
+		// TargetPort is either named or not specified.
+		// Look it up in EndpointSlices to get the actual port number.
+		endpointSlices, err := getEndpointSlicesForService(ctx, cl, svc)
+
+		if err != nil {
+			return 0, fmt.Errorf("error fetching EndpointSlices for service %s/%s: %w", svc.Namespace, svc.Name, err)
+		}
+
+		for _, endpointSlice := range endpointSlices.Items {
+			for _, p := range endpointSlice.Ports {
+				if p.Port != nil && *p.Port > 0 && *p.Protocol == svcPort.Protocol && *p.Name == svcPort.Name {
+					return int(*p.Port), nil
+				}
+			}
+		}
+
+		// Fallback to service port if we couldn't resolve from EndpointSlices.
+		return int(svcPort.Port), nil
 	}
 }
 
@@ -309,7 +327,10 @@ func filterValidBackendRefs(
 		}
 
 		// Determine the target port based on service type and mode.
-		targetPort := resolveTargetPort(svc, svcPort, fqdn)
+		targetPort, err := resolveTargetPort(ctx, cl, svc, svcPort, fqdn)
+		if err != nil {
+			return nil, err
+		}
 
 		// If we reach here, the BackendRef is valid and has endpoints.
 		validBackendRefs = append(validBackendRefs, validBackendRef{

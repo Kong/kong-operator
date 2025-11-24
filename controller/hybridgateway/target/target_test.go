@@ -652,11 +652,15 @@ func TestResolveExternalNameEndpoints(t *testing.T) {
 // TestResolveTargetPort tests the resolveTargetPort function.
 func TestResolveTargetPort(t *testing.T) {
 	tests := []struct {
-		name         string
-		service      *corev1.Service
-		servicePort  *corev1.ServicePort
-		fqdn         bool
-		expectedPort int
+		name                 string
+		service              *corev1.Service
+		servicePort          *corev1.ServicePort
+		fqdn                 bool
+		expectedPort         int
+		existingSlices       []discoveryv1.EndpointSlice
+		interceptorFuncs     *interceptor.Funcs
+		expectError          bool
+		expectedErrorMessage string
 	}{
 		{
 			name: "FQDN mode with regular service should use service port",
@@ -743,11 +747,104 @@ func TestResolveTargetPort(t *testing.T) {
 			fqdn:         false,
 			expectedPort: 8080,
 		},
+		{
+			name: "Regular service with named targetPort resolved from EndpointSlice",
+			service: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "named-svc",
+					Namespace: "default",
+				},
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "10.0.0.1",
+				},
+			},
+			servicePort: &corev1.ServicePort{
+				Name: "http",
+				Port: 80,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.String,
+					StrVal: "http",
+				},
+				Protocol: corev1.ProtocolTCP,
+			},
+			fqdn:         false,
+			expectedPort: 8080,
+			existingSlices: []discoveryv1.EndpointSlice{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "named-svc-slice",
+						Namespace: "default",
+						Labels: map[string]string{
+							discoveryv1.LabelServiceName: "named-svc",
+						},
+					},
+					Ports: []discoveryv1.EndpointPort{
+						createTestEndpointPort("http", 8080, corev1.ProtocolTCP),
+					},
+				},
+			},
+		},
+		{
+			name: "EndpointSlice List error propagates in resolveTargetPort",
+			service: &corev1.Service{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "err-svc",
+					Namespace: "default",
+				},
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "10.0.0.1",
+				},
+			},
+			servicePort: &corev1.ServicePort{
+				Name: "http",
+				Port: 80,
+				TargetPort: intstr.IntOrString{
+					Type:   intstr.String,
+					StrVal: "http",
+				},
+				Protocol: corev1.ProtocolTCP,
+			},
+			fqdn: false,
+			// Provide an interceptor that causes List to fail so we hit the error branch.
+			interceptorFuncs: &interceptor.Funcs{
+				List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					return fmt.Errorf("simulated list failure")
+				},
+			},
+			expectError:          true,
+			expectedErrorMessage: "error fetching EndpointSlices for service default/err-svc",
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := resolveTargetPort(tt.service, tt.servicePort, tt.fqdn)
+			// Provide a context and a fake client for functions that may query EndpointSlices.
+			ctx := context.Background()
+
+			// Build objects list for the fake client.
+			var objects []client.Object
+			for i := range tt.existingSlices {
+				objects = append(objects, &tt.existingSlices[i])
+			}
+
+			var cl client.Client
+			if tt.interceptorFuncs != nil {
+				cl = fake.NewClientBuilder().WithScheme(createTestScheme()).WithObjects(objects...).WithInterceptorFuncs(*tt.interceptorFuncs).Build()
+			} else {
+				cl = fake.NewClientBuilder().WithScheme(createTestScheme()).WithObjects(objects...).Build()
+			}
+
+			result, err := resolveTargetPort(ctx, cl, tt.service, tt.servicePort, tt.fqdn)
+			if tt.expectError {
+				require.Error(t, err)
+				if tt.expectedErrorMessage != "" {
+					assert.Contains(t, err.Error(), tt.expectedErrorMessage)
+				}
+				return
+			}
+			require.NoError(t, err)
 			assert.Equal(t, tt.expectedPort, result)
 		})
 	}
