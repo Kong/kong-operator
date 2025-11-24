@@ -123,7 +123,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		konnectAPIAuthConfiguration := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 
 		t.Logf("Creating and setting expecting status for corresponding KonnectControlPlane with Konnect ID: %s", konnectControlPlaneID)
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, cl, konnectAPIAuthConfiguration, deploy.WithKonnectID(konnectControlPlaneID))
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, cl, konnectAPIAuthConfiguration, deploy.WithKonnectID(konnectControlPlaneID))
 
 		t.Logf("Creating KonnectExtension")
 		konnectExtension := konnectv1alpha2.KonnectExtension{
@@ -321,7 +321,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		konnectAPIAuthConfiguration := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 
 		t.Logf("Creating and setting expecting status for corresponding KonnectControlPlane with Konnect ID: %s", konnectControlPlaneID)
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, cl, konnectAPIAuthConfiguration, deploy.WithKonnectID(konnectControlPlaneID))
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, cl, konnectAPIAuthConfiguration, deploy.WithKonnectID(konnectControlPlaneID))
 
 		t.Logf("Creating KonnectExtension")
 		konnectExtension := konnectv1alpha2.KonnectExtension{

@@ -57,7 +57,7 @@ func TestKongConsumerGroup(t *testing.T) {
 
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 
 	cWatch := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
 
@@ -245,7 +245,7 @@ func TestKongConsumerGroup(t *testing.T) {
 
 		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 
 		w := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
 

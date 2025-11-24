@@ -49,7 +49,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 
 	t.Log("Setting up SDK expectations on KongDataPlaneClientCertificate creation")
 	const dpCertID = "dp-cert-id"
@@ -143,7 +143,7 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 
 		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 
 		w := setupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
 

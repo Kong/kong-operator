@@ -55,7 +55,7 @@ func TestKongService(t *testing.T) {
 
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 
 	t.Run("adding, patching and deleting KongService", func(t *testing.T) {
 		const (
@@ -160,7 +160,7 @@ func TestKongService(t *testing.T) {
 			port       = int64(8081)
 		)
 
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth,
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth,
 			deploy.KonnectGatewayControlPlaneType(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeK8SIngressController),
 		)
 		t.Log("Creating a KongUpstream and setting it to programmed")
@@ -294,7 +294,7 @@ func TestKongService(t *testing.T) {
 
 		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 
 		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 
@@ -347,7 +347,7 @@ func TestKongService(t *testing.T) {
 
 		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 
 		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 
@@ -405,7 +405,7 @@ func TestKongService(t *testing.T) {
 				},
 			}, nil)
 
-		cp = deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth,
+		cp = deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth,
 			func(obj client.Object) {
 				cpNew := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
 				cpNew.Name = cp.Name
@@ -423,7 +423,6 @@ func TestKongService(t *testing.T) {
 	})
 
 	t.Run("adopting a service in override mode then deleting it", func(t *testing.T) {
-
 		serviceKonnectID := uuid.NewString()
 		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 
@@ -486,7 +485,6 @@ func TestKongService(t *testing.T) {
 	})
 
 	t.Run("adopting a service with NotFound error returned from upstream", func(t *testing.T) {
-
 		serviceKonnectID := uuid.NewString()
 		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 

@@ -54,7 +54,7 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 
 	factory := sdkmocks.NewMockSDKFactory(t)
 	sdk := factory.SDK

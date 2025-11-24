@@ -67,7 +67,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 	t.Run("konnectID adding and deleting", func(t *testing.T) {
 		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth,
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth,
 			deploy.KonnectGatewayControlPlaneTypeWithCloudGatewaysEnabled(),
 		)
 
@@ -153,7 +153,7 @@ func TestKonnectDataPlaneGroupConfiguration(t *testing.T) {
 	t.Run("namespacedRef adding and deleting", func(t *testing.T) {
 		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth,
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth,
 			deploy.KonnectGatewayControlPlaneTypeWithCloudGatewaysEnabled(),
 		)
 

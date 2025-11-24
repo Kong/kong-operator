@@ -49,7 +49,7 @@ func TestKongRoute(t *testing.T) {
 
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 	svc := deploy.KongServiceWithID(t, ctx, clientNamespaced,
 		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
 	)

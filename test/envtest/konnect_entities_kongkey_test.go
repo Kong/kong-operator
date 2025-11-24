@@ -61,7 +61,7 @@ func TestKongKey(t *testing.T) {
 
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 
 	t.Log("Setting up SDK expectations on KongKey creation")
 	sdk.KeysSDK.EXPECT().CreateKey(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
@@ -308,7 +308,7 @@ func TestKongKey(t *testing.T) {
 
 		t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 		apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 
 		w := setupWatch[configurationv1alpha1.KongKeyList](t, ctx, cl, client.InNamespace(ns.Name))
 

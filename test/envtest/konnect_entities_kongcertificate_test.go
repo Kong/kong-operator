@@ -55,7 +55,7 @@ func TestKongCertificate(t *testing.T) {
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 
 	t.Run("base", func(t *testing.T) {
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 		cpID := cp.GetKonnectStatus().GetKonnectID()
 
 		t.Log("Setting up SDK expectations on KongCertificate creation")
@@ -135,7 +135,7 @@ func TestKongCertificate(t *testing.T) {
 		const (
 			certID = "id-conflict"
 		)
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 		cpID := cp.GetKonnectStatus().GetKonnectID()
 
 		w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
@@ -184,7 +184,7 @@ func TestKongCertificate(t *testing.T) {
 
 	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
 		t.Skip("konnectID control plane reference not supported yet: https://github.com/kong/kong-operator/issues/1469")
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 		cpID := cp.GetKonnectStatus().GetKonnectID()
 
 		t.Log("Setting up SDK expectations on KongCertificate creation")
@@ -245,7 +245,7 @@ func TestKongCertificate(t *testing.T) {
 			id = "abc-12345"
 		)
 
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, mgr, clientNamespaced, apiAuth)
 		cpID := cp.GetKonnectStatus().GetKonnectID()
 
 		w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
