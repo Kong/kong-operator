@@ -156,11 +156,14 @@
   [#2427](https://github.com/Kong/kong-operator/pull/2427)
 - Hybrid Gateway: attach KongService generation to BackendRefs and fix filter/plugin conversion.
   [#2456](https://github.com/Kong/kong-operator/pull/2456)
-- Translate `healtchchecks.thershold` in `KongUpstreamPolicy` to the
-  `healthchecks.thershold` field in Kong upstreams.
+- Translate `healtchchecks.threshold` in `KongUpstreamPolicy` to the
+  `healthchecks.threshold` field in Kong upstreams.
   [#2662](https://github.com/Kong/kong-operator/pull/2662)
 - Reject CA Secrets with multiple PEM certs.
   [#2671](https://github.com/Kong/kong-operator/pull/2671)
+- Fix the default values of `combinedServicesFromDifferentHTTPRoutes` and
+  `drainSupport` in `ControlPlaneTranslationOptions` not being set correctly.
+  [#2589](https://github.com/Kong/kong-operator/pull/2589)
 
 ## [v2.0.5]
 
