@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	"runtime/debug"
 	"strings"
@@ -154,13 +155,46 @@ func TestMain(m *testing.M) {
 		podLabelsFile := path.Join(podLabelsDir, "labels")
 		if _, err := os.Stat(podLabelsFile); os.IsNotExist(err) {
 			fmt.Printf("INFO: creating pod labels file at %s\n", podLabelsFile)
+			// Try to create the directory. If permission is denied, try with sudo.
 			if err := os.MkdirAll(podLabelsDir, 0755); err != nil {
-				exitOnErr(fmt.Errorf("failed to create directory %s: %w", podLabelsDir, err))
+				// Permission denied, try with sudo
+				fmt.Printf("INFO: permission denied, retrying with sudo\n")
+				cmd := exec.Command("sudo", "mkdir", "-p", podLabelsDir)
+				if output, err := cmd.CombinedOutput(); err != nil {
+					exitOnErr(fmt.Errorf("failed to create directory %s with sudo: %w, output: %s", podLabelsDir, err, string(output)))
+				}
 			}
-			// Write minimal pod labels for testing (without trailing newline to avoid empty label parsing)
-			if err := os.WriteFile(podLabelsFile, []byte("app=\"kong-operator\""), 0600); err != nil {
-				exitOnErr(fmt.Errorf("failed to create pod labels file %s: %w", podLabelsFile, err))
+
+			// Write the file content to a temporary location first
+			content := []byte("app=\"kong-operator\"")
+			tmpFile, err := os.CreateTemp("", "podinfo-labels-*")
+			if err != nil {
+				exitOnErr(fmt.Errorf("failed to create temporary file: %w", err))
 			}
+			tmpPath := tmpFile.Name()
+			defer os.Remove(tmpPath)
+
+			if _, err := tmpFile.Write(content); err != nil {
+				tmpFile.Close()
+				exitOnErr(fmt.Errorf("failed to write to temporary file: %w", err))
+			}
+			tmpFile.Close()
+
+			// Try to copy the file to the target location
+			if err := os.Rename(tmpPath, podLabelsFile); err != nil {
+				// Permission denied, use sudo to copy
+				fmt.Printf("INFO: using sudo to copy file to %s\n", podLabelsFile)
+				cmd := exec.Command("sudo", "cp", tmpPath, podLabelsFile)
+				if output, err := cmd.CombinedOutput(); err != nil {
+					exitOnErr(fmt.Errorf("failed to copy file with sudo: %w, output: %s", err, string(output)))
+				}
+				// Set proper permissions
+				cmd = exec.Command("sudo", "chmod", "644", podLabelsFile)
+				if output, err := cmd.CombinedOutput(); err != nil {
+					exitOnErr(fmt.Errorf("failed to set permissions with sudo: %w, output: %s", err, string(output)))
+				}
+			}
+
 			fmt.Printf("INFO: successfully created pod labels file\n")
 			// Verify the file was actually created and is readable
 			if content, err := os.ReadFile(podLabelsFile); err != nil {
