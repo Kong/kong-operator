@@ -1147,17 +1147,8 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 	t.Log("Creating a KongConsumer to adopt the existing consumer")
 	createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, userName,
 		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-		func(obj client.Object) {
-			kc, ok := obj.(*configurationv1.KongConsumer)
-			require.True(t, ok)
-			kc.Spec.Adopt = &commonv1alpha1.AdoptOptions{
-				From: commonv1alpha1.AdoptSourceKonnect,
-				Mode: commonv1alpha1.AdoptModeOverride,
-				Konnect: &commonv1alpha1.AdoptKonnectOptions{
-					ID: consumerID,
-				},
-			}
-		})
+		deploy.WithKonnectAdoptOptions[*configurationv1.KongConsumer](commonv1alpha1.AdoptModeOverride, consumerID),
+	)
 
 	t.Log("Waiting for KongConsumer to be programmed and set Konnect ID")
 	watchFor(t, ctx, wConsumer, apiwatch.Modified, func(kc *configurationv1.KongConsumer) bool {
@@ -1238,7 +1229,6 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 			BasicAuth: &sdkkonnectcomp.BasicAuth{
 				ID:       lo.ToPtr(basicAuthID),
 				Username: "username",
-				Password: "password",
 				Consumer: &sdkkonnectcomp.BasicAuthConsumer{
 					ID: lo.ToPtr(consumerID),
 				},
@@ -1432,7 +1422,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 		t.Log("Creating a KongCredentialJWT for adopting the existing JWT auth")
 		createdJWT := &configurationv1alpha1.KongCredentialJWT{
 			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "hmac",
+				GenerateName: "jwt",
 			},
 			Spec: configurationv1alpha1.KongCredentialJWTSpec{
 				Adopt: &commonv1alpha1.AdoptOptions{
