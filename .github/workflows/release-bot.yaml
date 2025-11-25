@@ -182,7 +182,7 @@ jobs:
           # Amend the commit message to avoid infinite loop of this workflow (it's triggered by the commit message).
           git commit --amend -m "chore: cherry-pick ${{ needs.semver.outputs.version }} commit (${{ github.sha }}) onto main"
 
-      - uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e # v7.0.6
+      - uses: peter-evans/create-pull-request@84ae59a2cdc2258d6fa0732dd66352dddae2a412 # v7.0.6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ env.CHERRYPICK_BRANCH }}
