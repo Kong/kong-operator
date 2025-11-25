@@ -36,6 +36,16 @@
       ]
     },
     {
+      "description": "Match dependencies in .mise.toml that are properly annotated with `# renovate: datasource={} depName={}.`",
+      "customType": "regex",
+      "fileMatch": [
+        "\\.mise\\.toml$"
+      ],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( registryUrl=(?<registryUrl>.*?))?\\n.+\"v(?<currentValue>.*?)\""
+      ]
+    },
+    {
       "description": "Match dependencies in .custom-gcl.yml that are properly annotated with `# renovate: datasource={} depName={}.`",
       "customType": "regex",
       "fileMatch": [
