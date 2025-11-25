@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/conditions"
 	"github.com/kong/kong-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/test/helpers/eventually"
 )
 
 const (
@@ -244,11 +245,7 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
 
 	t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: cp.Name, Namespace: cp.Namespace}, cp)
-		require.NoError(t, err)
-		assertKonnectEntityProgrammed(t, cp)
-	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+	cp = eventually.KonnectEntityGetsProgrammed(t, ctx, clientNamespaced, cp)
 
 	cpKonnectID := cp.GetKonnectID()
 
@@ -277,6 +274,7 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 	require.NotNil(t, resp.Plugin, "Should get a non-nil plugin in the response")
 	globalRequestTransformerPlugin := resp.Plugin
 	require.NotNil(t, globalRequestTransformerPlugin.ID, "Should receive a non-nil plugin ID")
+	globalPluginID := *globalRequestTransformerPlugin.ID
 
 	buf, err := json.Marshal(globalRequestTransformerPlugin.Config)
 	require.NoError(t, err, "Should marshal plugin configuration in JSON successfully")
@@ -300,30 +298,23 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: kongPluginReqTransformer.Name,
 			},
-			Adopt: &commonv1alpha1.AdoptOptions{
-				From: commonv1alpha1.AdoptSourceKonnect,
-				Mode: commonv1alpha1.AdoptModeOverride,
-				Konnect: &commonv1alpha1.AdoptKonnectOptions{
-					ID: *globalRequestTransformerPlugin.ID,
-				},
-			},
 			Scope: configurationv1alpha1.KongPluginBindingScopeGlobalInControlPlane,
 		},
-	}, deploy.WithKonnectNamespacedRefControlPlaneRef(cp))
+	},
+		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongPluginBinding](commonv1alpha1.AdoptModeOverride, globalPluginID),
+	)
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kpbGlobal.DeepCopy()))
 
 	t.Log("Waiting for KongPluginBinding to be programmed and set Konnect ID")
-	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		err := clientNamespaced.Get(GetCtx(), client.ObjectKeyFromObject(kpbGlobal), kpbGlobal)
-		require.NoError(t, err)
-
-		assertKonnectEntityProgrammed(collect, kpbGlobal)
-		assert.Equalf(collect, *globalRequestTransformerPlugin.ID, kpbGlobal.GetKonnectID(),
-			"KongPluginBinding should set Konnect ID %s as the adopted plugin in status",
-			*globalRequestTransformerPlugin.ID,
-		)
-	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick,
-		"Did not see KongPluginBinding set Konnect ID and Programmed condition to True",
+	eventually.KonnectEntityGetsProgrammed(
+		t, ctx, clientNamespaced, kpbGlobal,
+		func(t *assert.CollectT, kpb *configurationv1alpha1.KongPluginBinding) {
+			require.Equalf(t, globalPluginID, kpb.GetKonnectID(),
+				"KongPluginBinding %s/%s should set Konnect ID %s as the adopted plugin in status",
+				kpb.Namespace, kpb.Name, globalPluginID,
+			)
+		},
 	)
 
 	t.Log("Creating a KongService to attach plugins to")
@@ -331,17 +322,11 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, ks.DeepCopy()))
 
 	t.Log("Waiting for the KongService to get a Konnect ID")
-	var serviceKonnectID string
-	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		err := clientNamespaced.Get(GetCtx(), client.ObjectKeyFromObject(ks), ks)
-		require.NoError(t, err)
-
-		assertKonnectEntityProgrammed(collect, ks)
-		assert.NotEmpty(collect, ks.GetKonnectID())
-		serviceKonnectID = ks.GetKonnectID()
-	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick,
-		"Did not see KongService set Konnect ID and Programmed condition to True",
+	ks = eventually.KonnectEntityGetsProgrammed(
+		t, ctx, clientNamespaced, ks,
 	)
+	require.NotEmpty(t, ks.GetKonnectID(), "KongService should get Konnect ID when programmed")
+	serviceKonnectID := ks.GetKonnectID()
 
 	t.Log("Creating a plugin by SDK attached to the service for adopting")
 	resp, err = sdk.GetPluginSDK().CreatePlugin(
@@ -364,22 +349,10 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 	require.NotNil(t, resp.Plugin, "Should get a non-nil plugin in the response")
 	serviceResponseTransformerPlugin := resp.Plugin
 	require.NotNil(t, serviceResponseTransformerPlugin.ID, "Should receive a non-nil plugin ID")
-
-	buf, err = json.Marshal(serviceResponseTransformerPlugin.Config)
-	require.NoError(t, err, "Should marshal plugin configuration in JSON successfully")
+	pluginServiceID := *serviceResponseTransformerPlugin.ID
 
 	t.Log("Creating a KongPlugin and a KongPluginBinding for adopting the plugin")
-	kongPluginResponseTransformer := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "kongplugin-service-response-transformer",
-		},
-		PluginName: "response-transformer",
-		Config: apiextensionsv1.JSON{
-			Raw: buf,
-		},
-	}
-	require.NoError(t, clientNamespaced.Create(GetCtx(), kongPluginResponseTransformer))
+	kongPluginResponseTransformer := deploy.ResponseTransformerPlugin(t, ctx, clientNamespaced)
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kongPluginResponseTransformer.DeepCopy()))
 
 	kpbService := deploy.KongPluginBinding(t, GetCtx(), clientNamespaced, &configurationv1alpha1.KongPluginBinding{
@@ -387,36 +360,21 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: kongPluginResponseTransformer.Name,
 			},
-			Adopt: &commonv1alpha1.AdoptOptions{
-				From: commonv1alpha1.AdoptSourceKonnect,
-				Mode: commonv1alpha1.AdoptModeOverride,
-				Konnect: &commonv1alpha1.AdoptKonnectOptions{
-					ID: *serviceResponseTransformerPlugin.ID,
-				},
-			},
-			Scope: configurationv1alpha1.KongPluginBindingScopeOnlyTargets,
-			Targets: &configurationv1alpha1.KongPluginBindingTargets{
-				ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
-					Name:  ks.Name,
-					Kind:  "KongService",
-					Group: configurationv1alpha1.GroupVersion.Group,
-				},
-			},
 		},
-	}, deploy.WithKonnectNamespacedRefControlPlaneRef(cp))
+	},
+		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongPluginBinding](commonv1alpha1.AdoptModeOverride, pluginServiceID),
+		deploy.WithKongPluginBindingTarget(ks),
+	)
 	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kpbService.DeepCopy()))
 
 	t.Log("Waiting for KongPluginBinding to be programmed and set Konnect ID")
-	require.EventuallyWithT(t, func(collect *assert.CollectT) {
-		err := clientNamespaced.Get(GetCtx(), client.ObjectKeyFromObject(kpbService), kpbService)
-		require.NoError(t, err)
-
-		assertKonnectEntityProgrammed(collect, kpbService)
-		assert.Equalf(collect, *serviceResponseTransformerPlugin.ID, kpbService.GetKonnectID(),
-			"KongPluginBinding should set Konnect ID %s as the adopted plugin in status",
-			*serviceResponseTransformerPlugin.ID,
-		)
-	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick,
-		"Did not see KongPluginBinding set Konnect ID and Programmed condition to True",
+	eventually.KonnectEntityGetsProgrammed(t, ctx, clientNamespaced, kpbService,
+		func(t *assert.CollectT, kpb *configurationv1alpha1.KongPluginBinding) {
+			require.Equalf(t, pluginServiceID, kpb.GetKonnectID(),
+				"KongPluginBinding %s/%s should set Konnect ID %s as the adopted plugin in status",
+				kpbService.Namespace, kpbService.Name, pluginServiceID,
+			)
+		},
 	)
 }

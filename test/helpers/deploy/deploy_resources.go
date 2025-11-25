@@ -1078,6 +1078,51 @@ func RateLimitingPlugin(
 	return plugin
 }
 
+// RequestTransformerPlugin deploys the request-transformer KongPlugin resource and returns the resource.
+// The provided client should be namespaced, i.e. created with `client.NewNamespacedClient(client, ns)`
+func RequestTransformerPlugin(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+) *configurationv1.KongPlugin {
+	t.Helper()
+
+	plugin := &configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "request-transformer-kp-",
+		},
+		PluginName: "request-transformer",
+		Config: apiextensionsv1.JSON{
+			Raw: []byte(`{"add":{"headers":["X-Kong-Test:test"]}}`),
+		},
+	}
+	require.NoError(t, cl.Create(ctx, plugin))
+	t.Logf("deployed new %s KongPlugin (%s)", client.ObjectKeyFromObject(plugin), plugin.PluginName)
+	return plugin
+}
+
+// ResponseTransformerPlugin deploys the response-transformer KongPlugin resource and returns the resource.
+// The provided client should be namespaced, i.e. created with `client.NewNamespacedClient(client, ns)`
+func ResponseTransformerPlugin(t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+) *configurationv1.KongPlugin {
+	t.Helper()
+
+	plugin := &configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "response-transformer-kp-",
+		},
+		PluginName: "response-transformer",
+		Config: apiextensionsv1.JSON{
+			Raw: []byte(`{"add":{"headers":["X-Kong-Test:test"]}}`),
+		},
+	}
+	require.NoError(t, cl.Create(ctx, plugin))
+	t.Logf("deployed new %s KongPlugin (%s)", client.ObjectKeyFromObject(plugin), plugin.PluginName)
+	return plugin
+}
+
 // KongKeySet deploys a KongKeySet resource and returns the resource.
 func KongKeySet(
 	t *testing.T,
@@ -1262,6 +1307,55 @@ func WithKonnectAdoptOptions[T ObjectSupportingAdoption](mode commonv1alpha1.Ado
 				},
 			}
 			ent.SetAdoptOptions(opts)
+		}
+	}
+}
+
+// ObjectSupportingBindingPlugins defines the interface of types supporting to be set as the target of KongPluginBinding.
+type ObjectSupportingBindingPlugins interface {
+	*configurationv1alpha1.KongService |
+		*configurationv1alpha1.KongRoute |
+		*configurationv1.KongConsumer |
+		*configurationv1beta1.KongConsumerGroup
+	GetName() string
+}
+
+// WithKongPluginBindingTarget returns an option function that sets the binding target of the KongPluginBinding.
+// The option function also sets the scope of the KongPluginBinding to "OnlyTargets".
+func WithKongPluginBindingTarget[T ObjectSupportingBindingPlugins](
+	bindTarget T,
+) ObjOption {
+	return func(obj client.Object) {
+		kpb, ok := obj.(*configurationv1alpha1.KongPluginBinding)
+		if !ok {
+			return
+		}
+		kpb.Spec.Scope = configurationv1alpha1.KongPluginBindingScopeOnlyTargets
+		if kpb.Spec.Targets == nil {
+			kpb.Spec.Targets = &configurationv1alpha1.KongPluginBindingTargets{}
+		}
+		// Set the target into the spec.targets of the KongPluginBinding.
+		switch any(bindTarget).(type) {
+		case *configurationv1alpha1.KongService:
+			kpb.Spec.Targets.ServiceReference = &configurationv1alpha1.TargetRefWithGroupKind{
+				Group: configurationv1alpha1.GroupVersion.Group,
+				Kind:  "KongService",
+				Name:  bindTarget.GetName(),
+			}
+		case *configurationv1alpha1.KongRoute:
+			kpb.Spec.Targets.RouteReference = &configurationv1alpha1.TargetRefWithGroupKind{
+				Group: configurationv1alpha1.GroupVersion.Group,
+				Kind:  "KongRoute",
+				Name:  bindTarget.GetName(),
+			}
+		case *configurationv1.KongConsumer:
+			kpb.Spec.Targets.ConsumerReference = &configurationv1alpha1.TargetRef{
+				Name: bindTarget.GetName(),
+			}
+		case *configurationv1beta1.KongConsumerGroup:
+			kpb.Spec.Targets.ConsumerGroupReference = &configurationv1alpha1.TargetRef{
+				Name: bindTarget.GetName(),
+			}
 		}
 	}
 }
