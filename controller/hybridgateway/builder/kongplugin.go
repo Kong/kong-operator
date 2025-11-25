@@ -1,12 +1,15 @@
 package builder
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
 
 	"github.com/samber/lo"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -103,7 +106,7 @@ func (b *KongPluginBuilder) MustBuild() configurationv1.KongPlugin {
 }
 
 // WithFilter sets the KongPlugin configuration based on the given HTTPRouteFilter.
-func (b *KongPluginBuilder) WithFilter(filter gwtypes.HTTPRouteFilter) *KongPluginBuilder {
+func (b *KongPluginBuilder) WithFilter(ctx context.Context, cl client.Client, namespace string, filter gwtypes.HTTPRouteFilter) *KongPluginBuilder {
 
 	switch filter.Type {
 	case gatewayv1.HTTPRouteFilterRequestHeaderModifier:
@@ -151,6 +154,13 @@ func (b *KongPluginBuilder) WithFilter(filter gwtypes.HTTPRouteFilter) *KongPlug
 			return b
 		}
 		b.plugin.Config.Raw = configJSON
+	case gatewayv1.HTTPRouteFilterExtensionRef:
+		plugin, err := translateExtensionRef(ctx, cl, namespace, filter)
+		if err != nil {
+			b.errors = append(b.errors, err)
+			return b
+		}
+		b.plugin = *plugin
 	default:
 		b.errors = append(b.errors, fmt.Errorf("unsupported filter type: %s", filter.Type))
 	}
@@ -158,6 +168,32 @@ func (b *KongPluginBuilder) WithFilter(filter gwtypes.HTTPRouteFilter) *KongPlug
 }
 
 // internal functions and types for translating HTTPRouteFilter to KongPlugin configurations
+
+func translateExtensionRef(ctx context.Context, cl client.Client, namespace string, filter gwtypes.HTTPRouteFilter) (*configurationv1.KongPlugin, error) {
+	var err error
+	plugin := &configurationv1.KongPlugin{}
+
+	if filter.ExtensionRef == nil {
+		err = errors.New("ExtensionRef filter is missing")
+		return nil, err
+	}
+
+	if filter.ExtensionRef.Group != gatewayv1.Group(configurationv1.GroupVersion.Group) || filter.ExtensionRef.Kind != "KongPlugin" {
+		err = fmt.Errorf("unsupported ExtensionRef: %s/%s", filter.ExtensionRef.Group, filter.ExtensionRef.Kind)
+		return nil, err
+	}
+
+	err = cl.Get(ctx, types.NamespacedName{
+		Name:      string(filter.ExtensionRef.Name),
+		Namespace: namespace,
+	}, plugin)
+	if err != nil {
+		err = fmt.Errorf("failed to get KongPlugin for ExtensionRef %s: %w", filter.ExtensionRef.Name, err)
+		return nil, err
+	}
+
+	return plugin, nil
+}
 
 type transformerTargetSlice struct {
 	Headers []string `json:"headers,omitempty"`
