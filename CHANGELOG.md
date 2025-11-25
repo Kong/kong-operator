@@ -186,6 +186,10 @@
   for `Gateway`s configured in different namespaces with `GatewayConfiguration` that
   has field `spec.controlPlaneOptions.watchNamespaces.type` set to `own`.
   [#2717](https://github.com/Kong/kong-operator/pull/2717)
+- Gateway controllers now watch changes on Secrets referenced by
+  `spec.listeners.tls.certificateRef`, ensuring Gateway status conditions
+  are updated when referenced certificates change.
+  [#2661](https://github.com/Kong/kong-operator/pull/2661)
 
 ## [v2.0.5]
 
