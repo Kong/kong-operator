@@ -35,6 +35,14 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- Translate `healtchchecks.thershold` in `KongUpstreamPolicy` to the
+  `healthchecks.thershold` field in Kong upstreams.
+  [#2662](https://github.com/Kong/kong-operator/pull/2662)
+
 ## [v2.0.5]
 
 > Release date: 2025-10-17
