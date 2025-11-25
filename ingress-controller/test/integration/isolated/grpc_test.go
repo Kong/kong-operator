@@ -120,7 +120,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 							BackendRef: gatewayapi.BackendRef{
 								BackendObjectReference: gatewayapi.BackendObjectReference{
 									Name: gatewayapi.ObjectName(service.Name),
-									Port: lo.ToPtr(gatewayapi.PortNumber(test.GRPCBinPort)),
+									Port: lo.ToPtr(test.GRPCBinPort),
 								},
 							},
 						}},

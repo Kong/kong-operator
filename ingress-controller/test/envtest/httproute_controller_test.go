@@ -379,6 +379,15 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 						Name: gatewayapi.ObjectName(gwNonKong.Name),
 					},
 					ControllerName: gateway.GetControllerName(),
+					Conditions: []metav1.Condition{
+						{
+							Type:               "Accepted",
+							Status:             metav1.ConditionTrue,
+							ObservedGeneration: route.GetGeneration(),
+							LastTransitionTime: metav1.Now(),
+							Reason:             "Accepted",
+						},
+					},
 				},
 			},
 		},
@@ -416,6 +425,15 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 						Name: gatewayapi.ObjectName(gwNonKong.Name),
 					},
 					ControllerName: gwcNonKong.Spec.ControllerName,
+					Conditions: []metav1.Condition{
+						{
+							Type:               "Accepted",
+							Status:             metav1.ConditionTrue,
+							ObservedGeneration: routeNonKong.GetGeneration(),
+							LastTransitionTime: metav1.Now(),
+							Reason:             "Accepted",
+						},
+					},
 				},
 			},
 		},

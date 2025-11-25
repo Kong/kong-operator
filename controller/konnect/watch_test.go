@@ -185,19 +185,25 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 				},
 			},
 		}
+
+		builderFunc := func(
+			objs []client.Object, cp *konnectv1alpha2.KonnectGatewayControlPlane,
+		) *fakectrlruntimeclient.ClientBuilder {
+			return fakectrlruntimeclient.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(append(objs, cp)...)
+		}
+
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
-				builder := fakectrlruntimeclient.NewClientBuilder().
-					WithScheme(scheme.Get()).
-					WithObjects(append(tt.list, cp)...)
-
 				// Build a separate client for indices as we have kind of a chicken-egg problem here. We need a client
 				// in the extract function passed to the builder's WithIndex function, but it's the builder that creates
 				// the client. So we build the client for indices first (without the index) and then build the client
 				// with the index.
-				clForIndices := builder.Build()
+				clForIndices := builderFunc(tt.list, cp).Build()
 				require.NotNil(t, clForIndices)
 
+				builder := builderFunc(tt.list, cp)
 				for _, opt := range index.OptionsForKongConsumer(clForIndices) {
 					builder = builder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 				}

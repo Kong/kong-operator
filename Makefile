@@ -805,9 +805,11 @@ generate.gateway-api-urls:
 		OUTPUT=$(shell pwd)/pkg/utils/test/zz_generated.gateway_api.go \
 		go generate -tags=generate_gateway_api_urls ./internal/utils/cmd/generate-gateway-api-urls
 
+# NOTE: we also need --server-side because some CRDs exceed the size limit for annotations:
+# The CustomResourceDefinition "httproutes.gateway.networking.k8s.io" is invalid: metadata.annotations: Too long: may not be more than 262144 bytes
 .PHONY: install.gateway-api-crds
 install.gateway-api-crds: kustomize ensure.go.pkg.downloaded.gateway-api
-	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_KUSTOMIZE_EXPERIMENTAL_LOCAL_PATH) | kubectl apply -f -
+	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_KUSTOMIZE_EXPERIMENTAL_LOCAL_PATH) | kubectl apply --server-side -f -
 
 .PHONY: uninstall.gateway-api-crds
 uninstall.gateway-api-crds: kustomize ensure.go.pkg.downloaded.gateway-api

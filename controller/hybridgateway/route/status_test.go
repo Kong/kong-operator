@@ -1129,7 +1129,7 @@ func Test_FilterMatchingListeners(t *testing.T) {
 	listenerNotReady := gwtypes.Listener{Name: "listener2", Port: 80, Protocol: gwtypes.HTTPProtocolType}
 	listenerWrongProtocol := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: "TCP"}
 	tlsModePassthrough := gatewayv1.TLSModePassthrough
-	listenerWrongTLS := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPSProtocolType, TLS: &gatewayv1.GatewayTLSConfig{Mode: &tlsModePassthrough}}
+	listenerWrongTLS := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPSProtocolType, TLS: &gatewayv1.ListenerTLSConfig{Mode: &tlsModePassthrough}}
 
 	tests := []struct {
 		name      string
@@ -2584,6 +2584,6 @@ func groupPtr(s string) *gatewayv1.Group                                     { g
 func kindPtr(s string) *gatewayv1.Kind                                       { k := gatewayv1.Kind(s); return &k }
 func nsPtr(s string) *gatewayv1.Namespace                                    { n := gatewayv1.Namespace(s); return &n }
 func sectionPtr(s string) *gatewayv1.SectionName                             { sec := gatewayv1.SectionName(s); return &sec }
-func portPtr(i int32) *gatewayv1.PortNumber                                  { p := gatewayv1.PortNumber(i); return &p }
 func ptrObjName(s string) *gwtypes.ObjectName                                { n := gwtypes.ObjectName(s); return &n }
+func portPtr(i int32) *gatewayv1.PortNumber                                  { return &i }
 func fromNamespacesPtr(v gatewayv1.FromNamespaces) *gatewayv1.FromNamespaces { return &v }
