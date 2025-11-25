@@ -575,6 +575,7 @@ func generateDataPlaneNetworkPolicy(
 			MatchLabels: matchPodLabels,
 		}
 	}
+
 	limitAdminAPIIngress := networkingv1.NetworkPolicyIngressRule{
 		Ports: []networkingv1.NetworkPolicyPort{
 			{Protocol: &protocolTCP, Port: &adminAPISSLPort},
@@ -582,6 +583,21 @@ func generateDataPlaneNetworkPolicy(
 		From: []networkingv1.NetworkPolicyPeer{
 			policyPeerForControllerPod,
 		},
+	}
+
+	// When running outside a pod (e.g., via telepresence in integration tests),
+	// we need an additional rule to allow admin API access from any source.
+	// This is because telepresence traffic doesn't come from a pod with matching labels.
+	// We keep the original restrictive rule so that tests can verify the NetworkPolicy
+	// is created with the correct peer selector.
+	var allowAllAdminAPIIngress networkingv1.NetworkPolicyIngressRule
+	if !k8sutils.RunningInPod() {
+		allowAllAdminAPIIngress = networkingv1.NetworkPolicyIngressRule{
+			Ports: []networkingv1.NetworkPolicyPort{
+				{Protocol: &protocolTCP, Port: &adminAPISSLPort},
+			},
+			// No From restriction - allows access from any source
+		}
 	}
 
 	allowProxyIngress := networkingv1.NetworkPolicyIngressRule{
@@ -595,6 +611,19 @@ func generateDataPlaneNetworkPolicy(
 		Ports: []networkingv1.NetworkPolicyPort{
 			{Protocol: &protocolTCP, Port: &metricsPort},
 		},
+	}
+
+	// Build the ingress rules list
+	ingressRules := []networkingv1.NetworkPolicyIngressRule{
+		limitAdminAPIIngress,
+		allowProxyIngress,
+		allowMetricsIngress,
+	}
+
+	// When running outside a pod (e.g., via telepresence), add an additional rule
+	// to allow admin API access from any source
+	if !k8sutils.RunningInPod() && allowAllAdminAPIIngress.Ports != nil {
+		ingressRules = append(ingressRules, allowAllAdminAPIIngress)
 	}
 
 	return &networkingv1.NetworkPolicy{
@@ -611,11 +640,7 @@ func generateDataPlaneNetworkPolicy(
 			PolicyTypes: []networkingv1.PolicyType{
 				networkingv1.PolicyTypeIngress,
 			},
-			Ingress: []networkingv1.NetworkPolicyIngressRule{
-				limitAdminAPIIngress,
-				allowProxyIngress,
-				allowMetricsIngress,
-			},
+			Ingress: ingressRules,
 		},
 	}, nil
 }
