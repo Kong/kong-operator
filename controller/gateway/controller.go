@@ -239,10 +239,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	isHybridGateway := isGatewayHybrid(gatewayConfig)
 	if isHybridGateway {
 		log.Trace(logger, "Hybrid Gateway provisioning")
-		konnectControlPlane, cpReady, err := r.provisionKonnectGatewayControlPlane(ctx, logger, &gateway, gatewayConfig)
-		if err != nil || !cpReady {
-			return ctrl.Result{}, err
-		}
+		konnectControlPlane, cpReady := r.provisionKonnectGatewayControlPlane(ctx, logger, &gateway, gatewayConfig)
 		// Set the KonnectGatewayControlPlaneProgrammedType Condition to False. This happens only if:
 		// * the new status is false and there was no KonnectGatewayControlPlaneProgrammedType condition in the gateway
 		// * the new status is false and the previous status was true
@@ -259,9 +256,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 					return ctrl.Result{}, err
 				}
 				log.Debug(logger, "KonnectGatewayControlplane not ready yet")
+				return ctrl.Result{}, nil
 			}
 			return ctrl.Result{}, nil // requeue will be triggered by the update of the controlplane status
 		}
+		if !cpReady {
+			return ctrl.Result{}, nil
+		}
+
 		// if the controlplane wasn't ready before this reconciliation loop and now is ready, log this event
 		if !k8sutils.HasConditionTrue(kcfggateway.KonnectGatewayControlPlaneProgrammedType, oldGwConditionsAware) {
 			log.Debug(logger, "KonnectGatewayControlplane is ready")
@@ -726,7 +728,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 	logger logr.Logger,
 	gateway *gwtypes.Gateway,
 	gatewayConfig *GatewayConfiguration,
-) (cp *konnectv1alpha2.KonnectGatewayControlPlane, ready bool, err error) {
+) (cp *konnectv1alpha2.KonnectGatewayControlPlane, ready bool) {
 	logger = logger.WithName("konnectGatewayControlPlaneProvisioning")
 
 	log.Trace(logger, "Looking for associated KonnectGatewayControlPlanes")
@@ -737,7 +739,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 			createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
-		return nil, false, err
+		return nil, false
 	}
 
 	switch count := len(konnectControlPlanes); {
@@ -749,7 +751,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 				createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 				gatewayConditionsAndListenersAware(gateway),
 			)
-			return nil, false, err
+			return nil, false
 		} else {
 			log.Debug(logger, "KonnectGatewayControlPlane created")
 			k8sutils.SetCondition(
@@ -757,7 +759,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 				gatewayConditionsAndListenersAware(gateway),
 			)
 		}
-		return nil, false, nil
+		return nil, false
 	case count > 1:
 		err := fmt.Errorf("KonnectGatewayControlPlanes found: %d, expected: 1, requeuing", count)
 		k8sutils.SetCondition(
@@ -767,9 +769,9 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 		log.Debug(logger, "reducing KonnectGatewayControlPlanes", "count", count)
 		if rErr := k8sreduce.ReduceKonnectGatewayControlPlane(ctx, r.Client, konnectControlPlanes); rErr != nil {
 			log.Error(logger, rErr, "reducing KonnectGatewayControlPlanes failed")
-			return nil, false, rErr
+			return nil, false
 		}
-		return nil, false, nil
+		return nil, false
 	}
 
 	// If we continue, there is only one konnect gateway controlplane.
@@ -784,14 +786,14 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 			createKonnectGatewayControlPlaneCondition(metav1.ConditionFalse, kcfgconsts.ConditionReason(configurationv1.ReasonPending), "Waiting for the resource to become programmed", gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
-		return konnectControlPlane, false, nil
+		return konnectControlPlane, false
 	}
 
 	k8sutils.SetCondition(
 		createKonnectGatewayControlPlaneCondition(metav1.ConditionTrue, kcfgconsts.ConditionReason(configurationv1.ReasonProgrammed), "", gateway.Generation),
 		gatewayConditionsAndListenersAware(gateway),
 	)
-	return konnectControlPlane, true, nil
+	return konnectControlPlane, true
 }
 
 func (r *Reconciler) provisionKonnectExtension(
