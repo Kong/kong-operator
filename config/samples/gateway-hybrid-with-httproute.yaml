@@ -69,6 +69,17 @@ spec:
     - path:
         type: PathPrefix
         value: /echo
+    filters:
+    - type: ExtensionRef
+      extensionRef:
+        group: configuration.konghq.com
+        kind: KongPlugin
+        name: rate-limit-5-min
+    - type: RequestHeaderModifier
+      requestHeaderModifier:
+        add:
+        - name: X-Added-By
+          value: Kong
     backendRefs:
     - name: echo
       kind: Service
@@ -76,6 +87,15 @@ spec:
     - name: echo-2
       kind: Service
       port: 80
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+ name: rate-limit-5-min
+config:
+ minute: 5
+ policy: local
+plugin: rate-limiting
 ---
 apiVersion: v1
 kind: Service
