@@ -148,9 +148,9 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, s *corev1.Secret) []reconcile.Request {
 				// Use field index to list only Gateways that reference this Secret.
 				var gwList gwtypes.GatewayList
-				key := fmt.Sprintf("%s/%s", s.Namespace, s.Name)
-				if err := r.List(ctx, &gwList, client.MatchingFields{idx.TLSCertificateSecretsOnGatewayIndex: key}); err != nil {
-					ctrllog.FromContext(ctx).Error(err, "failed to list indexed gateways for Secret watch", "secret", client.ObjectKeyFromObject(s))
+				nn := client.ObjectKeyFromObject(s)
+				if err := r.List(ctx, &gwList, client.MatchingFields{idx.TLSCertificateSecretsOnGatewayIndex: nn}); err != nil {
+					ctrllog.FromContext(ctx).Error(err, "failed to list indexed gateways for Secret watch", "secret", nn)
 					return nil
 				}
 				recs := make([]reconcile.Request, 0, len(gwList.Items))
