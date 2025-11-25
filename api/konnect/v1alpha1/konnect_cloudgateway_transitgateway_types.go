@@ -146,12 +146,12 @@ type AzureTransitGateway struct {
 type TransitGatewayDNSConfig struct {
 	// RemoteDNSServerIPAddresses is the list of remote DNS server IP Addresses to connect to for resolving internal DNS via a transit gateway.
 	//
-	// +optional
+	// +required
 	RemoteDNSServerIPAddresses []string `json:"remote_dns_server_ip_addresses,omitempty"`
 	// DomainProxyList is the list of internal domain names to proxy for DNS resolution from the listed remote DNS server IP addresses,
 	// for a transit gateway.
 	//
-	// +optional
+	// +required
 	DomainProxyList []string `json:"domain_proxy_list,omitempty"`
 }
 
@@ -159,7 +159,7 @@ type TransitGatewayDNSConfig struct {
 type AwsTransitGatewayAttachmentConfig struct {
 	// TransitGatewayID is the AWS transit gateway ID to create attachment to.
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	TransitGatewayID string `json:"transit_gateway_id"`
 	// RAMShareArn is the resource share ARN to verify request to create transit gateway attachment.

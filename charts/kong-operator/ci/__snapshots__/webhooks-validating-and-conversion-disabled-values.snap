@@ -623,9 +623,6 @@ spec:
                     - enabled
                     - disabled
                     type: string
-                required:
-                - dumpSensitive
-                - state
                 type: object
                 x-kubernetes-validations:
                 - message: Cannot enable dumpSensitive when state is disabled
@@ -10356,9 +10353,6 @@ spec:
                         - enabled
                         - disabled
                         type: string
-                    required:
-                    - dumpSensitive
-                    - state
                     type: object
                     x-kubernetes-validations:
                     - message: Cannot enable dumpSensitive when state is disabled
@@ -28420,7 +28414,6 @@ spec:
                         type: string
                     required:
                     - ram_share_arn
-                    - transit_gateway_id
                     type: object
                   cidr_blocks:
                     description: |-
@@ -28448,6 +28441,9 @@ spec:
                           items:
                             type: string
                           type: array
+                      required:
+                      - domain_proxy_list
+                      - remote_dns_server_ip_addresses
                       type: object
                     type: array
                   name:
@@ -28509,6 +28505,9 @@ spec:
                           items:
                             type: string
                           type: array
+                      required:
+                      - domain_proxy_list
+                      - remote_dns_server_ip_addresses
                       type: object
                     type: array
                   name:
