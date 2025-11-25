@@ -172,6 +172,10 @@
 - Fix the default values of `combinedServicesFromDifferentHTTPRoutes` and
   `drainSupport` in `ControlPlaneTranslationOptions` not being set correctly.
   [#2589](https://github.com/Kong/kong-operator/pull/2589)
+- Fix random, unexpected and invalid validation error during validation of `HTTPRoute`s
+  for `Gateway`s configured in different namespaces with `GatewayConfiguration` that
+  has field `spec.controlPlaneOptions.watchNamespaces.type` set to `own`.
+  [#2717](https://github.com/Kong/kong-operator/pull/2717)
 
 ## [v2.0.5]
 
