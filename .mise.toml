@@ -6,7 +6,6 @@ MISE_DATA_DIR='bin/'
 
 helm = "https://github.com/Antiarchitect/asdf-helm.git#00b6ead39b97536304042241f31242811ca39f74"
 govulncheck = "https://github.com/wizzardich/asdf-govulncheck.git#2e3e9ce0edbc6ec89097d221c9a04217bbe1f51b"
-markdownlint-cli2 = "https://github.com/paulo-ferraz-oliveira/asdf-markdownlint-cli2.git#6d14d9fb2f6f7572e7cbcbb818da9670ba4bef62"
 kubelinter = "https://github.com/the-cashman/asdf-kube-linter.git#14a55249ef69d5fe98b027b89f111aec2c30ee57"
 kube-code-generator = "https://github.com/mise-plugins/mise-kube-code-generator.git#e98effe0bda46523b4dee7217767457f7ca13fd4"
 
