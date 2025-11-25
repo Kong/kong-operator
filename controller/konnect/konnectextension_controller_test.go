@@ -22,11 +22,6 @@ import (
 )
 
 func TestSkipKonnectCleanupRemovesFinalizers(t *testing.T) {
-	testScheme := scheme.Get()
-	utilruntime.Must(corev1.AddToScheme(testScheme))
-	utilruntime.Must(operatorv1beta1.AddToScheme(testScheme))
-	utilruntime.Must(konnectv1alpha2.AddToScheme(testScheme))
-
 	ext := &konnectv1alpha2.KonnectExtension{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:            "test-ext",
@@ -51,7 +46,7 @@ func TestSkipKonnectCleanupRemovesFinalizers(t *testing.T) {
 	}
 
 	client := fakeclient.NewClientBuilder().
-		WithScheme(testScheme).
+		WithScheme(scheme.Get()).
 		WithObjects(ext, secret).
 		Build()
 
