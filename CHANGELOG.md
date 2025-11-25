@@ -42,6 +42,10 @@
 - Translate `healtchchecks.thershold` in `KongUpstreamPolicy` to the
   `healthchecks.thershold` field in Kong upstreams.
   [#2662](https://github.com/Kong/kong-operator/pull/2662)
+- Fix random, unexpected and invalid validation error during validation of `HTTPRoute`s
+  for `Gateway`s configured in different namespaces with `GatewayConfiguration` that
+  has field `spec.controlPlaneOptions.watchNamespaces.type` set to `own`.
+  [#2717](https://github.com/Kong/kong-operator/pull/2717)
 
 ## [v2.0.5]
 
