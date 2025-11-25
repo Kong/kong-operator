@@ -44,6 +44,12 @@
   This improves performance of config syncs for large configurations.
   [#2759](https://github.com/Kong/kong-operator/pull/2759)
 
+### Changed
+
+- `DataPlane`'s `spec.network.services.ingress.ports` now allows up to 64 ports
+  to be specified. This aligns `DataPlane` with Gateway APIs' `Gateway`.
+  [#2722](https://github.com/Kong/kong-operator/pull/2722)
+
 ## [v2.1.0-alpha.0]
 
 ### Added
