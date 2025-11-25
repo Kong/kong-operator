@@ -6,6 +6,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -13,11 +14,13 @@ import (
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/scheme"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers/deploy"
 	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
@@ -181,6 +184,40 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 		watchFor(t, ctx, w, apiwatch.Modified,
 			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongDataPlaneClientCertificate didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
+		)
+	})
+
+	t.Run("Adopting existing dataplane certificate", func(t *testing.T) {
+		dpCertID := uuid.NewString()
+		w := setupWatch[configurationv1alpha1.KongDataPlaneClientCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting DataPlane certificates")
+		sdk.DataPlaneCertificatesSDK.EXPECT().GetDataplaneCertificate(
+			mock.Anything,
+			cp.GetKonnectID(),
+			dpCertID,
+		).Return(&sdkkonnectops.GetDataplaneCertificateResponse{
+			DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
+				Item: &sdkkonnectcomp.DataPlaneClientCertificate{
+					ID:   lo.ToPtr(dpCertID),
+					Cert: lo.ToPtr(deploy.TestValidCertPEM),
+				},
+			},
+		}, nil)
+
+		t.Log("Creating a KongDataPlaneClientCertificate for adopting it")
+		createdDPCert := deploy.KongDataPlaneClientCertificateAttachedToCP(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongDataPlaneClientCertificate](commonv1alpha1.AdoptModeMatch, dpCertID),
+		)
+
+		t.Logf("Waiting for KongDataPlaneClientCertificate %s/%s to be programmed and set Konnect ID", ns.Name, createdDPCert.Name)
+		watchFor(t, ctx, w, apiwatch.Modified, func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
+			return dpCert.Name == createdDPCert.Name &&
+				k8sutils.IsProgrammed(dpCert) &&
+				dpCert.GetKonnectID() == dpCertID
+		},
+			fmt.Sprintf("KongDataPlaneCertificate didn't get Programmed status condition or didn't get the correct Konnect ID %s assigned", dpCertID),
 		)
 	})
 }

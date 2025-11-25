@@ -130,6 +130,55 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 				},
 				ExpectedUpdateErrorMessage: lo.ToPtr("spec.cert is immutable when an entity is already Programmed"),
 			},
+			{
+				Name: "Can adopt in match mode",
+				TestObject: &configurationv1alpha1.KongDataPlaneClientCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
+						KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
+							Cert: "cert",
+						},
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						Adopt: &commonv1alpha1.AdoptOptions{
+							From: commonv1alpha1.AdoptSourceKonnect,
+							Mode: commonv1alpha1.AdoptModeMatch,
+							Konnect: &commonv1alpha1.AdoptKonnectOptions{
+								ID: "test-dp-cert",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "Cannot adopt in override mode",
+				TestObject: &configurationv1alpha1.KongDataPlaneClientCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
+						KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
+							Cert: "cert",
+						},
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						Adopt: &commonv1alpha1.AdoptOptions{
+							From: commonv1alpha1.AdoptSourceKonnect,
+							Mode: commonv1alpha1.AdoptModeOverride,
+							Konnect: &commonv1alpha1.AdoptKonnectOptions{
+								ID: "test-dp-cert",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("Only 'match' mode adoption is supported"),
+			},
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
