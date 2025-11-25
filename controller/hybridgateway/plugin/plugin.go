@@ -22,28 +22,41 @@ import (
 
 // PluginForFilter creates or retrieves a KongPlugin for the given HTTPRoute filter.
 //
-// The function performs the following operations:
-//  1. Generates the KongPlugin name using the namegen package
-//  2. Builds the KongPlugin resource from the filter using the builder package
-//  3. Determines if the plugin is self-managed (derived from an ExtensionRef)
-//  4. For non-self-managed plugins:
-//     a. Checks if a KongPlugin with that name already exists in the cluster
-//     b. If it exists, updates the KongPlugin annotations to include the current HTTPRoute
-//     c. If it doesn't exist, returns the newly built KongPlugin for creation
-//  5. For self-managed plugins, skips existence checks and updates
+// Workflow:
+//  1. Derives the KongPlugin name (namegen) and enriches the logger context.
+//  2. If the filter type is ExtensionRef:
+//     - Validates group/kind.
+//     - Retrieves the referenced KongPlugin directly (no build, no mutation).
+//     - Returns it with selfManaged=true.
+//  3. Otherwise builds a new KongPlugin (builder chain: name, namespace, labels, annotations, filter).
+//  4. Attempts to GET an existing KongPlugin with the same name/namespace:
+//     - If an API error (other than NotFound) occurs, returns the error.
+//     - If NotFound, returns the freshly built plugin (selfManaged=false) for creation.
+//     - If found:
+//     a. Preserves the existing hybrid routes annotation value.
+//     b. Uses AnnotationManager to append the current HTTPRoute reference.
+//     c. Returns the updated (rebuilt) plugin (selfManaged=false).
+//  5. Spec reconciliation for existing plugins is not performed yet (see TODO / issue 2687).
+//
+// Self-managed plugin:
+//
+//	A plugin referenced via ExtensionRef. These are returned as-is without rebuild,
+//	annotation modification, or existence checks.
 //
 // Parameters:
-//   - ctx: The context for API calls and cancellation
-//   - logger: Logger for structured logging
-//   - cl: Kubernetes client for API operations
-//   - httpRoute: The HTTPRoute resource from which the KongPlugin is derived
-//   - filter: The specific filter within the HTTPRoute rule
-//   - pRef: The parent reference (Gateway) for the HTTPRoute
+//
+//	ctx        - Context for API calls.
+//	logger     - Structured logger.
+//	cl         - Kubernetes client.
+//	httpRoute  - Source HTTPRoute.
+//	filter     - The HTTPRouteFilter being processed.
+//	pRef       - Parent (Gateway) reference.
 //
 // Returns:
-//   - *configurationv1.KongPlugin: The created or updated KongPlugin resource
-//   - selfManaged: A boolean indicating if the plugin is self-managed (from ExtensionRef)
-//   - error: Any error that occurred during the process
+//
+//	*configurationv1.KongPlugin - Built or retrieved plugin.
+//	selfManaged                 - True if sourced from ExtensionRef.
+//	error                       - Any error encountered.
 func PluginForFilter(
 	ctx context.Context,
 	logger logr.Logger,
