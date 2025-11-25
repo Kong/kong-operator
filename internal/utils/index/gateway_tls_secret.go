@@ -1,7 +1,6 @@
 package index
 
 import (
-	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -32,7 +31,7 @@ func tlsCertificateSecretsOnGateway(o client.Object) []string {
 		return nil
 	}
 
-	var out []string
+	seen := make(map[string]struct{})
 	for _, l := range gw.Spec.Listeners {
 		if l.TLS == nil {
 			continue
@@ -52,8 +51,13 @@ func tlsCertificateSecretsOnGateway(o client.Object) []string {
 			if ref.Name == "" {
 				continue
 			}
-			out = append(out, ns+"/"+string(ref.Name))
+			seen[ns+"/"+string(ref.Name)] = struct{}{}
 		}
 	}
-	return lo.Uniq(out)
+
+	out := make([]string, 0, len(seen))
+	for key := range seen {
+		out = append(out, key)
+	}
+	return out
 }

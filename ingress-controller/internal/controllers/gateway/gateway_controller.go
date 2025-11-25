@@ -139,22 +139,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		source.Kind(
 			mgr.GetCache(),
 			&corev1.Secret{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, s *corev1.Secret) []reconcile.Request {
-				referrers, err := r.ReferenceIndexers.ListReferrerObjectsByReferent(s)
-				if err != nil {
-					r.Log.Error(err, "Failed to list referrers for Secret", "secret", client.ObjectKeyFromObject(s))
-					return nil
-				}
-				recs := make([]reconcile.Request, 0, len(referrers))
-				for _, obj := range referrers {
-					nn := client.ObjectKeyFromObject(obj)
-					if !r.GatewayNN.MatchesNN(nn) { // respect --gateway-to-reconcile if set
-						continue
-					}
-					recs = append(recs, reconcile.Request{NamespacedName: nn})
-				}
-				return recs
-			}),
+			handler.TypedEnqueueRequestsFromMapFunc(r.listGatewaysForSecret),
 		),
 	)
 
@@ -364,6 +349,25 @@ func (r *GatewayReconciler) listGatewaysForHTTPRoute(_ context.Context, obj clie
 		})
 	}
 
+	return recs
+}
+
+// listGatewaysForSecret returns reconcile requests for all Gateways that reference the given Secret
+// via TLS certificateRefs.
+func (r *GatewayReconciler) listGatewaysForSecret(_ context.Context, s *corev1.Secret) []reconcile.Request {
+	referrers, err := r.ReferenceIndexers.ListReferrerObjectsByReferent(s)
+	if err != nil {
+		r.Log.Error(err, "Failed to list referrers for Secret", "secret", client.ObjectKeyFromObject(s))
+		return nil
+	}
+	recs := make([]reconcile.Request, 0, len(referrers))
+	for _, obj := range referrers {
+		nn := client.ObjectKeyFromObject(obj)
+		if !r.GatewayNN.MatchesNN(nn) {
+			continue
+		}
+		recs = append(recs, reconcile.Request{NamespacedName: nn})
+	}
 	return recs
 }
 

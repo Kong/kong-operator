@@ -149,7 +149,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 				// Use field index to list only Gateways that reference this Secret.
 				var gwList gwtypes.GatewayList
 				nn := client.ObjectKeyFromObject(s)
-				if err := r.List(ctx, &gwList, client.MatchingFields{idx.TLSCertificateSecretsOnGatewayIndex: nn}); err != nil {
+				if err := r.List(ctx, &gwList, client.MatchingFields{idx.TLSCertificateSecretsOnGatewayIndex: nn.String()}); err != nil {
 					ctrllog.FromContext(ctx).Error(err, "failed to list indexed gateways for Secret watch", "secret", nn)
 					return nil
 				}

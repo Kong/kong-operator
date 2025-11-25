@@ -3,7 +3,6 @@ package envtest
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
@@ -34,7 +33,6 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 
 	r := &kogateway.Reconciler{
 		Client:                mgr.GetClient(),
-		CacheSyncTimeout:      30 * time.Second,
 		Scheme:                scheme,
 		Namespace:             ns.Name,
 		DefaultDataPlaneImage: "kong:latest",
@@ -53,7 +51,7 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 	}
 	require.NoError(t, c.Create(ctx, gc))
 
-	// Patch status Accepted=True for GatewayClass so KO Gateway controller processes Gateways.
+	t.Log("patching GatewayClass status to Accepted=True")
 	require.Eventually(t, func() bool {
 		var cur gatewayv1.GatewayClass
 		if err := c.Get(ctx, types.NamespacedName{Name: gc.Name}, &cur); err != nil {
@@ -73,7 +71,7 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 			return false
 		}
 		return true
-	}, 10*time.Second, 200*time.Millisecond)
+	}, waitTime, tickTime)
 
 	// Create an initial INVALID TLS Secret referenced by the Gateway listener.
 	secretName := "test-cert"
@@ -109,10 +107,10 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 	}
 	require.NoError(t, c.Create(ctx, gw))
 
-	// Initially, the invalid Secret should result in ResolvedRefs=False (InvalidCertificateRef).
-	waitForGatewayResolvedRefsStatus(t, ctx, c, ns.Name, gw.Name, metav1.ConditionFalse, 30*time.Second, 300*time.Millisecond)
+	t.Log("verifying that the invalid Secret results in ResolvedRefs=False (InvalidCertificateRef)")
+	waitForGatewayResolvedRefsStatus(t, ctx, c, ns.Name, gw.Name, metav1.ConditionFalse)
 
-	// Now rotate the Secret with a valid TLS certificate and key.
+	t.Log("rotating the Secret with a valid TLS certificate and key")
 	certPEM, keyPEM := certhelper.MustGenerateCertPEMFormat()
 	require.NoError(t, c.Patch(ctx, &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{Namespace: ns.Name, Name: secretName},
@@ -123,19 +121,18 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 		},
 	}, client.MergeFrom(bad)))
 
-	// After rotation, the Secret watch should enqueue the Gateway and ResolvedRefs should become True.
-	waitForGatewayResolvedRefsStatus(t, ctx, c, ns.Name, gw.Name, metav1.ConditionTrue, 60*time.Second, 500*time.Millisecond)
+	t.Log("verifying that after rotation the Secret watch enqueues the Gateway and ResolvedRefs becomes True")
+	waitForGatewayResolvedRefsStatus(t, ctx, c, ns.Name, gw.Name, metav1.ConditionTrue)
 }
 
 // waitForGatewayResolvedRefsStatus waits until the Gateway's listener ResolvedRefs condition
-// matches the expected status, or fails after the provided timeout.
+// matches the expected status, or fails after the default timeout.
 func waitForGatewayResolvedRefsStatus(
 	t *testing.T,
 	ctx context.Context,
 	c client.Client,
 	namespace, name string,
 	status metav1.ConditionStatus,
-	timeout, interval time.Duration,
 ) {
 	t.Helper()
 	require.Eventually(t, func() bool {
@@ -154,5 +151,5 @@ func waitForGatewayResolvedRefsStatus(
 			}
 		}
 		return false
-	}, timeout, interval)
+	}, waitTime, tickTime)
 }
