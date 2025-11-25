@@ -353,7 +353,7 @@ const (
 type ControlPlaneConfigDump struct {
 	// When State is enabled, Operator will dump the translated Kong configuration by it from a diagnostics server.
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:Enum=enabled;disabled
 	// +kubebuilder:default="disabled"
 	State ConfigDumpState `json:"state"`
@@ -361,7 +361,7 @@ type ControlPlaneConfigDump struct {
 	// When DumpSensitive is enabled, the configuration will be dumped unchanged, including sensitive parts like private keys and credentials.
 	// When DumpSensitive is disabled, the sensitive configuration parts like private keys and credentials are redacted.
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:Enum=enabled;disabled
 	// +kubebuilder:default="disabled"
 	DumpSensitive ConfigDumpState `json:"dumpSensitive"`

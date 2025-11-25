@@ -13,21 +13,39 @@ linters:
             disable:
               - "*"
             enable:
-              - jsontags
-              - duplicatemarkers
+              - arrayofstruct
               - conditions
-              - maxlength
+              - defaultorrequired
+              - duplicatemarkers
               - integers
+              - jsontags
+              - maxlength
               - nobools
+              - nodurations
               - nofloats
               - nomaps
+              - nonullable
               - nophase
+              - notimestamp
               - optionalorrequired
+              - preferredmarkers
               - requiredfields
               - statusoptional
               - statussubresource
               - uniquemarkers
           lintersConfig:
+            # https://github.com/kubernetes-sigs/kube-api-linter/issues/195
+            # requiredfields:
+            #   omitempty:
+            #     policy: Ignore
+            preferredmarkers:
+              markers:
+                - preferredIdentifier: "k8s:optional"
+                  equivalentIdentifiers:
+                    - identifier: "kubebuilder:validation:Optional"
+                - preferredIdentifier: "k8s:required"
+                  equivalentIdentifiers:
+                    - identifier: "kubebuilder:validation:Required"
             conditions:
               isFirstField: Warn
               useProtobuf: Warn
@@ -42,14 +60,6 @@ linters:
               preferredRequiredMarker: required
   exclusions:
     rules:
-      - linters:
-          - kubeapilinter
-        path: .*
-        text: "(optionalorrequired: embedded field  must be marked as optional or required)"
-      - linters:
-          - kubeapilinter
-        path: .*
-        text: "(optionalorrequired: field Spec must be marked as optional or required)"
       - linters:
           - kubeapilinter
         path: .*
@@ -75,6 +85,11 @@ linters:
           - kubeapilinter
         path: api/konnect/v1alpha1/.*
         text: "conditions: Conditions field must be the first field in the struct"
+      # NOTE: We've already released v2beta1 with Duration fields in ControlPlane spec.
+      - linters:
+          - kubeapilinter
+        path: api/gateway-operator/v2beta1/controlplane_types.go
+        text: 'nodurations: field ControlPlane.* pointer should not use a Duration'
 
       # TODO: remove this.
       - linters:
@@ -109,5 +124,5 @@ linters:
       # TODO: remove this.
       - linters:
           - kubeapilinter
-        path: api/(konnect|gateway-operator)/.*
+        path: api/(konnect/v1alpha(1|2)|gateway-operator/v2beta1)/.*
         text: 'maxlength: .*'

@@ -8834,9 +8834,6 @@ spec:
                     - enabled
                     - disabled
                     type: string
-                required:
-                - dumpSensitive
-                - state
                 type: object
                 x-kubernetes-validations:
                 - message: Cannot enable dumpSensitive when state is disabled
