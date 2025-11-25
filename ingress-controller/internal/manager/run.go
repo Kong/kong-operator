@@ -19,6 +19,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/adminapi"
@@ -284,10 +285,24 @@ func New(
 		return nil, err
 	}
 
+	// For admission validator, a client has to see all namespaces to allow validation.
+	// See dispatchValidationNoMatcher(), which returns the first found validator, because
+	// it can't decide robustly which one has cache with a namespace that is needed to
+	// validate against e.g. for handleHTTPRoute where in the chain function
+	// ensureHTTPRouteIsManagedByController(...), is called which fetches Gateway resource.
 	setupLog.Info("Registering admission validator")
+	allNamespacesClient, err := newManagerClient(
+		mgr.GetConfig(),
+		client.Options{
+			Scheme: mgr.GetScheme(),
+		},
+	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to create all namespaces client for admission validator: %w", err)
+	}
 	m.kongValidator = admission.NewKongHTTPValidator(
 		logger,
-		NewTypeMetaSettingClient(mgr.GetClient()),
+		allNamespacesClient,
 		c.IngressClassName,
 		admission.NewDefaultAdminAPIServicesProvider(m.clientsManager),
 		translatorFeatureFlags,
