@@ -205,23 +205,13 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 			},
 		}, nil)
 
-		t.Log("Creating a KongDataPlaneCertificate for adopting it")
+		t.Log("Creating a KongDataPlaneClientCertificate for adopting it")
 		createdDPCert := deploy.KongDataPlaneClientCertificateAttachedToCP(t, ctx, clientNamespaced,
 			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-			func(obj client.Object) {
-				dpCert, ok := obj.(*configurationv1alpha1.KongDataPlaneClientCertificate)
-				require.True(t, ok)
-				dpCert.Spec.Adopt = &commonv1alpha1.AdoptOptions{
-					From: commonv1alpha1.AdoptSourceKonnect,
-					Mode: commonv1alpha1.AdoptModeMatch,
-					Konnect: &commonv1alpha1.AdoptKonnectOptions{
-						ID: dpCertID,
-					},
-				}
-			},
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongDataPlaneClientCertificate](commonv1alpha1.AdoptModeMatch, dpCertID),
 		)
 
-		t.Log("Waiting for KongDataPlaneCertificate to be programmed and set Konnect ID")
+		t.Logf("Waiting for KongDataPlaneClientCertificate %s/%s to be programmed and set Konnect ID", ns.Name, createdDPCert.Name)
 		watchFor(t, ctx, w, apiwatch.Modified, func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
 			return dpCert.Name == createdDPCert.Name &&
 				k8sutils.IsProgrammed(dpCert) &&
