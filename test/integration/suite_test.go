@@ -3,9 +3,7 @@ package integration
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
-	"os/exec"
 	"path"
 	"runtime/debug"
 	"strings"
@@ -131,79 +129,12 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 	defer cleanupTelepresence()
 
-	// Set KUBERNETES_SERVICE_HOST to enable NetworkPolicy creation in tests.
-	// When running with telepresence, the controller can access cluster services
-	// and should create NetworkPolicies just like it would when deployed in-cluster.
+	// Setup environment for NetworkPolicy testing.
 	// See: https://github.com/Kong/kong-operator/issues/2074
-	if os.Getenv("KUBERNETES_SERVICE_HOST") == "" {
-		// Get the Kubernetes API server host from the cluster config
-		restConfig := GetEnv().Cluster().Config()
-		if restConfig.Host != "" {
-			apiURL, err := url.Parse(restConfig.Host)
-			if err == nil && apiURL.Host != "" {
-				fmt.Printf("INFO: setting KUBERNETES_SERVICE_HOST=%s for NetworkPolicy support\n", apiURL.Hostname())
-				os.Setenv("KUBERNETES_SERVICE_HOST", apiURL.Hostname())
-			}
-		}
-	}
-
-	// Create fake pod labels file for testing.
-	// The controller expects this file when RunningOnKubernetes() is true
-	// (i.e., when KUBERNETES_SERVICE_HOST is set).
-	if os.Getenv("KUBERNETES_SERVICE_HOST") != "" {
-		podLabelsDir := "/etc/podinfo"
-		podLabelsFile := path.Join(podLabelsDir, "labels")
-		if _, err := os.Stat(podLabelsFile); os.IsNotExist(err) {
-			fmt.Printf("INFO: creating pod labels file at %s\n", podLabelsFile)
-			// Try to create the directory. If permission is denied, try with sudo.
-			if err := os.MkdirAll(podLabelsDir, 0755); err != nil {
-				// Permission denied, try with sudo
-				fmt.Printf("INFO: permission denied, retrying with sudo\n")
-				cmd := exec.Command("sudo", "mkdir", "-p", podLabelsDir)
-				if output, err := cmd.CombinedOutput(); err != nil {
-					exitOnErr(fmt.Errorf("failed to create directory %s with sudo: %w, output: %s", podLabelsDir, err, string(output)))
-				}
-			}
-
-			// Write the file content to a temporary location first
-			content := []byte("app=\"kong-operator\"")
-			tmpFile, err := os.CreateTemp("", "podinfo-labels-*")
-			if err != nil {
-				exitOnErr(fmt.Errorf("failed to create temporary file: %w", err))
-			}
-			tmpPath := tmpFile.Name()
-			defer os.Remove(tmpPath)
-
-			if _, err := tmpFile.Write(content); err != nil {
-				tmpFile.Close()
-				exitOnErr(fmt.Errorf("failed to write to temporary file: %w", err))
-			}
-			tmpFile.Close()
-
-			// Try to copy the file to the target location
-			if err := os.Rename(tmpPath, podLabelsFile); err != nil {
-				// Permission denied, use sudo to copy
-				fmt.Printf("INFO: using sudo to copy file to %s\n", podLabelsFile)
-				cmd := exec.Command("sudo", "cp", tmpPath, podLabelsFile)
-				if output, err := cmd.CombinedOutput(); err != nil {
-					exitOnErr(fmt.Errorf("failed to copy file with sudo: %w, output: %s", err, string(output)))
-				}
-				// Set proper permissions
-				cmd = exec.Command("sudo", "chmod", "644", podLabelsFile)
-				if output, err := cmd.CombinedOutput(); err != nil {
-					exitOnErr(fmt.Errorf("failed to set permissions with sudo: %w, output: %s", err, string(output)))
-				}
-			}
-
-			fmt.Printf("INFO: successfully created pod labels file\n")
-			// Verify the file was actually created and is readable
-			if content, err := os.ReadFile(podLabelsFile); err != nil {
-				exitOnErr(fmt.Errorf("failed to verify pod labels file %s: %w", podLabelsFile, err))
-			} else {
-				fmt.Printf("INFO: verified pod labels file content: %s\n", string(content))
-			}
-		}
-	}
+	helpers.SetupKubernetesServiceHost(GetEnv().Cluster().Config())
+	cleanupPodLabels, err := helpers.SetupFakePodLabels()
+	exitOnErr(err)
+	defer cleanupPodLabels()
 
 	fmt.Println("INFO: starting the operator's controller manager")
 	// Spawn the controller manager based on passed config in

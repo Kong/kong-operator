@@ -590,15 +590,11 @@ func generateDataPlaneNetworkPolicy(
 	// This is because telepresence traffic doesn't come from a pod with matching labels.
 	// We keep the original restrictive rule so that tests can verify the NetworkPolicy
 	// is created with the correct peer selector.
-	var allowAllAdminAPIIngress networkingv1.NetworkPolicyIngressRule
-	if !k8sutils.RunningInPod() {
-		allowAllAdminAPIIngress = networkingv1.NetworkPolicyIngressRule{
-			Ports: []networkingv1.NetworkPolicyPort{
-				{Protocol: &protocolTCP, Port: &adminAPISSLPort},
-			},
-			// No From restriction - allows access from any source
-		}
-	}
+	//
+	// NOTE: This relaxed rule should only be active in test environments.
+	// In production (when running inside a pod), RunningInPod() returns true
+	// and this rule will not be added.
+	runningInPod := k8sutils.RunningInPod()
 
 	allowProxyIngress := networkingv1.NetworkPolicyIngressRule{
 		Ports: []networkingv1.NetworkPolicyPort{
@@ -622,7 +618,12 @@ func generateDataPlaneNetworkPolicy(
 
 	// When running outside a pod (e.g., via telepresence), add an additional rule
 	// to allow admin API access from any source
-	if !k8sutils.RunningInPod() && allowAllAdminAPIIngress.Ports != nil {
+	if !runningInPod {
+		allowAllAdminAPIIngress := networkingv1.NetworkPolicyIngressRule{
+			Ports: []networkingv1.NetworkPolicyPort{
+				{Protocol: &protocolTCP, Port: &adminAPISSLPort},
+			},
+		}
 		ingressRules = append(ingressRules, allowAllAdminAPIIngress)
 	}
 
