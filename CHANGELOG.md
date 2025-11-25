@@ -141,6 +141,9 @@
   is now tracked through the `gateway-operator.konghq.com/hybrid-routes` annotation. The same generated
   resource can now be shared among different HTTPRoutes.
   [#2656](https://github.com/Kong/kong-operator/pull/2656)
+- HybridGateway: implemented `ExtensionRef` filters to allow reference of self-managed plugins from
+  `HTTPRoute`s' filters.
+  [#2715](https://github.com/Kong/kong-operator/pull/2715)
 
 ### Changed
 
