@@ -251,6 +251,8 @@ func KonnectEntitiesTestCase(t *testing.T, params konnectEntitiesTestCaseParams)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
 	kp := deploy.ProxyCachePlugin(t, ctx, params.client)
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kp.DeepCopy()))
+
 	kpb := deploy.KongPluginBinding(t, ctx, params.client,
 		konnect.NewKongPluginBindingBuilder().
 			WithServiceTarget(ks.Name).
@@ -259,13 +261,12 @@ func KonnectEntitiesTestCase(t *testing.T, params konnectEntitiesTestCaseParams)
 			Build(),
 		deploy.WithTestIDLabel(params.testID),
 	)
-	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kp.DeepCopy()))
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kpb.DeepCopy()))
 
 	t.Logf("Waiting for KongPluginBinding to be updated with Konnect ID")
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		err := GetClients().MgrClient.Get(GetCtx(), types.NamespacedName{Name: kpb.Name, Namespace: params.ns}, kpb)
 		require.NoError(t, err)
-
 		assertKonnectEntityProgrammed(t, kpb)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
