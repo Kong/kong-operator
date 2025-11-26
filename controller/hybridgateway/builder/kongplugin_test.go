@@ -1,7 +1,6 @@
 package builder
 
 import (
-	"context"
 	"encoding/json"
 	"testing"
 
@@ -277,7 +276,7 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewKongPlugin().WithFilter(context.TODO(), nil, "", tt.filter)
+			builder := NewKongPlugin().WithFilter(tt.filter)
 
 			plugin, err := builder.Build()
 
@@ -410,7 +409,7 @@ func TestKongPluginBuilder_WithFilter_ResponseHeaderModifier(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewKongPlugin().WithFilter(context.TODO(), nil, "", tt.filter)
+			builder := NewKongPlugin().WithFilter(tt.filter)
 
 			plugin, err := builder.Build()
 
@@ -437,7 +436,7 @@ func TestKongPluginBuilder_WithFilter_UnsupportedType(t *testing.T) {
 		Type: gatewayv1.HTTPRouteFilterCORS, // Unsupported type
 	}
 
-	builder := NewKongPlugin().WithFilter(context.TODO(), nil, "", filter)
+	builder := NewKongPlugin().WithFilter(filter)
 
 	_, err := builder.Build()
 	assert.Error(t, err)
@@ -538,7 +537,7 @@ func TestKongPluginBuilder_ChainedCalls(t *testing.T) {
 		WithNamespace("test-ns").
 		WithLabels(route, parentRef).
 		WithAnnotations(route, parentRef).
-		WithFilter(context.TODO(), nil, "", filter).
+		WithFilter(filter).
 		MustBuild()
 
 	assert.Equal(t, "test-plugin", plugin.Name)

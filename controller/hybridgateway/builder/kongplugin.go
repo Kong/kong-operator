@@ -1,14 +1,12 @@
 package builder
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
 
 	"github.com/samber/lo"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -105,7 +103,7 @@ func (b *KongPluginBuilder) MustBuild() configurationv1.KongPlugin {
 }
 
 // WithFilter sets the KongPlugin configuration based on the given HTTPRouteFilter.
-func (b *KongPluginBuilder) WithFilter(ctx context.Context, cl client.Client, namespace string, filter gwtypes.HTTPRouteFilter) *KongPluginBuilder {
+func (b *KongPluginBuilder) WithFilter(filter gwtypes.HTTPRouteFilter) *KongPluginBuilder {
 
 	switch filter.Type {
 	case gatewayv1.HTTPRouteFilterRequestHeaderModifier:
@@ -153,7 +151,6 @@ func (b *KongPluginBuilder) WithFilter(ctx context.Context, cl client.Client, na
 			return b
 		}
 		b.plugin.Config.Raw = configJSON
-	case gatewayv1.HTTPRouteFilterExtensionRef:
 	default:
 		b.errors = append(b.errors, fmt.Errorf("unsupported filter type: %s", filter.Type))
 	}

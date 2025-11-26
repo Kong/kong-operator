@@ -11,7 +11,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -172,7 +171,7 @@ func TestPluginForFilter(t *testing.T) {
 			if tt.existingPlugin != nil {
 				objects = append(objects, tt.existingPlugin)
 			}
-			fakeClient := fake.NewClientBuilder().
+			fakeClient := fakectrlruntimeclient.NewClientBuilder().
 				WithScheme(scheme).
 				WithRuntimeObjects(objects...).
 				Build()

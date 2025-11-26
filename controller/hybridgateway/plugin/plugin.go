@@ -86,7 +86,7 @@ func PluginForFilter(
 		WithNamespace(httpRoute.Namespace).
 		WithLabels(httpRoute, pRef).
 		WithAnnotations(httpRoute, pRef).
-		WithFilter(ctx, cl, httpRoute.Namespace, filter).
+		WithFilter(filter).
 		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongPlugin resource")
