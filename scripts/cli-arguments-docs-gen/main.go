@@ -83,6 +83,11 @@ func getTypeForHuman(f *flag.Flag) string {
 		String() string
 	}
 
+	t, _ := flag.UnquoteUsage(f)
+	if t != "" && t != "value" && t != "0" {
+		return t
+	}
+
 	switch typ := f.Value.(type) {
 	case boolvalue:
 		return "bool"
