@@ -60,7 +60,7 @@ func ServiceForRule(
 
 	service, err := builder.NewKongService().
 		WithName(serviceName).
-		WithNamespace(httpRoute.Namespace).
+		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
 		WithLabels(httpRoute, pRef).
 		WithAnnotations(httpRoute, pRef).
 		WithSpecName(serviceName).

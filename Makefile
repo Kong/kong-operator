@@ -190,12 +190,11 @@ MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/npm-markdownlint-cli2/$(MARKDOWNLINT_
 download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
 	$(MAKE) mise-install DEP_VER=npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION)
 
-HELM_VERSION = $(shell $(YQ) -r '.helm' < $(TOOLS_VERSIONS_FILE))
-HELM = $(PROJECT_DIR)/bin/installs/helm/$(HELM_VERSION)/bin/helm
+HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["http:helm"].version' < $(MISE_FILE))
+HELM = $(PROJECT_DIR)/bin/installs/http-helm/$(HELM_VERSION)/helm
 .PHONY: download.helm
 download.helm: mise yq ## Download helm locally if necessary.
-	$(MAKE) mise-plugin-install DEP=helm
-	@$(MISE) install -q helm@$(HELM_VERSION)
+	$(MAKE) mise-install DEP_VER=http:helm
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
