@@ -19,7 +19,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/pkg/utils/test"
+	testutils "github.com/kong/kong-operator/pkg/utils/test"
 )
 
 // logOutput is a file to use for manager log output other than stderr.
@@ -48,17 +48,9 @@ func PrepareClusterForRunningControllerManager(
 		}
 	}
 
-	// Deploy all RBACs required for testing to the cluster.
-	if err := DeployRBACsForCluster(ctx, cluster); err != nil {
-		return fmt.Errorf("failed to deploy RBACs: %w", err)
-	}
+	fmt.Println("INFO: Deploying all required Kubernetes Configuration (RBAC, CRDs, etc.) for the operator")
 
-	// Deploy all CRDs required for testing to the cluster.
-	if err := DeployCRDsForCluster(ctx, cluster); err != nil {
-		return fmt.Errorf("failed to deploy CRDs: %w", err)
-	}
-
-	return nil
+	return testutils.DeployKubernetesConfiguration(ctx, cluster)
 }
 
 // DeployControllerManagerForCluster deploys all the base CRDs needed for the
@@ -123,7 +115,7 @@ func DeployControllerManagerForCluster(
 		Namespace: kongAddon.Namespace(),
 		Name:      "ingress-controller-kong-udp-proxy",
 	})
-	cfg.Impersonate = test.ServiceAccountToImpersonate
+	cfg.Impersonate = testutils.ServiceAccountToImpersonate
 	// Increase Admin API init tolerance for CI: Kong can take longer to be ready.
 	cfg.KongAdminInitializationRetries = 180
 	cfg.KongAdminInitializationRetryDelay = time.Second

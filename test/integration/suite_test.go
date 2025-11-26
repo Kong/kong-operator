@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path"
 	"runtime/debug"
 	"strings"
 	"testing"
@@ -107,23 +106,12 @@ func TestMain(m *testing.M) {
 	clients, err = testutils.NewK8sClients(GetEnv())
 	exitOnErr(err)
 
-	fmt.Println("INFO: creating system namespaces and serviceaccounts")
-	exitOnErr(clusters.CreateNamespace(GetCtx(), GetEnv().Cluster(), "kong-system"))
-
-	configPath := path.Join(testutils.ProjectRootPath(), "config")
-
-	exitOnErr(clusters.KustomizeDeployForCluster(GetCtx(), GetEnv().Cluster(), path.Join(configPath, "/rbac/base")))
-	exitOnErr(clusters.KustomizeDeployForCluster(GetCtx(), GetEnv().Cluster(), path.Join(configPath, "/rbac/role")))
-	exitOnErr(clusters.KustomizeDeployForCluster(GetCtx(), GetEnv().Cluster(), path.Join(configPath, "/default/validating_policies")))
-
-	// normally this is obtained from the downward API. the tests fake it.
+	// Normally this is obtained from the downward API. the tests fake it.
 	err = os.Setenv("POD_NAMESPACE", "kong-system")
 	exitOnErr(err)
 
-	if !test.IsInstallingCRDsDisabled() {
-		fmt.Println("INFO: deploying CRDs to test cluster")
-		exitOnErr(testutils.DeployCRDs(GetCtx(), path.Join(configPath, "/crd"), GetClients().OperatorClient, GetEnv().Cluster()))
-	}
+	fmt.Println("INFO: Deploying all required Kubernetes Configuration (RBAC, CRDs, etc.) for the operator")
+	exitOnErr(testutils.DeployKubernetesConfiguration(GetCtx(), env.Cluster()))
 
 	cleanupTelepresence, err := helpers.SetupTelepresence(ctx)
 	exitOnErr(err)
