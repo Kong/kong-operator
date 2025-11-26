@@ -42,7 +42,7 @@ require (
 	github.com/prometheus/client_model v0.6.2
 	github.com/prometheus/common v0.66.1
 	github.com/samber/lo v1.51.0
-	github.com/samber/mo v1.15.0
+	github.com/samber/mo v1.16.0
 	github.com/sethvargo/go-password v0.3.1
 	github.com/sourcegraph/conc v0.3.0
 	github.com/stretchr/testify v1.11.1
