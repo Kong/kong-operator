@@ -67,7 +67,7 @@ func RouteForRule(
 
 	routeBuilder := builder.NewKongRoute().
 		WithName(routeName).
-		WithNamespace(httpRoute.Namespace).
+		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
 		WithLabels(httpRoute, pRef).
 		WithAnnotations(httpRoute, pRef).
 		WithSpecName(routeName).
