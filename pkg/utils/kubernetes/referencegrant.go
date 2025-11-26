@@ -22,10 +22,10 @@ func AllowedByReferenceGrants(
 		return true, nil
 	}
 	referenceGrantList := gatewayv1beta1.ReferenceGrantList{}
-	namespacedClient := client.NewNamespacedClient(cl, targetNamespace)
-	err := namespacedClient.List(
+	err := cl.List(
 		ctx,
 		&referenceGrantList,
+		client.InNamespace(targetNamespace),
 		// TODO: Add field selector to filter ReferenceGrants having given `from` to limit the listing scope here.
 	)
 	if err != nil {

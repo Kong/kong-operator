@@ -2292,7 +2292,6 @@ func TestGetGatewayConfigForParametersRef(t *testing.T) {
 
 			// Check returned gateway config
 			assert.Equal(t, tc.expectedGatewayConfig, gatewayConfig)
-
 		})
 	}
 }

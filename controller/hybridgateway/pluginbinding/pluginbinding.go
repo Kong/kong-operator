@@ -57,7 +57,7 @@ func BindingForPluginAndRoute(
 
 	binding, err := builder.NewKongPluginBinding().
 		WithName(bindingName).
-		WithNamespace(httpRoute.Namespace).
+		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
 		WithLabels(httpRoute, pRef).
 		WithAnnotations(httpRoute, pRef).
 		WithPluginRef(pluginName).

@@ -172,11 +172,11 @@ download.chartsnap: yq download.helm
 	HELM=$(HELM) CHARTSNAP_VERSION=$(CHARTSNAP_VERSION) ./scripts/install-chartsnap.sh
 
 KUBE_LINTER_VERSION = $(shell $(YQ) -ojson -r '.kube-linter' < $(TOOLS_VERSIONS_FILE))
-KUBE_LINTER = $(PROJECT_DIR)/bin/installs/kube-linter/v$(KUBE_LINTER_VERSION)/bin/kube-linter
+KUBE_LINTER = $(PROJECT_DIR)/bin/installs/kube-linter/$(KUBE_LINTER_VERSION)/bin/kube-linter
 .PHONY: kube-linter
 download.kube-linter: mise yq
 	$(MAKE) mise-plugin-install DEP=kube-linter
-	@$(MAKE) mise-install DEP_VER=kube-linter@v$(KUBE_LINTER_VERSION)
+	@$(MAKE) mise-install DEP_VER=kube-linter@$(KUBE_LINTER_VERSION)
 
 TELEPRESENCE_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["github:telepresenceio/telepresence"].version' < $(MISE_FILE))
 TELEPRESENCE= $(PROJECT_DIR)/bin/installs/github-telepresenceio-telepresence/$(TELEPRESENCE_VERSION)/telepresence
@@ -185,18 +185,16 @@ download.telepresence: mise yq ## Download telepresence locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:telepresenceio/telepresence
 
 MARKDOWNLINT_VERSION = $(shell $(YQ) -r '.markdownlint-cli2' < $(TOOLS_VERSIONS_FILE))
-MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/markdownlint-cli2/$(MARKDOWNLINT_VERSION)/bin/markdownlint-cli2
+MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/npm-markdownlint-cli2/$(MARKDOWNLINT_VERSION)/bin/markdownlint-cli2
 .PHONY: download.markdownlint-cli2
 download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
-	$(MAKE) mise-plugin-install DEP=markdownlint-cli2
-	@$(MISE) install -q markdownlint-cli2@$(MARKDOWNLINT_VERSION)
+	$(MAKE) mise-install DEP_VER=npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION)
 
-HELM_VERSION = $(shell $(YQ) -r '.helm' < $(TOOLS_VERSIONS_FILE))
-HELM = $(PROJECT_DIR)/bin/installs/helm/$(HELM_VERSION)/bin/helm
+HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["http:helm"].version' < $(MISE_FILE))
+HELM = $(PROJECT_DIR)/bin/installs/http-helm/$(HELM_VERSION)/helm
 .PHONY: download.helm
 download.helm: mise yq ## Download helm locally if necessary.
-	$(MAKE) mise-plugin-install DEP=helm
-	@$(MISE) install -q helm@$(HELM_VERSION)
+	$(MAKE) mise-install DEP_VER=http:helm
 
 .PHONY: use-setup-envtest
 use-setup-envtest:

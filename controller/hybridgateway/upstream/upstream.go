@@ -55,7 +55,7 @@ func UpstreamForRule(
 
 	upstream, err := builder.NewKongUpstream().
 		WithName(upstreamName).
-		WithNamespace(httpRoute.Namespace).
+		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
 		WithLabels(httpRoute, pRef).
 		WithAnnotations(httpRoute, pRef).
 		WithSpecName(upstreamName).
