@@ -183,14 +183,8 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		updated = controllerutil.AddFinalizer(&ext, consts.ExtensionInUseFinalizer)
 	}
 	if updated {
-		if err := r.Update(ctx, &ext); err != nil {
-			if k8serrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
-			if k8serrors.IsNotFound(err) {
-				return ctrl.Result{}, nil
-			}
-			return ctrl.Result{}, err
+		if res, err, done := handleUpdateError(r.Update(ctx, &ext)); done {
+			return res, err
 		}
 		log.Debug(logger, "Extension-in-use finalizer changed on KonnectExtension")
 		return ctrl.Result{}, nil
@@ -235,14 +229,8 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			// remove the konnect-cleanup finalizer from the KonnectExtension.
 			updated = controllerutil.RemoveFinalizer(&ext, KonnectCleanupFinalizer)
 			if updated {
-				if err := r.Update(ctx, &ext); err != nil {
-					if k8serrors.IsConflict(err) {
-						return ctrl.Result{Requeue: true}, nil
-					}
-					if k8serrors.IsNotFound(err) {
-						return ctrl.Result{}, nil
-					}
-					return ctrl.Result{}, err
+				if res, err, done := handleUpdateError(r.Update(ctx, &ext)); done {
+					return res, err
 				}
 				log.Debug(logger, "Konnect-cleanup finalizer removed from KonnectExtension")
 				return ctrl.Result{}, nil
@@ -641,17 +629,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					ext.Status.Konnect = nil
 				}
 			}
-			err := r.Client.Status().Update(ctx, &ext)
-			if k8serrors.IsConflict(err) {
-				// in case the err is of type conflict, don't return it and instead trigger
-				// another reconciliation.
-				// This is just to prevent spamming of conflict errors.
-				return ctrl.Result{Requeue: true}, nil
+			if res, err, done := handleUpdateError(r.Client.Status().Update(ctx, &ext)); done {
+				return res, err
 			}
-			if k8serrors.IsNotFound(err) {
-				return ctrl.Result{}, nil
-			}
-			return ctrl.Result{}, err
 		}
 	}
 
@@ -690,6 +670,38 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}, nil
 }
 
+// handleUpdateError handles common transient errors after Update operations.
+// Returns (result, error, shouldReturn) where shouldReturn indicates if the caller
+// should immediately return with the provided result and error.
+//   - For conflict errors: returns (ctrl.Result{Requeue: true}, nil, true)
+//   - For not found errors: returns (ctrl.Result{}, nil, true)
+//   - For other errors: returns (ctrl.Result{}, err, true)
+//   - For nil error: returns (ctrl.Result{}, nil, false)
+func handleUpdateError(err error) (ctrl.Result, error, bool) {
+	if err == nil {
+		return ctrl.Result{}, nil, false
+	}
+	switch {
+	case k8serrors.IsConflict(err):
+		return ctrl.Result{Requeue: true}, nil, true
+	case k8serrors.IsNotFound(err):
+		return ctrl.Result{}, nil, true
+	default:
+		return ctrl.Result{}, err, true
+	}
+}
+
+// skipKonnectCleanup handles the deletion of a KonnectExtension when Konnect API
+// credentials are unavailable (e.g., the referenced KonnectGatewayControlPlane or
+// KonnectAPIAuthConfiguration has already been deleted).
+//
+// In this scenario, remote cleanup in Konnect cannot be performed, so this method:
+//  1. Removes finalizers from the associated certificate Secret (if it exists)
+//  2. Removes the KonnectCleanupFinalizer from the KonnectExtension itself
+//
+// This allows the KonnectExtension to be garbage collected even when communication
+// with Konnect is not possible. Note that this may leave orphaned resources in Konnect
+// that will need to be cleaned up manually or through other means.
 func (r *KonnectExtensionReconciler) skipKonnectCleanup(ctx context.Context, logger logr.Logger, ext *konnectv1alpha2.KonnectExtension) (ctrl.Result, error) {
 	log.Info(logger, "KonnectExtension cleanup proceeding without Konnect credentials; skipping remote operations")
 
@@ -726,15 +738,8 @@ func (r *KonnectExtensionReconciler) skipKonnectCleanup(ctx context.Context, log
 	}
 
 	if controllerutil.RemoveFinalizer(ext, KonnectCleanupFinalizer) {
-		if err := r.Update(ctx, ext); err != nil {
-			switch {
-			case k8serrors.IsConflict(err):
-				return ctrl.Result{Requeue: true}, nil
-			case k8serrors.IsNotFound(err):
-				return ctrl.Result{}, nil
-			default:
-				return ctrl.Result{}, err
-			}
+		if res, err, done := handleUpdateError(r.Update(ctx, ext)); done {
+			return res, err
 		}
 		log.Info(logger, "removed konnect-cleanup finalizer after skipping remote cleanup")
 	}
