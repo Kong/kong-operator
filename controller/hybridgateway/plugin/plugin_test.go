@@ -7,9 +7,11 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
@@ -169,12 +171,12 @@ func TestPluginForFilter(t *testing.T) {
 			if tt.existingPlugin != nil {
 				objects = append(objects, tt.existingPlugin)
 			}
-			fakeClient := fake.NewClientBuilder().
+			fakeClient := fakectrlruntimeclient.NewClientBuilder().
 				WithScheme(scheme).
 				WithRuntimeObjects(objects...).
 				Build()
 
-			plugin, err := PluginForFilter(ctx, logger, fakeClient, tt.httpRoute, tt.filter, tt.parentRef)
+			plugin, _, err := PluginForFilter(ctx, logger, fakeClient, tt.httpRoute, tt.filter, tt.parentRef)
 
 			if tt.expectedError {
 				require.Error(t, err)
@@ -184,6 +186,155 @@ func TestPluginForFilter(t *testing.T) {
 
 			if tt.validatePlugin != nil {
 				tt.validatePlugin(t, plugin)
+			}
+		})
+	}
+}
+
+func TestGetReferencedKongPlugin(t *testing.T) {
+	tests := []struct {
+		name           string
+		filter         gwtypes.HTTPRouteFilter
+		namespace      string
+		existingPlugin *configurationv1.KongPlugin
+		expectedPlugin *configurationv1.KongPlugin
+		expectedError  string
+	}{
+		{
+			name: "nil ExtensionRef",
+			filter: gwtypes.HTTPRouteFilter{
+				Type:         gatewayv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: nil,
+			},
+			namespace:     "default",
+			expectedError: "ExtensionRef filter is missing",
+		},
+		{
+			name: "unsupported ExtensionRef group",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group("unsupported.group"),
+					Kind:  "KongPlugin",
+					Name:  "test-plugin",
+				},
+			},
+			namespace:     "default",
+			expectedError: "unsupported ExtensionRef: unsupported.group/KongPlugin",
+		},
+		{
+			name: "unsupported ExtensionRef kind",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "UnsupportedKind",
+					Name:  "test-plugin",
+				},
+			},
+			namespace:     "default",
+			expectedError: "unsupported ExtensionRef: configuration.konghq.com/UnsupportedKind",
+		},
+		{
+			name: "successful ExtensionRef fetch",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "test-plugin",
+				},
+			},
+			namespace: "default",
+			existingPlugin: &configurationv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-plugin",
+					Namespace: "default",
+				},
+				PluginName: "rate-limiting",
+			},
+			expectedPlugin: &configurationv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-plugin",
+					Namespace: "default",
+				},
+				PluginName: "rate-limiting",
+			},
+		},
+		{
+			name: "ExtensionRef not found",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "non-existent-plugin",
+				},
+			},
+			namespace:     "default",
+			expectedError: "failed to get KongPlugin for ExtensionRef non-existent-plugin",
+		},
+		{
+			name: "ExtensionRef with complex plugin configuration",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "complex-plugin",
+				},
+			},
+			namespace: "test-namespace",
+			existingPlugin: &configurationv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "complex-plugin",
+					Namespace: "test-namespace",
+				},
+				PluginName: "custom-plugin",
+				Config: apiextensionsv1.JSON{
+					Raw: []byte(`{"key":"value"}`),
+				},
+			},
+			expectedPlugin: &configurationv1.KongPlugin{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "complex-plugin",
+					Namespace: "test-namespace",
+				},
+				PluginName: "custom-plugin",
+				Config: apiextensionsv1.JSON{
+					Raw: []byte(`{"key":"value"}`),
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Create a fake client with the existing plugin if provided
+			objects := []client.Object{}
+			if tt.existingPlugin != nil {
+				objects = append(objects, tt.existingPlugin)
+			}
+			cl := fakectrlruntimeclient.
+				NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(objects...).
+				Build()
+
+			result, err := getReferencedKongPlugin(context.TODO(), cl, tt.namespace, tt.filter)
+
+			if tt.expectedError != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				require.NoError(t, err)
+				assert.NotNil(t, result)
+				assert.Equal(t, tt.expectedPlugin.Name, result.Name)
+				assert.Equal(t, tt.expectedPlugin.Namespace, result.Namespace)
+				assert.Equal(t, tt.expectedPlugin.PluginName, result.PluginName)
+				if len(tt.expectedPlugin.Config.Raw) > 0 {
+					assert.Equal(t, tt.expectedPlugin.Config.Raw, result.Config.Raw)
+				}
 			}
 		})
 	}
