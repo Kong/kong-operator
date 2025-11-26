@@ -50,6 +50,7 @@ endif
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
 TOOLS_VERSIONS_FILE = $(PROJECT_DIR)/.tools_versions.yaml
+CUSTOM_GOLANGCI_LINT_FILE = $(PROJECT_DIR)/.custom-gcl.yml
 
 .PHONY: tools
 tools: controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq crd-ref-docs
@@ -172,11 +173,10 @@ download.chartsnap: yq download.helm
 	HELM=$(HELM) CHARTSNAP_VERSION=$(CHARTSNAP_VERSION) ./scripts/install-chartsnap.sh
 
 KUBE_LINTER_VERSION = $(shell $(YQ) -ojson -r '.kube-linter' < $(TOOLS_VERSIONS_FILE))
-KUBE_LINTER = $(PROJECT_DIR)/bin/installs/kube-linter/$(KUBE_LINTER_VERSION)/bin/kube-linter
+KUBE_LINTER = $(PROJECT_DIR)/bin/installs/github-stackrox-kube-linter/$(KUBE_LINTER_VERSION)/kube-linter
 .PHONY: kube-linter
 download.kube-linter: mise yq
-	$(MAKE) mise-plugin-install DEP=kube-linter
-	@$(MAKE) mise-install DEP_VER=kube-linter@$(KUBE_LINTER_VERSION)
+	$(MAKE) mise-install DEP_VER=github:stackrox/kube-linter@$(KUBE_LINTER_VERSION)
 
 TELEPRESENCE_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["github:telepresenceio/telepresence"].version' < $(MISE_FILE))
 TELEPRESENCE= $(PROJECT_DIR)/bin/installs/github-telepresenceio-telepresence/$(TELEPRESENCE_VERSION)/telepresence
@@ -195,6 +195,12 @@ HELM = $(PROJECT_DIR)/bin/installs/http-helm/$(HELM_VERSION)/helm
 .PHONY: download.helm
 download.helm: mise yq ## Download helm locally if necessary.
 	$(MAKE) mise-install DEP_VER=http:helm
+
+KUBE_API_LINTER_VERSION = $(shell $(YQ) -r '.plugins[0].version' < $(CUSTOM_GOLANGCI_LINT_FILE))
+KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter
+.PHONY: download.kube-api-linter
+download.kube-api-linter: mise yq ## Download kube-api-linter locally if necessary.
+	$(MAKE) mise-install DEP_VER=go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter@$(KUBE_API_LINTER_VERSION)
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
@@ -994,27 +1000,9 @@ install.telepresence: download.telepresence
 uninstall.telepresence: download.telepresence
 	@$(PROJECT_DIR)/scripts/telepresence-manager.sh uninstall "$(TELEPRESENCE)"
 
-# Currently kube-api-linter can only be run with golangci-lint as custom linter.
-# There have been some discussions about making it possible to be run as a standalone tool
-# using go run but nothing has been implemented yet.
-# ref: https://github.com/kubernetes-sigs/kube-api-linter/issues/86
-
-GOLANGCI_LINT_KUBE_API_LINTER = $(PROJECT_DIR)/bin/golangci-kube-api-linter
-
-# Target below only checks if the kube-api-linter is installed, if not it will
-# run golangci-lint custom to produce a custom linter binary.
-# It does not enforce the version of kube-api-linter, so when that changes in
-# .custom-gcl.yml it will not cause a rebuild. Until that changes, we need to
-# manually remove the binary and call `make lint.api` to rebuild it.
-
-.PHONY: lint.api.remove
-lint.api.remove:
-	@rm -f $(GOLANGCI_LINT_KUBE_API_LINTER)
-
 .PHONY: lint.api
-lint.api: golangci-lint
-	@[[ -f $(GOLANGCI_LINT_KUBE_API_LINTER) ]] || $(GOLANGCI_LINT) custom -v
-	$(GOLANGCI_LINT_KUBE_API_LINTER) run --config $(PROJECT_DIR)/.golangci-kube-api.yaml -v \
+lint.api: download.kube-api-linter
+	$(KUBE_API_LINTER) run --config $(PROJECT_DIR)/.golangci-kube-api.yaml -v \
 		./api/gateway-operator/v2beta1/... \
 		./api/konnect/v1alpha1/... \
 		./api/konnect/v1alpha2/... \
