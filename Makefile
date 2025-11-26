@@ -95,11 +95,10 @@ kustomize: mise yq ## Download kustomize locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:kubernetes-sigs/kustomize
 
 CLIENT_GEN_VERSION = $(shell $(YQ) -r '.code-generator' < $(TOOLS_VERSIONS_FILE))
-CLIENT_GEN = $(PROJECT_DIR)/bin/installs/kube-code-generator/$(CLIENT_GEN_VERSION)/bin/client-gen
+CLIENT_GEN = $(PROJECT_DIR)/bin/installs/go-k8s-io-code-generator-cmd-client-gen/$(CLIENT_GEN_VERSION)/bin/client-gen
 .PHONY: client-gen
 client-gen: mise yq ## Download client-gen locally if necessary.
-	$(MAKE) mise-plugin-install DEP=kube-code-generator
-	@$(MISE) install -q kube-code-generator@$(CLIENT_GEN_VERSION)
+	$(MAKE) mise-install DEP_VER=go:k8s.io/code-generator/cmd/client-gen@$(CLIENT_GEN_VERSION)
 
 GOLANGCI_LINT_VERSION = $(shell $(YQ) -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
 GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/github-golangci-golangci-lint/$(GOLANGCI_LINT_VERSION)/golangci-lint
@@ -108,15 +107,14 @@ golangci-lint: mise yq ## Download golangci-lint locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:golangci/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
-MODERNIZE = $(PROJECT_DIR)/bin/modernize
+MODERNIZE = $(PROJECT_DIR)/bin/installs/go-golang-org-x-tools-gopls-internal-analysis-modernize-cmd-modernize/$(MODERNIZE_VERSION)/bin/modernize
 # Flags for modernize analyzer. Disable the "omitzero" category to avoid
 # warnings about `omitempty` on nested struct fields, which we intentionally
 # keep for compatibility with upstream expectations.
 MODERNIZE_FLAGS ?= -category=-omitzero
 .PHONY: modernize
 modernize: yq
-	GOBIN=$(PROJECT_DIR)/bin go install -v \
-		golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@$(MODERNIZE_VERSION)
+	$(MAKE) mise-install DEP_VER=go:golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@$(MODERNIZE_VERSION)
 
 GOTESTSUM_VERSION = $(shell $(YQ) -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/github-gotestyourself-gotestsum/$(GOTESTSUM_VERSION)/gotestsum
@@ -161,11 +159,10 @@ download.shellcheck: mise yq ## Download shellcheck locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:koalaman/shellcheck@$(SHELLCHECK_VERSION)
 
 GOVULNCHECK_VERSION = $(shell $(YQ) -r '.govulncheck' < $(TOOLS_VERSIONS_FILE))
-GOVULNCHECK = $(PROJECT_DIR)/bin/installs/govulncheck/$(GOVULNCHECK_VERSION)/bin/govulncheck
+GOVULNCHECK = $(PROJECT_DIR)/bin/installs/go-golang-org-x-vuln-cmd-govulncheck/$(GOVULNCHECK_VERSION)/bin/govulncheck
 .PHONY: download.govulncheck
 download.govulncheck: mise yq ## Download govulncheck locally if necessary.
-	$(MAKE) mise-plugin-install DEP=govulncheck
-	@$(MISE) install -q govulncheck@$(GOVULNCHECK_VERSION)
+	$(MAKE) mise-install DEP_VER=go:golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 
 CHARTSNAP_VERSION = $(shell $(YQ) -ojson -r '.chartsnap' < $(TOOLS_VERSIONS_FILE))
 .PHONY: download.chartsnap
