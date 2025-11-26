@@ -174,7 +174,7 @@ rows:
     default: '`:8081`'
   - flag: '`--konnect-controller-max-concurrent-reconciles`'
     type: '`uint`'
-    description: "Maximum number of concurrent reconciles for Konnect entities."
+    description: "Maximum number of concurrent reconciles for Konnect controllers."
     default: '`8`'
   - flag: '`--konnect-sync-period`'
     type: '`duration`'
@@ -188,9 +188,17 @@ rows:
     type: '`string`'
     description: "Logging mode to use. Possible values: production, development."
     default: '`"production"`'
-  - flag: '`--max-concurrent-reconciles`'
-    type: '`string`'
-    description: "Maximum number of concurrent reconciles for controllers entities (except the Konnect controllers)."
+  - flag: '`--max-concurrent-reconciles-controlplane-controller`'
+    type: '`uint`'
+    description: "Maximum number of concurrent reconciles for ControlPlane controllers."
+    default: '`1`'
+  - flag: '`--max-concurrent-reconciles-dataplane-controller`'
+    type: '`uint`'
+    description: "Maximum number of concurrent reconciles for DataPlane controllers."
+    default: '`1`'
+  - flag: '`--max-concurrent-reconciles-gateway-controller`'
+    type: '`uint`'
+    description: "Maximum number of concurrent reconciles for Gateway controllers."
     default: '`1`'
   - flag: '`--metrics-access-filter`'
     type: '`string`'

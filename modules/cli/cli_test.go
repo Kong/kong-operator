@@ -233,6 +233,23 @@ func TestParse(t *testing.T) {
 				return cfg
 			},
 		},
+		{
+			name: "max concurrent reconciles env vars are set",
+			envVars: map[string]string{
+				"KONG_OPERATOR_MAX_CONCURRENT_RECONCILES_DATAPLANE_CONTROLLER":    "8",
+				"KONG_OPERATOR_MAX_CONCURRENT_RECONCILES_CONTROLPLANE_CONTROLLER": "10",
+				"KONG_OPERATOR_MAX_CONCURRENT_RECONCILES_GATEWAY_CONTROLLER":      "12",
+				"KONG_OPERATOR_KONNECT_CONTROLLER_MAX_CONCURRENT_RECONCILES":      "16",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.MaxConcurrentReconcilesDataPlane = 8
+				cfg.MaxConcurrentReconcilesControlPlane = 10
+				cfg.MaxConcurrentReconcilesGateway = 12
+				cfg.MaxConcurrentReconcilesKonnect = 16
+				return cfg
+			},
+		},
 	}
 
 	for _, tC := range testCases {
@@ -286,8 +303,10 @@ func expectedDefaultCfg() manager.Config {
 		KonnectSyncPeriod:                       consts.DefaultKonnectSyncPeriod,
 		KongPluginInstallationControllerEnabled: false,
 		LoggerOpts:                              &zap.Options{},
-		KonnectMaxConcurrentReconciles:          consts.DefaultKonnectMaxConcurrentReconciles,
-		MaxConcurrentReconciles:                 consts.DefaultMaxConcurrentReconciles,
+		MaxConcurrentReconcilesKonnect:          consts.DefaultMaxConcurrentReconcilesKonnect,
+		MaxConcurrentReconcilesDataPlane:        consts.DefaultMaxConcurrentReconcilesDataPlane,
+		MaxConcurrentReconcilesControlPlane:     consts.DefaultMaxConcurrentReconcilesControlPlane,
+		MaxConcurrentReconcilesGateway:          consts.DefaultMaxConcurrentReconcilesGateway,
 		ClusterDomain:                           ingressmgrconfig.DefaultClusterDomain,
 		EmitKubernetesEvents:                    true,
 		ConversionWebhookEnabled:                true,
