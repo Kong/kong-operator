@@ -81,8 +81,10 @@ func New(m metadata.Info) *CLI {
 	// controllers for Konnect APIs
 	flagSet.BoolVar(&cfg.KonnectControllersEnabled, "enable-controller-konnect", false, "Enable the Konnect controllers.")
 	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
-	flagSet.UintVar(&cfg.KonnectMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultKonnectMaxConcurrentReconciles, "Maximum number of concurrent reconciles for Konnect entities.")
-	flagSet.UintVar(&cfg.MaxConcurrentReconciles, "max-concurrent-reconciles", consts.DefaultMaxConcurrentReconciles, "Maximum number of concurrent reconciles for controllers entities (except the Konnect controllers).")
+	flagSet.UintVar(&cfg.MaxConcurrentReconcilesKonnect, "konnect-controller-max-concurrent-reconciles", consts.DefaultMaxConcurrentReconcilesKonnect, "Maximum number of concurrent reconciles for Konnect controllers.")
+	flagSet.UintVar(&cfg.MaxConcurrentReconcilesDataPlane, "max-concurrent-reconciles-dataplane-controller", consts.DefaultMaxConcurrentReconcilesDataPlane, "Maximum number of concurrent reconciles for DataPlane controllers.")
+	flagSet.UintVar(&cfg.MaxConcurrentReconcilesControlPlane, "max-concurrent-reconciles-controlplane-controller", consts.DefaultMaxConcurrentReconcilesControlPlane, "Maximum number of concurrent reconciles for ControlPlane controllers.")
+	flagSet.UintVar(&cfg.MaxConcurrentReconcilesGateway, "max-concurrent-reconciles-gateway-controller", consts.DefaultMaxConcurrentReconcilesGateway, "Maximum number of concurrent reconciles for Gateway controllers.")
 
 	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information.")
 

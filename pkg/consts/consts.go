@@ -158,11 +158,21 @@ const (
 	// DefaultKonnectSyncPeriod is the default sync period for Konnect entities.
 	DefaultKonnectSyncPeriod = time.Minute
 
-	// DefaultKonnectMaxConcurrentReconciles is the default max concurrent reconciles for Konnect entities.
-	DefaultKonnectMaxConcurrentReconciles = uint(8)
+	// DefaultMaxConcurrentReconcilesKonnect is the default max concurrent
+	// reconciles for Konnect entities controllers.
+	DefaultMaxConcurrentReconcilesKonnect = uint(8)
 
-	// DefaultMaxConcurrentReconciles is the default max concurrent reconciles for the operator.
-	DefaultMaxConcurrentReconciles = uint(1)
+	// DefaultMaxConcurrentReconcilesDataPlane is the default max concurrent
+	// reconciles for the DataPlane controllers.
+	DefaultMaxConcurrentReconcilesDataPlane = uint(1)
+
+	// DefaultMaxConcurrentReconcilesControlPlane is the default max concurrent
+	// reconciles for the ControlPlane controllers.
+	DefaultMaxConcurrentReconcilesControlPlane = uint(1)
+
+	// DefaultMaxConcurrentReconcilesGateway is the default max concurrent
+	// reconciles for the Gateway controllers.
+	DefaultMaxConcurrentReconcilesGateway = uint(1)
 )
 
 const (

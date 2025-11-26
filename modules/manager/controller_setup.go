@@ -375,8 +375,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	}
 
 	ctrlOpts := controller.Options{
-		CacheSyncTimeout:        c.CacheSyncTimeout,
-		MaxConcurrentReconciles: int(c.MaxConcurrentReconciles),
+		CacheSyncTimeout: c.CacheSyncTimeout,
 	}
 
 	controllers := []ControllerDef{
@@ -394,7 +393,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.GatewayControllerEnabled,
 			Controller: &gateway.Reconciler{
-				ControllerOptions:       ctrlOpts,
+				ControllerOptions:       controllerOptions(ctrlOpts, withMaxConcurrentReconciles(int(c.MaxConcurrentReconcilesGateway))),
 				Client:                  mgr.GetClient(),
 				Scheme:                  mgr.GetScheme(),
 				Namespace:               c.ControllerNamespace,
@@ -409,7 +408,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.GatewayControllerEnabled || c.ControlPlaneControllerEnabled,
 			Controller: &controlplane.Reconciler{
-				ControllerOptions:        ctrlOpts,
+				ControllerOptions:        controllerOptions(ctrlOpts, withMaxConcurrentReconciles(int(c.MaxConcurrentReconcilesControlPlane))),
 				AnonymousReportsEnabled:  c.AnonymousReports,
 				LoggingMode:              c.LoggingMode,
 				Client:                   mgr.GetClient(),
@@ -432,7 +431,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: (c.DataPlaneControllerEnabled || c.GatewayControllerEnabled) && !c.DataPlaneBlueGreenControllerEnabled,
 			Controller: &dataplane.Reconciler{
-				ControllerOptions:        ctrlOpts,
+				ControllerOptions:        controllerOptions(ctrlOpts, withMaxConcurrentReconciles(int(c.MaxConcurrentReconcilesDataPlane))),
 				Client:                   mgr.GetClient(),
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
@@ -450,7 +449,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.DataPlaneBlueGreenControllerEnabled,
 			Controller: &dataplane.BlueGreenReconciler{
-				ControllerOptions:        ctrlOpts,
+				ControllerOptions:        controllerOptions(ctrlOpts, withMaxConcurrentReconciles(int(c.MaxConcurrentReconcilesDataPlane))),
 				CacheSyncTimeout:         c.CacheSyncTimeout,
 				Client:                   mgr.GetClient(),
 				ClusterCASecretName:      c.ClusterCASecretName,
@@ -458,7 +457,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				ClusterCAKeyConfig:       clusterCAKeyConfig,
 				SecretLabelSelector:      c.SecretLabelSelector,
 				DataPlaneController: &dataplane.Reconciler{
-					ControllerOptions:        ctrlOpts,
+					ControllerOptions:        controllerOptions(ctrlOpts, withMaxConcurrentReconciles(int(c.MaxConcurrentReconcilesDataPlane))),
 					Client:                   mgr.GetClient(),
 					ClusterCASecretName:      c.ClusterCASecretName,
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
@@ -540,10 +539,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	// Konnect controllers
 	if c.KonnectControllersEnabled {
 		sdkFactory := sdkops.NewSDKFactory()
-		ctrlOpts := controller.Options{
-			CacheSyncTimeout:        c.CacheSyncTimeout,
-			MaxConcurrentReconciles: int(c.KonnectMaxConcurrentReconciles),
-		}
+		ctrlOpts := controllerOptions(ctrlOpts, withMaxConcurrentReconciles(int(c.MaxConcurrentReconcilesKonnect)))
+
 		controllerFactory := konnectControllerFactory{
 			sdkFactory:        sdkFactory,
 			loggingMode:       c.LoggingMode,
@@ -710,5 +707,19 @@ func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootOb
 	return ControllerDef{
 		Enabled:    true,
 		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr, referenceGrantEnabled, fqdnMode, clusterDomain),
+	}
+}
+
+func controllerOptions(base controller.Options, opts ...func(*controller.Options)) controller.Options {
+	ret := base
+	for _, o := range opts {
+		o(&ret)
+	}
+	return ret
+}
+
+func withMaxConcurrentReconciles(n int) func(*controller.Options) {
+	return func(o *controller.Options) {
+		o.MaxConcurrentReconciles = n
 	}
 }

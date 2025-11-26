@@ -111,10 +111,12 @@ type Config struct {
 	AIGatewayControllerEnabled              bool
 	KongPluginInstallationControllerEnabled bool
 	KonnectSyncPeriod                       time.Duration
-	KonnectMaxConcurrentReconciles          uint
+	MaxConcurrentReconcilesKonnect          uint
+	MaxConcurrentReconcilesDataPlane        uint
+	MaxConcurrentReconcilesControlPlane     uint
+	MaxConcurrentReconcilesGateway          uint
 	GatewayAPIExperimentalEnabled           bool
 	ControlPlaneExtensionsControllerEnabled bool
-	MaxConcurrentReconciles                 uint
 
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool
