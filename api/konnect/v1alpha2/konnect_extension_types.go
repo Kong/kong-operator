@@ -272,3 +272,11 @@ type DataPlaneClientAuthStatus struct {
 	// +optional
 	CertificateSecretRef *SecretRef `json:"certificateSecretRef,omitempty"`
 }
+
+// GetKonnectAPIAuthConfigurationRef returns the KonnectAPIAuthConfigurationRef from the KonnectExtension status.
+func (ke *KonnectExtension) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigurationRef {
+	if ke.Status.Konnect == nil || ke.Status.Konnect.AuthRef == nil {
+		return KonnectAPIAuthConfigurationRef{}
+	}
+	return *ke.Status.Konnect.AuthRef
+}

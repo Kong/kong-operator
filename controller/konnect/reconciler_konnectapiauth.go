@@ -8,6 +8,7 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -25,6 +26,12 @@ import (
 	"github.com/kong/kong-operator/modules/manager/logging"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
+
+// APIAuthInUseFinalizer is a finalizer added to KonnectAPIAuthConfiguration resources
+// that are currently in use by other Konnect resources. This finalizer prevents the
+// deletion of the authentication configuration until all dependent resources have
+// been properly cleaned up or updated to use a different authentication method.
+const APIAuthInUseFinalizer = "konnect.konghq.com/konnectapiauth-in-use"
 
 // KonnectAPIAuthConfigurationReconciler reconciles a KonnectAPIAuthConfiguration object.
 type KonnectAPIAuthConfigurationReconciler struct {
@@ -72,14 +79,16 @@ func (r *KonnectAPIAuthConfigurationReconciler) SetupWithManager(ctx context.Con
 
 	b := ctrl.NewControllerManagedBy(mgr).
 		For(&konnectv1alpha1.KonnectAPIAuthConfiguration{}).
+		Named("KonnectAPIAuthConfiguration").
 		Watches(
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(
 				listKonnectAPIAuthConfigurationsReferencingSecret(mgr.GetClient()),
 			),
 			builder.WithPredicates(secretLabelPredicate),
-		).
-		Named("KonnectAPIAuthConfiguration")
+		)
+
+	setKonnectAPIAuthConfigurationRefWatches(b)
 
 	return b.Complete(r)
 }
@@ -97,6 +106,15 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		entityTypeName = "KonnectAPIAuthConfiguration"
 		logger         = log.GetLogger(ctx, entityTypeName, r.loggingMode)
 	)
+
+	updated, err := EnsureFinalizerOnKonnectAPIAuthConfiguration(ctx, r.client, &apiAuth)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to ensure finalizer on KonnectAPIAuthConfiguration %s: %w", req.String(), err)
+	}
+	if updated {
+		// update will requeue
+		return ctrl.Result{}, nil
+	}
 
 	log.Debug(logger, "reconciling")
 	if !apiAuth.GetDeletionTimestamp().IsZero() {
@@ -269,4 +287,67 @@ func getTokenFromKonnectAPIAuthConfiguration(
 	}
 
 	return "", fmt.Errorf("unknown KonnectAPIAuthType: %s", apiAuth.Spec.Type)
+}
+
+// EnsureFinalizerOnKonnectAPIAuthConfiguration ensures that the KonnectAPIAuthConfiguration
+// has a finalizer if there are any resources referencing it, or removes the finalizer if there
+// are no referencing resources.
+//
+// It iterates through all types in KonnectAPIAuthReferencingTypeListsWithIndexes and checks if
+// any resources of those types reference the given KonnectAPIAuthConfiguration. If at least one
+// referencing resource is found, it adds the APIAuthInUseFinalizer to the KonnectAPIAuthConfiguration.
+// If no referencing resources are found, it removes the finalizer.
+//
+// Parameters:
+//   - ctx: The context for the operation
+//   - cl: The Kubernetes client used to list resources and patch the KonnectAPIAuthConfiguration
+//   - apiAuth: The KonnectAPIAuthConfiguration to ensure the finalizer on
+//
+// Returns:
+//   - patched: true if the KonnectAPIAuthConfiguration was modified (finalizer added or removed), false otherwise
+//   - err: An error if the operation failed, nil otherwise
+func EnsureFinalizerOnKonnectAPIAuthConfiguration(
+	ctx context.Context,
+	cl client.Client,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+) (patched bool, err error) {
+	var needsFinalizer bool
+	for t, i := range konnectAPIAuthReferencingTypeListsWithIndexes {
+		list := t.DeepCopyObject().(client.ObjectList)
+		err := cl.List(ctx,
+			list,
+			client.InNamespace(apiAuth.GetNamespace()),
+			client.MatchingFields{
+				i: apiAuth.Name,
+			},
+		)
+		if err != nil {
+			return false, fmt.Errorf("failed to list objects of type %T referencing KonnectAPIAuthConfiguration %s: %w", t, apiAuth.Name, err)
+		}
+
+		items, err := meta.ExtractList(list)
+		if err != nil {
+			return false, fmt.Errorf("failed to extract items from list: %w", err)
+		}
+		if len(items) > 0 {
+			needsFinalizer = true
+			break
+		}
+	}
+
+	var updated bool
+	// Add or remove finalizer based on whether there are referencing resources
+	if needsFinalizer {
+		updated, _, err = patch.WithFinalizer(ctx, cl, client.Object(apiAuth), APIAuthInUseFinalizer)
+		if err != nil {
+			return false, err
+		}
+	} else {
+		updated, _, err = patch.WithoutFinalizer(ctx, cl, client.Object(apiAuth), APIAuthInUseFinalizer)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	return updated, nil
 }
