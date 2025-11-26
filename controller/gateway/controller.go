@@ -170,33 +170,6 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	return builder.Complete(r)
 }
 
-// secretReferencedByGateway returns true if any listener in the Gateway references the Secret
-// identified by secretNS/secretName in its TLS certificateRefs.
-func secretReferencedByGateway(gw *gwtypes.Gateway, secretNS, secretName string) bool {
-	for _, l := range gw.Spec.Listeners {
-		if l.TLS == nil {
-			continue
-		}
-		for _, ref := range l.TLS.CertificateRefs {
-			// Only accept core Secret references when Group/Kind is specified.
-			if ref.Group != nil && string(*ref.Group) != corev1.GroupName {
-				continue
-			}
-			if ref.Kind != nil && string(*ref.Kind) != "Secret" {
-				continue
-			}
-			ns := gw.Namespace
-			if ref.Namespace != nil {
-				ns = string(*ref.Namespace)
-			}
-			if ns == secretNS && string(ref.Name) == secretName {
-				return true
-			}
-		}
-	}
-	return false
-}
-
 // Reconcile moves the current state of an object to the intended state.
 func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, "gateway", r.LoggingMode)
