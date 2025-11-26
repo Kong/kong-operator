@@ -1,0 +1,489 @@
+# Basic HTTPRoute test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: basic-httproute
+spec:
+  description: |
+    This test validates that the hybrid gateway controller correctly
+    processes a basic HTTPRoute with a single service backend.
+  
+  timeouts:
+    apply: 120s
+    assert: 120s
+    delete: 120s
+  
+  steps:
+    # Step 1: Create prerequisite resources
+    - name: create-prerequisites
+      description: Create GatewayClass, Gateway, and backend Service
+      try:
+        - apply:
+            file: 01-prerequisites.yaml
+        - apply:
+            file: 00-httpbin.yaml
+        # Assert common Konnect and Gateway resources.
+        - assert:
+            file: ../common/assertions/konnect-apiauth.yaml
+        - assert:
+            file: ../common/assertions/gatewayclass.yaml
+        - assert:
+            file: ../common/assertions/gatewayconfiguration.yaml
+        - assert:
+            file: ../common/assertions/gateway.yaml
+        - assert:
+            file: ../common/assertions/konnect-gateway-controlplane.yaml
+        - assert:
+            file: ../common/assertions/konnect-extension.yaml
+        # Assert test-specific resources (namespaces, service, deployment)
+        - assert:
+            file: 00-assert-httpbin.yaml
+        - assert:
+            file: 01-assert-prerequisites.yaml
+    
+    # Step 2: Create HTTPRoute
+    - name: create-httproute
+      description: Create HTTPRoute that references the Gateway
+      try:
+        - apply:
+            file: 02-httproute.yaml
+        - assert:
+            file: 02-assert-httproute.yaml
+    
+    # Step 3: Verify generated Kong resources
+    - name: verify-kong-resources
+      description: Verify KongRoute, KongService, KongUpstream, and KongTarget are created
+      try:
+        # Collect bindings needed for Kong resource assertions
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: hybrid_gateway_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
+            outputs:
+              - name: hybrid_gateway_namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get httproute -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: managedby_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get httproute -n kong -o jsonpath='{.items[0].metadata.namespace}'
+            outputs:
+              - name: managedby_namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get httproute -n kong echo -o jsonpath='{.spec.rules[*].matches[*].path.value}' | jq -Rsc 'split(" ")'
+            outputs:
+              - name: route_paths_json
+                value: ($stdout)
+        - script:
+            content: |
+              OUTPUT=$(kubectl get httproute -n kong echo -o jsonpath='{.spec.rules[*].matches[*].method}')
+              if [ -z "$OUTPUT" ]; then
+                echo '[]'
+              else
+                echo "$OUTPUT" | tr -d '\n' | jq -Rsc 'split(" ")'
+              fi
+            outputs:
+              - name: route_methods_json
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get konnectgatewaycontrolplane -n kong -l gateway-operator.konghq.com/managed-by=gateway -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: konnectgatewaycontrolplane_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get kongservice -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: kongservice_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get kongupstream -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: kongupstream_name
+                value: ($stdout)
+        - script:
+            content: echo "kong"
+            outputs:
+              - name: namespace
+                value: kong
+              - name: strip_path
+                value: true
+              - name: weight
+                value: 1
+        # Assert Kong resources using common templates
+        - assert:
+            file: ../common/assertions/kongroute.yaml
+        - assert:
+            file: ../common/assertions/kongservice.yaml
+        - assert:
+            file: ../common/assertions/kongupstream.yaml
+        - assert:
+            file: ../common/assertions/kongtarget.yaml
+    
+    # Step 4: Verify data plane is configured and traffic flows
+    - name: verify-data-plane
+      description: Verify that the Kong data plane is properly configured and can route traffic
+      try:
+        # Collect bindings for connectivity tests
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: hybrid_gateway_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
+            outputs:
+              - name: hybrid_gateway_namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get httproute -n kong -o jsonpath='{.items[0].spec.rules[0].matches[0].path.value}'
+            outputs:
+              - name: route_path
+                value: ($stdout)
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($hybrid_gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($hybrid_gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Test from within the cluster
+        - description: Test connectivity from within the cluster
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              POD_NAME="curl-test-$(date +%s)-$$"
+              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -- \
+                curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' http://${PROXY_IP}${ROUTE_PATH}
+            check:
+              (contains($stdout, '200')): true
+        # Test from outside the cluster
+        - description: Test connectivity from outside the cluster
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}
+            check:
+              (contains($stdout, '200')): true
+    
+    # Step 5: Update HTTPRoute
+    - name: update-httproute
+      description: Update HTTPRoute and verify changes propagate
+      try:
+        # Collect old Kong resource names before update
+        - script:
+            content: |
+              kubectl get kongroute -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
+            outputs:
+              - name: old_kongroute_names
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get kongservice -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
+            outputs:
+              - name: old_kongservice_names
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get kongupstream -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
+            outputs:
+              - name: old_kongupstream_names
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get kongtarget -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
+            outputs:
+              - name: old_kongtarget_names
+                value: ($stdout)
+        # Apply the update
+        - apply:
+            file: 04-update-httproute.yaml
+        - assert:
+            file: 04-assert-updated-resources.yaml
+        # Wait for old resources to be deleted
+        - script:
+            env:
+              - name: OLD_NAMES
+                value: ($old_kongroute_names)
+            content: |
+              if [ -n "$OLD_NAMES" ]; then
+                for name in $OLD_NAMES; do
+                  echo "Waiting for old KongRoute $name to be deleted..."
+                  kubectl wait --for=delete kongroute/$name -n kong --timeout=60s || true
+                done
+              fi
+        - script:
+            env:
+              - name: OLD_NAMES
+                value: ($old_kongservice_names)
+            content: |
+              if [ -n "$OLD_NAMES" ]; then
+                for name in $OLD_NAMES; do
+                  echo "Waiting for old KongService $name to be deleted..."
+                  kubectl wait --for=delete kongservice/$name -n kong --timeout=60s || true
+                done
+              fi
+        - script:
+            env:
+              - name: OLD_NAMES
+                value: ($old_kongupstream_names)
+            content: |
+              if [ -n "$OLD_NAMES" ]; then
+                for name in $OLD_NAMES; do
+                  echo "Waiting for old KongUpstream $name to be deleted..."
+                  kubectl wait --for=delete kongupstream/$name -n kong --timeout=60s || true
+                done
+              fi
+        - script:
+            env:
+              - name: OLD_NAMES
+                value: ($old_kongtarget_names)
+            content: |
+              if [ -n "$OLD_NAMES" ]; then
+                for name in $OLD_NAMES; do
+                  echo "Waiting for old KongTarget $name to be deleted..."
+                  kubectl wait --for=delete kongtarget/$name -n kong --timeout=60s || true
+                done
+              fi
+        # Wait for new KongRoute to be programmed
+        - script:
+            content: |
+              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute
+        # Collect bindings for Kong resource assertions
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: hybrid_gateway_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
+            outputs:
+              - name: hybrid_gateway_namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get httproute -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: managedby_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get httproute -n kong -o jsonpath='{.items[0].metadata.namespace}'
+            outputs:
+              - name: managedby_namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get httproute -n kong echo -o jsonpath='{.spec.rules[*].matches[*].path.value}' | jq -Rsc 'split(" ")'
+            outputs:
+              - name: route_paths_json
+                value: ($stdout)
+        - script:
+            content: |
+              OUTPUT=$(kubectl get httproute -n kong echo -o jsonpath='{.spec.rules[*].matches[*].method}')
+              if [ -z "$OUTPUT" ]; then
+                echo '[]'
+              else
+                echo "$OUTPUT" | tr -d '\n' | jq -Rsc 'split(" ")'
+              fi
+            outputs:
+              - name: route_methods_json
+                value: ($stdout)
+        - script:
+            content: echo "kong"
+            outputs:
+              - name: namespace
+                value: kong
+              - name: strip_path
+                value: false
+              - name: weight
+                value: 1
+        # Collect Kong resource names after reconciliation
+        - script:
+            content: |
+              kubectl get konnectgatewaycontrolplane -n kong -l gateway-operator.konghq.com/managed-by=gateway -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: konnectgatewaycontrolplane_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get kongservice -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: kongservice_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get kongupstream -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: kongupstream_name
+                value: ($stdout)
+        # Verify Kong resources are updated
+        - assert:
+            file: ../common/assertions/kongroute.yaml
+        - assert:
+            file: ../common/assertions/kongservice.yaml
+        - assert:
+            file: ../common/assertions/kongupstream.yaml
+        - assert:
+            file: ../common/assertions/kongtarget.yaml
+        # Additional assertion for methods field (specific to this step)
+        - assert:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongRoute
+              metadata:
+                namespace: kong
+              spec:
+                methods: (parse_json($route_methods_json))
+        # Test the updated routes
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        
+        # Create a test pod for in-cluster tests
+        - script:
+            content: |
+              kubectl run curl-test-pod --image=curlimages/curl:latest --restart=Never -- sleep 3600
+              kubectl wait --for=condition=Ready pod/curl-test-pod --timeout=60s
+        
+        # Test from within the cluster
+        - description: Test GET /get endpoint from within cluster
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null http://${PROXY_IP}/get
+            check:
+              (contains($stdout, '200')): true
+        
+        - description: Test POST /post endpoint from within cluster
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X POST http://${PROXY_IP}/post
+            check:
+              (contains($stdout, '200')): true
+        
+        - description: Test PUT /put endpoint from within cluster
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X PUT http://${PROXY_IP}/put
+            check:
+              (contains($stdout, '200')): true
+        
+        - description: Test PATCH /patch endpoint from within cluster
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X PATCH http://${PROXY_IP}/patch
+            check:
+              (contains($stdout, '200')): true
+        
+        - description: Test DELETE /delete endpoint from within cluster
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X DELETE http://${PROXY_IP}/delete
+            check:
+              (contains($stdout, '200')): true
+        
+        # Delete the test pod
+        - script:
+            content: |
+              kubectl delete pod curl-test-pod --ignore-not-found=true --wait=false
+        
+        # Test from outside the cluster
+        - description: Test GET /get endpoint from host
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get
+            check:
+              (contains($stdout, '200')): true
+        
+        - description: Test POST /post endpoint from host
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/post
+            check:
+              (contains($stdout, '200')): true
+        
+        - description: Test PUT /put endpoint from host
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PUT http://${PROXY_IP}/put
+            check:
+              (contains($stdout, '200')): true
+        
+        - description: Test PATCH /patch endpoint from host
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PATCH http://${PROXY_IP}/patch
+            check:
+              (contains($stdout, '200')): true
+        
+        - description: Test DELETE /delete endpoint from host
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X DELETE http://${PROXY_IP}/delete
+            check:
+              (contains($stdout, '200')): true
+    

@@ -1,0 +1,9 @@
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectAPIAuthConfiguration
+metadata:
+  name: konnect-api-auth-dev-1
+  namespace: kong
+status:
+  conditions:
+    - type: APIAuthValid
+      status: "True"

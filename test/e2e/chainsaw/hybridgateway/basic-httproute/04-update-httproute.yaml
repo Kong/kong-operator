@@ -1,0 +1,44 @@
+---
+# Updated HTTPRoute with multiple HTTP method rules pointing to httpbin
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: echo
+  namespace: kong
+  annotations:
+    konghq.com/strip-path: "false"
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: kong-foo
+  rules:
+    # All standard HTTP methods to their respective endpoints
+    - matches:
+        - path:
+            type: Exact
+            value: /get
+          method: GET
+        - path:
+            type: Exact
+            value: /post
+          method: POST
+        - path:
+            type: Exact
+            value: /put
+          method: PUT
+        - path:
+            type: Exact
+            value: /patch
+          method: PATCH
+        - path:
+            type: Exact
+            value: /delete
+          method: DELETE
+        - path:
+            type: PathPrefix
+            value: /status
+      backendRefs:
+        - name: httpbin
+          port: 80
+

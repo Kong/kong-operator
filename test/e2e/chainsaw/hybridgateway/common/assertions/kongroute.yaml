@@ -1,0 +1,44 @@
+---
+# Template for asserting KongRoute resources
+# 
+# Required bindings:
+#   - namespace: Resource namespace (e.g., "kong")
+#   - managedby_name: HTTPRoute name (e.g., "echo")
+#   - managedby_namespace: HTTPRoute namespace (e.g., "kong")
+#   - hybrid_gateway_name: Gateway name (e.g., "kong-foo")
+#   - hybrid_gateway_namespace: Gateway namespace (e.g., "kong")
+#   - strip_path: Strip path boolean (e.g., true)
+#   - kongservice_name: Name of the KongService this route references
+#   - route_paths_json: JSON string array of paths (e.g., "["/echo"]" or "["/get","/post"]")
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongRoute
+metadata:
+  namespace: ($namespace)
+  (labels."gateway-operator.konghq.com/hybrid-gateways-name" == ($hybrid_gateway_name)): true
+  (labels."gateway-operator.konghq.com/hybrid-gateways-namespace" == ($hybrid_gateway_namespace)): true
+  (labels."gateway-operator.konghq.com/managed-by" == 'HTTPRoute'): true
+  (annotations."gateway-operator.konghq.com/hybrid-routes" | contains(@, join('/', [($managedby_namespace), ($managedby_name)]))): true
+spec:
+  paths: (parse_json($route_paths_json))
+  strip_path: ($strip_path)
+  serviceRef:
+    namespacedRef:
+      name: ($kongservice_name)
+status:
+  # Filter conditions to check for required status
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'KongServiceRefValid']):
+    - status: 'True'
+      reason: Valid
+  (conditions[?type == 'APIAuthResolvedRef']):
+    - status: 'True'
+      reason: ResolvedRef
+  (conditions[?type == 'APIAuthValid']):
+    - status: 'True'
+      reason: Valid
+  # Assert Konnect integration fields are populated
+  (konnect.controlPlaneID != null): true
+  (konnect.id != null): true
+  (konnect.serviceID != null): true
