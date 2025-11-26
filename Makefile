@@ -88,10 +88,11 @@ controller-gen: mise yq ## Download controller-gen locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:kubernetes-sigs/controller-tools@$(CONTROLLER_GEN_VERSION)
 
 KUSTOMIZE_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["github:kubernetes-sigs/kustomize"].version' < $(MISE_FILE))
-KUSTOMIZE = $(PROJECT_DIR)/bin/installs/github-kubernetes-sigs-kustomize/$(KUSTOMIZE_VERSION)/kustomize
+KUSTOMIZE_VERSION_PREFIX = $(shell $(YQ) -p toml -o yaml '.tools["github:kubernetes-sigs/kustomize"].version_prefix' < $(MISE_FILE))
+KUSTOMIZE = $(PROJECT_DIR)/bin/installs/github-kubernetes-sigs-kustomize/kustomize-$(KUSTOMIZE_VERSION)/kustomize
 .PHONY: kustomize
 kustomize: mise yq ## Download kustomize locally if necessary.
-	$(MAKE) mise-install DEP_VER=github:kubernetes-sigs/kustomize
+	$(MAKE) mise-install DEP_VER=github:kubernetes-sigs/kustomize@$(KUSTOMIZE_VERSION_PREFIX)$(KUSTOMIZE_VERSION)
 
 CLIENT_GEN_VERSION = $(shell $(YQ) -r '.code-generator' < $(TOOLS_VERSIONS_FILE))
 CLIENT_GEN = $(PROJECT_DIR)/bin/installs/kube-code-generator/$(CLIENT_GEN_VERSION)/bin/client-gen
