@@ -9,12 +9,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
-	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/scheme"
