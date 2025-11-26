@@ -193,13 +193,12 @@ func TestPluginForFilter(t *testing.T) {
 
 func TestGetReferencedKongPlugin(t *testing.T) {
 	tests := []struct {
-		name             string
-		filter           gwtypes.HTTPRouteFilter
-		namespace        string
-		existingPlugin   *configurationv1.KongPlugin
-		expectedPlugin   *configurationv1.KongPlugin
-		expectedError    string
-		clientShouldFail bool
+		name           string
+		filter         gwtypes.HTTPRouteFilter
+		namespace      string
+		existingPlugin *configurationv1.KongPlugin
+		expectedPlugin *configurationv1.KongPlugin
+		expectedError  string
 	}{
 		{
 			name: "nil ExtensionRef",
@@ -272,9 +271,8 @@ func TestGetReferencedKongPlugin(t *testing.T) {
 					Name:  "non-existent-plugin",
 				},
 			},
-			namespace:        "default",
-			clientShouldFail: true,
-			expectedError:    "failed to get KongPlugin for ExtensionRef non-existent-plugin",
+			namespace:     "default",
+			expectedError: "failed to get KongPlugin for ExtensionRef non-existent-plugin",
 		},
 		{
 			name: "ExtensionRef with complex plugin configuration",
