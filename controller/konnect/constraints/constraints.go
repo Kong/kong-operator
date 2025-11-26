@@ -118,5 +118,7 @@ type SupportedKonnectEntityPluginReferenceableType interface {
 // Konnect entities that are defined within a ControlPlane do not because their
 // KonnectAPIAuthConfigurationRef is defined in the referenced ControlPlane.
 type EntityWithKonnectAPIAuthConfigurationRef interface {
+	client.Object
+
 	GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.KonnectAPIAuthConfigurationRef
 }

@@ -29,6 +29,11 @@ func OptionsForKonnectExtension() []Option {
 			Field:          IndexFieldKonnectExtensionOnKonnectGatewayControlPlane,
 			ExtractValueFn: konnectExtensionControlPlaneRef,
 		},
+		{
+			Object:         &konnectv1alpha2.KonnectExtension{},
+			Field:          IndexFieldKonnectExtensionOnAPIAuthConfiguration,
+			ExtractValueFn: konnectExtensionAPIAuthConfigurationRef,
+		},
 	}
 }
 
@@ -57,4 +62,17 @@ func konnectExtensionControlPlaneRef(obj client.Object) []string {
 	}
 	// TODO: add namespace to index when cross namespace reference is supported.
 	return []string{ext.Spec.Konnect.ControlPlane.Ref.KonnectNamespacedRef.Name}
+}
+
+func konnectExtensionAPIAuthConfigurationRef(obj client.Object) []string {
+	ext, ok := obj.(*konnectv1alpha2.KonnectExtension)
+	if !ok {
+		return nil
+	}
+
+	if ext.GetKonnectAPIAuthConfigurationRef().Name == "" {
+		return nil
+	}
+
+	return []string{ext.GetKonnectAPIAuthConfigurationRef().Name}
 }
