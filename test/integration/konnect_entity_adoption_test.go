@@ -311,8 +311,8 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 		t, ctx, clientNamespaced, kpbGlobal,
 		func(t *assert.CollectT, kpb *configurationv1alpha1.KongPluginBinding) {
 			require.Equalf(t, globalPluginID, kpb.GetKonnectID(),
-				"KongPluginBinding %s/%s should set Konnect ID %s as the adopted plugin in status",
-				kpb.Namespace, kpb.Name, globalPluginID,
+				"KongPluginBinding %s should set Konnect ID %s as the adopted plugin in status",
+				client.ObjectKeyFromObject(kpb), globalPluginID,
 			)
 		},
 	)
@@ -372,8 +372,8 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 	eventually.KonnectEntityGetsProgrammed(t, ctx, clientNamespaced, kpbService,
 		func(t *assert.CollectT, kpb *configurationv1alpha1.KongPluginBinding) {
 			require.Equalf(t, pluginServiceID, kpb.GetKonnectID(),
-				"KongPluginBinding %s/%s should set Konnect ID %s as the adopted plugin in status",
-				kpbService.Namespace, kpbService.Name, pluginServiceID,
+				"KongPluginBinding %s should set Konnect ID %s as the adopted plugin in status",
+				client.ObjectKeyFromObject(kpbService), pluginServiceID,
 			)
 		},
 	)

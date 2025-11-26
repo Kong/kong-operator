@@ -1051,7 +1051,7 @@ func ProxyCachePlugin(
 		},
 	}
 	require.NoError(t, cl.Create(ctx, plugin))
-	t.Logf("deployed new %s KongPlugin (%s)", client.ObjectKeyFromObject(plugin), plugin.PluginName)
+	logObjectCreate(t, plugin, "plugin name: %s", plugin.PluginName)
 	return plugin
 }
 
@@ -1074,7 +1074,7 @@ func RateLimitingPlugin(
 		},
 	}
 	require.NoError(t, cl.Create(ctx, plugin))
-	t.Logf("deployed new %s KongPlugin (%s)", client.ObjectKeyFromObject(plugin), plugin.PluginName)
+	logObjectCreate(t, plugin, "plugin name: %s", plugin.PluginName)
 	return plugin
 }
 
@@ -1097,7 +1097,7 @@ func RequestTransformerPlugin(
 		},
 	}
 	require.NoError(t, cl.Create(ctx, plugin))
-	t.Logf("deployed new %s KongPlugin (%s)", client.ObjectKeyFromObject(plugin), plugin.PluginName)
+	logObjectCreate(t, plugin, "plugin name: %s", plugin.PluginName)
 	return plugin
 }
 
@@ -1119,7 +1119,7 @@ func ResponseTransformerPlugin(t *testing.T,
 		},
 	}
 	require.NoError(t, cl.Create(ctx, plugin))
-	t.Logf("deployed new %s KongPlugin (%s)", client.ObjectKeyFromObject(plugin), plugin.PluginName)
+	logObjectCreate(t, plugin, "plugin name: %s", plugin.PluginName)
 	return plugin
 }
 
@@ -1365,8 +1365,14 @@ func logObjectCreate[
 		client.Object
 		GetTypeName() string
 	},
-](t *testing.T, obj T) {
+](t *testing.T, obj T, msgAndArgs ...string) {
 	t.Helper()
 
-	t.Logf("deployed new %s %s resource", obj.GetTypeName(), client.ObjectKeyFromObject(obj))
+	if len(msgAndArgs) == 0 {
+		t.Logf("deployed new %s %s resource", obj.GetTypeName(), client.ObjectKeyFromObject(obj))
+		return
+	}
+
+	msg := fmt.Sprintf(msgAndArgs[0], lo.ToAnySlice(msgAndArgs[1:])...)
+	t.Logf("deployed new %s %s resource: %s ", obj.GetTypeName(), client.ObjectKeyFromObject(obj), msg)
 }
