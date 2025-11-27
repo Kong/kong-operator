@@ -126,7 +126,7 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *kongstate.KongState 
 					sanitizeAuth(basicAuth)
 					kongState.Consumers[i].BasicAuths = append(kongState.Consumers[i].BasicAuths,
 						&kongstate.BasicAuth{
-							BasicAuth: *basicAuth,
+							BasicAuth: basicAuth.BasicAuth,
 						},
 					)
 				}
@@ -318,7 +318,7 @@ type authT interface {
 	*kong.KeyAuth |
 		*kong.HMACAuth |
 		*kong.JWTAuth |
-		*kong.BasicAuth |
+		*kong.BasicAuthOptions |
 		*kong.ACLGroup |
 		*kong.Oauth2Credential |
 		*kong.MTLSAuth
@@ -338,7 +338,7 @@ func sanitizeAuth[t authT](auth t) {
 		a.ID = nil
 		a.CreatedAt = nil
 		a.Consumer = nil
-	case *kong.BasicAuth:
+	case *kong.BasicAuthOptions:
 		a.ID = nil
 		a.CreatedAt = nil
 		a.Consumer = nil
@@ -358,5 +358,7 @@ func sanitizeAuth[t authT](auth t) {
 			a.CACertificate.ID = nil
 			a.CACertificate.CreatedAt = nil
 		}
+	default:
+		panic("unsupported auth type")
 	}
 }
