@@ -574,17 +574,21 @@ test.unit.pretty:
 	@$(MAKE) _test.unit GOTESTSUM_FORMAT=pkgname GOTESTFLAGS="$(GOTESTFLAGS)" UNIT_TEST_PATHS="$(UNIT_TEST_PATHS)"
 
 ENVTEST_TEST_PATHS := ./test/envtest/...
-ENVTEST_TIMEOUT ?= 5m
+ENVTEST_TIMEOUT ?= 10m
 PKG_LIST=./controller/...,./internal/...,./pkg/...,./modules/...
+TEST_DIR ?= $(PROJECT_DIR)
 
 .PHONY: _test.envtest
 _test.envtest: gotestsum setup-envtest
 	$(MAKE) use-setup-envtest CLUSTER_VERSION=$(CLUSTER_VERSION)
+	cd $(TEST_DIR) && \
 	KUBECONFIG=$(KUBECONFIG) \
 	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(CLUSTER_VERSION) -p path)" \
 	GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-		$(GOTESTSUM) -- $(GOTESTFLAGS) \
+		$(GOTESTSUM) -- \
+		$(GOTESTFLAGS) \
 		-race \
+		-tags envtest \
 		-timeout $(ENVTEST_TIMEOUT) \
 		-covermode=atomic \
 		-coverpkg=$(PKG_LIST) \

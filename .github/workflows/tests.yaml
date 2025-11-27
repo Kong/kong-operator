@@ -442,7 +442,6 @@ jobs:
         op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
     - name: run envtest tests
-      working-directory: ${{ matrix.directory }}
       env:
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         GOTESTSUM_JUNITFILE: "${{ matrix.directory }}/envtest-tests.xml"
@@ -453,7 +452,7 @@ jobs:
         # Remove patch number as envtest releases are not provided for every patch version
         VERSION="${VERSION%.*}"
         echo "Cluster version: $VERSION"
-        make test.envtest CLUSTER_VERSION=${VERSION}
+        make test.envtest CLUSTER_VERSION=${VERSION} TEST_DIR=${{ matrix.directory }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
