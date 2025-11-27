@@ -750,6 +750,7 @@ test.charts.ct.install:
 		--helm-extra-set-args "--set=ko-crds.keep=false" \
 		--helm-extra-args "--wait" \
 		--helm-extra-args "--timeout=3m" \
+		--helm-extra-args "--debug" \
 		--charts charts/$(CHART_NAME) \
 		--namespace kong-test
 
