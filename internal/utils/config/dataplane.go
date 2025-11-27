@@ -52,6 +52,7 @@ var kongInKonnectClusterTypeControlPlane = map[string]string{
 	"KONG_CLUSTER_TELEMETRY_SERVER_NAME": "<TELEMETRY-ENDPOINT>",
 	"KONG_CLUSTER_CERT":                  "/etc/secrets/kong-cluster-cert/tls.crt",
 	"KONG_CLUSTER_CERT_KEY":              "/etc/secrets/kong-cluster-cert/tls.key",
+	"KONG_INCREMENTAL_SYNC":              "on",
 	"KONG_LUA_SSL_TRUSTED_CERTIFICATE":   "system",
 	"KONG_KONNECT_MODE":                  "on",
 	"KONG_VITALS":                        "off",
