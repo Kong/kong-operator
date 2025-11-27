@@ -67,9 +67,6 @@ type DataPlaneOwnedResourceFinalizerReconciler[T DataPlaneOwnedResource, PT Data
 	Client      client.Client
 	LoggingMode logging.Mode
 	Opts        controller.Options
-	// MaxConcurrentReconciles is the maximum number of concurrent reconciliation
-	// requests that this controller can process at a time.
-	MaxConcurrentReconciles uint
 }
 
 // NewDataPlaneOwnedResourceFinalizerReconciler returns a new DataPlaneOwnedResourceFinalizerReconciler for a type passed
