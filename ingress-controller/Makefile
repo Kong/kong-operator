@@ -49,20 +49,6 @@ yq: mise # Download yq locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=yq
 	@$(MAKE) mise-install DEP_VER=yq@$(YQ_VERSION)
 
-GOTESTSUM_VERSION = $(shell $(YQ) -ojson -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
-GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum
-.PHONY: gotestsum
-gotestsum: yq ## Download gotestsum locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=gotestsum
-	@$(MAKE) mise-install DEP_VER=gotestsum@$(GOTESTSUM_VERSION)
-
-SETUP_ENVTEST_VERSION = $(shell $(YQ) -ojson -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
-SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
-.PHONY: setup-envtest
-setup-envtest: mise yq ## Download setup-envtest locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=setup-envtest
-	@$(MAKE) mise-install DEP_VER=setup-envtest@$(SETUP_ENVTEST_VERSION)
-
 # ------------------------------------------------------------------------------
 # Testing
 # ------------------------------------------------------------------------------
@@ -71,38 +57,7 @@ NCPU ?= $(shell getconf _NPROCESSORS_ONLN)
 PKG_LIST = ./pkg/...,./internal/...
 INTEGRATION_TEST_TIMEOUT ?= "45m"
 KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
-GOTESTSUM_FORMAT ?= standard-verbose
 JUNIT_REPORT ?= /dev/null
-
-.PHONY: use-setup-envtest
-use-setup-envtest:
-	$(SETUP_ENVTEST) use -v info $(CLUSTER_VERSION)
-
-ENVTEST_TIMEOUT ?= 10m
-
-.PHONY: _test.envtest
-.ONESHELL: _test.envtest
-_test.envtest: gotestsum setup-envtest
-	$(MAKE) use-setup-envtest CLUSTER_VERSION=$(CLUSTER_VERSION)
-	KUBECONFIG=$(KUBECONFIG) \
-	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(CLUSTER_VERSION) -p path)" \
-		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
-		$(GOTESTSUM) \
-		--hide-summary output \
-		-- \
-		-race \
-		-ldflags="$(LDFLAGS_COMMON)" \
-		$(GOTESTFLAGS) \
-		-tags envtest \
-		-covermode=atomic \
-		-timeout $(ENVTEST_TIMEOUT) \
-		-coverpkg=$(PKG_LIST) \
-		-coverprofile=coverage.envtest.out \
-		./test/envtest/...
-
-.PHONY: test.envtest
-test.envtest:
-	$(MAKE) _test.envtest GOTESTSUM_FORMAT=standard-verbose
 
 TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong' < ./test/test_dependencies.yaml)
 
