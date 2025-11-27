@@ -744,12 +744,22 @@ test.charts.ct.install:
 # for each release. Without this, some objects like CRDs can still be around
 # when another test helm release is being installed and the above mentioned
 # ownership error will be returned.
+#
+# NOTE: We add the --take-ownership below to ensure that we take ownership of
+# existing CRDs installed by prior test runs. This technically shouldn't be an
+# issue but sometimes on CI the CRDs are left around from prior runs and
+# we get:
+# Error: INSTALLATION FAILED: Unable to continue with install: CustomResourceDefinition
+# "kongkeysets.configuration.konghq.com" in namespace "" exists and cannot be imported into
+# the current release: invalid ownership metadata; annotation validation error: key "meta.helm.sh/release-name"
+# must equal "kong-operator-3xhr8uzhvr": current value is "kong-operator-8in3ojpws4"
 
 	ct install --target-branch main \
 		--debug \
 		--helm-extra-set-args "--set=ko-crds.keep=false" \
 		--helm-extra-args "--wait" \
 		--helm-extra-args "--timeout=3m" \
+		--helm-extra-args "--take-ownership" \
 		--charts charts/$(CHART_NAME) \
 		--namespace kong-test
 
