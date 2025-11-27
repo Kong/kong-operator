@@ -15,22 +15,7 @@ excludeVulns="$(jq -nc '[
   # Kubernetes GitRepo Volume Inadvertent Local Repository Access in k8s.io/kubernetes
   # We do not use the GitRepo volume type.
   # https://github.com/kubernetes/kubernetes/issues/130786
-  "GO-2025-3521",
-
-  # Moby firewalld reload removes bridge network isolation in github.com/docker/docker
-  # https://pkg.go.dev/vuln/GO-2025-3829
-  # (aka CVE-2025-54410, GHSA-4vq8-7jfc-9cvp)
-  "GO-2025-3829",
-
-  # SSH servers parsing GSSAPI authentication requests do not validate the number of mechanisms specified in the request, allowing an attacker to cause unbounded memory consumption.
-  # It was fixed in golang.org/x/crypto 0.45.0 but the govulncheck workflow still fails: https://github.com/Kong/kong-operator/pull/2658.
-  # https://pkg.go.dev/vuln/GO-2025-4134
-  "GO-2025-4134",
-
-  # SSH Agent servers do not validate the size of messages when processing new identity requests, which may cause the program to panic if the message is malformed due to an out of bounds read.
-  # It was fixed in golang.org/x/crypto 0.45.0 but the govulncheck workflow still fails: https://github.com/Kong/kong-operator/pull/2658.
-  # https://pkg.go.dev/vuln/GO-2025-4135
-  "GO-2025-4135" 
+  "GO-2025-3521"
 
 ]')"
 export excludeVulns
