@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/test/helpers/asserts"
 )
 
 func TestSpecificGatewayNN(t *testing.T) {
@@ -92,7 +93,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 	})
 
 	t.Run("not configured gateway does not gets its listener status filled and HTTPRoute attached to it doesn't get its status parent filled", func(t *testing.T) {
-		require.Never(t, func() bool {
+		asserts.Never(t, func(ctx context.Context) bool {
 			t.Logf("Checking if Gateway %s is ignored (does not get status listeners filled)", nnIgnored)
 			var gwIgnored gatewayapi.Gateway
 			if err := ctrlClient.Get(ctx, nnIgnored, &gwIgnored); err != nil {
@@ -128,7 +129,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 	})
 
 	t.Run("changes to gatewayclass used by not configured gateway do not get gateway's listener status filled", func(t *testing.T) {
-		require.Never(t, func() bool {
+		asserts.Never(t, func(ctx context.Context) bool {
 			gwcOld := gwc.DeepCopy()
 			gwc.Annotations = map[string]string{"foo": strconv.Itoa(time.Now().Nanosecond())}
 			if err := ctrlClient.Patch(ctx, &gwc, client.MergeFrom(gwcOld)); err != nil {
@@ -158,7 +159,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 	})
 
 	t.Run("changes to httproute attached to ignored gateway do not get gateway's listener status filled", func(t *testing.T) {
-		require.Never(t, func() bool {
+		asserts.Never(t, func(ctx context.Context) bool {
 			routeIgnored := ignoredRoutes[0].DeepCopy()
 			routeIgnoredOld := routeIgnored.DeepCopy()
 			routeIgnored.Annotations = map[string]string{"foo": strconv.Itoa(time.Now().Nanosecond())}
@@ -211,7 +212,7 @@ func TestSpecificGatewayNN(t *testing.T) {
 		}
 		require.NoError(t, ctrlClient.Create(ctx, &refGrant))
 
-		require.Never(t, func() bool {
+		asserts.Never(t, func(ctx context.Context) bool {
 			refGrantOld := refGrant.DeepCopy()
 			refGrant.Annotations = map[string]string{"foo": strconv.Itoa(time.Now().Nanosecond())}
 			if err := ctrlClient.Patch(ctx, &refGrant, client.MergeFrom(refGrantOld)); err != nil {
