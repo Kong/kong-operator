@@ -216,8 +216,6 @@ func CreateEnvironment(t *testing.T, ctx context.Context, opts ...TestEnvOption)
 	require.NoError(t, err)
 
 	if opt.InstallViaKustomize {
-		t.Logf("deploying Gateway APIs CRDs from %s", testutils.GatewayExperimentalCRDsKustomizeURL)
-		require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), testutils.GatewayExperimentalCRDsKustomizeURL))
 
 		t.Log("creating system namespaces and serviceaccounts")
 		require.NoError(t, clusters.CreateNamespace(ctx, env.Cluster(), "kong-system"))

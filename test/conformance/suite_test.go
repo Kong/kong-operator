@@ -21,6 +21,7 @@ import (
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test"
 	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/test/helpers/kcfg"
 )
 
 // -----------------------------------------------------------------------------
@@ -89,7 +90,7 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 
 	fmt.Println("INFO: Deploying all required Kubernetes Configuration (RBAC, CRDs, etc.) for the operator")
-	exitOnErr(testutils.DeployKubernetesConfiguration(ctx, env.Cluster()))
+	exitOnErr(kcfg.DeployKubernetesConfiguration(ctx, env.Cluster()))
 
 	cleanupTelepresence, err := helpers.SetupTelepresence(ctx)
 	exitOnErr(err)

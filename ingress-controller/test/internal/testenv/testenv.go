@@ -189,7 +189,7 @@ func GithubRunID() string {
 func ControllerFeatureGates() string {
 	featureGates := os.Getenv("KONG_CONTROLLER_FEATURE_GATES")
 	if featureGates == "" {
-		featureGates = consts.DefaultFeatureGates
+		featureGates = consts.DefaultControllerFeatureGates
 	}
 	return featureGates
 }

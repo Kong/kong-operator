@@ -1,4 +1,4 @@
-package test
+package kcfg
 
 import (
 	"go/build"
@@ -49,7 +49,7 @@ func TestConstructModulePath(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := ConstructModulePath(tt.moduleName, tt.version)
+			result := constructModulePath(tt.moduleName, tt.version)
 			require.Equal(t, tt.expected, result)
 		})
 	}

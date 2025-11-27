@@ -15,4 +15,7 @@ const (
 
 	// ControllerNamespace is the Kubernetes namespace where the controller is deployed.
 	ControllerNamespace = "kong-system"
+
+	// DefaultControllerFeatureGates are the default (fallback) feature gates for the controller in tests.
+	DefaultControllerFeatureGates = "GatewayAlpha=true,KongServiceFacade=true,KongCustomEntity=true"
 )

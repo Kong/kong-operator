@@ -25,9 +25,9 @@ import (
 	"github.com/kong/kong-operator/modules/manager/metadata"
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayapipkg "github.com/kong/kong-operator/pkg/gatewayapi"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/pkg/vars"
 	"github.com/kong/kong-operator/test"
+	"github.com/kong/kong-operator/test/helpers/kcfg"
 )
 
 var skippedTestsShared = []string{
@@ -107,7 +107,8 @@ func TestGatewayConformance(t *testing.T) {
 	timeoutConfig.HTTPRouteMustHaveCondition = looserTimeout
 
 	opts := conformance.DefaultOptions(t)
-	opts.BaseManifests = testutils.GatewayRawRepoURL + "/conformance/base/manifests.yaml"
+	// It takes default conformance suite configuration manifests from provided location.
+	opts.ManifestFS = kcfg.GatewayAPIConformanceTestsFilesystemsWithManifests()
 	opts.ReportOutputPath = "../../" + reportFileName
 	opts.Implementation = conformancev1.Implementation{
 		Organization: metadata.Organization,

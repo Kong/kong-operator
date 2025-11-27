@@ -274,9 +274,6 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		return true
 	}, time.Minute, 3*time.Second)
 
-	t.Logf("deploying Gateway APIs CRDs in standard channel from %s", consts.GatewayStandardCRDsKustomizeURL)
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayStandardCRDsKustomizeURL))
-
 	t.Log("verifying controller updates associated Gateway resoures")
 	gw := deployGateway(ctx, t, env)
 	verifyGateway(ctx, t, env, gw)
@@ -346,9 +343,6 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	gw, err = gc.GatewayV1().Gateways(corev1.NamespaceDefault).Get(ctx, gw.Name, metav1.GetOptions{})
 	require.NoError(t, err)
 
-	t.Logf("deploying Gateway APIs CRDs in experimental channel from %s", consts.GatewayExperimentalCRDsKustomizeURL)
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayExperimentalCRDsKustomizeURL))
-
 	t.Log("updating proxy deployment to enable TCP listener")
 	proxyDeployment := deployments.GetProxy(ctx, t, env)
 	for i, container := range proxyDeployment.Spec.Template.Spec.Containers {
@@ -393,16 +387,12 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 
-	// ensure that Gateways with no addresses come online and start ingesting routes
-	t.Logf("deploying Gateway APIs CRDs from %s", consts.GatewayExperimentalCRDsKustomizeURL)
-	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayExperimentalCRDsKustomizeURL))
-
 	deployment := getManifestDeployments(dblessPath).GetController(ctx, t, env)
 	t.Log("updating controller deployment to enable Gateway feature gate")
 	for i, container := range deployment.Spec.Template.Spec.Containers {
 		if container.Name == controllerContainerName {
 			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultFeatureGates})
+				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultControllerFeatureGates})
 		}
 	}
 	_, err := env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,

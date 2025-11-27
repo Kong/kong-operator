@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -31,6 +30,7 @@ import (
 	"github.com/kong/kong-operator/pkg/vars"
 	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/eventually"
+	"github.com/kong/kong-operator/test/helpers/kcfg"
 )
 
 func TestHelmUpgrade(t *testing.T) {
@@ -45,7 +45,7 @@ func TestHelmUpgrade(t *testing.T) {
 
 	var (
 		ctx      = t.Context()
-		chartDir = filepath.Join(testutils.ProjectRootPath(), "charts/kong-operator")
+		chartDir = kcfg.ChartPath()
 	)
 
 	// createEnvironment will queue up environment cleanup if necessary

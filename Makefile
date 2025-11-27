@@ -313,7 +313,7 @@ API_DIR ?= api
 #   make generate && make manifests && make test.charts.golden.update
 # into a single command: make generate
 # Note: manifests is placed near the end to preserve the prior ordering (docs are generated from CRDs first).
-generate: generate.gateway-api-urls generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix generate.format manifests test.charts.golden.update generate.cli-arguments-docs
+generate: generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.mocks generate.deepcopy generate.apitypes-funcs generate.docs generate.lint-fix generate.format manifests test.charts.golden.update generate.cli-arguments-docs
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -786,26 +786,11 @@ generate.mocks: mockery
 #
 # [1]: https://github.com/kubernetes-sigs/kustomize/blob/master/examples/remoteBuild.md#remote-directories
 GATEWAY_API_PACKAGE ?= sigs.k8s.io/gateway-api
-GATEWAY_API_RELEASE_CHANNEL ?= experimental
 GATEWAY_API_VERSION ?= $(shell go list -m -f '{{ .Version }}' $(GATEWAY_API_PACKAGE))
-
 GATEWAY_API_CRDS_LOCAL_PATH = $(shell go env GOPATH)/pkg/mod/$(GATEWAY_API_PACKAGE)@$(GATEWAY_API_VERSION)/config/crd
 GATEWAY_API_CRDS_KUSTOMIZE_STANDARD_LOCAL_PATH = $(GATEWAY_API_CRDS_LOCAL_PATH)/
 GATEWAY_API_CRDS_KUSTOMIZE_EXPERIMENTAL_LOCAL_PATH = $(GATEWAY_API_CRDS_LOCAL_PATH)/experimental
-GATEWAY_API_REPO ?= kubernetes-sigs/gateway-api
-GATEWAY_API_RAW_REPO ?= https://raw.githubusercontent.com/$(GATEWAY_API_REPO)
-GATEWAY_API_CRDS_STANDARD_URL = github.com/$(GATEWAY_API_REPO)/config/crd?ref=$(GATEWAY_API_VERSION)
-GATEWAY_API_CRDS_EXPERIMENTAL_URL = github.com/$(GATEWAY_API_REPO)/config/crd/experimental?ref=$(GATEWAY_API_VERSION)
-GATEWAY_API_RAW_REPO_URL = $(GATEWAY_API_RAW_REPO)/$(GATEWAY_API_VERSION)
 
-.PHONY: generate.gateway-api-urls
-generate.gateway-api-urls:
-	CRDS_STANDARD_URL="$(GATEWAY_API_CRDS_STANDARD_URL)" \
-		CRDS_EXPERIMENTAL_URL="$(GATEWAY_API_CRDS_EXPERIMENTAL_URL)" \
-		RAW_REPO_URL="$(GATEWAY_API_RAW_REPO_URL)" \
-		INPUT=$(shell pwd)/internal/utils/cmd/generate-gateway-api-urls/gateway_consts.tmpl \
-		OUTPUT=$(shell pwd)/pkg/utils/test/zz_generated.gateway_api.go \
-		go generate -tags=generate_gateway_api_urls ./internal/utils/cmd/generate-gateway-api-urls
 
 # NOTE: we also need --server-side because some CRDs exceed the size limit for annotations:
 # The CustomResourceDefinition "httproutes.gateway.networking.k8s.io" is invalid: metadata.annotations: Too long: may not be more than 262144 bytes

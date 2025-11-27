@@ -23,7 +23,7 @@ func ApplyTemplate(t *testing.T, cfg *rest.Config, chartPath string, templates [
 		"admissionregistration.k8s.io/v1/ValidatingAdmissionPolicyBinding",
 	}
 
-	data := RenderTemplate(t, chartPath, templates, helmArgs...)
+	data := renderTemplate(t, chartPath, templates, helmArgs...)
 	res, err := apply.Apply(t.Context(), cfg, []byte(data))
 	require.NoError(t, err)
 	for _, r := range res {
@@ -31,8 +31,8 @@ func ApplyTemplate(t *testing.T, cfg *rest.Config, chartPath string, templates [
 	}
 }
 
-// RenderTemplate renders the selected templates in the chart and returns the result as a string.
-func RenderTemplate(t *testing.T, chartPath string, templates []string, helmArgs ...string) string {
+// renderTemplate renders the selected templates in the chart and returns the result as a string.
+func renderTemplate(t *testing.T, chartPath string, templates []string, helmArgs ...string) string {
 	t.Helper()
 	releaseName := "ko"
 	valuesFile := path.Join(chartPath, "values.yaml")
