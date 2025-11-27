@@ -1,0 +1,23 @@
+area/crds:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'config/crd/gateway-operator/**'
+      - 'config/crd/kong-operator/**'
+      - 'config/crd/ingress-controller-incubator/**'
+
+area/docs:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'docs/**'
+      - 'README.md'
+      - '.github/**.md'
+
+area/tests:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'test/**'
+
+area/charts:
+  - changed-files:
+    - any-glob-to-any-file:
+      - 'charts/**'

@@ -1,0 +1,21 @@
+name: "Pull Request Labeler"
+run-name: Pull Request Labeler, branch:${{ github.ref_name }}, triggered by @${{ github.actor }}
+
+on:
+- pull_request
+
+
+concurrency:
+  # Run only for most recent commit in PRs but for all tags and commits on main
+  # Ref: https://docs.github.com/en/actions/using-jobs/using-concurrency
+  group: ${{ github.workflow }}-${{ github.head_ref || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  labeler:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+    - uses: actions/labeler@634933edcd8ababfe52f92936142cc22ac488b1b
