@@ -114,7 +114,7 @@ func TestMultiInstanceManager_Profiling(t *testing.T) {
 		body := io.TeeReader(profileResp.Body, &buff)
 		p, err := profile.Parse(body)
 		if !assert.NoError(c, err, "failed to parse profile") {
-			profileResp.Body = io.NopCloser(bytes.NewReader(buff.Bytes()))
+			profileResp.Body = io.NopCloser(&buff)
 			respDump, err := httputil.DumpResponse(profileResp, true)
 			require.NoError(c, err, "failed to dump response")
 			t.Logf("Profile response dump:\n%s", respDump)
