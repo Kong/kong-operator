@@ -422,7 +422,7 @@ func createTargetsFromValidBackendRefs(ctx context.Context, logger logr.Logger, 
 
 			target, err := builder.NewKongTarget().
 				WithName(targetName).
-				WithNamespace(httpRoute.Namespace).
+				WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
 				WithLabels(httpRoute, pRef).
 				WithAnnotations(httpRoute, pRef).
 				WithUpstreamRef(upstreamName).

@@ -50,6 +50,7 @@ endif
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
 TOOLS_VERSIONS_FILE = $(PROJECT_DIR)/.tools_versions.yaml
+CUSTOM_GOLANGCI_LINT_FILE = $(PROJECT_DIR)/.custom-gcl.yml
 
 .PHONY: tools
 tools: controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq crd-ref-docs
@@ -94,11 +95,10 @@ kustomize: mise yq ## Download kustomize locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:kubernetes-sigs/kustomize
 
 CLIENT_GEN_VERSION = $(shell $(YQ) -r '.code-generator' < $(TOOLS_VERSIONS_FILE))
-CLIENT_GEN = $(PROJECT_DIR)/bin/installs/kube-code-generator/$(CLIENT_GEN_VERSION)/bin/client-gen
+CLIENT_GEN = $(PROJECT_DIR)/bin/installs/go-k8s-io-code-generator-cmd-client-gen/$(CLIENT_GEN_VERSION)/bin/client-gen
 .PHONY: client-gen
 client-gen: mise yq ## Download client-gen locally if necessary.
-	$(MAKE) mise-plugin-install DEP=kube-code-generator
-	@$(MISE) install -q kube-code-generator@$(CLIENT_GEN_VERSION)
+	$(MAKE) mise-install DEP_VER=go:k8s.io/code-generator/cmd/client-gen@$(CLIENT_GEN_VERSION)
 
 GOLANGCI_LINT_VERSION = $(shell $(YQ) -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
 GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/github-golangci-golangci-lint/$(GOLANGCI_LINT_VERSION)/golangci-lint
@@ -107,15 +107,14 @@ golangci-lint: mise yq ## Download golangci-lint locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:golangci/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
-MODERNIZE = $(PROJECT_DIR)/bin/modernize
+MODERNIZE = $(PROJECT_DIR)/bin/installs/go-golang-org-x-tools-gopls-internal-analysis-modernize-cmd-modernize/$(MODERNIZE_VERSION)/bin/modernize
 # Flags for modernize analyzer. Disable the "omitzero" category to avoid
 # warnings about `omitempty` on nested struct fields, which we intentionally
 # keep for compatibility with upstream expectations.
 MODERNIZE_FLAGS ?= -category=-omitzero
 .PHONY: modernize
 modernize: yq
-	GOBIN=$(PROJECT_DIR)/bin go install -v \
-		golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@$(MODERNIZE_VERSION)
+	$(MAKE) mise-install DEP_VER=go:golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@$(MODERNIZE_VERSION)
 
 GOTESTSUM_VERSION = $(shell $(YQ) -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
 GOTESTSUM = $(PROJECT_DIR)/bin/installs/github-gotestyourself-gotestsum/$(GOTESTSUM_VERSION)/gotestsum
@@ -160,11 +159,10 @@ download.shellcheck: mise yq ## Download shellcheck locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:koalaman/shellcheck@$(SHELLCHECK_VERSION)
 
 GOVULNCHECK_VERSION = $(shell $(YQ) -r '.govulncheck' < $(TOOLS_VERSIONS_FILE))
-GOVULNCHECK = $(PROJECT_DIR)/bin/installs/govulncheck/$(GOVULNCHECK_VERSION)/bin/govulncheck
+GOVULNCHECK = $(PROJECT_DIR)/bin/installs/go-golang-org-x-vuln-cmd-govulncheck/$(GOVULNCHECK_VERSION)/bin/govulncheck
 .PHONY: download.govulncheck
 download.govulncheck: mise yq ## Download govulncheck locally if necessary.
-	$(MAKE) mise-plugin-install DEP=govulncheck
-	@$(MISE) install -q govulncheck@$(GOVULNCHECK_VERSION)
+	$(MAKE) mise-install DEP_VER=go:golang.org/x/vuln/cmd/govulncheck@$(GOVULNCHECK_VERSION)
 
 CHARTSNAP_VERSION = $(shell $(YQ) -ojson -r '.chartsnap' < $(TOOLS_VERSIONS_FILE))
 .PHONY: download.chartsnap
@@ -172,11 +170,10 @@ download.chartsnap: yq download.helm
 	HELM=$(HELM) CHARTSNAP_VERSION=$(CHARTSNAP_VERSION) ./scripts/install-chartsnap.sh
 
 KUBE_LINTER_VERSION = $(shell $(YQ) -ojson -r '.kube-linter' < $(TOOLS_VERSIONS_FILE))
-KUBE_LINTER = $(PROJECT_DIR)/bin/installs/kube-linter/v$(KUBE_LINTER_VERSION)/bin/kube-linter
+KUBE_LINTER = $(PROJECT_DIR)/bin/installs/github-stackrox-kube-linter/$(KUBE_LINTER_VERSION)/kube-linter
 .PHONY: kube-linter
 download.kube-linter: mise yq
-	$(MAKE) mise-plugin-install DEP=kube-linter
-	@$(MAKE) mise-install DEP_VER=kube-linter@v$(KUBE_LINTER_VERSION)
+	$(MAKE) mise-install DEP_VER=github:stackrox/kube-linter@$(KUBE_LINTER_VERSION)
 
 TELEPRESENCE_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["github:telepresenceio/telepresence"].version' < $(MISE_FILE))
 TELEPRESENCE= $(PROJECT_DIR)/bin/installs/github-telepresenceio-telepresence/$(TELEPRESENCE_VERSION)/telepresence
@@ -190,12 +187,17 @@ MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/npm-markdownlint-cli2/$(MARKDOWNLINT_
 download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
 	$(MAKE) mise-install DEP_VER=npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION)
 
-HELM_VERSION = $(shell $(YQ) -r '.helm' < $(TOOLS_VERSIONS_FILE))
-HELM = $(PROJECT_DIR)/bin/installs/helm/$(HELM_VERSION)/bin/helm
+HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["http:helm"].version' < $(MISE_FILE))
+HELM = $(PROJECT_DIR)/bin/installs/http-helm/$(HELM_VERSION)/helm
 .PHONY: download.helm
 download.helm: mise yq ## Download helm locally if necessary.
-	$(MAKE) mise-plugin-install DEP=helm
-	@$(MISE) install -q helm@$(HELM_VERSION)
+	$(MAKE) mise-install DEP_VER=http:helm
+
+KUBE_API_LINTER_VERSION = $(shell $(YQ) -r '.plugins[0].version' < $(CUSTOM_GOLANGCI_LINT_FILE))
+KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter
+.PHONY: download.kube-api-linter
+download.kube-api-linter: mise yq ## Download kube-api-linter locally if necessary.
+	$(MAKE) mise-install DEP_VER=go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter@$(KUBE_API_LINTER_VERSION)
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
@@ -995,27 +997,9 @@ install.telepresence: download.telepresence
 uninstall.telepresence: download.telepresence
 	@$(PROJECT_DIR)/scripts/telepresence-manager.sh uninstall "$(TELEPRESENCE)"
 
-# Currently kube-api-linter can only be run with golangci-lint as custom linter.
-# There have been some discussions about making it possible to be run as a standalone tool
-# using go run but nothing has been implemented yet.
-# ref: https://github.com/kubernetes-sigs/kube-api-linter/issues/86
-
-GOLANGCI_LINT_KUBE_API_LINTER = $(PROJECT_DIR)/bin/golangci-kube-api-linter
-
-# Target below only checks if the kube-api-linter is installed, if not it will
-# run golangci-lint custom to produce a custom linter binary.
-# It does not enforce the version of kube-api-linter, so when that changes in
-# .custom-gcl.yml it will not cause a rebuild. Until that changes, we need to
-# manually remove the binary and call `make lint.api` to rebuild it.
-
-.PHONY: lint.api.remove
-lint.api.remove:
-	@rm -f $(GOLANGCI_LINT_KUBE_API_LINTER)
-
 .PHONY: lint.api
-lint.api: golangci-lint
-	@[[ -f $(GOLANGCI_LINT_KUBE_API_LINTER) ]] || $(GOLANGCI_LINT) custom -v
-	$(GOLANGCI_LINT_KUBE_API_LINTER) run --config $(PROJECT_DIR)/.golangci-kube-api.yaml -v \
+lint.api: download.kube-api-linter
+	$(KUBE_API_LINTER) run --config $(PROJECT_DIR)/.golangci-kube-api.yaml -v \
 		./api/gateway-operator/v2beta1/... \
 		./api/konnect/v1alpha1/... \
 		./api/konnect/v1alpha2/... \

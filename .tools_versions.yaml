@@ -5,7 +5,7 @@ controller-tools: "0.19.0"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 golangci-lint: "2.6.2"
 # TODO: Renovate comment is missing. This needs to be added at some point.
-modernize: "v0.19.1"
+modernize: "0.19.1"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 skaffold: "2.17.0"
 # renovate: datasource=github-releases depName=go-delve/delve
@@ -45,5 +45,3 @@ kube-linter: "0.7.6"
 markdownlint-cli2: "0.19.1"
 # renovate: datasource=github-releases depName=cert-manager/cert-manager
 cert-manager: "1.19.1"
-# renovate: datasource=github-releases depName=helm/helm
-helm: "4.0.1"

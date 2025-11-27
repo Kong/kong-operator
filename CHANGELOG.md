@@ -141,6 +141,15 @@
   is now tracked through the `gateway-operator.konghq.com/hybrid-routes` annotation. The same generated
   resource can now be shared among different HTTPRoutes.
   [#2656](https://github.com/Kong/kong-operator/pull/2656)
+- HybridGateway: implemented `ExtensionRef` filters to allow reference of self-managed plugins from
+  `HTTPRoute`s' filters.
+  [#2715](https://github.com/Kong/kong-operator/pull/2715)
+- `KonnectAPIAuthConfiguration` resources now have automatic finalizer management
+  to prevent deletion when they are actively referenced by other Konnect resources
+  (`KonnectGatewayControlPlane`, `KonnectCloudGatewayNetwork`, `KonnectExtension`).
+  The finalizer `konnect.konghq.com/konnectapiauth-in-use` is automatically added
+  when references exist and removed when all referencing resources are deleted.
+  [#2726](https://github.com/Kong/kong-operator/pull/2726)
 
 ### Changed
 

@@ -57,7 +57,7 @@ rows:
     description: "Send anonymized usage data to help improve Kong."
     default: '`true`'
   - flag: '`--apiserver-burst`'
-    type: '`string`'
+    type: '`int`'
     description: "The Kubernetes API RateLimiter maximum burst queries per second."
     default: '`300`'
   - flag: '`--apiserver-host`'
@@ -65,11 +65,11 @@ rows:
     description: "The Kubernetes API server URL. If not set, the operator will use cluster config discovery."
     default: ""
   - flag: '`--apiserver-qps`'
-    type: '`string`'
+    type: '`int`'
     description: "The Kubernetes API RateLimiter maximum queries per second."
     default: '`100`'
   - flag: '`--cache-sync-period`'
-    type: '`string`'
+    type: '`duration`'
     description: "Sets the minimum frequency for reconciling watched resources. Defaults to the controller-runtime value if unspecified or set to 0s."
     default: '`0s`'
   - flag: '`--cache-sync-timeout`'
@@ -77,7 +77,7 @@ rows:
     description: "Sets the time limit for syncing controller caches. Defaults to the controller-runtime value if set to `0`."
     default: '`0s`'
   - flag: '`--cluster-ca-key-size`'
-    type: '`string`'
+    type: '`int`'
     description: "Size (in bits) of the key used for the cluster CA certificate. Only used for RSA keys."
     default: '`4096`'
   - flag: '`--cluster-ca-key-type`'
@@ -173,11 +173,11 @@ rows:
     description: "The address the probe endpoint binds to."
     default: '`:8081`'
   - flag: '`--konnect-controller-max-concurrent-reconciles`'
-    type: '`string`'
+    type: '`uint`'
     description: "Maximum number of concurrent reconciles for Konnect entities."
     default: '`8`'
   - flag: '`--konnect-sync-period`'
-    type: '`string`'
+    type: '`duration`'
     description: "Sync period for Konnect entities. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again."
     default: '`1m0s`'
   - flag: '`--kubeconfig`'

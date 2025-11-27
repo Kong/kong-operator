@@ -410,7 +410,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				"filterCount", len(rule.Filters))
 
 			for _, filter := range rule.Filters {
-				pluginPtr, err := plugin.PluginForFilter(ctx, logger, c.Client, c.route, filter, &pRef)
+				pluginPtr, selfManagedPlugin, err := plugin.PluginForFilter(ctx, logger, c.Client, c.route, filter, &pRef)
 				if err != nil {
 					log.Error(logger, err, "Failed to translate KongPlugin resource, skipping filter",
 						"filter", filter.Type)
@@ -418,7 +418,9 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					continue
 				}
 				pluginName := pluginPtr.Name
-				c.outputStore = append(c.outputStore, pluginPtr)
+				if !selfManagedPlugin {
+					c.outputStore = append(c.outputStore, pluginPtr)
+				}
 
 				// Create a KongPluginBinding to bind the KongPlugin to each KongRoute.
 				bindingPtr, err := pluginbinding.BindingForPluginAndRoute(
