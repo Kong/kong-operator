@@ -56,21 +56,6 @@ spec:
           $patch: delete`
 )
 
-// patchControllerImage replaces the kong/kubernetes-ingress-controller image with the provided image and tag,
-// and returns the modified manifest.
-func patchControllerImage(baseManifestReader io.Reader, image, tag string) (io.Reader, error) {
-	kustomization := types.Kustomization{
-		Images: []types.Image{
-			{
-				Name:    "kong/kubernetes-ingress-controller",
-				NewName: image,
-				NewTag:  tag,
-			},
-		},
-	}
-	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
-}
-
 // patchKongImage replaces the kong and kong/kong-gateway images in a manifest with the provided image and tag,
 // and returns the modified manifest.
 func patchKongImage(baseManifestReader io.Reader, image, tag string) (io.Reader, error) {

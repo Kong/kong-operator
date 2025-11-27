@@ -270,10 +270,8 @@ func GenerateControlPlaneProbe(endpoint string, port intstr.IntOrString) *corev1
 }
 
 var (
-	_defaultDataPlaneResourcesOnce    sync.Once
-	_dataPlaneDefaultResources        corev1.ResourceRequirements
-	_defaultControlPlaneResourcesOnce sync.Once
-	_controlPlaneDefaultResources     corev1.ResourceRequirements
+	_defaultDataPlaneResourcesOnce sync.Once
+	_dataPlaneDefaultResources     corev1.ResourceRequirements
 )
 
 // DefaultDataPlaneResources generates a ResourceRequirements with the DataPlane defaults.

@@ -31,12 +31,10 @@ linters:
     # Uncomment or remove - TODO: https://github.com/Kong/kong-operator/issues/1847
     # - testifylint
     - unconvert
+    - unused
     - unparam
     - usetesting
     - wastedassign
-  # Remove - TODO: https://github.com/Kong/kong-operator/issues/1847
-  disable:
-    - unused
   settings:
     staticcheck:
       checks:
