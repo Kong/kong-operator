@@ -21,9 +21,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
@@ -46,7 +44,6 @@ import (
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/internal/utils/gatewayclass"
-	idx "github.com/kong/kong-operator/internal/utils/index"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
@@ -145,25 +142,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		source.Kind(
 			mgr.GetCache(),
 			&corev1.Secret{},
-			handler.TypedEnqueueRequestsFromMapFunc(func(ctx context.Context, s *corev1.Secret) []reconcile.Request {
-				// Use field index to list only Gateways that reference this Secret.
-				var gwList gwtypes.GatewayList
-				nn := client.ObjectKeyFromObject(s)
-				if err := r.List(ctx, &gwList, client.MatchingFields{idx.TLSCertificateSecretsOnGatewayIndex: nn.String()}); err != nil {
-					ctrllog.FromContext(ctx).Error(err, "failed to list indexed gateways for Secret watch", "secret", nn)
-					return nil
-				}
-				recs := make([]reconcile.Request, 0, len(gwList.Items))
-				for i := range gwList.Items {
-					gw := gwList.Items[i]
-					// Optional pre-filter: only enqueue Gateways managed by this controller.
-					if !r.gatewayHasMatchingGatewayClass(&gw) {
-						continue
-					}
-					recs = append(recs, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&gw)})
-				}
-				return recs
-			}),
+			handler.TypedEnqueueRequestsFromMapFunc(r.listGatewayReconcileRequestsForSecret),
 		),
 	)
 

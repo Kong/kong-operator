@@ -1,7 +1,6 @@
 package envtest
 
 import (
-	"context"
 	"testing"
 
 	"github.com/samber/lo"
@@ -14,10 +13,9 @@ import (
 
 	kogateway "github.com/kong/kong-operator/controller/gateway"
 	certhelper "github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
-	gwcdecor "github.com/kong/kong-operator/internal/utils/gatewayclass"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	managerscheme "github.com/kong/kong-operator/modules/manager/scheme"
-	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
+	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/pkg/vars"
 )
 
@@ -52,26 +50,7 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 	require.NoError(t, c.Create(ctx, gc))
 
 	t.Log("patching GatewayClass status to Accepted=True")
-	require.Eventually(t, func() bool {
-		var cur gatewayv1.GatewayClass
-		if err := c.Get(ctx, types.NamespacedName{Name: gc.Name}, &cur); err != nil {
-			return false
-		}
-		cond := metav1.Condition{
-			Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
-			Status:             metav1.ConditionTrue,
-			Reason:             string(gatewayv1.GatewayClassReasonAccepted),
-			ObservedGeneration: cur.Generation,
-			LastTransitionTime: metav1.Now(),
-		}
-		// Use shared helper to set/merge the condition.
-		gwcd := gwcdecor.DecorateGatewayClass(&cur)
-		k8sutils.SetCondition(cond, gwcd)
-		if err := c.Status().Update(ctx, &cur); err != nil {
-			return false
-		}
-		return true
-	}, waitTime, tickTime)
+	require.Eventually(t, testutils.GatewayClassAcceptedStatusUpdate(t, ctx, gc.Name, c), waitTime, tickTime)
 
 	// Create an initial INVALID TLS Secret referenced by the Gateway listener.
 	secretName := "test-cert"
@@ -108,7 +87,8 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 	require.NoError(t, c.Create(ctx, gw))
 
 	t.Log("verifying that the invalid Secret results in ResolvedRefs=False (InvalidCertificateRef)")
-	waitForGatewayResolvedRefsStatus(t, ctx, c, ns.Name, gw.Name, metav1.ConditionFalse)
+	gwNN := types.NamespacedName{Namespace: ns.Name, Name: gw.Name}
+	require.Eventually(t, testutils.GatewayListenerResolvedRefsCondition(t, ctx, gwNN, c, metav1.ConditionFalse), waitTime, tickTime)
 
 	t.Log("rotating the Secret with a valid TLS certificate and key")
 	certPEM, keyPEM := certhelper.MustGenerateCertPEMFormat()
@@ -122,34 +102,5 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 	}, client.MergeFrom(bad)))
 
 	t.Log("verifying that after rotation the Secret watch enqueues the Gateway and ResolvedRefs becomes True")
-	waitForGatewayResolvedRefsStatus(t, ctx, c, ns.Name, gw.Name, metav1.ConditionTrue)
-}
-
-// waitForGatewayResolvedRefsStatus waits until the Gateway's listener ResolvedRefs condition
-// matches the expected status, or fails after the default timeout.
-func waitForGatewayResolvedRefsStatus(
-	t *testing.T,
-	ctx context.Context,
-	c client.Client,
-	namespace, name string,
-	status metav1.ConditionStatus,
-) {
-	t.Helper()
-	require.Eventually(t, func() bool {
-		var cur gatewayv1.Gateway
-		if err := c.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, &cur); err != nil {
-			return false
-		}
-		if len(cur.Status.Listeners) == 0 {
-			return false
-		}
-		for _, ls := range cur.Status.Listeners {
-			for _, cond := range ls.Conditions {
-				if cond.Type == string(gatewayv1.ListenerConditionResolvedRefs) && cond.Status == status {
-					return true
-				}
-			}
-		}
-		return false
-	}, waitTime, tickTime)
+	require.Eventually(t, testutils.GatewayListenerResolvedRefsCondition(t, ctx, gwNN, c, metav1.ConditionTrue), waitTime, tickTime)
 }
