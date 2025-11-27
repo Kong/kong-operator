@@ -531,22 +531,6 @@ func Test_isProgrammed(t *testing.T) {
 	}
 }
 
-type errorClient struct {
-	client.Client
-	failGateway      bool
-	failGatewayClass bool
-}
-
-func (e *errorClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	if e.failGateway && key.Name == "my-gateway" && key.Namespace == "default" {
-		return fmt.Errorf("generic gateway error")
-	}
-	if e.failGatewayClass && key.Name == "my-class" {
-		return fmt.Errorf("generic gatewayclass error")
-	}
-	return e.Client.Get(ctx, key, obj, opts...)
-}
-
 func Test_BuildAcceptedCondition(t *testing.T) {
 	ctx := context.Background()
 
