@@ -31026,7 +31026,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        image: docker.io/kong/kong-operator:2.1
+        image: docker.io/kong/kong-operator:2.1.0-alpha.0
         livenessProbe:
           httpGet:
             path: /healthz
