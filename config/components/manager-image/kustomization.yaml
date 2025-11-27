@@ -4,4 +4,4 @@ kind: Component
 images:
 - name: docker.io/kong/kong-operator
   newName: docker.io/kong/kong-operator
-  newTag: "2.0"
+  newTag: 2.1.0-alpha.0
