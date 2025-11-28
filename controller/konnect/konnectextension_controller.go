@@ -309,14 +309,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
 	err = r.Get(ctx, apiAuthRef, &apiAuth)
-	if requeue, res, retErr := handleAPIAuthStatusCondition(
-		ctx,
-		r.Client,
-		&ext,
-		apiAuth,
-		err,
-		readyCondition,
-	); requeue {
+	if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, &ext, apiAuth, apiAuthRef, err, readyCondition); requeue {
 		return res, retErr
 	}
 
