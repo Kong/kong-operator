@@ -277,6 +277,7 @@ func TestStickySessionsNotSupportedEventGeneration(t *testing.T) {
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
 		WithKongServiceFacadeFeatureEnabled(),
+		WithInitCacheSyncDuration(2*time.Second),
 		WithProxySyncInterval(100*time.Millisecond),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
