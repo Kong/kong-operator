@@ -6,10 +6,12 @@ import (
 	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -377,4 +379,196 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 			)
 		},
 	)
+}
+
+func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
+	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+
+	testID := uuid.NewString()[:8]
+	t.Logf("Running Konnect entity adoption test for consumer with credentials with ID: %s", testID)
+
+	clientNamespaced := client.NewNamespacedClient(GetClients().MgrClient, ns.Name)
+
+	t.Log("Creating Konnect API auth configuration and Konnect control plane")
+	authCfg := deploy.KonnectAPIAuthConfiguration(t, GetCtx(), clientNamespaced,
+		deploy.WithTestIDLabel(testID),
+		func(obj client.Object) {
+			authCfg := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
+			authCfg.Spec.Type = konnectv1alpha1.KonnectAPIAuthTypeToken
+			authCfg.Spec.Token = test.KonnectAccessToken()
+			authCfg.Spec.ServerURL = test.KonnectServerURL()
+		},
+	)
+
+	cp := deploy.KonnectGatewayControlPlane(t, GetCtx(), clientNamespaced, authCfg,
+		deploy.WithTestIDLabel(testID),
+		deploy.KonnectGatewayControlPlaneLabel(deploy.KonnectTestIDLabel, testID),
+	)
+
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, cp.DeepCopy()))
+
+	t.Logf("Waiting for Konnect ID to be assigned to ControlPlane %s/%s", cp.Namespace, cp.Name)
+	cp = eventually.KonnectEntityGetsProgrammed(t, ctx, clientNamespaced, cp)
+
+	cpKonnectID := cp.GetKonnectID()
+
+	t.Log("Create a consumer by SDK for adoption")
+	server, err := server.NewServer[struct{}](test.KonnectServerURL())
+	require.NoError(t, err, "Should create a server successfully")
+	sdk := sdkops.NewSDKFactory().NewKonnectSDK(server, sdkops.SDKToken(test.KonnectAccessToken()))
+	require.NotNil(t, sdk)
+
+	consumerUsername := "test-adoption-consumer-" + testID
+	consumerResp, err := sdk.GetConsumersSDK().CreateConsumer(GetCtx(), cpKonnectID, sdkkonnectcomp.Consumer{
+		Username: lo.ToPtr(consumerUsername),
+	})
+	require.NoError(t, err, "Should create consumer in Konnect successfully")
+	consumerOutput := consumerResp.GetConsumer()
+	require.NotNil(t, consumerOutput, "Should get a non-nil consumer in response")
+	require.NotNil(t, consumerOutput.ID, "Should get a non-nil ID in the consumer")
+	consumerKonnectID := *consumerOutput.ID
+	t.Logf("Created consumer %s in Konnect with ID: %s", consumerUsername, consumerKonnectID)
+
+	t.Log("Create a BasicAuth credential attached to the consumer by SDK for adoption")
+	basicAuthResp, err := sdk.GetBasicAuthCredentialsSDK().CreateBasicAuthWithConsumer(
+		GetCtx(),
+		sdkkonnectops.CreateBasicAuthWithConsumerRequest{
+			ControlPlaneID:              cpKonnectID,
+			ConsumerIDForNestedEntities: consumerKonnectID,
+			BasicAuthWithoutParents: sdkkonnectcomp.BasicAuthWithoutParents{
+				Username: "basic-auth-user-" + testID,
+				Password: "basic-auth-password",
+			},
+		},
+	)
+	require.NoError(t, err, "Should create BasicAuth credential in Konnect successfully")
+	basicAuthOutput := basicAuthResp.GetBasicAuth()
+	require.NotNil(t, basicAuthOutput, "Should get a non-nil BasicAuth in response")
+	require.NotNil(t, basicAuthOutput.ID, "Should get a non-nil ID in the BasicAuth")
+	basicAuthKonnectID := *basicAuthOutput.ID
+	t.Logf("Created BasicAuth credential in Konnect with ID: %s", basicAuthKonnectID)
+
+	t.Log("Create an APIKey credential attached to the consumer by SDK for adoption")
+	apiKeyResp, err := sdk.GetAPIKeyCredentialsSDK().CreateKeyAuthWithConsumer(
+		GetCtx(),
+		sdkkonnectops.CreateKeyAuthWithConsumerRequest{
+			ControlPlaneID:              cpKonnectID,
+			ConsumerIDForNestedEntities: consumerKonnectID,
+			KeyAuthWithoutParents: &sdkkonnectcomp.KeyAuthWithoutParents{
+				Key: lo.ToPtr("api-key-" + testID),
+			},
+		},
+	)
+	require.NoError(t, err, "Should create APIKey credential in Konnect successfully")
+	apiKeyOutput := apiKeyResp.GetKeyAuth()
+	require.NotNil(t, apiKeyOutput, "Should get a non-nil APIKey in response")
+	require.NotNil(t, apiKeyOutput.ID, "Should get a non-nil ID in the APIKey")
+	apiKeyKonnectID := *apiKeyOutput.ID
+	t.Logf("Created APIKey credential in Konnect with ID: %s", apiKeyKonnectID)
+
+	t.Log("Create a KongConsumer to adopt the consumer in Konnect")
+	kongConsumer := deploy.KongConsumer(t, GetCtx(), clientNamespaced, consumerUsername,
+		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		deploy.WithKonnectAdoptOptions[*configurationv1.KongConsumer](commonv1alpha1.AdoptModeOverride, consumerKonnectID),
+	)
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kongConsumer.DeepCopy()))
+
+	t.Log("Waiting for the KongConsumer to be programmed and set Konnect ID")
+	kongConsumer = eventually.KonnectEntityGetsProgrammed(t, ctx, clientNamespaced, kongConsumer,
+		func(collect *assert.CollectT, kc *configurationv1.KongConsumer) {
+			assert.Equalf(collect, consumerKonnectID, kc.GetKonnectID(),
+				"KongConsumer should set Konnect ID %s as the adopted consumer in status", consumerKonnectID,
+			)
+		},
+	)
+
+	t.Log("Create a KongCredentialBasicAuth to adopt the BasicAuth credential in Konnect")
+	kongCredentialBasicAuth := &configurationv1alpha1.KongCredentialBasicAuth{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "basic-auth-adopt-",
+			Namespace:    ns.Name,
+		},
+		Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
+			ConsumerRef: corev1.LocalObjectReference{
+				Name: kongConsumer.Name,
+			},
+			KongCredentialBasicAuthAPISpec: configurationv1alpha1.KongCredentialBasicAuthAPISpec{
+				Username: "basic-auth-user-" + testID,
+				Password: "basic-auth-password",
+			},
+			Adopt: &commonv1alpha1.AdoptOptions{
+				From: commonv1alpha1.AdoptSourceKonnect,
+				Mode: commonv1alpha1.AdoptModeOverride,
+				Konnect: &commonv1alpha1.AdoptKonnectOptions{
+					ID: basicAuthKonnectID,
+				},
+			},
+		},
+	}
+	require.NoError(t, clientNamespaced.Create(GetCtx(), kongCredentialBasicAuth))
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kongCredentialBasicAuth.DeepCopy()))
+
+	t.Log("Waiting for the KongCredentialBasicAuth to be programmed and set Konnect ID")
+	eventually.KonnectEntityGetsProgrammed(t, ctx, clientNamespaced, kongCredentialBasicAuth,
+		func(collect *assert.CollectT, cred *configurationv1alpha1.KongCredentialBasicAuth) {
+			assert.Equalf(collect, basicAuthKonnectID, cred.GetKonnectID(),
+				"KongCredentialBasicAuth should set Konnect ID %s as the adopted credential in status", basicAuthKonnectID,
+			)
+		},
+	)
+
+	t.Log("Create a KongCredentialAPIKey to adopt the APIKey credential in Konnect")
+	kongCredentialAPIKey := &configurationv1alpha1.KongCredentialAPIKey{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "api-key-adopt-",
+			Namespace:    ns.Name,
+		},
+		Spec: configurationv1alpha1.KongCredentialAPIKeySpec{
+			ConsumerRef: corev1.LocalObjectReference{
+				Name: kongConsumer.Name,
+			},
+			KongCredentialAPIKeyAPISpec: configurationv1alpha1.KongCredentialAPIKeyAPISpec{
+				Key: "api-key-" + testID,
+			},
+			Adopt: &commonv1alpha1.AdoptOptions{
+				From: commonv1alpha1.AdoptSourceKonnect,
+				Mode: commonv1alpha1.AdoptModeOverride,
+				Konnect: &commonv1alpha1.AdoptKonnectOptions{
+					ID: apiKeyKonnectID,
+				},
+			},
+		},
+	}
+	require.NoError(t, clientNamespaced.Create(GetCtx(), kongCredentialAPIKey))
+	t.Cleanup(deleteObjectAndWaitForDeletionFn(t, kongCredentialAPIKey.DeepCopy()))
+
+	t.Log("Waiting for the KongCredentialAPIKey to be programmed and set Konnect ID")
+	eventually.KonnectEntityGetsProgrammed(t, ctx, clientNamespaced, kongCredentialAPIKey,
+		func(collect *assert.CollectT, cred *configurationv1alpha1.KongCredentialAPIKey) {
+			assert.Equalf(collect, apiKeyKonnectID, cred.GetKonnectID(),
+				"KongCredentialAPIKey should set Konnect ID %s as the adopted credential in status", apiKeyKonnectID,
+			)
+		},
+	)
+
+	t.Log("Updating the KongConsumer to verify the adopted consumer can be updated")
+	oldKongConsumer := kongConsumer.DeepCopy()
+	kongConsumer.CustomID = "custom-id-" + testID
+	err = clientNamespaced.Patch(GetCtx(), kongConsumer, client.MergeFrom(oldKongConsumer))
+	require.NoError(t, err)
+
+	t.Log("Verifying that the consumer in Konnect is updated")
+	require.EventuallyWithT(t, func(collect *assert.CollectT) {
+		resp, err := sdk.GetConsumersSDK().GetConsumer(GetCtx(), consumerKonnectID, cpKonnectID)
+		require.NoError(collect, err, "Should get consumer from Konnect successfully")
+
+		consumerOutput := resp.GetConsumer()
+		require.NotNil(collect, consumerOutput, "Should get a non-nil consumer in response")
+		assert.NotNil(collect, consumerOutput.CustomID, "Should get a non-nil CustomID in the consumer")
+		if consumerOutput.CustomID != nil {
+			assert.Equal(collect, "custom-id-"+testID, *consumerOutput.CustomID,
+				"CustomID of the consumer should be updated to match the spec in KongConsumer")
+		}
+	}, testutils.ObjectUpdateTimeout, checkKonnectAPITick,
+		"Did not see consumer in Konnect updated to match spec of KongConsumer")
 }
