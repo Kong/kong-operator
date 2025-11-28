@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
@@ -19,11 +20,13 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/controllers"
 )
 
-// StartReconcilers creates a controller manager and starts the provided reconciler
+// StartReconciler creates a controller manager and starts the provided reconciler
 // as its runnable.
 // It also adds a t.Cleanup which waits for the manager to exit so that the test
 // can be self contained and logs from different tests' managers don't mix up.
-func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme, cfg *rest.Config, reconcilers ...controllers.Reconciler) {
+func StartReconciler(
+	ctx context.Context, t *testing.T, scheme *runtime.Scheme, cfg *rest.Config, r controllers.Reconciler, opts ...func(*manager.Options),
+) {
 	t.Helper()
 
 	ctx, logger, logs := CreateTestLogger(ctx)
@@ -43,13 +46,15 @@ func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme,
 		},
 	}
 
+	for _, opt := range opts {
+		opt(&o)
+	}
+
 	mgr, err := ctrl.NewManager(cfg, o)
 	require.NoError(t, err)
 
-	for _, r := range reconcilers {
-		r.SetLogger(mgr.GetLogger())
-		require.NoError(t, r.SetupWithManager(mgr))
-	}
+	r.SetLogger(mgr.GetLogger())
+	require.NoError(t, r.SetupWithManager(mgr))
 
 	// This wait group makes it so that we wait for manager to exit.
 	// This way we get clean test logs not mixing between tests.
@@ -70,4 +75,12 @@ func NewControllerClient(t *testing.T, scheme *runtime.Scheme, cfg *rest.Config)
 	})
 	require.NoError(t, err)
 	return client
+}
+
+func WithWatchNamespace(ns string) func(*manager.Options) {
+	return func(o *manager.Options) {
+		o.Cache.DefaultNamespaces = map[string]cache.Config{
+			ns: {},
+		}
+	}
 }

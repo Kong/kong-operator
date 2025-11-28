@@ -68,7 +68,7 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		},
 	}
 	require.NoError(t, client.Create(ctx, &svc))
-	StartReconcilers(ctx, t, client.Scheme(), cfg, reconciler)
+	StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
 
 	gwc := gatewayapi.GatewayClass{
 		Spec: gatewayapi.GatewayClassSpec{
@@ -284,7 +284,7 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	ns := CreateNamespace(ctx, t, client)
 	nsRoute := CreateNamespace(ctx, t, client)
 
-	StartReconcilers(ctx, t, client.Scheme(), cfg, reconciler)
+	StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
 
 	gwc := gatewayapi.GatewayClass{
 		Spec: gatewayapi.GatewayClassSpec{

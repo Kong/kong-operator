@@ -12,11 +12,11 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
-	gatewayclientv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
+	"k8s.io/client-go/rest"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/controllers/gateway"
@@ -25,7 +25,22 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
 	"github.com/kong/kong-operator/ingress-controller/test/helpers/conditions"
 	"github.com/kong/kong-operator/ingress-controller/test/mocks"
+	"github.com/kong/kong-operator/test/helpers/asserts"
 )
+
+type testcaseGatewayWithGatewayClassReconciliation struct {
+	Name         string
+	GatewayClass gatewayapi.GatewayClass
+	Gateway      gatewayapi.Gateway
+	Test         func(
+		ctx context.Context,
+		t *testing.T,
+		cl client.Client,
+		gwc gatewayapi.GatewayClass,
+		gw gatewayapi.Gateway,
+		ns corev1.Namespace,
+	)
+}
 
 func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 	t.Parallel()
@@ -42,23 +57,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 	scheme := Scheme(t, WithGatewayAPI)
 	cfg := Setup(t, scheme)
 
-	gatewayClient, err := gatewayclient.NewForConfig(cfg)
-	require.NoError(t, err)
-
-	client := NewControllerClient(t, scheme, cfg)
-
-	testcases := []struct {
-		Name         string
-		GatewayClass gatewayapi.GatewayClass
-		Gateway      gatewayapi.Gateway
-		Test         func(
-			ctx context.Context,
-			t *testing.T,
-			gwClient gatewayclientv1.GatewayInterface,
-			gwc gatewayapi.GatewayClass,
-			gw gatewayapi.Gateway,
-		)
-	}{
+	testcases := []testcaseGatewayWithGatewayClassReconciliation{
 		{
 			Name: "unsupported gateway class",
 			GatewayClass: gatewayapi.GatewayClass{
@@ -85,13 +84,14 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			Test: func(
 				ctx context.Context,
 				t *testing.T,
-				gwClient gatewayclientv1.GatewayInterface,
+				cl client.Client,
 				gwc gatewayapi.GatewayClass,
 				gw gatewayapi.Gateway,
+				ns corev1.Namespace,
 			) {
 				t.Logf("deploying gateway class %s", gwc.Name)
-				require.NoError(t, client.Create(ctx, &gwc))
-				t.Cleanup(func() { _ = client.Delete(t.Context(), &gwc) }) //nolint:contextcheck
+				require.NoError(t, cl.Create(ctx, &gwc))
+				t.Cleanup(func() { _ = cl.Delete(t.Context(), &gwc) }) //nolint:contextcheck
 
 				t.Logf("verifying that the unsupported Gateway %s does not get Accepted or Programmed by the controller", gw.Name)
 				// NOTE: Ideally we wouldn't like to perform a busy wait loop here,
@@ -104,10 +104,12 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				//
 				// NOTE: we're not using a busy loop without a sleep because that could cause
 				// the rate limiter to kick in and fail the test.
-				require.Never(t, func() bool {
-					gateway, err := gwClient.Get(ctx, gw.Name, metav1.GetOptions{})
+				asserts.Never(t, func(ctx context.Context) bool {
+					var gateway gatewayapi.Gateway
+					nn := client.ObjectKeyFromObject(&gw)
+					err := cl.Get(ctx, nn, &gateway)
 					if err != nil {
-						t.Logf("error getting Gateway %s: %v", gateway.Name, err)
+						t.Logf("error getting Gateway %s: %v", nn, err)
 						return true
 					}
 					if len(gateway.Status.Conditions) != 2 {
@@ -153,9 +155,10 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			Test: func(
 				ctx context.Context,
 				t *testing.T,
-				gwClient gatewayclientv1.GatewayInterface,
+				cl client.Client,
 				gwc gatewayapi.GatewayClass,
 				gw gatewayapi.Gateway,
+				ns corev1.Namespace,
 			) {
 				t.Logf("verifying that the Gateway %s does not get scheduled by the controller due to missing its GatewayClass", gw.Name)
 				// NOTE: Ideally we wouldn't like to perform a busy wait loop here,
@@ -166,7 +169,9 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				// implementation.
 				// Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/4190
 				for i := 0; i < 100; i++ {
-					gateway, err := gwClient.Get(ctx, gw.Name, metav1.GetOptions{})
+					var gateway gatewayapi.Gateway
+					nn := client.ObjectKeyFromObject(&gw)
+					err := cl.Get(ctx, nn, &gateway)
 					require.NoError(t, err)
 					require.Len(t, gateway.Status.Conditions, 2)
 
@@ -179,18 +184,20 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				}
 
 				t.Logf("deploying gateway class %s", gwc.Name)
-				require.NoError(t, client.Create(ctx, &gwc))
-				t.Cleanup(func() { _ = client.Delete(t.Context(), &gwc) }) //nolint:contextcheck
+				require.NoError(t, cl.Create(ctx, &gwc))
+				t.Cleanup(func() { _ = cl.Delete(t.Context(), &gwc) }) //nolint:contextcheck
 
 				// Let's wait and check that the Gateway hasn't been reconciled by the operator.
 				t.Log("verifying the Gateway is not reconciled as it is using a managed GatewayClass")
 
 				// NOTE: we're not using a busy loop without a sleep because that could cause
 				// the rate limiter to kick in and fail the test.
-				require.Never(t, func() bool {
-					gateway, err := gwClient.Get(ctx, gw.Name, metav1.GetOptions{})
+				asserts.Never(t, func(ctx context.Context) bool {
+					var gateway gatewayapi.Gateway
+					nn := client.ObjectKeyFromObject(&gw)
+					err := cl.Get(ctx, nn, &gateway)
 					if err != nil {
-						t.Logf("error getting Gateway %s: %v", gateway.Name, err)
+						t.Logf("error getting Gateway %s: %v", nn, err)
 						return true
 					}
 					if len(gateway.Status.Conditions) != 2 {
@@ -239,9 +246,10 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			Test: func(
 				ctx context.Context,
 				t *testing.T,
-				gwClient gatewayclientv1.GatewayInterface,
+				cl client.Client,
 				gwc gatewayapi.GatewayClass,
 				gw gatewayapi.Gateway,
+				ns corev1.Namespace,
 			) {
 				t.Logf("verifying that the Gateway %s does not get scheduled by the controller due to missing its GatewayClass", gw.Name)
 				// NOTE: Ideally we wouldn't like to perform a busy wait loop here,
@@ -254,10 +262,12 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				//
 				// NOTE: we're not using a busy loop without a sleep because that could cause
 				// the rate limiter to kick in and fail the test.
-				require.Never(t, func() bool {
-					gateway, err := gwClient.Get(ctx, gw.Name, metav1.GetOptions{})
+				asserts.Never(t, func(ctx context.Context) bool {
+					var gateway gatewayapi.Gateway
+					nn := client.ObjectKeyFromObject(&gw)
+					err := cl.Get(ctx, nn, &gateway)
 					if err != nil {
-						t.Logf("error getting Gateway %s: %v", gateway.Name, err)
+						t.Logf("error getting Gateway %s: %v", nn, err)
 						return true
 					}
 					if len(gateway.Status.Conditions) != 2 {
@@ -277,27 +287,30 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				}, waitTime, tickTime)
 
 				t.Logf("deploying gateway class %s", gwc.Name)
-				require.NoError(t, client.Create(ctx, &gwc))
-				t.Cleanup(func() { _ = client.Delete(t.Context(), &gwc) }) //nolint:contextcheck
+				require.NoError(t, cl.Create(ctx, &gwc))
+				t.Cleanup(func() { _ = cl.Delete(t.Context(), &gwc) }) //nolint:contextcheck
 
 				t.Logf("now that the GatewayClass exists, verifying that the Gateway %s gets Accepted and Programmed", gw.Name)
 
-				w, err := gwClient.Watch(ctx, metav1.ListOptions{
-					FieldSelector: "metadata.name=" + gw.Name,
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: gatewayv1.GroupVersion.String(),
-						Kind:       "Gateway",
-					},
+				w, err := client.NewWithWatch(cfg, client.Options{
+					Scheme: scheme,
 				})
 				require.NoError(t, err)
-				defer w.Stop()
+
+				ww, err := w.Watch(ctx, &gatewayapi.GatewayList{},
+					client.InNamespace(ns.Name),
+					client.MatchingFields{
+						"metadata.name": gw.Name,
+					},
+				)
+				require.NoError(t, err)
 
 			forLoop:
 				for {
 					select {
 					case <-ctx.Done():
 						t.Fatalf("context got cancelled: %v", ctx.Err())
-					case event := <-w.ResultChan():
+					case event := <-ww.ResultChan():
 						gateway, ok := event.Object.(*gatewayapi.Gateway)
 						require.True(t, ok, "expected to get a Gateway object, got %T", event.Object)
 
@@ -316,10 +329,17 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 		},
 	}
 
+	testGatewayWithGatewayClassReconciliation(t, cfg, scheme, testcases)
+}
+
+func testGatewayWithGatewayClassReconciliation(
+	t *testing.T,
+	cfg *rest.Config,
+	scheme *k8sruntime.Scheme,
+	testcases []testcaseGatewayWithGatewayClassReconciliation,
+) {
 	for _, tc := range testcases {
 		t.Run(tc.Name, func(t *testing.T) {
-			t.Parallel()
-
 			var (
 				ctx    context.Context
 				cancel func()
@@ -333,12 +353,13 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 			}
 			defer cancel()
 
-			ns := CreateNamespace(ctx, t, client)
+			cl := NewControllerClient(t, scheme, cfg)
+			ns := CreateNamespace(ctx, t, cl)
+			clNamespaced := client.NewNamespacedClient(cl, ns.Name)
 
 			svc := corev1.Service{
 				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "publish-svc",
+					Name: "publish-svc",
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: builder.NewServicePort().
@@ -349,12 +370,12 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 						IntoSlice(),
 				},
 			}
-			require.NoError(t, client.Create(ctx, &svc))
+			require.NoError(t, clNamespaced.Create(ctx, &svc))
 
 			// GatewayReconciler runs GatewayClassReconciler, so we only need to
 			// start the former.
 			gwReconciler := &gateway.GatewayReconciler{
-				Client: client,
+				Client: cl,
 				PublishServiceRef: k8stypes.NamespacedName{
 					Namespace: ns.Name,
 					Name:      svc.Name,
@@ -362,15 +383,14 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				DataplaneClient:   mocks.Dataplane{},
 				ReferenceIndexers: ctrlref.NewCacheIndexers(logr.Discard()),
 			}
-			StartReconcilers(ctx, t, client.Scheme(), cfg, gwReconciler)
+			StartReconciler(ctx, t, scheme, cfg, gwReconciler, WithWatchNamespace(ns.Name))
 
 			t.Logf("deploying gateway %s using %s gateway class", tc.Gateway.Name, tc.GatewayClass.Name)
 			tc.Gateway.Namespace = ns.Name
-			require.NoError(t, client.Create(ctx, &tc.Gateway))
-			t.Cleanup(func() { _ = client.Delete(t.Context(), &tc.Gateway) })
+			require.NoError(t, clNamespaced.Create(ctx, &tc.Gateway))
+			t.Cleanup(func() { _ = clNamespaced.Delete(t.Context(), &tc.Gateway) })
 
-			gwClient := gatewayClient.GatewayV1().Gateways(ns.Name)
-			tc.Test(ctx, t, gwClient, tc.GatewayClass, tc.Gateway)
+			tc.Test(ctx, t, clNamespaced, tc.GatewayClass, tc.Gateway, ns)
 		})
 	}
 }
