@@ -69,7 +69,7 @@ linters:
       - linters:
           - kubeapilinter
         path: api/konnect/v1alpha1/konnect_gateway_controlplane_types.go
-        text: "nobools: field CloudGateway pointer should not use a bool. Use a string type with meaningful constant values as an enum."
+        text: "nobools: field CreateControlPlaneRequest.CloudGateway pointer should not use a bool. Use a string type with meaningful constant values as an enum."
       # NOTE: Let the old APIs be as they are.
       - linters:
           - kubeapilinter
