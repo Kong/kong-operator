@@ -1063,7 +1063,6 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 }
 
 func TestAdoptingConsumerAndCredentials(t *testing.T) {
-
 	t.Parallel()
 	ctx, cancel := Context(t, t.Context())
 	defer cancel()
@@ -1098,7 +1097,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](konnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialHMAC](&metricsmocks.MockRecorder{}),
 		),
-		konnect.NewKongCredentialSecretReconciler(logging.DevelopmentMode, mgr.GetClient(), mgr.GetScheme()),
+		konnect.NewKongCredentialSecretReconciler(controller.Options{}, logging.DevelopmentMode, mgr.GetClient(), mgr.GetScheme()),
 	}
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
@@ -1211,7 +1210,6 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 			return apikey.Name == createdAPIKey.Name && k8sutils.IsProgrammed(apikey) && apikey.GetKonnectID() == keyAuthID
 		},
 			"KongCredentialAPIKey did not get programmed or set Konnect ID")
-
 	})
 
 	// Adopting a basic auth credential
