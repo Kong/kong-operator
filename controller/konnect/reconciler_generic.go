@@ -44,6 +44,7 @@ type KonnectEntityReconciler[T constraints.SupportedKonnectEntityType, TEnt cons
 	sdkFactory              sdkops.SDKFactory
 	CacheSyncTimeout        time.Duration
 	Client                  client.Client
+	apiReader               client.Reader
 	LoggingMode             logging.Mode
 	MaxConcurrentReconciles uint
 	SyncPeriod              time.Duration
@@ -111,6 +112,7 @@ func NewKonnectEntityReconciler[
 
 // SetupWithManager sets up the controller with the given manager.
 func (r *KonnectEntityReconciler[T, TEnt]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	r.apiReader = mgr.GetAPIReader()
 	var (
 		e              T
 		ent            = TEnt(&e)
@@ -356,7 +358,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return res, retErr
 	}
 
-	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.Client, &apiAuth)
+	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.apiReader, &apiAuth)
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, r.Client, &apiAuth,
