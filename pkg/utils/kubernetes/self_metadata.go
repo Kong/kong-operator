@@ -60,3 +60,13 @@ func GetSelfPodLabels() (map[string]string, error) {
 func RunningOnKubernetes() bool {
 	return os.Getenv("KUBERNETES_SERVICE_HOST") != ""
 }
+
+// RunningInPod returns true if the process is running inside an actual Kubernetes pod.
+// This checks for the presence of the service account namespace file which is mounted
+// in every pod by default.
+// This is useful to distinguish between running in a real pod vs running locally
+// with telepresence (where KUBERNETES_SERVICE_HOST might be set but we're not in a pod).
+func RunningInPod() bool {
+	_, err := os.Stat(serviceAccountNamespaceFile)
+	return err == nil
+}

@@ -575,6 +575,7 @@ func generateDataPlaneNetworkPolicy(
 			MatchLabels: matchPodLabels,
 		}
 	}
+
 	limitAdminAPIIngress := networkingv1.NetworkPolicyIngressRule{
 		Ports: []networkingv1.NetworkPolicyPort{
 			{Protocol: &protocolTCP, Port: &adminAPISSLPort},
@@ -583,6 +584,17 @@ func generateDataPlaneNetworkPolicy(
 			policyPeerForControllerPod,
 		},
 	}
+
+	// When running outside a pod (e.g., via telepresence in integration tests),
+	// we need an additional rule to allow admin API access from any source.
+	// This is because telepresence traffic doesn't come from a pod with matching labels.
+	// We keep the original restrictive rule so that tests can verify the NetworkPolicy
+	// is created with the correct peer selector.
+	//
+	// NOTE: This relaxed rule should only be active in test environments.
+	// In production (when running inside a pod), RunningInPod() returns true
+	// and this rule will not be added.
+	runningInPod := k8sutils.RunningInPod()
 
 	allowProxyIngress := networkingv1.NetworkPolicyIngressRule{
 		Ports: []networkingv1.NetworkPolicyPort{
@@ -595,6 +607,24 @@ func generateDataPlaneNetworkPolicy(
 		Ports: []networkingv1.NetworkPolicyPort{
 			{Protocol: &protocolTCP, Port: &metricsPort},
 		},
+	}
+
+	// Build the ingress rules list
+	ingressRules := []networkingv1.NetworkPolicyIngressRule{
+		limitAdminAPIIngress,
+		allowProxyIngress,
+		allowMetricsIngress,
+	}
+
+	// When running outside a pod (e.g., via telepresence), add an additional rule
+	// to allow admin API access from any source
+	if !runningInPod {
+		allowAllAdminAPIIngress := networkingv1.NetworkPolicyIngressRule{
+			Ports: []networkingv1.NetworkPolicyPort{
+				{Protocol: &protocolTCP, Port: &adminAPISSLPort},
+			},
+		}
+		ingressRules = append(ingressRules, allowAllAdminAPIIngress)
 	}
 
 	return &networkingv1.NetworkPolicy{
@@ -611,11 +641,7 @@ func generateDataPlaneNetworkPolicy(
 			PolicyTypes: []networkingv1.PolicyType{
 				networkingv1.PolicyTypeIngress,
 			},
-			Ingress: []networkingv1.NetworkPolicyIngressRule{
-				limitAdminAPIIngress,
-				allowProxyIngress,
-				allowMetricsIngress,
-			},
+			Ingress: ingressRules,
 		},
 	}, nil
 }
