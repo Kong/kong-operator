@@ -233,6 +233,42 @@ func TestParse(t *testing.T) {
 				return cfg
 			},
 		},
+		{
+			name: "max concurrent reconciles env vars are set",
+			envVars: map[string]string{
+				"KONG_OPERATOR_MAX_CONCURRENT_RECONCILES_DATAPLANE_CONTROLLER":    "8",
+				"KONG_OPERATOR_MAX_CONCURRENT_RECONCILES_CONTROLPLANE_CONTROLLER": "10",
+				"KONG_OPERATOR_MAX_CONCURRENT_RECONCILES_GATEWAY_CONTROLLER":      "12",
+				"KONG_OPERATOR_KONNECT_CONTROLLER_MAX_CONCURRENT_RECONCILES":      "16",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.MaxConcurrentReconcilesDataPlane = 8
+				cfg.MaxConcurrentReconcilesControlPlane = 10
+				cfg.MaxConcurrentReconcilesGateway = 12
+				cfg.MaxConcurrentReconcilesKonnect = 16
+				cfg.KonnectControllerMaxConcurrentReconciles = 16
+				return cfg
+			},
+		},
+		{
+			name: "max concurrent reconciles env vars are set using new flag",
+			envVars: map[string]string{
+				"KONG_OPERATOR_MAX_CONCURRENT_RECONCILES_DATAPLANE_CONTROLLER":    "8",
+				"KONG_OPERATOR_MAX_CONCURRENT_RECONCILES_CONTROLPLANE_CONTROLLER": "10",
+				"KONG_OPERATOR_MAX_CONCURRENT_RECONCILES_GATEWAY_CONTROLLER":      "12",
+				"KONG_OPERATOR_MAX_CONCURRENT_RECONCILES_KONNECT_CONTROLLER":      "16",
+			},
+			expectedCfg: func() manager.Config {
+				cfg := expectedDefaultCfg()
+				cfg.MaxConcurrentReconcilesDataPlane = 8
+				cfg.MaxConcurrentReconcilesControlPlane = 10
+				cfg.MaxConcurrentReconcilesGateway = 12
+				cfg.MaxConcurrentReconcilesKonnect = 16
+				cfg.KonnectControllerMaxConcurrentReconciles = 8 // default
+				return cfg
+			},
+		},
 	}
 
 	for _, tC := range testCases {
@@ -254,43 +290,47 @@ func TestParse(t *testing.T) {
 
 func expectedDefaultCfg() manager.Config {
 	return manager.Config{
-		MetricsAddr:                             ":8080",
-		MetricsAccessFilter:                     "off",
-		ProbeAddr:                               ":8081",
-		LeaderElection:                          true,
-		LeaderElectionNamespace:                 "kong-system",
-		LoggingMode:                             logging.ProductionMode,
-		ValidateImages:                          true,
-		EnforceConfig:                           true,
-		ControllerName:                          "",
-		ControllerNamespace:                     "kong-system",
-		AnonymousReports:                        true,
-		APIServerHost:                           "",
-		APIServerQPS:                            100,
-		APIServerBurst:                          300,
-		KubeconfigPath:                          "",
-		SecretLabelSelector:                     mgrconfig.DefaultSecretLabelSelector,
-		ConfigMapLabelSelector:                  mgrconfig.DefaultConfigMapLabelSelector,
-		ClusterCASecretName:                     "kong-operator-ca",
-		ClusterCASecretNamespace:                "kong-system",
-		ClusterCAKeyType:                        mgrconfig.ECDSA,
-		ClusterCAKeySize:                        mgrconfig.DefaultClusterCAKeySize,
-		GatewayControllerEnabled:                true,
-		ControlPlaneControllerEnabled:           true,
-		DataPlaneControllerEnabled:              true,
-		DataPlaneBlueGreenControllerEnabled:     true,
-		ControlPlaneConfigurationDumpEnabled:    false,
-		ControlPlaneConfigurationDumpAddr:       ":10256",
-		ControlPlaneExtensionsControllerEnabled: true,
-		KonnectControllersEnabled:               false,
-		KonnectSyncPeriod:                       consts.DefaultKonnectSyncPeriod,
-		KongPluginInstallationControllerEnabled: false,
-		LoggerOpts:                              &zap.Options{},
-		KonnectMaxConcurrentReconciles:          consts.DefaultKonnectMaxConcurrentReconciles,
-		ClusterDomain:                           ingressmgrconfig.DefaultClusterDomain,
-		EmitKubernetesEvents:                    true,
-		ConversionWebhookEnabled:                true,
-		ValidatingWebhookEnabled:                true,
-		FQDNModeEnabled:                         false,
+		MetricsAddr:                              ":8080",
+		MetricsAccessFilter:                      "off",
+		ProbeAddr:                                ":8081",
+		LeaderElection:                           true,
+		LeaderElectionNamespace:                  "kong-system",
+		LoggingMode:                              logging.ProductionMode,
+		ValidateImages:                           true,
+		EnforceConfig:                            true,
+		ControllerName:                           "",
+		ControllerNamespace:                      "kong-system",
+		AnonymousReports:                         true,
+		APIServerHost:                            "",
+		APIServerQPS:                             100,
+		APIServerBurst:                           300,
+		KubeconfigPath:                           "",
+		SecretLabelSelector:                      mgrconfig.DefaultSecretLabelSelector,
+		ConfigMapLabelSelector:                   mgrconfig.DefaultConfigMapLabelSelector,
+		ClusterCASecretName:                      "kong-operator-ca",
+		ClusterCASecretNamespace:                 "kong-system",
+		ClusterCAKeyType:                         mgrconfig.ECDSA,
+		ClusterCAKeySize:                         mgrconfig.DefaultClusterCAKeySize,
+		GatewayControllerEnabled:                 true,
+		ControlPlaneControllerEnabled:            true,
+		DataPlaneControllerEnabled:               true,
+		DataPlaneBlueGreenControllerEnabled:      true,
+		ControlPlaneConfigurationDumpEnabled:     false,
+		ControlPlaneConfigurationDumpAddr:        ":10256",
+		ControlPlaneExtensionsControllerEnabled:  true,
+		KonnectControllersEnabled:                false,
+		KonnectSyncPeriod:                        consts.DefaultKonnectSyncPeriod,
+		KongPluginInstallationControllerEnabled:  false,
+		LoggerOpts:                               &zap.Options{},
+		MaxConcurrentReconcilesKonnect:           consts.DefaultMaxConcurrentReconcilesKonnect,
+		KonnectControllerMaxConcurrentReconciles: consts.DefaultMaxConcurrentReconcilesKonnect,
+		MaxConcurrentReconcilesDataPlane:         consts.DefaultMaxConcurrentReconcilesDataPlane,
+		MaxConcurrentReconcilesControlPlane:      consts.DefaultMaxConcurrentReconcilesControlPlane,
+		MaxConcurrentReconcilesGateway:           consts.DefaultMaxConcurrentReconcilesGateway,
+		ClusterDomain:                            ingressmgrconfig.DefaultClusterDomain,
+		EmitKubernetesEvents:                     true,
+		ConversionWebhookEnabled:                 true,
+		ValidatingWebhookEnabled:                 true,
+		FQDNModeEnabled:                          false,
 	}
 }

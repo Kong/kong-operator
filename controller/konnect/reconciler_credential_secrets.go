@@ -14,6 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -70,21 +71,24 @@ const (
 
 // KongCredentialSecretReconciler reconciles a KongPlugin object.
 type KongCredentialSecretReconciler struct {
-	loggingMode logging.Mode
-	client      client.Client
-	scheme      *runtime.Scheme
+	controllerOptions controller.Options
+	loggingMode       logging.Mode
+	client            client.Client
+	scheme            *runtime.Scheme
 }
 
 // NewKongCredentialSecretReconciler creates a new KongCredentialSecretReconciler.
 func NewKongCredentialSecretReconciler(
+	ctrlOptions controller.Options,
 	loggingMode logging.Mode,
 	client client.Client,
 	scheme *runtime.Scheme,
 ) *KongCredentialSecretReconciler {
 	return &KongCredentialSecretReconciler{
-		loggingMode: loggingMode,
-		client:      client,
-		scheme:      scheme,
+		controllerOptions: ctrlOptions,
+		loggingMode:       loggingMode,
+		client:            client,
+		scheme:            scheme,
 	}
 }
 
@@ -105,6 +109,7 @@ func (r *KongCredentialSecretReconciler) SetupWithManager(_ context.Context, mgr
 
 	return ctrl.NewControllerManagedBy(mgr).
 		Named("KongCredentialSecret").
+		WithOptions(r.controllerOptions).
 		For(
 			&corev1.Secret{},
 			builder.WithPredicates(

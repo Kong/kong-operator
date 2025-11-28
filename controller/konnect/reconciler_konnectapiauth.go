@@ -14,6 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -35,9 +36,10 @@ const APIAuthInUseFinalizer = "konnect.konghq.com/konnectapiauth-in-use"
 
 // KonnectAPIAuthConfigurationReconciler reconciles a KonnectAPIAuthConfiguration object.
 type KonnectAPIAuthConfigurationReconciler struct {
-	sdkFactory  sdkops.SDKFactory
-	client      client.Client
-	loggingMode logging.Mode
+	controllerOptions controller.Options
+	sdkFactory        sdkops.SDKFactory
+	client            client.Client
+	loggingMode       logging.Mode
 }
 
 const (
@@ -53,14 +55,16 @@ const (
 
 // NewKonnectAPIAuthConfigurationReconciler creates a new KonnectAPIAuthConfigurationReconciler.
 func NewKonnectAPIAuthConfigurationReconciler(
+	controllerOptions controller.Options,
 	sdkFactory sdkops.SDKFactory,
 	loggingMode logging.Mode,
 	client client.Client,
 ) *KonnectAPIAuthConfigurationReconciler {
 	return &KonnectAPIAuthConfigurationReconciler{
-		sdkFactory:  sdkFactory,
-		loggingMode: loggingMode,
-		client:      client,
+		controllerOptions: controllerOptions,
+		sdkFactory:        sdkFactory,
+		loggingMode:       loggingMode,
+		client:            client,
 	}
 }
 
@@ -78,6 +82,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) SetupWithManager(ctx context.Con
 	}
 
 	b := ctrl.NewControllerManagedBy(mgr).
+		WithOptions(r.controllerOptions).
 		For(&konnectv1alpha1.KonnectAPIAuthConfiguration{}).
 		Named("KonnectAPIAuthConfiguration").
 		Watches(

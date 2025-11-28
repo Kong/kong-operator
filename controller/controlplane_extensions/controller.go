@@ -69,7 +69,8 @@ type ScrapeUpdateNotifier interface {
 // ControlPlane have the correct annotation set.
 type Reconciler struct {
 	client.Client
-	CacheSyncTimeout                time.Duration
+
+	ControllerOptions               controller.Options
 	LoggingMode                     osslogging.Mode
 	DataPlaneScraperManagerNotifier ScrapeUpdateNotifier
 }
@@ -77,9 +78,7 @@ type Reconciler struct {
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		WithOptions(controller.Options{
-			CacheSyncTimeout: r.CacheSyncTimeout,
-		}).
+		WithOptions(r.ControllerOptions).
 		// Watch for changes to owned ControlPlane that had DataPlane.
 		For(&gwtypes.ControlPlane{},
 			builder.WithPredicates(
