@@ -168,15 +168,15 @@ download.govulncheck: mise yq ## Download govulncheck locally if necessary.
 
 CHARTSNAP_VERSION = $(shell yq -ojson -r '.chartsnap' < $(TOOLS_VERSIONS_FILE))
 .PHONY: download.chartsnap
-download.chartsnap:
-	CHARTSNAP_VERSION=${CHARTSNAP_VERSION} ./scripts/install-chartsnap.sh
+download.chartsnap: yq download.helm
+	HELM=$(HELM) CHARTSNAP_VERSION=$(CHARTSNAP_VERSION) ./scripts/install-chartsnap.sh
 
 KUBE_LINTER_VERSION = $(shell yq -ojson -r '.kube-linter' < $(TOOLS_VERSIONS_FILE))
-KUBE_LINTER = $(PROJECT_DIR)/bin/installs/kube-linter/v$(KUBE_LINTER_VERSION)/bin/kube-linter
+KUBE_LINTER = $(PROJECT_DIR)/bin/installs/kube-linter/$(KUBE_LINTER_VERSION)/bin/kube-linter
 .PHONY: kube-linter
 download.kube-linter:
 	@$(MAKE) mise-plugin-install DEP=kube-linter
-	@$(MAKE) mise-install DEP_VER=kube-linter@v$(KUBE_LINTER_VERSION)
+	@$(MAKE) mise-install DEP_VER=kube-linter@$(KUBE_LINTER_VERSION)
 
 TELEPRESENCE_VERSION = $(shell $(YQ) -r '.telepresence' < $(TOOLS_VERSIONS_FILE))
 TELEPRESENCE= $(PROJECT_DIR)/bin/installs/telepresence/$(TELEPRESENCE_VERSION)/bin/telepresence
@@ -191,6 +191,13 @@ MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/markdownlint-cli2/$(MARKDOWNLINT_VERS
 download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
 	@$(MISE) plugin install --yes -q markdownlint-cli2
 	@$(MISE) install -q markdownlint-cli2@$(MARKDOWNLINT_VERSION)
+
+HELM_VERSION = $(shell $(YQ) -r '.helm' < $(TOOLS_VERSIONS_FILE))
+HELM = $(PROJECT_DIR)/bin/installs/helm/$(HELM_VERSION)/bin/helm
+.PHONY: download.helm
+download.helm: mise yq ## Download helm locally if necessary.
+	@$(MISE) plugin install --yes -q helm
+	@$(MISE) install -q helm@$(HELM_VERSION)
 
 .PHONY: use-setup-envtest
 use-setup-envtest:
@@ -706,8 +713,8 @@ endef
 export GOLDEN_TEST_FAILURE_MSG
 
 .PHONY: _chartsnap
-_chartsnap: download.chartsnap
-	helm chartsnap -c ./charts/$(CHART) -f ./charts/$(CHART)/ci/ $(CHARTSNAP_ARGS) \
+_chartsnap: download.chartsnap download.helm
+	$(HELM) chartsnap -c ./charts/$(CHART) -f ./charts/$(CHART)/ci/ $(CHARTSNAP_ARGS) \
 		-- \
 		--api-versions gateway.networking.k8s.io/v1 \
 		--api-versions admissionregistration.k8s.io/v1/ValidatingAdmissionPolicy \
@@ -863,19 +870,19 @@ debug.skaffold.continuous: _ensure-kong-system-namespace
 
 CERT_MANAGER_VERSION = $(shell $(YQ) -r '.cert-manager' < $(TOOLS_VERSIONS_FILE))
 .PHONY: install.helm.cert-manager
-install.helm.cert-manager: yq
-	helm repo add jetstack https://charts.jetstack.io && \
-	helm repo update && \
-	helm upgrade --install \
-	  cert-manager jetstack/cert-manager \
-	  --namespace cert-manager \
-	  --create-namespace \
-	  --version $(CERT_MANAGER_VERSION) \
-	  --set crds.enabled=true
+install.helm.cert-manager: yq download.helm
+	$(HELM) repo add jetstack https://charts.jetstack.io && \
+	$(HELM) repo update && \
+	$(HELM) upgrade --install \
+		cert-manager jetstack/cert-manager \
+		--namespace cert-manager \
+		--create-namespace \
+		--version $(CERT_MANAGER_VERSION) \
+		--set crds.enabled=true
 
 .PHONY: uninstall.helm.cert-manager
-uninstall.helm.cert-manager:
-	helm uninstall cert-manager --namespace cert-manager
+uninstall.helm.cert-manager: download.helm
+	$(HELM) uninstall cert-manager --namespace cert-manager
 
 # Install CRDs into the K8s cluster specified in ~/.kube/config.
 .PHONY: install
