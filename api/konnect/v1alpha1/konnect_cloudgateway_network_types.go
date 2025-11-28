@@ -31,7 +31,7 @@ func init() {
 // +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : oldSelf.spec.cidr_block == self.spec.cidr_block",message="spec.cidr_block is immutable when an entity is already Programmed"
 // +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : (!has(self.spec.state) && !has(oldSelf.spec.state)) || self.spec.state == oldSelf.spec.state",message="spec.state is immutable when an entity is already Programmed"
 // +apireference:kgo:include
-// +kong:channels=gateway-operator
+// +kong:channels=kong-operator
 type KonnectCloudGatewayNetwork struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
