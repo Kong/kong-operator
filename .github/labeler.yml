@@ -21,3 +21,10 @@ area/charts:
   - changed-files:
     - any-glob-to-any-file:
       - 'charts/**'
+
+area/ci:
+  - changed-files:
+    - any-glob-to-any-file:
+      - '.github/workflows/**'
+      - '.github/*.yaml'
+      - '.github/*.yml'
