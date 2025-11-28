@@ -32,7 +32,6 @@ import (
 )
 
 func TestAdmissionWebhook_KongVault(t *testing.T) {
-	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
@@ -176,7 +175,6 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongPlugins(t *testing.T) {
-	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
@@ -430,7 +428,6 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
-	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
@@ -694,7 +691,6 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongConsumers(t *testing.T) {
-	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
@@ -1031,7 +1027,6 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 }
 
 func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
-	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
@@ -1236,7 +1231,6 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 }
 
 func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
-	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
