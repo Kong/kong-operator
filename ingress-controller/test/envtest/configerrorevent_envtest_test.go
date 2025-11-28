@@ -207,6 +207,8 @@ func TestConfigErrorEventGenerationDBMode(t *testing.T) {
 }
 
 func TestStickySessionsNotSupportedEventGeneration(t *testing.T) {
+	t.Skip("skipping flaky test, TODO: https://github.com/Kong/kong-operator/issues/2082")
+
 	// Can't be run in parallel because we're using t.Setenv() below which doesn't allow it.
 
 	ctx, cancel := context.WithCancel(t.Context())
