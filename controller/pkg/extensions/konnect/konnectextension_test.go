@@ -344,6 +344,10 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 					Value: "7078163243.us.tp.konghq.com",
 				},
 				{
+					Name:  "KONG_INCREMENTAL_SYNC",
+					Value: "on",
+				},
+				{
 					Name:  "KONG_KONNECT_MODE",
 					Value: "on",
 				},

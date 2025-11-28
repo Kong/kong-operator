@@ -36,6 +36,14 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Added
+
+- DataPlane: Enable incremental config sync by default when using Konnect as control plane.
+  This improves performance of config syncs for large configurations.
+  [#2759](https://github.com/Kong/kong-operator/pull/2759)
+
 ## [v2.1.0-alpha.0]
 
 ### Added
