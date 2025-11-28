@@ -370,6 +370,8 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 		},
 	}
 	require.NoError(t, client.Create(ctx, &route))
+	routeNN := ctrlclient.ObjectKeyFromObject(&route)
+
 	// Status has to be updated separately.
 	route.Status = gatewayapi.HTTPRouteStatus{
 		RouteStatus: gatewayapi.RouteStatus{
@@ -416,6 +418,8 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 		},
 	}
 	require.NoError(t, client.Create(ctx, &routeNonKong))
+	routeNonKongNN := ctrlclient.ObjectKeyFromObject(&routeNonKong)
+
 	// Status has to be updated separately.
 	routeNonKong.Status = gatewayapi.HTTPRouteStatus{
 		RouteStatus: gatewayapi.RouteStatus{
@@ -442,8 +446,8 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 
 	t.Run("routes attached to Gateways that are reconciled by KIC should have other Gateway refs cleared from status", func(t *testing.T) {
 		require.Eventually(t, func() bool {
-			if err := client.Get(ctx, ctrlclient.ObjectKeyFromObject(&route), &route); err != nil {
-				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
+			if err := client.Get(ctx, routeNN, &route); err != nil {
+				t.Logf("failed to get HTTPRoute %s: %v", routeNN, err)
 				return false
 			}
 
@@ -460,18 +464,18 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 
 	t.Run("routes that were attached to Gateways that are reconciled by KIC and now become detached should have KIC Gateway refs cleared from status", func(t *testing.T) {
 		require.Eventually(t, func() bool {
-			if err := client.Get(ctx, ctrlclient.ObjectKeyFromObject(&route), &route); err != nil {
-				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
+			if err := client.Get(ctx, routeNN, &route); err != nil {
+				t.Logf("failed to get HTTPRoute %s: %v", routeNN, err)
 				return false
 			}
 			route.Spec.ParentRefs = nil
 			if err := client.Status().Update(ctx, &route); err != nil {
-				t.Logf("failed to update HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
+				t.Logf("failed to update HTTPRoute %s: %v", routeNN, err)
 				return false
 			}
 
-			if err := client.Get(ctx, ctrlclient.ObjectKeyFromObject(&route), &route); err != nil {
-				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&route), err)
+			if err := client.Get(ctx, routeNN, &route); err != nil {
+				t.Logf("failed to get HTTPRoute %s: %v", routeNN, err)
 				return false
 			}
 
@@ -481,8 +485,8 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 
 	t.Run("routes attached to Gateways that are not reconciled by KIC should not have other Gateway refs cleared from status", func(t *testing.T) {
 		require.Never(t, func() bool {
-			if err := client.Get(ctx, ctrlclient.ObjectKeyFromObject(&routeNonKong), &routeNonKong); err != nil {
-				t.Logf("failed to get HTTPRoute %s: %v", ctrlclient.ObjectKeyFromObject(&routeNonKong), err)
+			if err := client.Get(ctx, routeNonKongNN, &routeNonKong); err != nil {
+				t.Logf("failed to get HTTPRoute %s: %v", routeNonKongNN, err)
 				return true
 			}
 
