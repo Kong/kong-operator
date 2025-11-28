@@ -1,0 +1,28 @@
+# Chainsaw test configuration for Hybrid Gateway Controller
+#
+# Required Environment Variables:
+#   KONNECT_TOKEN - Konnect API authentication token (e.g., kpat_...)
+#   KONNECT_SERVER_URL - (Optional) Konnect server URL, defaults to eu.api.konghq.tech
+#
+# Example:
+#   export KONNECT_TOKEN="kpat_your_token_here"
+#   export KONNECT_SERVER_URL="us.api.konghq.tech"  # Optional
+#   chainsaw test
+#
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Configuration
+metadata:
+  name: hybridgateway-tests
+spec:
+  # Timeout for the whole test suite
+  timeout: 15m
+  # Skip deletion of resources after tests (useful for debugging)
+  skipDelete: true
+  # Fail fast on first error
+  failFast: false
+  # Number of parallel tests
+  parallel: 1
+  # Exclude test directories
+  exclude: []
+  # Full name to pass to the underlying test
+  fullName: false
