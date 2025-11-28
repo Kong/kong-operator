@@ -30,6 +30,7 @@ import (
 	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/internal/utils/gatewayclass"
 	"github.com/kong/kong-operator/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -731,6 +732,39 @@ func GatewayClassIsAccepted(t *testing.T, ctx context.Context, gatewayClassName 
 	}
 }
 
+// GatewayClassAcceptedStatusUpdate is a helper function for tests that returns a function
+// that can be used to update the GatewayClass status to Accepted=True.
+// This is useful in envtest scenarios where no controller is setting the status.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func GatewayClassAcceptedStatusUpdate(
+	t *testing.T,
+	ctx context.Context,
+	gatewayClassName string,
+	c client.Client,
+) func() bool {
+	return func() bool {
+		var cur gatewayv1.GatewayClass
+		if err := c.Get(ctx, types.NamespacedName{Name: gatewayClassName}, &cur); err != nil {
+			t.Logf("error getting gatewayclass: %v", err)
+			return false
+		}
+		cond := metav1.Condition{
+			Type:               string(gatewayv1.GatewayClassConditionStatusAccepted),
+			Status:             metav1.ConditionTrue,
+			Reason:             string(gatewayv1.GatewayClassReasonAccepted),
+			ObservedGeneration: cur.Generation,
+			LastTransitionTime: metav1.Now(),
+		}
+		// Use SetCondition with the decorated GatewayClass that implements ConditionsAware.
+		k8sutils.SetCondition(cond, gatewayclass.DecorateGatewayClass(&cur))
+		if err := c.Status().Update(ctx, &cur); err != nil {
+			t.Logf("error updating gatewayclass status: %v", err)
+			return false
+		}
+		return true
+	}
+}
+
 // GatewayNotExist is a helper function for tests that returns a function
 // to check a if gateway(with specified namespace and name) does not exist.
 //
@@ -764,6 +798,37 @@ func GatewayIsProgrammed(t *testing.T, ctx context.Context, gatewayNSN types.Nam
 func GatewayListenersAreProgrammed(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
 		return gatewayutils.AreListenersProgrammed(MustGetGateway(t, ctx, gatewayNSN, clients))
+	}
+}
+
+// GatewayListenerResolvedRefsCondition returns a function that checks if a Gateway's listener
+// has a ResolvedRefs condition matching the expected status.
+// This is useful for envtests using controller-runtime client.Client.
+// Should be used in conjunction with require.Eventually or assert.Eventually.
+func GatewayListenerResolvedRefsCondition(
+	t *testing.T,
+	ctx context.Context,
+	gatewayNSN types.NamespacedName,
+	c client.Client,
+	expectedStatus metav1.ConditionStatus,
+) func() bool {
+	return func() bool {
+		var gw gwtypes.Gateway
+		if err := c.Get(ctx, gatewayNSN, &gw); err != nil {
+			t.Logf("error getting gateway: %v", err)
+			return false
+		}
+		if len(gw.Status.Listeners) == 0 {
+			return false
+		}
+		for _, ls := range gw.Status.Listeners {
+			for _, cond := range ls.Conditions {
+				if cond.Type == string(gatewayv1.ListenerConditionResolvedRefs) && cond.Status == expectedStatus {
+					return true
+				}
+			}
+		}
+		return false
 	}
 }
 
