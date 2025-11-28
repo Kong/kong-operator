@@ -352,7 +352,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
 	err = r.Client.Get(ctx, apiAuthRef, &apiAuth)
-	if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, apiAuth, err); requeue {
+	if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, apiAuth, apiAuthRef, err); requeue {
 		return res, retErr
 	}
 
