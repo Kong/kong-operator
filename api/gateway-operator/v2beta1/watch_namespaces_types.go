@@ -16,6 +16,8 @@ type WatchNamespaces struct {
 	// Only used when Type is set to List.
 	//
 	// +optional
+	// +kubebuilder:validation:MaxItems=64
+	// +kubebuilder:validation:items:MaxLength=64
 	List []string `json:"list,omitempty"`
 }
 

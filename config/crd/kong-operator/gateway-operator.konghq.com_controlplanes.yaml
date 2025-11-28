@@ -8848,6 +8848,7 @@ spec:
                   properties:
                     name:
                       description: Name is the name of the controller.
+                      maxLength: 63
                       minLength: 1
                       type: string
                     state:
@@ -8879,6 +8880,7 @@ spec:
                     properties:
                       name:
                         description: Ref is the name of the DataPlane to configure.
+                        maxLength: 63
                         minLength: 1
                         type: string
                     required:
@@ -8911,6 +8913,9 @@ spec:
                     description: |-
                       ReverseSync sends configuration to DataPlane (Kong Gateway) even if
                       the configuration checksum has not changed since previous update.
+                    enum:
+                    - enabled
+                    - disabled
                     type: string
                   timeout:
                     description: Timeout is the timeout of a single run of syncing
@@ -8972,6 +8977,7 @@ spec:
                   properties:
                     name:
                       description: Name is the name of the feature gate.
+                      maxLength: 63
                       minLength: 1
                       type: string
                     state:
@@ -9012,6 +9018,7 @@ spec:
                   which Ingress resources this ControlPlane should be responsible for.
 
                   If omitted, Ingress resources will not be supported by the ControlPlane.
+                maxLength: 63
                 type: string
               konnect:
                 description: Konnect defines the Konnect-related configuration options
@@ -9167,7 +9174,9 @@ spec:
                       List is a list of namespaces to watch for resources.
                       Only used when Type is set to List.
                     items:
+                      maxLength: 64
                       type: string
+                    maxItems: 64
                     type: array
                   type:
                     description: |-
@@ -9273,6 +9282,7 @@ spec:
                   properties:
                     name:
                       description: Name is the name of the controller.
+                      maxLength: 63
                       minLength: 1
                       type: string
                     state:
@@ -9298,6 +9308,7 @@ spec:
                 properties:
                   name:
                     description: Name is the name of the DataPlane.
+                    maxLength: 63
                     minLength: 1
                     type: string
                 required:
@@ -9313,6 +9324,7 @@ spec:
                   properties:
                     name:
                       description: Name is the name of the feature gate.
+                      maxLength: 63
                       minLength: 1
                       type: string
                     state:
