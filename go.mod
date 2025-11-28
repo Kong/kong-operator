@@ -52,7 +52,7 @@ require (
 	github.com/tidwall/pretty v1.2.1
 	github.com/tonglil/buflogr v1.1.1
 	go.uber.org/goleak v1.3.0
-	go.uber.org/zap v1.27.0
+	go.uber.org/zap v1.27.1
 	golang.org/x/mod v0.30.0
 	golang.org/x/sync v0.18.0
 	google.golang.org/api v0.256.0
