@@ -26,7 +26,7 @@ func init() {
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +apireference:kgo:include
-// +kong:channels=gateway-operator
+// +kong:channels=kong-operator
 type KonnectCloudGatewayDataPlaneGroupConfiguration struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

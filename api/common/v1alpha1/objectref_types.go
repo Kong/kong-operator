@@ -26,7 +26,7 @@ const (
 // +kubebuilder:validation:XValidation:rule="self.type == 'konnectID' ? has(self.konnectID) : true", message="when type is konnectID, konnectID must be set"
 // +kubebuilder:validation:XValidation:rule="self.type == 'konnectID' ? !has(self.namespacedRef) : true", message="when type is konnectID, namespacedRef must not be set"
 // +apireference:kgo:include
-// +kong:channels=gateway-operator
+// +kong:channels=kong-operator
 type ObjectRef struct {
 	// Type defines type of the object which is referenced. It can be one of:
 	//

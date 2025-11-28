@@ -205,7 +205,7 @@ func channelsFromAnnotations(crd apiext.CustomResourceDefinition) []ChannelType 
 		switch ChannelType(strings.TrimSpace(s)) {
 		case IngressControllerIncubatorChannelType:
 			return ChannelType(strings.TrimSpace(s))
-		case IngressControllerChannelType, GatewayOperatorChannelType:
+		case IngressControllerChannelType, GatewayOperatorChannelType, KongOperatorChannelType:
 			return KongOperatorChannelType
 		default:
 			log.Fatalf("unknown channel: %s", s)

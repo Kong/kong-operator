@@ -53,7 +53,7 @@ import (
 // +kubebuilder:printcolumn:name="Endpoint",type="string",JSONPath=".status.endpoint",description="The URL endpoint for the AIGateway"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +apireference:kgo:include
-// +kong:channels=gateway-operator
+// +kong:channels=kong-operator
 type AIGateway struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -29,7 +29,7 @@ func init() {
 // +kubebuilder:printcolumn:name="OrgID",description="Konnect Organization ID this resource belongs to.",type=string,JSONPath=`.status.organizationID`
 // +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : (!has(self.spec.awsTransitGateway) ? true : oldSelf.spec.awsTransitGateway.name == self.spec.awsTransitGateway.name)",message="spec.awsTransitGateway.name is immutable when transit gateway is already Programmed"
 // +kubebuilder:validation:XValidation:rule="(!has(self.status) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : (!has(self.spec.azureTransitGateway) ? true : oldSelf.spec.azureTransitGateway.name == self.spec.azureTransitGateway.name)",message="spec.azureTransitGateway.name is immutable when transit gateway is already Programmed"
-// +kong:channels=gateway-operator
+// +kong:channels=kong-operator
 type KonnectCloudGatewayTransitGateway struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

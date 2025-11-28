@@ -44,7 +44,7 @@ const (
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:validation:XValidation:rule="oldSelf.spec.konnect.controlPlane.ref == self.spec.konnect.controlPlane.ref", message="spec.konnect.controlPlane.ref is immutable."
 // +apireference:kgo:include
-// +kong:channels=gateway-operator
+// +kong:channels=kong-operator
 type KonnectExtension struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

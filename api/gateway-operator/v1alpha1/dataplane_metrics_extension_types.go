@@ -45,7 +45,7 @@ const (
 // enriched with metadata required for in-cluster Kubernetes autoscaling.
 //
 // +apireference:kgo:include
-// +kong:channels=gateway-operator
+// +kong:channels=kong-operator
 type DataPlaneMetricsExtension struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
