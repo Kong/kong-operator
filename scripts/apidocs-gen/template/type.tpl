@@ -4,12 +4,14 @@
 {{- if markdownShouldRenderType $type -}}
 
 {{- if $isKind -}}
-### {{ $type.Name }}
+### <a id="{{ markdownTypeID $type | markdownSafeID }}">{{ $type.Name }}</a>
 {{ else -}}
 #### {{ $type.Name }}
 {{ end -}}
 
-{{ if $type.IsAlias }}_Underlying type:_ `{{ markdownRenderTypeLink $type.UnderlyingType  }}`{{ end }}
+{{ if $type.IsAlias }}
+_Underlying type:_ `{{ markdownRenderTypeLink $type.UnderlyingType }}`
+{{ end }}
 
 {{ $type.Doc | replace "\n\n" "<br /><br />" }}
 
@@ -26,12 +28,12 @@
 {{ end -}}
 
 {{ range $type.Members -}}
-| `{{ .Name  }}` _{{ markdownRenderType .Type }}_ | {{ template "type_members" . }} |
+| `{{ .Name }}` _{{ markdownRenderType .Type }}_ | {{ template "type_members" . }} |
 {{ end -}}
 
-{{ end }}
+{{ end -}}
 
-{{ if $type.References -}}
+{{ if $type.References }}
 _Appears in:_
 {{- range $type.SortedReferences }}
 - {{ markdownRenderTypeLink . }}
