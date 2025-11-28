@@ -429,7 +429,7 @@ func startControllerManager(
 
 	t.Logf("configuring feature gates")
 	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/4849
-	featureGates := consts.DefaultFeatureGates
+	featureGates := consts.DefaultControllerFeatureGates
 	for gate, value := range setupCfg.controllerManagerFeatureGates {
 		featureGates += "," + fmt.Sprintf("%s=%s", gate, value)
 	}

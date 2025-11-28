@@ -2,11 +2,8 @@ package envtest
 
 import (
 	"context"
-	"go/build"
 	"os"
 	"os/signal"
-	"path/filepath"
-	"runtime"
 	"sync"
 	"syscall"
 	"testing"
@@ -31,7 +28,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
-	"github.com/kong/kong-operator/ingress-controller/test/consts"
+	"github.com/kong/kong-operator/test/helpers/kcfg"
 )
 
 type Options struct {
@@ -134,11 +131,9 @@ func Setup(t *testing.T, scheme *k8sruntime.Scheme, optModifiers ...OptionModifi
 
 func installGatewayCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
 	t.Helper()
-
-	gatewayCRDPath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "sigs.k8s.io", "gateway-api@"+consts.GatewayAPIPackageVersion, "config", "crd", "experimental")
 	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme:             scheme,
-		Paths:              []string{gatewayCRDPath},
+		Paths:              []string{kcfg.GatewayAPIExperimentalCRDsPath()},
 		ErrorIfPathMissing: true,
 	})
 	require.NoError(t, err, "failed installing Gateway API CRDs")
@@ -146,34 +141,15 @@ func installGatewayCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Confi
 
 func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
 	t.Helper()
-
-	root := repoRootFromThisFile()
-	kongKOCRDPath := filepath.Join(root, "config", "crd", "kong-operator")
-	// IMPORTANT: point to the directory that contains the actual incubator CRD YAMLs.
-	// The "incubator" directory only contains a kustomization and no CRD files; envtest
-	// does not process kustomize. Use ingress-controller-incubator which holds the CRDs.
-	kongIncubatorCRDPath := filepath.Join(root, "config", "crd", "ingress-controller-incubator")
 	_, err := envtest.InstallCRDs(cfg, envtest.CRDInstallOptions{
 		Scheme: scheme,
 		Paths: []string{
-			kongKOCRDPath,
-			kongIncubatorCRDPath,
+			kcfg.KongOperatorCRDsPath(),
+			kcfg.IngressControllerIncubatorCRDsPath(),
 		},
 		ErrorIfPathMissing: true,
 	})
 	require.NoError(t, err)
-}
-
-// repoRootFromThisFile returns absolute repository root by using the path of this source file.
-func repoRootFromThisFile() string {
-	_, b, _, ok := runtime.Caller(0)
-	if !ok {
-		// Fallback to current working directory if runtime.Caller fails
-		cwd, _ := os.Getwd()
-		return cwd
-	}
-	// This file lives in ingress-controller/test/envtest/, go three levels up.
-	return filepath.Clean(filepath.Join(filepath.Dir(b), "../../.."))
 }
 
 func deployIngressClass(ctx context.Context, t *testing.T, name string, client ctrlclient.Client) {

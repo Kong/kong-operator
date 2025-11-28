@@ -1,7 +1,6 @@
 package crdsvalidation
 
 import (
-	"path"
 	"testing"
 
 	"github.com/go-logr/zapr"
@@ -16,16 +15,14 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/modules/manager/scheme"
-	"github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test/crdsvalidation/common"
 	"github.com/kong/kong-operator/test/envtest"
 	"github.com/kong/kong-operator/test/helpers/generate"
 	"github.com/kong/kong-operator/test/helpers/helm"
+	"github.com/kong/kong-operator/test/helpers/kcfg"
 )
 
 const (
-	// ChartPath is the path relative to the project to the kong-operator chart
-	ChartPath = "charts/kong-operator"
 
 	// ValidationPolicyDataplane contains data plane validation policies path relative to the kong-operator chart
 	ValidationPolicyDataplane = "templates/validation-policy-dataplane.yaml"
@@ -49,12 +46,11 @@ func TestKonnectValidationAdmissionPolicy(t *testing.T) {
 	wc := &common.WarningCollector{}
 	cfg.WarningHandler = wc
 
-	chartPath := path.Join(test.ProjectRootPath(), ChartPath)
 	templates := []string{
 		ValidationPolicyKonnect,
 	}
 
-	helm.ApplyTemplate(t, cfg, chartPath, templates)
+	helm.ApplyTemplate(t, cfg, kcfg.ChartPath(), templates)
 
 	t.Run("static autoscale", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration]{
@@ -99,12 +95,11 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 		cfg, ns = envtest.Setup(t, ctx, scheme)
 	)
 
-	chartPath := path.Join(test.ProjectRootPath(), ChartPath)
 	templates := []string{
 		ValidationPolicyDataplane,
 	}
 
-	helm.ApplyTemplate(t, cfg, chartPath, templates)
+	helm.ApplyTemplate(t, cfg, kcfg.ChartPath(), templates)
 
 	t.Run("ports", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.DataPlane]{

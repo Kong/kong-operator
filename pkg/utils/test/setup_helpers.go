@@ -4,12 +4,9 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"go/build"
 	"io"
 	"net/http"
 	"os"
-	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -17,19 +14,13 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
-	"github.com/samber/lo"
-	"golang.org/x/mod/modfile"
-	apiextclient "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset/typed/apiextensions/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/modules/manager"
-	"github.com/kong/kong-operator/test"
 )
 
 // SetupControllerLogger sets up the controller logger.
@@ -185,112 +176,4 @@ func BuildMTLSCredentials(ctx context.Context, k8sClient *kubernetes.Clientset, 
 			return nil
 		}
 	}
-}
-
-// ExtractModuleVersion extracts version of an imported module in go.mod.
-// If the module is not found, or we failed to parse the module version, it will return an error.
-func ExtractModuleVersion(moduleName string) (string, error) {
-	projectRoot := ProjectRootPath()
-	content, err := os.ReadFile(filepath.Join(projectRoot, "go.mod"))
-	if err != nil {
-		return "", err
-	}
-	f, err := modfile.Parse("go.mod", content, nil)
-	if err != nil {
-		return "", err
-	}
-	module, found := lo.Find(f.Require, func(r *modfile.Require) bool {
-		return r.Mod.Path == moduleName
-	})
-	if !found {
-		return "", fmt.Errorf("module %s not found", moduleName)
-	}
-	return module.Mod.Version, nil
-}
-
-func DeployKubernetesConfiguration(ctx context.Context, cluster clusters.Cluster) error {
-	const systemNS = "kong-system"
-	fmt.Printf("INFO: creating namespaces %s (for controller)\n", systemNS)
-	if err := clusters.CreateNamespace(ctx, cluster, systemNS); err != nil {
-		return err
-	}
-
-	configPath := path.Join(ProjectRootPath(), "config")
-
-	for _, cfg := range []string{
-		"/rbac/base",
-		"/rbac/role",
-		"/default/validating_policies",
-	} {
-		fmt.Printf("INFO: deploying Kubernetes configuration: %s\n", cfg)
-		if err := clusters.KustomizeDeployForCluster(ctx, cluster, path.Join(configPath, cfg)); err != nil {
-			return err
-		}
-	}
-
-	if !test.IsInstallingCRDsDisabled() {
-		fmt.Println("INFO: deploying CRDs to test cluster")
-		if err := deployCRDs(ctx, cluster); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-// deployCRDs deploys the CRDs commonly used in tests.
-func deployCRDs(ctx context.Context, cluster clusters.Cluster) error {
-	kubectlFlags := []string{"--server-side", "-v5"}
-
-	// CRDs for gateway APIs.
-	fmt.Printf("INFO: deploying Gateway API CRDs: %s\n", GatewayExperimentalCRDsKustomizeURL)
-	if err := clusters.KustomizeDeployForCluster(ctx, cluster, GatewayExperimentalCRDsKustomizeURL, kubectlFlags...); err != nil {
-		return err
-	}
-
-	// Local CRDs for Kong Operator.
-	crdPath := filepath.Join(ProjectRootPath(), "config", "crd")
-	for _, p := range []string{
-		"kong-operator",
-		"ingress-controller-incubator",
-	} {
-		path := filepath.Join(crdPath, p)
-		fmt.Printf("INFO: deploying local CRDs: %s\n", path)
-		if err := clusters.KustomizeDeployForCluster(ctx, cluster, path, kubectlFlags...); err != nil {
-			return fmt.Errorf("failed installing CRDs from %s: %w", path, err)
-		}
-	}
-
-	apiextClient, err := apiextclient.NewForConfig(cluster.Config())
-	if err != nil {
-		return err
-	}
-
-	// Some kind of a canary to ensure that the CRDs are actually installed before proceeding.
-	for _, crd := range []string{
-		"gateways.gateway.networking.k8s.io",                         // GWAPI CRD
-		"dataplanes.gateway-operator.konghq.com",                     // kong-operator
-		"kongservicefacades.incubator.ingress-controller.konghq.com", // ingress-controller-incubator
-	} {
-		if err := retry.OnError(
-			retry.DefaultRetry,
-			apierrors.IsNotFound,
-			func() error {
-				_, err := apiextClient.CustomResourceDefinitions().Get(ctx, crd, metav1.GetOptions{})
-				return err
-			},
-		); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// ConstructModulePath constructs the module path for the given module name and version.
-// It accounts for v1+ modules which are stored in separate directories in the GOPATH.
-func ConstructModulePath(moduleName, version string) string {
-	modulePath := filepath.Join(build.Default.GOPATH, "pkg", "mod")
-	modulePath = filepath.Join(append([]string{modulePath}, strings.Split(moduleName, "/")...)...)
-	modulePath += "@" + version
-	return modulePath
 }

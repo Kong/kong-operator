@@ -20,6 +20,7 @@ import (
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/test/consts"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
+	"github.com/kong/kong-operator/test/helpers/kcfg"
 )
 
 // logOutput is a file to use for manager log output other than stderr.
@@ -50,7 +51,7 @@ func PrepareClusterForRunningControllerManager(
 
 	fmt.Println("INFO: Deploying all required Kubernetes Configuration (RBAC, CRDs, etc.) for the operator")
 
-	return testutils.DeployKubernetesConfiguration(ctx, cluster)
+	return kcfg.DeployKubernetesConfiguration(ctx, cluster)
 }
 
 // DeployControllerManagerForCluster deploys all the base CRDs needed for the
