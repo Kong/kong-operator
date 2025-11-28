@@ -135,7 +135,7 @@ rows:
     default: '`:8081`'
   - flag: '`--konnect-controller-max-concurrent-reconciles`'
     type: '`uint`'
-    description: "Maximum number of concurrent reconciles for Konnect controllers."
+    description: "Deprecated: Please use '--max-concurrent-reconciles-konnect-controller' instead."
     default: '`8`'
   - flag: '`--konnect-sync-period`'
     type: '`duration`'
@@ -161,6 +161,10 @@ rows:
     type: '`uint`'
     description: "Maximum number of concurrent reconciles for Gateway controllers."
     default: '`1`'
+  - flag: '`--max-concurrent-reconciles-konnect-controller`'
+    type: '`uint`'
+    description: "Maximum number of concurrent reconciles for Konnect controllers."
+    default: '`8`'
   - flag: '`--metrics-access-filter`'
     type: '`string`'
     description: "Specifies the filter access function to be used for accessing the metrics endpoint (possible values: off, rbac). Default is off."
