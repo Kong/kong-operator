@@ -51,7 +51,6 @@ type GatewayReconciler struct {
 	Scheme          *runtime.Scheme
 	DataplaneClient controllers.DataPlane
 
-	WatchNamespaces  []string
 	CacheSyncTimeout time.Duration
 
 	ReferenceIndexers ctrlref.CacheIndexers
