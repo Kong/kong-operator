@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
@@ -1056,6 +1057,397 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 		watchFor(t, ctx, wHMAC, apiwatch.Modified,
 			objectHasConditionProgrammedSetToTrue[*configurationv1alpha1.KongCredentialHMAC](),
 			"HMAC credential should get the Programmed condition",
+		)
+	})
+}
+
+func TestAdoptingConsumerAndCredentials(t *testing.T) {
+
+	t.Parallel()
+	ctx, cancel := Context(t, t.Context())
+	defer cancel()
+	cfg, ns := Setup(t, ctx, scheme.Get())
+
+	t.Log("Setting up the manager with reconcilers")
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+	factory := sdkmocks.NewMockSDKFactory(t)
+	sdk := factory.SDK
+	reconcilers := []Reconciler{
+		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1.KongConsumer](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1.KongConsumer](&metricsmocks.MockRecorder{}),
+		),
+		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialBasicAuth](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialBasicAuth](&metricsmocks.MockRecorder{}),
+		),
+		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialAPIKey](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialAPIKey](&metricsmocks.MockRecorder{}),
+		),
+		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialACL](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialACL](&metricsmocks.MockRecorder{}),
+		),
+		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialJWT](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialJWT](&metricsmocks.MockRecorder{}),
+		),
+		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
+			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](konnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialHMAC](&metricsmocks.MockRecorder{}),
+		),
+		konnect.NewKongCredentialSecretReconciler(logging.DevelopmentMode, mgr.GetClient(), mgr.GetScheme()),
+	}
+	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
+
+	t.Log("Setting up clients")
+	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
+		Scheme: scheme.Get(),
+	})
+	require.NoError(t, err)
+	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
+
+	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
+	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
+	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+
+	consumerID := uuid.NewString()
+	userName := "user-1"
+	wConsumer := setupWatch[configurationv1.KongConsumerList](t, ctx, cl, client.InNamespace(ns.Name))
+
+	t.Log("Setting up SDK expectations for getting and updating consumers")
+	sdk.ConsumersSDK.EXPECT().ListConsumerGroupsForConsumer(
+		mock.Anything,
+		sdkkonnectops.ListConsumerGroupsForConsumerRequest{
+			ControlPlaneID: cp.GetKonnectID(),
+			ConsumerID:     consumerID,
+		}).
+		Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{
+			Object: &sdkkonnectops.ListConsumerGroupsForConsumerResponseBody{},
+		}, nil)
+	sdk.ConsumersSDK.EXPECT().GetConsumer(
+		mock.Anything,
+		consumerID,
+		cp.GetKonnectID(),
+	).Return(&sdkkonnectops.GetConsumerResponse{
+		Consumer: &sdkkonnectcomp.Consumer{
+			ID:       lo.ToPtr(consumerID),
+			Username: lo.ToPtr(userName),
+		},
+	}, nil)
+	sdk.ConsumersSDK.EXPECT().UpsertConsumer(
+		mock.Anything,
+		mock.MatchedBy(func(req sdkkonnectops.UpsertConsumerRequest) bool {
+			return req.ConsumerID == consumerID
+		}),
+	).Return(nil, nil)
+
+	t.Log("Creating a KongConsumer to adopt the existing consumer")
+	createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, userName,
+		deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+		deploy.WithKonnectAdoptOptions[*configurationv1.KongConsumer](commonv1alpha1.AdoptModeOverride, consumerID),
+	)
+
+	t.Log("Waiting for KongConsumer to be programmed and set Konnect ID")
+	watchFor(t, ctx, wConsumer, apiwatch.Modified, func(kc *configurationv1.KongConsumer) bool {
+		return kc.Name == createdConsumer.Name && k8sutils.IsProgrammed(kc) && kc.GetKonnectID() == consumerID
+	},
+		"KongConsumer did not get programmed or set Konnect ID")
+
+	// Adopting a KeyAuth credential
+	t.Run("APIKey", func(t *testing.T) {
+		keyAuthID := uuid.NewString()
+		wAPIKey := setupWatch[configurationv1alpha1.KongCredentialAPIKeyList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating KeyAuth credentials")
+		sdk.KongCredentialsAPIKeySDK.EXPECT().GetKeyAuthWithConsumer(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.GetKeyAuthWithConsumerRequest) bool {
+				return req.ConsumerIDForNestedEntities == consumerID
+			}),
+		).Return(&sdkkonnectops.GetKeyAuthWithConsumerResponse{
+			KeyAuth: &sdkkonnectcomp.KeyAuth{
+				ID:  lo.ToPtr(keyAuthID),
+				Key: lo.ToPtr("key"),
+				Consumer: &sdkkonnectcomp.KeyAuthConsumer{
+					ID: lo.ToPtr(consumerID),
+				},
+			},
+		}, nil)
+		sdk.KongCredentialsAPIKeySDK.EXPECT().UpsertKeyAuthWithConsumer(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertKeyAuthWithConsumerRequest) bool {
+				return req.ConsumerIDForNestedEntities == consumerID && req.KeyAuthID == keyAuthID
+			}),
+		).Return(nil, nil)
+
+		t.Log("Creating a KongCredentialAPIKey to adopt the KeyAuth")
+		createdAPIKey := &configurationv1alpha1.KongCredentialAPIKey{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "api-key-",
+			},
+			Spec: configurationv1alpha1.KongCredentialAPIKeySpec{
+				Adopt: &commonv1alpha1.AdoptOptions{
+					From: commonv1alpha1.AdoptSourceKonnect,
+					Mode: commonv1alpha1.AdoptModeOverride,
+					Konnect: &commonv1alpha1.AdoptKonnectOptions{
+						ID: keyAuthID,
+					},
+				},
+				ConsumerRef: corev1.LocalObjectReference{
+					Name: createdConsumer.Name,
+				},
+				KongCredentialAPIKeyAPISpec: configurationv1alpha1.KongCredentialAPIKeyAPISpec{
+					Key: "key",
+				},
+			},
+		}
+		require.NoError(t, clientNamespaced.Create(ctx, createdAPIKey))
+
+		t.Log("Waiting for the KongCredentialAPIKey to be programmed and set Konnect ID")
+		watchFor(t, ctx, wAPIKey, apiwatch.Modified, func(apikey *configurationv1alpha1.KongCredentialAPIKey) bool {
+			return apikey.Name == createdAPIKey.Name && k8sutils.IsProgrammed(apikey) && apikey.GetKonnectID() == keyAuthID
+		},
+			"KongCredentialAPIKey did not get programmed or set Konnect ID")
+
+	})
+
+	// Adopting a basic auth credential
+	t.Run("BasicAuth", func(t *testing.T) {
+		basicAuthID := uuid.NewString()
+		wBasicAuth := setupWatch[configurationv1alpha1.KongCredentialBasicAuthList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating BasicAuth credentials")
+		sdk.KongCredentialsBasicAuthSDK.EXPECT().GetBasicAuthWithConsumer(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.GetBasicAuthWithConsumerRequest) bool {
+				return req.BasicAuthID == basicAuthID && req.ConsumerIDForNestedEntities == consumerID
+			}),
+		).Return(&sdkkonnectops.GetBasicAuthWithConsumerResponse{
+			BasicAuth: &sdkkonnectcomp.BasicAuth{
+				ID:       lo.ToPtr(basicAuthID),
+				Username: "username",
+				Consumer: &sdkkonnectcomp.BasicAuthConsumer{
+					ID: lo.ToPtr(consumerID),
+				},
+			},
+		}, nil)
+		sdk.KongCredentialsBasicAuthSDK.EXPECT().UpsertBasicAuthWithConsumer(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertBasicAuthWithConsumerRequest) bool {
+				return req.ConsumerIDForNestedEntities == consumerID && req.BasicAuthID == basicAuthID
+			}),
+		).Return(nil, nil)
+
+		t.Log("Creating a KongCredentialBasicAuth to adopt the BasicAuth")
+		createdBasicAuth := &configurationv1alpha1.KongCredentialBasicAuth{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "basic-auth-",
+			},
+			Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
+				Adopt: &commonv1alpha1.AdoptOptions{
+					From: commonv1alpha1.AdoptSourceKonnect,
+					Mode: commonv1alpha1.AdoptModeOverride,
+					Konnect: &commonv1alpha1.AdoptKonnectOptions{
+						ID: basicAuthID,
+					},
+				},
+				ConsumerRef: corev1.LocalObjectReference{
+					Name: createdConsumer.Name,
+				},
+				KongCredentialBasicAuthAPISpec: configurationv1alpha1.KongCredentialBasicAuthAPISpec{
+					Username: "username",
+					Password: "password-1",
+				},
+			},
+		}
+		require.NoError(t, clientNamespaced.Create(ctx, createdBasicAuth))
+
+		t.Log("Waiting for the KongCredentialBasicAuth to be programmed and set Konnect ID")
+		watchFor(t, ctx, wBasicAuth, apiwatch.Modified, func(auth *configurationv1alpha1.KongCredentialBasicAuth) bool {
+			return auth.Name == createdBasicAuth.Name && k8sutils.IsProgrammed(auth) && auth.GetKonnectID() == basicAuthID
+		},
+			"KongCredentialBasicAuth did not get programmed or set Konnect ID")
+	})
+
+	// Adopting an ACL
+	t.Run("ACL", func(t *testing.T) {
+		aclID := uuid.NewString()
+		wACL := setupWatch[configurationv1alpha1.KongCredentialACLList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating ACL credentials")
+		sdk.KongCredentialsACLSDK.EXPECT().GetACLWithConsumer(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.GetACLWithConsumerRequest) bool {
+				return req.ACLID == aclID && req.ConsumerIDForNestedEntities == consumerID
+			}),
+		).Return(&sdkkonnectops.GetACLWithConsumerResponse{
+			ACL: &sdkkonnectcomp.ACL{
+				ID:    lo.ToPtr(aclID),
+				Group: "acl-1",
+				Consumer: &sdkkonnectcomp.ACLConsumer{
+					ID: lo.ToPtr(consumerID),
+				},
+			},
+		}, nil)
+		sdk.KongCredentialsACLSDK.EXPECT().UpsertACLWithConsumer(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertACLWithConsumerRequest) bool {
+				return req.ACLID == aclID && req.ConsumerIDForNestedEntities == consumerID
+			}),
+		).Return(nil, nil)
+
+		t.Log("Creating a KongCredentialACL to adopt the ACL")
+		createdACL := &configurationv1alpha1.KongCredentialACL{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "acl-",
+			},
+			Spec: configurationv1alpha1.KongCredentialACLSpec{
+				Adopt: &commonv1alpha1.AdoptOptions{
+					From: commonv1alpha1.AdoptSourceKonnect,
+					Mode: commonv1alpha1.AdoptModeOverride,
+					Konnect: &commonv1alpha1.AdoptKonnectOptions{
+						ID: aclID,
+					},
+				},
+				ConsumerRef: corev1.LocalObjectReference{
+					Name: createdConsumer.Name,
+				},
+				KongCredentialACLAPISpec: configurationv1alpha1.KongCredentialACLAPISpec{
+					Group: "acl-1",
+				},
+			},
+		}
+		require.NoError(t, clientNamespaced.Create(ctx, createdACL))
+
+		t.Log("Waiting for the KongCredentialACL to be programmed and set Konnect ID")
+		watchFor(t, ctx, wACL, apiwatch.Modified, func(acl *configurationv1alpha1.KongCredentialACL) bool {
+			return acl.Name == createdACL.Name && k8sutils.IsProgrammed(acl) && acl.GetKonnectID() == aclID
+		},
+			"KongCredentialACL did not get programmed or set Konnect ID",
+		)
+	})
+
+	// Adopting an HMAC auth credential
+	t.Run("HMAC", func(t *testing.T) {
+		hmacID := uuid.NewString()
+		wHMAC := setupWatch[configurationv1alpha1.KongCredentialHMACList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating HMACs")
+		sdk.KongCredentialsHMACSDK.EXPECT().GetHmacAuthWithConsumer(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.GetHmacAuthWithConsumerRequest) bool {
+				return req.HMACAuthID == hmacID && req.ConsumerIDForNestedEntities == consumerID
+			}),
+		).Return(&sdkkonnectops.GetHmacAuthWithConsumerResponse{
+			HMACAuth: &sdkkonnectcomp.HMACAuth{
+				ID:       lo.ToPtr(hmacID),
+				Username: "user",
+				Secret:   lo.ToPtr("secret"),
+				Consumer: &sdkkonnectcomp.HMACAuthConsumer{
+					ID: lo.ToPtr(consumerID),
+				},
+			},
+		}, nil)
+		sdk.KongCredentialsHMACSDK.EXPECT().UpsertHmacAuthWithConsumer(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertHmacAuthWithConsumerRequest) bool {
+				return req.HMACAuthID == hmacID && req.ConsumerIDForNestedEntities == consumerID
+			}),
+		).Return(nil, nil)
+
+		t.Log("Creating a KongCredentialHMACAuth to adopt the existing HMAC auth")
+		createdHMACAuth := &configurationv1alpha1.KongCredentialHMAC{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "hmac-",
+			},
+			Spec: configurationv1alpha1.KongCredentialHMACSpec{
+				Adopt: &commonv1alpha1.AdoptOptions{
+					From: commonv1alpha1.AdoptSourceKonnect,
+					Mode: commonv1alpha1.AdoptModeOverride,
+					Konnect: &commonv1alpha1.AdoptKonnectOptions{
+						ID: hmacID,
+					},
+				},
+				ConsumerRef: corev1.LocalObjectReference{
+					Name: createdConsumer.Name,
+				},
+				KongCredentialHMACAPISpec: configurationv1alpha1.KongCredentialHMACAPISpec{
+					Username: lo.ToPtr("user"),
+					Secret:   lo.ToPtr("secret"),
+				},
+			},
+		}
+		require.NoError(t, clientNamespaced.Create(ctx, createdHMACAuth))
+
+		t.Log("Waiting for the KongCredentialHMAC to be programmed and set Konnect ID")
+		watchFor(t, ctx, wHMAC, apiwatch.Modified, func(hmac *configurationv1alpha1.KongCredentialHMAC) bool {
+			return hmac.Name == createdHMACAuth.Name && k8sutils.IsProgrammed(hmac) && hmac.GetKonnectID() == hmacID
+		},
+			"KongCredentialHMAC did not get programmed or set Konnect ID",
+		)
+	})
+
+	// Adopting a JWT
+	t.Run("JWT", func(t *testing.T) {
+		jwtID := uuid.NewString()
+		wJWT := setupWatch[configurationv1alpha1.KongCredentialJWTList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating JWTAuths")
+		sdk.KongCredentialsJWTSDK.EXPECT().GetJwtWithConsumer(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.GetJwtWithConsumerRequest) bool {
+				return req.JWTID == jwtID && req.ConsumerIDForNestedEntities == consumerID
+			}),
+		).Return(&sdkkonnectops.GetJwtWithConsumerResponse{
+			Jwt: &sdkkonnectcomp.Jwt{
+				ID: lo.ToPtr(jwtID),
+				Consumer: &sdkkonnectcomp.JWTConsumer{
+					ID: lo.ToPtr(consumerID),
+				},
+				Algorithm: lo.ToPtr(sdkkonnectcomp.AlgorithmHs256),
+				Key:       lo.ToPtr("jwt-key"),
+				Secret:    lo.ToPtr("jwt-secret"),
+			},
+		}, nil)
+		sdk.KongCredentialsJWTSDK.EXPECT().UpsertJwtWithConsumer(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertJwtWithConsumerRequest) bool {
+				return req.JWTID == jwtID && req.ConsumerIDForNestedEntities == consumerID
+			}),
+		).Return(nil, nil)
+
+		t.Log("Creating a KongCredentialJWT for adopting the existing JWT auth")
+		createdJWT := &configurationv1alpha1.KongCredentialJWT{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "jwt-",
+			},
+			Spec: configurationv1alpha1.KongCredentialJWTSpec{
+				Adopt: &commonv1alpha1.AdoptOptions{
+					From: commonv1alpha1.AdoptSourceKonnect,
+					Mode: commonv1alpha1.AdoptModeOverride,
+					Konnect: &commonv1alpha1.AdoptKonnectOptions{
+						ID: jwtID,
+					},
+				},
+				ConsumerRef: corev1.LocalObjectReference{
+					Name: createdConsumer.Name,
+				},
+				KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
+					Algorithm: "HS256",
+					Key:       lo.ToPtr("jwt-key"),
+					Secret:    lo.ToPtr("jwt-secret"),
+				},
+			},
+		}
+		require.NoError(t, clientNamespaced.Create(ctx, createdJWT))
+
+		t.Log("Waiting for the KongCredentialJWT to be programmed and set Konnect ID")
+		watchFor(t, ctx, wJWT, apiwatch.Modified, func(jwt *configurationv1alpha1.KongCredentialJWT) bool {
+			return jwt.Name == createdJWT.Name && k8sutils.IsProgrammed(jwt) && jwt.GetKonnectID() == jwtID
+		},
+			"KongCredentialJWT did not get programmed or set Konnect ID",
 		)
 	})
 }
