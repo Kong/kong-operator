@@ -212,7 +212,7 @@ type DataPlaneServiceOptions struct {
 	// the underlying service ports, while the protocol is defaulted to TCP,
 	// as it is the only protocol currently supported.
 	//
-	// +kubebuilder:validation:MaxItems=4
+	// +kubebuilder:validation:MaxItems=64
 	Ports []DataPlaneServicePort `json:"ports,omitempty"`
 
 	// ServiceOptions is the struct containing service options shared with
