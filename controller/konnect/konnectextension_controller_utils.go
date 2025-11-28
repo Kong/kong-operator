@@ -74,6 +74,9 @@ func (r *KonnectExtensionReconciler) getGatewayKonnectControlPlane(
 		controlPlaneRefValidCond.Status = metav1.ConditionFalse
 		controlPlaneRefValidCond.Reason = konnectv1alpha1.ControlPlaneRefReasonInvalid
 		controlPlaneRefValidCond.Message = errGetFromK8s.Error()
+		if ext.Status.Konnect != nil {
+			ext.Status.Konnect.ControlPlaneID = ""
+		}
 		if res, _, errPatch := patch.StatusWithConditions(
 			ctx,
 			r.Client,
@@ -119,8 +122,8 @@ func (r *KonnectExtensionReconciler) getGatewayKonnectControlPlane(
 func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 	ctx context.Context,
 	ext *konnectv1alpha2.KonnectExtension,
-	dps operatorv1beta1.DataPlaneList,
-	cps gwtypes.ControlPlaneList,
+	dps []operatorv1beta1.DataPlane,
+	cps []gwtypes.ControlPlane,
 ) (ctrl.Result, error) {
 	sortRefs := func(refs []commonv1alpha1.NamespacedRef) {
 		refToStr := func(ref commonv1alpha1.NamespacedRef) string {
@@ -142,7 +145,7 @@ func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 
 	// Ensure DataPlaneRefs are up-to-date.
 	var dpRefs []commonv1alpha1.NamespacedRef
-	for _, dp := range dps.Items {
+	for _, dp := range dps {
 		// Only add DataPlanes with the KonnectExtensionApplied condition set to true.
 		if !hasExtensionAppliedCondition(dp.Status.Conditions) {
 			continue
@@ -157,7 +160,7 @@ func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 
 	// Ensure ControlPlaneRefs are up-to-date.
 	var cpRefs []commonv1alpha1.NamespacedRef
-	for _, cp := range cps.Items {
+	for _, cp := range cps {
 		// Only add ControlPlanes with the KonnectExtensionApplied condition set to true.
 		if !hasExtensionAppliedCondition(cp.Status.Conditions) {
 			continue

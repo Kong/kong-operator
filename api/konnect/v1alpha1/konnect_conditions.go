@@ -181,6 +181,10 @@ const (
 	// used with the DataPlaneCertificateProvisioned condition type indicating that the
 	// the DataPlane client certificate creation in Konnect has failed.
 	DataPlaneCertificateProvisionedReasonKonnectAPIOpFailed = "KonnectAPIOpFailed"
+	// DataPlaneCertificateProvisionedReasonProvisioning is the reason
+	// used with the DataPlaneCertificateProvisioned condition type indicating that the
+	// the DataPlane client certificate creation in Konnect is in progress.
+	DataPlaneCertificateProvisionedReasonProvisioning = "Provisioning"
 )
 
 const (
