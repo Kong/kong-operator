@@ -118,6 +118,28 @@ func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client
 	return
 }
 
+// listGatewayReconcileRequestsForSecret returns reconcile requests for Gateways
+// that reference the given Secret via listeners.tls.certificateRefs.
+// It uses a field index to efficiently find matching Gateways.
+func (r *Reconciler) listGatewayReconcileRequestsForSecret(ctx context.Context, s *corev1.Secret) []reconcile.Request {
+	var gwList gwtypes.GatewayList
+	nn := client.ObjectKeyFromObject(s)
+	if err := r.List(ctx, &gwList, client.MatchingFields{index.TLSCertificateSecretsOnGatewayIndex: nn.String()}); err != nil {
+		ctrllog.FromContext(ctx).Error(err, "failed to list indexed gateways for Secret watch", "secret", nn)
+		return nil
+	}
+	recs := make([]reconcile.Request, 0, len(gwList.Items))
+	for i := range gwList.Items {
+		gw := gwList.Items[i]
+		// Only enqueue Gateways managed by this controller.
+		if !r.gatewayHasMatchingGatewayClass(&gw) {
+			continue
+		}
+		recs = append(recs, reconcile.Request{NamespacedName: client.ObjectKeyFromObject(&gw)})
+	}
+	return recs
+}
+
 // listGatewaysForKonnectExtension is a watch predicate which finds all Gateways
 // that use a GatewayConfiguration that references a specific KonnectExtension.
 func (r *Reconciler) listGatewaysForKonnectExtension(ctx context.Context, ext *konnectv1alpha2.KonnectExtension) []reconcile.Request {

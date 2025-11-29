@@ -97,6 +97,9 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 
 	if cfg.GatewayControllerEnabled {
 		indexOptions = append(indexOptions, index.OptionsForGatewayClass()...)
+		// Index Gateways by referenced TLS Secrets so the Gateway controller can
+		// efficiently list Gateways for a Secret event.
+		indexOptions = append(indexOptions, index.OptionsForGatewayTLSSecret()...)
 	}
 
 	if cfg.KonnectControllersEnabled {

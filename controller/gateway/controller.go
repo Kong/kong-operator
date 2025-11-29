@@ -129,6 +129,16 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			),
 		)
 	}
+
+	// Watch Secrets to requeue Gateways that reference them via listeners.tls.certificateRefs.
+	builder.WatchesRawSource(
+		source.Kind(
+			mgr.GetCache(),
+			&corev1.Secret{},
+			handler.TypedEnqueueRequestsFromMapFunc(r.listGatewayReconcileRequestsForSecret),
+		),
+	)
+
 	return builder.Complete(r)
 }
 
