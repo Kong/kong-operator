@@ -19109,11 +19109,7 @@ spec:
                                         type: object
                                     type: object
                                 type: object
-                            required:
-                            - blueGreen
                             type: object
-                        required:
-                        - strategy
                         type: object
                       scaling:
                         description: Scaling defines the scaling options for the deployment.
