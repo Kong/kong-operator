@@ -87,7 +87,7 @@ type HorizontalScaling struct {
 type Rollout struct {
 	// Strategy contains the deployment strategy for rollout.
 	//
-	// +required
+	// +optional
 	Strategy RolloutStrategy `json:"strategy"`
 }
 
@@ -96,7 +96,7 @@ type Rollout struct {
 type RolloutStrategy struct {
 	// BlueGreen holds the options specific for Blue Green Deployments.
 	//
-	// +required
+	// +optional
 	BlueGreen BlueGreenStrategy `json:"blueGreen"`
 }
 
