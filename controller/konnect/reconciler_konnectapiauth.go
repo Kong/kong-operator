@@ -37,6 +37,7 @@ const APIAuthInUseFinalizer = "konnect.konghq.com/konnectapiauth-in-use"
 type KonnectAPIAuthConfigurationReconciler struct {
 	sdkFactory  sdkops.SDKFactory
 	client      client.Client
+	apiReader   client.Reader
 	loggingMode logging.Mode
 }
 
@@ -66,6 +67,7 @@ func NewKonnectAPIAuthConfigurationReconciler(
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KonnectAPIAuthConfigurationReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	r.apiReader = mgr.GetAPIReader()
 	secretLabelPredicate, err := predicate.LabelSelectorPredicate(
 		metav1.LabelSelector{
 			MatchLabels: map[string]string{
@@ -134,7 +136,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		return ctrl.Result{}, nil
 	}
 
-	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.client, &apiAuth)
+	token, err := getTokenFromKonnectAPIAuthConfiguration(ctx, r.apiReader, &apiAuth)
 	if err != nil {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, r.client, &apiAuth,
@@ -256,7 +258,7 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 
 // getTokenFromKonnectAPIAuthConfiguration returns the token from the secret reference or the token field.
 func getTokenFromKonnectAPIAuthConfiguration(
-	ctx context.Context, cl client.Client, apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	ctx context.Context, cl client.Reader, apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
 ) (string, error) {
 	switch apiAuth.Spec.Type {
 	case konnectv1alpha1.KonnectAPIAuthTypeToken:
