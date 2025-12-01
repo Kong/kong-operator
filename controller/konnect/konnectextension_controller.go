@@ -161,14 +161,18 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	ctx = ctrllog.IntoContext(ctx, logger)
 	log.Debug(logger, "reconciling")
 
-	nn := client.ObjectKeyFromObject(&ext)
-
-	dataplanes, err := listKonnectExtensionReferrers[operatorv1beta1.DataPlaneList](ctx, r.Client, nn)
-	if err != nil {
+	var (
+		dataPlaneList    operatorv1beta1.DataPlaneList
+		controlPlaneList gwtypes.ControlPlaneList
+	)
+	if err := r.List(ctx, &dataPlaneList, client.MatchingFields{
+		index.KonnectExtensionIndex: client.ObjectKeyFromObject(&ext).String(),
+	}); err != nil {
 		return ctrl.Result{}, err
 	}
-	controlplanes, err := listKonnectExtensionReferrers[gwtypes.ControlPlaneList](ctx, r.Client, nn)
-	if err != nil {
+	if err := r.List(ctx, &controlPlaneList, client.MatchingFields{
+		index.KonnectExtensionIndex: client.ObjectKeyFromObject(&ext).String(),
+	}); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -177,12 +181,12 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// If the extension is marked for deletion and no object is using it, we can proceed with the cleanup.
 	if !ext.DeletionTimestamp.IsZero() &&
 		ext.DeletionTimestamp.Before(lo.ToPtr(metav1.Now())) &&
-		len(dataplanes)+len(controlplanes) == 0 {
+		len(dataPlaneList.Items)+len(controlPlaneList.Items) == 0 {
 		cleanup = true
 	}
 
 	switch {
-	case len(dataplanes)+len(controlplanes) == 0:
+	case len(dataPlaneList.Items)+len(controlPlaneList.Items) == 0:
 		updated = controllerutil.RemoveFinalizer(&ext, consts.ExtensionInUseFinalizer)
 	default:
 		updated = controllerutil.AddFinalizer(&ext, consts.ExtensionInUseFinalizer)
@@ -847,7 +851,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return res, err
 	}
 
-	if res, err := r.ensureExtendablesReferencesInStatus(ctx, &ext, dataplanes, controlplanes); err != nil || !res.IsZero() {
+	if res, err := r.ensureExtendablesReferencesInStatus(ctx, &ext, dataPlaneList.Items, controlPlaneList.Items); err != nil || !res.IsZero() {
 		return res, err
 	}
 
@@ -907,48 +911,4 @@ func enforceSecretInUseFinalizer(
 		"operation", enforce,
 	)
 	return true, ctrl.Result{}, nil
-}
-
-// listKonnectExtensionReferrers lists all objects that reference the given KonnectExtension.
-// It uses the KonnectExtensionIndex index for listing the objects which needs to
-// be set for the queried typed.
-func listKonnectExtensionReferrers[
-	TList interface {
-		operatorv1beta1.DataPlaneList | gwtypes.ControlPlaneList
-		GetItems() []T
-	},
-	TListPtr interface {
-		*TList
-		client.ObjectList
-		GetItems() []T
-	},
-	TT clientObject[T],
-	T any,
-](
-	ctx context.Context,
-	cl client.Client,
-	referencedKonnectExtension client.ObjectKey,
-) ([]T, error) {
-	listOpts := []client.ListOption{
-		client.MatchingFields{
-			index.KonnectExtensionIndex: referencedKonnectExtension.String(),
-		},
-	}
-
-	var (
-		list    TList
-		listPtr TListPtr = &list
-	)
-	if err := cl.List(ctx, listPtr, listOpts...); err != nil {
-		return nil, err
-	}
-	return list.GetItems(), nil
-}
-
-type clientObjectT[T any] interface {
-	*T
-}
-
-type clientObject[T any] interface {
-	clientObjectT[T]
 }
