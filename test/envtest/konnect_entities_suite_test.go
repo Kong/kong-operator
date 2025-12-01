@@ -68,8 +68,10 @@ func testNewKonnectEntityReconciler[
 		factory := sdkmocks.NewMockSDKFactory(t)
 		sdk := factory.SDK
 
-		StartReconcilers(ctx, t, mgr, logs, konnect.NewKonnectEntityReconciler[T, TEnt](factory, logging.DevelopmentMode, cl,
-			konnect.WithMetricRecorder[T, TEnt](&metricsmocks.MockRecorder{})))
+		StartReconcilers(ctx, t, mgr, logs,
+			konnect.NewKonnectEntityReconciler[T, TEnt](
+				factory, logging.DevelopmentMode, cl,
+				konnect.WithMetricRecorder[T, TEnt](&metricsmocks.MockRecorder{})))
 
 		const (
 			wait = time.Second

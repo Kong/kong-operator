@@ -423,7 +423,6 @@ func TestKongService(t *testing.T) {
 	})
 
 	t.Run("adopting a service in override mode then deleting it", func(t *testing.T) {
-
 		serviceKonnectID := uuid.NewString()
 		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 
@@ -476,7 +475,6 @@ func TestKongService(t *testing.T) {
 	})
 
 	t.Run("adopting a service with NotFound error returned from upstream", func(t *testing.T) {
-
 		serviceKonnectID := uuid.NewString()
 		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl, client.InNamespace(ns.Name))
 

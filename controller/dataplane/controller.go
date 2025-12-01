@@ -3,7 +3,6 @@ package dataplane
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
@@ -36,8 +35,10 @@ import (
 // Reconciler reconciles a DataPlane object
 type Reconciler struct {
 	client.Client
+
+	ControllerOptions controller.Options
+
 	eventRecorder            record.EventRecorder
-	CacheSyncTimeout         time.Duration
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
 	ClusterCAKeyConfig       secrets.KeyConfig
@@ -57,9 +58,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	r.eventRecorder = mgr.GetEventRecorderFor("dataplane")
 
 	return DataPlaneWatchBuilder(mgr, r.KonnectEnabled).
-		WithOptions(controller.Options{
-			CacheSyncTimeout: r.CacheSyncTimeout,
-		}).
+		WithOptions(r.ControllerOptions).
 		Complete(r)
 }
 

@@ -81,7 +81,11 @@ func New(m metadata.Info) *CLI {
 	// controllers for Konnect APIs
 	flagSet.BoolVar(&cfg.KonnectControllersEnabled, "enable-controller-konnect", false, "Enable the Konnect controllers.")
 	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
-	flagSet.UintVar(&cfg.KonnectMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultKonnectMaxConcurrentReconciles, "Maximum number of concurrent reconciles for Konnect entities.")
+	flagSet.UintVar(&cfg.KonnectControllerMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultMaxConcurrentReconcilesKonnect, "Deprecated: Please use '--max-concurrent-reconciles-konnect-controller' instead.")
+	flagSet.UintVar(&cfg.MaxConcurrentReconcilesKonnect, "max-concurrent-reconciles-konnect-controller", consts.DefaultMaxConcurrentReconcilesKonnect, "Maximum number of concurrent reconciles for Konnect controllers.")
+	flagSet.UintVar(&cfg.MaxConcurrentReconcilesDataPlane, "max-concurrent-reconciles-dataplane-controller", consts.DefaultMaxConcurrentReconcilesDataPlane, "Maximum number of concurrent reconciles for DataPlane controllers.")
+	flagSet.UintVar(&cfg.MaxConcurrentReconcilesControlPlane, "max-concurrent-reconciles-controlplane-controller", consts.DefaultMaxConcurrentReconcilesControlPlane, "Maximum number of concurrent reconciles for ControlPlane controllers.")
+	flagSet.UintVar(&cfg.MaxConcurrentReconcilesGateway, "max-concurrent-reconciles-gateway-controller", consts.DefaultMaxConcurrentReconcilesGateway, "Maximum number of concurrent reconciles for Gateway controllers.")
 
 	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information.")
 
@@ -228,6 +232,17 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	c.cfg.ClusterCASecretNamespace = clusterCASecretNamespace
 	c.cfg.LoggerOpts = logging.SetupLogEncoder(c.cfg.LoggingMode, c.loggerOpts)
 	c.cfg.LeaderElectionNamespace = controllerNamespace
+
+	// TODO: https://github.com/Kong/kong-operator/issues/2768
+	if c.cfg.KonnectControllerMaxConcurrentReconciles != consts.DefaultMaxConcurrentReconcilesKonnect {
+		if c.cfg.MaxConcurrentReconcilesKonnect != consts.DefaultMaxConcurrentReconcilesKonnect {
+			fmt.Println("ERROR: both --konnect-controller-max-concurrent-reconciles and --max-concurrent-reconciles-konnect-controller have been set. Please use only --max-concurrent-reconciles-konnect-controller.")
+			os.Exit(1)
+		}
+
+		fmt.Println("WARN: --konnect-controller-max-concurrent-reconciles is deprecated, please use --max-concurrent-reconciles-konnect-controller instead")
+		c.cfg.MaxConcurrentReconcilesKonnect = c.cfg.KonnectControllerMaxConcurrentReconciles
+	}
 
 	return *c.cfg
 }

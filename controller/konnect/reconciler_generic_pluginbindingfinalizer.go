@@ -9,6 +9,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -32,8 +33,9 @@ type KonnectEntityPluginBindingFinalizerReconciler[
 	T constraints.SupportedKonnectEntityPluginReferenceableType,
 	TEnt constraints.EntityType[T],
 ] struct {
-	LoggingMode logging.Mode
-	Client      client.Client
+	ControllerOptions controller.Options
+	LoggingMode       logging.Mode
+	Client            client.Client
 }
 
 // NewKonnectEntityPluginReconciler returns a new KonnectEntityPluginReconciler
@@ -42,12 +44,14 @@ func NewKonnectEntityPluginReconciler[
 	T constraints.SupportedKonnectEntityPluginReferenceableType,
 	TEnt constraints.EntityType[T],
 ](
+	controllerOptions controller.Options,
 	loggingMode logging.Mode,
 	client client.Client,
 ) *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt] {
 	r := &KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]{
-		LoggingMode: loggingMode,
-		Client:      client,
+		ControllerOptions: controllerOptions,
+		LoggingMode:       loggingMode,
+		Client:            client,
 	}
 	return r
 }
@@ -268,6 +272,7 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) setControllerBu
 	}
 
 	b.
+		WithOptions(r.ControllerOptions).
 		For(ent,
 			builder.WithPredicates(
 				predicate.NewPredicateFuncs(pred),

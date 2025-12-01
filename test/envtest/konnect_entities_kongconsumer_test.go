@@ -19,6 +19,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
@@ -54,7 +55,7 @@ func TestKongConsumer(t *testing.T) {
 			konnect.WithKonnectEntitySyncPeriod[configurationv1beta1.KongConsumerGroup](konnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1beta1.KongConsumerGroup](&metricsmocks.MockRecorder{}),
 		),
-		konnect.NewKongCredentialSecretReconciler(logging.DevelopmentMode, mgr.GetClient(), mgr.GetScheme()),
+		konnect.NewKongCredentialSecretReconciler(controller.Options{}, logging.DevelopmentMode, mgr.GetClient(), mgr.GetScheme()),
 	}
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
@@ -597,7 +598,7 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](konnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialHMAC](&metricsmocks.MockRecorder{}),
 		),
-		konnect.NewKongCredentialSecretReconciler(logging.DevelopmentMode, mgr.GetClient(), mgr.GetScheme()),
+		konnect.NewKongCredentialSecretReconciler(controller.Options{}, logging.DevelopmentMode, mgr.GetClient(), mgr.GetScheme()),
 	}
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
@@ -1062,7 +1063,6 @@ func TestKongConsumerSecretCredentials(t *testing.T) {
 }
 
 func TestAdoptingConsumerAndCredentials(t *testing.T) {
-
 	t.Parallel()
 	ctx, cancel := Context(t, t.Context())
 	defer cancel()
@@ -1097,7 +1097,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 			konnect.WithKonnectEntitySyncPeriod[configurationv1alpha1.KongCredentialHMAC](konnectInfiniteSyncTime),
 			konnect.WithMetricRecorder[configurationv1alpha1.KongCredentialHMAC](&metricsmocks.MockRecorder{}),
 		),
-		konnect.NewKongCredentialSecretReconciler(logging.DevelopmentMode, mgr.GetClient(), mgr.GetScheme()),
+		konnect.NewKongCredentialSecretReconciler(controller.Options{}, logging.DevelopmentMode, mgr.GetClient(), mgr.GetScheme()),
 	}
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
@@ -1210,7 +1210,6 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 			return apikey.Name == createdAPIKey.Name && k8sutils.IsProgrammed(apikey) && apikey.GetKonnectID() == keyAuthID
 		},
 			"KongCredentialAPIKey did not get programmed or set Konnect ID")
-
 	})
 
 	// Adopting a basic auth credential

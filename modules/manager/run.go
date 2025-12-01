@@ -111,9 +111,15 @@ type Config struct {
 	AIGatewayControllerEnabled              bool
 	KongPluginInstallationControllerEnabled bool
 	KonnectSyncPeriod                       time.Duration
-	KonnectMaxConcurrentReconciles          uint
-	GatewayAPIExperimentalEnabled           bool
-	ControlPlaneExtensionsControllerEnabled bool
+	// TODO: remove this a couple of versions after 2.1 release
+	// TODO: https://github.com/Kong/kong-operator/issues/2768
+	KonnectControllerMaxConcurrentReconciles uint
+	MaxConcurrentReconcilesKonnect           uint
+	MaxConcurrentReconcilesDataPlane         uint
+	MaxConcurrentReconcilesControlPlane      uint
+	MaxConcurrentReconcilesGateway           uint
+	GatewayAPIExperimentalEnabled            bool
+	ControlPlaneExtensionsControllerEnabled  bool
 
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool
