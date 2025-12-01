@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.0.6](#v206)
 - [v2.0.5](#v205)
 - [v2.0.4](#v204)
 - [v2.0.3](#v203)
@@ -35,7 +36,9 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.0.6]
+
+> Release date: 2025-12-01
 
 ### Fixes
 
@@ -52,6 +55,8 @@
   `spec.listeners.tls.certificateRef`, ensuring Gateway status conditions
   are updated when referenced certificates change.
   [#2661](https://github.com/Kong/kong-operator/pull/2661)
+- Trigger reconciliation events on `KongPlugin`s upon changes on `KongPluginBinding`.
+  [#2637](https://github.com/Kong/kong-operator/pull/2637)
 
 ## [v2.0.5]
 
@@ -1410,6 +1415,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.0.6]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.0.6
 [v2.0.5]: https://github.com/Kong/kong-operator/compare/v2.0.4..v2.0.5
 [v2.0.4]: https://github.com/Kong/kong-operator/compare/v2.0.3..v2.0.4
 [v2.0.3]: https://github.com/Kong/kong-operator/compare/v2.0.2..v2.0.3
