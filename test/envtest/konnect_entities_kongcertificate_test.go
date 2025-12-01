@@ -8,6 +8,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -15,6 +16,7 @@ import (
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect"
@@ -23,6 +25,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/test/helpers/eventually"
 	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
@@ -301,5 +304,56 @@ func TestKongCertificate(t *testing.T) {
 			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongCACertificate didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)
+	})
+
+	t.Run("Adopting an existing certificate", func(t *testing.T) {
+		certID := uuid.NewString()
+
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cpID := cp.GetKonnectStatus().GetKonnectID()
+
+		w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating certificates")
+		sdk.CertificatesSDK.EXPECT().GetCertificate(
+			mock.Anything,
+			certID,
+			cpID,
+		).Return(&sdkkonnectops.GetCertificateResponse{
+			Certificate: &sdkkonnectcomp.Certificate{
+				Cert: "test-cert",
+				Key:  "test-key",
+				ID:   lo.ToPtr(certID),
+			},
+		}, nil)
+		sdk.CertificatesSDK.EXPECT().UpsertCertificate(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertCertificateRequest) bool {
+				return req.CertificateID == certID && req.ControlPlaneID == cpID
+			}),
+		).Return(nil, nil)
+
+		t.Log("Creating a KongCertificate to adopt the existing certificate")
+		createdCert := deploy.KongCertificateAttachedToCP(
+			t, ctx, clientNamespaced, cp,
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongCertificate](commonv1alpha1.AdoptModeOverride, certID),
+		)
+
+		t.Logf("Waiting for KongCertificate %s to be programmed and set Konnect ID", client.ObjectKeyFromObject(createdCert))
+		watchFor(t, ctx, w, apiwatch.Modified,
+			func(cert *configurationv1alpha1.KongCertificate) bool {
+				return cert.Name == createdCert.Name &&
+					k8sutils.IsProgrammed(cert) &&
+					cert.GetKonnectID() == certID
+			},
+			fmt.Sprintf("KongCertificate didn't get Programmed status condition or didn't get the correct Konnect ID (%s) assigned", certID),
+		)
+
+		t.Log("Setting up SDK expectations for certificate deletion")
+		sdk.CertificatesSDK.EXPECT().DeleteCertificate(mock.Anything, cpID, certID).Return(nil, nil)
+
+		t.Logf("Deleting KongCertificate %s and waiting for it to disappear", client.ObjectKeyFromObject(createdCert))
+		require.NoError(t, clientNamespaced.Delete(ctx, createdCert))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdCert, waitTime, tickTime)
 	})
 }
