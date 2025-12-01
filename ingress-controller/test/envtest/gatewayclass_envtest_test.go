@@ -107,8 +107,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				asserts.Never(t, func(ctx context.Context) bool {
 					var gateway gatewayapi.Gateway
 					nn := client.ObjectKeyFromObject(&gw)
-					err := cl.Get(ctx, nn, &gateway)
-					if err != nil {
+					if err := cl.Get(ctx, nn, &gateway); err != nil {
 						t.Logf("error getting Gateway %s: %v", nn, err)
 						return true
 					}
@@ -195,8 +194,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				asserts.Never(t, func(ctx context.Context) bool {
 					var gateway gatewayapi.Gateway
 					nn := client.ObjectKeyFromObject(&gw)
-					err := cl.Get(ctx, nn, &gateway)
-					if err != nil {
+if err := cl.Get(ctx, nn, &gateway); err != nil {
 						t.Logf("error getting Gateway %s: %v", nn, err)
 						return true
 					}
@@ -265,8 +263,7 @@ func TestGatewayWithGatewayClassReconciliation(t *testing.T) {
 				asserts.Never(t, func(ctx context.Context) bool {
 					var gateway gatewayapi.Gateway
 					nn := client.ObjectKeyFromObject(&gw)
-					err := cl.Get(ctx, nn, &gateway)
-					if err != nil {
+					if err := cl.Get(ctx, nn, &gateway); err != nil {
 						t.Logf("error getting Gateway %s: %v", nn, err)
 						return true
 					}
