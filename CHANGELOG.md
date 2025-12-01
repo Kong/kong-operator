@@ -48,6 +48,10 @@
   [#2717](https://github.com/Kong/kong-operator/pull/2717)
 - Reject CA Secrets with multiple PEM certs.
   [#2671](https://github.com/Kong/kong-operator/pull/2671)
+- Gateway controllers now watch changes on Secrets referenced by
+  `spec.listeners.tls.certificateRef`, ensuring Gateway status conditions
+  are updated when referenced certificates change.
+  [#2661](https://github.com/Kong/kong-operator/pull/2661)
 
 ## [v2.0.5]
 
