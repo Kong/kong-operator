@@ -825,6 +825,36 @@ func KongCertificateAttachedToCP(
 	return cert
 }
 
+// KongCertificateAttachedToCPWithProgrammed deploys a KongCertificate resource attached to CP
+// with the "programmed" condition and the given Konnect ID in the status.
+func KongCertificateAttachedToCPWithProgrammed(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
+	konnectID string,
+	opts ...ObjOption,
+) *configurationv1alpha1.KongCertificate {
+	t.Helper()
+
+	cert := KongCertificateAttachedToCP(t, ctx, cl, cp, opts...)
+
+	if konnectID != "" {
+		cert.SetKonnectID(konnectID)
+	}
+	cert.Status.Conditions = []metav1.Condition{
+		{
+			Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
+			Status:             metav1.ConditionTrue,
+			Reason:             konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
+			ObservedGeneration: cert.GetGeneration(),
+			LastTransitionTime: metav1.Now(),
+		},
+	}
+	require.NoError(t, cl.Status().Update(ctx, cert))
+	return cert
+}
+
 // KongUpstream deploys a KongUpstream resource and returns it.
 func KongUpstream(
 	t *testing.T,

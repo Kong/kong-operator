@@ -9,6 +9,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -22,7 +23,9 @@ import (
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/scheme"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/test/helpers/eventually"
 	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
@@ -352,5 +355,53 @@ func TestKongKey(t *testing.T) {
 			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongKey didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)
+	})
+
+	t.Run("Adopting an existing key", func(t *testing.T) {
+		keyKonnectID := uuid.NewString()
+		keyName := "adopted-key"
+		keyKID := "adopted-key-id"
+
+		w := setupWatch[configurationv1alpha1.KongKeyList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating key set")
+		sdk.KeysSDK.EXPECT().GetKey(mock.Anything, keyKonnectID, cp.GetKonnectID()).Return(
+			&sdkkonnectops.GetKeyResponse{
+				Key: &sdkkonnectcomp.Key{
+					Name: lo.ToPtr(keyName),
+					ID:   lo.ToPtr(keyKonnectID),
+					Kid:  keyKID,
+				},
+			}, nil,
+		)
+		sdk.KeysSDK.EXPECT().UpsertKey(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertKeyRequest) bool {
+				return req.KeyID == keyKonnectID && req.ControlPlaneID == cp.GetKonnectID()
+			}),
+		).Return(nil, nil)
+
+		t.Log("Creating a KongKey to adopt the existing key")
+		createdKey := deploy.KongKey(
+			t, ctx, clientNamespaced, keyKID, keyName,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongKey](commonv1alpha1.AdoptModeOverride, keyKonnectID),
+		)
+
+		t.Logf("Waiting for KongKey %s to be programmed and set Konnect ID", client.ObjectKeyFromObject(createdKey))
+		watchFor(t, ctx, w, apiwatch.Modified, func(key *configurationv1alpha1.KongKey) bool {
+			return key.Name == createdKey.Name &&
+				k8sutils.IsProgrammed(key) &&
+				key.GetKonnectID() == keyKonnectID
+		},
+			fmt.Sprintf("KongKey didn't get Programmed status condition or didn't get the correct Konnect ID (%s) assigned", keyKonnectID),
+		)
+
+		t.Log("Setting up SDK expectations for key deletion")
+		sdk.KeysSDK.EXPECT().DeleteKey(mock.Anything, cp.GetKonnectID(), keyKonnectID).Return(nil, nil)
+
+		t.Logf("Deleting KongKey %s and waiting for it to disappear", client.ObjectKeyFromObject(createdKey))
+		require.NoError(t, clientNamespaced.Delete(ctx, createdKey))
+		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, createdKey, waitTime, tickTime)
 	})
 }

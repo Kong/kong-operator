@@ -1,27 +1,28 @@
 package envtest
 
 import (
+	"fmt"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/test/helpers/eventually"
 	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
@@ -56,23 +57,7 @@ func TestKongSNI(t *testing.T) {
 
 	t.Run("adding, patching and deleting KongSNI", func(t *testing.T) {
 		t.Log("Creating KongCertificate and setting it to Programmed")
-		createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp)
-		createdCert.Status = configurationv1alpha1.KongCertificateStatus{
-			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-				KonnectEntityStatus: konnectEntityStatus("cert-12345"),
-				ControlPlaneID:      cp.Status.GetKonnectID(),
-			},
-			Conditions: []metav1.Condition{
-				{
-					Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
-					Status:             metav1.ConditionTrue,
-					Reason:             konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
-					ObservedGeneration: createdCert.GetGeneration(),
-					LastTransitionTime: metav1.Now(),
-				},
-			},
-		}
-		require.NoError(t, clientNamespaced.Status().Update(ctx, createdCert))
+		createdCert := deploy.KongCertificateAttachedToCPWithProgrammed(t, ctx, clientNamespaced, cp, "cert-12345")
 
 		w := setupWatch[configurationv1alpha1.KongSNIList](t, ctx, cl, client.InNamespace(ns.Name))
 
@@ -141,5 +126,64 @@ func TestKongSNI(t *testing.T) {
 		)
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.SNIsSDK, waitTime, tickTime)
+	})
+
+	t.Run("Adopting an existing SNI", func(t *testing.T) {
+		sniID := uuid.NewString()
+		certID := uuid.NewString()
+		sniName := "test-adoption.example.com"
+
+		t.Log("Creating KongCertificate and setting it to Programmed")
+		createdCert := deploy.KongCertificateAttachedToCPWithProgrammed(t, ctx, clientNamespaced, cp, certID)
+
+		w := setupWatch[configurationv1alpha1.KongSNIList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating SNIs")
+		sdk.SNIsSDK.EXPECT().GetSniWithCertificate(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.GetSniWithCertificateRequest) bool {
+				return req.CertificateID == certID && req.SNIID == sniID
+			}),
+		).Return(&sdkkonnectops.GetSniWithCertificateResponse{
+			Sni: &sdkkonnectcomp.Sni{
+				Certificate: sdkkonnectcomp.SNICertificate{
+					ID: lo.ToPtr(certID),
+				},
+				Name: sniName,
+				ID:   lo.ToPtr(sniID),
+			},
+		}, nil)
+		sdk.SNIsSDK.EXPECT().UpsertSniWithCertificate(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertSniWithCertificateRequest) bool {
+				return req.CertificateID == certID && req.SNIID == sniID
+			}),
+		).Return(nil, nil)
+
+		t.Log("Creating a KongSNI to adopt the existing SNI")
+		createdSNI := deploy.KongSNIAttachedToCertificate(t, ctx, clientNamespaced, createdCert,
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongSNI](commonv1alpha1.AdoptModeOverride, sniID),
+		)
+
+		t.Logf("Waiting for KongSNI %s to get programmed and set Konnect ID", client.ObjectKeyFromObject(createdSNI))
+		watchFor(t, ctx, w, apiwatch.Modified, func(sni *configurationv1alpha1.KongSNI) bool {
+			return sni.Name == createdSNI.Name &&
+				k8sutils.IsProgrammed(sni) &&
+				sni.GetKonnectID() == sniID
+		},
+			fmt.Sprintf("KongSNI didn't get Programmed status condition or didn't get the correct Konnect ID (%s) assigned", sniID),
+		)
+
+		t.Log("Setting up SDK expectations for SNI deletion")
+		sdk.SNIsSDK.EXPECT().DeleteSniWithCertificate(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.DeleteSniWithCertificateRequest) bool {
+				return req.CertificateID == certID && req.SNIID == sniID
+			}),
+		).Return(nil, nil)
+
+		t.Logf("Deleting KongSNI %s and waiting for it to disappear", client.ObjectKeyFromObject(createdSNI))
+		require.NoError(t, clientNamespaced.Delete(ctx, createdSNI))
+		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, createdSNI, waitTime, tickTime)
 	})
 }
