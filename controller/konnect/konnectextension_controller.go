@@ -864,13 +864,13 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 }
 
 // SecretInUseEnforceT is an enum type for enforcing or removing the secret-in-use finalizer.
-type SecretInUseEnforceT byte
+type SecretInUseEnforceT string
 
 const (
 	// SecretInUseEnforceAdd enforces the secret-in-use finalizer.
-	SecretInUseEnforceAdd SecretInUseEnforceT = 1
+	SecretInUseEnforceAdd SecretInUseEnforceT = "add"
 	// SecretInUseEnforceRemove removes the secret-in-use finalizer.
-	SecretInUseEnforceRemove SecretInUseEnforceT = 0
+	SecretInUseEnforceRemove SecretInUseEnforceT = "remove"
 )
 
 // enforceSecretInUseFinalizer adds or removes the secret-in-use finalizer on the given secret.
@@ -904,6 +904,7 @@ func enforceSecretInUseFinalizer(
 	log.Debug(logger,
 		finalizer+" finalizer enforced on Secret",
 		"secret", client.ObjectKeyFromObject(certificateSecret),
+		"operation", enforce,
 	)
 	return true, ctrl.Result{}, nil
 }
