@@ -304,7 +304,6 @@ func setupControllers(
 					PublishServiceUDPRef: c.PublishServiceUDP,
 					AddressOverrides:     c.PublishStatusAddress,
 					AddressOverridesUDP:  c.PublishStatusAddressUDP,
-					WatchNamespaces:      c.WatchNamespaces,
 					CacheSyncTimeout:     c.CacheSyncTimeout,
 					ReferenceIndexers:    referenceIndexers,
 					GatewayNN:            controllers.NewOptionalNamespacedName(c.GatewayToReconcile),

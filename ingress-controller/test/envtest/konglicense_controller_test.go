@@ -37,7 +37,7 @@ func TestKongLicenseController(t *testing.T) {
 		mo.None[ctrllicense.ValidatorFunc](),
 	)
 
-	StartReconcilers(ctx, t, ctrlClient.Scheme(), cfg, reconciler)
+	StartReconciler(ctx, t, ctrlClient.Scheme(), cfg, reconciler)
 
 	const (
 		fullControllerName  = ctrllicense.LicenseControllerTypeKIC + "/test"
@@ -153,7 +153,7 @@ func TestKongLicenseControllerValidation(t *testing.T) {
 		mo.None[string](),
 		mo.Some(licenseValidator),
 	)
-	StartReconcilers(ctx, t, ctrlClient.Scheme(), cfg, reconciler)
+	StartReconciler(ctx, t, ctrlClient.Scheme(), cfg, reconciler)
 
 	t.Log("Create a KongLicense and verify that it is reconciled")
 	kongLicense1 := &configurationv1alpha1.KongLicense{
