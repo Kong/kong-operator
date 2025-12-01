@@ -47,7 +47,7 @@ const (
 // +kubebuilder:validation:XValidation:rule="self.spec.konnect.controlPlane.ref.type == 'konnectID' ? has(self.spec.konnect.configuration) : true",message="konnect must be set when ControlPlaneRef is set to KonnectID."
 // +kubebuilder:validation:XValidation:rule="self.spec.konnect.controlPlane.ref.type == 'konnectNamespacedRef' ? !has(self.spec.konnect.configuration) : true",message="konnect must be unset when ControlPlaneRef is set to konnectNamespacedRef."
 // +apireference:kgo:include
-// +kong:channels=gateway-operator
+// +kong:channels=kong-operator
 type KonnectExtension struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

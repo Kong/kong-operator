@@ -39,7 +39,7 @@ import (
 // +kubebuilder:validation:XValidation:rule="!(has(self.configFrom) && has(self.configPatches))", message="Using both configFrom and configPatches fields is not allowed."
 // +kubebuilder:validation:XValidation:rule="self.plugin == oldSelf.plugin", message="The plugin field is immutable"
 // +apireference:kic:include
-// +kong:channels=gateway-operator
+// +kong:channels=kong-operator
 type KongPlugin struct {
 	metav1.TypeMeta `json:",inline"`
 	// Setting a `global` label to `true` will apply the plugin to every request proxied by the Kong.

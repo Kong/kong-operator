@@ -37,7 +37,7 @@ func init() {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:storageversion
 // +apireference:kgo:include
-// +kong:channels=gateway-operator
+// +kong:channels=kong-operator
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=kogc,categories=kong
