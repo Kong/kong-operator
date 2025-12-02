@@ -44,7 +44,7 @@ jobs:
       docs_only: ${{ steps.check-files.outputs.docs_only }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
         with:
           egress-policy: audit
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -85,7 +85,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - name: Checkout repository
@@ -140,7 +140,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - name: Checkout repository
@@ -160,7 +160,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - name: Checkout repository
@@ -218,7 +218,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - name: Checkout repository
@@ -264,7 +264,7 @@ jobs:
       CLUSTER_NAME: install-with-kustomize
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - name: Checkout repository
@@ -315,7 +315,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -336,7 +336,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - name: checkout repository
@@ -382,7 +382,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
@@ -421,7 +421,7 @@ jobs:
           - .
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - name: checkout repository
@@ -485,7 +485,7 @@ jobs:
         - router-flavor: expressions
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - name: checkout repository
@@ -546,7 +546,7 @@ jobs:
           - .
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - name: checkout repository
@@ -602,7 +602,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - name: checkout repository
@@ -653,7 +653,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
       with:
         egress-policy: audit
     - name: checkout repository
@@ -710,7 +710,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
         with:
           egress-policy: audit
 
@@ -763,7 +763,7 @@ jobs:
     if: always()
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@95d9a5deda9de15063e7595e9719c11c38c90ae2 # v2.13.2
+        uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
         with:
           egress-policy: audit
       - name: Check if docs-only changes
