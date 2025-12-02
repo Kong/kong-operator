@@ -174,10 +174,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// In case the referenced KongService is being deleted, disregard the error
 		// and continue.
 		case errors.As(err, &ReferencedKongServiceIsBeingDeleted{}):
-			log.Info(logger, "referenced KongService is being deleted, proceeding with reconciliation", err.Error())
+			log.Info(logger, "referenced KongService is being deleted, proceeding with reconciliation", "error", err.Error())
 		case errors.As(err, &ReferencedObjectDoesNotExist{}):
 			if ent.GetDeletionTimestamp().IsZero() {
-				log.Info(logger, "referenced KongService does not exist, proceeding with reconciliation", err.Error())
+				log.Info(logger, "referenced KongService does not exist, proceeding with reconciliation", "error", err.Error())
 			}
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
