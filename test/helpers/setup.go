@@ -31,9 +31,7 @@ func SetupTestEnv(t *testing.T, ctx context.Context, env environments.Environmen
 		t.Helper()
 
 		t.Log("performing test cleanup")
-		// Use a longer timeout for cleanup to avoid flakiness when namespaces
-		// take longer to terminate due to finalizers on CRDs (e.g., Konnect resources).
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute*5)
 		defer cancel()
 		assert.NoError(t, cleaner.Cleanup(ctx))
 	})
