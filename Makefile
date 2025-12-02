@@ -47,7 +47,6 @@ endif
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 
 TOOLS_VERSIONS_FILE = $(PROJECT_DIR)/.tools_versions.yaml
-CUSTOM_GOLANGCI_LINT_FILE = $(PROJECT_DIR)/.custom-gcl.yml
 
 .PHONY: tools
 tools: controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq crd-ref-docs
@@ -190,7 +189,7 @@ HELM = $(PROJECT_DIR)/bin/installs/http-helm/$(HELM_VERSION)/helm
 download.helm: mise yq ## Download helm locally if necessary.
 	$(MAKE) mise-install DEP_VER=http:helm
 
-KUBE_API_LINTER_VERSION = $(shell $(YQ) -r '.plugins[0].version' < $(CUSTOM_GOLANGCI_LINT_FILE))
+KUBE_API_LINTER_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"].version' < $(MISE_FILE))
 KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter
 .PHONY: download.kube-api-linter
 download.kube-api-linter: mise yq ## Download kube-api-linter locally if necessary.
