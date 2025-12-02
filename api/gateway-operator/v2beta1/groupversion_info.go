@@ -14,9 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package v2beta1 contains API Schema definitions for the gateway-operator.konghq.com v2beta1 API group
-// +kubebuilder:object:generate=true
-// +groupName=gateway-operator.konghq.com
 package v2beta1
 
 import (
