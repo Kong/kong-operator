@@ -6,6 +6,13 @@ updates:
   - /hack/generators/
   schedule:
     interval: daily
+  cooldown:
+    semver-major-days: 5
+    semver-minor-days: 2
+    semver-patch-days: 2
+    exclude:
+    - "github.com/Kong/*"
+    - "github.com/kong/*"
   labels:
   - dependencies
   # Create a group of dependencies to be updated together in one pull request
@@ -32,6 +39,10 @@ updates:
     interval: daily
   labels:
   - github_actions
+  cooldown:
+    semver-major-days: 5
+    semver-minor-days: 2
+    semver-patch-days: 2
 - package-ecosystem: docker
   directory: /
   schedule:
