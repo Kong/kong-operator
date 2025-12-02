@@ -8,6 +8,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -15,6 +16,7 @@ import (
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect"
@@ -22,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/test/helpers/eventually"
 	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
@@ -265,5 +268,52 @@ func TestKongCACertificate(t *testing.T) {
 			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongCACertificate didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)
+	})
+
+	t.Run("Adopting an existing CA certificate", func(t *testing.T) {
+		caCertID := uuid.NewString()
+
+		w := setupWatch[configurationv1alpha1.KongCACertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations on getting and updating CA certificates")
+		sdk.CACertificatesSDK.EXPECT().GetCaCertificate(
+			mock.Anything,
+			caCertID,
+			cp.GetKonnectID(),
+		).Return(&sdkkonnectops.GetCaCertificateResponse{
+			CACertificate: &sdkkonnectcomp.CACertificate{
+				Cert: "test-cert",
+				ID:   lo.ToPtr(caCertID),
+			},
+		}, nil)
+		sdk.CACertificatesSDK.EXPECT().UpsertCaCertificate(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertCaCertificateRequest) bool {
+				return req.CACertificateID == caCertID && req.ControlPlaneID == cp.GetKonnectID()
+			}),
+		).Return(nil, nil)
+
+		t.Log("Creating a KongCACertificate to adopt the existing CA certificate")
+		createdCACert := deploy.KongCACertificateAttachedToCP(t, ctx, clientNamespaced, cp,
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongCACertificate](commonv1alpha1.AdoptModeOverride, caCertID),
+		)
+
+		t.Logf("Waiting for KongCACertificate %s to be programmed and set Konnect ID", client.ObjectKeyFromObject(createdCACert))
+		watchFor(t, ctx, w, apiwatch.Modified,
+			func(caCert *configurationv1alpha1.KongCACertificate) bool {
+				return caCert.Name == createdCACert.Name &&
+					k8sutils.IsProgrammed(caCert) &&
+					caCert.GetKonnectID() == caCertID
+			},
+			fmt.Sprintf("KongCACertificate didn't get Programmed status condition or didn't get the correct Konnect ID (%s) assigned", caCertID),
+		)
+
+		t.Log("Setting up SDK expecatations on CA certificate deletion")
+		sdk.CACertificatesSDK.EXPECT().DeleteCaCertificate(mock.Anything, cp.GetKonnectID(), caCertID).Return(nil, nil)
+
+		t.Logf("Deleting the KongCACertificate %s and waiting for it to disappear", client.ObjectKeyFromObject(createdCACert))
+		require.NoError(t, clientNamespaced.Delete(ctx, createdCACert))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdCACert, waitTime, tickTime)
+
 	})
 }

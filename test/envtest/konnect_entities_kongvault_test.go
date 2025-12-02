@@ -1,12 +1,14 @@
 package envtest
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -14,6 +16,7 @@ import (
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect"
@@ -21,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/test/helpers/eventually"
 	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
@@ -205,5 +209,58 @@ func TestKongVault(t *testing.T) {
 		}, "KongVault didn't get Programmed status condition or didn't get the correct (vault-12345) Konnect ID assigned")
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
+	})
+
+	t.Run("Adopting existing vault", func(t *testing.T) {
+		vaultID := uuid.NewString()
+
+		t.Log("Setting up SDK expectations for getting and updating vaults")
+		sdk.VaultSDK.EXPECT().GetVault(
+			mock.Anything,
+			vaultID,
+			cp.GetKonnectID(),
+		).Return(
+			&sdkkonnectops.GetVaultResponse{
+				Vault: &sdkkonnectcomp.Vault{
+					ID:     lo.ToPtr(vaultID),
+					Name:   "test-vault",
+					Prefix: "prefix",
+					Config: map[string]any{},
+				},
+			}, nil,
+		)
+		sdk.VaultSDK.EXPECT().UpsertVault(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertVaultRequest) bool {
+				return req.VaultID == vaultID && req.ControlPlaneID == cp.GetKonnectID()
+			}),
+		).Return(
+			&sdkkonnectops.UpsertVaultResponse{}, nil,
+		)
+
+		t.Log("Creating a KongVault to adopt the existing vault")
+		createdVault := deploy.KongVaultAttachedToCP(t, ctx, cl,
+			"test-vault",
+			"prefix",
+			[]byte(`{"key":"value"}`),
+			cp,
+			deploy.WithKonnectAdoptOptions[*configurationv1alpha1.KongVault](commonv1alpha1.AdoptModeOverride, vaultID),
+		)
+
+		t.Logf("Watching for vault %s to be programmed and set Konnect ID", createdVault.Name)
+		watchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
+			return kv.Name == createdVault.Name &&
+				k8sutils.IsProgrammed(kv) &&
+				kv.GetKonnectID() == vaultID
+		},
+			fmt.Sprintf("KongVault didn't get Programmed status condition or didn't get the correct Konnect ID (%s) assigned", vaultID),
+		)
+
+		t.Log("Setting up SDK expectations for vault deletion")
+		sdk.VaultSDK.EXPECT().DeleteVault(mock.Anything, cp.GetKonnectID(), vaultID).Return(nil, nil)
+
+		t.Logf("Deleting KongVault %s", createdVault.Name)
+		require.NoError(t, cl.Delete(ctx, createdVault))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdVault, waitTime, tickTime)
 	})
 }

@@ -8,6 +8,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -17,6 +18,7 @@ import (
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
@@ -26,6 +28,7 @@ import (
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/test/helpers/deploy"
+	"github.com/kong/kong-operator/test/helpers/eventually"
 	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
@@ -289,5 +292,54 @@ func TestKongConsumerGroup(t *testing.T) {
 			conditionsAreSetWhenReferencedControlPlaneIsMissing(created),
 			"KongConsumerGroup didn't get Programmed and/or ControlPlaneRefValid status condition set to False",
 		)
+	})
+
+	t.Run("Adopting an existing consumer group", func(t *testing.T) {
+		cgID := uuid.NewString()
+		cgName := "adopted-consumer-group"
+
+		w := setupWatch[configurationv1beta1.KongConsumerGroupList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for getting and updating consumer groups")
+		sdk.ConsumerGroupSDK.EXPECT().GetConsumerGroup(
+			mock.Anything,
+			cgID,
+			cp.GetKonnectID(),
+		).Return(&sdkkonnectops.GetConsumerGroupResponse{
+			ConsumerGroupInsideWrapper: &sdkkonnectcomp.ConsumerGroupInsideWrapper{
+				ConsumerGroup: &sdkkonnectcomp.ConsumerGroup{
+					Name: cgName,
+					ID:   lo.ToPtr(cgID),
+				},
+			},
+		}, nil)
+		sdk.ConsumerGroupSDK.EXPECT().UpsertConsumerGroup(
+			mock.Anything,
+			mock.MatchedBy(func(req sdkkonnectops.UpsertConsumerGroupRequest) bool {
+				return req.ConsumerGroupID == cgID && req.ControlPlaneID == cp.GetKonnectID()
+			}),
+		).Return(nil, nil)
+
+		t.Log("Creating a KongConsumerGroup to adopt the existing consumer group")
+		createdConsumerGroup := deploy.KongConsumerGroupAttachedToCP(t, ctx, clientNamespaced,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
+			deploy.WithKonnectAdoptOptions[*configurationv1beta1.KongConsumerGroup](commonv1alpha1.AdoptModeOverride, cgID),
+		)
+
+		t.Logf("Waiting for KongConsumerGroup %s to be programmed and set Konnect ID", client.ObjectKeyFromObject(createdConsumerGroup))
+		watchFor(t, ctx, w, apiwatch.Modified, func(cg *configurationv1beta1.KongConsumerGroup) bool {
+			return cg.Name == createdConsumerGroup.Name &&
+				k8sutils.IsProgrammed(cg) &&
+				cg.GetKonnectID() == cgID
+		},
+			fmt.Sprintf("KongConsumerGroup didn't get Programmed status condition or didn't get the correct Konnect ID (%s) assigned", cgID),
+		)
+
+		t.Log("Setting up SDK expectations for consumer group deletion")
+		sdk.ConsumerGroupSDK.EXPECT().DeleteConsumerGroup(mock.Anything, cp.GetKonnectID(), cgID).Return(nil, nil)
+
+		t.Logf("Deleting KongConsumerGroup %s and waiting for it to disappear", client.ObjectKeyFromObject(createdConsumerGroup))
+		require.NoError(t, clientNamespaced.Delete(ctx, createdConsumerGroup))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdConsumerGroup, waitTime, tickTime)
 	})
 }
