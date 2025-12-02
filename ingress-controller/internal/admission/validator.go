@@ -3,7 +3,6 @@ package admission
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
@@ -438,7 +437,7 @@ func (validator KongHTTPValidator) ValidateGateway(
 	// validate the gatewayclass reference
 	gwc := gatewayapi.GatewayClass{}
 	if err := validator.ManagerClient.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gwc); err != nil {
-		if strings.Contains(err.Error(), "not found") {
+		if apierrors.IsNotFound(err) {
 			return true, "", nil // not managed by this controller
 		}
 		return false, ErrTextCantRetrieveGatewayClass, err
