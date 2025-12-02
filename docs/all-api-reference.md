@@ -726,6 +726,13 @@ KeySetRefType is the enum type for the KeySetRef.
 _Appears in:_
 - [KeySetRef](#keysetref)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `konnectID` | KeySetRefKonnectID is the type for the KonnectID KeySetRef.<br />It is used to reference a KeySet entity by its ID on the Konnect platform.<br /> |
+| `namespacedRef` | KeySetRefNamespacedRef is the type for the KeySetRef.<br />It is used to reference a KeySet entity inside the cluster<br />using a namespaced reference.<br /> |
+
 #### Kind
 _Underlying type:_ `string`
 
@@ -1345,6 +1352,13 @@ Allowed values are:
 
 _Appears in:_
 - [KongPluginBindingSpec](#kongpluginbindingspec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `OnlyTargets` | KongPluginBindingScopeOnlyTargets is the scope for the plugin binding to be applied only to the targets.<br /> |
+| `GlobalInControlPlane` | KongPluginBindingScopeGlobalInControlPlane is the scope for the plugin binding to be applied to all entities in the<br />control plane (a.k.a. global scope).<br /> |
 
 #### KongPluginBindingSpec
 
@@ -2323,6 +2337,15 @@ provider.
 _Appears in:_
 - [AICloudProvider](#aicloudprovider)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `openai` | AICloudProviderOpenAI is the OpenAI cloud provider.<br />They are known for models such as ChatGPT 3.5, 4, Dall-e, e.t.c.<br /> |
+| `azure` | AICloudProviderAzure is the Azure cloud provider.<br />They are known for models such as PHI-2.<br /> |
+| `cohere` | AICloudProviderCohere is the Cohere cloud provider.<br />They are known for models such as Cohere-Embed, and Cohere-Rerank.<br /> |
+| `mistral` | AICloudProviderMistral is the Mistral.AI cloud provider.<br />They are known for models such as mistral-tiny.<br /> |
+
 #### AIGatewayConsumerRef
 
 
@@ -2460,6 +2483,12 @@ such as "internet-accessible", "internal-only".
 _Appears in:_
 - [AIGatewayEndpoint](#aigatewayendpoint)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `internet-accessible` | NetworkInternetAccessible indicates that the endpoint is accessible from<br />the public internet.<br /> |
+
 
 
 
@@ -2546,6 +2575,14 @@ LLMPromptRole indicates the role of a prompt for a large language model (LLM).
 _Appears in:_
 - [LLMPrompt](#llmprompt)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `user` | LLMPromptRoleUser indicates that the prompt is for the user.<br /> |
+| `system` | LLMPromptRoleSystem indicates that the prompt is for the system.<br /> |
+| `assistance` | LLMPromptRoleAssistant indicates that the prompt is for the 'virtual assistant'.<br />It represents something that the chat bot "did", or "theoretically could have," said.<br /> |
+
 #### LLMPromptType
 _Underlying type:_ `string`
 
@@ -2558,6 +2595,13 @@ language model (LLM).
 
 _Appears in:_
 - [CloudHostedLargeLanguageModel](#cloudhostedlargelanguagemodel)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `chat` | LLMPromptTypeChat indicates that the prompt is for a chat.<br /> |
+| `completions` | LLMPromptTypeCompletion indicates that the prompt is for a completion.<br /> |
 
 #### LargeLanguageModels
 
@@ -2751,6 +2795,15 @@ AddressSourceType defines the type of source this address represents.<br /><br /
 _Appears in:_
 - [Address](#address)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `PublicLoadBalancer` | PublicLoadBalancerAddressSourceType represents an address belonging to<br />a public Load Balancer.<br /> |
+| `PrivateLoadBalancer` | PrivateLoadBalancerAddressSourceType represents an address belonging to<br />a private Load Balancer.<br /> |
+| `PublicIP` | PublicIPAddressSourceType represents an address belonging to a public IP.<br /> |
+| `PrivateIP` | PrivateIPAddressSourceType represents an address belonging to a private IP.<br /> |
+
 #### AddressType
 _Underlying type:_ `string`
 
@@ -2763,6 +2816,13 @@ AddressType defines how a network address is represented as a text string.<br />
 
 _Appears in:_
 - [Address](#address)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `IPAddress` | IPAddressType is a textual representation of a numeric IP address. IPv4<br />addresses must be in dotted-decimal form. IPv6 addresses<br />must be in a standard IPv6 text representation<br />(see [RFC 5952](https://tools.ietf.org/html/rfc5952)).<br />This type is intended for specific addresses. Address ranges are not<br />supported (e.g. you can not use a CIDR range like 127.0.0.0/24 as an<br />IPAddress).<br /> |
+| `Hostname` | HostnameAddressType represents a DNS based ingress point. This is similar to the<br />corresponding hostname field in Kubernetes load balancer status. For<br />example, this concept may be used for cloud load balancers where a DNS<br />name is used to expose a load balancer.<br /> |
 
 #### BlueGreenStrategy
 
@@ -3355,6 +3415,13 @@ PromotionStrategy is the type of promotion strategy consts.<br /><br />Allowed v
 _Appears in:_
 - [Promotion](#promotion)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `AutomaticPromotion` | AutomaticPromotion indicates that once all workflows and tests have completed successfully,<br />the new resources should be promoted and replace the previous resources.<br /> |
+| `BreakBeforePromotion` | BreakBeforePromotion is the same as AutomaticPromotion but with an added breakpoint<br />to enable manual inspection.<br />The user must indicate manually when they want the promotion to continue.<br />That can be done by annotating the DataPlane object with<br />`"gateway-operator.konghq.com/promote-when-ready": "true"`.<br /> |
+
 #### Rollout
 
 
@@ -3402,6 +3469,13 @@ managing the Deployment objects during and after a rollout.<br /><br />Allowed v
 
 _Appears in:_
 - [RolloutResourcePlan](#rolloutresourceplan)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `ScaleDownOnPromotionScaleUpOnRollout` | RolloutResourcePlanDeploymentScaleDownOnPromotionScaleUpOnRollout is a rollout<br />resource plan for Deployment which makes the operator scale down<br />the Deployment to 0 when the rollout is not initiated by a spec change<br />and then to scale it up when the rollout is initiated (the owner resource<br />like a DataPlane is patched or updated).<br /> |
+| `DeleteOnPromotionRecreateOnRollout` | RolloutResourcePlanDeploymentDeleteOnPromotionRecreateOnRollout which makes the operator delete the<br />Deployment the rollout is not initiated by a spec change and then to<br />re-create it when the rollout is initiated (the owner resource like<br />a DataPlane is patched or updated)<br /> |
 
 #### RolloutResources
 
@@ -3516,6 +3590,14 @@ WatchNamespacesType indicates the type of namespace watching to be done.
 _Appears in:_
 - [WatchNamespaces](#watchnamespaces)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `all` | WatchNamespacesTypeAll indicates that all namespaces should be watched<br />for resources.<br /> |
+| `list` | WatchNamespacesTypeList indicates that only the namespaces listed in<br />the Namespaces field should be watched for resources.<br />All the namespaces enumerated in the list will be watched in addition to<br />the namespace of the object.<br /> |
+| `own` | WatchNamespacesTypeOwn indicates that only the namespace of the<br />object should be watched for resources.<br /> |
+
 
 ## gateway-operator.konghq.com/v2beta1
 
@@ -3590,6 +3672,13 @@ ConfigDumpState defines the state of configuration dump.
 _Appears in:_
 - [ControlPlaneConfigDump](#controlplaneconfigdump)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `enabled` | ConfigDumpStateEnabled indicates that configuration dump is enabled.<br /> |
+| `disabled` | ConfigDumpStateDisabled indicates that the configuration dump is disabled.<br /> |
+
 #### ControlPlaneCombinedServicesFromDifferentHTTPRoutesState
 _Underlying type:_ `string`
 
@@ -3602,6 +3691,13 @@ feature that allows the ControlPlane to combine services from different HTTPRout
 
 _Appears in:_
 - [ControlPlaneTranslationOptions](#controlplanetranslationoptions)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `enabled` | ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled indicates that the feature is enabled.<br /> |
+| `disabled` | ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateDisabled indicates that the feature is disabled.<br /> |
 
 #### ControlPlaneConfigDump
 
@@ -3722,6 +3818,13 @@ that the ControlPlane is responsible for configuring.
 _Appears in:_
 - [ControlPlaneDataPlaneTarget](#controlplanedataplanetarget)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `ref` | ControlPlaneDataPlaneTargetRefType indicates that the DataPlane target is a ref<br />of a DataPlane resource managed by the operator.<br />This is used for configuring DataPlanes that are managed by the operator.<br /> |
+| `managedByOwner` | ControlPlaneDataPlaneTargetManagedByType indicates that the DataPlane target<br />is managed by the owner of the ControlPlane.<br />This is the case when using a Gateway resource to manage the DataPlane<br />and the ControlPlane is responsible for configuring it.<br /> |
+
 #### ControlPlaneDrainSupportState
 _Underlying type:_ `string`
 
@@ -3734,6 +3837,13 @@ to include terminating endpoints in Kong upstreams with weight=0 for graceful co
 
 _Appears in:_
 - [ControlPlaneTranslationOptions](#controlplanetranslationoptions)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `enabled` | ControlPlaneDrainSupportStateEnabled indicates that the feature is enabled.<br /> |
+| `disabled` | ControlPlaneDrainSupportStateDisabled indicates that the feature is disabled.<br /> |
 
 #### ControlPlaneFallbackConfiguration
 
@@ -3761,6 +3871,13 @@ ControlPlaneFallbackConfigurationState defines the state of the fallback configu
 
 _Appears in:_
 - [ControlPlaneFallbackConfiguration](#controlplanefallbackconfiguration)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `enabled` | ControlPlaneFallbackConfigurationStateEnabled indicates that the fallback configuration is enabled.<br /> |
+| `disabled` | ControlPlaneFallbackConfigurationStateDisabled indicates that the fallback configuration is disabled.<br /> |
 
 #### ControlPlaneFeatureGate
 
@@ -3846,6 +3963,13 @@ ControlPlaneKonnectConsumersSyncState defines the state of consumer synchronizat
 _Appears in:_
 - [ControlPlaneKonnectOptions](#controlplanekonnectoptions)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `enabled` | ControlPlaneKonnectConsumersSyncStateEnabled indicates that consumer synchronization is enabled.<br /> |
+| `disabled` | ControlPlaneKonnectConsumersSyncStateDisabled indicates that consumer synchronization is disabled.<br /> |
+
 #### ControlPlaneKonnectLicensing
 
 
@@ -3875,6 +3999,13 @@ ControlPlaneKonnectLicensingState defines the state of Konnect licensing.
 
 _Appears in:_
 - [ControlPlaneKonnectLicensing](#controlplanekonnectlicensing)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `enabled` | ControlPlaneKonnectLicensingStateEnabled indicates that Konnect licensing is enabled.<br /> |
+| `disabled` | ControlPlaneKonnectLicensingStateDisabled indicates that Konnect licensing is disabled.<br /> |
 
 #### ControlPlaneKonnectOptions
 
@@ -3953,6 +4084,13 @@ ControlPlaneReverseSyncState defines the state of the reverse sync feature.
 _Appears in:_
 - [ControlPlaneDataPlaneSync](#controlplanedataplanesync)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `enabled` | ControlPlaneReverseSyncStateEnabled indicates that reverse sync is enabled.<br /> |
+| `disabled` | ControlPlaneReverseSyncStateDisabled indicates that reverse sync is disabled.<br /> |
+
 #### ControlPlaneSpec
 
 
@@ -4030,6 +4168,13 @@ ControllerState defines the state of a controller.
 _Appears in:_
 - [ControlPlaneController](#controlplanecontroller)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `enabled` | ControllerStateEnabled indicates that the controller is enabled.<br /> |
+| `disabled` | ControllerStateDisabled indicates that the controller is disabled.<br /> |
+
 #### DataPlaneDeploymentOptions
 
 
@@ -4081,6 +4226,13 @@ FeatureGateState defines the state of a feature gate.
 
 _Appears in:_
 - [ControlPlaneFeatureGate](#controlplanefeaturegate)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `enabled` | FeatureGateStateEnabled indicates that the feature gate is enabled.<br /> |
+| `disabled` | FeatureGateStateDisabled indicates that the feature gate is disabled.<br /> |
 
 #### GatewayConfigControlPlaneOptions
 
@@ -4366,6 +4518,13 @@ PromotionStrategy is the type of promotion strategy consts.<br /><br />Allowed v
 _Appears in:_
 - [Promotion](#promotion)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `AutomaticPromotion` | AutomaticPromotion indicates that once all workflows and tests have completed successfully,<br />the new resources should be promoted and replace the previous resources.<br /> |
+| `BreakBeforePromotion` | BreakBeforePromotion is the same as AutomaticPromotion but with an added breakpoint<br />to enable manual inspection.<br />The user must indicate manually when they want the promotion to continue.<br />That can be done by annotating the DataPlane object with<br />`"gateway-operator.konghq.com/promote-when-ready": "true"`.<br /> |
+
 #### Rollout
 
 
@@ -4413,6 +4572,13 @@ managing the Deployment objects during and after a rollout.<br /><br />Allowed v
 
 _Appears in:_
 - [RolloutResourcePlan](#rolloutresourceplan)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `ScaleDownOnPromotionScaleUpOnRollout` | RolloutResourcePlanDeploymentScaleDownOnPromotionScaleUpOnRollout is a rollout<br />resource plan for Deployment which makes the operator scale down<br />the Deployment to 0 when the rollout is not initiated by a spec change<br />and then to scale it up when the rollout is initiated (the owner resource<br />like a DataPlane is patched or updated).<br /> |
+| `DeleteOnPromotionRecreateOnRollout` | RolloutResourcePlanDeploymentDeleteOnPromotionRecreateOnRollout which makes the operator delete the<br />Deployment the rollout is not initiated by a spec change and then to<br />re-create it when the rollout is initiated (the owner resource like<br />a DataPlane is patched or updated)<br /> |
 
 #### RolloutResources
 
@@ -4509,6 +4675,14 @@ WatchNamespacesType indicates the type of namespace watching to be done.
 
 _Appears in:_
 - [WatchNamespaces](#watchnamespaces)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `all` | WatchNamespacesTypeAll indicates that all namespaces should be watched<br />for resources.<br /> |
+| `list` | WatchNamespacesTypeList indicates that only the namespaces listed in<br />the Namespaces field should be watched for resources.<br />All the namespaces enumerated in the list will be watched in addition to<br />the namespace of the object.<br /> |
+| `own` | WatchNamespacesTypeOwn indicates that only the namespace of the<br />object should be watched for resources.<br /> |
 
 
 ## incubator.ingress-controller.konghq.com/v1alpha1
@@ -4857,6 +5031,13 @@ ConfigurationDataPlaneGroupAutoscaleType is the type of autoscale configuration 
 _Appears in:_
 - [ConfigurationDataPlaneGroupAutoscale](#configurationdataplanegroupautoscale)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `static` | ConfigurationDataPlaneGroupAutoscaleTypeStatic is the autoscale type for static configuration.<br /> |
+| `autopilot` | ConfigurationDataPlaneGroupAutoscaleTypeAutopilot is the autoscale type for autopilot configuration.<br /> |
+
 #### ConfigurationDataPlaneGroupEnvironmentField
 
 
@@ -4967,6 +5148,13 @@ KonnectAPIAuthType is the type of authentication used to authenticate with the K
 
 _Appears in:_
 - [KonnectAPIAuthConfigurationSpec](#konnectapiauthconfigurationspec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `token` | KonnectAPIAuthTypeToken is the token authentication type.<br /> |
+| `secretRef` | KonnectAPIAuthTypeSecretRef is the secret reference authentication type.<br /> |
 
 #### KonnectCloudGatewayDataPlaneGroupConfigurationSpec
 
@@ -5173,6 +5361,13 @@ KonnectExtensionClusterType is the type of the Konnect Control Plane.
 _Appears in:_
 - [KonnectExtensionControlPlaneStatus](#konnectextensioncontrolplanestatus)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `ControlPlane` | ClusterTypeControlPlane is the type of the Konnect Control Plane.<br /> |
+| `K8SIngressController` | ClusterTypeK8sIngressController is the type of the Kubernetes Control Plane.<br /> |
+
 #### KonnectExtensionControlPlane
 
 
@@ -5377,6 +5572,13 @@ ProvisioningMethod is the type of the provisioning methods available to provisio
 _Appears in:_
 - [CertificateSecret](#certificatesecret)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Manual` | ManualSecretProvisioning is the method used to provision the certificate manually.<br /> |
+| `Automatic` | AutomaticSecretProvisioning is the method used to provision the certificate automatically.<br /> |
+
 #### SecretRef
 
 
@@ -5422,6 +5624,13 @@ TransitGatewayType defines the type of Konnect transit gateway.
 _Appears in:_
 - [KonnectCloudGatewayTransitGatewaySpec](#konnectcloudgatewaytransitgatewayspec)
 - [KonnectTransitGatewayAPISpec](#konnecttransitgatewayapispec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `AWSTransitGateway` | TransitGatewayTypeAWSTransitGateway defines the the AWS transit gateway type.<br /> |
+| `AzureTransitGateway` | TransitGatewayTypeAzureTransitGateway defines the Azure transit gateway type.<br /> |
 
 
 ## konnect.konghq.com/v1alpha2
@@ -5767,6 +5976,13 @@ KonnectExtensionClusterType is the type of the Konnect Control Plane.
 _Appears in:_
 - [KonnectExtensionControlPlaneStatus](#konnectextensioncontrolplanestatus)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `ControlPlane` | ClusterTypeControlPlane is the type of the Konnect Control Plane.<br /> |
+| `K8SIngressController` | ClusterTypeK8sIngressController is the type of the Kubernetes Control Plane.<br /> |
+
 #### KonnectExtensionControlPlane
 
 
@@ -5946,6 +6162,13 @@ ProvisioningMethod is the type of the provisioning methods available to provisio
 
 _Appears in:_
 - [CertificateSecret](#certificatesecret)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Manual` | ManualSecretProvisioning is the method used to provision the certificate manually.<br /> |
+| `Automatic` | AutomaticSecretProvisioning is the method used to provision the certificate automatically.<br /> |
 
 #### SecretRef
 

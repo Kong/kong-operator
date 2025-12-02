@@ -720,6 +720,13 @@ KeySetRefType is the enum type for the KeySetRef.
 _Appears in:_
 - [KeySetRef](#keysetref)
 
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `konnectID` | KeySetRefKonnectID is the type for the KonnectID KeySetRef.<br />It is used to reference a KeySet entity by its ID on the Konnect platform.<br /> |
+| `namespacedRef` | KeySetRefNamespacedRef is the type for the KeySetRef.<br />It is used to reference a KeySet entity inside the cluster<br />using a namespaced reference.<br /> |
+
 #### Kind
 _Underlying type:_ `string`
 
@@ -1339,6 +1346,13 @@ Allowed values are:
 
 _Appears in:_
 - [KongPluginBindingSpec](#kongpluginbindingspec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `OnlyTargets` | KongPluginBindingScopeOnlyTargets is the scope for the plugin binding to be applied only to the targets.<br /> |
+| `GlobalInControlPlane` | KongPluginBindingScopeGlobalInControlPlane is the scope for the plugin binding to be applied to all entities in the<br />control plane (a.k.a. global scope).<br /> |
 
 #### KongPluginBindingSpec
 
