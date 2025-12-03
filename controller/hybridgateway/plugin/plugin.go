@@ -45,18 +45,18 @@ import (
 //
 // Parameters:
 //
-//	ctx        - Context for API calls.
-//	logger     - Structured logger.
-//	cl         - Kubernetes client.
-//	httpRoute  - Source HTTPRoute.
-//	filter     - The HTTPRouteFilter being processed.
-//	pRef       - Parent (Gateway) reference.
+//   - ctx: Context for API calls.
+//   - logger: Structured logger.
+//   - cl: Kubernetes client.
+//   - httpRoute: Source HTTPRoute.
+//   - filter: The HTTPRouteFilter being processed.
+//   - pRef: Parent (Gateway) reference.
 //
 // Returns:
-//
-//	*configurationv1.KongPlugin - Built or retrieved plugin.
-//	selfManaged                 - True if sourced from ExtensionRef.
-//	error                       - Any error encountered.
+//   - kongPlugin: The translated plugin.
+//   - exists: True if the KongPlugin already exists.
+//   - selfManaged: True if sourced from ExtensionRef.
+//   - err: Any error encountered.
 func PluginForFilter(
 	ctx context.Context,
 	logger logr.Logger,
@@ -64,7 +64,7 @@ func PluginForFilter(
 	httpRoute *gwtypes.HTTPRoute,
 	filter gwtypes.HTTPRouteFilter,
 	pRef *gwtypes.ParentReference,
-) (kongPlugin *configurationv1.KongPlugin, selfManaged bool, err error) {
+) (kongPlugin *configurationv1.KongPlugin, exists, selfManaged bool, err error) {
 	pluginName := namegen.NewKongPluginName(filter)
 	logger = logger.WithValues("kongplugin", pluginName)
 	log.Debug(logger, "Generating KongPlugin for HTTPRoute filter")
@@ -75,10 +75,10 @@ func PluginForFilter(
 		plugin, err := getReferencedKongPlugin(ctx, cl, httpRoute.Namespace, filter)
 		if err != nil {
 			log.Error(logger, err, "Failed to retrieve referenced KongPlugin")
-			return nil, false, fmt.Errorf("failed to retrieve referenced KongPlugin %s: %w", pluginName, err)
+			return nil, false, false, fmt.Errorf("failed to retrieve referenced KongPlugin %s: %w", pluginName, err)
 		}
 		log.Debug(logger, "Successfully retrieved referenced KongPlugin")
-		return plugin, true, nil
+		return plugin, true, true, nil
 	}
 
 	plugin, err := builder.NewKongPlugin().
@@ -90,7 +90,7 @@ func PluginForFilter(
 		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongPlugin resource")
-		return nil, false, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
+		return nil, false, false, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
 	}
 
 	// Check if KongPlugin already exists
@@ -101,13 +101,13 @@ func PluginForFilter(
 	}
 	if err = cl.Get(ctx, namespacedName, existingPlugin); err != nil && !apierrors.IsNotFound(err) {
 		log.Error(logger, err, "Failed to check for existing KongPlugin")
-		return nil, false, fmt.Errorf("failed to check for existing KongPlugin %s: %w", pluginName, err)
+		return nil, false, false, fmt.Errorf("failed to check for existing KongPlugin %s: %w", pluginName, err)
 	}
 
 	if apierrors.IsNotFound(err) {
 		// KongPlugin doesn't exist, create a new one
 		log.Debug(logger, "New KongPlugin generated successfully")
-		return &plugin, false, nil
+		return &plugin, false, false, nil
 	}
 
 	// KongPlugin exists, update annotations to include current HTTPRoute
@@ -121,7 +121,7 @@ func PluginForFilter(
 
 	log.Debug(logger, "Successfully updated existing KongPlugin")
 
-	return &plugin, false, nil
+	return &plugin, true, false, nil
 }
 
 func getReferencedKongPlugin(ctx context.Context, cl client.Client, namespace string, filter gwtypes.HTTPRouteFilter) (*configurationv1.KongPlugin, error) {

@@ -39,8 +39,9 @@ import (
 //   - hostnames: The hostnames for the KongRoute
 //
 // Returns:
-//   - *configurationv1alpha1.KongRoute: The created or updated KongRoute resource
-//   - error: Any error that occurred during the process
+//   - kongRoute: The created or updated KongRoute resource
+//   - exists: A boolean indicating whether the KongRoute already exists (true) or must be created (false)
+//   - err: Any error that occurred during the process
 func RouteForRule(
 	ctx context.Context,
 	logger logr.Logger,
@@ -51,7 +52,7 @@ func RouteForRule(
 	cp *commonv1alpha1.ControlPlaneRef,
 	serviceName string,
 	hostnames []string,
-) (*configurationv1alpha1.KongRoute, error) {
+) (kongRoute *configurationv1alpha1.KongRoute, exists bool, err error) {
 	routeName := namegen.NewKongRouteName(httpRoute, cp, rule)
 	logger = logger.WithValues("kongroute", routeName)
 	log.Debug(logger, "Creating KongRoute for HTTPRoute rule")
@@ -82,19 +83,19 @@ func RouteForRule(
 	newRoute, err := routeBuilder.Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongRoute resource")
-		return nil, fmt.Errorf("failed to build KongRoute %s: %w", routeName, err)
+		return nil, false, fmt.Errorf("failed to build KongRoute %s: %w", routeName, err)
 	}
 
 	err = cl.Get(ctx, namespacedName, existingRoute)
 	if err != nil && !apierrors.IsNotFound(err) {
 		log.Error(logger, err, "Failed to check for existing KongRoute")
-		return nil, fmt.Errorf("failed to check for existing KongRoute %s: %w", routeName, err)
+		return nil, false, fmt.Errorf("failed to check for existing KongRoute %s: %w", routeName, err)
 	}
 
 	// Route doesn't exist yet
 	if apierrors.IsNotFound(err) {
 		log.Debug(logger, "Successfully created new KongRoute")
-		return &newRoute, nil
+		return &newRoute, false, nil
 	}
 
 	// Route is already there, check it is managed by this HTTPRoute
@@ -103,10 +104,10 @@ func RouteForRule(
 		// This should never happen as the HTTPRoute name is used to generate the KongRoute name.
 		err := fmt.Errorf("KongRoute %s already exists and is managed by another HTTPRoute", routeName)
 		log.Error(logger, err, "Failed to create/update KongRoute resource, skipping rule")
-		return nil, err
+		return nil, false, err
 	}
 
 	log.Debug(logger, "Successfully updated existing KongRoute")
 
-	return &newRoute, nil
+	return &newRoute, true, nil
 }
