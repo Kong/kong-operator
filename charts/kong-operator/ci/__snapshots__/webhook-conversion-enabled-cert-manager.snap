@@ -56742,7 +56742,7 @@ rules:
   - kongcertificates
   - kongconsumergroups
   - kongconsumers
-  - kongdataplaneclientcertificates
+  - kongdataplaneclientcertificates/status
   - kongkeys
   - kongkeysets
   - kongsnis
@@ -56773,7 +56773,6 @@ rules:
   - kongcredentialjwts/finalizers
   - kongcredentialjwts/status
   - kongdataplaneclientcertificates/finalizers
-  - kongdataplaneclientcertificates/status
   - kongkeys/finalizers
   - kongkeys/status
   - kongkeysets/finalizers
@@ -56816,6 +56815,7 @@ rules:
   - kongcredentialbasicauths
   - kongcredentialhmacs
   - kongcredentialjwts
+  - kongdataplaneclientcertificates
   - kongpluginbindings
   - kongplugins
   - kongroutes

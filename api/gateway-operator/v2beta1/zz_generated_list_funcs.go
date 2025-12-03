@@ -6,3 +6,8 @@ package v2beta1
 func (obj GatewayConfigurationList) GetItems() []GatewayConfiguration {
 	return obj.Items
 }
+
+// GetItems returns the list of ControlPlane items.
+func (obj ControlPlaneList) GetItems() []ControlPlane {
+	return obj.Items
+}

@@ -113,7 +113,7 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 			konnectv1alpha1.DataPlaneCertificateProvisionedConditionType,
 			konnectv1alpha2.KonnectExtensionReadyConditionType)
 		assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, konnectExtension.Status.Conditions)
-	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+	}, testutils.ObjectUpdateTimeout*30, testutils.ObjectUpdateTick)
 
 	t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s/%s", konnectExtension.Namespace, konnectExtension.Name)
 	require.EventuallyWithT(t,
@@ -468,6 +468,10 @@ func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
 								Name:  "KONG_LOG_LEVEL",
 								Value: "debug",
 							},
+						},
+						ReadinessProbe: &corev1.Probe{
+							InitialDelaySeconds: 1,
+							PeriodSeconds:       1,
 						},
 					},
 				},

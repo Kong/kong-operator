@@ -261,6 +261,9 @@ var supportedGatewayOperatorTypes = []supportedTypesT{
 			{
 				Type: "GatewayConfiguration",
 			},
+			{
+				Type: "ControlPlane",
+			},
 		},
 	},
 }
