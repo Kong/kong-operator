@@ -43,6 +43,10 @@
 - DataPlane: Enable incremental config sync by default when using Konnect as control plane.
   This improves performance of config syncs for large configurations.
   [#2759](https://github.com/Kong/kong-operator/pull/2759)
+- Added new metric for Prometheus called `ingress_controller_admission_count`.
+  It's a counter and has two labels `allowed` to indicate if the resource was allowed
+  and `resource` to indicate the resource under admission.
+  [#2803](https://github.com/Kong/kong-operator/pull/2803)
 
 ## [v2.1.0-alpha.0]
 
