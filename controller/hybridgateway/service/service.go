@@ -42,8 +42,9 @@ import (
 //   - upstreamName: The name of the KongUpstream this service should point to
 //
 // Returns:
-//   - *configurationv1alpha1.KongService: The created or updated service resource
-//   - error: Any error that occurred during the process
+//   - kongService: The created or updated service resource
+//   - exists: A boolean indicating whether the KongService already exists (true) or must be created (false)
+//   - err: Any error that occurred during the process
 func ServiceForRule(
 	ctx context.Context,
 	logger logr.Logger,
@@ -53,7 +54,7 @@ func ServiceForRule(
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
 	upstreamName string,
-) (*configurationv1alpha1.KongService, error) {
+) (kongService *configurationv1alpha1.KongService, exists bool, err error) {
 	serviceName := namegen.NewKongServiceName(cp, rule)
 	logger = logger.WithValues("kongservice", serviceName)
 	log.Debug(logger, "Generating KongService for HTTPRoute rule")
@@ -68,7 +69,7 @@ func ServiceForRule(
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
-		return nil, fmt.Errorf("failed to build KongService %s: %w", serviceName, err)
+		return nil, false, fmt.Errorf("failed to build KongService %s: %w", serviceName, err)
 	}
 
 	// Check if the service already exists
@@ -79,13 +80,13 @@ func ServiceForRule(
 	}
 	if err = cl.Get(ctx, namespacedName, existingService); err != nil && !apierrors.IsNotFound(err) {
 		log.Error(logger, err, "Failed to check for existing KongService")
-		return nil, fmt.Errorf("failed to check for existing KongService %s: %w", serviceName, err)
+		return nil, false, fmt.Errorf("failed to check for existing KongService %s: %w", serviceName, err)
 	}
 
 	if apierrors.IsNotFound(err) {
 		// KongService doesn't exist, create a new one
 		log.Debug(logger, "New KongService generated successfully")
-		return &service, nil
+		return &service, false, nil
 	}
 
 	// KongService exists, update annotations to include current HTTPRoute
@@ -98,5 +99,5 @@ func ServiceForRule(
 	// https://github.com/Kong/kong-operator/issues/2687
 	log.Debug(logger, "Successfully updated existing KongService")
 
-	return &service, nil
+	return &service, true, nil
 }

@@ -39,8 +39,9 @@ import (
 //   - routeName: The name of the KongRoute to bind to
 //
 // Returns:
-//   - *configurationv1alpha1.KongPluginBinding: The created or updated KongPluginBinding resource
-//   - error: Any error that occurred during the process
+//   - kongPluginBinding: The created or updated KongPluginBinding resource
+//   - exists: A boolean indicating whether the KongPluginBinding already exists (true) or must be created (false)
+//   - err: Any error that occurred during the process
 func BindingForPluginAndRoute(
 	ctx context.Context,
 	logger logr.Logger,
@@ -50,7 +51,7 @@ func BindingForPluginAndRoute(
 	cp *commonv1alpha1.ControlPlaneRef,
 	pluginName string,
 	routeName string,
-) (*configurationv1alpha1.KongPluginBinding, error) {
+) (kongPluginBinding *configurationv1alpha1.KongPluginBinding, exists bool, err error) {
 	bindingName := namegen.NewKongPluginBindingName(routeName, pluginName)
 	logger = logger.WithValues("kongpluginbinding", bindingName)
 	log.Debug(logger, "Generating KongPluginBinding for KongPlugin and KongRoute")
@@ -66,7 +67,7 @@ func BindingForPluginAndRoute(
 		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongPluginBinding resource")
-		return nil, fmt.Errorf("failed to build KongPluginBinding %s: %w", bindingName, err)
+		return nil, false, fmt.Errorf("failed to build KongPluginBinding %s: %w", bindingName, err)
 	}
 
 	// Check if KongPluginBinding already exists
@@ -77,13 +78,13 @@ func BindingForPluginAndRoute(
 	}
 	if err = cl.Get(ctx, namespacedName, existingBinding); err != nil && !apierrors.IsNotFound(err) {
 		log.Error(logger, err, "Failed to check for existing KongPluginBinding")
-		return nil, fmt.Errorf("failed to check for existing KongPluginBinding %s: %w", bindingName, err)
+		return nil, false, fmt.Errorf("failed to check for existing KongPluginBinding %s: %w", bindingName, err)
 	}
 
 	if apierrors.IsNotFound(err) {
 		// KongPluginBinding doesn't exist, create a new one
 		log.Debug(logger, "New KongPluginBinding generated successfully")
-		return &binding, nil
+		return &binding, false, nil
 	}
 
 	// KongPluginBinding exists, update annotations to include current HTTPRoute
@@ -96,5 +97,5 @@ func BindingForPluginAndRoute(
 	// https://github.com/Kong/kong-operator/issues/2687
 	log.Debug(logger, "Successfully updated existing KongPluginBinding")
 
-	return &binding, nil
+	return &binding, true, nil
 }

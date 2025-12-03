@@ -38,8 +38,9 @@ import (
 //   - cp: The control plane reference for the KongUpstream
 //
 // Returns:
-//   - *configurationv1alpha1.KongUpstream: The created or updated KongUpstream resource
-//   - error: Any error that occurred during the process
+//   - kongUpstream: The translated KongUpstream resource
+//   - exists: A boolean indicating whether the KongUpstream already exists (true) or must be created (false)
+//   - err: Any error that occurred during the process
 func UpstreamForRule(
 	ctx context.Context,
 	logger logr.Logger,
@@ -48,7 +49,7 @@ func UpstreamForRule(
 	rule gwtypes.HTTPRouteRule,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
-) (*configurationv1alpha1.KongUpstream, error) {
+) (kongUpstream *configurationv1alpha1.KongUpstream, exists bool, err error) {
 	upstreamName := namegen.NewKongUpstreamName(cp, rule)
 	logger = logger.WithValues("kongupstream", upstreamName)
 	log.Debug(logger, "Creating KongUpstream for HTTPRoute rule")
@@ -63,7 +64,7 @@ func UpstreamForRule(
 		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongUpstream resource")
-		return nil, fmt.Errorf("failed to build KongUpstream %s: %w", upstreamName, err)
+		return nil, false, fmt.Errorf("failed to build KongUpstream %s: %w", upstreamName, err)
 	}
 
 	// Check if KongUpstream already exists
@@ -74,13 +75,13 @@ func UpstreamForRule(
 	}
 	if err = cl.Get(ctx, upstreamKey, existingUpstream); err != nil && !apierrors.IsNotFound(err) {
 		log.Error(logger, err, "Failed to check for existing KongUpstream")
-		return nil, fmt.Errorf("failed to check for existing KongUpstream %s: %w", upstreamName, err)
+		return nil, false, fmt.Errorf("failed to check for existing KongUpstream %s: %w", upstreamName, err)
 	}
 
 	if apierrors.IsNotFound(err) {
 		// KongUpstream doesn't exist, create a new one
 		log.Debug(logger, "Creating a new KongUpstream resource")
-		return &upstream, nil
+		return &upstream, false, nil
 	}
 
 	// KongUpstream exists, update annotations to include current HTTPRoute
@@ -93,5 +94,5 @@ func UpstreamForRule(
 	// https://github.com/Kong/kong-operator/issues/2687
 	log.Debug(logger, "Successfully updated existing KongUpstream")
 
-	return &upstream, nil
+	return &upstream, true, nil
 }
