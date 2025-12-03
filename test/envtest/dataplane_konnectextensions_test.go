@@ -40,17 +40,10 @@ import (
 func TestDataPlaneKonnectExtension(t *testing.T) {
 	t.Parallel()
 
-	cfg, _ := Setup(t, t.Context(), scheme.Get())
+	cfg, ns := Setup(t, t.Context(), scheme.Get())
 	ctx := t.Context()
 
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
-
-	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: NameFromT(t),
-		},
-	}
-	require.NoError(t, mgr.GetClient().Create(ctx, ns))
 
 	cl := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
 	factory := sdkmocks.NewMockSDKFactory(t)
@@ -60,25 +53,35 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 		clusterCASecretName = "cluster-ca"
 	)
 
-	clusterCAKeyConfig := secrets.KeyConfig{
-		Type: x509.RSA,
-		Size: 2048,
-	}
+	var (
+		clusterCAKeyConfig = secrets.KeyConfig{
+			Type: x509.RSA,
+			Size: 2048,
+		}
+		clusterCANN = types.NamespacedName{
+			Name:      clusterCASecretName,
+			Namespace: ns.Name,
+		}
+		clusterCALabels = map[string]string{
+			"konghq.com/secret": "true",
+		}
+	)
+	t.Logf("Creating cluster CA secret %s", clusterCANN)
+	require.NoError(t, secrets.CreateClusterCACertificate(ctx, logr.Discard(), cl, clusterCANN, clusterCALabels, clusterCAKeyConfig))
+
 	dpReconciler := &dataplane.Reconciler{
 		Client:                   cl,
 		ClusterCASecretName:      clusterCASecretName,
 		ClusterCASecretNamespace: ns.Name,
 		ClusterCAKeyConfig:       clusterCAKeyConfig,
 		DefaultImage:             consts.DefaultDataPlaneImage,
-		LoggingMode:              logging.DevelopmentMode,
 		ValidateDataPlaneImage:   true,
 		KonnectEnabled:           true,
 		EnforceConfig:            true,
 	}
 	konnectExtensionReconciler := &konnect.KonnectExtensionReconciler{
-		Client:      cl,
-		LoggingMode: logging.DevelopmentMode,
-		SdkFactory:  factory,
+		Client:     cl,
+		SdkFactory: factory,
 		// To ensure we don't resync in test. Reconciler will be called automatically on changes.
 		SyncPeriod:               konnectInfiniteSyncTime,
 		ClusterCASecretName:      clusterCASecretName,
@@ -94,14 +97,6 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 			konnect.WithMetricRecorder[configurationv1alpha1.KongDataPlaneClientCertificate](&metricsmocks.MockRecorder{}),
 		),
 	)
-
-	t.Logf("Creating cluster CA secret")
-	require.NoError(t, secrets.CreateClusterCACertificate(ctx, logr.Discard(), cl, types.NamespacedName{
-		Name:      clusterCASecretName,
-		Namespace: ns.Name,
-	}, map[string]string{
-		"konghq.com/secret": "true",
-	}, clusterCAKeyConfig))
 
 	t.Run("base", func(t *testing.T) {
 		const (
