@@ -767,6 +767,25 @@ _Appears in:_
 
 - [KongCertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcertificatespec)
 
+#### KongCertificateSourceType
+_Underlying type:_ `string`
+
+KongCertificateSourceType is the type of source for the certificate data.
+
+
+
+
+
+_Appears in:_
+- [KongCertificateSpec](#kongcertificatespec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` | KongCertificateSourceTypeInline indicates that the certificate data is provided inline in the spec.<br /> |
+| `secretRef` | KongCertificateSourceTypeSecretRef indicates that the certificate data is sourced from a Kubernetes Secret.<br /> |
+
 #### KongCertificateSpec
 
 
