@@ -804,15 +804,34 @@ KongCertificateAPISpec contains the API specification for the KongCertificate.
 
 | Field | Description |
 | --- | --- |
-| `cert` _string_ | Cert is the PEM-encoded certificate. |
-| `cert_alt` _string_ | CertAlt is the PEM-encoded certificate. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. |
-| `key` _string_ | Key is the PEM-encoded private key. |
-| `key_alt` _string_ | KeyAlt is the PEM-encoded private key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. |
+| `cert` _string_ | Cert is the PEM-encoded certificate. This field is used when type is 'inline'. |
+| `cert_alt` _string_ | CertAlt is the PEM-encoded certificate. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'inline'. |
+| `key` _string_ | Key is the PEM-encoded private key. This field is used when type is 'inline'. |
+| `key_alt` _string_ | KeyAlt is the PEM-encoded private key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'inline'. |
 | `tags` _[Tags](#tags)_ | Tags is an optional set of tags applied to the certificate. |
 
 
 _Appears in:_
 - [KongCertificateSpec](#kongcertificatespec)
+
+#### KongCertificateSourceType
+_Underlying type:_ `string`
+
+KongCertificateSourceType is the type of source for the certificate data.
+
+
+
+
+
+_Appears in:_
+- [KongCertificateSpec](#kongcertificatespec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` | KongCertificateSourceTypeInline indicates that the certificate data is provided inline in the spec.<br /> |
+| `secretRef` | KongCertificateSourceTypeSecretRef indicates that the certificate data is sourced from a Kubernetes Secret.<br /> |
 
 #### KongCertificateSpec
 
@@ -823,12 +842,15 @@ KongCertificateSpec contains the specification for the KongCertificate.
 
 | Field | Description |
 | --- | --- |
+| `type` _[KongCertificateSourceType](#kongcertificatesourcetype)_ | Type indicates the source of the certificate data. Can be 'inline' or 'secretRef'. |
 | `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef references the Konnect Control Plane that this KongCertificate should be created in. |
 | `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a certificate from an existing certificate in Konnect. |
-| `cert` _string_ | Cert is the PEM-encoded certificate. |
-| `cert_alt` _string_ | CertAlt is the PEM-encoded certificate. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. |
-| `key` _string_ | Key is the PEM-encoded private key. |
-| `key_alt` _string_ | KeyAlt is the PEM-encoded private key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. |
+| `secretRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#secretreference-v1-core)_ | SecretRef is a reference to a Kubernetes Secret containing the certificate and key. This field is used when type is 'secretRef'. The Secret must contain keys named 'tls.crt' and 'tls.key'. |
+| `secretRefAlt` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#secretreference-v1-core)_ | SecretRefAlt is a reference to a Kubernetes Secret containing the alternative certificate and key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'secretRef'. The Secret must contain keys named 'tls.crt' and 'tls.key'. |
+| `cert` _string_ | Cert is the PEM-encoded certificate. This field is used when type is 'inline'. |
+| `cert_alt` _string_ | CertAlt is the PEM-encoded certificate. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'inline'. |
+| `key` _string_ | Key is the PEM-encoded private key. This field is used when type is 'inline'. |
+| `key_alt` _string_ | KeyAlt is the PEM-encoded private key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'inline'. |
 | `tags` _[Tags](#tags)_ | Tags is an optional set of tags applied to the certificate. |
 
 
