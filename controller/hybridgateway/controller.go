@@ -179,7 +179,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	}
 
 	// Phase 2: Translation.
-	resourceCount, err := translate(conv, ctx, logger)
+	needsRequeue, resourceCount, err := translate(conv, ctx, logger)
 	if err != nil {
 		// Record translation failure event.
 		r.eventRecorder.Event(
@@ -192,12 +192,14 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	}
 
 	// Record translation success event.
-	r.eventRecorder.Event(
-		obj,
-		corev1.EventTypeNormal,
-		routeconst.EventReasonHTTPRouteTranslationSucceeded,
-		fmt.Sprintf("HTTPRoute successfully translated to %d Kong resources", resourceCount),
-	)
+	if !needsRequeue {
+		r.eventRecorder.Event(
+			obj,
+			corev1.EventTypeNormal,
+			routeconst.EventReasonHTTPRouteTranslationSucceeded,
+			fmt.Sprintf("HTTPRoute successfully translated to %d Kong resources", resourceCount),
+		)
+	}
 
 	// Phase 3: State Enforcement.
 	stateChanged, err := enforceState(ctx, r.Client, logger, conv)
@@ -221,6 +223,12 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 			fmt.Sprintf("Kong resources successfully enforced: %d total", resourceCount),
 		)
 		log.Trace(logger, "State changed, requeueing")
+		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// If translation is not finished and needs requeue, do it now.
+	if needsRequeue {
+		log.Trace(logger, "Translation requeue needed, requeueing")
 		return ctrl.Result{Requeue: true}, nil
 	}
 

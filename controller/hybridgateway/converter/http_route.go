@@ -91,11 +91,11 @@ func (c *httpRouteConverter) GetRootObject() gwtypes.HTTPRoute {
 // Returns:
 //   - int: Number of Kong resources created during translation
 //   - error: Aggregated translation errors or nil if successful
-func (c *httpRouteConverter) Translate(ctx context.Context, logger logr.Logger) (int, error) {
-	if err := c.translate(ctx, logger); err != nil {
-		return 0, err
+func (c *httpRouteConverter) Translate(ctx context.Context, logger logr.Logger) (needsRequeue bool, err error) {
+	if needsRequeue, err = c.translate(ctx, logger); err != nil {
+		return false, err
 	}
-	return len(c.outputStore), nil
+	return needsRequeue, nil
 }
 
 // GetOutputStore implements APIConverter.
@@ -161,6 +161,11 @@ func (c *httpRouteConverter) GetOutputStore(ctx context.Context, logger logr.Log
 
 	log.Debug(logger, "Finished output store conversion", "totalObjectsConverted", len(objects))
 	return objects, nil
+}
+
+// GetOutputStoreLen returns the number of objects in the output store.
+func (c *httpRouteConverter) GetOutputStoreLen(ctx context.Context, logger logr.Logger) int {
+	return len(c.outputStore)
 }
 
 // GetExpectedGVKs returns the list of GroupVersionKinds that this converter expects to manage for HTTPRoute resources.
@@ -293,11 +298,12 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 //   - logger: Logger for structured logging with httproute-translate phase.
 //
 // Returns:
+//   - bool: true if any resource is going to be created anew and we need to requeue translation.
 //   - error: Aggregated translation errors or nil if successful.
 //
 // The function prioritizes complete error visibility over fail-fast behavior, allowing
 // users to see all translation issues at once rather than fixing them one by one.
-func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) error {
+func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) (bool, error) {
 	logger = logger.WithValues("phase", "httproute-translate")
 	log.Debug(logger, "Starting HTTPRoute translation")
 
@@ -306,16 +312,19 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 	supportedParentRefs, err := c.getHybridGatewayParents(ctx, logger)
 	if err != nil {
 		log.Error(logger, err, "Failed to get supported parent references")
-		return err
+		return false, err
 	}
 	if len(supportedParentRefs) == 0 {
 		log.Info(logger, "No supported parent references found, skipping translation")
-		return nil
+		return false, nil
 	}
 
 	log.Debug(logger, "Found supported parent references",
 		"parentRefCount", len(supportedParentRefs))
 
+	// Track if any we need to requeue the translation due to a Kong resource going to be created anew and required by
+	// other Kong resources requiring its prior existence.
+	needsRequeue := false
 	for _, pRefData := range supportedParentRefs {
 		pRef := pRefData.parentRef
 		cp := pRefData.cpRef
@@ -334,7 +343,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				"filterCount", len(rule.Filters))
 
 			// Build the KongUpstream resource.
-			upstreamPtr, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
+			upstreamPtr, exists, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongUpstream resource for rule, skipping rule",
 					"controlPlane", cp.KonnectNamespacedRef)
@@ -345,8 +354,103 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			c.outputStore = append(c.outputStore, upstreamPtr)
 			log.Debug(logger, "Successfully translated KongUpstream resource",
 				"upstream", upstreamName)
+			if !exists {
+				needsRequeue = true
+				continue
+			}
+
+			// Build the KongService resource.
+			servicePtr, exists, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
+			if err != nil {
+				log.Error(logger, err, "Failed to translate KongService resource, skipping rule",
+					"controlPlane", cp.KonnectNamespacedRef,
+					"upstream", upstreamName)
+				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongService for rule: %w", err))
+				continue
+			}
+			serviceName := servicePtr.Name
+			c.outputStore = append(c.outputStore, servicePtr)
+			log.Debug(logger, "Successfully translated KongService resource",
+				"service", serviceName)
+			if !exists {
+				needsRequeue = true
+				continue
+			}
+
+			// Build the KongRoute resource.
+			routePtr, exists, err := kongroute.RouteForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)
+			if err != nil {
+				log.Error(logger, err, "Failed to translate KongRoute resource, skipping rule",
+					"service", serviceName,
+					"hostnames", hostnames)
+				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongRoute for rule: %w", err))
+				continue
+			}
+			routeName := routePtr.Name
+			c.outputStore = append(c.outputStore, routePtr)
+			log.Debug(logger, "Successfully translated KongRoute resource",
+				"route", routeName)
+			if !exists {
+				needsRequeue = true
+				continue
+			}
+
+			// Build the KongPlugin and KongPluginBinding resources.
+			log.Debug(logger, "Processing filters for rule",
+				"kongRoute", routeName,
+				"filterCount", len(rule.Filters))
+
+			for _, filter := range rule.Filters {
+				pluginPtr, exists, selfManagedPlugin, err := plugin.PluginForFilter(ctx, logger, c.Client, c.route, filter, &pRef)
+				if err != nil {
+					log.Error(logger, err, "Failed to translate KongPlugin resource, skipping filter",
+						"filter", filter.Type)
+					translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongPlugin for filter: %w", err))
+					continue
+				}
+				pluginName := pluginPtr.Name
+				if !selfManagedPlugin {
+					c.outputStore = append(c.outputStore, pluginPtr)
+					log.Debug(logger, "Successfully translated KongPlugin resource",
+						"plugin", pluginName)
+					if !exists {
+						needsRequeue = true
+						continue
+					}
+				}
+				// Create a KongPluginBinding to bind the KongPlugin to each KongRoute.
+				bindingPtr, exists, err := pluginbinding.BindingForPluginAndRoute(
+					ctx,
+					logger,
+					c.Client,
+					c.route,
+					&pRef,
+					cp,
+					pluginName,
+					routeName,
+				)
+				if err != nil {
+					log.Error(logger, err, "Failed to build KongPluginBinding resource, skipping binding",
+						"plugin", pluginName,
+						"kongRoute", routeName)
+					translationErrors = append(translationErrors, fmt.Errorf("failed to build KongPluginBinding for plugin %s: %w", pluginName, err))
+					continue
+				}
+				bindingName := bindingPtr.Name
+				c.outputStore = append(c.outputStore, bindingPtr)
+
+				log.Debug(logger, "Successfully translated KongPlugin and KongPluginBinding resources",
+					"plugin", pluginName,
+					"binding", bindingName)
+			}
+
+			// Wait for plugins to be configured before creating targets.
+			if needsRequeue {
+				continue
+			}
 
 			// Build the KongTarget resources.
+			// Leave them as the last step since we want everything fully configured before enabling the traffic to the backends.
 			targets, err := target.TargetsForBackendRefs(
 				ctx,
 				logger.WithValues("upstream", upstreamName),
@@ -372,78 +476,6 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			for _, tgt := range targets {
 				c.outputStore = append(c.outputStore, &tgt)
 			}
-
-			// Build the KongService resource.
-			servicePtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
-			if err != nil {
-				log.Error(logger, err, "Failed to translate KongService resource, skipping rule",
-					"controlPlane", cp.KonnectNamespacedRef,
-					"upstream", upstreamName)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongService for rule: %w", err))
-				continue
-			}
-			serviceName := servicePtr.Name
-			c.outputStore = append(c.outputStore, servicePtr)
-			log.Debug(logger, "Successfully translated KongService resource",
-				"service", serviceName)
-
-			// Build the KongRoute resource.
-			routePtr, err := kongroute.RouteForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)
-			if err != nil {
-				log.Error(logger, err, "Failed to translate KongRoute resource, skipping rule",
-					"service", serviceName,
-					"hostnames", hostnames)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongRoute for rule: %w", err))
-				continue
-			}
-			routeName := routePtr.Name
-			c.outputStore = append(c.outputStore, routePtr)
-			log.Debug(logger, "Successfully translated KongRoute resource",
-				"route", routeName)
-
-			// Build the KongPlugin and KongPluginBinding resources.
-			log.Debug(logger, "Processing filters for rule",
-				"kongRoute", routeName,
-				"filterCount", len(rule.Filters))
-
-			for _, filter := range rule.Filters {
-				pluginPtr, selfManagedPlugin, err := plugin.PluginForFilter(ctx, logger, c.Client, c.route, filter, &pRef)
-				if err != nil {
-					log.Error(logger, err, "Failed to translate KongPlugin resource, skipping filter",
-						"filter", filter.Type)
-					translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongPlugin for filter: %w", err))
-					continue
-				}
-				pluginName := pluginPtr.Name
-				if !selfManagedPlugin {
-					c.outputStore = append(c.outputStore, pluginPtr)
-				}
-
-				// Create a KongPluginBinding to bind the KongPlugin to each KongRoute.
-				bindingPtr, err := pluginbinding.BindingForPluginAndRoute(
-					ctx,
-					logger,
-					c.Client,
-					c.route,
-					&pRef,
-					cp,
-					pluginName,
-					routeName,
-				)
-				if err != nil {
-					log.Error(logger, err, "Failed to build KongPluginBinding resource, skipping binding",
-						"plugin", pluginName,
-						"kongRoute", routeName)
-					translationErrors = append(translationErrors, fmt.Errorf("failed to build KongPluginBinding for plugin %s: %w", pluginName, err))
-					continue
-				}
-				bindingName := bindingPtr.Name
-				c.outputStore = append(c.outputStore, bindingPtr)
-
-				log.Debug(logger, "Successfully translated KongPlugin and KongPluginBinding resources",
-					"plugin", pluginName,
-					"binding", bindingName)
-			}
 		}
 	}
 
@@ -454,13 +486,14 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			"errorCount", len(translationErrors))
 
 		// Join all errors using errors.Join for better error handling
-		return fmt.Errorf("translation failed with %d errors: %w", len(translationErrors), errors.Join(translationErrors...))
+		return needsRequeue, fmt.Errorf("translation failed with %d errors: %w", len(translationErrors), errors.Join(translationErrors...))
 	}
 
 	log.Debug(logger, "Successfully completed HTTPRoute translation",
-		"totalResourcesCreated", len(c.outputStore))
+		"totalResourcesCreated", len(c.outputStore),
+		"needsRequeue", needsRequeue)
 
-	return nil
+	return needsRequeue, nil
 }
 
 type hybridGatewayParent struct {
