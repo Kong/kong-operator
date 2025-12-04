@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kong-operator/test"
 	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/kcfg"
+	inthelpers "github.com/kong/kong-operator/test/integration/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -114,11 +115,15 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: Deploying all required Kubernetes Configuration (RBAC, CRDs, etc.) for the operator")
 	exitOnErr(kcfg.DeployKubernetesConfiguration(GetCtx(), env.Cluster()))
 
-	cleanupTelepresence, err := helpers.SetupTelepresence(ctx)
+	fmt.Println("INFO: final telepresence and intercept setup")
+	cleanupTelepresence, err := inthelpers.SetupTelepresence(ctx)
 	exitOnErr(err)
 	defer cleanupTelepresence()
 
-	fmt.Println("INFO: starting the operator's controller manager")
+	cleanupIntercept, err := inthelpers.SetupNetworkIntercepts(ctx, GetClients())
+	exitOnErr(err)
+	defer cleanupIntercept()
+
 	// Spawn the controller manager based on passed config in
 	// a separate goroutine and report whether that succeeded.
 	managerToTest := func(startedChan chan struct{}) error {
@@ -129,6 +134,8 @@ func TestMain(m *testing.M) {
 		exitOnErr(managerToTest(startedChan))
 	}()
 	<-startedChan
+
+	fmt.Println("INFO: starting the operator's controller manager")
 
 	httpClient, err := helpers.CreateHTTPClient(nil, "")
 	exitOnErr(err)

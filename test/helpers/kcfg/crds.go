@@ -38,6 +38,10 @@ func KongOperatorCRDsPath() string {
 	return filepath.Join(crdPath, "kong-operator")
 }
 
+func ValidatingWebhookPath() string {
+	return filepath.Join(cfgPath, "default", "validating_webhook")
+}
+
 func IngressControllerIncubatorCRDsPath() string {
 	return filepath.Join(crdPath, "ingress-controller-incubator")
 }
