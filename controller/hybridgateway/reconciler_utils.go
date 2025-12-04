@@ -208,6 +208,8 @@ func enforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logg
 // This cleanup process ensures that resources that were previously created by the converter
 // but are no longer needed (due to configuration changes) are properly removed from the cluster.
 //
+// Deletion is performed in a multi-step process ensuring resources are deleted in the order defined by conv.GetExpectedGVKs().
+//
 // Parameters:
 //   - ctx: The context for API calls and cancellation
 //   - cl: The Kubernetes client for listing and deleting resources
@@ -215,18 +217,24 @@ func enforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logg
 //   - conv: The APIConverter that manages the root object and its desired state
 //
 // Returns:
-//   - bool: true if any orphaned resources were deleted from the cluster
+//   - orphansDeleted: true if any orphaned resources were deleted in this iteration
+//   - requeueNeeded: true if a requeue is needed to continue the multi-step deletion process
 //   - error: Any error that occurred during the cleanup process
 //
 // The function uses ownership labels to identify resources managed by the root object
 // and only deletes resources that are no longer present in the converter's desired output.
-func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr[t]](ctx context.Context, cl client.Client, logger logr.Logger, conv converter.APIConverter[t]) (bool, error) {
+func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr[t]](
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	conv converter.APIConverter[t],
+) (orphansDeleted bool, requeueNeeded bool, err error) {
 	logger = logger.WithValues("phase", "orphan-cleanup")
 	log.Debug(logger, "Starting orphaned resource cleanup")
 
 	desiredObjects, err := conv.GetOutputStore(ctx, logger)
 	if err != nil {
-		return false, fmt.Errorf("failed to get desired objects from converter for cleanup: %w", err)
+		return false, false, fmt.Errorf("failed to get desired objects from converter for cleanup: %w", err)
 	}
 
 	desiredSet := make(map[string]struct{})
@@ -243,7 +251,7 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	case tPtr:
 		rootObjPtr = v
 	default:
-		return false, fmt.Errorf("failed to convert root object to pointer type: got %T, expected %T", &rootObj, rootObjPtr)
+		return false, false, fmt.Errorf("failed to convert root object to pointer type: got %T, expected %T", &rootObj, rootObjPtr)
 	}
 
 	// Build a set of desired resource keys.
@@ -256,6 +264,8 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 	log.Debug(logger, "Finished building desired resource key set", "totalKeys", len(desiredSet))
 
 	// For each expected GVK, list resources and delete orphans.
+	// Process one GVK at a time to ensure proper deletion ordering and wait for resources
+	// to be fully deleted before moving to the next type.
 	totalOrphansDeleted := 0
 	for _, gvk := range expectedGVKs {
 		log.Debug(logger, "Processing GVK for orphan cleanup", "gvk", gvk.String())
@@ -265,13 +275,14 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 		selector := metadata.LabelSelectorForOwnedResources(rootObjPtr, nil)
 
 		if err := cl.List(ctx, list, selector); err != nil {
-			return false, fmt.Errorf("unable to list objects with gvk %s: %w", gvk.String(), err)
+			return false, false, fmt.Errorf("unable to list objects with gvk %s: %w", gvk.String(), err)
 		}
 
 		log.Debug(logger, "Found existing resources for GVK", "gvk", gvk.String(), "resourceCount", len(list.Items))
 
 		am := metadata.NewAnnotationManager(logger)
 		orphansForGVK := 0
+		orphansBeingDeleted := 0
 		for _, item := range list.Items {
 			key := fmt.Sprintf("%s/%s/%s", item.GetNamespace(), item.GetName(), gvk.String())
 			if _, found := desiredSet[key]; !found {
@@ -289,14 +300,22 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 				if hybridAnnotations := am.GetRoutes(&item); len(hybridAnnotations) > 0 {
 					log.Debug(logger, "Updating hybrid-routes annotation", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
 					if err := cl.Patch(ctx, &item, client.MergeFrom(oldItem)); err != nil && !errors.IsNotFound(err) {
-						return false, fmt.Errorf("failed to update resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
+						return false, false, fmt.Errorf("failed to update resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
 					}
+					continue
+				}
+
+				// Check if the resource is already being deleted (has deletionTimestamp set).
+				// If so, we need to wait for it to be fully deleted before proceeding to the next GVK.
+				if !item.GetDeletionTimestamp().IsZero() {
+					log.Debug(logger, "Resource is already being deleted, will requeue to wait for deletion", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+					orphansBeingDeleted++
 					continue
 				}
 
 				log.Info(logger, "Deleting orphaned resource", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
 				if err := cl.Delete(ctx, &item); err != nil && !errors.IsNotFound(err) {
-					return false, fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
+					return false, false, fmt.Errorf("failed to delete orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
 				}
 				orphansForGVK++
 				totalOrphansDeleted++
@@ -307,15 +326,33 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 
 		if orphansForGVK > 0 {
 			log.Debug(logger, "Deleted orphaned resources for GVK", "gvk", gvk.String(), "orphansDeleted", orphansForGVK)
+		} else if orphansBeingDeleted > 0 {
+			log.Debug(logger, "Found resources being deleted for GVK, will requeue", "gvk", gvk.String(), "orphansBeingDeleted", orphansBeingDeleted)
 		} else {
 			log.Debug(logger, "No orphaned resources found for GVK", "gvk", gvk.String())
+		}
+
+		// If we found orphans that are currently being deleted, return true to trigger a requeue.
+		// This ensures we wait for the current GVK's resources to be fully deleted before
+		// moving to the next GVK, maintaining the proper deletion order for security.
+		if orphansBeingDeleted > 0 {
+			log.Debug(logger, "Requeueing to wait for resource deletion to complete", "gvk", gvk.String())
+			return totalOrphansDeleted > 0, true, nil
+		}
+
+		// If we deleted any orphans for this GVK, also requeue to verify they are fully deleted
+		// before proceeding to the next GVK type.
+		if orphansForGVK > 0 {
+			log.Debug(logger, "Requeueing after deleting orphaned resources", "gvk", gvk.String(), "orphansDeleted", orphansForGVK)
+			return true, true, nil
 		}
 	}
 
 	log.Debug(logger, "Finished orphaned resource cleanup", "totalOrphansDeleted", totalOrphansDeleted)
-	// Return true if any orphans were deleted.
-	orphansDeleted := totalOrphansDeleted > 0
-	return orphansDeleted, nil
+	// Return deleted status but no requeue needed (all GVKs processed).
+	orphansDeleted = totalOrphansDeleted > 0
+	requeueNeeded = false
+	return orphansDeleted, requeueNeeded, nil
 }
 
 // pruneDesiredObj removes fields that should not be compared when checking for differences.
