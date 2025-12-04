@@ -2,11 +2,14 @@ package integration
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"os"
 	"runtime/debug"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/certmanager"
@@ -22,6 +25,7 @@ import (
 	"github.com/kong/kong-operator/test"
 	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/kcfg"
+	inthelpers "github.com/kong/kong-operator/test/integration/helpers"
 )
 
 // -----------------------------------------------------------------------------
@@ -114,7 +118,9 @@ func TestMain(m *testing.M) {
 	fmt.Println("INFO: Deploying all required Kubernetes Configuration (RBAC, CRDs, etc.) for the operator")
 	exitOnErr(kcfg.DeployKubernetesConfiguration(GetCtx(), env.Cluster()))
 
-	cleanupTelepresence, err := helpers.SetupTelepresence(ctx)
+	fmt.Println("INFO: final telepresence and intercept setup")
+	cleanupTelepresence, err := inthelpers.SetupTelepresence(ctx)
+	_ = cleanupTelepresence
 	exitOnErr(err)
 	defer cleanupTelepresence()
 
@@ -126,6 +132,11 @@ func TestMain(m *testing.M) {
 	defer cleanupPodLabels()
 
 	fmt.Println("INFO: starting the operator's controller manager")
+	cleanupIntercept, err := inthelpers.SetupNetworkIntercepts(ctx, GetClients())
+	_ = cleanupIntercept
+	exitOnErr(err)
+	defer cleanupIntercept()
+
 	// Spawn the controller manager based on passed config in
 	// a separate goroutine and report whether that succeeded.
 	managerToTest := func(startedChan chan struct{}) error {
@@ -137,9 +148,30 @@ func TestMain(m *testing.M) {
 	}()
 	<-startedChan
 
+	fmt.Println("INFO: starting the operator's controller manager")
+
 	httpClient, err := helpers.CreateHTTPClient(nil, "")
 	exitOnErr(err)
 	exitOnErr(testutils.BuildMTLSCredentials(GetCtx(), GetClients().K8sClient, httpClient))
+
+	fmt.Println("INFO: verifying webhook")
+	// httpclient that ignores tls
+	c := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+
+	for i := range 5 {
+		time.Sleep(3 * time.Second)
+		if _, err := c.Get("https://gateway-operator-webhook-service.kong-system:5443/"); err != nil {
+			if i >= 4 {
+				exitOnErr(fmt.Errorf("webhook not reachable: %w", err))
+			}
+		}
+	}
 
 	fmt.Println("INFO: environment is ready, starting tests")
 	code = m.Run()

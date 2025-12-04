@@ -18,7 +18,7 @@ webhooks:
   # NOTE: By default Kong's helm charts use Ignore for the failurePolicy
   # e.g. https://github.com/Kong/charts/blob/fd9deb6ee34d9b9ac4ab4be2188d4564d0b655e5/charts/kong/values.yaml#L586
   # but setting this to Fail here allows devs to see the errors sooner, during development.
-  failurePolicy: Fail
+  failurePolicy: Ignore
   matchPolicy: Equivalent
   name: validations.kong.konghq.com
   rules:
@@ -72,7 +72,7 @@ webhooks:
   # NOTE: By default Kong's helm charts use Ignore for the failurePolicy
   # e.g. https://github.com/Kong/charts/blob/fd9deb6ee34d9b9ac4ab4be2188d4564d0b655e5/charts/kong/values.yaml#L586
   # but setting this to Fail here allows devs to see the errors sooner, during development.
-  failurePolicy: Fail
+  failurePolicy: Ignore
   matchPolicy: Equivalent
   name: secrets.validations.kong.konghq.com
   rules:
@@ -103,7 +103,7 @@ webhooks:
   # NOTE: By default Kong's helm charts use Ignore for the failurePolicy
   # e.g. https://github.com/Kong/charts/blob/fd9deb6ee34d9b9ac4ab4be2188d4564d0b655e5/charts/kong/values.yaml#L586
   # but setting this to Fail here allows devs to see the errors sooner, during development.
-  failurePolicy: Fail
+  failurePolicy: Ignore
   matchPolicy: Equivalent
   name: services.validations.kong.konghq.com
   rules:

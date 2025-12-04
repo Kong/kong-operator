@@ -1,0 +1,2 @@
+timeouts:
+  helm: 120s
