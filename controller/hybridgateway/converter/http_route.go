@@ -50,13 +50,16 @@ func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client, fqdnM
 		route:         httpRoute,
 		fqdnMode:      fqdnMode,
 		clusterDomain: clusterDomain,
+		// IMPORTANT: The order of this slice is significant during resource cleanup operations.
+		// While resources deletion order should take into account dependencies their main goal is to ensure safe cleanup preventing
+		// security issues (e.g., scenarios where routes remain active while security plugins are deleted first).
 		expectedGVKs: []schema.GroupVersionKind{
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongRoute"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongTarget"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongPluginBinding"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongService"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongUpstream"},
-			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongTarget"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1.GroupVersion.Version, Kind: "KongPlugin"},
-			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongPluginBinding"},
 		},
 	}
 }

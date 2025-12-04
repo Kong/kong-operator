@@ -16,6 +16,7 @@ import (
 // of a generic type t that satisfies the RootObject constraint.
 type APIConverter[t RootObject] interface {
 	// GetExpectedGVKs returns the list of GroupVersionKinds for resources expected to be created by this converter.
+	// The order of the returned slice is preserved during cleanup operations.
 	GetExpectedGVKs() []schema.GroupVersionKind
 	// Translate performs the conversion or translation logic for the root object, returning a boolean indicating if a requeue is needed and an error if the process fails.
 	Translate(ctx context.Context, logger logr.Logger) (bool, error)
