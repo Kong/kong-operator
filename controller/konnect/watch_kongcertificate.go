@@ -75,7 +75,7 @@ func enqueueKongCertificateForSecret(cl client.Client) func(ctx context.Context,
 			return nil
 		}
 
-		var requests []reconcile.Request
+		requests := make([]reconcile.Request, 0, len(certList.Items))
 		for _, cert := range certList.Items {
 			requests = append(requests, reconcile.Request{
 				NamespacedName: client.ObjectKey{

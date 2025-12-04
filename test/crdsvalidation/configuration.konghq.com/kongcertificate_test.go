@@ -160,7 +160,7 @@ func TestKongCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.cert and spec.key are required when type is 'inline'"),
+				ExpectedErrorMessage: lo.ToPtr("spec.cert is required when type is 'inline'"),
 			},
 			{
 				Name: "type=inline with empty cert returns error",
@@ -180,7 +180,7 @@ func TestKongCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.cert and spec.key are required when type is 'inline'"),
+				ExpectedErrorMessage: lo.ToPtr("spec.cert is required when type is 'inline'"),
 			},
 			{
 				Name: "type=inline with missing key returns error",
@@ -199,7 +199,7 @@ func TestKongCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.cert and spec.key are required when type is 'inline'"),
+				ExpectedErrorMessage: lo.ToPtr("spec.key is required when type is 'inline'"),
 			},
 			{
 				Name: "type=secretRef requires secretRef field",

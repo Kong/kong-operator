@@ -47,15 +47,14 @@ type KongCertificate struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
-// +kubebuilder:validation:XValidation:rule="self.type == 'inline' ? (has(self.cert) && self.cert.size() != 0 && has(self.key) && self.key.size() != 0) : true", message="spec.cert and spec.key are required when type is 'inline'"
-// +kubebuilder:validation:XValidation:rule="self.type == 'secretRef' ? has(self.secretRef) : true", message="spec.secretRef is required when type is 'secretRef'"
-// +kubebuilder:validation:XValidation:rule="!((has(self.cert) || has(self.key)) && (has(self.secretRef) || has(self.secretRefAlt)))", message="cert/key and secretRef/secretRefAlt cannot be set at the same time"
+// +kubebuilder:validation:XValidation:rule="self.type != 'inline' || (has(self.cert) && self.cert.size() != 0)", message="spec.cert is required when type is 'inline'"
+// +kubebuilder:validation:XValidation:rule="self.type != 'inline' || (has(self.key) && self.key.size() != 0)", message="spec.key is required when type is 'inline'"
+// +kubebuilder:validation:XValidation:rule="self.type != 'secretRef' ||  has(self.secretRef)", message="spec.secretRef is required when type is 'secretRef'"// +kubebuilder:validation:XValidation:rule="!((has(self.cert) || has(self.key)) && (has(self.secretRef) || has(self.secretRefAlt)))", message="cert/key and secretRef/secretRefAlt cannot be set at the same time"
 // +kubebuilder:validation:XValidation:rule="!((has(self.cert_alt) || has(self.key_alt)) && (has(self.secretRef) || has(self.secretRefAlt)))", message="cert_alt/key_alt and secretRef/secretRefAlt cannot be set at the same time"
 // +apireference:kgo:include
 type KongCertificateSpec struct {
 	// Type indicates the source of the certificate data.
 	// Can be 'inline' or 'secretRef'.
-	// +required
 	// +kubebuilder:validation:Enum=inline;secretRef
 	// +kubebuilder:default=inline
 	// +optional
@@ -114,6 +113,8 @@ type KongCertificateAPISpec struct {
 	KeyAlt string `json:"key_alt,omitempty"`
 
 	// Tags is an optional set of tags applied to the certificate.
+	// Tags will be applied when type is 'inline' or 'secretRef'.
+	// This field allows you to attach metadata to the certificate for identification or organization purposes.
 	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
 }
 

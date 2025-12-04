@@ -49348,7 +49348,10 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               tags:
-                description: Tags is an optional set of tags applied to the certificate.
+                description: |-
+                  Tags is an optional set of tags applied to the certificate.
+                  Tags will be applied when type is 'inline' or 'secretRef'.
+                  This field allows you to attach metadata to the certificate for identification or organization purposes.
                 items:
                   type: string
                 maxItems: 20
@@ -49378,9 +49381,12 @@ spec:
             - message: Cannot set or unset spec.adopt in updates
               rule: (has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt)
                 && !has(self.adopt))
-            - message: spec.cert and spec.key are required when type is 'inline'
-              rule: 'self.type == ''inline'' ? (has(self.cert) && self.cert.size()
-                != 0 && has(self.key) && self.key.size() != 0) : true'
+            - message: spec.cert is required when type is 'inline'
+              rule: self.type != 'inline' || (has(self.cert) && self.cert.size() !=
+                0)
+            - message: spec.key is required when type is 'inline'
+              rule: self.type != 'inline' || (has(self.key) && self.key.size() !=
+                0)
             - message: spec.secretRef is required when type is 'secretRef'
               rule: 'self.type == ''secretRef'' ? has(self.secretRef) : true'
             - message: cert/key and secretRef/secretRefAlt cannot be set at the same

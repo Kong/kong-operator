@@ -8,13 +8,13 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/internal/utils/index"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
 func TestEnqueueKongCertificateForSecret(t *testing.T) {
@@ -31,9 +31,7 @@ func TestEnqueueKongCertificateForSecret(t *testing.T) {
 		},
 	}
 
-	s := runtime.NewScheme()
-	_ = configurationv1alpha1.AddToScheme(s)
-	_ = corev1.AddToScheme(s)
+	s := scheme.Get()
 
 	tests := []struct {
 		name               string

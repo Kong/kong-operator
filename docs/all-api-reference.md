@@ -5754,10 +5754,6 @@ _Appears in:_
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)
 
-#### KonnectEntityStatusWithControlPlaneAndCertificateRefs
-
-
-KonnectEntityStatusWithControlPlaneAndCertificateRefs represents the status of a Konnect entity with references to a ControlPlane and a Certificate.
 
 
 
