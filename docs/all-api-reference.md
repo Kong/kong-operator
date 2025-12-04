@@ -808,7 +808,7 @@ KongCertificateAPISpec contains the API specification for the KongCertificate.
 | `cert_alt` _string_ | CertAlt is the PEM-encoded certificate. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'inline'. |
 | `key` _string_ | Key is the PEM-encoded private key. This field is used when type is 'inline'. |
 | `key_alt` _string_ | KeyAlt is the PEM-encoded private key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'inline'. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of tags applied to the certificate. |
+| `tags` _[Tags](#tags)_ | Tags is an optional set of tags applied to the certificate. Tags will be applied when type is 'inline' or 'secretRef'. This field allows you to attach metadata to the certificate for identification or organization purposes. |
 
 
 _Appears in:_
@@ -851,7 +851,7 @@ KongCertificateSpec contains the specification for the KongCertificate.
 | `cert_alt` _string_ | CertAlt is the PEM-encoded certificate. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'inline'. |
 | `key` _string_ | Key is the PEM-encoded private key. This field is used when type is 'inline'. |
 | `key_alt` _string_ | KeyAlt is the PEM-encoded private key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'inline'. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of tags applied to the certificate. |
+| `tags` _[Tags](#tags)_ | Tags is an optional set of tags applied to the certificate. Tags will be applied when type is 'inline' or 'secretRef'. This field allows you to attach metadata to the certificate for identification or organization purposes. |
 
 
 _Appears in:_

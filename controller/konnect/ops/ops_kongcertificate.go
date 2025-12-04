@@ -219,6 +219,8 @@ func fetchTLSDataFromSecret(ctx context.Context, cl client.Client, secretRef *co
 }
 
 func kongCertificateToCertificateInput(ctx context.Context, cl client.Client, cert *configurationv1alpha1.KongCertificate) (sdkkonnectcomp.Certificate, error) {
+	var certData, keyData, certAltData, keyAltData string
+
 	// Check the certificate data type.
 	if cert.Spec.Type != nil && *cert.Spec.Type == configurationv1alpha1.KongCertificateSourceTypeSecretRef {
 		// Fetch the Secret.
@@ -228,34 +230,37 @@ func kongCertificateToCertificateInput(ctx context.Context, cl client.Client, ce
 			return sdkkonnectcomp.Certificate{}, fmt.Errorf("secretRef is nil")
 		}
 
-		certData, keyData, err := fetchTLSDataFromSecret(ctx, cl, secretRef)
+		var err error
+		certData, keyData, err = fetchTLSDataFromSecret(ctx, cl, secretRef)
 		if err != nil {
 			return sdkkonnectcomp.Certificate{}, err
 		}
-		cert.Spec.Cert = certData
-		cert.Spec.Key = keyData
 
 		// Optional alternative cert/key.
 		if cert.Spec.SecretRefAlt != nil {
-			altCertData, altKeyData, err := fetchTLSDataFromSecret(ctx, cl, cert.Spec.SecretRefAlt)
+			certAltData, keyAltData, err = fetchTLSDataFromSecret(ctx, cl, cert.Spec.SecretRefAlt)
 			if err != nil {
 				return sdkkonnectcomp.Certificate{}, err
 			}
-			cert.Spec.CertAlt = altCertData
-			cert.Spec.KeyAlt = altKeyData
 		}
+	} else {
+		// Use inline certificate data.
+		certData = cert.Spec.Cert
+		keyData = cert.Spec.Key
+		certAltData = cert.Spec.CertAlt
+		keyAltData = cert.Spec.KeyAlt
 	}
 
 	input := sdkkonnectcomp.Certificate{
-		Cert: cert.Spec.Cert,
-		Key:  cert.Spec.Key,
+		Cert: certData,
+		Key:  keyData,
 		Tags: GenerateTagsForObject(cert, cert.Spec.Tags...),
 	}
-	if cert.Spec.CertAlt != "" {
-		input.CertAlt = lo.ToPtr(cert.Spec.CertAlt)
+	if certAltData != "" {
+		input.CertAlt = lo.ToPtr(certAltData)
 	}
-	if cert.Spec.KeyAlt != "" {
-		input.KeyAlt = lo.ToPtr(cert.Spec.KeyAlt)
+	if keyAltData != "" {
+		input.KeyAlt = lo.ToPtr(keyAltData)
 	}
 
 	return input, nil

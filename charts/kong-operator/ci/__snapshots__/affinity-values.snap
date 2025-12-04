@@ -46404,7 +46404,10 @@ spec:
                 type: object
                 x-kubernetes-map-type: atomic
               tags:
-                description: Tags is an optional set of tags applied to the certificate.
+                description: |-
+                  Tags is an optional set of tags applied to the certificate.
+                  Tags will be applied when type is 'inline' or 'secretRef'.
+                  This field allows you to attach metadata to the certificate for identification or organization purposes.
                 items:
                   type: string
                 maxItems: 20

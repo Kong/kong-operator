@@ -55,7 +55,6 @@ type KongCertificate struct {
 type KongCertificateSpec struct {
 	// Type indicates the source of the certificate data.
 	// Can be 'inline' or 'secretRef'.
-	// +required
 	// +kubebuilder:validation:Enum=inline;secretRef
 	// +kubebuilder:default=inline
 	// +optional
@@ -114,6 +113,8 @@ type KongCertificateAPISpec struct {
 	KeyAlt string `json:"key_alt,omitempty"`
 
 	// Tags is an optional set of tags applied to the certificate.
+	// Tags will be applied when type is 'inline' or 'secretRef'.
+	// This field allows you to attach metadata to the certificate for identification or organization purposes.
 	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
 }
 
