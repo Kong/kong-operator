@@ -17,11 +17,11 @@ type MockSDKWrapper struct {
 	ControlPlaneSDK             *mocks.MockControlPlanesSDK
 	CloudGatewaysSDK            *MockCloudGatewaysSDK
 	ControlPlaneGroupSDK        *MockControlPlaneGroupSDK
-	ServicesSDK                 *MockServicesSDK
+	ServicesSDK                 *mocks.MockServicesSDK
 	RoutesSDK                   *MockRoutesSDK
-	ConsumersSDK                *MockConsumersSDK
-	ConsumerGroupSDK            *MockConsumerGroupSDK
-	PluginSDK                   *MockPluginSDK
+	ConsumersSDK                *mocks.MockConsumersSDK
+	ConsumerGroupSDK            *mocks.MockConsumerGroupsSDK
+	PluginSDK                   *mocks.MockPluginsSDK
 	UpstreamsSDK                *MockUpstreamsSDK
 	TargetsSDK                  *MockTargetsSDK
 	MeSDK                       *MockMeSDK
@@ -33,8 +33,8 @@ type MockSDKWrapper struct {
 	CACertificatesSDK           *MockCACertificatesSDK
 	CertificatesSDK             *MockCertificatesSDK
 	VaultSDK                    *MockVaultSDK
-	KeysSDK                     *MockKeysSDK
-	KeySetsSDK                  *MockKeySetsSDK
+	KeysSDK                     *mocks.MockKeysSDK
+	KeySetsSDK                  *mocks.MockKeySetsSDK
 	SNIsSDK                     *MockSNIsSDK
 	DataPlaneCertificatesSDK    *MockDataPlaneClientCertificatesSDK
 	server                      server.Server
@@ -47,11 +47,11 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		ControlPlaneSDK:             mocks.NewMockControlPlanesSDK(t),
 		ControlPlaneGroupSDK:        NewMockControlPlaneGroupSDK(t),
 		CloudGatewaysSDK:            NewMockCloudGatewaysSDK(t),
-		ServicesSDK:                 NewMockServicesSDK(t),
+		ServicesSDK:                 mocks.NewMockServicesSDK(t),
 		RoutesSDK:                   NewMockRoutesSDK(t),
-		ConsumersSDK:                NewMockConsumersSDK(t),
-		ConsumerGroupSDK:            NewMockConsumerGroupSDK(t),
-		PluginSDK:                   NewMockPluginSDK(t),
+		ConsumersSDK:                mocks.NewMockConsumersSDK(t),
+		ConsumerGroupSDK:            mocks.NewMockConsumerGroupsSDK(t),
+		PluginSDK:                   mocks.NewMockPluginsSDK(t),
 		UpstreamsSDK:                NewMockUpstreamsSDK(t),
 		TargetsSDK:                  NewMockTargetsSDK(t),
 		MeSDK:                       NewMockMeSDK(t),
@@ -63,8 +63,8 @@ func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 		CACertificatesSDK:           NewMockCACertificatesSDK(t),
 		CertificatesSDK:             NewMockCertificatesSDK(t),
 		VaultSDK:                    NewMockVaultSDK(t),
-		KeysSDK:                     NewMockKeysSDK(t),
-		KeySetsSDK:                  NewMockKeySetsSDK(t),
+		KeysSDK:                     mocks.NewMockKeysSDK(t),
+		KeySetsSDK:                  mocks.NewMockKeySetsSDK(t),
 		SNIsSDK:                     NewMockSNIsSDK(t),
 		DataPlaneCertificatesSDK:    NewMockDataPlaneClientCertificatesSDK(t),
 
@@ -93,7 +93,7 @@ func (m MockSDKWrapper) GetControlPlaneGroupSDK() sdkops.ControlPlaneGroupSDK {
 	return m.ControlPlaneGroupSDK
 }
 
-func (m MockSDKWrapper) GetServicesSDK() sdkops.ServicesSDK {
+func (m MockSDKWrapper) GetServicesSDK() sdkkonnectgo.ServicesSDK {
 	return m.ServicesSDK
 }
 
@@ -101,15 +101,15 @@ func (m MockSDKWrapper) GetRoutesSDK() sdkops.RoutesSDK {
 	return m.RoutesSDK
 }
 
-func (m MockSDKWrapper) GetConsumersSDK() sdkops.ConsumersSDK {
+func (m MockSDKWrapper) GetConsumersSDK() sdkkonnectgo.ConsumersSDK {
 	return m.ConsumersSDK
 }
 
-func (m MockSDKWrapper) GetConsumerGroupsSDK() sdkops.ConsumerGroupSDK {
+func (m MockSDKWrapper) GetConsumerGroupsSDK() sdkkonnectgo.ConsumerGroupsSDK {
 	return m.ConsumerGroupSDK
 }
 
-func (m MockSDKWrapper) GetPluginSDK() sdkops.PluginSDK {
+func (m MockSDKWrapper) GetPluginSDK() sdkkonnectgo.PluginsSDK {
 	return m.PluginSDK
 }
 
@@ -157,11 +157,11 @@ func (m MockSDKWrapper) GetCertificatesSDK() sdkops.CertificatesSDK {
 	return m.CertificatesSDK
 }
 
-func (m MockSDKWrapper) GetKeysSDK() sdkops.KeysSDK {
+func (m MockSDKWrapper) GetKeysSDK() sdkkonnectgo.KeysSDK {
 	return m.KeysSDK
 }
 
-func (m MockSDKWrapper) GetKeySetsSDK() sdkops.KeySetsSDK {
+func (m MockSDKWrapper) GetKeySetsSDK() sdkkonnectgo.KeySetsSDK {
 	return m.KeySetsSDK
 }
 

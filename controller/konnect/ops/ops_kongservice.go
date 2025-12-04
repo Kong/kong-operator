@@ -7,18 +7,18 @@ import (
 	"net/url"
 	"strconv"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
 
 func createService(
 	ctx context.Context,
-	sdk sdkops.ServicesSDK,
+	sdk sdkkonnectgo.ServicesSDK,
 	svc *configurationv1alpha1.KongService,
 ) error {
 	if svc.GetControlPlaneID() == "" {
@@ -49,7 +49,7 @@ func createService(
 // if the operation fails.
 func updateService(
 	ctx context.Context,
-	sdk sdkops.ServicesSDK,
+	sdk sdkkonnectgo.ServicesSDK,
 	svc *configurationv1alpha1.KongService,
 ) error {
 	if svc.GetControlPlaneID() == "" {
@@ -77,7 +77,7 @@ func updateService(
 // It returns an error if the operation fails.
 func deleteService(
 	ctx context.Context,
-	sdk sdkops.ServicesSDK,
+	sdk sdkkonnectgo.ServicesSDK,
 	svc *configurationv1alpha1.KongService,
 ) error {
 	id := svc.GetKonnectStatus().GetKonnectID()
@@ -91,7 +91,7 @@ func deleteService(
 
 func adoptService(
 	ctx context.Context,
-	sdk sdkops.ServicesSDK,
+	sdk sdkkonnectgo.ServicesSDK,
 	svc *configurationv1alpha1.KongService,
 ) error {
 	cpID := svc.GetControlPlaneID()
@@ -172,7 +172,7 @@ func kongServiceToSDKServiceInput(
 // that matches the UID of the provided KongService.
 func getKongServiceForUID(
 	ctx context.Context,
-	sdk sdkops.ServicesSDK,
+	sdk sdkkonnectgo.ServicesSDK,
 	svc *configurationv1alpha1.KongService,
 ) (string, error) {
 	reqList := sdkkonnectops.ListServiceRequest{

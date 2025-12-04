@@ -7,6 +7,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -18,7 +19,6 @@ import (
 	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/pkg/metadata"
-	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 func TestKongConsumerGroupToSDKConsumerGroupInput_Tags(t *testing.T) {
@@ -59,7 +59,7 @@ func TestKongConsumerGroupToSDKConsumerGroupInput_Tags(t *testing.T) {
 
 func TestAdoptKongConsumerGroupOverride(t *testing.T) {
 	ctx := context.Background()
-	sdk := sdkmocks.NewMockConsumerGroupSDK(t)
+	sdk := mocks.NewMockConsumerGroupsSDK(t)
 
 	group := &configurationv1beta1.KongConsumerGroup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -103,7 +103,7 @@ func TestAdoptKongConsumerGroupOverride(t *testing.T) {
 
 func TestAdoptKongConsumerGroupMatch(t *testing.T) {
 	ctx := context.Background()
-	sdk := sdkmocks.NewMockConsumerGroupSDK(t)
+	sdk := mocks.NewMockConsumerGroupsSDK(t)
 
 	group := &configurationv1beta1.KongConsumerGroup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -142,7 +142,7 @@ func TestAdoptKongConsumerGroupMatch(t *testing.T) {
 
 func TestAdoptKongConsumerGroupMatchNotMatching(t *testing.T) {
 	ctx := context.Background()
-	sdk := sdkmocks.NewMockConsumerGroupSDK(t)
+	sdk := mocks.NewMockConsumerGroupsSDK(t)
 
 	group := &configurationv1beta1.KongConsumerGroup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -182,7 +182,7 @@ func TestAdoptKongConsumerGroupMatchNotMatching(t *testing.T) {
 
 func TestAdoptKongConsumerGroupUIDConflict(t *testing.T) {
 	ctx := context.Background()
-	sdk := sdkmocks.NewMockConsumerGroupSDK(t)
+	sdk := mocks.NewMockConsumerGroupsSDK(t)
 
 	group := &configurationv1beta1.KongConsumerGroup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -225,7 +225,7 @@ func TestAdoptKongConsumerGroupUIDConflict(t *testing.T) {
 
 func TestAdoptKongConsumerGroupFetchError(t *testing.T) {
 	ctx := context.Background()
-	sdk := sdkmocks.NewMockConsumerGroupSDK(t)
+	sdk := mocks.NewMockConsumerGroupsSDK(t)
 
 	group := &configurationv1beta1.KongConsumerGroup{
 		ObjectMeta: metav1.ObjectMeta{

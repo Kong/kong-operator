@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
@@ -19,15 +20,14 @@ import (
 	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
 	kcfgkonnect "github.com/kong/kong-operator/api/konnect"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
 func createConsumer(
 	ctx context.Context,
-	sdk sdkops.ConsumersSDK,
-	cgSDK sdkops.ConsumerGroupSDK,
+	sdk sdkkonnectgo.ConsumersSDK,
+	cgSDK sdkkonnectgo.ConsumerGroupsSDK,
 	cl client.Client,
 	consumer *configurationv1.KongConsumer,
 ) error {
@@ -69,8 +69,8 @@ func createConsumer(
 // It returns an error if the KongConsumer does not have a ControlPlaneRef.
 func updateConsumer(
 	ctx context.Context,
-	sdk sdkops.ConsumersSDK,
-	cgSDK sdkops.ConsumerGroupSDK,
+	sdk sdkkonnectgo.ConsumersSDK,
+	cgSDK sdkkonnectgo.ConsumerGroupsSDK,
 	cl client.Client,
 	consumer *configurationv1.KongConsumer,
 ) error {
@@ -113,8 +113,8 @@ func handleConsumerGroupAssignments(
 	ctx context.Context,
 	consumer *configurationv1.KongConsumer,
 	cl client.Client,
-	sdk sdkops.ConsumersSDK,
-	cgSDK sdkops.ConsumerGroupSDK,
+	sdk sdkkonnectgo.ConsumersSDK,
+	cgSDK sdkkonnectgo.ConsumerGroupsSDK,
 	cpID string,
 ) error {
 	// Resolve the Konnect IDs of the ConsumerGroups referenced by the KongConsumer.
@@ -155,8 +155,8 @@ func handleConsumerGroupAssignments(
 func reconcileConsumerGroupsWithKonnect(
 	ctx context.Context,
 	desiredConsumerGroupsIDs []string,
-	sdk sdkops.ConsumersSDK,
-	cgSDK sdkops.ConsumerGroupSDK,
+	sdk sdkkonnectgo.ConsumersSDK,
+	cgSDK sdkkonnectgo.ConsumerGroupsSDK,
 	cpID string,
 	consumer *configurationv1.KongConsumer,
 ) error {
@@ -301,7 +301,7 @@ func resolveConsumerGroupsKonnectIDs(
 // It returns an error if the operation fails.
 func deleteConsumer(
 	ctx context.Context,
-	sdk sdkops.ConsumersSDK,
+	sdk sdkkonnectgo.ConsumersSDK,
 	consumer *configurationv1.KongConsumer,
 ) error {
 	id := consumer.Status.Konnect.GetKonnectID()
@@ -315,8 +315,8 @@ func deleteConsumer(
 
 func adoptConsumer(
 	ctx context.Context,
-	sdk sdkops.ConsumersSDK,
-	cgSDK sdkops.ConsumerGroupSDK,
+	sdk sdkkonnectgo.ConsumersSDK,
+	cgSDK sdkkonnectgo.ConsumerGroupsSDK,
 	cl client.Client,
 	consumer *configurationv1.KongConsumer,
 	adoptOptions commonv1alpha1.AdoptOptions,
@@ -373,7 +373,7 @@ func adoptConsumer(
 
 func ensureConsumerMatch(
 	ctx context.Context,
-	sdk sdkops.ConsumersSDK,
+	sdk sdkkonnectgo.ConsumersSDK,
 	cl client.Client,
 	consumer *configurationv1.KongConsumer,
 	existing *sdkkonnectcomp.Consumer,
@@ -440,7 +440,7 @@ func kongConsumerToSDKConsumerInput(
 // getKongConsumerForUID lists consumers in Konnect with given k8s uid as its tag.
 func getKongConsumerForUID(
 	ctx context.Context,
-	sdk sdkops.ConsumersSDK,
+	sdk sdkkonnectgo.ConsumersSDK,
 	consumer *configurationv1.KongConsumer,
 ) (string, error) {
 	cpID := consumer.GetControlPlaneID()
