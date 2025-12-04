@@ -6,6 +6,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/mock"
@@ -21,7 +22,6 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/metadata"
-	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
@@ -440,7 +440,7 @@ func TestAdoptKongPluginBindingOverride(t *testing.T) {
 	}
 
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(plugin, service).Build()
-	sdk := sdkmocks.NewMockPluginSDK(t)
+	sdk := mocks.NewMockPluginsSDK(t)
 	sdk.EXPECT().GetPlugin(mock.Anything,
 		sdkkonnectops.GetPluginRequest{
 			PluginID:       pluginKonnectID,
@@ -544,7 +544,7 @@ func TestAdoptKongPluginBindingMatch(t *testing.T) {
 	remotePlugin := *desiredPlugin
 	remotePlugin.ID = lo.ToPtr(pluginKonnectID)
 
-	sdk := sdkmocks.NewMockPluginSDK(t)
+	sdk := mocks.NewMockPluginsSDK(t)
 	sdk.EXPECT().GetPlugin(mock.Anything,
 		sdkkonnectops.GetPluginRequest{
 			PluginID:       pluginKonnectID,
@@ -610,7 +610,7 @@ func TestAdoptKongPluginBindingMatchMismatch(t *testing.T) {
 	}
 
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(plugin).Build()
-	sdk := sdkmocks.NewMockPluginSDK(t)
+	sdk := mocks.NewMockPluginsSDK(t)
 	sdk.EXPECT().GetPlugin(mock.Anything,
 		sdkkonnectops.GetPluginRequest{
 			PluginID:       pluginKonnectID,
@@ -678,7 +678,7 @@ func TestAdoptKongPluginBindingFetchError(t *testing.T) {
 	}
 
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(plugin).Build()
-	sdk := sdkmocks.NewMockPluginSDK(t)
+	sdk := mocks.NewMockPluginsSDK(t)
 	sdk.EXPECT().GetPlugin(mock.Anything,
 		sdkkonnectops.GetPluginRequest{
 			PluginID:       pluginKonnectID,
@@ -740,7 +740,7 @@ func TestAdoptKongPluginBindingUIDConflict(t *testing.T) {
 	}
 
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(plugin).Build()
-	sdk := sdkmocks.NewMockPluginSDK(t)
+	sdk := mocks.NewMockPluginsSDK(t)
 	sdk.EXPECT().GetPlugin(mock.Anything,
 		sdkkonnectops.GetPluginRequest{
 			PluginID:       pluginKonnectID,

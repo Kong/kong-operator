@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"slices"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
@@ -18,7 +19,6 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/pkg/metadata"
 )
 
@@ -30,7 +30,7 @@ import (
 func createPlugin(
 	ctx context.Context,
 	cl client.Client,
-	sdk sdkops.PluginSDK,
+	sdk sdkkonnectgo.PluginsSDK,
 	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) error {
 	controlPlaneID := pluginBinding.GetControlPlaneID()
@@ -66,7 +66,7 @@ func createPlugin(
 // if the operation fails.
 func updatePlugin(
 	ctx context.Context,
-	sdk sdkops.PluginSDK,
+	sdk sdkkonnectgo.PluginsSDK,
 	cl client.Client,
 	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) error {
@@ -101,7 +101,7 @@ func updatePlugin(
 // It returns an error if the operation fails.
 func deletePlugin(
 	ctx context.Context,
-	sdk sdkops.PluginSDK,
+	sdk sdkkonnectgo.PluginsSDK,
 	pb *configurationv1alpha1.KongPluginBinding,
 ) error {
 	id := pb.GetKonnectID()
@@ -116,7 +116,7 @@ func deletePlugin(
 // getPluginForUID lists plugins in Konnect with given k8s uid as its tag.
 func getPluginForUID(
 	ctx context.Context,
-	sdk sdkops.PluginSDK,
+	sdk sdkkonnectgo.PluginsSDK,
 	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) (string, error) {
 	cpID := pluginBinding.GetControlPlaneID()
@@ -140,7 +140,7 @@ func getPluginForUID(
 
 func adoptPluginBinding(
 	ctx context.Context,
-	sdk sdkops.PluginSDK,
+	sdk sdkkonnectgo.PluginsSDK,
 	cl client.Client,
 	pluginBinding *configurationv1alpha1.KongPluginBinding,
 ) error {

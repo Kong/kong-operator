@@ -6,6 +6,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -18,7 +19,6 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/pkg/metadata"
-	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 func TestKongKeySetToKeySetInput(t *testing.T) {
@@ -66,15 +66,15 @@ func TestAdoptKongKeySetOverride(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
 		name                string
-		mockPair            func(*testing.T) (*sdkmocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet)
+		mockPair            func(*testing.T) (*mocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet)
 		assertions          func(*testing.T, *configurationv1alpha1.KongKeySet)
 		expectedErrContains string
 		expectedErrType     error
 	}{
 		{
 			name: "success",
-			mockPair: func(t *testing.T) (*sdkmocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
-				sdk := sdkmocks.NewMockKeySetsSDK(t)
+			mockPair: func(t *testing.T) (*mocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
+				sdk := mocks.NewMockKeySetsSDK(t)
 				sdk.EXPECT().GetKeySet(mock.Anything, "ks-1", "cp-1").Return(
 					&sdkkonnectops.GetKeySetResponse{
 						KeySet: &sdkkonnectcomp.KeySet{
@@ -122,8 +122,8 @@ func TestAdoptKongKeySetOverride(t *testing.T) {
 		},
 		{
 			name: "fetch failed",
-			mockPair: func(t *testing.T) (*sdkmocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
-				sdk := sdkmocks.NewMockKeySetsSDK(t)
+			mockPair: func(t *testing.T) (*mocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
+				sdk := mocks.NewMockKeySetsSDK(t)
 				sdk.EXPECT().GetKeySet(mock.Anything, "ks-1", "cp-1").Return(
 					nil,
 					&sdkkonnecterrs.NotFoundError{},
@@ -163,8 +163,8 @@ func TestAdoptKongKeySetOverride(t *testing.T) {
 		},
 		{
 			name: "uid conflict",
-			mockPair: func(t *testing.T) (*sdkmocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
-				sdk := sdkmocks.NewMockKeySetsSDK(t)
+			mockPair: func(t *testing.T) (*mocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
+				sdk := mocks.NewMockKeySetsSDK(t)
 				sdk.EXPECT().GetKeySet(mock.Anything, "ks-1", "cp-1").Return(
 					&sdkkonnectops.GetKeySetResponse{
 						KeySet: &sdkkonnectcomp.KeySet{
@@ -237,15 +237,15 @@ func TestAdoptKongKeySetMatch(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
 		name                string
-		mockPair            func(*testing.T) (*sdkmocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet)
+		mockPair            func(*testing.T) (*mocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet)
 		assertions          func(*testing.T, *configurationv1alpha1.KongKeySet)
 		expectedErrContains string
 		expectedErrType     error
 	}{
 		{
 			name: "success",
-			mockPair: func(t *testing.T) (*sdkmocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
-				sdk := sdkmocks.NewMockKeySetsSDK(t)
+			mockPair: func(t *testing.T) (*mocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
+				sdk := mocks.NewMockKeySetsSDK(t)
 				sdk.EXPECT().GetKeySet(mock.Anything, "ks-1", "cp-1").Return(
 					&sdkkonnectops.GetKeySetResponse{
 						KeySet: &sdkkonnectcomp.KeySet{
@@ -290,8 +290,8 @@ func TestAdoptKongKeySetMatch(t *testing.T) {
 		},
 		{
 			name: "mismatch",
-			mockPair: func(t *testing.T) (*sdkmocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
-				sdk := sdkmocks.NewMockKeySetsSDK(t)
+			mockPair: func(t *testing.T) (*mocks.MockKeySetsSDK, *configurationv1alpha1.KongKeySet) {
+				sdk := mocks.NewMockKeySetsSDK(t)
 				sdk.EXPECT().GetKeySet(mock.Anything, "ks-1", "cp-1").Return(
 					&sdkkonnectops.GetKeySetResponse{
 						KeySet: &sdkkonnectcomp.KeySet{
