@@ -441,7 +441,11 @@ func TestAdoptKongPluginBindingOverride(t *testing.T) {
 
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(plugin, service).Build()
 	sdk := sdkmocks.NewMockPluginSDK(t)
-	sdk.EXPECT().GetPlugin(mock.Anything, pluginKonnectID, cpID).Return(
+	sdk.EXPECT().GetPlugin(mock.Anything,
+		sdkkonnectops.GetPluginRequest{
+			PluginID:       pluginKonnectID,
+			ControlPlaneID: cpID,
+		}).Return(
 		&sdkkonnectops.GetPluginResponse{
 			Plugin: &sdkkonnectcomp.Plugin{
 				ID: lo.ToPtr(pluginKonnectID),
@@ -541,7 +545,11 @@ func TestAdoptKongPluginBindingMatch(t *testing.T) {
 	remotePlugin.ID = lo.ToPtr(pluginKonnectID)
 
 	sdk := sdkmocks.NewMockPluginSDK(t)
-	sdk.EXPECT().GetPlugin(mock.Anything, pluginKonnectID, cpID).Return(
+	sdk.EXPECT().GetPlugin(mock.Anything,
+		sdkkonnectops.GetPluginRequest{
+			PluginID:       pluginKonnectID,
+			ControlPlaneID: cpID,
+		}).Return(
 		&sdkkonnectops.GetPluginResponse{
 			Plugin: &remotePlugin,
 		},
@@ -603,7 +611,11 @@ func TestAdoptKongPluginBindingMatchMismatch(t *testing.T) {
 
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(plugin).Build()
 	sdk := sdkmocks.NewMockPluginSDK(t)
-	sdk.EXPECT().GetPlugin(mock.Anything, pluginKonnectID, cpID).Return(
+	sdk.EXPECT().GetPlugin(mock.Anything,
+		sdkkonnectops.GetPluginRequest{
+			PluginID:       pluginKonnectID,
+			ControlPlaneID: cpID,
+		}).Return(
 		&sdkkonnectops.GetPluginResponse{
 			Plugin: &sdkkonnectcomp.Plugin{
 				ID:     lo.ToPtr(pluginKonnectID),
@@ -667,7 +679,11 @@ func TestAdoptKongPluginBindingFetchError(t *testing.T) {
 
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(plugin).Build()
 	sdk := sdkmocks.NewMockPluginSDK(t)
-	sdk.EXPECT().GetPlugin(mock.Anything, pluginKonnectID, cpID).Return(
+	sdk.EXPECT().GetPlugin(mock.Anything,
+		sdkkonnectops.GetPluginRequest{
+			PluginID:       pluginKonnectID,
+			ControlPlaneID: cpID,
+		}).Return(
 		(*sdkkonnectops.GetPluginResponse)(nil),
 		&sdkkonnecterrs.NotFoundError{},
 	)
@@ -725,7 +741,11 @@ func TestAdoptKongPluginBindingUIDConflict(t *testing.T) {
 
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(plugin).Build()
 	sdk := sdkmocks.NewMockPluginSDK(t)
-	sdk.EXPECT().GetPlugin(mock.Anything, pluginKonnectID, cpID).Return(
+	sdk.EXPECT().GetPlugin(mock.Anything,
+		sdkkonnectops.GetPluginRequest{
+			PluginID:       pluginKonnectID,
+			ControlPlaneID: cpID,
+		}).Return(
 		&sdkkonnectops.GetPluginResponse{
 			Plugin: &sdkkonnectcomp.Plugin{
 				ID:   lo.ToPtr(pluginKonnectID),

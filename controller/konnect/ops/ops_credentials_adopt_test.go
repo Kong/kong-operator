@@ -289,7 +289,7 @@ func TestAdoptKongCredentialJWT(t *testing.T) {
 
 	t.Run("match success", func(t *testing.T) {
 		sdk := sdkmocks.NewMockKongCredentialJWTSDK(t)
-		alg := sdkkonnectcomp.AlgorithmHs256
+		alg := sdkkonnectcomp.JWTAlgorithmHs256
 		sdk.EXPECT().GetJwtWithConsumer(mock.Anything, mock.Anything).Return(&sdkkonnectops.GetJwtWithConsumerResponse{
 			Jwt: &sdkkonnectcomp.Jwt{
 				ID:           lo.ToPtr("jwt-1"),
