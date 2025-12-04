@@ -257,7 +257,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			&ext,
 			readyCondition,
 		); err != nil || updated || !res.IsZero() {
-			if err != nil && k8serrors.IsNotFound(err) {
+			if k8serrors.IsNotFound(err) {
 				return ctrl.Result{}, nil
 			}
 			return res, err
@@ -424,7 +424,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			readyCondition,
 			apiAuthConfigValidCond,
 		); errStatus != nil || updated || !res.IsZero() {
-			if errStatus != nil && k8serrors.IsNotFound(errStatus) {
+			if k8serrors.IsNotFound(errStatus) {
 				return ctrl.Result{}, nil
 			}
 			return res, errStatus
