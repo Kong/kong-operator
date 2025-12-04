@@ -48721,7 +48721,7 @@ metadata:
 {{ if .Values.keep }}
     helm.sh/resource-policy: keep
 {{ end }}
-    kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/channels: kong-operator
     kubernetes-configuration.konghq.com/version: v2.1.0-alpha.0
   name: ingressclassparameterses.configuration.konghq.com
 spec:
@@ -49449,7 +49449,7 @@ metadata:
 {{ if .Values.keep }}
     helm.sh/resource-policy: keep
 {{ end }}
-    kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/channels: kong-operator
     kubernetes-configuration.konghq.com/version: v2.1.0-alpha.0
   name: kongclusterplugins.configuration.konghq.com
 spec:
@@ -51771,7 +51771,7 @@ metadata:
 {{ if .Values.keep }}
     helm.sh/resource-policy: keep
 {{ end }}
-    kubernetes-configuration.konghq.com/channels: ingress-controller
+    kubernetes-configuration.konghq.com/channels: kong-operator
     kubernetes-configuration.konghq.com/version: v2.1.0-alpha.0
   name: kongcustomentities.configuration.konghq.com
 spec:

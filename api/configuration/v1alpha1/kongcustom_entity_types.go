@@ -26,7 +26,7 @@ type KongEntityScope string
 // +kubebuilder:printcolumn:name="Programmed",type=string,JSONPath=`.status.conditions[?(@.type=="Programmed")].status`
 // +kubebuilder:validation:XValidation:rule="self.spec.type == oldSelf.spec.type",message="The spec.type field is immutable"
 // +apireference:kic:include
-// +kong:channels=ingress-controller
+// +kong:channels=kong-operator
 type KongCustomEntity struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
