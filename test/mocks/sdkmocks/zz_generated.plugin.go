@@ -218,12 +218,12 @@ func (_c *MockPluginSDK_DeletePlugin_Call) RunAndReturn(run func(ctx context.Con
 }
 
 // GetPlugin provides a mock function for the type MockPluginSDK
-func (_mock *MockPluginSDK) GetPlugin(ctx context.Context, pluginID string, controlPlaneID string, opts ...operations.Option) (*operations.GetPluginResponse, error) {
+func (_mock *MockPluginSDK) GetPlugin(ctx context.Context, req operations.GetPluginRequest, opts ...operations.Option) (*operations.GetPluginResponse, error) {
 	var tmpRet mock.Arguments
 	if len(opts) > 0 {
-		tmpRet = _mock.Called(ctx, pluginID, controlPlaneID, opts)
+		tmpRet = _mock.Called(ctx, req, opts)
 	} else {
-		tmpRet = _mock.Called(ctx, pluginID, controlPlaneID)
+		tmpRet = _mock.Called(ctx, req)
 	}
 	ret := tmpRet
 
@@ -233,18 +233,18 @@ func (_mock *MockPluginSDK) GetPlugin(ctx context.Context, pluginID string, cont
 
 	var r0 *operations.GetPluginResponse
 	var r1 error
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) (*operations.GetPluginResponse, error)); ok {
-		return returnFunc(ctx, pluginID, controlPlaneID, opts...)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.GetPluginRequest, ...operations.Option) (*operations.GetPluginResponse, error)); ok {
+		return returnFunc(ctx, req, opts...)
 	}
-	if returnFunc, ok := ret.Get(0).(func(context.Context, string, string, ...operations.Option) *operations.GetPluginResponse); ok {
-		r0 = returnFunc(ctx, pluginID, controlPlaneID, opts...)
+	if returnFunc, ok := ret.Get(0).(func(context.Context, operations.GetPluginRequest, ...operations.Option) *operations.GetPluginResponse); ok {
+		r0 = returnFunc(ctx, req, opts...)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*operations.GetPluginResponse)
 		}
 	}
-	if returnFunc, ok := ret.Get(1).(func(context.Context, string, string, ...operations.Option) error); ok {
-		r1 = returnFunc(ctx, pluginID, controlPlaneID, opts...)
+	if returnFunc, ok := ret.Get(1).(func(context.Context, operations.GetPluginRequest, ...operations.Option) error); ok {
+		r1 = returnFunc(ctx, req, opts...)
 	} else {
 		r1 = ret.Error(1)
 	}
@@ -258,39 +258,33 @@ type MockPluginSDK_GetPlugin_Call struct {
 
 // GetPlugin is a helper method to define mock.On call
 //   - ctx context.Context
-//   - pluginID string
-//   - controlPlaneID string
+//   - req operations.GetPluginRequest
 //   - opts ...operations.Option
-func (_e *MockPluginSDK_Expecter) GetPlugin(ctx interface{}, pluginID interface{}, controlPlaneID interface{}, opts ...interface{}) *MockPluginSDK_GetPlugin_Call {
+func (_e *MockPluginSDK_Expecter) GetPlugin(ctx interface{}, req interface{}, opts ...interface{}) *MockPluginSDK_GetPlugin_Call {
 	return &MockPluginSDK_GetPlugin_Call{Call: _e.mock.On("GetPlugin",
-		append([]interface{}{ctx, pluginID, controlPlaneID}, opts...)...)}
+		append([]interface{}{ctx, req}, opts...)...)}
 }
 
-func (_c *MockPluginSDK_GetPlugin_Call) Run(run func(ctx context.Context, pluginID string, controlPlaneID string, opts ...operations.Option)) *MockPluginSDK_GetPlugin_Call {
+func (_c *MockPluginSDK_GetPlugin_Call) Run(run func(ctx context.Context, req operations.GetPluginRequest, opts ...operations.Option)) *MockPluginSDK_GetPlugin_Call {
 	_c.Call.Run(func(args mock.Arguments) {
 		var arg0 context.Context
 		if args[0] != nil {
 			arg0 = args[0].(context.Context)
 		}
-		var arg1 string
+		var arg1 operations.GetPluginRequest
 		if args[1] != nil {
-			arg1 = args[1].(string)
+			arg1 = args[1].(operations.GetPluginRequest)
 		}
-		var arg2 string
-		if args[2] != nil {
-			arg2 = args[2].(string)
-		}
-		var arg3 []operations.Option
+		var arg2 []operations.Option
 		var variadicArgs []operations.Option
-		if len(args) > 3 {
-			variadicArgs = args[3].([]operations.Option)
+		if len(args) > 2 {
+			variadicArgs = args[2].([]operations.Option)
 		}
-		arg3 = variadicArgs
+		arg2 = variadicArgs
 		run(
 			arg0,
 			arg1,
-			arg2,
-			arg3...,
+			arg2...,
 		)
 	})
 	return _c
@@ -301,7 +295,7 @@ func (_c *MockPluginSDK_GetPlugin_Call) Return(getPluginResponse *operations.Get
 	return _c
 }
 
-func (_c *MockPluginSDK_GetPlugin_Call) RunAndReturn(run func(ctx context.Context, pluginID string, controlPlaneID string, opts ...operations.Option) (*operations.GetPluginResponse, error)) *MockPluginSDK_GetPlugin_Call {
+func (_c *MockPluginSDK_GetPlugin_Call) RunAndReturn(run func(ctx context.Context, req operations.GetPluginRequest, opts ...operations.Option) (*operations.GetPluginResponse, error)) *MockPluginSDK_GetPlugin_Call {
 	_c.Call.Return(run)
 	return _c
 }

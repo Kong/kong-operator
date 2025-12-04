@@ -98,7 +98,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Key:       lo.ToPtr("key"),
-							Algorithm: string(sdkkonnectcomp.AlgorithmRs384),
+							Algorithm: string(sdkkonnectcomp.JWTAlgorithmRs256),
 						},
 					},
 				},
@@ -114,7 +114,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Key:       lo.ToPtr("key"),
-							Algorithm: string(sdkkonnectcomp.AlgorithmRs384),
+							Algorithm: string(sdkkonnectcomp.JWTAlgorithmRs384),
 						},
 					},
 				},
@@ -130,7 +130,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Key:       lo.ToPtr("key"),
-							Algorithm: string(sdkkonnectcomp.AlgorithmRs512),
+							Algorithm: string(sdkkonnectcomp.JWTAlgorithmRs512),
 						},
 					},
 				},
@@ -146,7 +146,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Key:       lo.ToPtr("key"),
-							Algorithm: string(sdkkonnectcomp.AlgorithmPs384),
+							Algorithm: string(sdkkonnectcomp.JWTAlgorithmPs256),
 						},
 					},
 				},
@@ -162,7 +162,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Key:       lo.ToPtr("key"),
-							Algorithm: string(sdkkonnectcomp.AlgorithmPs384),
+							Algorithm: string(sdkkonnectcomp.JWTAlgorithmPs384),
 						},
 					},
 				},
@@ -178,7 +178,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Key:       lo.ToPtr("key"),
-							Algorithm: string(sdkkonnectcomp.AlgorithmPs512),
+							Algorithm: string(sdkkonnectcomp.JWTAlgorithmPs512),
 						},
 					},
 				},
@@ -194,7 +194,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Key:       lo.ToPtr("key"),
-							Algorithm: string(sdkkonnectcomp.AlgorithmEs384),
+							Algorithm: string(sdkkonnectcomp.JWTAlgorithmEs256),
 						},
 					},
 				},
@@ -210,7 +210,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Key:       lo.ToPtr("key"),
-							Algorithm: string(sdkkonnectcomp.AlgorithmEs384),
+							Algorithm: string(sdkkonnectcomp.JWTAlgorithmEs384),
 						},
 					},
 				},
@@ -226,7 +226,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Key:       lo.ToPtr("key"),
-							Algorithm: string(sdkkonnectcomp.AlgorithmEs512),
+							Algorithm: string(sdkkonnectcomp.JWTAlgorithmEs512),
 						},
 					},
 				},
@@ -242,7 +242,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Key:       lo.ToPtr("key"),
-							Algorithm: string(sdkkonnectcomp.AlgorithmEdDsa),
+							Algorithm: string(sdkkonnectcomp.JWTAlgorithmEdDsa),
 						},
 					},
 				},
@@ -258,7 +258,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Key:       lo.ToPtr("key"),
-							Algorithm: string(sdkkonnectcomp.AlgorithmHs256),
+							Algorithm: string(sdkkonnectcomp.JWTAlgorithmHs256),
 						},
 					},
 				},
@@ -273,7 +273,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Key:       lo.ToPtr("key"),
-							Algorithm: string(sdkkonnectcomp.AlgorithmHs384),
+							Algorithm: string(sdkkonnectcomp.JWTAlgorithmHs384),
 						},
 					},
 				},
@@ -288,7 +288,7 @@ func TestKongCredentialJWT(t *testing.T) {
 						},
 						KongCredentialJWTAPISpec: configurationv1alpha1.KongCredentialJWTAPISpec{
 							Key:       lo.ToPtr("key"),
-							Algorithm: string(sdkkonnectcomp.AlgorithmHs512),
+							Algorithm: string(sdkkonnectcomp.JWTAlgorithmHs512),
 						},
 					},
 				},

@@ -1405,7 +1405,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 				Consumer: &sdkkonnectcomp.JWTConsumer{
 					ID: lo.ToPtr(consumerID),
 				},
-				Algorithm: lo.ToPtr(sdkkonnectcomp.AlgorithmHs256),
+				Algorithm: lo.ToPtr(sdkkonnectcomp.JWTAlgorithmHs256),
 				Key:       lo.ToPtr("jwt-key"),
 				Secret:    lo.ToPtr("jwt-secret"),
 			},

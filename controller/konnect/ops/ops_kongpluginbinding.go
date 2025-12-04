@@ -154,7 +154,10 @@ func adoptPluginBinding(
 	}
 	konnectID := adoptOptions.Konnect.ID
 
-	resp, err := sdk.GetPlugin(ctx, konnectID, cpID)
+	resp, err := sdk.GetPlugin(ctx, sdkkonnectops.GetPluginRequest{
+		PluginID:       konnectID,
+		ControlPlaneID: cpID,
+	})
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
 			KonnectID: konnectID,

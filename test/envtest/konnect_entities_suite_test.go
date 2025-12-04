@@ -69,7 +69,7 @@ func testNewKonnectEntityReconciler[
 		sdk := factory.SDK
 
 		StartReconcilers(ctx, t, mgr, logs,
-			konnect.NewKonnectEntityReconciler[T, TEnt](
+			konnect.NewKonnectEntityReconciler(
 				factory, logging.DevelopmentMode, cl,
 				konnect.WithMetricRecorder[T, TEnt](&metricsmocks.MockRecorder{})))
 

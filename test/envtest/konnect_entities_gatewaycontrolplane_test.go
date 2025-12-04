@@ -71,7 +71,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "12345",
-									Config: sdkkonnectcomp.Config{
+									Config: sdkkonnectcomp.ControlPlaneConfig{
 										ControlPlaneEndpoint: "https://control-plane-endpoint",
 										TelemetryEndpoint:    "https://telemetry-endpoint",
 									},
@@ -175,7 +175,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "12346",
-									Config: sdkkonnectcomp.Config{
+									Config: sdkkonnectcomp.ControlPlaneConfig{
 										ControlPlaneEndpoint: "https://control-plane-endpoint",
 										TelemetryEndpoint:    "https://telemetry-endpoint",
 									},
@@ -361,7 +361,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "123467",
-									Config: sdkkonnectcomp.Config{
+									Config: sdkkonnectcomp.ControlPlaneConfig{
 										ControlPlaneEndpoint: "https://control-plane-endpoint",
 										TelemetryEndpoint:    "https://telemetry-endpoint",
 									},
@@ -476,7 +476,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "123456",
-									Config: sdkkonnectcomp.Config{
+									Config: sdkkonnectcomp.ControlPlaneConfig{
 										ControlPlaneEndpoint: "https://control-plane-endpoint",
 										TelemetryEndpoint:    "https://telemetry-endpoint",
 									},
@@ -500,7 +500,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "123456",
-									Config: sdkkonnectcomp.Config{
+									Config: sdkkonnectcomp.ControlPlaneConfig{
 										ControlPlaneEndpoint: "https://control-plane-endpoint",
 										TelemetryEndpoint:    "https://telemetry-endpoint",
 									},
@@ -603,7 +603,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "group-123456",
-									Config: sdkkonnectcomp.Config{
+									Config: sdkkonnectcomp.ControlPlaneConfig{
 										ControlPlaneEndpoint: "https://control-plane-endpoint",
 										TelemetryEndpoint:    "https://telemetry-endpoint",
 									},
@@ -627,7 +627,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "group-123456",
-									Config: sdkkonnectcomp.Config{
+									Config: sdkkonnectcomp.ControlPlaneConfig{
 										ControlPlaneEndpoint: "https://control-plane-endpoint",
 										TelemetryEndpoint:    "https://telemetry-endpoint",
 									},
@@ -651,7 +651,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "123456",
-									Config: sdkkonnectcomp.Config{
+									Config: sdkkonnectcomp.ControlPlaneConfig{
 										ControlPlaneEndpoint: "https://control-plane-endpoint",
 										TelemetryEndpoint:    "https://telemetry-endpoint",
 									},
@@ -775,7 +775,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 							Data: []sdkkonnectcomp.ControlPlane{
 								{
 									ID: "cpg-id",
-									Config: sdkkonnectcomp.Config{
+									Config: sdkkonnectcomp.ControlPlaneConfig{
 										ControlPlaneEndpoint: "https://control-plane-endpoint",
 										TelemetryEndpoint:    "https://telemetry-endpoint",
 									},
