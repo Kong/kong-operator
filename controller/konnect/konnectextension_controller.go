@@ -156,7 +156,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, client.IgnoreNotFound(err)
 	}
 
-	logger := log.GetLogger(ctx, konnectv1alpha2.KonnectExtensionKind, r.LoggingMode).WithValues("konnectExtension", req.NamespacedName)
+	logger := log.GetLogger(ctx, konnectv1alpha2.KonnectExtensionKind, r.LoggingMode)
 
 	ctx = ctrllog.IntoContext(ctx, logger)
 	log.Debug(logger, "reconciling")
