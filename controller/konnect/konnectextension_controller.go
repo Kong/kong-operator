@@ -748,6 +748,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				// the operation is retried after the resync period.
 				return ctrl.Result{RequeueAfter: r.SyncPeriod}, err
 			}
+			log.Debug(logger, "KongDataPlaneClientCertificate deleted", "name", cert.Name, "namespace", cert.Namespace)
 			return ctrl.Result{Requeue: true}, err
 		}
 
@@ -763,7 +764,6 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				}
 				log.Info(logger, "Secret finalizer removed")
 			}
-			log.Debug(logger, "DataPlane client certificate Deleted in Konnect")
 			return ctrl.Result{Requeue: true}, nil
 		}
 	}

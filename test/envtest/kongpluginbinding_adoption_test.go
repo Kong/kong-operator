@@ -64,14 +64,16 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 		t.Log("Setting up SDK expectations for getting and updating plugins")
 		sdk.PluginSDK.EXPECT().GetPlugin(
 			mock.Anything,
-			pluginID,
-			cp.GetKonnectID(),
-		).Return(&sdkkonnectops.GetPluginResponse{
-			Plugin: &sdkkonnectcomp.Plugin{
-				ID:   lo.ToPtr(pluginID),
-				Name: "proxy-cache",
-			},
-		}, nil)
+			sdkkonnectops.GetPluginRequest{
+				PluginID:       pluginID,
+				ControlPlaneID: cp.GetKonnectID(),
+			}).Return(
+			&sdkkonnectops.GetPluginResponse{
+				Plugin: &sdkkonnectcomp.Plugin{
+					ID:   lo.ToPtr(pluginID),
+					Name: "proxy-cache",
+				},
+			}, nil)
 		sdk.PluginSDK.EXPECT().UpsertPlugin(
 			mock.Anything,
 			mock.MatchedBy(func(req sdkkonnectops.UpsertPluginRequest) bool {
@@ -117,17 +119,19 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 		t.Log("Setting up SDK expectations for getting and updating plugins")
 		sdk.PluginSDK.EXPECT().GetPlugin(
 			mock.Anything,
-			pluginID,
-			cp.GetKonnectID(),
-		).Return(&sdkkonnectops.GetPluginResponse{
-			Plugin: &sdkkonnectcomp.Plugin{
-				ID:   lo.ToPtr(pluginID),
-				Name: "proxy-cache",
-				Service: &sdkkonnectcomp.PluginService{
-					ID: lo.ToPtr(serviceID),
+			sdkkonnectops.GetPluginRequest{
+				PluginID:       pluginID,
+				ControlPlaneID: cp.GetKonnectID(),
+			}).Return(
+			&sdkkonnectops.GetPluginResponse{
+				Plugin: &sdkkonnectcomp.Plugin{
+					ID:   lo.ToPtr(pluginID),
+					Name: "proxy-cache",
+					Service: &sdkkonnectcomp.PluginService{
+						ID: lo.ToPtr(serviceID),
+					},
 				},
-			},
-		}, nil)
+			}, nil)
 		sdk.PluginSDK.EXPECT().UpsertPlugin(
 			mock.Anything,
 			mock.MatchedBy(func(req sdkkonnectops.UpsertPluginRequest) bool {
@@ -169,14 +173,16 @@ func TestKongPluginBindingAdoption(t *testing.T) {
 		t.Log("Setting up SDK expectations for getting plugins")
 		sdk.PluginSDK.EXPECT().GetPlugin(
 			mock.Anything,
-			pluginID,
-			cp.GetKonnectID(),
-		).Return(&sdkkonnectops.GetPluginResponse{
-			Plugin: &sdkkonnectcomp.Plugin{
-				ID:   lo.ToPtr(pluginID),
-				Name: "proxy-cache",
-			},
-		}, nil)
+			sdkkonnectops.GetPluginRequest{
+				PluginID:       pluginID,
+				ControlPlaneID: cp.GetKonnectID(),
+			}).Return(
+			&sdkkonnectops.GetPluginResponse{
+				Plugin: &sdkkonnectcomp.Plugin{
+					ID:   lo.ToPtr(pluginID),
+					Name: "proxy-cache",
+				},
+			}, nil)
 
 		t.Log("Creating a KongPluginBinding without the KongPlugin to adopt the plugin")
 		kpbGlobal := deploy.KongPluginBinding(t, ctx, clientNamespaced, konnect.NewKongPluginBindingBuilder().

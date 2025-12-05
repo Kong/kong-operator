@@ -11,11 +11,11 @@ import (
 type SDKWrapper interface {
 	GetControlPlaneSDK() sdkkonnectgo.ControlPlanesSDK
 	GetControlPlaneGroupSDK() ControlPlaneGroupSDK
-	GetServicesSDK() ServicesSDK
+	GetServicesSDK() sdkkonnectgo.ServicesSDK
 	GetRoutesSDK() RoutesSDK
-	GetConsumersSDK() ConsumersSDK
-	GetConsumerGroupsSDK() ConsumerGroupSDK
-	GetPluginSDK() PluginSDK
+	GetConsumersSDK() sdkkonnectgo.ConsumersSDK
+	GetConsumerGroupsSDK() sdkkonnectgo.ConsumerGroupsSDK
+	GetPluginSDK() sdkkonnectgo.PluginsSDK
 	GetUpstreamsSDK() UpstreamsSDK
 	GetTargetsSDK() TargetsSDK
 	GetVaultSDK() VaultSDK
@@ -27,8 +27,8 @@ type SDKWrapper interface {
 	GetHMACCredentialsSDK() KongCredentialHMACSDK
 	GetCACertificatesSDK() CACertificatesSDK
 	GetCertificatesSDK() CertificatesSDK
-	GetKeysSDK() KeysSDK
-	GetKeySetsSDK() KeySetsSDK
+	GetKeysSDK() sdkkonnectgo.KeysSDK
+	GetKeySetsSDK() sdkkonnectgo.KeySetsSDK
 	GetSNIsSDK() SNIsSDK
 	GetDataPlaneCertificatesSDK() DataPlaneClientCertificatesSDK
 	GetCloudGatewaysSDK() CloudGatewaysSDK
@@ -66,7 +66,7 @@ func (w sdkWrapper) GetControlPlaneGroupSDK() ControlPlaneGroupSDK {
 }
 
 // GetServicesSDK returns the SDK to operate Kong services.
-func (w sdkWrapper) GetServicesSDK() ServicesSDK {
+func (w sdkWrapper) GetServicesSDK() sdkkonnectgo.ServicesSDK {
 	return w.sdk.Services
 }
 
@@ -76,17 +76,17 @@ func (w sdkWrapper) GetRoutesSDK() RoutesSDK {
 }
 
 // GetConsumersSDK returns the SDK to operate Kong consumers.
-func (w sdkWrapper) GetConsumersSDK() ConsumersSDK {
+func (w sdkWrapper) GetConsumersSDK() sdkkonnectgo.ConsumersSDK {
 	return w.sdk.Consumers
 }
 
 // GetConsumerGroupsSDK returns the SDK to operate Kong consumer groups.
-func (w sdkWrapper) GetConsumerGroupsSDK() ConsumerGroupSDK {
+func (w sdkWrapper) GetConsumerGroupsSDK() sdkkonnectgo.ConsumerGroupsSDK {
 	return w.sdk.ConsumerGroups
 }
 
 // GetPluginSDK returns the SDK to operate plugins.
-func (w sdkWrapper) GetPluginSDK() PluginSDK {
+func (w sdkWrapper) GetPluginSDK() sdkkonnectgo.PluginsSDK {
 	return w.sdk.Plugins
 }
 
@@ -151,12 +151,12 @@ func (w sdkWrapper) GetHMACCredentialsSDK() KongCredentialHMACSDK {
 }
 
 // GetKeysSDK returns the SDK to operate keys.
-func (w sdkWrapper) GetKeysSDK() KeysSDK {
+func (w sdkWrapper) GetKeysSDK() sdkkonnectgo.KeysSDK {
 	return w.sdk.Keys
 }
 
 // GetKeySetsSDK returns the SDK to operate key sets.
-func (w sdkWrapper) GetKeySetsSDK() KeySetsSDK {
+func (w sdkWrapper) GetKeySetsSDK() sdkkonnectgo.KeySetsSDK {
 	return w.sdk.KeySets
 }
 

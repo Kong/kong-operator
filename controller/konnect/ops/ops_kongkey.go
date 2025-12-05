@@ -5,20 +5,20 @@ import (
 	"errors"
 	"fmt"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
 
 // createKey creates a KongKey in Konnect.
 // It sets the KonnectID in the KongKey status.
 func createKey(
 	ctx context.Context,
-	sdk sdkops.KeysSDK,
+	sdk sdkkonnectgo.KeysSDK,
 	key *configurationv1alpha1.KongKey,
 ) error {
 	cpID := key.GetControlPlaneID()
@@ -52,7 +52,7 @@ func createKey(
 // It returns an error if the KongKey does not have a KonnectID.
 func updateKey(
 	ctx context.Context,
-	sdk sdkops.KeysSDK,
+	sdk sdkkonnectgo.KeysSDK,
 	key *configurationv1alpha1.KongKey,
 ) error {
 	cpID := key.GetControlPlaneID()
@@ -80,7 +80,7 @@ func updateKey(
 // It returns an error if the operation fails.
 func deleteKey(
 	ctx context.Context,
-	sdk sdkops.KeysSDK,
+	sdk sdkkonnectgo.KeysSDK,
 	key *configurationv1alpha1.KongKey,
 ) error {
 	id := key.Status.Konnect.GetKonnectID()
@@ -94,7 +94,7 @@ func deleteKey(
 
 func adoptKey(
 	ctx context.Context,
-	sdk sdkops.KeysSDK,
+	sdk sdkkonnectgo.KeysSDK,
 	key *configurationv1alpha1.KongKey,
 ) error {
 	cpID := key.GetControlPlaneID()
@@ -188,7 +188,7 @@ func kongKeyToKeyInput(key *configurationv1alpha1.KongKey) sdkkonnectcomp.Key {
 
 func getKongKeyForUID(
 	ctx context.Context,
-	sdk sdkops.KeysSDK,
+	sdk sdkkonnectgo.KeysSDK,
 	key *configurationv1alpha1.KongKey,
 ) (string, error) {
 	resp, err := sdk.ListKey(ctx, sdkkonnectops.ListKeyRequest{

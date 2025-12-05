@@ -7,6 +7,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -23,7 +24,6 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/metadata"
-	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 func TestKongConsumerToSDKConsumerInput_Tags(t *testing.T) {
@@ -59,8 +59,8 @@ func TestKongConsumerToSDKConsumerInput_Tags(t *testing.T) {
 
 func TestAdoptKongConsumerOverride(t *testing.T) {
 	ctx := context.Background()
-	sdk := sdkmocks.NewMockConsumersSDK(t)
-	cgSDK := sdkmocks.NewMockConsumerGroupSDK(t)
+	sdk := mocks.NewMockConsumersSDK(t)
+	cgSDK := mocks.NewMockConsumerGroupsSDK(t)
 	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
 	consumer := &configurationv1.KongConsumer{
@@ -108,8 +108,8 @@ func TestAdoptKongConsumerOverride(t *testing.T) {
 
 func TestAdoptKongConsumerMatch(t *testing.T) {
 	ctx := context.Background()
-	sdk := sdkmocks.NewMockConsumersSDK(t)
-	cgSDK := sdkmocks.NewMockConsumerGroupSDK(t)
+	sdk := mocks.NewMockConsumersSDK(t)
+	cgSDK := mocks.NewMockConsumerGroupsSDK(t)
 
 	cg1 := &configurationv1beta1.KongConsumerGroup{
 		ObjectMeta: metav1.ObjectMeta{
@@ -191,8 +191,8 @@ func TestAdoptKongConsumerMatch(t *testing.T) {
 
 func TestAdoptKongConsumerMatchNotMatching(t *testing.T) {
 	ctx := context.Background()
-	sdk := sdkmocks.NewMockConsumersSDK(t)
-	cgSDK := sdkmocks.NewMockConsumerGroupSDK(t)
+	sdk := mocks.NewMockConsumersSDK(t)
+	cgSDK := mocks.NewMockConsumerGroupsSDK(t)
 	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
 	consumer := &configurationv1.KongConsumer{
@@ -231,8 +231,8 @@ func TestAdoptKongConsumerMatchNotMatching(t *testing.T) {
 
 func TestAdoptKongConsumerFetchError(t *testing.T) {
 	ctx := context.Background()
-	sdk := sdkmocks.NewMockConsumersSDK(t)
-	cgSDK := sdkmocks.NewMockConsumerGroupSDK(t)
+	sdk := mocks.NewMockConsumersSDK(t)
+	cgSDK := mocks.NewMockConsumerGroupsSDK(t)
 	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
 	consumer := &configurationv1.KongConsumer{

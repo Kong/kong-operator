@@ -11,4 +11,4 @@ packages:
       include-interface-regex: .*SDK$
       # TODO: gradually add more types to this exclude list when they are
       # provided by SDK Konnect Go.
-      exclude-interface-regex: ^ControlPlaneSDK$
+      exclude-interface-regex: ^ControlPlaneSDK|^ConsumersSDK|^ConsumerGroupSDK|^ServicesSDK|^PluginSDK|^KeysSDK|^KeySetsSDK$
