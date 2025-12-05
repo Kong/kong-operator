@@ -50,6 +50,12 @@
   to be specified. This aligns `DataPlane` with Gateway APIs' `Gateway`.
   [#2722](https://github.com/Kong/kong-operator/pull/2722)
 
+### Fixed
+
+- Fixed an issue where users could set the secret of configmap label selectors
+  to empty when the other one was left non-empty.
+  [#2810](https://github.com/Kong/kong-operator/pull/2810)
+
 ## [v2.1.0-alpha.0]
 
 ### Added
