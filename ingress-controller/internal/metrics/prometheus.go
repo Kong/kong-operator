@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -76,6 +77,16 @@ const (
 	InstanceIDKey string = "instance_id"
 )
 
+const (
+	// AllowedKey defines the key of the metric label indicating admission was allowed.
+	AllowedKey string = "allowed"
+)
+
+const (
+	// AdmissionResourceKey defines the name of the metric label indicating which dataplane this time series is relevant for.
+	AdmissionResourceKey string = "resource"
+)
+
 // Regular config push metrics names.
 const (
 	MetricNameConfigPushCount            = "ingress_controller_configuration_push_count"
@@ -86,6 +97,7 @@ const (
 	MetricNameTranslationBrokenResources = "ingress_controller_translation_broken_resource_count"
 	MetricNameTranslationDuration        = "ingress_controller_translation_duration_milliseconds"
 	MetricNameConfigPushDuration         = "ingress_controller_configuration_push_duration_milliseconds"
+	MetricNameAdmissionCount             = "ingress_controller_admission_count"
 )
 
 // Fallback config push metrics names.
@@ -200,6 +212,20 @@ var (
 			Buckets: prometheus.ExponentialBuckets(100, 1.33, 30),
 		},
 		[]string{SuccessKey, ProtocolKey, DataplaneKey, InstanceIDKey},
+	)
+
+	admissionCount = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: MetricNameAdmissionCount,
+			Help: fmt.Sprintf(
+				"Count of admissions processed by Kong. "+
+					"`%s` describes whether an admission was allowed. "+
+					"`%s` describes the resource under admission. ",
+				AllowedKey,
+				AdmissionResourceKey,
+			),
+		},
+		[]string{AllowedKey, AdmissionResourceKey},
 	)
 
 	configPushSize = prometheus.NewGaugeVec(
@@ -407,6 +433,7 @@ func init() {
 		configPushDuration,
 		configPushSize,
 		configPushSuccessTime,
+		admissionCount,
 		fallbackTranslationCount,
 		fallbackTranslationBrokenResources,
 		fallbackTranslationDuration,
@@ -491,6 +518,14 @@ func (c *GlobalCtrlRuntimeMetricsRecorder) RecordTranslationBrokenResources(coun
 	translationBrokenResources.With(prometheus.Labels{
 		InstanceIDKey: c.instanceID.String(),
 	}).Set(float64(count))
+}
+
+// RecordAdmissionResult records an admission request result.
+func (c *GlobalCtrlRuntimeMetricsRecorder) RecordAdmissionResult(allowed bool, resource string) {
+	admissionCount.With(prometheus.Labels{
+		AllowedKey:           strconv.FormatBool(allowed),
+		AdmissionResourceKey: resource,
+	}).Inc()
 }
 
 // RecordFallbackTranslationFailure records a failed fallback configuration translation.
