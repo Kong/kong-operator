@@ -118,6 +118,13 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 	defer cleanupTelepresence()
 
+	// Setup environment for NetworkPolicy testing.
+	// See: https://github.com/Kong/kong-operator/issues/2074
+	helpers.SetupKubernetesServiceHost(GetEnv().Cluster().Config())
+	cleanupPodLabels, err := helpers.SetupFakePodLabels()
+	exitOnErr(err)
+	defer cleanupPodLabels()
+
 	fmt.Println("INFO: starting the operator's controller manager")
 	// Spawn the controller manager based on passed config in
 	// a separate goroutine and report whether that succeeded.
