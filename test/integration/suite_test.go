@@ -2,11 +2,14 @@ package integration
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
+	"net/http"
 	"os"
 	"runtime/debug"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/certmanager"
@@ -140,6 +143,25 @@ func TestMain(m *testing.M) {
 	httpClient, err := helpers.CreateHTTPClient(nil, "")
 	exitOnErr(err)
 	exitOnErr(testutils.BuildMTLSCredentials(GetCtx(), GetClients().K8sClient, httpClient))
+
+	fmt.Println("INFO: verifying webhook")
+	// httpclient that ignores tls
+	c := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		},
+	}
+
+	for i := range 5 {
+		time.Sleep(3 * time.Second)
+		if _, err := c.Get("https://gateway-operator-webhook-service.kong-system:5443/"); err != nil {
+			if i >= 4 {
+				exitOnErr(fmt.Errorf("webhook not reachable: %w", err))
+			}
+		}
+	}
 
 	fmt.Println("INFO: environment is ready, starting tests")
 	code = m.Run()
