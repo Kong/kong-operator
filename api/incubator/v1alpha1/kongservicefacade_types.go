@@ -25,7 +25,7 @@ func init() {
 // +genclient
 // +kubebuilder:object:root=true
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:resource:categories=kong-ingress-controller
+// +kubebuilder:resource:categories=kong
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
 // +kong:channels=ingress-controller-incubator

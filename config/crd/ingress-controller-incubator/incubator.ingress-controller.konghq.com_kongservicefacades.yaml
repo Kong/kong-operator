@@ -10,7 +10,7 @@ spec:
   group: incubator.ingress-controller.konghq.com
   names:
     categories:
-    - kong-ingress-controller
+    - kong
     kind: KongServiceFacade
     listKind: KongServiceFacadeList
     plural: kongservicefacades

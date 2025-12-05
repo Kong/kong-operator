@@ -20825,7 +20825,6 @@ spec:
   group: configuration.konghq.com
   names:
     categories:
-    - kong-ingress-controller
     - kong
     kind: KongClusterPlugin
     listKind: KongClusterPluginList
@@ -21127,7 +21126,6 @@ spec:
   group: configuration.konghq.com
   names:
     categories:
-    - kong-ingress-controller
     - kong
     kind: KongConsumerGroup
     listKind: KongConsumerGroupList
@@ -21431,7 +21429,6 @@ spec:
   group: configuration.konghq.com
   names:
     categories:
-    - kong-ingress-controller
     - kong
     kind: KongConsumer
     listKind: KongConsumerList
@@ -23030,7 +23027,6 @@ spec:
   group: configuration.konghq.com
   names:
     categories:
-    - kong-ingress-controller
     - kong
     kind: KongCustomEntity
     listKind: KongCustomEntityList
@@ -24186,7 +24182,6 @@ spec:
   group: configuration.konghq.com
   names:
     categories:
-    - kong-ingress-controller
     - kong
     kind: KongLicense
     listKind: KongLicenseList
@@ -25006,7 +25001,6 @@ spec:
   group: configuration.konghq.com
   names:
     categories:
-    - kong-ingress-controller
     - kong
     kind: KongPlugin
     listKind: KongPluginList
@@ -26566,7 +26560,6 @@ spec:
   group: configuration.konghq.com
   names:
     categories:
-    - kong-ingress-controller
     - kong
     kind: KongUpstreamPolicy
     listKind: KongUpstreamPolicyList
@@ -27749,7 +27742,6 @@ spec:
   group: configuration.konghq.com
   names:
     categories:
-    - kong-ingress-controller
     - kong
     kind: KongVault
     listKind: KongVaultList
