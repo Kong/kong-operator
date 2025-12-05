@@ -190,6 +190,9 @@ func ensureInterceptDeployment(ctx context.Context, clients testutils.K8sClients
 				"app.kubernetes.io/name":      "gateway-operator",
 				"app.kubernetes.io/component": "ko",
 			},
+			Annotations: map[string]string{
+				"telepresence.getambassador.io/inject-traffic-agent": "enabled",
+			},
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: ptrTo[int32](1),
