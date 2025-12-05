@@ -6,6 +6,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -16,21 +17,20 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/pkg/metadata"
-	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 func TestCreateKongUpstream(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
 		name             string
-		mockUpstreamPair func(*testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream)
+		mockUpstreamPair func(*testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream)
 		expectedErr      bool
 		assertions       func(*testing.T, *configurationv1alpha1.KongUpstream)
 	}{
 		{
 			name: "success",
-			mockUpstreamPair: func(t *testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
-				sdk := sdkmocks.NewMockUpstreamsSDK(t)
+			mockUpstreamPair: func(t *testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := mocks.NewMockUpstreamsSDK(t)
 				svc := &configurationv1alpha1.KongUpstream{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
@@ -69,8 +69,8 @@ func TestCreateKongUpstream(t *testing.T) {
 		},
 		{
 			name: "fail - no control plane ID in status returns an error and does not create the Upstream in Konnect",
-			mockUpstreamPair: func(t *testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
-				sdk := sdkmocks.NewMockUpstreamsSDK(t)
+			mockUpstreamPair: func(t *testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := mocks.NewMockUpstreamsSDK(t)
 				svc := &configurationv1alpha1.KongUpstream{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
@@ -93,8 +93,8 @@ func TestCreateKongUpstream(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockUpstreamPair: func(t *testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
-				sdk := sdkmocks.NewMockUpstreamsSDK(t)
+			mockUpstreamPair: func(t *testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := mocks.NewMockUpstreamsSDK(t)
 				svc := &configurationv1alpha1.KongUpstream{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",
@@ -154,14 +154,14 @@ func TestDeleteKongUpstream(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
 		name             string
-		mockUpstreamPair func(*testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream)
+		mockUpstreamPair func(*testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream)
 		expectedErr      bool
 		assertions       func(*testing.T, *configurationv1alpha1.KongUpstream)
 	}{
 		{
 			name: "success",
-			mockUpstreamPair: func(t *testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
-				sdk := sdkmocks.NewMockUpstreamsSDK(t)
+			mockUpstreamPair: func(t *testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := mocks.NewMockUpstreamsSDK(t)
 				svc := &configurationv1alpha1.KongUpstream{
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
@@ -192,8 +192,8 @@ func TestDeleteKongUpstream(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockUpstreamPair: func(t *testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
-				sdk := sdkmocks.NewMockUpstreamsSDK(t)
+			mockUpstreamPair: func(t *testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := mocks.NewMockUpstreamsSDK(t)
 				svc := &configurationv1alpha1.KongUpstream{
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
@@ -226,8 +226,8 @@ func TestDeleteKongUpstream(t *testing.T) {
 		},
 		{
 			name: "not found error is ignored and considered a success when trying to delete",
-			mockUpstreamPair: func(t *testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
-				sdk := sdkmocks.NewMockUpstreamsSDK(t)
+			mockUpstreamPair: func(t *testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := mocks.NewMockUpstreamsSDK(t)
 				svc := &configurationv1alpha1.KongUpstream{
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
@@ -283,14 +283,14 @@ func TestUpdateKongUpstream(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
 		name             string
-		mockUpstreamPair func(*testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream)
+		mockUpstreamPair func(*testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream)
 		expectedErr      bool
 		assertions       func(*testing.T, *configurationv1alpha1.KongUpstream)
 	}{
 		{
 			name: "success",
-			mockUpstreamPair: func(t *testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
-				sdk := sdkmocks.NewMockUpstreamsSDK(t)
+			mockUpstreamPair: func(t *testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := mocks.NewMockUpstreamsSDK(t)
 				svc := &configurationv1alpha1.KongUpstream{
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
@@ -334,8 +334,8 @@ func TestUpdateKongUpstream(t *testing.T) {
 		},
 		{
 			name: "fail",
-			mockUpstreamPair: func(t *testing.T) (*sdkmocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
-				sdk := sdkmocks.NewMockUpstreamsSDK(t)
+			mockUpstreamPair: func(t *testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
+				sdk := mocks.NewMockUpstreamsSDK(t)
 				svc := &configurationv1alpha1.KongUpstream{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "svc-1",

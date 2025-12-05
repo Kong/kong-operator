@@ -5,18 +5,18 @@ import (
 	"errors"
 	"fmt"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
 
 func createUpstream(
 	ctx context.Context,
-	sdk sdkops.UpstreamsSDK,
+	sdk sdkkonnectgo.UpstreamsSDK,
 	upstream *configurationv1alpha1.KongUpstream,
 ) error {
 	if upstream.GetControlPlaneID() == "" {
@@ -47,7 +47,7 @@ func createUpstream(
 // if the operation fails.
 func updateUpstream(
 	ctx context.Context,
-	sdk sdkops.UpstreamsSDK,
+	sdk sdkkonnectgo.UpstreamsSDK,
 	upstream *configurationv1alpha1.KongUpstream,
 ) error {
 	if upstream.GetControlPlaneID() == "" {
@@ -75,7 +75,7 @@ func updateUpstream(
 // It returns an error if the operation fails.
 func deleteUpstream(
 	ctx context.Context,
-	sdk sdkops.UpstreamsSDK,
+	sdk sdkkonnectgo.UpstreamsSDK,
 	upstream *configurationv1alpha1.KongUpstream,
 ) error {
 	id := upstream.GetKonnectStatus().GetKonnectID()
@@ -89,7 +89,7 @@ func deleteUpstream(
 
 func adoptUpstream(
 	ctx context.Context,
-	sdk sdkops.UpstreamsSDK,
+	sdk sdkkonnectgo.UpstreamsSDK,
 	upstream *configurationv1alpha1.KongUpstream,
 ) error {
 	cpID := upstream.GetControlPlaneID()
@@ -168,7 +168,7 @@ func kongUpstreamToSDKUpstreamInput(
 // getKongUpstreamForUID lists upstreams in Konnect with given k8s uid as its tag.
 func getKongUpstreamForUID(
 	ctx context.Context,
-	sdk sdkops.UpstreamsSDK,
+	sdk sdkkonnectgo.UpstreamsSDK,
 	u *configurationv1alpha1.KongUpstream,
 ) (string, error) {
 	cpID := u.GetControlPlaneID()

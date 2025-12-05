@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
@@ -12,12 +13,11 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
 
 func createKongCredentialJWT(
 	ctx context.Context,
-	sdk sdkops.KongCredentialJWTSDK,
+	sdk sdkkonnectgo.JWTsSDK,
 	cred *configurationv1alpha1.KongCredentialJWT,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -55,7 +55,7 @@ func createKongCredentialJWT(
 // if the operation fails.
 func updateKongCredentialJWT(
 	ctx context.Context,
-	sdk sdkops.KongCredentialJWTSDK,
+	sdk sdkkonnectgo.JWTsSDK,
 	cred *configurationv1alpha1.KongCredentialJWT,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -83,7 +83,7 @@ func updateKongCredentialJWT(
 // It returns an error if the operation fails.
 func deleteKongCredentialJWT(
 	ctx context.Context,
-	sdk sdkops.KongCredentialJWTSDK,
+	sdk sdkkonnectgo.JWTsSDK,
 	cred *configurationv1alpha1.KongCredentialJWT,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -103,7 +103,7 @@ func deleteKongCredentialJWT(
 
 func adoptKongCredentialJWT(
 	ctx context.Context,
-	sdk sdkops.KongCredentialJWTSDK,
+	sdk sdkkonnectgo.JWTsSDK,
 	cred *configurationv1alpha1.KongCredentialJWT,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -185,7 +185,7 @@ func kongCredentialJWTToJWTWithoutParents(
 // getKongCredentialJWTForUID lists JWT credentials in Konnect with given k8s uid as its tag.
 func getKongCredentialJWTForUID(
 	ctx context.Context,
-	sdk sdkops.KongCredentialJWTSDK,
+	sdk sdkkonnectgo.JWTsSDK,
 	cred *configurationv1alpha1.KongCredentialJWT,
 ) (string, error) {
 	cpID := cred.GetControlPlaneID()

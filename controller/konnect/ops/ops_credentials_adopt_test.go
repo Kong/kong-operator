@@ -5,6 +5,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -16,7 +17,6 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
-	sdkmocks "github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 func newCredentialStatus() *konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndConsumerRefs {
@@ -54,7 +54,7 @@ func TestAdoptKongCredentialAPIKey(t *testing.T) {
 	}
 
 	t.Run("override success", func(t *testing.T) {
-		sdk := sdkmocks.NewMockKongCredentialAPIKeySDK(t)
+		sdk := mocks.NewMockAPIKeysSDK(t)
 		sdk.EXPECT().GetKeyAuthWithConsumer(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.GetKeyAuthWithConsumerRequest) bool {
 			return req.KeyAuthID == "key-1" &&
 				req.ControlPlaneID == "cp-123" &&
@@ -76,7 +76,7 @@ func TestAdoptKongCredentialAPIKey(t *testing.T) {
 	})
 
 	t.Run("match success", func(t *testing.T) {
-		sdk := sdkmocks.NewMockKongCredentialAPIKeySDK(t)
+		sdk := mocks.NewMockAPIKeysSDK(t)
 		sdk.EXPECT().GetKeyAuthWithConsumer(mock.Anything, mock.Anything).Return(&sdkkonnectops.GetKeyAuthWithConsumerResponse{
 			KeyAuth: &sdkkonnectcomp.KeyAuth{
 				Key:  lo.ToPtr("key-value"),
@@ -122,7 +122,7 @@ func TestAdoptKongCredentialBasicAuth(t *testing.T) {
 	}
 
 	t.Run("override success", func(t *testing.T) {
-		sdk := sdkmocks.NewMockKongCredentialBasicAuthSDK(t)
+		sdk := mocks.NewMockBasicAuthCredentialsSDK(t)
 		sdk.EXPECT().GetBasicAuthWithConsumer(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.GetBasicAuthWithConsumerRequest) bool {
 			return req.BasicAuthID == "basic-1" &&
 				req.ControlPlaneID == "cp-123" &&
@@ -141,7 +141,7 @@ func TestAdoptKongCredentialBasicAuth(t *testing.T) {
 	})
 
 	t.Run("match success", func(t *testing.T) {
-		sdk := sdkmocks.NewMockKongCredentialBasicAuthSDK(t)
+		sdk := mocks.NewMockBasicAuthCredentialsSDK(t)
 		sdk.EXPECT().GetBasicAuthWithConsumer(mock.Anything, mock.Anything).Return(&sdkkonnectops.GetBasicAuthWithConsumerResponse{
 			BasicAuth: &sdkkonnectcomp.BasicAuth{
 				Username: "user",
@@ -187,7 +187,7 @@ func TestAdoptKongCredentialACL(t *testing.T) {
 	}
 
 	t.Run("match success", func(t *testing.T) {
-		sdk := sdkmocks.NewMockKongCredentialACLSDK(t)
+		sdk := mocks.NewMockACLsSDK(t)
 		sdk.EXPECT().GetACLWithConsumer(mock.Anything, mock.Anything).Return(&sdkkonnectops.GetACLWithConsumerResponse{
 			ACL: &sdkkonnectcomp.ACL{
 				Group: "group-1",
@@ -236,7 +236,7 @@ func TestAdoptKongCredentialHMAC(t *testing.T) {
 	}
 
 	t.Run("match success", func(t *testing.T) {
-		sdk := sdkmocks.NewMockKongCredentialHMACSDK(t)
+		sdk := mocks.NewMockHMACAuthCredentialsSDK(t)
 		sdk.EXPECT().GetHmacAuthWithConsumer(mock.Anything, mock.Anything).Return(&sdkkonnectops.GetHmacAuthWithConsumerResponse{
 			HMACAuth: &sdkkonnectcomp.HMACAuth{
 				ID:       lo.ToPtr(id),
@@ -288,7 +288,7 @@ func TestAdoptKongCredentialJWT(t *testing.T) {
 	}
 
 	t.Run("match success", func(t *testing.T) {
-		sdk := sdkmocks.NewMockKongCredentialJWTSDK(t)
+		sdk := mocks.NewMockJWTsSDK(t)
 		alg := sdkkonnectcomp.JWTAlgorithmHs256
 		sdk.EXPECT().GetJwtWithConsumer(mock.Anything, mock.Anything).Return(&sdkkonnectops.GetJwtWithConsumerResponse{
 			Jwt: &sdkkonnectcomp.Jwt{

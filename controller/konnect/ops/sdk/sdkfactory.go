@@ -12,19 +12,19 @@ type SDKWrapper interface {
 	GetControlPlaneSDK() sdkkonnectgo.ControlPlanesSDK
 	GetControlPlaneGroupSDK() ControlPlaneGroupSDK
 	GetServicesSDK() sdkkonnectgo.ServicesSDK
-	GetRoutesSDK() RoutesSDK
+	GetRoutesSDK() sdkkonnectgo.RoutesSDK
 	GetConsumersSDK() sdkkonnectgo.ConsumersSDK
 	GetConsumerGroupsSDK() sdkkonnectgo.ConsumerGroupsSDK
 	GetPluginSDK() sdkkonnectgo.PluginsSDK
-	GetUpstreamsSDK() UpstreamsSDK
-	GetTargetsSDK() TargetsSDK
+	GetUpstreamsSDK() sdkkonnectgo.UpstreamsSDK
+	GetTargetsSDK() sdkkonnectgo.TargetsSDK
 	GetVaultSDK() VaultSDK
 	GetMeSDK() MeSDK
-	GetBasicAuthCredentialsSDK() KongCredentialBasicAuthSDK
-	GetAPIKeyCredentialsSDK() KongCredentialAPIKeySDK
-	GetACLCredentialsSDK() KongCredentialACLSDK
-	GetJWTCredentialsSDK() KongCredentialJWTSDK
-	GetHMACCredentialsSDK() KongCredentialHMACSDK
+	GetBasicAuthCredentialsSDK() sdkkonnectgo.BasicAuthCredentialsSDK
+	GetAPIKeyCredentialsSDK() sdkkonnectgo.APIKeysSDK
+	GetACLCredentialsSDK() sdkkonnectgo.ACLsSDK
+	GetJWTCredentialsSDK() sdkkonnectgo.JWTsSDK
+	GetHMACCredentialsSDK() sdkkonnectgo.HMACAuthCredentialsSDK
 	GetCACertificatesSDK() CACertificatesSDK
 	GetCertificatesSDK() CertificatesSDK
 	GetKeysSDK() sdkkonnectgo.KeysSDK
@@ -71,7 +71,7 @@ func (w sdkWrapper) GetServicesSDK() sdkkonnectgo.ServicesSDK {
 }
 
 // GetRoutesSDK returns the SDK to operate Kong routes.
-func (w sdkWrapper) GetRoutesSDK() RoutesSDK {
+func (w sdkWrapper) GetRoutesSDK() sdkkonnectgo.RoutesSDK {
 	return w.sdk.Routes
 }
 
@@ -91,12 +91,12 @@ func (w sdkWrapper) GetPluginSDK() sdkkonnectgo.PluginsSDK {
 }
 
 // GetUpstreamsSDK returns the SDK to operate Upstreams.
-func (w sdkWrapper) GetUpstreamsSDK() UpstreamsSDK {
+func (w sdkWrapper) GetUpstreamsSDK() sdkkonnectgo.UpstreamsSDK {
 	return w.sdk.Upstreams
 }
 
 // GetTargetsSDK returns the SDK to operate Targets.
-func (w sdkWrapper) GetTargetsSDK() TargetsSDK {
+func (w sdkWrapper) GetTargetsSDK() sdkkonnectgo.TargetsSDK {
 	return w.sdk.Targets
 }
 
@@ -126,27 +126,27 @@ func (w sdkWrapper) GetSNIsSDK() SNIsSDK {
 }
 
 // GetBasicAuthCredentialsSDK returns the BasicAuthCredentials SDK to get current organization.
-func (w sdkWrapper) GetBasicAuthCredentialsSDK() KongCredentialBasicAuthSDK {
+func (w sdkWrapper) GetBasicAuthCredentialsSDK() sdkkonnectgo.BasicAuthCredentialsSDK {
 	return w.sdk.BasicAuthCredentials
 }
 
 // GetAPIKeyCredentialsSDK returns the APIAKeyCredentials SDK to get current organization.
-func (w sdkWrapper) GetAPIKeyCredentialsSDK() KongCredentialAPIKeySDK {
+func (w sdkWrapper) GetAPIKeyCredentialsSDK() sdkkonnectgo.APIKeysSDK {
 	return w.sdk.APIKeys
 }
 
 // GetACLCredentialsSDK returns the ACLCredentials SDK to get current organization.
-func (w sdkWrapper) GetACLCredentialsSDK() KongCredentialACLSDK {
+func (w sdkWrapper) GetACLCredentialsSDK() sdkkonnectgo.ACLsSDK {
 	return w.sdk.ACLs
 }
 
 // GetJWTCredentialsSDK returns the JWTCredentials SDK to get current organization.
-func (w sdkWrapper) GetJWTCredentialsSDK() KongCredentialJWTSDK {
+func (w sdkWrapper) GetJWTCredentialsSDK() sdkkonnectgo.JWTsSDK {
 	return w.sdk.JWTs
 }
 
 // GetHMACCredentialsSDK returns the HMACCredentials SDK to get current organization.
-func (w sdkWrapper) GetHMACCredentialsSDK() KongCredentialHMACSDK {
+func (w sdkWrapper) GetHMACCredentialsSDK() sdkkonnectgo.HMACAuthCredentialsSDK {
 	return w.sdk.HMACAuthCredentials
 }
 
