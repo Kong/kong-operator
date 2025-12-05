@@ -18,7 +18,7 @@ type KongEntityScope string
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Namespaced
-// +kubebuilder:resource:shortName=kce,categories=kong-ingress-controller;kong,path=kongcustomentities,singular=kongcustomentity
+// +kubebuilder:resource:shortName=kce,categories=kong,path=kongcustomentities,singular=kongcustomentity
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Entity Type",type=string,JSONPath=`.spec.type`,description="type of the Kong entity"
