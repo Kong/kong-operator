@@ -745,7 +745,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 	if err != nil {
 		log.Debug(logger, fmt.Sprintf("failed listing associated konnect gateway controlplanes - error: %v", err))
 		k8sutils.SetCondition(
-			createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
+			createKonnectGatewayControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 		return nil, false
@@ -757,14 +757,14 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 		if err != nil {
 			log.Debug(logger, fmt.Sprintf("KonnectGatewayControlPlane creation failed - error: %v", err))
 			k8sutils.SetCondition(
-				createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
+				createKonnectGatewayControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 				gatewayConditionsAndListenersAware(gateway),
 			)
 			return nil, false
 		} else {
 			log.Debug(logger, "KonnectGatewayControlPlane created")
 			k8sutils.SetCondition(
-				createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, kcfgdataplane.ResourceCreatedMessage, gateway.Generation),
+				createKonnectGatewayControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, kcfgdataplane.ResourceCreatedMessage, gateway.Generation),
 				gatewayConditionsAndListenersAware(gateway),
 			)
 		}
@@ -772,7 +772,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 	case count > 1:
 		err := fmt.Errorf("KonnectGatewayControlPlanes found: %d, expected: 1, requeuing", count)
 		k8sutils.SetCondition(
-			createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
+			createKonnectGatewayControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
 		log.Debug(logger, "reducing KonnectGatewayControlPlanes", "count", count)

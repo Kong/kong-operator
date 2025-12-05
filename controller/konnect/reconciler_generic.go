@@ -157,10 +157,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		if errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
-					if k8serrors.IsConflict(err) {
-						return ctrl.Result{Requeue: true}, nil
+					if res, updateErr, shouldReturn := handleUpdateError(err); shouldReturn {
+						if updateErr != nil {
+							return res, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, updateErr)
+						}
+						return res, nil
 					}
-					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
 			}
 		}
@@ -181,10 +183,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			}
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
-					if k8serrors.IsConflict(err) {
-						return ctrl.Result{RequeueAfter: time.Second}, nil
+					if res, updateErr, shouldReturn := handleUpdateError(err); shouldReturn {
+						if updateErr != nil {
+							return res, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, updateErr)
+						}
+						return res, nil
 					}
-					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
 			}
 			return ctrl.Result{}, nil
@@ -215,10 +219,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		if errors.As(err, &ReferencedKongConsumerDoesNotExist{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
-					if k8serrors.IsConflict(err) {
-						return ctrl.Result{Requeue: true}, nil
+					if res, updateErr, shouldReturn := handleUpdateError(err); shouldReturn {
+						if updateErr != nil {
+							return res, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, updateErr)
+						}
+						return res, nil
 					}
-					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
 				log.Debug(logger, "finalizer removed as the owning KongConsumer is being deleted or is already gone",
 					"finalizer", KonnectCleanupFinalizer,
@@ -252,10 +258,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		if errors.As(err, &ReferencedKongUpstreamDoesNotExist{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
-					if k8serrors.IsConflict(err) {
-						return ctrl.Result{Requeue: true}, nil
+					if res, updateErr, shouldReturn := handleUpdateError(err); shouldReturn {
+						if updateErr != nil {
+							return res, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, updateErr)
+						}
+						return res, nil
 					}
-					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
 				log.Debug(logger, "finalizer removed as the owning KongUpstream is being deleted or is already gone",
 					"finalizer", KonnectCleanupFinalizer,
@@ -288,10 +296,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		if errors.As(err, &ReferencedKongCertificateDoesNotExist{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
-					if k8serrors.IsConflict(err) {
-						return ctrl.Result{Requeue: true}, nil
+					if res, updateErr, shouldReturn := handleUpdateError(err); shouldReturn {
+						if updateErr != nil {
+							return res, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, updateErr)
+						}
+						return res, nil
 					}
-					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
 				log.Debug(logger, "finalizer removed as the owning KongCertificate is being deleted or is already gone",
 					"finalizer", KonnectCleanupFinalizer,
@@ -323,10 +333,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		if errors.As(err, &ReferencedKongKeySetDoesNotExist{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
-					if k8serrors.IsConflict(err) {
-						return ctrl.Result{Requeue: true}, nil
+					if res, updateErr, shouldReturn := handleUpdateError(err); shouldReturn {
+						if updateErr != nil {
+							return res, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, updateErr)
+						}
+						return res, nil
 					}
-					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
 				log.Debug(logger, "finalizer removed as the owning KongKeySet is being deleted or is already gone",
 					"finalizer", KonnectCleanupFinalizer,
@@ -416,10 +428,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				return ctrl.Result{}, err
 			}
 			if err := r.Client.Update(ctx, ent); err != nil {
-				if k8serrors.IsConflict(err) {
-					return ctrl.Result{Requeue: true}, nil
+				if res, updateErr, shouldReturn := handleUpdateError(err); shouldReturn {
+					if updateErr != nil {
+						return res, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, updateErr)
+					}
+					return res, nil
 				}
-				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 			}
 		}
 

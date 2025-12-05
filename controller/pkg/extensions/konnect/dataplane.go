@@ -66,6 +66,9 @@ func (p *DataPlaneKonnectExtensionProcessor) Process(ctx context.Context, cl cli
 
 	d.WithVolume(kongInKonnectClusterCertificateVolume())
 	d.WithVolumeMount(kongInKonnectClusterCertificateVolumeMount(), consts.DataPlaneProxyContainerName)
+	if konnectExtension.Status.DataPlaneClientAuth == nil || konnectExtension.Status.DataPlaneClientAuth.CertificateSecretRef == nil {
+		return false, fmt.Errorf("DataPlaneClientAuth or CertificateSecretRef is nil in KonnectExtension status")
+	}
 	d.WithVolume(kongInKonnectClusterCertVolume(konnectExtension.Status.DataPlaneClientAuth.CertificateSecretRef.Name))
 	d.WithVolumeMount(kongInKonnectClusterVolumeMount(), consts.DataPlaneProxyContainerName)
 
