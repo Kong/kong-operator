@@ -28,9 +28,23 @@ func SetupTelepresence(ctx context.Context) (func(), error) {
 		fmt.Printf("INFO: path to binary from %s environment variable is %s\n", telepresenceBin, telepresenceExecutable)
 	}
 
-	out, err := exec.CommandContext(ctx, telepresenceExecutable, "helm", "install").CombinedOutput()
+	// Set pod labels on traffic-manager to match the labels expected by NetworkPolicy.
+	// This allows traffic from the local test process (via telepresence) to be allowed
+	// by the DataPlane's NetworkPolicy which restricts admin API access.
+	// NOTE: We use "app.kubernetes.io/name" instead of "app" because "app" conflicts
+	// with telepresence's deployment selector.
+	// See: https://github.com/Kong/kong-operator/issues/2074
+	helmInstallArgs := []string{
+		"helm", "install",
+		"--set", "podLabels.app\\.kubernetes\\.io/name=kong-operator",
+	}
+	out, err := exec.CommandContext(ctx, telepresenceExecutable, helmInstallArgs...).CombinedOutput()
 	if err != nil && bytes.Contains(out, []byte("use 'telepresence helm upgrade' instead to replace it")) {
-		if out, err := exec.CommandContext(ctx, telepresenceExecutable, "helm", "upgrade").CombinedOutput(); err != nil {
+		helmUpgradeArgs := []string{
+			"helm", "upgrade",
+			"--set", "podLabels.app\\.kubernetes\\.io/name=kong-operator",
+		}
+		if out, err := exec.CommandContext(ctx, telepresenceExecutable, helmUpgradeArgs...).CombinedOutput(); err != nil {
 			return nil, fmt.Errorf("failed to upgrade telepresence traffic manager: %w, %s", err, string(out))
 		}
 	} else if err != nil {
