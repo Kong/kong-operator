@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
@@ -12,12 +13,11 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
 
 func createKongCredentialACL(
 	ctx context.Context,
-	sdk sdkops.KongCredentialACLSDK,
+	sdk sdkkonnectgo.ACLsSDK,
 	cred *configurationv1alpha1.KongCredentialACL,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -55,7 +55,7 @@ func createKongCredentialACL(
 // if the operation fails.
 func updateKongCredentialACL(
 	ctx context.Context,
-	sdk sdkops.KongCredentialACLSDK,
+	sdk sdkkonnectgo.ACLsSDK,
 	cred *configurationv1alpha1.KongCredentialACL,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -86,7 +86,7 @@ func updateKongCredentialACL(
 // It returns an error if the operation fails.
 func deleteKongCredentialACL(
 	ctx context.Context,
-	sdk sdkops.KongCredentialACLSDK,
+	sdk sdkkonnectgo.ACLsSDK,
 	cred *configurationv1alpha1.KongCredentialACL,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -106,7 +106,7 @@ func deleteKongCredentialACL(
 
 func adoptKongCredentialACL(
 	ctx context.Context,
-	sdk sdkops.KongCredentialACLSDK,
+	sdk sdkkonnectgo.ACLsSDK,
 	cred *configurationv1alpha1.KongCredentialACL,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -184,7 +184,7 @@ func kongCredentialACLToACLWithoutParents(
 // getKongCredentialACLForUID lists API key credentials in Konnect with given k8s uid as its tag.
 func getKongCredentialACLForUID(
 	ctx context.Context,
-	sdk sdkops.KongCredentialACLSDK,
+	sdk sdkkonnectgo.ACLsSDK,
 	cred *configurationv1alpha1.KongCredentialACL,
 ) (string, error) {
 	cpID := cred.GetControlPlaneID()

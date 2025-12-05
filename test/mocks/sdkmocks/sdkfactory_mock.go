@@ -16,20 +16,20 @@ import (
 type MockSDKWrapper struct {
 	ControlPlaneSDK             *mocks.MockControlPlanesSDK
 	CloudGatewaysSDK            *MockCloudGatewaysSDK
-	ControlPlaneGroupSDK        *MockControlPlaneGroupSDK
+	ControlPlaneGroupSDK        *mocks.MockControlPlaneGroupsSDK
 	ServicesSDK                 *mocks.MockServicesSDK
-	RoutesSDK                   *MockRoutesSDK
+	RoutesSDK                   *mocks.MockRoutesSDK
 	ConsumersSDK                *mocks.MockConsumersSDK
 	ConsumerGroupSDK            *mocks.MockConsumerGroupsSDK
 	PluginSDK                   *mocks.MockPluginsSDK
-	UpstreamsSDK                *MockUpstreamsSDK
-	TargetsSDK                  *MockTargetsSDK
+	UpstreamsSDK                *mocks.MockUpstreamsSDK
+	TargetsSDK                  *mocks.MockTargetsSDK
 	MeSDK                       *MockMeSDK
-	KongCredentialsBasicAuthSDK *MockKongCredentialBasicAuthSDK
-	KongCredentialsAPIKeySDK    *MockKongCredentialAPIKeySDK
-	KongCredentialsACLSDK       *MockKongCredentialACLSDK
-	KongCredentialsJWTSDK       *MockKongCredentialJWTSDK
-	KongCredentialsHMACSDK      *MockKongCredentialHMACSDK
+	KongCredentialsBasicAuthSDK *mocks.MockBasicAuthCredentialsSDK
+	KongCredentialsAPIKeySDK    *mocks.MockAPIKeysSDK
+	KongCredentialsACLSDK       *mocks.MockACLsSDK
+	KongCredentialsJWTSDK       *mocks.MockJWTsSDK
+	KongCredentialsHMACSDK      *mocks.MockHMACAuthCredentialsSDK
 	CACertificatesSDK           *MockCACertificatesSDK
 	CertificatesSDK             *MockCertificatesSDK
 	VaultSDK                    *MockVaultSDK
@@ -45,21 +45,21 @@ var _ sdkops.SDKWrapper = MockSDKWrapper{}
 func NewMockSDKWrapperWithT(t *testing.T) *MockSDKWrapper {
 	return &MockSDKWrapper{
 		ControlPlaneSDK:             mocks.NewMockControlPlanesSDK(t),
-		ControlPlaneGroupSDK:        NewMockControlPlaneGroupSDK(t),
+		ControlPlaneGroupSDK:        mocks.NewMockControlPlaneGroupsSDK(t),
 		CloudGatewaysSDK:            NewMockCloudGatewaysSDK(t),
 		ServicesSDK:                 mocks.NewMockServicesSDK(t),
-		RoutesSDK:                   NewMockRoutesSDK(t),
+		RoutesSDK:                   mocks.NewMockRoutesSDK(t),
 		ConsumersSDK:                mocks.NewMockConsumersSDK(t),
 		ConsumerGroupSDK:            mocks.NewMockConsumerGroupsSDK(t),
 		PluginSDK:                   mocks.NewMockPluginsSDK(t),
-		UpstreamsSDK:                NewMockUpstreamsSDK(t),
-		TargetsSDK:                  NewMockTargetsSDK(t),
+		UpstreamsSDK:                mocks.NewMockUpstreamsSDK(t),
+		TargetsSDK:                  mocks.NewMockTargetsSDK(t),
 		MeSDK:                       NewMockMeSDK(t),
-		KongCredentialsBasicAuthSDK: NewMockKongCredentialBasicAuthSDK(t),
-		KongCredentialsAPIKeySDK:    NewMockKongCredentialAPIKeySDK(t),
-		KongCredentialsACLSDK:       NewMockKongCredentialACLSDK(t),
-		KongCredentialsJWTSDK:       NewMockKongCredentialJWTSDK(t),
-		KongCredentialsHMACSDK:      NewMockKongCredentialHMACSDK(t),
+		KongCredentialsBasicAuthSDK: mocks.NewMockBasicAuthCredentialsSDK(t),
+		KongCredentialsAPIKeySDK:    mocks.NewMockAPIKeysSDK(t),
+		KongCredentialsACLSDK:       mocks.NewMockACLsSDK(t),
+		KongCredentialsJWTSDK:       mocks.NewMockJWTsSDK(t),
+		KongCredentialsHMACSDK:      mocks.NewMockHMACAuthCredentialsSDK(t),
 		CACertificatesSDK:           NewMockCACertificatesSDK(t),
 		CertificatesSDK:             NewMockCertificatesSDK(t),
 		VaultSDK:                    NewMockVaultSDK(t),
@@ -97,7 +97,7 @@ func (m MockSDKWrapper) GetServicesSDK() sdkkonnectgo.ServicesSDK {
 	return m.ServicesSDK
 }
 
-func (m MockSDKWrapper) GetRoutesSDK() sdkops.RoutesSDK {
+func (m MockSDKWrapper) GetRoutesSDK() sdkkonnectgo.RoutesSDK {
 	return m.RoutesSDK
 }
 
@@ -113,31 +113,31 @@ func (m MockSDKWrapper) GetPluginSDK() sdkkonnectgo.PluginsSDK {
 	return m.PluginSDK
 }
 
-func (m MockSDKWrapper) GetUpstreamsSDK() sdkops.UpstreamsSDK {
+func (m MockSDKWrapper) GetUpstreamsSDK() sdkkonnectgo.UpstreamsSDK {
 	return m.UpstreamsSDK
 }
 
-func (m MockSDKWrapper) GetBasicAuthCredentialsSDK() sdkops.KongCredentialBasicAuthSDK {
+func (m MockSDKWrapper) GetBasicAuthCredentialsSDK() sdkkonnectgo.BasicAuthCredentialsSDK {
 	return m.KongCredentialsBasicAuthSDK
 }
 
-func (m MockSDKWrapper) GetAPIKeyCredentialsSDK() sdkops.KongCredentialAPIKeySDK {
+func (m MockSDKWrapper) GetAPIKeyCredentialsSDK() sdkkonnectgo.APIKeysSDK {
 	return m.KongCredentialsAPIKeySDK
 }
 
-func (m MockSDKWrapper) GetACLCredentialsSDK() sdkops.KongCredentialACLSDK {
+func (m MockSDKWrapper) GetACLCredentialsSDK() sdkkonnectgo.ACLsSDK {
 	return m.KongCredentialsACLSDK
 }
 
-func (m MockSDKWrapper) GetJWTCredentialsSDK() sdkops.KongCredentialJWTSDK {
+func (m MockSDKWrapper) GetJWTCredentialsSDK() sdkkonnectgo.JWTsSDK {
 	return m.KongCredentialsJWTSDK
 }
 
-func (m MockSDKWrapper) GetHMACCredentialsSDK() sdkops.KongCredentialHMACSDK {
+func (m MockSDKWrapper) GetHMACCredentialsSDK() sdkkonnectgo.HMACAuthCredentialsSDK {
 	return m.KongCredentialsHMACSDK
 }
 
-func (m MockSDKWrapper) GetTargetsSDK() sdkops.TargetsSDK {
+func (m MockSDKWrapper) GetTargetsSDK() sdkkonnectgo.TargetsSDK {
 	return m.TargetsSDK
 }
 

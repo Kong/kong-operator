@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
@@ -12,12 +13,11 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
 
 func createKongCredentialBasicAuth(
 	ctx context.Context,
-	sdk sdkops.KongCredentialBasicAuthSDK,
+	sdk sdkkonnectgo.BasicAuthCredentialsSDK,
 	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -55,7 +55,7 @@ func createKongCredentialBasicAuth(
 // if the operation fails.
 func updateKongCredentialBasicAuth(
 	ctx context.Context,
-	sdk sdkops.KongCredentialBasicAuthSDK,
+	sdk sdkkonnectgo.BasicAuthCredentialsSDK,
 	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -82,7 +82,7 @@ func updateKongCredentialBasicAuth(
 // It returns an error if the operation fails.
 func deleteKongCredentialBasicAuth(
 	ctx context.Context,
-	sdk sdkops.KongCredentialBasicAuthSDK,
+	sdk sdkkonnectgo.BasicAuthCredentialsSDK,
 	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -102,7 +102,7 @@ func deleteKongCredentialBasicAuth(
 
 func adoptKongCredentialBasicAuth(
 	ctx context.Context,
-	sdk sdkops.KongCredentialBasicAuthSDK,
+	sdk sdkkonnectgo.BasicAuthCredentialsSDK,
 	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -181,7 +181,7 @@ func kongCredentialBasicAuthToBasicAuthWithoutParents(
 // getKongCredentialBasicAuthForUID lists basic auth credentials in Konnect with given k8s uid as its tag.
 func getKongCredentialBasicAuthForUID(
 	ctx context.Context,
-	sdk sdkops.KongCredentialBasicAuthSDK,
+	sdk sdkkonnectgo.BasicAuthCredentialsSDK,
 	cred *configurationv1alpha1.KongCredentialBasicAuth,
 ) (string, error) {
 	cpID := cred.GetControlPlaneID()
