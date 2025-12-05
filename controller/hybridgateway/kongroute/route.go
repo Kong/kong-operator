@@ -73,8 +73,7 @@ func RouteForRule(
 		WithSpecName(routeName).
 		WithHosts(hostnames).
 		WithStripPath(metadata.ExtractStripPath(httpRoute.Annotations)).
-		WithKongService(serviceName).
-		WithOwner(httpRoute)
+		WithKongService(serviceName)
 
 	// Add HTTPRoute matches
 	for _, match := range rule.Matches {
