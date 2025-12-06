@@ -56,7 +56,10 @@ func SetupTelepresence(ctx context.Context) (func(), error) {
 	}
 
 	fmt.Println("INFO: connecting to the cluster with telepresence")
-	out, err = exec.CommandContext(ctx, telepresenceExecutable, "connect").CombinedOutput()
+	// NOTE: We need to specify --manager-namespace to connect to the traffic-manager
+	// installed in kong-system namespace above.
+	connectArgs := []string{"connect", "--manager-namespace", "kong-system"}
+	out, err = exec.CommandContext(ctx, telepresenceExecutable, connectArgs...).CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the cluster with telepresence: %w, %s", err, string(out))
 	}
