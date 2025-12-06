@@ -33,15 +33,19 @@ func SetupTelepresence(ctx context.Context) (func(), error) {
 	// by the DataPlane's NetworkPolicy which restricts admin API access.
 	// NOTE: We use "app.kubernetes.io/name" instead of "app" because "app" conflicts
 	// with telepresence's deployment selector.
+	// NOTE: We install traffic-manager in kong-system namespace to match the NetworkPolicy
+	// rules which only allow traffic from kong-system namespace.
 	// See: https://github.com/Kong/kong-operator/issues/2074
 	helmInstallArgs := []string{
 		"helm", "install",
+		"--manager-namespace", "kong-system",
 		"--set", "podLabels.app\\.kubernetes\\.io/name=kong-operator",
 	}
 	out, err := exec.CommandContext(ctx, telepresenceExecutable, helmInstallArgs...).CombinedOutput()
 	if err != nil && bytes.Contains(out, []byte("use 'telepresence helm upgrade' instead to replace it")) {
 		helmUpgradeArgs := []string{
 			"helm", "upgrade",
+			"--manager-namespace", "kong-system",
 			"--set", "podLabels.app\\.kubernetes\\.io/name=kong-operator",
 		}
 		if out, err := exec.CommandContext(ctx, telepresenceExecutable, helmUpgradeArgs...).CombinedOutput(); err != nil {
