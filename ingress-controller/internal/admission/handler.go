@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sync"
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
@@ -35,7 +36,8 @@ type RequestHandler struct {
 	// it the server to validate. Each instance is created per KIC
 	// instance run in KO. Dispatch methods are responsible for
 	// routing incoming requests to the appropriate validator.
-	validators map[string]KongValidator
+	validatorsMut sync.RWMutex
+	validators    map[string]KongValidator
 
 	Logger logr.Logger
 }
@@ -44,6 +46,8 @@ type RequestHandler struct {
 // Existing of a reference indexers is not guaranteed, so the second return boolean
 // value indicates it.
 func (h *RequestHandler) pickReferenceIndexers() (ctrlref.CacheIndexers, bool) {
+	h.validatorsMut.RLock()
+	defer h.validatorsMut.RUnlock()
 	if len(h.validators) > 0 {
 		return lo.Values(h.validators)[0].GetReferenceIndexers(), true
 	}
@@ -60,6 +64,8 @@ func (h *RequestHandler) pickReferenceIndexers() (ctrlref.CacheIndexers, bool) {
 // - h.handleGateway -> ValidateGateway
 // - h.handleHTTPRoute -> ValidateHTTPRoute
 func (h *RequestHandler) dispatchValidationNoMatcher() (KongValidator, bool) {
+	h.validatorsMut.RLock()
+	defer h.validatorsMut.RUnlock()
 	if len(h.validators) > 0 {
 		return lo.Values(h.validators)[0], true
 	}
@@ -73,6 +79,8 @@ func (h *RequestHandler) dispatchValidationNoMatcher() (KongValidator, bool) {
 // - h.handleKongConsumerGroup -> ValidateConsumerGroup
 // - h.handleKongVault -> ValidateVault
 func (h *RequestHandler) dispatchValidationIngressClassMatcher(obj metav1.ObjectMeta) (KongValidator, bool) {
+	h.validatorsMut.RLock()
+	defer h.validatorsMut.RUnlock()
 	for _, v := range h.validators {
 		if v.IngressClassMatcher(&obj) {
 			return v, true
@@ -88,6 +96,8 @@ func (h *RequestHandler) dispatchValidationIngressClassMatcher(obj metav1.Object
 // On that matching below entities rely:
 // - h.handleIngress-> ValidateIngress
 func (h *RequestHandler) dispatchValidationForIngress(ing netv1.Ingress) (KongValidator, bool) {
+	h.validatorsMut.RLock()
+	defer h.validatorsMut.RUnlock()
 	for _, v := range h.validators {
 		if v.IngressClassMatcher(&ing.ObjectMeta) ||
 			v.IngressV1ClassMatcher(&ing) {
@@ -104,6 +114,8 @@ func (h *RequestHandler) dispatchValidationForIngress(ing netv1.Ingress) (KongVa
 // On that matching below entities rely:
 // - h.handleKongCustomEntity -> ValidateCustomEntity
 func (h *RequestHandler) dispatchValidationForCustomEntity(entity configurationv1alpha1.KongCustomEntity) (KongValidator, bool) {
+	h.validatorsMut.RLock()
+	defer h.validatorsMut.RUnlock()
 	for _, v := range h.validators {
 		if v.IngressClassMatcher(&entity.ObjectMeta) ||
 			v.IngressClassMatcher(&metav1.ObjectMeta{
@@ -130,6 +142,8 @@ type mgrID interface {
 // RegisterValidator adds a new validator to the request handler. An instance of
 // validator is created per KIC instance in KO.
 func (h *RequestHandler) RegisterValidator(id mgrID, validator KongValidator) {
+	h.validatorsMut.Lock()
+	defer h.validatorsMut.Unlock()
 	if h.validators == nil {
 		h.validators = make(map[string]KongValidator)
 	}
@@ -140,12 +154,14 @@ func (h *RequestHandler) RegisterValidator(id mgrID, validator KongValidator) {
 // An instance of validator is removed when a particular KIC instance
 // is removed from KO.
 func (h *RequestHandler) UnregisterValidator(id mgrID) {
+	h.validatorsMut.Lock()
+	defer h.validatorsMut.Unlock()
 	delete(h.validators, id.String())
 }
 
 // ServeHTTP parses AdmissionReview requests and responds back
 // with the validation result of the entity.
-func (h RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (h *RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Body == nil {
 		h.Logger.Error(nil, "Received request with empty body")
 		http.Error(w, "Admission review object is missing",
@@ -233,7 +249,7 @@ var (
 	}
 )
 
-func (h RequestHandler) handleValidation(ctx context.Context, request admissionv1.AdmissionRequest) (
+func (h *RequestHandler) handleValidation(ctx context.Context, request admissionv1.AdmissionRequest) (
 	*admissionv1.AdmissionResponse, error,
 ) {
 	responseBuilder := NewResponseBuilder(request.UID)
@@ -269,7 +285,7 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 }
 
 // +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongconsumers,versions=v1,name=kongconsumers.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
-func (h RequestHandler) handleKongConsumer(
+func (h *RequestHandler) handleKongConsumer(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
@@ -315,7 +331,7 @@ func (h RequestHandler) handleKongConsumer(
 
 // +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongconsumergroups,versions=v1beta1,name=kongconsumergroups.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
-func (h RequestHandler) handleKongConsumerGroup(
+func (h *RequestHandler) handleKongConsumerGroup(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
@@ -338,7 +354,7 @@ func (h RequestHandler) handleKongConsumerGroup(
 
 // +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongplugins,versions=v1,name=kongplugins.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
-func (h RequestHandler) handleKongPlugin(
+func (h *RequestHandler) handleKongPlugin(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
@@ -363,7 +379,7 @@ func (h RequestHandler) handleKongPlugin(
 
 // +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongclusterplugins,versions=v1,name=kongclusterplugins.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
-func (h RequestHandler) handleKongClusterPlugin(
+func (h *RequestHandler) handleKongClusterPlugin(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
@@ -391,7 +407,7 @@ func (h RequestHandler) handleKongClusterPlugin(
 // handwritten webhook rules that we patch into the webhook manifest.
 // See https://github.com/kubernetes-sigs/controller-tools/issues/553 for further info.
 
-func (h RequestHandler) handleSecret(
+func (h *RequestHandler) handleSecret(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
@@ -448,7 +464,7 @@ func (h RequestHandler) handleSecret(
 
 // checkReferrersOfSecret validates all referrers (KongPlugins and KongClusterPlugins) of the secret
 // and rejects the secret if it generates invalid configurations for any of the referrers.
-func (h RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *corev1.Secret) (bool, int, string, error) {
+func (h *RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *corev1.Secret) (bool, int, string, error) {
 	ri, ok := h.pickReferenceIndexers()
 	if !ok {
 		return true, 0, "", nil
@@ -504,7 +520,7 @@ func (h RequestHandler) checkReferrersOfSecret(ctx context.Context, secret *core
 
 // +kubebuilder:webhook:verbs=create;update,groups=gateway.networking.k8s.io,resources=gateways,versions=v1;v1beta1,name=gateways.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
-func (h RequestHandler) handleGateway(
+func (h *RequestHandler) handleGateway(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
@@ -529,7 +545,7 @@ func (h RequestHandler) handleGateway(
 
 // +kubebuilder:webhook:verbs=create;update,groups=gateway.networking.k8s.io,resources=httproutes,versions=v1;v1beta1,name=httproutes.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
-func (h RequestHandler) handleHTTPRoute(
+func (h *RequestHandler) handleHTTPRoute(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,
 	responseBuilder *ResponseBuilder,
@@ -557,7 +573,7 @@ const (
 
 // +kubebuilder:webhook:verbs=create;update,groups=core,resources=services,versions=v1,name=services.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
-func (h RequestHandler) handleService(request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
+func (h *RequestHandler) handleService(request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	service := corev1.Service{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &service)
 	if err != nil {
@@ -576,7 +592,7 @@ func (h RequestHandler) handleService(request admissionv1.AdmissionRequest, resp
 
 // +kubebuilder:webhook:verbs=create;update,groups=networking.k8s.io,resources=ingresses,versions=v1,name=ingresses.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
-func (h RequestHandler) handleIngress(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
+func (h *RequestHandler) handleIngress(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	ingress := netv1.Ingress{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &ingress)
 	if err != nil {
@@ -596,7 +612,7 @@ func (h RequestHandler) handleIngress(ctx context.Context, request admissionv1.A
 
 // +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongvaults,versions=v1alpha1,name=kongvaults.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
-func (h RequestHandler) handleKongVault(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
+func (h *RequestHandler) handleKongVault(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	kongVault := configurationv1alpha1.KongVault{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongVault)
 	if err != nil {
@@ -616,7 +632,7 @@ func (h RequestHandler) handleKongVault(ctx context.Context, request admissionv1
 
 // +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongcustomentities,versions=v1alpha1,name=kongcustomentities.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
-func (h RequestHandler) handleKongCustomEntity(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
+func (h *RequestHandler) handleKongCustomEntity(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	kongCustomEntity := configurationv1alpha1.KongCustomEntity{}
 	_, _, err := codecs.UniversalDeserializer().Decode(request.Object.Raw, nil, &kongCustomEntity)
 	if err != nil {
