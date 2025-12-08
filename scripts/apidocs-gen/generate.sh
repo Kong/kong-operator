@@ -27,3 +27,7 @@ generate "/api/incubator" "/docs/incubator-api-reference.md"
 generate "/api/gateway-operator" "/docs/gateway-operator-api-reference.md"
 
 generate "/api" "/docs/all-api-reference.md"
+
+# Post-process generated docs to map external SDK types to primitives
+chmod +x "${SCRIPT_ROOT}/scripts/apidocs-gen/post-process-types.sh"
+"${SCRIPT_ROOT}/scripts/apidocs-gen/post-process-types.sh"
