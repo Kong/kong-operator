@@ -10251,7 +10251,7 @@ spec:
                               required:
                               - port
                               type: object
-                            maxItems: 4
+                            maxItems: 64
                             type: array
                           type:
                             default: LoadBalancer

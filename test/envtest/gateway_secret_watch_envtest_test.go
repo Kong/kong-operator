@@ -13,7 +13,6 @@ import (
 
 	kogateway "github.com/kong/kong-operator/controller/gateway"
 	certhelper "github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
-	"github.com/kong/kong-operator/modules/manager/logging"
 	managerscheme "github.com/kong/kong-operator/modules/manager/scheme"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/pkg/vars"
@@ -34,7 +33,6 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 		Scheme:                scheme,
 		Namespace:             ns.Name,
 		DefaultDataPlaneImage: "kong:latest",
-		LoggingMode:           logging.DevelopmentMode,
 	}
 	StartReconcilers(ctx, t, mgr, logs, r)
 

@@ -1,6 +1,7 @@
 package crdsvalidation_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/samber/lo"
@@ -377,6 +378,43 @@ func TestDataplane(t *testing.T) {
 						},
 					},
 				},
+			},
+			{
+				Name: "can specify up to 64 service ports",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										Ports: generatePorts(64),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "cannot specify more than 64 service ports",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										Ports: generatePorts(65),
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.network.services.ingress.ports: Too many: 65: must have at most 64 items"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
@@ -920,4 +958,16 @@ func TestDataplane(t *testing.T) {
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
+}
+
+func generatePorts(n int32) []operatorv1beta1.DataPlaneServicePort {
+	ret := make([]operatorv1beta1.DataPlaneServicePort, 0, 64)
+	for i := range n {
+		ret = append(ret, operatorv1beta1.DataPlaneServicePort{
+			Name:       fmt.Sprintf("http-%d", i),
+			Port:       80 + i,
+			TargetPort: intstr.FromInt(80),
+		})
+	}
+	return ret
 }
