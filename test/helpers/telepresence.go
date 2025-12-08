@@ -28,9 +28,23 @@ func SetupTelepresence(ctx context.Context) (func(), error) {
 		fmt.Printf("INFO: path to binary from %s environment variable is %s\n", telepresenceBin, telepresenceExecutable)
 	}
 
-	out, err := exec.CommandContext(ctx, telepresenceExecutable, "helm", "install").CombinedOutput()
+	// Set pod labels on traffic-manager to match the labels expected by NetworkPolicy.
+	// This allows traffic from the local test process (via telepresence) to be allowed
+	// by the DataPlane's NetworkPolicy which restricts admin API access.
+	// NOTE: We use "app.kubernetes.io/name" instead of "app" because "app" conflicts
+	// with telepresence's deployment selector.
+	// NOTE: We install traffic-manager in kong-system namespace to match the NetworkPolicy
+	// rules which only allow traffic from kong-system namespace.
+	// See: https://github.com/Kong/kong-operator/issues/2074
+	commonHelmFlags := []string{
+		"--manager-namespace", "kong-system",
+		"--set", "podLabels.app\\.kubernetes\\.io/name=kong-operator",
+	}
+	helmInstallArgs := append([]string{"helm", "install"}, commonHelmFlags...)
+	out, err := exec.CommandContext(ctx, telepresenceExecutable, helmInstallArgs...).CombinedOutput()
 	if err != nil && bytes.Contains(out, []byte("use 'telepresence helm upgrade' instead to replace it")) {
-		if out, err := exec.CommandContext(ctx, telepresenceExecutable, "helm", "upgrade").CombinedOutput(); err != nil {
+		helmUpgradeArgs := append([]string{"helm", "upgrade"}, commonHelmFlags...)
+		if out, err := exec.CommandContext(ctx, telepresenceExecutable, helmUpgradeArgs...).CombinedOutput(); err != nil {
 			return nil, fmt.Errorf("failed to upgrade telepresence traffic manager: %w, %s", err, string(out))
 		}
 	} else if err != nil {
@@ -38,7 +52,10 @@ func SetupTelepresence(ctx context.Context) (func(), error) {
 	}
 
 	fmt.Println("INFO: connecting to the cluster with telepresence")
-	out, err = exec.CommandContext(ctx, telepresenceExecutable, "connect").CombinedOutput()
+	// NOTE: We need to specify --manager-namespace to connect to the traffic-manager
+	// installed in kong-system namespace above.
+	connectArgs := []string{"connect", "--manager-namespace", "kong-system"}
+	out, err = exec.CommandContext(ctx, telepresenceExecutable, connectArgs...).CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to the cluster with telepresence: %w, %s", err, string(out))
 	}
