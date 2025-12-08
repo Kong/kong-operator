@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -32,87 +31,27 @@ func GetSelfNamespace() (string, error) {
 
 // GetSelfPodLabels gets all the labels of the KO pod.
 func GetSelfPodLabels() (map[string]string, error) {
-	var (
-		lastErr   error
-		locations []string
-	)
-
-	// Prefer explicit override first
-	if override := os.Getenv("KONG_OPERATOR_POD_LABELS_FILE"); override != "" {
-		locations = append(locations, override)
+	buf, err := os.ReadFile(podLabelsFile)
+	if err != nil {
+		return nil, fmt.Errorf("cannot find pod labels from file %s: %w", podLabelsFile, err)
 	}
 
-	// Then try TELEPRESENCE_ROOT mounted path
-	if root := os.Getenv("TELEPRESENCE_ROOT"); root != "" {
-		relPath := strings.TrimPrefix(podLabelsFile, "/")
-		locations = append(locations, filepath.Join(root, relPath))
-	}
-
-	// Finally fall back to standard pod labels file
-	locations = append(locations, podLabelsFile)
-
-	for _, path := range locations {
-		buf, err := os.ReadFile(path)
-		if err != nil {
-			lastErr = err
-			continue
-		}
-
-		ret := parsePodLabels(string(buf))
-		if len(ret) > 0 {
-			return ret, nil
-		}
-		lastErr = fmt.Errorf("no valid labels found in %s", path)
-	}
-
-	if lastErr != nil {
-		return nil, fmt.Errorf("cannot find pod labels from %v: %w", locations, lastErr)
-	}
-	return nil, fmt.Errorf("cannot determine pod labels")
-}
-
-// parsePodLabels parses pod labels from DownwardAPI format.
-// Supports both newline-separated and comma-separated formats.
-func parsePodLabels(content string) map[string]string {
+	labels := strings.SplitSeq(string(buf), "\n")
 	ret := make(map[string]string)
-	content = strings.TrimSpace(content)
-	if content == "" {
-		return ret
-	}
-
-	// Try newline-separated first
-	lines := strings.Split(content, "\n")
-	// If we only have one line and it contains commas, try comma-separated
-	if len(lines) == 1 && strings.Contains(content, ",") {
-		lines = strings.Split(content, ",")
-	}
-
-	for _, label := range lines {
-		label = strings.TrimSpace(label)
-		if label == "" {
-			continue
-		}
-
+	for label := range labels {
 		labelKV := strings.SplitN(label, "=", 2)
 		if len(labelKV) != 2 {
+			return nil, fmt.Errorf("invalid label format, should be key=value")
+		}
+		key := labelKV[0]
+		// The value in labels are escaped, e.g: "ko" => "\"ko\"". So we need to unquote it.
+		value, err := strconv.Unquote(labelKV[1])
+		if err != nil {
 			continue
 		}
-
-		key := strings.TrimSpace(labelKV[0])
-		value := strings.TrimSpace(labelKV[1])
-		if key == "" {
-			continue
-		}
-
-		// Try to unquote the value (DownwardAPI escapes values)
-		if unquoted, err := strconv.Unquote(value); err == nil {
-			value = unquoted
-		}
-
 		ret[key] = value
 	}
-
-	return ret
+	return ret, nil
 }
 
 // RunningOnKubernetes returns true if it is running in the kubernetes environment.

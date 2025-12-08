@@ -1,15 +1,10 @@
 package helpers
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"fmt"
 	"os"
 	"os/exec"
-	"sort"
-	"strconv"
-	"strings"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -22,6 +17,7 @@ import (
 
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test"
+	"github.com/samber/lo"
 )
 
 const (
@@ -74,23 +70,31 @@ func SetupNetworkIntercepts(ctx context.Context, clients testutils.K8sClients) (
 		return nil, fmt.Errorf("telepresence intercept deployment not ready: %w", err)
 	}
 
-	envFile, err := os.CreateTemp("", "telepresence-env-*.sh")
+	fmt.Println("INFO: connecting to the cluster with telepresence!!!")
+	// NOTE: We need to specify --manager-namespace to connect to the traffic-manager
+	// installed in kong-system namespace above.
+	connectArgs := []string{"connect", "--manager-namespace", "kong-system", "--namespace", "kong-system"}
+	out, err := exec.CommandContext(ctx, telepresenceExec, connectArgs...).CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("failed creating temporary env file for telepresence: %w", err)
+		return nil, fmt.Errorf("failed to connect to the cluster with telepresence: %w, %s", err, string(out))
 	}
-	envFilePath := envFile.Name()
-	_ = envFile.Close()
+
+	// envFile, err := os.CreateTemp("", "telepresence-env-*.sh")
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed creating temporary env file for telepresence: %w", err)
+	// }
+	// envFilePath := envFile.Name()
+	// _ = envFile.Close()
 
 	fmt.Println("INFO: establishing telepresence intercept for controller identity")
-	var (
-		labelOverridePath string
-	)
+	// var (
+	// 	labelOverridePath string
+	// )
 	intercept := func(portPair int, svcName string) []string {
 		return []string{
 			"replace",
 			svcName,
 			"--port", fmt.Sprintf("%d:%d", portPair, portPair),
-			"--env-file", envFilePath,
 		}
 	}
 
@@ -98,52 +102,13 @@ func SetupNetworkIntercepts(ctx context.Context, clients testutils.K8sClients) (
 	cmd.Env = os.Environ()
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		if !bytes.Contains(output, []byte("already exists")) {
-			_ = os.Remove(envFilePath)
-			return nil, fmt.Errorf("failed to create telepresence intercept: %w, %s", err, string(output))
-		}
+		// if !bytes.Contains(output, []byte("already exists")) {
+		// 	_ = os.Remove(envFilePath)
+		// 	return nil, fmt.Errorf("failed to create telepresence intercept: %w, %s", err, string(output))
+		// }
 		fmt.Println("WARN: telepresence intercept already exists, reusing the existing session")
 	}
 	fmt.Println(">>>\n", string(output), "\n<<<")
-
-	// const svc = "gateway-operator-webhook-service"
-	// cmd = exec.CommandContext(ctx, telepresenceExec, intercept(433, svc)...)
-	// cmd.Env = os.Environ()
-	// output, err = cmd.CombinedOutput()
-	// if err != nil {
-	// 	if !bytes.Contains(output, []byte("already exists")) {
-	// 		_ = os.Remove(envFilePath)
-	// 		return nil, fmt.Errorf("failed to create telepresence intercept: %w, %s", err, string(output))
-	// 	}
-	// 	fmt.Println("WARN: telepresence intercept already exists, reusing the existing session")
-	// }
-
-	// cmd = exec.CommandContext(ctx, telepresenceExec, intercept(5433, svc)...)
-	// cmd.Env = os.Environ()
-	// output, err = cmd.CombinedOutput()
-	// if err != nil {
-	// 	if !bytes.Contains(output, []byte("already exists")) {
-	// 		_ = os.Remove(envFilePath)
-	// 		return nil, fmt.Errorf("failed to create telepresence intercept: %w, %s", err, string(output))
-	// 	}
-	// 	fmt.Println("WARN: telepresence intercept already exists, reusing the existing session")
-	// }
-
-	if err := applyTelepresenceEnvFile(envFilePath); err != nil {
-		leaveCmd := exec.CommandContext(ctx, telepresenceExec, "leave", telepresenceInterceptName)
-		_ = leaveCmd.Run()
-		_ = os.Remove(envFilePath)
-		return nil, fmt.Errorf("failed to apply telepresence environment: %w", err)
-	}
-
-	overridePath, err := writePodLabelsOverride(interceptPodLabels())
-	if err != nil {
-		return nil, fmt.Errorf("failed to prepare pod labels override: %w", err)
-	}
-	labelOverridePath = overridePath
-	if err := os.Setenv("KONG_OPERATOR_POD_LABELS_FILE", overridePath); err != nil {
-		return nil, fmt.Errorf("failed to set pod labels override env: %w", err)
-	}
 
 	if err := ensureAdmissionRegistration(ctx, clients.K8sClient, k8stypes.NamespacedName{
 		Namespace: controllerNamespace,
@@ -166,14 +131,14 @@ func SetupNetworkIntercepts(ctx context.Context, clients testutils.K8sClients) (
 			fmt.Printf("WARN: failed to delete intercept service %s/%s: %v\n", controllerNamespace, telepresenceInterceptDeploymentName, err)
 		}
 
-		if err := os.Remove(envFilePath); err != nil && !os.IsNotExist(err) {
-			fmt.Printf("WARN: failed to remove telepresence env file %q: %v\n", envFilePath, err)
-		}
-		if labelOverridePath != "" {
-			if err := os.Remove(labelOverridePath); err != nil && !os.IsNotExist(err) {
-				fmt.Printf("WARN: failed to remove pod labels override file %q: %v\n", labelOverridePath, err)
-			}
-		}
+		// if err := os.Remove(envFilePath); err != nil && !os.IsNotExist(err) {
+		// 	fmt.Printf("WARN: failed to remove telepresence env file %q: %v\n", envFilePath, err)
+		// }
+		// if labelOverridePath != "" {
+		// 	if err := os.Remove(labelOverridePath); err != nil && !os.IsNotExist(err) {
+		// 		fmt.Printf("WARN: failed to remove pod labels override file %q: %v\n", labelOverridePath, err)
+		// 	}
+		// }
 	}
 
 	return cleanup, nil
@@ -195,7 +160,7 @@ func ensureInterceptDeployment(ctx context.Context, clients testutils.K8sClients
 			// },
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: ptrTo[int32](1),
+			Replicas: lo.ToPtr[int32](1),
 			Selector: &metav1.LabelSelector{
 				MatchLabels: map[string]string{
 					"app": "gateway-operator-controller-manager",
@@ -205,10 +170,11 @@ func ensureInterceptDeployment(ctx context.Context, clients testutils.K8sClients
 				ObjectMeta: metav1.ObjectMeta{
 					Labels: labels,
 					Annotations: map[string]string{
-						"telepresence.getambassador.io/inject-traffic-agent": "enabled",
+						"telepresence.io/inject-traffic-agent": "enabled",
 					},
 				},
 				Spec: corev1.PodSpec{
+					PriorityClassName: "system-cluster-critical",
 					Containers: []corev1.Container{
 						{
 							Name:  "identity",
@@ -301,69 +267,4 @@ func waitForDeploymentReady(ctx context.Context, clients testutils.K8sClients, n
 		}
 		return false, nil
 	})
-}
-
-func applyTelepresenceEnvFile(path string) error {
-	file, err := os.Open(path)
-	if err != nil {
-		return fmt.Errorf("failed to open telepresence env file %s: %w", path, err)
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
-		if line == "" || strings.HasPrefix(line, "#") {
-			continue
-		}
-		if after, ok := strings.CutPrefix(line, "export "); ok {
-			line = strings.TrimSpace(after)
-		}
-		key, value, found := strings.Cut(line, "=")
-		if !found || key == "" {
-			continue
-		}
-		key = strings.TrimSpace(key)
-		value = strings.TrimSpace(value)
-		if unquoted, err := strconv.Unquote(value); err == nil {
-			value = unquoted
-		}
-		if err := os.Setenv(key, value); err != nil {
-			return fmt.Errorf("failed setting environment variable %s: %w", key, err)
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("failed parsing telepresence env file %s: %w", path, err)
-	}
-	return nil
-}
-
-func ptrTo[T any](value T) *T {
-	return &value
-}
-
-func writePodLabelsOverride(labels map[string]string) (string, error) {
-	file, err := os.CreateTemp("", "ko-pod-labels-*.txt")
-	if err != nil {
-		return "", fmt.Errorf("failed to create pod labels temp file: %w", err)
-	}
-	if err := file.Close(); err != nil {
-		return "", fmt.Errorf("failed to close pod labels temp file: %w", err)
-	}
-
-	var keys []string
-	for k := range labels {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	lines := make([]string, 0, len(keys))
-	for _, key := range keys {
-		lines = append(lines, fmt.Sprintf("%s=%q", key, labels[key]))
-	}
-
-	if err := os.WriteFile(file.Name(), []byte(strings.Join(lines, "\n")), 0o600); err != nil {
-		return "", fmt.Errorf("failed to write pod labels temp file: %w", err)
-	}
-	return file.Name(), nil
 }

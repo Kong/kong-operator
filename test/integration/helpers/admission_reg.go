@@ -5,15 +5,15 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
+	admregv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
 	"github.com/kong/kong-operator/test/helpers/kcfg"
-	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
-	admregv1 "k8s.io/api/admissionregistration/v1"
-	"sigs.k8s.io/yaml"
 )
 
 // ensureAdmissionRegistration registers a validating webhook for the given configuration, it validates objects

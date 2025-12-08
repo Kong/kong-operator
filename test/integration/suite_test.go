@@ -120,7 +120,6 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: final telepresence and intercept setup")
 	cleanupTelepresence, err := inthelpers.SetupTelepresence(ctx)
-	_ = cleanupTelepresence
 	exitOnErr(err)
 	defer cleanupTelepresence()
 
@@ -133,7 +132,6 @@ func TestMain(m *testing.M) {
 
 	fmt.Println("INFO: starting the operator's controller manager")
 	cleanupIntercept, err := inthelpers.SetupNetworkIntercepts(ctx, GetClients())
-	_ = cleanupIntercept
 	exitOnErr(err)
 	defer cleanupIntercept()
 

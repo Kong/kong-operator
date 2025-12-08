@@ -5,12 +5,6 @@
 set -e
 set -o pipefail
 
-# Default XDG_CONFIG_HOME to the project .config/telepresence directory so Telepresence reads config.yml inside it
-PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-if [ -z "${XDG_CONFIG_HOME:-}" ]; then
-  export XDG_CONFIG_HOME="$PROJECT_DIR/.config/telepresence"
-fi
-
 # Function to log messages with different levels.
 log() {
   local level="$1"
