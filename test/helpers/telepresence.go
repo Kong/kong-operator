@@ -36,18 +36,14 @@ func SetupTelepresence(ctx context.Context) (func(), error) {
 	// NOTE: We install traffic-manager in kong-system namespace to match the NetworkPolicy
 	// rules which only allow traffic from kong-system namespace.
 	// See: https://github.com/Kong/kong-operator/issues/2074
-	helmInstallArgs := []string{
-		"helm", "install",
+	commonHelmFlags := []string{
 		"--manager-namespace", "kong-system",
 		"--set", "podLabels.app\\.kubernetes\\.io/name=kong-operator",
 	}
+	helmInstallArgs := append([]string{"helm", "install"}, commonHelmFlags...)
 	out, err := exec.CommandContext(ctx, telepresenceExecutable, helmInstallArgs...).CombinedOutput()
 	if err != nil && bytes.Contains(out, []byte("use 'telepresence helm upgrade' instead to replace it")) {
-		helmUpgradeArgs := []string{
-			"helm", "upgrade",
-			"--manager-namespace", "kong-system",
-			"--set", "podLabels.app\\.kubernetes\\.io/name=kong-operator",
-		}
+		helmUpgradeArgs := append([]string{"helm", "upgrade"}, commonHelmFlags...)
 		if out, err := exec.CommandContext(ctx, telepresenceExecutable, helmUpgradeArgs...).CombinedOutput(); err != nil {
 			return nil, fmt.Errorf("failed to upgrade telepresence traffic manager: %w, %s", err, string(out))
 		}
