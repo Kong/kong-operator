@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
@@ -12,12 +13,11 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
 
 func createKongCredentialHMAC(
 	ctx context.Context,
-	sdk sdkops.KongCredentialHMACSDK,
+	sdk sdkkonnectgo.HMACAuthCredentialsSDK,
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -55,7 +55,7 @@ func createKongCredentialHMAC(
 // if the operation fails.
 func updateKongCredentialHMAC(
 	ctx context.Context,
-	sdk sdkops.KongCredentialHMACSDK,
+	sdk sdkkonnectgo.HMACAuthCredentialsSDK,
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -83,7 +83,7 @@ func updateKongCredentialHMAC(
 // It returns an error if the operation fails.
 func deleteKongCredentialHMAC(
 	ctx context.Context,
-	sdk sdkops.KongCredentialHMACSDK,
+	sdk sdkkonnectgo.HMACAuthCredentialsSDK,
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -103,7 +103,7 @@ func deleteKongCredentialHMAC(
 
 func adoptKongCredentialHMAC(
 	ctx context.Context,
-	sdk sdkops.KongCredentialHMACSDK,
+	sdk sdkkonnectgo.HMACAuthCredentialsSDK,
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -186,7 +186,7 @@ func kongCredentialHMACToHMACWithoutParents(
 // getKongCredentialHMACForUID lists HMAC credentials in Konnect with given k8s uid as its tag.
 func getKongCredentialHMACForUID(
 	ctx context.Context,
-	sdk sdkops.KongCredentialHMACSDK,
+	sdk sdkkonnectgo.HMACAuthCredentialsSDK,
 	cred *configurationv1alpha1.KongCredentialHMAC,
 ) (string, error) {
 	cpID := cred.GetControlPlaneID()

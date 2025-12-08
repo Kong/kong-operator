@@ -7,6 +7,7 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -19,7 +20,6 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/pkg/metadata"
-	"github.com/kong/kong-operator/test/mocks/sdkmocks"
 )
 
 func TestKongRouteToSDKRouteInput_Tags(t *testing.T) {
@@ -77,15 +77,15 @@ func TestAdoptRoute(t *testing.T) {
 	ctx := t.Context()
 	testCases := []struct {
 		name                string
-		mockRoutePair       func(*testing.T) (*sdkmocks.MockRoutesSDK, *configurationv1alpha1.KongRoute)
+		mockRoutePair       func(*testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute)
 		assertions          func(*testing.T, *configurationv1alpha1.KongRoute)
 		expectedErrContains string
 		expectedErrType     error
 	}{
 		{
 			name: "success",
-			mockRoutePair: func(t *testing.T) (*sdkmocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
-				sdk := sdkmocks.NewMockRoutesSDK(t)
+			mockRoutePair: func(t *testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
+				sdk := mocks.NewMockRoutesSDK(t)
 				route := &configurationv1alpha1.KongRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "route-1",
@@ -147,8 +147,8 @@ func TestAdoptRoute(t *testing.T) {
 		},
 		{
 			name: "failed to fetch",
-			mockRoutePair: func(t *testing.T) (*sdkmocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
-				sdk := sdkmocks.NewMockRoutesSDK(t)
+			mockRoutePair: func(t *testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
+				sdk := mocks.NewMockRoutesSDK(t)
 				route := &configurationv1alpha1.KongRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "route-1",
@@ -189,8 +189,8 @@ func TestAdoptRoute(t *testing.T) {
 		},
 		{
 			name: "unsupported route type",
-			mockRoutePair: func(t *testing.T) (*sdkmocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
-				sdk := sdkmocks.NewMockRoutesSDK(t)
+			mockRoutePair: func(t *testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
+				sdk := mocks.NewMockRoutesSDK(t)
 				route := &configurationv1alpha1.KongRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "route-1",
@@ -234,8 +234,8 @@ func TestAdoptRoute(t *testing.T) {
 		},
 		{
 			name: "service reference not match",
-			mockRoutePair: func(t *testing.T) (*sdkmocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
-				sdk := sdkmocks.NewMockRoutesSDK(t)
+			mockRoutePair: func(t *testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
+				sdk := mocks.NewMockRoutesSDK(t)
 				route := &configurationv1alpha1.KongRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "route-1",
@@ -289,8 +289,8 @@ func TestAdoptRoute(t *testing.T) {
 		},
 		{
 			name: "success in match mode",
-			mockRoutePair: func(t *testing.T) (*sdkmocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
-				sdk := sdkmocks.NewMockRoutesSDK(t)
+			mockRoutePair: func(t *testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
+				sdk := mocks.NewMockRoutesSDK(t)
 				route := &configurationv1alpha1.KongRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "route-1",
@@ -345,8 +345,8 @@ func TestAdoptRoute(t *testing.T) {
 		},
 		{
 			name: "failed to match in match mode",
-			mockRoutePair: func(t *testing.T) (*sdkmocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
-				sdk := sdkmocks.NewMockRoutesSDK(t)
+			mockRoutePair: func(t *testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
+				sdk := mocks.NewMockRoutesSDK(t)
 				route := &configurationv1alpha1.KongRoute{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "route-1",
