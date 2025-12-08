@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.0.7](#v207)
 - [v2.0.6](#v206)
 - [v2.0.5](#v205)
 - [v2.0.4](#v204)
@@ -35,6 +36,16 @@
 - [v0.2.0](#v020)
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
+
+## [v2.0.7]
+
+> Release date: TBD
+
+### Fixed
+
+- Fixed an issue where users could set the secret of configmap label selectors
+  to empty when the other one was left non-empty.
+  [#2815](https://github.com/Kong/kong-operator/pull/2815)
 
 ## [v2.0.6]
 
@@ -1415,6 +1426,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.0.7]: https://github.com/Kong/kong-operator/compare/v2.0.6..v2.0.7
 [v2.0.6]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.0.6
 [v2.0.5]: https://github.com/Kong/kong-operator/compare/v2.0.4..v2.0.5
 [v2.0.4]: https://github.com/Kong/kong-operator/compare/v2.0.3..v2.0.4
