@@ -114,7 +114,7 @@ func SetupFakePodLabels() (cleanup func(), err error) {
 		fmt.Printf("INFO: verified pod labels file content: %s\n", string(content))
 	}
 
-	// Return cleanup function (though it may not work perfectly with os.Exit)
+	// Return cleanup function. When used with defer and os.Exit() this will not work.
 	return func() {
 		// Note: This cleanup may not be called if os.Exit is used
 		os.Remove(labelsFilePath)
