@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
@@ -12,12 +13,11 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
 
 func createKongCredentialAPIKey(
 	ctx context.Context,
-	sdk sdkops.KongCredentialAPIKeySDK,
+	sdk sdkkonnectgo.APIKeysSDK,
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -55,7 +55,7 @@ func createKongCredentialAPIKey(
 // if the operation fails.
 func updateKongCredentialAPIKey(
 	ctx context.Context,
-	sdk sdkops.KongCredentialAPIKeySDK,
+	sdk sdkkonnectgo.APIKeysSDK,
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -83,7 +83,7 @@ func updateKongCredentialAPIKey(
 // It returns an error if the operation fails.
 func deleteKongCredentialAPIKey(
 	ctx context.Context,
-	sdk sdkops.KongCredentialAPIKeySDK,
+	sdk sdkkonnectgo.APIKeysSDK,
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -103,7 +103,7 @@ func deleteKongCredentialAPIKey(
 
 func adoptKongCredentialAPIKey(
 	ctx context.Context,
-	sdk sdkops.KongCredentialAPIKeySDK,
+	sdk sdkkonnectgo.APIKeysSDK,
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) error {
 	cpID := cred.GetControlPlaneID()
@@ -182,7 +182,7 @@ func kongCredentialAPIKeyToKeyAuthWithoutParents(
 // getKongCredentialAPIKeyForUID lists API key credentials in Konnect with given k8s uid as its tag.
 func getKongCredentialAPIKeyForUID(
 	ctx context.Context,
-	sdk sdkops.KongCredentialAPIKeySDK,
+	sdk sdkkonnectgo.APIKeysSDK,
 	cred *configurationv1alpha1.KongCredentialAPIKey,
 ) (string, error) {
 	cpID := cred.GetControlPlaneID()

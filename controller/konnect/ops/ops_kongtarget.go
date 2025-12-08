@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
@@ -12,12 +13,11 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
 
 func createTarget(
 	ctx context.Context,
-	sdk sdkops.TargetsSDK,
+	sdk sdkkonnectgo.TargetsSDK,
 	target *configurationv1alpha1.KongTarget,
 ) error {
 	cpID := target.GetControlPlaneID()
@@ -50,7 +50,7 @@ func createTarget(
 
 func updateTarget(
 	ctx context.Context,
-	sdk sdkops.TargetsSDK,
+	sdk sdkkonnectgo.TargetsSDK,
 	target *configurationv1alpha1.KongTarget,
 ) error {
 	cpID := target.GetControlPlaneID()
@@ -77,7 +77,7 @@ func updateTarget(
 
 func deleteTarget(
 	ctx context.Context,
-	sdk sdkops.TargetsSDK,
+	sdk sdkkonnectgo.TargetsSDK,
 	target *configurationv1alpha1.KongTarget,
 ) error {
 	cpID := target.GetControlPlaneID()
@@ -104,7 +104,7 @@ func deleteTarget(
 
 func adoptTarget(
 	ctx context.Context,
-	sdk sdkops.TargetsSDK,
+	sdk sdkkonnectgo.TargetsSDK,
 	target *configurationv1alpha1.KongTarget,
 ) error {
 	cpID := target.GetControlPlaneID()
@@ -123,7 +123,6 @@ func adoptTarget(
 		UpstreamIDForTarget: target.Status.Konnect.UpstreamID,
 		TargetID:            konnectID,
 	})
-
 	if err != nil {
 		return KonnectEntityAdoptionFetchError{
 			KonnectID: konnectID,
@@ -177,7 +176,7 @@ func kongTargetToTargetWithoutParents(target *configurationv1alpha1.KongTarget) 
 // that matches the UID of the provided KongTarget.
 func getKongTargetForUID(
 	ctx context.Context,
-	sdk sdkops.TargetsSDK,
+	sdk sdkkonnectgo.TargetsSDK,
 	target *configurationv1alpha1.KongTarget,
 ) (string, error) {
 	reqList := sdkkonnectops.ListTargetWithUpstreamRequest{

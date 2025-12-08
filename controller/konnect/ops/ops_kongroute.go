@@ -12,12 +12,11 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
 )
 
 func createRoute(
 	ctx context.Context,
-	sdk sdkops.RoutesSDK,
+	sdk sdkkonnectgo.RoutesSDK,
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	if route.GetControlPlaneID() == "" {
@@ -45,7 +44,7 @@ func createRoute(
 // if the operation fails.
 func updateRoute(
 	ctx context.Context,
-	sdk sdkops.RoutesSDK,
+	sdk sdkkonnectgo.RoutesSDK,
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	cpID := route.GetControlPlaneID()
@@ -72,7 +71,7 @@ func updateRoute(
 // It returns an error if the operation fails.
 func deleteRoute(
 	ctx context.Context,
-	sdk sdkops.RoutesSDK,
+	sdk sdkkonnectgo.RoutesSDK,
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	id := route.GetKonnectStatus().GetKonnectID()
@@ -89,7 +88,7 @@ func deleteRoute(
 // It returns an error if the operation fails.
 func adoptRoute(
 	ctx context.Context,
-	sdk sdkops.RoutesSDK,
+	sdk sdkkonnectgo.RoutesSDK,
 	route *configurationv1alpha1.KongRoute,
 ) error {
 	cpID := route.GetControlPlaneID()
@@ -204,7 +203,7 @@ func kongRouteToSDKRouteInput(
 // that matches the UID of the provided KongRoute.
 func getKongRouteForUID(
 	ctx context.Context,
-	sdk sdkops.RoutesSDK,
+	sdk sdkkonnectgo.RoutesSDK,
 	r *configurationv1alpha1.KongRoute,
 ) (string, error) {
 	reqList := sdkkonnectops.ListRouteRequest{
@@ -271,5 +270,4 @@ func routeJSONMatch(routeJSON *sdkkonnectcomp.RouteJSON, route *configurationv1a
 			sdkkonnectcomp.PathHandlingV0) &&
 		lo.ElementsMatch(routeJSON.Sources, routeJSONInput.Sources) &&
 		lo.ElementsMatch(routeJSON.Destinations, routeJSONInput.Destinations)
-
 }

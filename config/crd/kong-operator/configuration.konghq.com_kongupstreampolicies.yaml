@@ -12,7 +12,6 @@ spec:
   group: configuration.konghq.com
   names:
     categories:
-    - kong-ingress-controller
     - kong
     kind: KongUpstreamPolicy
     listKind: KongUpstreamPolicyList
