@@ -9,7 +9,9 @@
 #### {{ $type.Name }}
 {{ end -}}
 
-{{ if $type.IsAlias }}_Underlying type:_ `{{ markdownRenderTypeLink $type.UnderlyingType  }}`{{ end }}
+{{- if $type.IsAlias }}
+_Underlying type:_ `{{ markdownRenderTypeLink $type.UnderlyingType }}`
+{{- end }}
 
 {{ $type.Doc | replace "\n\n" "<br /><br />" }}
 
@@ -25,16 +27,23 @@
 | `kind` _string_ | `{{ $type.GVK.Kind }}`
 {{ end -}}
 
+{{- $regK8s := "k8s\\.io/api/.*" -}}
+
 {{ range $type.Members -}}
-| `{{ .Name  }}` _{{ markdownRenderType .Type }}_ | {{ template "type_members" . }} |
+{{- $typString := .Type | toString -}}
+{{ if regexMatch $regK8s $typString -}}
+| `{{ .Name }}` _{{ markdownRenderType .Type }}_ | {{ template "type_members" . }} |
+{{ else -}}
+| `{{ .Name }}` _{{- template "type_link" .Type -}}_ | {{ template "type_members" . }} |
+{{ end -}}
+{{ end -}}
 {{ end -}}
 
-{{ end }}
 
-{{ if $type.References -}}
+{{- if $type.References }}
 _Appears in:_
-{{- range $type.SortedReferences }}
-- {{ markdownRenderTypeLink . }}
+{{ range $type.SortedReferences }}
+- {{ template "type_link" . }}
 {{- end }}
 {{- end }}
 
