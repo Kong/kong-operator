@@ -96,7 +96,7 @@ func Create[
 	case *configurationv1alpha1.KongCredentialHMAC:
 		err = createKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
-		err = createCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
+		err = createCACertificate(ctx, cl, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCertificate:
 		err = createCertificate(ctx, cl, sdk.GetCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
@@ -452,7 +452,7 @@ func Update[
 	case *configurationv1alpha1.KongCredentialHMAC:
 		err = updateKongCredentialHMAC(ctx, sdk.GetHMACCredentialsSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
-		err = updateCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
+		err = updateCACertificate(ctx, cl, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCertificate:
 		err = updateCertificate(ctx, cl, sdk.GetCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongTarget:
@@ -569,7 +569,7 @@ func Adopt[
 	case *configurationv1alpha1.KongCertificate:
 		err = adoptCertificate(ctx, cl, sdk.GetCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
-		err = adoptCACertificate(ctx, sdk.GetCACertificatesSDK(), ent)
+		err = adoptCACertificate(ctx, cl, sdk.GetCACertificatesSDK(), ent)
 	case *configurationv1alpha1.KongSNI:
 		err = adoptSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongVault:

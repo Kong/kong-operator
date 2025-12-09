@@ -47,6 +47,10 @@
   This allows users to define KongCertificates that reference existing Kubernetes                                                                                                      │
   Secrets containing TLS certificate and key data, instead of embedding them inline.                                                                                                   │
   [#2802](https://github.com/Kong/kong-operator/pull/2802)  
+- KongCACertificate: Add support for sourcing CA certificates from Kubernetes Secrets.
+  This allows users to define KongCACertificates that references exsiting Kubernetes
+  Secrets containing TLS CA certificate instead of embedding them inline
+  [#2482](https://github.com/Kong/kong-operator/pull/2842)
 
 ### Changed
 

@@ -20,13 +20,32 @@ func TestKongCACertificate(t *testing.T) {
 	scheme := scheme.Get()
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
-	t.Run("required fields validation", func(t *testing.T) {
+	t.Run("type field validation", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongCACertificate]{
 			{
-				Name: "cert field is required",
+				Name: "type=inline requires cert field",
 				TestObject: &configurationv1alpha1.KongCACertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCACertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCACertificateSourceTypeInline),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
+							Cert: "test-cert",
+						},
+					},
+				},
+			},
+			{
+				Name: "type=inline with missing cert returns error",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCACertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCACertificateSourceTypeInline),
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
 							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
@@ -36,7 +55,167 @@ func TestKongCACertificate(t *testing.T) {
 						KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.cert: Required value"),
+				ExpectedErrorMessage: lo.ToPtr("spec.cert is required when type is 'inline'"),
+			},
+			{
+				Name: "type=inline with empty cert returns error",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCACertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCACertificateSourceTypeInline),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
+							Cert: "",
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.cert is required when type is 'inline'"),
+			},
+			{
+				Name: "type=secretRef requires secretRef field",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCACertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCACertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+					},
+				},
+			},
+			{
+				Name: "type=secretRef without secretRef returns error",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCACertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCACertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.secretRef is required when type is 'secretRef'"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("mixing inline and secretRef validation", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongCACertificate]{
+			{
+				Name: "cert cannot be mixed with secretRef",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCACertificateSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+						KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
+							Cert: "test-cert",
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("cert and secretRef cannot be set at the same time"),
+			},
+			{
+				Name: "valid: secretRef alone is allowed",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCACertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCACertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+					},
+				},
+			},
+			{
+				Name: "valid: cert alone is allowed for inline",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCACertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCACertificateSourceTypeInline),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
+							Cert: "test-cert",
+						},
+					},
+				},
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("namespace validation for secretRef", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongCACertificate]{
+			{
+				Name: "secretRef.namespace cannot be set (ReferenceGrant not yet supported)",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCACertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCACertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name:      "test-secret",
+							Namespace: lo.ToPtr("other-namespace"),
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.secretRef.namespace is not allowed until ReferenceGrant support is implemented"),
+			},
+			{
+				Name: "valid: secretRef without namespace is allowed",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCACertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCACertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+					},
+				},
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
