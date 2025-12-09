@@ -41,64 +41,6 @@ func TestKongCertificate(t *testing.T) {
 	})
 
 	t.Run("required fields", func(t *testing.T) {
-		common.TestCasesGroup[*configurationv1alpha1.KongCertificate]{
-			{
-				Name: "cert field is required",
-				TestObject: &configurationv1alpha1.KongCertificate{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: configurationv1alpha1.KongCertificateSpec{
-						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
-							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-								Name: "test-konnect-control-plane",
-							},
-						},
-						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
-							Key: "test-key",
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("spec.cert: Required value"),
-			},
-			{
-				Name: "key field is required",
-				TestObject: &configurationv1alpha1.KongCertificate{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: configurationv1alpha1.KongCertificateSpec{
-						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
-							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-								Name: "test-konnect-control-plane",
-							},
-						},
-						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
-							Cert: "test-cert",
-						},
-					},
-				},
-				ExpectedErrorMessage: lo.ToPtr("spec.key: Required value"),
-			},
-			{
-				Name: "cert and key fields are required",
-				TestObject: &configurationv1alpha1.KongCertificate{
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: configurationv1alpha1.KongCertificateSpec{
-						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
-							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-								Name: "test-konnect-control-plane",
-							},
-						},
-						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
-							Cert: "test-cert",
-							Key:  "test-key",
-						},
-					},
-				},
-			},
-		}.
-			RunWithConfig(t, cfg, scheme)
-
 		t.Run("tags validation", func(t *testing.T) {
 			common.TestCasesGroup[*configurationv1alpha1.KongCertificate]{
 				{
@@ -177,5 +119,366 @@ func TestKongCertificate(t *testing.T) {
 			}.
 				RunWithConfig(t, cfg, scheme)
 		})
+	})
+
+	t.Run("type field validation", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongCertificate]{
+			{
+				Name: "type=inline requires cert and key fields",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+							Cert: "test-cert",
+							Key:  "test-key",
+						},
+					},
+				},
+			},
+			{
+				Name: "type=inline with missing cert returns error",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+							Key: "test-key",
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.cert is required when type is 'inline'"),
+			},
+			{
+				Name: "type=inline with empty cert returns error",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+							Cert: "",
+							Key:  "test-key",
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.cert is required when type is 'inline'"),
+			},
+			{
+				Name: "type=inline with missing key returns error",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+							Cert: "test-cert",
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.key is required when type is 'inline'"),
+			},
+			{
+				Name: "type=secretRef requires secretRef field",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+					},
+				},
+			},
+			{
+				Name: "type=secretRef without secretRef returns error",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.secretRef is required when type is 'secretRef'"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("mixing inline and secretRef validation", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongCertificate]{
+			{
+				Name: "cert/key cannot be mixed with secretRef",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+							Cert: "test-cert",
+							Key:  "test-key",
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("cert/key and secretRef/secretRefAlt cannot be set at the same time"),
+			},
+			{
+				Name: "cert cannot be mixed with secretRefAlt",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRefAlt: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret-alt",
+						},
+						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+							Cert: "test-cert",
+							Key:  "test-key",
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("cert/key and secretRef/secretRefAlt cannot be set at the same time"),
+			},
+			{
+				Name: "key alone cannot be mixed with secretRef",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+							Key: "test-key",
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("cert/key and secretRef/secretRefAlt cannot be set at the same time"),
+			},
+			{
+				Name: "certAlt/keyAlt cannot be mixed with secretRef",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+							CertAlt: "test-cert-alt",
+							KeyAlt:  "test-key-alt",
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("cert_alt/key_alt and secretRef/secretRefAlt cannot be set at the same time"),
+			},
+			{
+				Name: "certAlt alone cannot be mixed with secretRefAlt",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRefAlt: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret-alt",
+						},
+						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+							CertAlt: "test-cert-alt",
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("cert_alt/key_alt and secretRef/secretRefAlt cannot be set at the same time"),
+			},
+			{
+				Name: "valid: secretRef and secretRefAlt can be used together",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+						SecretRefAlt: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret-alt",
+						},
+					},
+				},
+			},
+			{
+				Name: "valid: cert/key and certAlt/keyAlt can be used together for inline",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeInline),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
+							Cert:    "test-cert",
+							Key:     "test-key",
+							CertAlt: "test-cert-alt",
+							KeyAlt:  "test-key-alt",
+						},
+					},
+				},
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("namespace validation for secretRef", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongCertificate]{
+			{
+				Name: "secretRef.namespace cannot be set (ReferenceGrant not yet supported)",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name:      "test-secret",
+							Namespace: lo.ToPtr("other-namespace"),
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.secretRef.namespace is not allowed until ReferenceGrant support is implemented"),
+			},
+			{
+				Name: "secretRefAlt.namespace cannot be set (ReferenceGrant not yet supported)",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+						SecretRefAlt: &commonv1alpha1.NamespacedRef{
+							Name:      "test-secret-alt",
+							Namespace: lo.ToPtr("other-namespace"),
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.secretRefAlt.namespace is not allowed until ReferenceGrant support is implemented"),
+			},
+			{
+				Name: "valid: secretRef without namespace is allowed",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+					},
+				},
+			},
+			{
+				Name: "valid: both secretRef and secretRefAlt without namespace are allowed",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+						SecretRefAlt: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret-alt",
+						},
+					},
+				},
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
 	})
 }

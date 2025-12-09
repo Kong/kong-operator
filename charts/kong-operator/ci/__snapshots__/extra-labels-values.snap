@@ -46285,7 +46285,9 @@ spec:
                 - message: konnect.id is immutable
                   rule: 'has(self.konnect) ? (self.konnect.id == oldSelf.konnect.id) : true'
               cert:
-                description: Cert is the PEM-encoded certificate.
+                description: |-
+                  Cert is the PEM-encoded certificate.
+                  This field is used when type is 'inline'.
                 type: string
               cert_alt:
                 description: |-
@@ -46293,6 +46295,7 @@ spec:
                   This should only be set if you have both RSA and ECDSA types of
                   certificate available and would like Kong to prefer serving using ECDSA certs
                   when client advertises support for it.
+                  This field is used when type is 'inline'.
                 type: string
               controlPlaneRef:
                 description: ControlPlaneRef references the Konnect Control Plane that this KongCertificate should be created in.
@@ -46359,7 +46362,9 @@ spec:
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               key:
-                description: Key is the PEM-encoded private key.
+                description: |-
+                  Key is the PEM-encoded private key.
+                  This field is used when type is 'inline'.
                 type: string
               key_alt:
                 description: |-
@@ -46367,9 +46372,65 @@ spec:
                   This should only be set if you have both RSA and ECDSA types of
                   certificate available and would like Kong to prefer serving using ECDSA certs
                   when client advertises support for it.
+                  This field is used when type is 'inline'.
                 type: string
+              secretRef:
+                description: |-
+                  SecretRef is a reference to a Kubernetes Secret containing the certificate and key.
+                  This field is used when type is 'secretRef'.
+                  The Secret must contain keys named 'tls.crt' and 'tls.key'.
+                  The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented.
+                properties:
+                  name:
+                    description: Name is the name of the referred resource.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referred resource.
+
+                      For namespace-scoped resources if no Namespace is provided then the
+                      namespace of the parent object MUST be used.
+
+                      This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
+                    type: string
+                required:
+                - name
+                type: object
+              secretRefAlt:
+                description: |-
+                  SecretRefAlt is a reference to a Kubernetes Secret containing the alternative certificate and key.
+                  This should only be set if you have both RSA and ECDSA types of certificate available
+                  and would like Kong to prefer serving using ECDSA certs when client advertises support for it.
+                  This field is used when type is 'secretRef'.
+                  The Secret must contain keys named 'tls.crt' and 'tls.key'.
+                  The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented.
+                properties:
+                  name:
+                    description: Name is the name of the referred resource.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referred resource.
+
+                      For namespace-scoped resources if no Namespace is provided then the
+                      namespace of the parent object MUST be used.
+
+                      This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
+                    type: string
+                required:
+                - name
+                type: object
               tags:
-                description: Tags is an optional set of tags applied to the certificate.
+                description: |-
+                  Tags is an optional set of tags applied to the certificate.
+                  Tags will be applied when type is 'inline' or 'secretRef'.
+                  This field allows you to attach metadata to the certificate for identification or organization purposes.
                 items:
                   type: string
                 maxItems: 20
@@ -46377,10 +46438,17 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+              type:
+                default: inline
+                description: |-
+                  Type indicates the source of the certificate data.
+                  Can be 'inline' or 'secretRef'.
+                enum:
+                - inline
+                - secretRef
+                type: string
             required:
-            - cert
             - controlPlaneRef
-            - key
             type: object
             x-kubernetes-validations:
             - message: KIC is not supported as control plane
@@ -46389,6 +46457,20 @@ spec:
               rule: '!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == ''konnectNamespacedRef'')'
             - message: Cannot set or unset spec.adopt in updates
               rule: (has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))
+            - message: spec.cert is required when type is 'inline'
+              rule: self.type != 'inline' || (has(self.cert) && self.cert.size() != 0)
+            - message: spec.key is required when type is 'inline'
+              rule: self.type != 'inline' || (has(self.key) && self.key.size() != 0)
+            - message: spec.secretRef is required when type is 'secretRef'
+              rule: self.type != 'secretRef' ||  has(self.secretRef)
+            - message: cert/key and secretRef/secretRefAlt cannot be set at the same time
+              rule: '!((has(self.cert) || has(self.key)) && (has(self.secretRef) || has(self.secretRefAlt)))'
+            - message: cert_alt/key_alt and secretRef/secretRefAlt cannot be set at the same time
+              rule: '!((has(self.cert_alt) || has(self.key_alt)) && (has(self.secretRef) || has(self.secretRefAlt)))'
+            - message: spec.secretRef.namespace is not allowed until ReferenceGrant support is implemented
+              rule: '!has(self.secretRef) || !has(self.secretRef.__namespace__) || self.secretRef.__namespace__.size() == 0'
+            - message: spec.secretRefAlt.namespace is not allowed until ReferenceGrant support is implemented
+              rule: '!has(self.secretRefAlt) || !has(self.secretRefAlt.__namespace__) || self.secretRefAlt.__namespace__.size() == 0'
           status:
             default:
               conditions:

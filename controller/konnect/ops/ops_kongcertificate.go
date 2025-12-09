@@ -9,6 +9,8 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/samber/lo"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
@@ -19,6 +21,7 @@ import (
 // It sets the KonnectID in the KongCertificate status.
 func createCertificate(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkops.CertificatesSDK,
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
@@ -54,9 +57,16 @@ func createCertificate(
 		return nil
 	}
 
+	// Generate the input for the creation.
+	// This may fetch the Secret if the Certificate source type is SecretRef.
+	input, err := kongCertificateToCertificateInput(ctx, cl, cert)
+	if err != nil {
+		return err
+	}
+
 	resp, err := sdk.CreateCertificate(ctx,
 		cpID,
-		kongCertificateToCertificateInput(cert),
+		input,
 	)
 
 	// TODO: handle already exists
@@ -81,6 +91,7 @@ func createCertificate(
 // It returns an error if the KongCertificate does not have a KonnectID.
 func updateCertificate(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkops.CertificatesSDK,
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
@@ -89,11 +100,18 @@ func updateCertificate(
 		return CantPerformOperationWithoutControlPlaneIDError{Entity: cert, Op: UpdateOp}
 	}
 
-	_, err := sdk.UpsertCertificate(ctx,
+	// Generate the input for the update.
+	// This may fetch the Secret if the Certificate source type is SecretRef.
+	input, err := kongCertificateToCertificateInput(ctx, cl, cert)
+	if err != nil {
+		return err
+	}
+
+	_, err = sdk.UpsertCertificate(ctx,
 		sdkkonnectops.UpsertCertificateRequest{
 			ControlPlaneID: cpID,
 			CertificateID:  cert.GetKonnectStatus().GetKonnectID(),
-			Certificate:    kongCertificateToCertificateInput(cert),
+			Certificate:    input,
 		},
 	)
 
@@ -123,6 +141,7 @@ func deleteCertificate(
 
 func adoptCertificate(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkops.CertificatesSDK,
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
@@ -161,7 +180,7 @@ func adoptCertificate(
 	case commonv1alpha1.AdoptModeOverride:
 		certCopy := cert.DeepCopy()
 		certCopy.SetKonnectID(konnectID)
-		if err = updateCertificate(ctx, sdk, certCopy); err != nil {
+		if err = updateCertificate(ctx, cl, sdk, certCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:
@@ -178,20 +197,81 @@ func adoptCertificate(
 	return nil
 }
 
-func kongCertificateToCertificateInput(cert *configurationv1alpha1.KongCertificate) sdkkonnectcomp.Certificate {
-	input := sdkkonnectcomp.Certificate{
-		Cert: cert.Spec.Cert,
-		Key:  cert.Spec.Key,
-		Tags: GenerateTagsForObject(cert, cert.Spec.Tags...),
+func fetchTLSDataFromSecret(ctx context.Context, cl client.Client, parentNamespace string, secretRef *commonv1alpha1.NamespacedRef) (certData, keyData string, err error) {
+	if secretRef == nil {
+		return "", "", fmt.Errorf("secretRef is nil")
 	}
-	if cert.Spec.CertAlt != "" {
-		input.CertAlt = lo.ToPtr(cert.Spec.CertAlt)
+	ns := parentNamespace
+	if secretRef.Namespace != nil && *secretRef.Namespace != "" {
+		ns = *secretRef.Namespace
 	}
-	if cert.Spec.KeyAlt != "" {
-		input.KeyAlt = lo.ToPtr(cert.Spec.KeyAlt)
+	secret := &corev1.Secret{}
+	if err := cl.Get(ctx, client.ObjectKey{
+		Namespace: ns,
+		Name:      secretRef.Name,
+	}, secret); err != nil {
+		return "", "", fmt.Errorf("failed to fetch Secret %s/%s: %w", ns, secretRef.Name, err)
 	}
 
-	return input
+	certBytes, ok := secret.Data["tls.crt"]
+	if !ok {
+		return "", "", fmt.Errorf("secret %s/%s is missing key 'tls.crt'", ns, secretRef.Name)
+	}
+	keyBytes, ok := secret.Data["tls.key"]
+	if !ok {
+		return "", "", fmt.Errorf("secret %s/%s is missing key 'tls.key'", ns, secretRef.Name)
+	}
+
+	return string(certBytes), string(keyBytes), nil
+}
+
+func kongCertificateToCertificateInput(ctx context.Context, cl client.Client, cert *configurationv1alpha1.KongCertificate) (sdkkonnectcomp.Certificate, error) {
+	var certData, keyData, certAltData, keyAltData string
+
+	// Check the certificate data type.
+	if cert.Spec.Type != nil && *cert.Spec.Type == configurationv1alpha1.KongCertificateSourceTypeSecretRef {
+		// Fetch the Secret.
+		secretRef := cert.Spec.SecretRef
+		if secretRef == nil {
+			// This should not happen due to validation, but just in case.
+			return sdkkonnectcomp.Certificate{}, fmt.Errorf("secretRef is nil")
+		}
+
+		var err error
+		parentNamespace := cert.GetNamespace()
+		certData, keyData, err = fetchTLSDataFromSecret(ctx, cl, parentNamespace, secretRef)
+		if err != nil {
+			return sdkkonnectcomp.Certificate{}, err
+		}
+
+		// Optional alternative cert/key.
+		if cert.Spec.SecretRefAlt != nil {
+			certAltData, keyAltData, err = fetchTLSDataFromSecret(ctx, cl, parentNamespace, cert.Spec.SecretRefAlt)
+			if err != nil {
+				return sdkkonnectcomp.Certificate{}, err
+			}
+		}
+	} else {
+		// Use inline certificate data.
+		certData = cert.Spec.Cert
+		keyData = cert.Spec.Key
+		certAltData = cert.Spec.CertAlt
+		keyAltData = cert.Spec.KeyAlt
+	}
+
+	input := sdkkonnectcomp.Certificate{
+		Cert: certData,
+		Key:  keyData,
+		Tags: GenerateTagsForObject(cert, cert.Spec.Tags...),
+	}
+	if certAltData != "" {
+		input.CertAlt = lo.ToPtr(certAltData)
+	}
+	if keyAltData != "" {
+		input.KeyAlt = lo.ToPtr(keyAltData)
+	}
+
+	return input, nil
 }
 
 func getKongCertificateForUID(
