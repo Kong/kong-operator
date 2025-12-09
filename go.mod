@@ -54,7 +54,7 @@ require (
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.1
 	golang.org/x/mod v0.30.0
-	golang.org/x/sync v0.18.0
+	golang.org/x/sync v0.19.0
 	google.golang.org/api v0.257.0
 	google.golang.org/grpc v1.77.0
 	google.golang.org/protobuf v1.36.10
