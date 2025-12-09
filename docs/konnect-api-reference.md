@@ -5,18 +5,18 @@
 - [konnect.konghq.com/v1alpha1](#konnect-konghq-com-v1alpha1)
 - [konnect.konghq.com/v1alpha2](#konnect-konghq-com-v1alpha2)
 
-## <a id="konnect-konghq-com-v1alpha1">konnect.konghq.com/v1alpha1</a>
+## konnect.konghq.com/v1alpha1
 
 Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1alpha1 API group.
 
-- [KonnectAPIAuthConfiguration](#github-com-kong-kong-operator-api-konnect-v1alpha1-konnectapiauthconfiguration)
-- [KonnectCloudGatewayDataPlaneGroupConfiguration](#github-com-kong-kong-operator-api-konnect-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
-- [KonnectCloudGatewayNetwork](#github-com-kong-kong-operator-api-konnect-v1alpha1-konnectcloudgatewaynetwork)
-- [KonnectCloudGatewayTransitGateway](#github-com-kong-kong-operator-api-konnect-v1alpha1-konnectcloudgatewaytransitgateway)
-- [KonnectExtension](#github-com-kong-kong-operator-api-konnect-v1alpha1-konnectextension)
-- [KonnectGatewayControlPlane](#github-com-kong-kong-operator-api-konnect-v1alpha1-konnectgatewaycontrolplane)
+- [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-konnectapiauthconfiguration)
+- [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
+- [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
+- [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-konnectcloudgatewaytransitgateway)
+- [KonnectExtension](#konnect-konghq-com-v1alpha1-konnectextension)
+- [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 
-### <a id="github-com-kong-kong-operator-api-konnect-v1alpha1-konnectapiauthconfiguration">KonnectAPIAuthConfiguration</a>
+### KonnectAPIAuthConfiguration
 
 
 KonnectAPIAuthConfiguration is the Schema for the Konnect configuration type.
@@ -27,11 +27,11 @@ KonnectAPIAuthConfiguration is the Schema for the Konnect configuration type.
 | --- | --- |
 | `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
 | `kind` _string_ | `KonnectAPIAuthConfiguration`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KonnectAPIAuthConfigurationSpec](#konnectapiauthconfigurationspec)_ | Spec is the specification of the KonnectAPIAuthConfiguration resource. |
-| `status` _[KonnectAPIAuthConfigurationStatus](#konnectapiauthconfigurationstatus)_ | Status is the status of the KonnectAPIAuthConfiguration resource. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectAPIAuthConfigurationSpec](#konnect-konghq-com-v1alpha1-types-konnectapiauthconfigurationspec)_ | Spec is the specification of the KonnectAPIAuthConfiguration resource. |
+| `status` _[KonnectAPIAuthConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectapiauthconfigurationstatus)_ | Status is the status of the KonnectAPIAuthConfiguration resource. |
 
-### <a id="github-com-kong-kong-operator-api-konnect-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration">KonnectCloudGatewayDataPlaneGroupConfiguration</a>
+### KonnectCloudGatewayDataPlaneGroupConfiguration
 
 
 KonnectCloudGatewayDataPlaneGroupConfiguration is the Schema for the Konnect Network API.
@@ -42,11 +42,11 @@ KonnectCloudGatewayDataPlaneGroupConfiguration is the Schema for the Konnect Net
 | --- | --- |
 | `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
 | `kind` _string_ | `KonnectCloudGatewayDataPlaneGroupConfiguration`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KonnectCloudGatewayDataPlaneGroupConfigurationSpec](#konnectcloudgatewaydataplanegroupconfigurationspec)_ | Spec defines the desired state of KonnectCloudGatewayDataPlaneGroupConfiguration. |
-| `status` _[KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnectcloudgatewaydataplanegroupconfigurationstatus)_ | Status defines the observed state of KonnectCloudGatewayDataPlaneGroupConfiguration. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectCloudGatewayDataPlaneGroupConfigurationSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationspec)_ | Spec defines the desired state of KonnectCloudGatewayDataPlaneGroupConfiguration. |
+| `status` _[KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)_ | Status defines the observed state of KonnectCloudGatewayDataPlaneGroupConfiguration. |
 
-### <a id="github-com-kong-kong-operator-api-konnect-v1alpha1-konnectcloudgatewaynetwork">KonnectCloudGatewayNetwork</a>
+### KonnectCloudGatewayNetwork
 
 
 KonnectCloudGatewayNetwork is the Schema for the Konnect Network API.
@@ -57,11 +57,11 @@ KonnectCloudGatewayNetwork is the Schema for the Konnect Network API.
 | --- | --- |
 | `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
 | `kind` _string_ | `KonnectCloudGatewayNetwork`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KonnectCloudGatewayNetworkSpec](#konnectcloudgatewaynetworkspec)_ | Spec defines the desired state of KonnectCloudGatewayNetwork. |
-| `status` _[KonnectCloudGatewayNetworkStatus](#konnectcloudgatewaynetworkstatus)_ | Status defines the observed state of KonnectCloudGatewayNetwork. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)_ | Spec defines the desired state of KonnectCloudGatewayNetwork. |
+| `status` _[KonnectCloudGatewayNetworkStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkstatus)_ | Status defines the observed state of KonnectCloudGatewayNetwork. |
 
-### <a id="github-com-kong-kong-operator-api-konnect-v1alpha1-konnectcloudgatewaytransitgateway">KonnectCloudGatewayTransitGateway</a>
+### KonnectCloudGatewayTransitGateway
 
 
 KonnectCloudGatewayTransitGateway is the Schema for the Konnect Transit Gateway API.
@@ -72,11 +72,11 @@ KonnectCloudGatewayTransitGateway is the Schema for the Konnect Transit Gateway 
 | --- | --- |
 | `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
 | `kind` _string_ | `KonnectCloudGatewayTransitGateway`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KonnectCloudGatewayTransitGatewaySpec](#konnectcloudgatewaytransitgatewayspec)_ | Spec defines the desired state of KonnectCloudGatewayTransitGateway. |
-| `status` _[KonnectCloudGatewayTransitGatewayStatus](#konnectcloudgatewaytransitgatewaystatus)_ | Status defines the observed state of KonnectCloudGatewayTransitGateway. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)_ | Spec defines the desired state of KonnectCloudGatewayTransitGateway. |
+| `status` _[KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)_ | Status defines the observed state of KonnectCloudGatewayTransitGateway. |
 
-### <a id="github-com-kong-kong-operator-api-konnect-v1alpha1-konnectextension">KonnectExtension</a>
+### KonnectExtension
 
 
 KonnectExtension is the Schema for the KonnectExtension API, and is intended to be referenced as
@@ -90,11 +90,11 @@ deployment(s) spec gets customized to include the konnect-related configuration.
 | --- | --- |
 | `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
 | `kind` _string_ | `KonnectExtension`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KonnectExtensionSpec](#konnectextensionspec)_ | Spec is the specification of the KonnectExtension resource. |
-| `status` _[KonnectExtensionStatus](#konnectextensionstatus)_ | Status is the status of the KonnectExtension resource. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectExtensionSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionspec)_ | Spec is the specification of the KonnectExtension resource. |
+| `status` _[KonnectExtensionStatus](#konnect-konghq-com-v1alpha1-types-konnectextensionstatus)_ | Status is the status of the KonnectExtension resource. |
 
-### <a id="github-com-kong-kong-operator-api-konnect-v1alpha1-konnectgatewaycontrolplane">KonnectGatewayControlPlane</a>
+### KonnectGatewayControlPlane
 
 
 KonnectGatewayControlPlane is the Schema for the KonnectGatewayControlplanes API.
@@ -105,9 +105,9 @@ KonnectGatewayControlPlane is the Schema for the KonnectGatewayControlplanes API
 | --- | --- |
 | `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
 | `kind` _string_ | `KonnectGatewayControlPlane`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KonnectGatewayControlPlaneSpec](#konnectgatewaycontrolplanespec)_ | Spec defines the desired state of KonnectGatewayControlPlane. |
-| `status` _[KonnectGatewayControlPlaneStatus](#konnectgatewaycontrolplanestatus)_ | Status defines the observed state of KonnectGatewayControlPlane. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)_ | Spec defines the desired state of KonnectGatewayControlPlane. |
+| `status` _[KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)_ | Status defines the observed state of KonnectGatewayControlPlane. |
 
 ### Types
 
@@ -124,13 +124,14 @@ AWSTransitGateway is the configuration of an AWS transit gateway.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Human-readable name of the transit gateway. |
-| `dns_config` _[TransitGatewayDNSConfig](#transitgatewaydnsconfig) array_ | List of mappings from remote DNS server IP address sets to proxied internal domains, for a transit gateway attachment. |
-| `cidr_blocks` _string array_ | CIDR blocks for constructing a route table for the transit gateway, when attaching to the owning network. |
-| `attachment_config` _[AwsTransitGatewayAttachmentConfig](#awstransitgatewayattachmentconfig)_ | configuration to attach to AWS transit gateway on the AWS side. |
+| `dns_config` _[TransitGatewayDNSConfig](#konnect-konghq-com-v1alpha1-types-transitgatewaydnsconfig)_ | List of mappings from remote DNS server IP address sets to proxied internal domains, for a transit gateway attachment. |
+| `cidr_blocks` _[]string_ | CIDR blocks for constructing a route table for the transit gateway, when attaching to the owning network. |
+| `attachment_config` _[AwsTransitGatewayAttachmentConfig](#konnect-konghq-com-v1alpha1-types-awstransitgatewayattachmentconfig)_ | configuration to attach to AWS transit gateway on the AWS side. |
 
 _Appears in:_
-- [KonnectCloudGatewayTransitGatewaySpec](#konnectcloudgatewaytransitgatewayspec)
-- [KonnectTransitGatewayAPISpec](#konnecttransitgatewayapispec)
+
+- [KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)
+- [KonnectTransitGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecttransitgatewayapispec)
 
 #### AwsTransitGatewayAttachmentConfig
 
@@ -145,7 +146,8 @@ AwsTransitGatewayAttachmentConfig is the configuration to attach to a AWS transi
 | `ram_share_arn` _string_ | RAMShareArn is the resource share ARN to verify request to create transit gateway attachment. |
 
 _Appears in:_
-- [AWSTransitGateway](#awstransitgateway)
+
+- [AWSTransitGateway](#konnect-konghq-com-v1alpha1-types-awstransitgateway)
 
 #### AzureTransitGateway
 
@@ -157,12 +159,13 @@ AzureTransitGateway is the configuration of an Azure transit gateway.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Human-readable name of the transit gateway. |
-| `dns_config` _[TransitGatewayDNSConfig](#transitgatewaydnsconfig) array_ | List of mappings from remote DNS server IP address sets to proxied internal domains, for a transit gateway attachment. |
-| `attachment_config` _[AzureVNETPeeringAttachmentConfig](#azurevnetpeeringattachmentconfig)_ | configuration to attach to Azure VNET peering gateway. |
+| `dns_config` _[TransitGatewayDNSConfig](#konnect-konghq-com-v1alpha1-types-transitgatewaydnsconfig)_ | List of mappings from remote DNS server IP address sets to proxied internal domains, for a transit gateway attachment. |
+| `attachment_config` _[AzureVNETPeeringAttachmentConfig](#konnect-konghq-com-v1alpha1-types-azurevnetpeeringattachmentconfig)_ | configuration to attach to Azure VNET peering gateway. |
 
 _Appears in:_
-- [KonnectCloudGatewayTransitGatewaySpec](#konnectcloudgatewaytransitgatewayspec)
-- [KonnectTransitGatewayAPISpec](#konnecttransitgatewayapispec)
+
+- [KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)
+- [KonnectTransitGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecttransitgatewayapispec)
 
 #### AzureVNETPeeringAttachmentConfig
 
@@ -179,7 +182,8 @@ AzureVNETPeeringAttachmentConfig is the configuration to attach to a Azure VNET 
 | `vnet_name` _string_ | VnetName is the VNET Name for the Azure VNET Peering attachment. |
 
 _Appears in:_
-- [AzureTransitGateway](#azuretransitgateway)
+
+- [AzureTransitGateway](#konnect-konghq-com-v1alpha1-types-azuretransitgateway)
 
 #### CertificateSecret
 
@@ -190,11 +194,12 @@ CertificateSecret contains the information to access the client certificate.
 
 | Field | Description |
 | --- | --- |
-| `provisioning` _[ProvisioningMethod](#provisioningmethod)_ | Provisioning is the method used to provision the certificate. It can be either Manual or Automatic. In case manual provisioning is used, the certificate must be provided by the user. In case automatic provisioning is used, the certificate will be automatically generated by the system. |
-| `secretRef` _[SecretRef](#secretref)_ | CertificateSecretRef is the reference to the Secret containing the client certificate. |
+| `provisioning` _[ProvisioningMethod](#konnect-konghq-com-v1alpha1-types-provisioningmethod)_ | Provisioning is the method used to provision the certificate. It can be either Manual or Automatic. In case manual provisioning is used, the certificate must be provided by the user. In case automatic provisioning is used, the certificate will be automatically generated by the system. |
+| `secretRef` _[SecretRef](#konnect-konghq-com-v1alpha1-types-secretref)_ | CertificateSecretRef is the reference to the Secret containing the client certificate. |
 
 _Appears in:_
-- [KonnectExtensionClientAuth](#konnectextensionclientauth)
+
+- [KonnectExtensionClientAuth](#konnect-konghq-com-v1alpha1-types-konnectextensionclientauth)
 
 #### ConfigurationDataPlaneGroupAutoscale
 
@@ -205,12 +210,13 @@ ConfigurationDataPlaneGroupAutoscale specifies the autoscale configuration for t
 
 | Field | Description |
 | --- | --- |
-| `static` _[ConfigurationDataPlaneGroupAutoscaleStatic](#configurationdataplanegroupautoscalestatic)_ | Static specifies the static configuration for the data-plane group. |
-| `autopilot` _[ConfigurationDataPlaneGroupAutoscaleAutopilot](#configurationdataplanegroupautoscaleautopilot)_ | Autopilot specifies the autoscale configuration for the data-plane group. |
-| `type` _[ConfigurationDataPlaneGroupAutoscaleType](#configurationdataplanegroupautoscaletype)_ | Type of autoscaling to use. |
+| `static` _[ConfigurationDataPlaneGroupAutoscaleStatic](#konnect-konghq-com-v1alpha1-types-configurationdataplanegroupautoscalestatic)_ | Static specifies the static configuration for the data-plane group. |
+| `autopilot` _[ConfigurationDataPlaneGroupAutoscaleAutopilot](#konnect-konghq-com-v1alpha1-types-configurationdataplanegroupautoscaleautopilot)_ | Autopilot specifies the autoscale configuration for the data-plane group. |
+| `type` _[ConfigurationDataPlaneGroupAutoscaleType](#konnect-konghq-com-v1alpha1-types-configurationdataplanegroupautoscaletype)_ | Type of autoscaling to use. |
 
 _Appears in:_
-- [KonnectConfigurationDataPlaneGroup](#konnectconfigurationdataplanegroup)
+
+- [KonnectConfigurationDataPlaneGroup](#konnect-konghq-com-v1alpha1-types-konnectconfigurationdataplanegroup)
 
 #### ConfigurationDataPlaneGroupAutoscaleAutopilot
 
@@ -221,11 +227,12 @@ ConfigurationDataPlaneGroupAutoscaleAutopilot specifies the autoscale configurat
 
 | Field | Description |
 | --- | --- |
-| `base_rps` _integer_ | Base number of requests per second that the deployment target should support. |
-| `max_rps` _integer_ | Max number of requests per second that the deployment target should support. If not set, this defaults to 10x base_rps. |
+| `base_rps` _int64_ | Base number of requests per second that the deployment target should support. |
+| `max_rps` _*int64_ | Max number of requests per second that the deployment target should support. If not set, this defaults to 10x base_rps. |
 
 _Appears in:_
-- [ConfigurationDataPlaneGroupAutoscale](#configurationdataplanegroupautoscale)
+
+- [ConfigurationDataPlaneGroupAutoscale](#konnect-konghq-com-v1alpha1-types-configurationdataplanegroupautoscale)
 
 #### ConfigurationDataPlaneGroupAutoscaleStatic
 
@@ -236,16 +243,16 @@ ConfigurationDataPlaneGroupAutoscaleStatic specifies the static configuration fo
 
 | Field | Description |
 | --- | --- |
-| `instance_type` _[InstanceTypeName](#instancetypename)_ | Instance type name to indicate capacity. Currently supported values are small, medium, large but this list might be expanded in the future. For all the allowed values, please refer to the Konnect API documentation at https://docs.konghq.com/konnect/api/cloud-gateways/latest/#/Data-Plane%20Group%20Configurations/create-configuration. |
-| `requested_instances` _integer_ | Number of data-planes the deployment target will contain. |
+| `instance_type` _github.com/Kong/sdk-konnect-go/models/components.InstanceTypeName_ | Instance type name to indicate capacity. Currently supported values are small, medium, large but this list might be expanded in the future. For all the allowed values, please refer to the Konnect API documentation at https://docs.konghq.com/konnect/api/cloud-gateways/latest/#/Data-Plane%20Group%20Configurations/create-configuration. |
+| `requested_instances` _int64_ | Number of data-planes the deployment target will contain. |
 
 _Appears in:_
-- [ConfigurationDataPlaneGroupAutoscale](#configurationdataplanegroupautoscale)
+
+- [ConfigurationDataPlaneGroupAutoscale](#konnect-konghq-com-v1alpha1-types-configurationdataplanegroupautoscale)
 
 #### ConfigurationDataPlaneGroupAutoscaleType
 
 _Underlying type:_ `string`
-
 
 ConfigurationDataPlaneGroupAutoscaleType is the type of autoscale configuration for the data-plane group.
 
@@ -253,7 +260,8 @@ ConfigurationDataPlaneGroupAutoscaleType is the type of autoscale configuration 
 
 
 _Appears in:_
-- [ConfigurationDataPlaneGroupAutoscale](#configurationdataplanegroupautoscale)
+
+- [ConfigurationDataPlaneGroupAutoscale](#konnect-konghq-com-v1alpha1-types-configurationdataplanegroupautoscale)
 
 Allowed values:
 
@@ -275,7 +283,8 @@ ConfigurationDataPlaneGroupEnvironmentField specifies an environment variable fi
 | `value` _string_ | Value assigned to the environment variable field for the data-plane group. |
 
 _Appears in:_
-- [KonnectConfigurationDataPlaneGroup](#konnectconfigurationdataplanegroup)
+
+- [KonnectConfigurationDataPlaneGroup](#konnect-konghq-com-v1alpha1-types-konnectconfigurationdataplanegroup)
 
 #### CreateControlPlaneRequest
 
@@ -286,16 +295,17 @@ CreateControlPlaneRequest - The request schema for the create control plane requ
 
 | Field | Description |
 | --- | --- |
-| `name` _string_ | The name of the control plane. |
-| `description` _string_ | The description of the control plane in Konnect. |
-| `cluster_type` _[CreateControlPlaneRequestClusterType](#createcontrolplanerequestclustertype)_ | The ClusterType value of the cluster associated with the Control Plane. |
-| `auth_type` _[AuthType](#authtype)_ | The auth type value of the cluster associated with the Runtime Group. |
-| `cloud_gateway` _boolean_ | Whether this control-plane can be used for cloud-gateways. |
-| `proxy_urls` _[ProxyURL](#proxyurl) array_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
-| `labels` _object (keys:string, values:string)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _*string_ | The name of the control plane. |
+| `description` _*string_ | The description of the control plane in Konnect. |
+| `cluster_type` _*github.com/Kong/sdk-konnect-go/models/components.CreateControlPlaneRequestClusterType_ | The ClusterType value of the cluster associated with the Control Plane. |
+| `auth_type` _*github.com/Kong/sdk-konnect-go/models/components.AuthType_ | The auth type value of the cluster associated with the Runtime Group. |
+| `cloud_gateway` _*bool_ | Whether this control-plane can be used for cloud-gateways. |
+| `proxy_urls` _[]github.com/Kong/sdk-konnect-go/models/components.ProxyURL_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
+| `labels` _map[string]string_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 
 _Appears in:_
-- [KonnectGatewayControlPlaneSpec](#konnectgatewaycontrolplanespec)
+
+- [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 
 #### DataPlaneClientAuthStatus
 
@@ -306,15 +316,15 @@ DataPlaneClientAuthStatus contains the status information related to the ClientA
 
 | Field | Description |
 | --- | --- |
-| `certificateSecretRef` _[SecretRef](#secretref)_ | CertificateSecretRef is the reference to the Secret containing the client certificate. |
+| `certificateSecretRef` _[SecretRef](#konnect-konghq-com-v1alpha1-types-secretref)_ | CertificateSecretRef is the reference to the Secret containing the client certificate. |
 
 _Appears in:_
-- [KonnectExtensionStatus](#konnectextensionstatus)
+
+- [KonnectExtensionStatus](#konnect-konghq-com-v1alpha1-types-konnectextensionstatus)
 
 #### DataPlaneLabelValue
 
 _Underlying type:_ `string`
-
 
 DataPlaneLabelValue is the type that defines the value of a label that will be applied to the Konnect DataPlane.
 
@@ -322,7 +332,8 @@ DataPlaneLabelValue is the type that defines the value of a label that will be a
 
 
 _Appears in:_
-- [KonnectExtensionDataPlane](#konnectextensiondataplane)
+
+- [KonnectExtensionDataPlane](#konnect-konghq-com-v1alpha1-types-konnectextensiondataplane)
 
 #### KonnectAPIAuthConfigurationSpec
 
@@ -333,13 +344,14 @@ KonnectAPIAuthConfigurationSpec is the specification of the KonnectAPIAuthConfig
 
 | Field | Description |
 | --- | --- |
-| `type` _[KonnectAPIAuthType](#konnectapiauthtype)_ |  |
+| `type` _[KonnectAPIAuthType](#konnect-konghq-com-v1alpha1-types-konnectapiauthtype)_ |  |
 | `token` _string_ | Token is the Konnect token used to authenticate with the Konnect API. |
 | `secretRef` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#secretreference-v1-core)_ | SecretRef is a reference to a Kubernetes Secret containing the Konnect token. This secret is required to have the konghq.com/credential label set to "konnect". |
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server. It can be either a full URL with an HTTPs scheme or just a hostname. Please refer to https://docs.konghq.com/konnect/network/ for the list of supported hostnames. |
 
 _Appears in:_
-- [KonnectAPIAuthConfiguration](#konnectapiauthconfiguration)
+
+- [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-types-konnectapiauthconfiguration)
 
 #### KonnectAPIAuthConfigurationStatus
 
@@ -350,17 +362,17 @@ KonnectAPIAuthConfigurationStatus is the status of the KonnectAPIAuthConfigurati
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect configuration. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect configuration. |
 | `organizationID` _string_ | OrganizationID is the unique identifier of the organization in Konnect. |
 | `serverURL` _string_ | ServerURL is configured server URL. |
 
 _Appears in:_
-- [KonnectAPIAuthConfiguration](#konnectapiauthconfiguration)
+
+- [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-types-konnectapiauthconfiguration)
 
 #### KonnectAPIAuthType
 
 _Underlying type:_ `string`
-
 
 KonnectAPIAuthType is the type of authentication used to authenticate with the Konnect API.
 
@@ -368,7 +380,8 @@ KonnectAPIAuthType is the type of authentication used to authenticate with the K
 
 
 _Appears in:_
-- [KonnectAPIAuthConfigurationSpec](#konnectapiauthconfigurationspec)
+
+- [KonnectAPIAuthConfigurationSpec](#konnect-konghq-com-v1alpha1-types-konnectapiauthconfigurationspec)
 
 Allowed values:
 
@@ -387,13 +400,14 @@ KonnectCloudGatewayDataPlaneGroupConfigurationSpec defines the desired state of 
 | Field | Description |
 | --- | --- |
 | `version` _string_ | Version specifies the desired Kong Gateway version. |
-| `dataplane_groups` _[KonnectConfigurationDataPlaneGroup](#konnectconfigurationdataplanegroup) array_ | DataplaneGroups is a list of desired data-plane groups that describe where to deploy instances, along with how many instances. |
-| `api_access` _[APIAccess](#apiaccess)_ | APIAccess is the desired type of API access for data-plane groups. |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane which DataPlanes from this configuration will connect to. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a cloud gateway dataplane group configuration from an existing transit dataplane group configuration in Konnect. |
+| `dataplane_groups` _[KonnectConfigurationDataPlaneGroup](#konnect-konghq-com-v1alpha1-types-konnectconfigurationdataplanegroup)_ | DataplaneGroups is a list of desired data-plane groups that describe where to deploy instances, along with how many instances. |
+| `api_access` _*github.com/Kong/sdk-konnect-go/models/components.APIAccess_ | APIAccess is the desired type of API access for data-plane groups. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane which DataPlanes from this configuration will connect to. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a cloud gateway dataplane group configuration from an existing transit dataplane group configuration in Konnect. |
 
 _Appears in:_
-- [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnectcloudgatewaydataplanegroupconfiguration)
+
+- [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfiguration)
 
 #### KonnectCloudGatewayDataPlaneGroupConfigurationStatus
 
@@ -404,15 +418,16 @@ KonnectCloudGatewayDataPlaneGroupConfigurationStatus defines the observed state 
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
-| `dataplane_groups` _[KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup](#konnectcloudgatewaydataplanegroupconfigurationstatusgroup) array_ | DataPlaneGroups is a list of deployed data-plane groups. |
+| `dataplane_groups` _[KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatusgroup)_ | DataPlaneGroups is a list of deployed data-plane groups. |
 
 _Appears in:_
-- [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnectcloudgatewaydataplanegroupconfiguration)
+
+- [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfiguration)
 
 #### KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup
 
@@ -425,14 +440,15 @@ KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup defines the observed s
 | --- | --- |
 | `id` _string_ | ID is the ID of the deployed data-plane group. |
 | `cloud_gateway_network_id` _string_ | CloudGatewayNetworkID is the ID of the cloud gateway network. |
-| `provider` _[ProviderName](#providername)_ | Name of cloud provider. |
+| `provider` _github.com/Kong/sdk-konnect-go/models/components.ProviderName_ | Name of cloud provider. |
 | `region` _string_ | Region ID for cloud provider region. |
-| `private_ip_addresses` _string array_ | PrivateIPAddresses is a list of private IP addresses of the internal load balancer that proxies traffic to this data-plane group. |
-| `egress_ip_addresses` _string array_ | EgressIPAddresses is a list of egress IP addresses for the network that this data-plane group runs on. |
+| `private_ip_addresses` _[]string_ | PrivateIPAddresses is a list of private IP addresses of the internal load balancer that proxies traffic to this data-plane group. |
+| `egress_ip_addresses` _[]string_ | EgressIPAddresses is a list of egress IP addresses for the network that this data-plane group runs on. |
 | `state` _string_ | State is the current state of the data plane group. Can be e.g. initializing, ready, terminating. |
 
 _Appears in:_
-- [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnectcloudgatewaydataplanegroupconfigurationstatus)
+
+- [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
 
 #### KonnectCloudGatewayNetworkSpec
 
@@ -446,14 +462,15 @@ KonnectCloudGatewayNetworkSpec defines the desired state of KonnectCloudGatewayN
 | `name` _string_ | Specifies the name of the network on Konnect. |
 | `cloud_gateway_provider_account_id` _string_ | Specifies the provider Account ID. |
 | `region` _string_ | Region ID for cloud provider region. |
-| `availability_zones` _string array_ | List of availability zones that the network is attached to. |
+| `availability_zones` _[]string_ | List of availability zones that the network is attached to. |
 | `cidr_block` _string_ | CIDR block configuration for the network. |
-| `state` _[NetworkCreateState](#networkcreatestate)_ | Initial state for creating a network. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a cloud gateway network from an existing network in Konnect. |
-| `konnect` _[KonnectConfiguration](#konnectconfiguration)_ |  |
+| `state` _*github.com/Kong/sdk-konnect-go/models/components.NetworkCreateState_ | Initial state for creating a network. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a cloud gateway network from an existing network in Konnect. |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ |  |
 
 _Appears in:_
-- [KonnectCloudGatewayNetwork](#konnectcloudgatewaynetwork)
+
+- [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetwork)
 
 #### KonnectCloudGatewayNetworkStatus
 
@@ -464,14 +481,15 @@ KonnectCloudGatewayNetworkStatus defines the observed state of KonnectCloudGatew
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectCloudGatewayNetwork.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectCloudGatewayNetwork.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `state` _string_ | State is the current state of the network. Can be e.g. initializing, ready, terminating. |
 
 _Appears in:_
-- [KonnectCloudGatewayNetwork](#konnectcloudgatewaynetwork)
+
+- [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetwork)
 
 #### KonnectCloudGatewayTransitGatewaySpec
 
@@ -482,14 +500,15 @@ KonnectCloudGatewayTransitGatewaySpec defines the desired state of KonnectCloudG
 
 | Field | Description |
 | --- | --- |
-| `networkRef` _[ObjectRef](#objectref)_ | NetworkRef is the schema for the NetworkRef type. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a cloud gateway transit gateway from an existing transit gateway in Konnect. |
-| `type` _[TransitGatewayType](#transitgatewaytype)_ | Type is the type of the Konnect transit gateway. |
-| `awsTransitGateway` _[AWSTransitGateway](#awstransitgateway)_ | AWSTransitGateway is the configuration of an AWS transit gateway. Used when type is "AWS Transit Gateway". |
-| `azureTransitGateway` _[AzureTransitGateway](#azuretransitgateway)_ | AzureTransitGateway is the configuration of an Azure transit gateway. Used when type is "Azure Transit Gateway". |
+| `networkRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | NetworkRef is the schema for the NetworkRef type. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a cloud gateway transit gateway from an existing transit gateway in Konnect. |
+| `type` _[TransitGatewayType](#konnect-konghq-com-v1alpha1-types-transitgatewaytype)_ | Type is the type of the Konnect transit gateway. |
+| `awsTransitGateway` _[AWSTransitGateway](#konnect-konghq-com-v1alpha1-types-awstransitgateway)_ | AWSTransitGateway is the configuration of an AWS transit gateway. Used when type is "AWS Transit Gateway". |
+| `azureTransitGateway` _[AzureTransitGateway](#konnect-konghq-com-v1alpha1-types-azuretransitgateway)_ | AzureTransitGateway is the configuration of an Azure transit gateway. Used when type is "Azure Transit Gateway". |
 
 _Appears in:_
-- [KonnectCloudGatewayTransitGateway](#konnectcloudgatewaytransitgateway)
+
+- [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgateway)
 
 #### KonnectCloudGatewayTransitGatewayStatus
 
@@ -500,15 +519,16 @@ KonnectCloudGatewayTransitGatewayStatus defines the current state of KonnectClou
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectCloudGatewayDataPlaneGroupConfiguration.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 | `networkID` _string_ | NetworkID is the Konnect ID of the Konnect cloud gateway network this entity is associated with. |
-| `state` _[TransitGatewayState](#transitgatewaystate)_ | State is the state of the transit gateway on Konnect side. |
+| `state` _github.com/Kong/sdk-konnect-go/models/components.TransitGatewayState_ | State is the state of the transit gateway on Konnect side. |
 
 _Appears in:_
-- [KonnectCloudGatewayTransitGateway](#konnectcloudgatewaytransitgateway)
+
+- [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgateway)
 
 #### KonnectConfigurationDataPlaneGroup
 
@@ -519,14 +539,15 @@ KonnectConfigurationDataPlaneGroup is the schema for the KonnectConfiguration ty
 
 | Field | Description |
 | --- | --- |
-| `provider` _[ProviderName](#providername)_ | Name of cloud provider. |
+| `provider` _github.com/Kong/sdk-konnect-go/models/components.ProviderName_ | Name of cloud provider. |
 | `region` _string_ | Region for cloud provider region. |
-| `networkRef` _[ObjectRef](#objectref)_ | NetworkRef is the reference to the network that this data-plane group will be deployed on.<br /><br />Cross namespace references are not supported for networkRef of type namespacedRef. This will be enforced in the future but currently (due to limitation in CEL validation in Kubernetes 1.31 and older) it is not. |
-| `autoscale` _[ConfigurationDataPlaneGroupAutoscale](#configurationdataplanegroupautoscale)_ | Autoscale configuration for the data-plane group. |
-| `environment` _[ConfigurationDataPlaneGroupEnvironmentField](#configurationdataplanegroupenvironmentfield) array_ | Array of environment variables to set for a data-plane group. |
+| `networkRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | NetworkRef is the reference to the network that this data-plane group will be deployed on.<br /><br />Cross namespace references are not supported for networkRef of type namespacedRef. This will be enforced in the future but currently (due to limitation in CEL validation in Kubernetes 1.31 and older) it is not. |
+| `autoscale` _[ConfigurationDataPlaneGroupAutoscale](#konnect-konghq-com-v1alpha1-types-configurationdataplanegroupautoscale)_ | Autoscale configuration for the data-plane group. |
+| `environment` _[ConfigurationDataPlaneGroupEnvironmentField](#konnect-konghq-com-v1alpha1-types-configurationdataplanegroupenvironmentfield)_ | Array of environment variables to set for a data-plane group. |
 
 _Appears in:_
-- [KonnectCloudGatewayDataPlaneGroupConfigurationSpec](#konnectcloudgatewaydataplanegroupconfigurationspec)
+
+- [KonnectCloudGatewayDataPlaneGroupConfigurationSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationspec)
 
 #### KonnectEndpoints
 
@@ -541,8 +562,9 @@ KonnectEndpoints defines the Konnect endpoints for the control plane.
 | `controlPlane` _string_ | ControlPlaneEndpoint is the endpoint for the control plane. |
 
 _Appears in:_
-- [KonnectExtensionControlPlaneStatus](#konnectextensioncontrolplanestatus)
-- [KonnectGatewayControlPlaneStatus](#konnectgatewaycontrolplanestatus)
+
+- [KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectextensioncontrolplanestatus)
+- [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 
 #### KonnectExtensionClientAuth
 
@@ -555,15 +577,15 @@ with e.g., token-based authentication.
 
 | Field | Description |
 | --- | --- |
-| `certificateSecret` _[CertificateSecret](#certificatesecret)_ | CertificateSecret contains the information to access the client certificate. |
+| `certificateSecret` _[CertificateSecret](#konnect-konghq-com-v1alpha1-types-certificatesecret)_ | CertificateSecret contains the information to access the client certificate. |
 
 _Appears in:_
-- [KonnectExtensionSpec](#konnectextensionspec)
+
+- [KonnectExtensionSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionspec)
 
 #### KonnectExtensionClusterType
 
 _Underlying type:_ `string`
-
 
 KonnectExtensionClusterType is the type of the Konnect Control Plane.
 
@@ -571,7 +593,8 @@ KonnectExtensionClusterType is the type of the Konnect Control Plane.
 
 
 _Appears in:_
-- [KonnectExtensionControlPlaneStatus](#konnectextensioncontrolplanestatus)
+
+- [KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectextensioncontrolplanestatus)
 
 Allowed values:
 
@@ -589,10 +612,11 @@ KonnectExtensionControlPlane is the configuration for the Konnect Control Plane.
 
 | Field | Description |
 | --- | --- |
-| `ref` _[ControlPlaneRef](#controlplaneref)_ | Ref is a reference to a Konnect ControlPlane this KonnectExtension is associated with. |
+| `ref` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | Ref is a reference to a Konnect ControlPlane this KonnectExtension is associated with. |
 
 _Appears in:_
-- [KonnectExtensionKonnectSpec](#konnectextensionkonnectspec)
+
+- [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
 
 #### KonnectExtensionControlPlaneStatus
 
@@ -604,11 +628,12 @@ KonnectExtensionControlPlaneStatus contains the Konnect Control Plane status inf
 | Field | Description |
 | --- | --- |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this KonnectExtension is associated with. |
-| `clusterType` _[KonnectExtensionClusterType](#konnectextensionclustertype)_ | ClusterType is the type of the Konnect Control Plane. |
-| `endpoints` _[KonnectEndpoints](#konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. |
+| `clusterType` _[KonnectExtensionClusterType](#konnect-konghq-com-v1alpha1-types-konnectextensionclustertype)_ | ClusterType is the type of the Konnect Control Plane. |
+| `endpoints` _[KonnectEndpoints](#konnect-konghq-com-v1alpha1-types-konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. |
 
 _Appears in:_
-- [KonnectExtensionStatus](#konnectextensionstatus)
+
+- [KonnectExtensionStatus](#konnect-konghq-com-v1alpha1-types-konnectextensionstatus)
 
 #### KonnectExtensionDataPlane
 
@@ -619,10 +644,11 @@ KonnectExtensionDataPlane is the configuration for the Konnect DataPlane.
 
 | Field | Description |
 | --- | --- |
-| `labels` _object (keys:string, values:[DataPlaneLabelValue](#dataplanelabelvalue))_ | Labels is a set of labels that will be applied to the Konnect DataPlane. |
+| `labels` _[DataPlaneLabelValue](#konnect-konghq-com-v1alpha1-types-dataplanelabelvalue)_ | Labels is a set of labels that will be applied to the Konnect DataPlane. |
 
 _Appears in:_
-- [KonnectExtensionKonnectSpec](#konnectextensionkonnectspec)
+
+- [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
 
 #### KonnectExtensionKonnectSpec
 
@@ -633,12 +659,13 @@ KonnectExtensionKonnectSpec holds the konnect-related configuration.
 
 | Field | Description |
 | --- | --- |
-| `controlPlane` _[KonnectExtensionControlPlane](#konnectextensioncontrolplane)_ | ControlPlane is the configuration for the Konnect Control Plane. |
-| `dataPlane` _[KonnectExtensionDataPlane](#konnectextensiondataplane)_ | DataPlane is the configuration for the Konnect DataPlane. |
-| `configuration` _[KonnectConfiguration](#konnectconfiguration)_ | Configuration holds the information needed to set up the Konnect Configuration. |
+| `controlPlane` _[KonnectExtensionControlPlane](#konnect-konghq-com-v1alpha1-types-konnectextensioncontrolplane)_ | ControlPlane is the configuration for the Konnect Control Plane. |
+| `dataPlane` _[KonnectExtensionDataPlane](#konnect-konghq-com-v1alpha1-types-konnectextensiondataplane)_ | DataPlane is the configuration for the Konnect DataPlane. |
+| `configuration` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | Configuration holds the information needed to set up the Konnect Configuration. |
 
 _Appears in:_
-- [KonnectExtensionSpec](#konnectextensionspec)
+
+- [KonnectExtensionSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionspec)
 
 #### KonnectExtensionSpec
 
@@ -649,11 +676,12 @@ KonnectExtensionSpec defines the desired state of KonnectExtension.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectExtensionKonnectSpec](#konnectextensionkonnectspec)_ | Konnect holds the konnect-related configuration |
-| `clientAuth` _[KonnectExtensionClientAuth](#konnectextensionclientauth)_ | ClientAuth is the configuration for the client certificate authentication. In case the ControlPlaneRef is of type KonnectID, it is required to set up the connection with the Konnect Platform. |
+| `konnect` _[KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)_ | Konnect holds the konnect-related configuration |
+| `clientAuth` _[KonnectExtensionClientAuth](#konnect-konghq-com-v1alpha1-types-konnectextensionclientauth)_ | ClientAuth is the configuration for the client certificate authentication. In case the ControlPlaneRef is of type KonnectID, it is required to set up the connection with the Konnect Platform. |
 
 _Appears in:_
-- [KonnectExtension](#konnectextension)
+
+- [KonnectExtension](#konnect-konghq-com-v1alpha1-types-konnectextension)
 
 #### KonnectExtensionStatus
 
@@ -664,14 +692,15 @@ KonnectExtensionStatus defines the observed state of KonnectExtension.
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectExtensionStatus. |
-| `dataPlaneRefs` _NamespacedRef array_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
-| `controlPlaneRefs` _NamespacedRef array_ | ControlPlaneRefs is the array  of ControlPlane references this is associated with. A new reference is set by the operator when this extension is associated with a ControlPlane through its extensions spec. |
-| `dataPlaneClientAuth` _[DataPlaneClientAuthStatus](#dataplaneclientauthstatus)_ | DataPlaneClientAuth contains the configuration for the client certificate authentication for the DataPlane. |
-| `konnect` _[KonnectExtensionControlPlaneStatus](#konnectextensioncontrolplanestatus)_ | Konnect contains the status information related to the Konnect Control Plane. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectExtensionStatus. |
+| `dataPlaneRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
+| `controlPlaneRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ControlPlaneRefs is the array  of ControlPlane references this is associated with. A new reference is set by the operator when this extension is associated with a ControlPlane through its extensions spec. |
+| `dataPlaneClientAuth` _[DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha1-types-dataplaneclientauthstatus)_ | DataPlaneClientAuth contains the configuration for the client certificate authentication for the DataPlane. |
+| `konnect` _[KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectextensioncontrolplanestatus)_ | Konnect contains the status information related to the Konnect Control Plane. |
 
 _Appears in:_
-- [KonnectExtension](#konnectextension)
+
+- [KonnectExtension](#konnect-konghq-com-v1alpha1-types-konnectextension)
 
 #### KonnectGatewayControlPlaneSpec
 
@@ -682,20 +711,21 @@ KonnectGatewayControlPlaneSpec defines the desired state of KonnectGatewayContro
 
 | Field | Description |
 | --- | --- |
-| `name` _string_ | The name of the control plane. |
-| `description` _string_ | The description of the control plane in Konnect. |
-| `cluster_type` _[CreateControlPlaneRequestClusterType](#createcontrolplanerequestclustertype)_ | The ClusterType value of the cluster associated with the Control Plane. |
-| `auth_type` _[AuthType](#authtype)_ | The auth type value of the cluster associated with the Runtime Group. |
-| `cloud_gateway` _boolean_ | Whether this control-plane can be used for cloud-gateways. |
-| `proxy_urls` _[ProxyURL](#proxyurl) array_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
-| `labels` _object (keys:string, values:string)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
-| `mirror` _[MirrorSpec](#mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
-| `source` _[EntitySource](#entitysource)_ | Source represents the source type of the Konnect entity. |
+| `name` _*string_ | The name of the control plane. |
+| `description` _*string_ | The description of the control plane in Konnect. |
+| `cluster_type` _*github.com/Kong/sdk-konnect-go/models/components.CreateControlPlaneRequestClusterType_ | The ClusterType value of the cluster associated with the Control Plane. |
+| `auth_type` _*github.com/Kong/sdk-konnect-go/models/components.AuthType_ | The auth type value of the cluster associated with the Runtime Group. |
+| `cloud_gateway` _*bool_ | Whether this control-plane can be used for cloud-gateways. |
+| `proxy_urls` _[]github.com/Kong/sdk-konnect-go/models/components.ProxyURL_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
+| `labels` _map[string]string_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `mirror` _[MirrorSpec](#konnect-konghq-com-v1alpha1-types-mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
+| `source` _[EntitySource](#common-konghq-com-v1alpha1-types-entitysource)_ | Source represents the source type of the Konnect entity. |
 | `members` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core) array_ | Members is a list of references to the KonnectGatewayControlPlaneMembers that are part of this control plane group. Only applicable for ControlPlanes that are created as groups. |
-| `konnect` _[KonnectConfiguration](#konnectconfiguration)_ | KonnectConfiguration contains the Konnect configuration for the control plane. |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration contains the Konnect configuration for the control plane. |
 
 _Appears in:_
-- [KonnectGatewayControlPlane](#konnectgatewaycontrolplane)
+
+- [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplane)
 
 #### KonnectGatewayControlPlaneStatus
 
@@ -706,14 +736,15 @@ KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayCon
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectGatewayControlPlane.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectGatewayControlPlane.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
-| `konnectEndpoints` _[KonnectEndpoints](#konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. They are required by the DataPlane to be properly configured in Konnect and connect to the control plane. |
+| `konnectEndpoints` _[KonnectEndpoints](#konnect-konghq-com-v1alpha1-types-konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. They are required by the DataPlane to be properly configured in Konnect and connect to the control plane. |
 
 _Appears in:_
-- [KonnectGatewayControlPlane](#konnectgatewaycontrolplane)
+
+- [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplane)
 
 #### KonnectTransitGatewayAPISpec
 
@@ -725,12 +756,13 @@ The type and all the types it referenced are mostly copied github.com/Kong/sdk-k
 
 | Field | Description |
 | --- | --- |
-| `type` _[TransitGatewayType](#transitgatewaytype)_ | Type is the type of the Konnect transit gateway. |
-| `awsTransitGateway` _[AWSTransitGateway](#awstransitgateway)_ | AWSTransitGateway is the configuration of an AWS transit gateway. Used when type is "AWS Transit Gateway". |
-| `azureTransitGateway` _[AzureTransitGateway](#azuretransitgateway)_ | AzureTransitGateway is the configuration of an Azure transit gateway. Used when type is "Azure Transit Gateway". |
+| `type` _[TransitGatewayType](#konnect-konghq-com-v1alpha1-types-transitgatewaytype)_ | Type is the type of the Konnect transit gateway. |
+| `awsTransitGateway` _[AWSTransitGateway](#konnect-konghq-com-v1alpha1-types-awstransitgateway)_ | AWSTransitGateway is the configuration of an AWS transit gateway. Used when type is "AWS Transit Gateway". |
+| `azureTransitGateway` _[AzureTransitGateway](#konnect-konghq-com-v1alpha1-types-azuretransitgateway)_ | AzureTransitGateway is the configuration of an Azure transit gateway. Used when type is "Azure Transit Gateway". |
 
 _Appears in:_
-- [KonnectCloudGatewayTransitGatewaySpec](#konnectcloudgatewaytransitgatewayspec)
+
+- [KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)
 
 #### MirrorKonnect
 
@@ -741,10 +773,11 @@ MirrorKonnect contains the Konnect Mirror configuration.
 
 | Field | Description |
 | --- | --- |
-| `id` _[KonnectIDType](#konnectidtype)_ | ID is the ID of the Konnect entity. It can be set only in case the ControlPlane type is Mirror. |
+| `id` _[KonnectIDType](#common-konghq-com-v1alpha1-types-konnectidtype)_ | ID is the ID of the Konnect entity. It can be set only in case the ControlPlane type is Mirror. |
 
 _Appears in:_
-- [MirrorSpec](#mirrorspec)
+
+- [MirrorSpec](#konnect-konghq-com-v1alpha1-types-mirrorspec)
 
 #### MirrorSpec
 
@@ -755,15 +788,15 @@ MirrorSpec contains the Konnect Mirror configuration.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[MirrorKonnect](#mirrorkonnect)_ | Konnect contains the KonnectID of the KonnectGatewayControlPlane that is mirrored. |
+| `konnect` _[MirrorKonnect](#konnect-konghq-com-v1alpha1-types-mirrorkonnect)_ | Konnect contains the KonnectID of the KonnectGatewayControlPlane that is mirrored. |
 
 _Appears in:_
-- [KonnectGatewayControlPlaneSpec](#konnectgatewaycontrolplanespec)
+
+- [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
 
 #### ProvisioningMethod
 
 _Underlying type:_ `string`
-
 
 ProvisioningMethod is the type of the provisioning methods available to provision the certificate.
 
@@ -771,7 +804,8 @@ ProvisioningMethod is the type of the provisioning methods available to provisio
 
 
 _Appears in:_
-- [CertificateSecret](#certificatesecret)
+
+- [CertificateSecret](#konnect-konghq-com-v1alpha1-types-certificatesecret)
 
 Allowed values:
 
@@ -792,8 +826,9 @@ SecretRef contains the reference to the Secret containing the Konnect Control Pl
 | `name` _string_ | Name is the name of the Secret containing the Konnect Control Plane's cluster certificate. |
 
 _Appears in:_
-- [CertificateSecret](#certificatesecret)
-- [DataPlaneClientAuthStatus](#dataplaneclientauthstatus)
+
+- [CertificateSecret](#konnect-konghq-com-v1alpha1-types-certificatesecret)
+- [DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha1-types-dataplaneclientauthstatus)
 
 #### TransitGatewayDNSConfig
 
@@ -804,17 +839,17 @@ TransitGatewayDNSConfig is the DNS configuration of a tansit gateway.
 
 | Field | Description |
 | --- | --- |
-| `remote_dns_server_ip_addresses` _string array_ | RemoteDNSServerIPAddresses is the list of remote DNS server IP Addresses to connect to for resolving internal DNS via a transit gateway. |
-| `domain_proxy_list` _string array_ | DomainProxyList is the list of internal domain names to proxy for DNS resolution from the listed remote DNS server IP addresses, for a transit gateway. |
+| `remote_dns_server_ip_addresses` _[]string_ | RemoteDNSServerIPAddresses is the list of remote DNS server IP Addresses to connect to for resolving internal DNS via a transit gateway. |
+| `domain_proxy_list` _[]string_ | DomainProxyList is the list of internal domain names to proxy for DNS resolution from the listed remote DNS server IP addresses, for a transit gateway. |
 
 _Appears in:_
-- [AWSTransitGateway](#awstransitgateway)
-- [AzureTransitGateway](#azuretransitgateway)
+
+- [AWSTransitGateway](#konnect-konghq-com-v1alpha1-types-awstransitgateway)
+- [AzureTransitGateway](#konnect-konghq-com-v1alpha1-types-azuretransitgateway)
 
 #### TransitGatewayType
 
 _Underlying type:_ `string`
-
 
 TransitGatewayType defines the type of Konnect transit gateway.
 
@@ -822,8 +857,9 @@ TransitGatewayType defines the type of Konnect transit gateway.
 
 
 _Appears in:_
-- [KonnectCloudGatewayTransitGatewaySpec](#konnectcloudgatewaytransitgatewayspec)
-- [KonnectTransitGatewayAPISpec](#konnecttransitgatewayapispec)
+
+- [KonnectCloudGatewayTransitGatewaySpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewayspec)
+- [KonnectTransitGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnecttransitgatewayapispec)
 
 Allowed values:
 
@@ -832,14 +868,14 @@ Allowed values:
 | `AWSTransitGateway` | TransitGatewayTypeAWSTransitGateway defines the the AWS transit gateway type.<br /> |
 | `AzureTransitGateway` | TransitGatewayTypeAzureTransitGateway defines the Azure transit gateway type.<br /> |
 
-## <a id="konnect-konghq-com-v1alpha2">konnect.konghq.com/v1alpha2</a>
+## konnect.konghq.com/v1alpha2
 
 Package v1alpha2 contains API Schema definitions for the konnect.konghq.com v1alpha2 API group.
 
-- [KonnectExtension](#github-com-kong-kong-operator-api-konnect-v1alpha2-konnectextension)
-- [KonnectGatewayControlPlane](#github-com-kong-kong-operator-api-konnect-v1alpha2-konnectgatewaycontrolplane)
+- [KonnectExtension](#konnect-konghq-com-v1alpha2-konnectextension)
+- [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha2-konnectgatewaycontrolplane)
 
-### <a id="github-com-kong-kong-operator-api-konnect-v1alpha2-konnectextension">KonnectExtension</a>
+### KonnectExtension
 
 
 KonnectExtension is the Schema for the KonnectExtension API, and is intended to be referenced as
@@ -853,11 +889,11 @@ deployment(s) spec gets customized to include the konnect-related configuration.
 | --- | --- |
 | `apiVersion` _string_ | `konnect.konghq.com/v1alpha2`
 | `kind` _string_ | `KonnectExtension`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KonnectExtensionSpec](#konnectextensionspec)_ | Spec is the specification of the KonnectExtension resource. |
-| `status` _[KonnectExtensionStatus](#konnectextensionstatus)_ | Status is the status of the KonnectExtension resource. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectExtensionSpec](#konnect-konghq-com-v1alpha2-types-konnectextensionspec)_ | Spec is the specification of the KonnectExtension resource. |
+| `status` _[KonnectExtensionStatus](#konnect-konghq-com-v1alpha2-types-konnectextensionstatus)_ | Status is the status of the KonnectExtension resource. |
 
-### <a id="github-com-kong-kong-operator-api-konnect-v1alpha2-konnectgatewaycontrolplane">KonnectGatewayControlPlane</a>
+### KonnectGatewayControlPlane
 
 
 KonnectGatewayControlPlane is the Schema for the KonnectGatewayControlplanes API.
@@ -868,9 +904,9 @@ KonnectGatewayControlPlane is the Schema for the KonnectGatewayControlplanes API
 | --- | --- |
 | `apiVersion` _string_ | `konnect.konghq.com/v1alpha2`
 | `kind` _string_ | `KonnectGatewayControlPlane`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KonnectGatewayControlPlaneSpec](#konnectgatewaycontrolplanespec)_ | Spec defines the desired state of KonnectGatewayControlPlane. |
-| `status` _[KonnectGatewayControlPlaneStatus](#konnectgatewaycontrolplanestatus)_ | Status defines the observed state of KonnectGatewayControlPlane. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanespec)_ | Spec defines the desired state of KonnectGatewayControlPlane. |
+| `status` _[KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)_ | Status defines the observed state of KonnectGatewayControlPlane. |
 
 ### Types
 
@@ -884,11 +920,12 @@ CertificateSecret contains the information to access the client certificate.
 
 | Field | Description |
 | --- | --- |
-| `provisioning` _[ProvisioningMethod](#provisioningmethod)_ | Provisioning is the method used to provision the certificate. It can be either Manual or Automatic. In case manual provisioning is used, the certificate must be provided by the user. In case automatic provisioning is used, the certificate will be automatically generated by the system. |
-| `secretRef` _[SecretRef](#secretref)_ | CertificateSecretRef is the reference to the Secret containing the client certificate. |
+| `provisioning` _[ProvisioningMethod](#konnect-konghq-com-v1alpha2-types-provisioningmethod)_ | Provisioning is the method used to provision the certificate. It can be either Manual or Automatic. In case manual provisioning is used, the certificate must be provided by the user. In case automatic provisioning is used, the certificate will be automatically generated by the system. |
+| `secretRef` _[SecretRef](#konnect-konghq-com-v1alpha2-types-secretref)_ | CertificateSecretRef is the reference to the Secret containing the client certificate. |
 
 _Appears in:_
-- [KonnectExtensionClientAuth](#konnectextensionclientauth)
+
+- [KonnectExtensionClientAuth](#konnect-konghq-com-v1alpha2-types-konnectextensionclientauth)
 
 #### DataPlaneClientAuthStatus
 
@@ -899,15 +936,15 @@ DataPlaneClientAuthStatus contains the status information related to the ClientA
 
 | Field | Description |
 | --- | --- |
-| `certificateSecretRef` _[SecretRef](#secretref)_ | CertificateSecretRef is the reference to the Secret containing the client certificate. |
+| `certificateSecretRef` _[SecretRef](#konnect-konghq-com-v1alpha2-types-secretref)_ | CertificateSecretRef is the reference to the Secret containing the client certificate. |
 
 _Appears in:_
-- [KonnectExtensionStatus](#konnectextensionstatus)
+
+- [KonnectExtensionStatus](#konnect-konghq-com-v1alpha2-types-konnectextensionstatus)
 
 #### DataPlaneLabelValue
 
 _Underlying type:_ `string`
-
 
 DataPlaneLabelValue is the type that defines the value of a label that will be applied to the Konnect DataPlane.
 
@@ -915,7 +952,8 @@ DataPlaneLabelValue is the type that defines the value of a label that will be a
 
 
 _Appears in:_
-- [KonnectExtensionDataPlane](#konnectextensiondataplane)
+
+- [KonnectExtensionDataPlane](#konnect-konghq-com-v1alpha2-types-konnectextensiondataplane)
 
 #### KonnectAPIAuthConfigurationRef
 
@@ -929,8 +967,9 @@ KonnectAPIAuthConfigurationRef is a reference to a KonnectAPIAuthConfiguration r
 | `name` _string_ | Name is the name of the KonnectAPIAuthConfiguration resource. |
 
 _Appears in:_
-- [KonnectConfiguration](#konnectconfiguration)
-- [KonnectExtensionControlPlaneStatus](#konnectextensioncontrolplanestatus)
+
+- [KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)
+- [KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectextensioncontrolplanestatus)
 
 #### KonnectConfiguration
 
@@ -941,13 +980,14 @@ KonnectConfiguration is the Schema for the KonnectConfiguration API.
 
 | Field | Description |
 | --- | --- |
-| `authRef` _[KonnectAPIAuthConfigurationRef](#konnectapiauthconfigurationref)_ | APIAuthConfigurationRef is the reference to the API Auth Configuration that should be used for this Konnect Configuration. |
+| `authRef` _[KonnectAPIAuthConfigurationRef](#konnect-konghq-com-v1alpha2-types-konnectapiauthconfigurationref)_ | APIAuthConfigurationRef is the reference to the API Auth Configuration that should be used for this Konnect Configuration. |
 
 _Appears in:_
-- [KonnectCloudGatewayNetworkSpec](#konnectcloudgatewaynetworkspec)
-- [KonnectExtensionKonnectSpec](#konnectextensionkonnectspec)
-- [KonnectGatewayControlPlaneSpec](#konnectgatewaycontrolplanespec)
-- [KonnectGatewayControlPlaneSpec](#konnectgatewaycontrolplanespec)
+
+- [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
+- [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
+- [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
+- [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanespec)
 
 #### KonnectEndpoints
 
@@ -962,8 +1002,9 @@ KonnectEndpoints defines the Konnect endpoints for the control plane.
 | `controlPlane` _string_ | ControlPlaneEndpoint is the endpoint for the control plane. |
 
 _Appears in:_
-- [KonnectExtensionControlPlaneStatus](#konnectextensioncontrolplanestatus)
-- [KonnectGatewayControlPlaneStatus](#konnectgatewaycontrolplanestatus)
+
+- [KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectextensioncontrolplanestatus)
+- [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)
 
 #### KonnectEntityStatus
 
@@ -979,18 +1020,19 @@ KonnectEntityStatus represents the status of a Konnect entity.
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
 
 _Appears in:_
-- [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnectcloudgatewaydataplanegroupconfigurationstatus)
-- [KonnectCloudGatewayNetworkStatus](#konnectcloudgatewaynetworkstatus)
-- [KonnectCloudGatewayTransitGatewayStatus](#konnectcloudgatewaytransitgatewaystatus)
-- [KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnectentitystatuswithcontrolplaneandcertificaterefs)
-- [KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)
-- [KonnectEntityStatusWithControlPlaneAndKeySetRef](#konnectentitystatuswithcontrolplaneandkeysetref)
-- [KonnectEntityStatusWithControlPlaneAndServiceRefs](#konnectentitystatuswithcontrolplaneandservicerefs)
-- [KonnectEntityStatusWithControlPlaneAndUpstreamRefs](#konnectentitystatuswithcontrolplaneandupstreamrefs)
-- [KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)
-- [KonnectEntityStatusWithNetworkRef](#konnectentitystatuswithnetworkref)
-- [KonnectGatewayControlPlaneStatus](#konnectgatewaycontrolplanestatus)
-- [KonnectGatewayControlPlaneStatus](#konnectgatewaycontrolplanestatus)
+
+- [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
+- [KonnectCloudGatewayNetworkStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkstatus)
+- [KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)
+- [KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificaterefs)
+- [KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)
+- [KonnectEntityStatusWithControlPlaneAndKeySetRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandkeysetref)
+- [KonnectEntityStatusWithControlPlaneAndServiceRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandservicerefs)
+- [KonnectEntityStatusWithControlPlaneAndUpstreamRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandupstreamrefs)
+- [KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)
+- [KonnectEntityStatusWithNetworkRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithnetworkref)
+- [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
+- [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)
 
 
 
@@ -1017,7 +1059,8 @@ KonnectEntityStatusWithControlPlaneRef represents the status of a Konnect entity
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this Route is associated with. |
 
 _Appears in:_
-- [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnectcloudgatewaydataplanegroupconfigurationstatus)
+
+- [KonnectCloudGatewayDataPlaneGroupConfigurationStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfigurationstatus)
 
 #### KonnectEntityStatusWithNetworkRef
 
@@ -1034,7 +1077,8 @@ KonnectEntityStatusWithNetworkRef represents the status of a Konnect entity with
 | `networkID` _string_ | NetworkID is the Konnect ID of the Konnect cloud gateway network this entity is associated with. |
 
 _Appears in:_
-- [KonnectCloudGatewayTransitGatewayStatus](#konnectcloudgatewaytransitgatewaystatus)
+
+- [KonnectCloudGatewayTransitGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgatewaystatus)
 
 #### KonnectExtensionClientAuth
 
@@ -1047,15 +1091,15 @@ with e.g., token-based authentication.
 
 | Field | Description |
 | --- | --- |
-| `certificateSecret` _[CertificateSecret](#certificatesecret)_ | CertificateSecret contains the information to access the client certificate. |
+| `certificateSecret` _[CertificateSecret](#konnect-konghq-com-v1alpha2-types-certificatesecret)_ | CertificateSecret contains the information to access the client certificate. |
 
 _Appears in:_
-- [KonnectExtensionSpec](#konnectextensionspec)
+
+- [KonnectExtensionSpec](#konnect-konghq-com-v1alpha2-types-konnectextensionspec)
 
 #### KonnectExtensionClusterType
 
 _Underlying type:_ `string`
-
 
 KonnectExtensionClusterType is the type of the Konnect Control Plane.
 
@@ -1063,7 +1107,8 @@ KonnectExtensionClusterType is the type of the Konnect Control Plane.
 
 
 _Appears in:_
-- [KonnectExtensionControlPlaneStatus](#konnectextensioncontrolplanestatus)
+
+- [KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectextensioncontrolplanestatus)
 
 Allowed values:
 
@@ -1081,10 +1126,11 @@ KonnectExtensionControlPlane is the configuration for the Konnect Control Plane.
 
 | Field | Description |
 | --- | --- |
-| `ref` _[KonnectExtensionControlPlaneRef](#konnectextensioncontrolplaneref)_ | Ref is a reference to a Konnect ControlPlane this KonnectExtension is associated with. |
+| `ref` _[KonnectExtensionControlPlaneRef](#common-konghq-com-v1alpha1-types-konnectextensioncontrolplaneref)_ | Ref is a reference to a Konnect ControlPlane this KonnectExtension is associated with. |
 
 _Appears in:_
-- [KonnectExtensionKonnectSpec](#konnectextensionkonnectspec)
+
+- [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha2-types-konnectextensionkonnectspec)
 
 #### KonnectExtensionControlPlaneStatus
 
@@ -1096,12 +1142,13 @@ KonnectExtensionControlPlaneStatus contains the Konnect Control Plane status inf
 | Field | Description |
 | --- | --- |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this KonnectExtension is associated with. |
-| `clusterType` _[KonnectExtensionClusterType](#konnectextensionclustertype)_ | ClusterType is the type of the Konnect Control Plane. |
-| `endpoints` _[KonnectEndpoints](#konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. |
-| `authRef` _[KonnectAPIAuthConfigurationRef](#konnectapiauthconfigurationref)_ | AuthRef is the reference to the KonnectAPIAuthConfiguration used to authenticate with Konnect. For particular KonnectExtension and ControlPlane combination. |
+| `clusterType` _[KonnectExtensionClusterType](#konnect-konghq-com-v1alpha2-types-konnectextensionclustertype)_ | ClusterType is the type of the Konnect Control Plane. |
+| `endpoints` _[KonnectEndpoints](#konnect-konghq-com-v1alpha2-types-konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. |
+| `authRef` _[KonnectAPIAuthConfigurationRef](#konnect-konghq-com-v1alpha2-types-konnectapiauthconfigurationref)_ | AuthRef is the reference to the KonnectAPIAuthConfiguration used to authenticate with Konnect. For particular KonnectExtension and ControlPlane combination. |
 
 _Appears in:_
-- [KonnectExtensionStatus](#konnectextensionstatus)
+
+- [KonnectExtensionStatus](#konnect-konghq-com-v1alpha2-types-konnectextensionstatus)
 
 #### KonnectExtensionDataPlane
 
@@ -1112,10 +1159,11 @@ KonnectExtensionDataPlane is the configuration for the Konnect DataPlane.
 
 | Field | Description |
 | --- | --- |
-| `labels` _object (keys:string, values:[DataPlaneLabelValue](#dataplanelabelvalue))_ | Labels is a set of labels that will be applied to the Konnect DataPlane. |
+| `labels` _[DataPlaneLabelValue](#konnect-konghq-com-v1alpha2-types-dataplanelabelvalue)_ | Labels is a set of labels that will be applied to the Konnect DataPlane. |
 
 _Appears in:_
-- [KonnectExtensionKonnectSpec](#konnectextensionkonnectspec)
+
+- [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha2-types-konnectextensionkonnectspec)
 
 #### KonnectExtensionKonnectSpec
 
@@ -1126,11 +1174,12 @@ KonnectExtensionKonnectSpec holds the konnect-related configuration.
 
 | Field | Description |
 | --- | --- |
-| `controlPlane` _[KonnectExtensionControlPlane](#konnectextensioncontrolplane)_ | ControlPlane is the configuration for the Konnect Control Plane. |
-| `dataPlane` _[KonnectExtensionDataPlane](#konnectextensiondataplane)_ | DataPlane is the configuration for the Konnect DataPlane. |
+| `controlPlane` _[KonnectExtensionControlPlane](#konnect-konghq-com-v1alpha2-types-konnectextensioncontrolplane)_ | ControlPlane is the configuration for the Konnect Control Plane. |
+| `dataPlane` _[KonnectExtensionDataPlane](#konnect-konghq-com-v1alpha2-types-konnectextensiondataplane)_ | DataPlane is the configuration for the Konnect DataPlane. |
 
 _Appears in:_
-- [KonnectExtensionSpec](#konnectextensionspec)
+
+- [KonnectExtensionSpec](#konnect-konghq-com-v1alpha2-types-konnectextensionspec)
 
 #### KonnectExtensionSpec
 
@@ -1141,11 +1190,12 @@ KonnectExtensionSpec defines the desired state of KonnectExtension.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectExtensionKonnectSpec](#konnectextensionkonnectspec)_ | Konnect holds the konnect-related configuration |
-| `clientAuth` _[KonnectExtensionClientAuth](#konnectextensionclientauth)_ | ClientAuth is the configuration for the client certificate authentication. |
+| `konnect` _[KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha2-types-konnectextensionkonnectspec)_ | Konnect holds the konnect-related configuration |
+| `clientAuth` _[KonnectExtensionClientAuth](#konnect-konghq-com-v1alpha2-types-konnectextensionclientauth)_ | ClientAuth is the configuration for the client certificate authentication. |
 
 _Appears in:_
-- [KonnectExtension](#konnectextension)
+
+- [KonnectExtension](#konnect-konghq-com-v1alpha2-types-konnectextension)
 
 #### KonnectExtensionStatus
 
@@ -1156,14 +1206,15 @@ KonnectExtensionStatus defines the observed state of KonnectExtension.
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectExtensionStatus. Known condition types are: |
-| `dataPlaneRefs` _NamespacedRef array_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
-| `controlPlaneRefs` _NamespacedRef array_ | ControlPlaneRefs is the array  of ControlPlane references this is associated with. A new reference is set by the operator when this extension is associated with a ControlPlane through its extensions spec. |
-| `dataPlaneClientAuth` _[DataPlaneClientAuthStatus](#dataplaneclientauthstatus)_ | DataPlaneClientAuth contains the configuration for the client certificate authentication for the DataPlane. |
-| `konnect` _[KonnectExtensionControlPlaneStatus](#konnectextensioncontrolplanestatus)_ | Konnect contains the status information related to the Konnect Control Plane. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectExtensionStatus. Known condition types are: |
+| `dataPlaneRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | DataPlaneRefs is the array  of DataPlane references this is associated with. A new reference is set by the operator when this extension is associated with a DataPlane through its extensions spec. |
+| `controlPlaneRefs` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ControlPlaneRefs is the array  of ControlPlane references this is associated with. A new reference is set by the operator when this extension is associated with a ControlPlane through its extensions spec. |
+| `dataPlaneClientAuth` _[DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha2-types-dataplaneclientauthstatus)_ | DataPlaneClientAuth contains the configuration for the client certificate authentication for the DataPlane. |
+| `konnect` _[KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectextensioncontrolplanestatus)_ | Konnect contains the status information related to the Konnect Control Plane. |
 
 _Appears in:_
-- [KonnectExtension](#konnectextension)
+
+- [KonnectExtension](#konnect-konghq-com-v1alpha2-types-konnectextension)
 
 #### KonnectGatewayControlPlaneSpec
 
@@ -1174,14 +1225,15 @@ KonnectGatewayControlPlaneSpec defines the desired state of KonnectGatewayContro
 
 | Field | Description |
 | --- | --- |
-| `createControlPlaneRequest` _[CreateControlPlaneRequest](#createcontrolplanerequest)_ | CreateControlPlaneRequest is the request to create a Konnect Control Plane. |
-| `mirror` _[MirrorSpec](#mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
-| `source` _[EntitySource](#entitysource)_ | Source represents the source type of the Konnect entity. |
+| `createControlPlaneRequest` _*github.com/Kong/sdk-konnect-go/models/components.CreateControlPlaneRequest_ | CreateControlPlaneRequest is the request to create a Konnect Control Plane. |
+| `mirror` _[MirrorSpec](#konnect-konghq-com-v1alpha2-types-mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
+| `source` _[EntitySource](#common-konghq-com-v1alpha1-types-entitysource)_ | Source represents the source type of the Konnect entity. |
 | `members` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core) array_ | Members is a list of references to the KonnectGatewayControlPlaneMembers that are part of this control plane group. Only applicable for ControlPlanes that are created as groups. |
-| `konnect` _[KonnectConfiguration](#konnectconfiguration)_ | KonnectConfiguration contains the Konnect configuration for the control plane. |
+| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration contains the Konnect configuration for the control plane. |
 
 _Appears in:_
-- [KonnectGatewayControlPlane](#konnectgatewaycontrolplane)
+
+- [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplane)
 
 #### KonnectGatewayControlPlaneStatus
 
@@ -1192,15 +1244,16 @@ KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayCon
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KonnectGatewayControlPlane.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KonnectGatewayControlPlane.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 | `id` _string_ | ID is the unique identifier of the Konnect entity as assigned by Konnect API. If it's unset (empty string), it means the Konnect entity hasn't been created yet. |
 | `serverURL` _string_ | ServerURL is the URL of the Konnect server in which the entity exists. |
 | `organizationID` _string_ | OrgID is ID of Konnect Org that this entity has been created in. |
-| `clusterType` _[ControlPlaneClusterType](#controlplaneclustertype)_ | ClusterType is the cluster type of the Konnect control plane. When the KonnectGatewayControlPlane is attached to a control plane in Konnect, ClusterType is filled with the cluster type of the control plane. |
-| `konnectEndpoints` _[KonnectEndpoints](#konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. They are required by the DataPlane to be properly configured in Konnect and connect to the control plane. |
+| `clusterType` _github.com/Kong/sdk-konnect-go/models/components.ControlPlaneClusterType_ | ClusterType is the cluster type of the Konnect control plane. When the KonnectGatewayControlPlane is attached to a control plane in Konnect, ClusterType is filled with the cluster type of the control plane. |
+| `konnectEndpoints` _[KonnectEndpoints](#konnect-konghq-com-v1alpha2-types-konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. They are required by the DataPlane to be properly configured in Konnect and connect to the control plane. |
 
 _Appears in:_
-- [KonnectGatewayControlPlane](#konnectgatewaycontrolplane)
+
+- [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplane)
 
 #### MirrorKonnect
 
@@ -1211,10 +1264,11 @@ MirrorKonnect contains the Konnect Mirror configuration.
 
 | Field | Description |
 | --- | --- |
-| `id` _[KonnectIDType](#konnectidtype)_ | ID is the ID of the Konnect entity. It can be set only in case the ControlPlane type is Mirror. |
+| `id` _[KonnectIDType](#common-konghq-com-v1alpha1-types-konnectidtype)_ | ID is the ID of the Konnect entity. It can be set only in case the ControlPlane type is Mirror. |
 
 _Appears in:_
-- [MirrorSpec](#mirrorspec)
+
+- [MirrorSpec](#konnect-konghq-com-v1alpha2-types-mirrorspec)
 
 #### MirrorSpec
 
@@ -1225,15 +1279,15 @@ MirrorSpec contains the Konnect Mirror configuration.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[MirrorKonnect](#mirrorkonnect)_ | Konnect contains the KonnectID of the KonnectGatewayControlPlane that is mirrored. |
+| `konnect` _[MirrorKonnect](#konnect-konghq-com-v1alpha2-types-mirrorkonnect)_ | Konnect contains the KonnectID of the KonnectGatewayControlPlane that is mirrored. |
 
 _Appears in:_
-- [KonnectGatewayControlPlaneSpec](#konnectgatewaycontrolplanespec)
+
+- [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanespec)
 
 #### ProvisioningMethod
 
 _Underlying type:_ `string`
-
 
 ProvisioningMethod is the type of the provisioning methods available to provision the certificate.
 
@@ -1241,7 +1295,8 @@ ProvisioningMethod is the type of the provisioning methods available to provisio
 
 
 _Appears in:_
-- [CertificateSecret](#certificatesecret)
+
+- [CertificateSecret](#konnect-konghq-com-v1alpha2-types-certificatesecret)
 
 Allowed values:
 
@@ -1262,6 +1317,7 @@ SecretRef contains the reference to the Secret containing the Konnect Control Pl
 | `name` _string_ | Name is the name of the Secret containing the Konnect Control Plane's cluster certificate. |
 
 _Appears in:_
-- [CertificateSecret](#certificatesecret)
-- [DataPlaneClientAuthStatus](#dataplaneclientauthstatus)
+
+- [CertificateSecret](#konnect-konghq-com-v1alpha2-types-certificatesecret)
+- [DataPlaneClientAuthStatus](#konnect-konghq-com-v1alpha2-types-dataplaneclientauthstatus)
 

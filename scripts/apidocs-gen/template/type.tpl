@@ -4,14 +4,14 @@
 {{- if markdownShouldRenderType $type -}}
 
 {{- if $isKind -}}
-### <a id="{{ markdownTypeID $type | markdownSafeID }}">{{ $type.Name }}</a>
+### {{ $type.Name }}
 {{ else -}}
 #### {{ $type.Name }}
 {{ end -}}
 
-{{ if $type.IsAlias }}
+{{- if $type.IsAlias }}
 _Underlying type:_ `{{ markdownRenderTypeLink $type.UnderlyingType }}`
-{{ end }}
+{{- end }}
 
 {{ $type.Doc | replace "\n\n" "<br /><br />" }}
 
@@ -27,16 +27,23 @@ _Underlying type:_ `{{ markdownRenderTypeLink $type.UnderlyingType }}`
 | `kind` _string_ | `{{ $type.GVK.Kind }}`
 {{ end -}}
 
+{{- $regK8s := "k8s\\.io/api/.*" -}}
+
 {{ range $type.Members -}}
+{{- $typString := .Type | toString -}}
+{{ if regexMatch $regK8s $typString -}}
 | `{{ .Name }}` _{{ markdownRenderType .Type }}_ | {{ template "type_members" . }} |
+{{ else -}}
+| `{{ .Name }}` _{{- template "type_link" .Type -}}_ | {{ template "type_members" . }} |
+{{ end -}}
+{{ end -}}
 {{ end -}}
 
-{{ end -}}
 
-{{ if $type.References }}
+{{- if $type.References }}
 _Appears in:_
-{{- range $type.SortedReferences }}
-- {{ markdownRenderTypeLink . }}
+{{ range $type.SortedReferences }}
+- {{ template "type_link" . }}
 {{- end }}
 {{- end }}
 

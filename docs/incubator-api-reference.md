@@ -4,13 +4,13 @@
 
 - [incubator.ingress-controller.konghq.com/v1alpha1](#incubator-ingress-controller-konghq-com-v1alpha1)
 
-## <a id="incubator-ingress-controller-konghq-com-v1alpha1">incubator.ingress-controller.konghq.com/v1alpha1</a>
+## incubator.ingress-controller.konghq.com/v1alpha1
 
 Package v1alpha1 contains API Schema definitions for the incubator.ingress-controller.konghq.com v1alpha1 API group.
 
-- [KongServiceFacade](#github-com-kong-kong-operator-api-incubator-v1alpha1-kongservicefacade)
+- [KongServiceFacade](#incubator-ingress-controller-konghq-com-v1alpha1-kongservicefacade)
 
-### <a id="github-com-kong-kong-operator-api-incubator-v1alpha1-kongservicefacade">KongServiceFacade</a>
+### KongServiceFacade
 
 
 KongServiceFacade allows creating separate Kong Services for a single Kubernetes
@@ -26,9 +26,9 @@ matching the ingressClass of the Kong Ingress Controller (`kong` by default) to 
 | --- | --- |
 | `apiVersion` _string_ | `incubator.ingress-controller.konghq.com/v1alpha1`
 | `kind` _string_ | `KongServiceFacade`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongServiceFacadeSpec](#kongservicefacadespec)_ |  |
-| `status` _[KongServiceFacadeStatus](#kongservicefacadestatus)_ |  |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongServiceFacadeSpec](#incubator-konghq-com-v1alpha1-types-kongservicefacadespec)_ |  |
+| `status` _[KongServiceFacadeStatus](#incubator-konghq-com-v1alpha1-types-kongservicefacadestatus)_ |  |
 
 ### Types
 
@@ -44,10 +44,11 @@ that is used as a backend for a Kong Service Facade.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Name is the name of the referenced Kubernetes Service. |
-| `port` _integer_ | Port is the port of the referenced Kubernetes Service. |
+| `port` _int32_ | Port is the port of the referenced Kubernetes Service. |
 
 _Appears in:_
-- [KongServiceFacadeSpec](#kongservicefacadespec)
+
+- [KongServiceFacadeSpec](#incubator-konghq-com-v1alpha1-types-kongservicefacadespec)
 
 #### KongServiceFacadeSpec
 
@@ -58,10 +59,11 @@ KongServiceFacadeSpec defines the desired state of KongServiceFacade.
 
 | Field | Description |
 | --- | --- |
-| `backendRef` _[KongServiceFacadeBackend](#kongservicefacadebackend)_ | Backend is a reference to a Kubernetes Service that is used as a backend for this Kong Service Facade. |
+| `backendRef` _[KongServiceFacadeBackend](#incubator-konghq-com-v1alpha1-types-kongservicefacadebackend)_ | Backend is a reference to a Kubernetes Service that is used as a backend for this Kong Service Facade. |
 
 _Appears in:_
-- [KongServiceFacade](#kongservicefacade)
+
+- [KongServiceFacade](#incubator-konghq-com-v1alpha1-types-kongservicefacade)
 
 #### KongServiceFacadeStatus
 
@@ -72,8 +74,9 @@ KongServiceFacadeStatus defines the observed state of KongServiceFacade.
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongServiceFacade.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KongServiceFacade.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 
 _Appears in:_
-- [KongServiceFacade](#kongservicefacade)
+
+- [KongServiceFacade](#incubator-konghq-com-v1alpha1-types-kongservicefacade)
 

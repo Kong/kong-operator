@@ -1,14 +1,14 @@
 {{- define "gvDetails" -}}
 {{- $gv := . -}}
 
-## <a id="{{ .Group | replace "." "-" }}-{{ .Version }}">{{ $gv.GroupVersionString }}</a>
+## {{ $gv.GroupVersionString }}
 
 {{ $gv.Doc }}
 
 {{- if $gv.Kinds }}
 {{- range $gv.SortedKinds }}
 {{- $typ := $gv.TypeForKind . }}
-- [{{ $typ.Name }}](#{{ markdownTypeID $typ | markdownSafeID }})
+- [{{ $typ.Name }}](#{{ $gv.Group | replace "." "-" }}-{{ $gv.Version }}-{{ $typ.Name | lower }})
 {{- end }}
 
 {{ end }}

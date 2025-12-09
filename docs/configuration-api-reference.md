@@ -6,15 +6,15 @@
 - [configuration.konghq.com/v1alpha1](#configuration-konghq-com-v1alpha1)
 - [configuration.konghq.com/v1beta1](#configuration-konghq-com-v1beta1)
 
-## <a id="configuration-konghq-com-v1">configuration.konghq.com/v1</a>
+## configuration.konghq.com/v1
 
 Package v1 contains API Schema definitions for the konghq.com v1 API group.
 
-- [KongClusterPlugin](#github-com-kong-kong-operator-api-configuration-v1-kongclusterplugin)
-- [KongConsumer](#github-com-kong-kong-operator-api-configuration-v1-kongconsumer)
-- [KongPlugin](#github-com-kong-kong-operator-api-configuration-v1-kongplugin)
+- [KongClusterPlugin](#configuration-konghq-com-v1-kongclusterplugin)
+- [KongConsumer](#configuration-konghq-com-v1-kongconsumer)
+- [KongPlugin](#configuration-konghq-com-v1-kongplugin)
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1-kongclusterplugin">KongClusterPlugin</a>
+### KongClusterPlugin
 
 
 KongClusterPlugin is the Schema for the kongclusterplugins API.
@@ -25,20 +25,20 @@ KongClusterPlugin is the Schema for the kongclusterplugins API.
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1`
 | `kind` _string_ | `KongClusterPlugin`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `consumerRef` _string_ | ConsumerRef is a reference to a particular consumer. |
-| `disabled` _boolean_ | Disabled set if the plugin is disabled or not. |
-| `config` _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#json-v1-apiextensions-k8s-io)_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once. |
-| `configFrom` _[NamespacedConfigSource](#namespacedconfigsource)_ | ConfigFrom references a secret containing the plugin configuration. This should be used when the plugin configuration contains sensitive information, such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin. Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once. |
-| `configPatches` _[NamespacedConfigPatch](#namespacedconfigpatch) array_ | ConfigPatches represents JSON patches to the configuration of the plugin. Each item means a JSON patch to add something in the configuration, where path is specified in `path` and value is in `valueFrom` referencing a key in a secret. When Config is specified, patches will be applied to the configuration in Config. Otherwise, patches will be applied to an empty object. |
+| `disabled` _bool_ | Disabled set if the plugin is disabled or not. |
+| `config` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once. |
+| `configFrom` _[NamespacedConfigSource](#configuration-konghq-com-v1-types-namespacedconfigsource)_ | ConfigFrom references a secret containing the plugin configuration. This should be used when the plugin configuration contains sensitive information, such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin. Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once. |
+| `configPatches` _[NamespacedConfigPatch](#configuration-konghq-com-v1-types-namespacedconfigpatch)_ | ConfigPatches represents JSON patches to the configuration of the plugin. Each item means a JSON patch to add something in the configuration, where path is specified in `path` and value is in `valueFrom` referencing a key in a secret. When Config is specified, patches will be applied to the configuration in Config. Otherwise, patches will be applied to an empty object. |
 | `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
 | `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
-| `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
-| `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
+| `protocols` _[KongProtocol](#configuration-konghq-com-v1-types-kongprotocol)_ | Protocols configures plugin to run on requests received on specific protocols. |
+| `ordering` _*github.com/kong/go-kong/kong.PluginOrdering_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
-| `status` _[KongClusterPluginStatus](#kongclusterpluginstatus)_ | Status represents the current status of the KongClusterPlugin resource. |
+| `status` _[KongClusterPluginStatus](#configuration-konghq-com-v1-types-kongclusterpluginstatus)_ | Status represents the current status of the KongClusterPlugin resource. |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1-kongconsumer">KongConsumer</a>
+### KongConsumer
 
 
 KongConsumer is the Schema for the kongconsumers API.
@@ -49,15 +49,15 @@ KongConsumer is the Schema for the kongconsumers API.
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1`
 | `kind` _string_ | `KongConsumer`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `username` _string_ | Username is a Kong cluster-unique username of the consumer. |
 | `custom_id` _string_ | CustomID is a Kong cluster-unique existing ID for the consumer - useful for mapping Kong with users in your existing database. |
-| `credentials` _string array_ | Credentials are references to secrets containing a credential to be provisioned in Kong. |
-| `consumerGroups` _string array_ | ConsumerGroups are references to consumer groups (that consumer wants to be part of) provisioned in Kong. |
-| `spec` _[KongConsumerSpec](#kongconsumerspec)_ |  |
-| `status` _[KongConsumerStatus](#kongconsumerstatus)_ | Status represents the current status of the KongConsumer resource. |
+| `credentials` _[]string_ | Credentials are references to secrets containing a credential to be provisioned in Kong. |
+| `consumerGroups` _[]string_ | ConsumerGroups are references to consumer groups (that consumer wants to be part of) provisioned in Kong. |
+| `spec` _[KongConsumerSpec](#configuration-konghq-com-v1-types-kongconsumerspec)_ |  |
+| `status` _[KongConsumerStatus](#configuration-konghq-com-v1-types-kongconsumerstatus)_ | Status represents the current status of the KongConsumer resource. |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1-kongplugin">KongPlugin</a>
+### KongPlugin
 
 
 KongPlugin is the Schema for the kongplugins API.
@@ -68,18 +68,18 @@ KongPlugin is the Schema for the kongplugins API.
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1`
 | `kind` _string_ | `KongPlugin`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `consumerRef` _string_ | ConsumerRef is a reference to a particular consumer. |
-| `disabled` _boolean_ | Disabled set if the plugin is disabled or not. |
-| `config` _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#json-v1-apiextensions-k8s-io)_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
-| `configFrom` _[ConfigSource](#configsource)_ | ConfigFrom references a secret containing the plugin configuration. This should be used when the plugin configuration contains sensitive information, such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
-| `configPatches` _[ConfigPatch](#configpatch) array_ | ConfigPatches represents JSON patches to the configuration of the plugin. Each item means a JSON patch to add something in the configuration, where path is specified in `path` and value is in `valueFrom` referencing a key in a secret. When Config is specified, patches will be applied to the configuration in Config. Otherwise, patches will be applied to an empty object. |
+| `disabled` _bool_ | Disabled set if the plugin is disabled or not. |
+| `config` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Config contains the plugin configuration. It's a list of keys and values required to configure the plugin. Please read the documentation of the plugin being configured to set values in here. For any plugin in Kong, anything that goes in the `config` JSON key in the Admin API request, goes into this property. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
+| `configFrom` _[ConfigSource](#configuration-konghq-com-v1-types-configsource)_ | ConfigFrom references a secret containing the plugin configuration. This should be used when the plugin configuration contains sensitive information, such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin. Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once. |
+| `configPatches` _[ConfigPatch](#configuration-konghq-com-v1-types-configpatch)_ | ConfigPatches represents JSON patches to the configuration of the plugin. Each item means a JSON patch to add something in the configuration, where path is specified in `path` and value is in `valueFrom` referencing a key in a secret. When Config is specified, patches will be applied to the configuration in Config. Otherwise, patches will be applied to an empty object. |
 | `plugin` _string_ | PluginName is the name of the plugin to which to apply the config. |
 | `run_on` _string_ | RunOn configures the plugin to run on the first or the second or both nodes in case of a service mesh deployment. |
-| `protocols` _[KongProtocol](#kongprotocol) array_ | Protocols configures plugin to run on requests received on specific protocols. |
-| `ordering` _[PluginOrdering](#pluginordering)_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
+| `protocols` _[KongProtocol](#configuration-konghq-com-v1-types-kongprotocol)_ | Protocols configures plugin to run on requests received on specific protocols. |
+| `ordering` _*github.com/kong/go-kong/kong.PluginOrdering_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
-| `status` _[KongPluginStatus](#kongpluginstatus)_ | Status represents the current status of the KongPlugin resource. |
+| `status` _[KongPluginStatus](#configuration-konghq-com-v1-types-kongpluginstatus)_ | Status represents the current status of the KongPlugin resource. |
 
 ### Types
 
@@ -100,10 +100,11 @@ It is an equivalent of the following patch:
 | Field | Description |
 | --- | --- |
 | `path` _string_ | Path is the JSON-Pointer value (RFC6901) that references a location within the target configuration. |
-| `valueFrom` _[ConfigSource](#configsource)_ | ValueFrom is the reference to a key of a secret where the patched value comes from. |
+| `valueFrom` _[ConfigSource](#configuration-konghq-com-v1-types-configsource)_ | ValueFrom is the reference to a key of a secret where the patched value comes from. |
 
 _Appears in:_
-- [KongPlugin](#kongplugin)
+
+- [KongPlugin](#configuration-konghq-com-v1-types-kongplugin)
 
 #### ConfigSource
 
@@ -114,11 +115,12 @@ ConfigSource is a wrapper around SecretValueFromSource.
 
 | Field | Description |
 | --- | --- |
-| `secretKeyRef` _[SecretValueFromSource](#secretvaluefromsource)_ | Specifies a name and a key of a secret to refer to. The namespace is implicitly set to the one of referring object. |
+| `secretKeyRef` _[SecretValueFromSource](#configuration-konghq-com-v1-types-secretvaluefromsource)_ | Specifies a name and a key of a secret to refer to. The namespace is implicitly set to the one of referring object. |
 
 _Appears in:_
-- [ConfigPatch](#configpatch)
-- [KongPlugin](#kongplugin)
+
+- [ConfigPatch](#configuration-konghq-com-v1-types-configpatch)
+- [KongPlugin](#configuration-konghq-com-v1-types-kongplugin)
 
 #### KongClusterPluginStatus
 
@@ -129,10 +131,11 @@ KongClusterPluginStatus represents the current status of the KongClusterPlugin r
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongClusterPluginStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KongClusterPluginStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 
 _Appears in:_
-- [KongClusterPlugin](#kongclusterplugin)
+
+- [KongClusterPlugin](#configuration-konghq-com-v1-types-kongclusterplugin)
 
 #### KongConsumerSpec
 
@@ -143,12 +146,13 @@ KongConsumerSpec defines the specification of the KongConsumer.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this Consumer is associated with. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a consumer from an existing consumer in Konnect. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of tags applied to the consumer. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this Consumer is associated with. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a consumer from an existing consumer in Konnect. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the consumer. |
 
 _Appears in:_
-- [KongConsumer](#kongconsumer)
+
+- [KongConsumer](#configuration-konghq-com-v1-types-kongconsumer)
 
 #### KongConsumerStatus
 
@@ -159,11 +163,12 @@ KongConsumerStatus represents the current status of the KongConsumer resource.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongConsumer.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KongConsumer.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 
 _Appears in:_
-- [KongConsumer](#kongconsumer)
+
+- [KongConsumer](#configuration-konghq-com-v1-types-kongconsumer)
 
 #### KongPluginStatus
 
@@ -174,15 +179,15 @@ KongPluginStatus represents the current status of the KongPlugin resource.
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongPluginStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KongPluginStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 
 _Appears in:_
-- [KongPlugin](#kongplugin)
+
+- [KongPlugin](#configuration-konghq-com-v1-types-kongplugin)
 
 #### KongProtocol
 
 _Underlying type:_ `string`
-
 
 KongProtocol is a valid Kong protocol.
 This alias is necessary to deal with https://github.com/kubernetes-sigs/controller-tools/issues/342
@@ -191,8 +196,9 @@ This alias is necessary to deal with https://github.com/kubernetes-sigs/controll
 
 
 _Appears in:_
-- [KongClusterPlugin](#kongclusterplugin)
-- [KongPlugin](#kongplugin)
+
+- [KongClusterPlugin](#configuration-konghq-com-v1-types-kongclusterplugin)
+- [KongPlugin](#configuration-konghq-com-v1-types-kongplugin)
 
 #### NamespacedConfigPatch
 
@@ -205,10 +211,11 @@ to the generated configuration of plugin in Kong.
 | Field | Description |
 | --- | --- |
 | `path` _string_ | Path is the JSON path to add the patch. |
-| `valueFrom` _[NamespacedConfigSource](#namespacedconfigsource)_ | ValueFrom is the reference to a key of a secret where the patched value comes from. |
+| `valueFrom` _[NamespacedConfigSource](#configuration-konghq-com-v1-types-namespacedconfigsource)_ | ValueFrom is the reference to a key of a secret where the patched value comes from. |
 
 _Appears in:_
-- [KongClusterPlugin](#kongclusterplugin)
+
+- [KongClusterPlugin](#configuration-konghq-com-v1-types-kongclusterplugin)
 
 #### NamespacedConfigSource
 
@@ -219,11 +226,12 @@ NamespacedConfigSource is a wrapper around NamespacedSecretValueFromSource.
 
 | Field | Description |
 | --- | --- |
-| `secretKeyRef` _[NamespacedSecretValueFromSource](#namespacedsecretvaluefromsource)_ | Specifies a name, a namespace, and a key of a secret to refer to. |
+| `secretKeyRef` _[NamespacedSecretValueFromSource](#configuration-konghq-com-v1-types-namespacedsecretvaluefromsource)_ | Specifies a name, a namespace, and a key of a secret to refer to. |
 
 _Appears in:_
-- [KongClusterPlugin](#kongclusterplugin)
-- [NamespacedConfigPatch](#namespacedconfigpatch)
+
+- [KongClusterPlugin](#configuration-konghq-com-v1-types-kongclusterplugin)
+- [NamespacedConfigPatch](#configuration-konghq-com-v1-types-namespacedconfigpatch)
 
 #### NamespacedSecretValueFromSource
 
@@ -239,7 +247,8 @@ NamespacedSecretValueFromSource represents the source of a secret value specifyi
 | `key` _string_ | The key containing the value. |
 
 _Appears in:_
-- [NamespacedConfigSource](#namespacedconfigsource)
+
+- [NamespacedConfigSource](#configuration-konghq-com-v1-types-namespacedconfigsource)
 
 #### SecretValueFromSource
 
@@ -254,34 +263,35 @@ SecretValueFromSource represents the source of a secret value.
 | `key` _string_ | The key containing the value. |
 
 _Appears in:_
-- [ConfigSource](#configsource)
 
-## <a id="configuration-konghq-com-v1alpha1">configuration.konghq.com/v1alpha1</a>
+- [ConfigSource](#configuration-konghq-com-v1-types-configsource)
+
+## configuration.konghq.com/v1alpha1
 
 Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
 
-- [IngressClassParameters](#github-com-kong-kong-operator-api-configuration-v1alpha1-ingressclassparameters)
-- [KongCACertificate](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcacertificate)
-- [KongCertificate](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcertificate)
-- [KongCredentialACL](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialacl)
-- [KongCredentialAPIKey](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialapikey)
-- [KongCredentialBasicAuth](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialbasicauth)
-- [KongCredentialHMAC](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialhmac)
-- [KongCredentialJWT](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialjwt)
-- [KongCustomEntity](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongcustomentity)
-- [KongDataPlaneClientCertificate](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongdataplaneclientcertificate)
-- [KongKey](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongkey)
-- [KongKeySet](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongkeyset)
-- [KongLicense](#github-com-kong-kong-operator-api-configuration-v1alpha1-konglicense)
-- [KongPluginBinding](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongpluginbinding)
-- [KongRoute](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongroute)
-- [KongSNI](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongsni)
-- [KongService](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongservice)
-- [KongTarget](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongtarget)
-- [KongUpstream](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongupstream)
-- [KongVault](#github-com-kong-kong-operator-api-configuration-v1alpha1-kongvault)
+- [IngressClassParameters](#configuration-konghq-com-v1alpha1-ingressclassparameters)
+- [KongCACertificate](#configuration-konghq-com-v1alpha1-kongcacertificate)
+- [KongCertificate](#configuration-konghq-com-v1alpha1-kongcertificate)
+- [KongCredentialACL](#configuration-konghq-com-v1alpha1-kongcredentialacl)
+- [KongCredentialAPIKey](#configuration-konghq-com-v1alpha1-kongcredentialapikey)
+- [KongCredentialBasicAuth](#configuration-konghq-com-v1alpha1-kongcredentialbasicauth)
+- [KongCredentialHMAC](#configuration-konghq-com-v1alpha1-kongcredentialhmac)
+- [KongCredentialJWT](#configuration-konghq-com-v1alpha1-kongcredentialjwt)
+- [KongCustomEntity](#configuration-konghq-com-v1alpha1-kongcustomentity)
+- [KongDataPlaneClientCertificate](#configuration-konghq-com-v1alpha1-kongdataplaneclientcertificate)
+- [KongKey](#configuration-konghq-com-v1alpha1-kongkey)
+- [KongKeySet](#configuration-konghq-com-v1alpha1-kongkeyset)
+- [KongLicense](#configuration-konghq-com-v1alpha1-konglicense)
+- [KongPluginBinding](#configuration-konghq-com-v1alpha1-kongpluginbinding)
+- [KongRoute](#configuration-konghq-com-v1alpha1-kongroute)
+- [KongSNI](#configuration-konghq-com-v1alpha1-kongsni)
+- [KongService](#configuration-konghq-com-v1alpha1-kongservice)
+- [KongTarget](#configuration-konghq-com-v1alpha1-kongtarget)
+- [KongUpstream](#configuration-konghq-com-v1alpha1-kongupstream)
+- [KongVault](#configuration-konghq-com-v1alpha1-kongvault)
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-ingressclassparameters">IngressClassParameters</a>
+### IngressClassParameters
 
 
 IngressClassParameters is the Schema for the IngressClassParameters API.
@@ -292,10 +302,10 @@ IngressClassParameters is the Schema for the IngressClassParameters API.
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `IngressClassParameters`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[IngressClassParametersSpec](#ingressclassparametersspec)_ | Spec is the IngressClassParameters specification. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[IngressClassParametersSpec](#configuration-konghq-com-v1alpha1-types-ingressclassparametersspec)_ | Spec is the IngressClassParameters specification. |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcacertificate">KongCACertificate</a>
+### KongCACertificate
 
 
 KongCACertificate is the schema for CACertificate API which defines a Kong CA Certificate.
@@ -306,11 +316,11 @@ KongCACertificate is the schema for CACertificate API which defines a Kong CA Ce
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongCACertificate`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongCACertificateSpec](#kongcacertificatespec)_ |  |
-| `status` _[KongCACertificateStatus](#kongcacertificatestatus)_ |  |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongCACertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcacertificatespec)_ |  |
+| `status` _[KongCACertificateStatus](#configuration-konghq-com-v1alpha1-types-kongcacertificatestatus)_ |  |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcertificate">KongCertificate</a>
+### KongCertificate
 
 
 KongCertificate is the schema for Certificate API which defines a Kong Certificate.
@@ -321,11 +331,11 @@ KongCertificate is the schema for Certificate API which defines a Kong Certifica
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongCertificate`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongCertificateSpec](#kongcertificatespec)_ |  |
-| `status` _[KongCertificateStatus](#kongcertificatestatus)_ |  |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongCertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcertificatespec)_ |  |
+| `status` _[KongCertificateStatus](#configuration-konghq-com-v1alpha1-types-kongcertificatestatus)_ |  |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialacl">KongCredentialACL</a>
+### KongCredentialACL
 
 
 KongCredentialACL is the schema for ACL credentials API which defines a ACL credential for consumers.
@@ -336,11 +346,11 @@ KongCredentialACL is the schema for ACL credentials API which defines a ACL cred
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongCredentialACL`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongCredentialACLSpec](#kongcredentialaclspec)_ | Spec contains the ACL credential specification. |
-| `status` _[KongCredentialACLStatus](#kongcredentialaclstatus)_ | Status contains the ACL credential status. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongCredentialACLSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialaclspec)_ | Spec contains the ACL credential specification. |
+| `status` _[KongCredentialACLStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialaclstatus)_ | Status contains the ACL credential status. |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialapikey">KongCredentialAPIKey</a>
+### KongCredentialAPIKey
 
 
 KongCredentialAPIKey is the schema for API key credentials API which defines a API key credential for consumers.
@@ -351,11 +361,11 @@ KongCredentialAPIKey is the schema for API key credentials API which defines a A
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongCredentialAPIKey`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongCredentialAPIKeySpec](#kongcredentialapikeyspec)_ | Spec contains the API Key credential specification. |
-| `status` _[KongCredentialAPIKeyStatus](#kongcredentialapikeystatus)_ | Status contains the API Key credential status. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongCredentialAPIKeySpec](#configuration-konghq-com-v1alpha1-types-kongcredentialapikeyspec)_ | Spec contains the API Key credential specification. |
+| `status` _[KongCredentialAPIKeyStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialapikeystatus)_ | Status contains the API Key credential status. |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialbasicauth">KongCredentialBasicAuth</a>
+### KongCredentialBasicAuth
 
 
 KongCredentialBasicAuth is the schema for BasicAuth credentials API which defines a BasicAuth credential for consumers.
@@ -366,11 +376,11 @@ KongCredentialBasicAuth is the schema for BasicAuth credentials API which define
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongCredentialBasicAuth`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongCredentialBasicAuthSpec](#kongcredentialbasicauthspec)_ | Spec contains the BasicAuth credential specification. |
-| `status` _[KongCredentialBasicAuthStatus](#kongcredentialbasicauthstatus)_ | Status contains the BasicAuth credential status. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongCredentialBasicAuthSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialbasicauthspec)_ | Spec contains the BasicAuth credential specification. |
+| `status` _[KongCredentialBasicAuthStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialbasicauthstatus)_ | Status contains the BasicAuth credential status. |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialhmac">KongCredentialHMAC</a>
+### KongCredentialHMAC
 
 
 KongCredentialHMAC is the schema for HMAC credentials API which defines a HMAC credential for consumers.
@@ -381,11 +391,11 @@ KongCredentialHMAC is the schema for HMAC credentials API which defines a HMAC c
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongCredentialHMAC`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongCredentialHMACSpec](#kongcredentialhmacspec)_ | Spec contains the HMAC credential specification. |
-| `status` _[KongCredentialHMACStatus](#kongcredentialhmacstatus)_ | Status contains the HMAC credential status. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongCredentialHMACSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialhmacspec)_ | Spec contains the HMAC credential specification. |
+| `status` _[KongCredentialHMACStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialhmacstatus)_ | Status contains the HMAC credential status. |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcredentialjwt">KongCredentialJWT</a>
+### KongCredentialJWT
 
 
 KongCredentialJWT is the schema for JWT credentials API which defines a JWT credential for consumers.
@@ -396,11 +406,11 @@ KongCredentialJWT is the schema for JWT credentials API which defines a JWT cred
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongCredentialJWT`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongCredentialJWTSpec](#kongcredentialjwtspec)_ | Spec contains the JWT credential specification. |
-| `status` _[KongCredentialJWTStatus](#kongcredentialjwtstatus)_ | Status contains the JWT credential status. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongCredentialJWTSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialjwtspec)_ | Spec contains the JWT credential specification. |
+| `status` _[KongCredentialJWTStatus](#configuration-konghq-com-v1alpha1-types-kongcredentialjwtstatus)_ | Status contains the JWT credential status. |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongcustomentity">KongCustomEntity</a>
+### KongCustomEntity
 
 
 KongCustomEntity defines a "custom" Kong entity that KIC cannot support the entity type directly.
@@ -411,11 +421,11 @@ KongCustomEntity defines a "custom" Kong entity that KIC cannot support the enti
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongCustomEntity`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongCustomEntitySpec](#kongcustomentityspec)_ |  |
-| `status` _[KongCustomEntityStatus](#kongcustomentitystatus)_ | Status stores the reconciling status of the resource. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongCustomEntitySpec](#configuration-konghq-com-v1alpha1-types-kongcustomentityspec)_ |  |
+| `status` _[KongCustomEntityStatus](#configuration-konghq-com-v1alpha1-types-kongcustomentitystatus)_ | Status stores the reconciling status of the resource. |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongdataplaneclientcertificate">KongDataPlaneClientCertificate</a>
+### KongDataPlaneClientCertificate
 
 
 KongDataPlaneClientCertificate is the schema for KongDataPlaneClientCertificate API which defines a KongDataPlaneClientCertificate entity.
@@ -426,11 +436,11 @@ KongDataPlaneClientCertificate is the schema for KongDataPlaneClientCertificate 
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongDataPlaneClientCertificate`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongDataPlaneClientCertificateSpec](#kongdataplaneclientcertificatespec)_ |  |
-| `status` _[KongDataPlaneClientCertificateStatus](#kongdataplaneclientcertificatestatus)_ |  |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongDataPlaneClientCertificateSpec](#configuration-konghq-com-v1alpha1-types-kongdataplaneclientcertificatespec)_ |  |
+| `status` _[KongDataPlaneClientCertificateStatus](#configuration-konghq-com-v1alpha1-types-kongdataplaneclientcertificatestatus)_ |  |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongkey">KongKey</a>
+### KongKey
 
 
 KongKey is the schema for KongKey API which defines a KongKey entity.
@@ -441,11 +451,11 @@ KongKey is the schema for KongKey API which defines a KongKey entity.
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongKey`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongKeySpec](#kongkeyspec)_ |  |
-| `status` _[KongKeyStatus](#kongkeystatus)_ |  |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongKeySpec](#configuration-konghq-com-v1alpha1-types-kongkeyspec)_ |  |
+| `status` _[KongKeyStatus](#configuration-konghq-com-v1alpha1-types-kongkeystatus)_ |  |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongkeyset">KongKeySet</a>
+### KongKeySet
 
 
 KongKeySet is the schema for KongKeySet API which defines a KongKeySet entity.
@@ -456,11 +466,11 @@ KongKeySet is the schema for KongKeySet API which defines a KongKeySet entity.
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongKeySet`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongKeySetSpec](#kongkeysetspec)_ |  |
-| `status` _[KongKeySetStatus](#kongkeysetstatus)_ |  |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongKeySetSpec](#configuration-konghq-com-v1alpha1-types-kongkeysetspec)_ |  |
+| `status` _[KongKeySetStatus](#configuration-konghq-com-v1alpha1-types-kongkeysetstatus)_ |  |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-konglicense">KongLicense</a>
+### KongLicense
 
 
 KongLicense stores a Kong enterprise license to apply to managed Kong gateway instances.
@@ -471,12 +481,12 @@ KongLicense stores a Kong enterprise license to apply to managed Kong gateway in
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongLicense`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `rawLicenseString` _string_ | RawLicenseString is a string with the raw content of the license. |
-| `enabled` _boolean_ | Enabled is set to true to let controllers (like KIC or KGO) to reconcile it. Default value is true to apply the license by default. |
-| `status` _[KongLicenseStatus](#konglicensestatus)_ | Status is the status of the KongLicense being processed by controllers. |
+| `enabled` _bool_ | Enabled is set to true to let controllers (like KIC or KGO) to reconcile it. Default value is true to apply the license by default. |
+| `status` _[KongLicenseStatus](#configuration-konghq-com-v1alpha1-types-konglicensestatus)_ | Status is the status of the KongLicense being processed by controllers. |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongpluginbinding">KongPluginBinding</a>
+### KongPluginBinding
 
 
 KongPluginBinding is the schema for Plugin Bindings API which defines a Kong Plugin Binding.
@@ -487,11 +497,11 @@ KongPluginBinding is the schema for Plugin Bindings API which defines a Kong Plu
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongPluginBinding`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongPluginBindingSpec](#kongpluginbindingspec)_ |  |
-| `status` _[KongPluginBindingStatus](#kongpluginbindingstatus)_ |  |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongPluginBindingSpec](#configuration-konghq-com-v1alpha1-types-kongpluginbindingspec)_ |  |
+| `status` _[KongPluginBindingStatus](#configuration-konghq-com-v1alpha1-types-kongpluginbindingstatus)_ |  |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongroute">KongRoute</a>
+### KongRoute
 
 
 KongRoute is the schema for Routes API which defines a Kong Route.
@@ -503,11 +513,11 @@ Currently, KongRoute supports only the JSON flavor of Route configuration.
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongRoute`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongRouteSpec](#kongroutespec)_ |  |
-| `status` _[KongRouteStatus](#kongroutestatus)_ |  |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongRouteSpec](#configuration-konghq-com-v1alpha1-types-kongroutespec)_ |  |
+| `status` _[KongRouteStatus](#configuration-konghq-com-v1alpha1-types-kongroutestatus)_ |  |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongsni">KongSNI</a>
+### KongSNI
 
 
 KongSNI is the schema for SNI API which defines a Kong SNI.
@@ -518,11 +528,11 @@ KongSNI is the schema for SNI API which defines a Kong SNI.
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongSNI`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongSNISpec](#kongsnispec)_ |  |
-| `status` _[KongSNIStatus](#kongsnistatus)_ |  |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongSNISpec](#configuration-konghq-com-v1alpha1-types-kongsnispec)_ |  |
+| `status` _[KongSNIStatus](#configuration-konghq-com-v1alpha1-types-kongsnistatus)_ |  |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongservice">KongService</a>
+### KongService
 
 
 KongService is the schema for Services API which defines a Kong Service.
@@ -533,11 +543,11 @@ KongService is the schema for Services API which defines a Kong Service.
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongService`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongServiceSpec](#kongservicespec)_ |  |
-| `status` _[KongServiceStatus](#kongservicestatus)_ |  |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongServiceSpec](#configuration-konghq-com-v1alpha1-types-kongservicespec)_ |  |
+| `status` _[KongServiceStatus](#configuration-konghq-com-v1alpha1-types-kongservicestatus)_ |  |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongtarget">KongTarget</a>
+### KongTarget
 
 
 KongTarget is the schema for Target API which defines a Kong Target attached to a Kong Upstream.
@@ -548,11 +558,11 @@ KongTarget is the schema for Target API which defines a Kong Target attached to 
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongTarget`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongTargetSpec](#kongtargetspec)_ |  |
-| `status` _[KongTargetStatus](#kongtargetstatus)_ |  |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongTargetSpec](#configuration-konghq-com-v1alpha1-types-kongtargetspec)_ |  |
+| `status` _[KongTargetStatus](#configuration-konghq-com-v1alpha1-types-kongtargetstatus)_ |  |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongupstream">KongUpstream</a>
+### KongUpstream
 
 
 KongUpstream is the schema for Upstream API which defines a Kong Upstream.
@@ -563,11 +573,11 @@ KongUpstream is the schema for Upstream API which defines a Kong Upstream.
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongUpstream`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongUpstreamSpec](#kongupstreamspec)_ |  |
-| `status` _[KongUpstreamStatus](#kongupstreamstatus)_ |  |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongUpstreamSpec](#configuration-konghq-com-v1alpha1-types-kongupstreamspec)_ |  |
+| `status` _[KongUpstreamStatus](#configuration-konghq-com-v1alpha1-types-kongupstreamstatus)_ |  |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1alpha1-kongvault">KongVault</a>
+### KongVault
 
 
 KongVault is the schema for kongvaults API which defines a custom Kong vault.
@@ -580,9 +590,9 @@ See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
 | `kind` _string_ | `KongVault`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongVaultSpec](#kongvaultspec)_ |  |
-| `status` _[KongVaultStatus](#kongvaultstatus)_ |  |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongVaultSpec](#configuration-konghq-com-v1alpha1-types-kongvaultspec)_ |  |
+| `status` _[KongVaultStatus](#configuration-konghq-com-v1alpha1-types-kongvaultstatus)_ |  |
 
 ### Types
 
@@ -598,18 +608,18 @@ ControllerReference is a reference to a controller that reconciles the KongLicen
 
 | Field | Description |
 | --- | --- |
-| `group` _[Group](#group)_ | Group is the group of referent. It should be empty if the referent is in "core" group (like pod). |
-| `kind` _[Kind](#kind)_ | Kind is the kind of the referent. By default the nil kind means kind Pod. |
-| `namespace` _[Namespace](#namespace)_ | Namespace is the namespace of the referent. It should be empty if the referent is cluster scoped. |
-| `name` _[ObjectName](#objectname)_ | Name is the name of the referent. |
+| `group` _[Group](#configuration-konghq-com-v1alpha1-types-group)_ | Group is the group of referent. It should be empty if the referent is in "core" group (like pod). |
+| `kind` _[Kind](#configuration-konghq-com-v1alpha1-types-kind)_ | Kind is the kind of the referent. By default the nil kind means kind Pod. |
+| `namespace` _[Namespace](#configuration-konghq-com-v1alpha1-types-namespace)_ | Namespace is the namespace of the referent. It should be empty if the referent is cluster scoped. |
+| `name` _[ObjectName](#configuration-konghq-com-v1alpha1-types-objectname)_ | Name is the name of the referent. |
 
 _Appears in:_
-- [KongLicenseControllerStatus](#konglicensecontrollerstatus)
+
+- [KongLicenseControllerStatus](#configuration-konghq-com-v1alpha1-types-konglicensecontrollerstatus)
 
 #### Group
 
 _Underlying type:_ `string`
-
 
 Group refers to a Kubernetes Group. It must either be an empty string or a
 RFC 1123 subdomain.
@@ -618,7 +628,8 @@ RFC 1123 subdomain.
 
 
 _Appears in:_
-- [ControllerReference](#controllerreference)
+
+- [ControllerReference](#configuration-konghq-com-v1alpha1-types-controllerreference)
 
 #### IngressClassParametersSpec
 
@@ -629,11 +640,12 @@ IngressClassParametersSpec defines the desired state of IngressClassParameters.
 
 | Field | Description |
 | --- | --- |
-| `serviceUpstream` _boolean_ | Offload load-balancing to kube-proxy or sidecar. |
-| `enableLegacyRegexDetection` _boolean_ | EnableLegacyRegexDetection automatically detects if ImplementationSpecific Ingress paths are regular expression paths using the legacy 2.x heuristic. The controller adds the "~" prefix to those paths if the Kong version is 3.0 or higher. |
+| `serviceUpstream` _bool_ | Offload load-balancing to kube-proxy or sidecar. |
+| `enableLegacyRegexDetection` _bool_ | EnableLegacyRegexDetection automatically detects if ImplementationSpecific Ingress paths are regular expression paths using the legacy 2.x heuristic. The controller adds the "~" prefix to those paths if the Kong version is 3.0 or higher. |
 
 _Appears in:_
-- [IngressClassParameters](#ingressclassparameters)
+
+- [IngressClassParameters](#configuration-konghq-com-v1alpha1-types-ingressclassparameters)
 
 #### KeySetRef
 
@@ -645,17 +657,17 @@ It is used to reference a KeySet entity.
 
 | Field | Description |
 | --- | --- |
-| `type` _[KeySetRefType](#keysetreftype)_ | Type defines type of the KeySet object reference. It can be one of: - konnectID - namespacedRef |
-| `konnectID` _string_ | KonnectID is the schema for the KonnectID type. This field is required when the Type is konnectID. |
-| `namespacedRef` _[NameRef](#nameref)_ | NamespacedRef is a reference to a KeySet entity inside the cluster. This field is required when the Type is namespacedRef. |
+| `type` _[KeySetRefType](#configuration-konghq-com-v1alpha1-types-keysetreftype)_ | Type defines type of the KeySet object reference. It can be one of: - konnectID - namespacedRef |
+| `konnectID` _*string_ | KonnectID is the schema for the KonnectID type. This field is required when the Type is konnectID. |
+| `namespacedRef` _[NameRef](#common-konghq-com-v1alpha1-types-nameref)_ | NamespacedRef is a reference to a KeySet entity inside the cluster. This field is required when the Type is namespacedRef. |
 
 _Appears in:_
-- [KongKeySpec](#kongkeyspec)
+
+- [KongKeySpec](#configuration-konghq-com-v1alpha1-types-kongkeyspec)
 
 #### KeySetRefType
 
 _Underlying type:_ `string`
-
 
 KeySetRefType is the enum type for the KeySetRef.
 
@@ -663,7 +675,8 @@ KeySetRefType is the enum type for the KeySetRef.
 
 
 _Appears in:_
-- [KeySetRef](#keysetref)
+
+- [KeySetRef](#configuration-konghq-com-v1alpha1-types-keysetref)
 
 Allowed values:
 
@@ -676,14 +689,14 @@ Allowed values:
 
 _Underlying type:_ `string`
 
-
 Kind refers to a Kubernetes kind.
 
 
 
 
 _Appears in:_
-- [ControllerReference](#controllerreference)
+
+- [ControllerReference](#configuration-konghq-com-v1alpha1-types-controllerreference)
 
 #### KongCACertificateAPISpec
 
@@ -695,10 +708,11 @@ KongCACertificateAPISpec contains the API specification for the KongCACertificat
 | Field | Description |
 | --- | --- |
 | `cert` _string_ | Cert is the PEM-encoded CA certificate. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of tags applied to the certificate. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the certificate. |
 
 _Appears in:_
-- [KongCACertificateSpec](#kongcacertificatespec)
+
+- [KongCACertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcacertificatespec)
 
 #### KongCACertificateSpec
 
@@ -709,13 +723,14 @@ KongCACertificateSpec contains the specification for the KongCACertificate.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef references the Konnect Control Plane that this KongCACertificate should be created in. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a CA certificate from an existing CA certificate in Konnect. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the Konnect Control Plane that this KongCACertificate should be created in. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a CA certificate from an existing CA certificate in Konnect. |
 | `cert` _string_ | Cert is the PEM-encoded CA certificate. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of tags applied to the certificate. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the certificate. |
 
 _Appears in:_
-- [KongCACertificate](#kongcacertificate)
+
+- [KongCACertificate](#configuration-konghq-com-v1alpha1-types-kongcacertificate)
 
 #### KongCACertificateStatus
 
@@ -726,11 +741,12 @@ KongCACertificateStatus defines the observed state of KongCACertificate.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongCACertificate](#kongcacertificate)
+
+- [KongCACertificate](#configuration-konghq-com-v1alpha1-types-kongcacertificate)
 
 #### KongCertificateAPISpec
 
@@ -745,10 +761,11 @@ KongCertificateAPISpec contains the API specification for the KongCertificate.
 | `cert_alt` _string_ | CertAlt is the PEM-encoded certificate. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. |
 | `key` _string_ | Key is the PEM-encoded private key. |
 | `key_alt` _string_ | KeyAlt is the PEM-encoded private key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of tags applied to the certificate. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the certificate. |
 
 _Appears in:_
-- [KongCertificateSpec](#kongcertificatespec)
+
+- [KongCertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcertificatespec)
 
 #### KongCertificateSpec
 
@@ -759,16 +776,17 @@ KongCertificateSpec contains the specification for the KongCertificate.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef references the Konnect Control Plane that this KongCertificate should be created in. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a certificate from an existing certificate in Konnect. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the Konnect Control Plane that this KongCertificate should be created in. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a certificate from an existing certificate in Konnect. |
 | `cert` _string_ | Cert is the PEM-encoded certificate. |
 | `cert_alt` _string_ | CertAlt is the PEM-encoded certificate. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. |
 | `key` _string_ | Key is the PEM-encoded private key. |
 | `key_alt` _string_ | KeyAlt is the PEM-encoded private key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of tags applied to the certificate. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the certificate. |
 
 _Appears in:_
-- [KongCertificate](#kongcertificate)
+
+- [KongCertificate](#configuration-konghq-com-v1alpha1-types-kongcertificate)
 
 #### KongCertificateStatus
 
@@ -779,11 +797,12 @@ KongCertificateStatus defines the observed state of KongCertificate.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongCertificate](#kongcertificate)
+
+- [KongCertificate](#configuration-konghq-com-v1alpha1-types-kongcertificate)
 
 #### KongCredentialACLAPISpec
 
@@ -795,10 +814,11 @@ KongCredentialACLAPISpec defines specification of an ACL credential.
 | Field | Description |
 | --- | --- |
 | `group` _string_ | Group is the name for the ACL credential. |
-| `tags` _[Tags](#tags)_ | Tags is a list of tags for the ACL credential. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the ACL credential. |
 
 _Appears in:_
-- [KongCredentialACLSpec](#kongcredentialaclspec)
+
+- [KongCredentialACLSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialaclspec)
 
 #### KongCredentialACLSpec
 
@@ -810,12 +830,13 @@ KongCredentialACLSpec defines specification of Kong ACL.
 | Field | Description |
 | --- | --- |
 | `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this KongCredentialACL is associated with. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting an ACL from an existing ACL in Konnect. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting an ACL from an existing ACL in Konnect. |
 | `group` _string_ | Group is the name for the ACL credential. |
-| `tags` _[Tags](#tags)_ | Tags is a list of tags for the ACL credential. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the ACL credential. |
 
 _Appears in:_
-- [KongCredentialACL](#kongcredentialacl)
+
+- [KongCredentialACL](#configuration-konghq-com-v1alpha1-types-kongcredentialacl)
 
 #### KongCredentialACLStatus
 
@@ -826,11 +847,12 @@ KongCredentialACLStatus represents the current status of the ACL credential reso
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongCredentialACL](#kongcredentialacl)
+
+- [KongCredentialACL](#configuration-konghq-com-v1alpha1-types-kongcredentialacl)
 
 #### KongCredentialAPIKeyAPISpec
 
@@ -842,10 +864,11 @@ KongCredentialAPIKeyAPISpec defines specification of an API Key credential.
 | Field | Description |
 | --- | --- |
 | `key` _string_ | Key is the key for the API Key credential. |
-| `tags` _[Tags](#tags)_ | Tags is a list of tags for the API Key credential. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the API Key credential. |
 
 _Appears in:_
-- [KongCredentialAPIKeySpec](#kongcredentialapikeyspec)
+
+- [KongCredentialAPIKeySpec](#configuration-konghq-com-v1alpha1-types-kongcredentialapikeyspec)
 
 #### KongCredentialAPIKeySpec
 
@@ -857,12 +880,13 @@ KongCredentialAPIKeySpec defines specification of a Kong API key credential.
 | Field | Description |
 | --- | --- |
 | `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this KongCredentialAPIKey is associated with. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting an API key credential from an existing API key in Konnect. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting an API key credential from an existing API key in Konnect. |
 | `key` _string_ | Key is the key for the API Key credential. |
-| `tags` _[Tags](#tags)_ | Tags is a list of tags for the API Key credential. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the API Key credential. |
 
 _Appears in:_
-- [KongCredentialAPIKey](#kongcredentialapikey)
+
+- [KongCredentialAPIKey](#configuration-konghq-com-v1alpha1-types-kongcredentialapikey)
 
 #### KongCredentialAPIKeyStatus
 
@@ -873,11 +897,12 @@ KongCredentialAPIKeyStatus represents the current status of the API Key credenti
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongCredentialAPIKey](#kongcredentialapikey)
+
+- [KongCredentialAPIKey](#configuration-konghq-com-v1alpha1-types-kongcredentialapikey)
 
 #### KongCredentialBasicAuthAPISpec
 
@@ -889,11 +914,12 @@ KongCredentialBasicAuthAPISpec defines specification of a BasicAuth credential.
 | Field | Description |
 | --- | --- |
 | `password` _string_ | Password is the password for the BasicAuth credential. |
-| `tags` _[Tags](#tags)_ | Tags is a list of tags for the BasicAuth credential. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the BasicAuth credential. |
 | `username` _string_ | Username is the username for the BasicAuth credential. |
 
 _Appears in:_
-- [KongCredentialBasicAuthSpec](#kongcredentialbasicauthspec)
+
+- [KongCredentialBasicAuthSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialbasicauthspec)
 
 #### KongCredentialBasicAuthSpec
 
@@ -905,13 +931,14 @@ KongCredentialBasicAuthSpec defines specification of a Kong BasicAuth credential
 | Field | Description |
 | --- | --- |
 | `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this CredentialBasicAuth is associated with. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a BasicAuth credential from an existing BasicAuth credential in Konnect. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a BasicAuth credential from an existing BasicAuth credential in Konnect. |
 | `password` _string_ | Password is the password for the BasicAuth credential. |
-| `tags` _[Tags](#tags)_ | Tags is a list of tags for the BasicAuth credential. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the BasicAuth credential. |
 | `username` _string_ | Username is the username for the BasicAuth credential. |
 
 _Appears in:_
-- [KongCredentialBasicAuth](#kongcredentialbasicauth)
+
+- [KongCredentialBasicAuth](#configuration-konghq-com-v1alpha1-types-kongcredentialbasicauth)
 
 #### KongCredentialBasicAuthStatus
 
@@ -922,11 +949,12 @@ KongCredentialBasicAuthStatus represents the current status of the BasicAuth cre
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongCredentialBasicAuth](#kongcredentialbasicauth)
+
+- [KongCredentialBasicAuth](#configuration-konghq-com-v1alpha1-types-kongcredentialbasicauth)
 
 #### KongCredentialHMACAPISpec
 
@@ -937,13 +965,14 @@ KongCredentialHMACAPISpec defines specification of an HMAC credential.
 
 | Field | Description |
 | --- | --- |
-| `id` _string_ | ID is the unique identifier for the HMAC credential. |
-| `secret` _string_ | Secret is the secret for the HMAC credential. |
-| `tags` _[Tags](#tags)_ | Tags is a list of tags for the HMAC credential. |
-| `username` _string_ | Username is the username for the HMAC credential. |
+| `id` _*string_ | ID is the unique identifier for the HMAC credential. |
+| `secret` _*string_ | Secret is the secret for the HMAC credential. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the HMAC credential. |
+| `username` _*string_ | Username is the username for the HMAC credential. |
 
 _Appears in:_
-- [KongCredentialHMACSpec](#kongcredentialhmacspec)
+
+- [KongCredentialHMACSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialhmacspec)
 
 #### KongCredentialHMACSpec
 
@@ -955,14 +984,15 @@ KongCredentialHMACSpec defines specification of a Kong HMAC credential.
 | Field | Description |
 | --- | --- |
 | `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this KongCredentialHMAC is associated with. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a HMAC credential from an existing HMAC credential in Konnect. |
-| `id` _string_ | ID is the unique identifier for the HMAC credential. |
-| `secret` _string_ | Secret is the secret for the HMAC credential. |
-| `tags` _[Tags](#tags)_ | Tags is a list of tags for the HMAC credential. |
-| `username` _string_ | Username is the username for the HMAC credential. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a HMAC credential from an existing HMAC credential in Konnect. |
+| `id` _*string_ | ID is the unique identifier for the HMAC credential. |
+| `secret` _*string_ | Secret is the secret for the HMAC credential. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the HMAC credential. |
+| `username` _*string_ | Username is the username for the HMAC credential. |
 
 _Appears in:_
-- [KongCredentialHMAC](#kongcredentialhmac)
+
+- [KongCredentialHMAC](#configuration-konghq-com-v1alpha1-types-kongcredentialhmac)
 
 #### KongCredentialHMACStatus
 
@@ -973,11 +1003,12 @@ KongCredentialHMACStatus represents the current status of the HMAC credential re
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongCredentialHMAC](#kongcredentialhmac)
+
+- [KongCredentialHMAC](#configuration-konghq-com-v1alpha1-types-kongcredentialhmac)
 
 #### KongCredentialJWTAPISpec
 
@@ -989,14 +1020,15 @@ KongCredentialJWTAPISpec defines specification of an JWT credential.
 | Field | Description |
 | --- | --- |
 | `algorithm` _string_ | Algorithm is the algorithm used to sign the JWT token. |
-| `id` _string_ | ID is the unique identifier for the JWT credential. |
-| `key` _string_ | Key is the key for the JWT credential. |
-| `rsa_public_key` _string_ | RSA PublicKey is the RSA public key for the JWT credential. |
-| `secret` _string_ | Secret is the secret for the JWT credential. |
-| `tags` _[Tags](#tags)_ | Tags is a list of tags for the JWT credential. |
+| `id` _*string_ | ID is the unique identifier for the JWT credential. |
+| `key` _*string_ | Key is the key for the JWT credential. |
+| `rsa_public_key` _*string_ | RSA PublicKey is the RSA public key for the JWT credential. |
+| `secret` _*string_ | Secret is the secret for the JWT credential. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the JWT credential. |
 
 _Appears in:_
-- [KongCredentialJWTSpec](#kongcredentialjwtspec)
+
+- [KongCredentialJWTSpec](#configuration-konghq-com-v1alpha1-types-kongcredentialjwtspec)
 
 #### KongCredentialJWTSpec
 
@@ -1008,16 +1040,17 @@ KongCredentialJWTSpec defines specification of a Kong JWT credential.
 | Field | Description |
 | --- | --- |
 | `consumerRef` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core)_ | ConsumerRef is a reference to a Consumer this KongCredentialJWT is associated with. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a JWT credential from an existing JWT credential in Konnect. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a JWT credential from an existing JWT credential in Konnect. |
 | `algorithm` _string_ | Algorithm is the algorithm used to sign the JWT token. |
-| `id` _string_ | ID is the unique identifier for the JWT credential. |
-| `key` _string_ | Key is the key for the JWT credential. |
-| `rsa_public_key` _string_ | RSA PublicKey is the RSA public key for the JWT credential. |
-| `secret` _string_ | Secret is the secret for the JWT credential. |
-| `tags` _[Tags](#tags)_ | Tags is a list of tags for the JWT credential. |
+| `id` _*string_ | ID is the unique identifier for the JWT credential. |
+| `key` _*string_ | Key is the key for the JWT credential. |
+| `rsa_public_key` _*string_ | RSA PublicKey is the RSA public key for the JWT credential. |
+| `secret` _*string_ | Secret is the secret for the JWT credential. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is a list of tags for the JWT credential. |
 
 _Appears in:_
-- [KongCredentialJWT](#kongcredentialjwt)
+
+- [KongCredentialJWT](#configuration-konghq-com-v1alpha1-types-kongcredentialjwt)
 
 #### KongCredentialJWTStatus
 
@@ -1028,11 +1061,12 @@ KongCredentialJWTStatus represents the current status of the JWT credential reso
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndConsumerRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandconsumerrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongCredentialJWT](#kongcredentialjwt)
+
+- [KongCredentialJWT](#configuration-konghq-com-v1alpha1-types-kongcredentialjwt)
 
 #### KongCustomEntitySpec
 
@@ -1044,12 +1078,13 @@ KongCustomEntitySpec defines the specification of the KongCustomEntity.
 | Field | Description |
 | --- | --- |
 | `type` _string_ | EntityType is the type of the Kong entity. The type is used in generating declarative configuration. |
-| `fields` _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#json-v1-apiextensions-k8s-io)_ | Fields defines the fields of the Kong entity itself. |
+| `fields` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Fields defines the fields of the Kong entity itself. |
 | `controllerName` _string_ | ControllerName specifies the controller that should reconcile it, like ingress class. |
-| `parentRef` _[ObjectReference](#objectreference)_ | ParentRef references the kubernetes resource it attached to when its scope is "attached". Currently only KongPlugin/KongClusterPlugin allowed. This will make the custom entity to be attached to the entity(service/route/consumer) where the plugin is attached. |
+| `parentRef` _[ObjectReference](#configuration-konghq-com-v1alpha1-types-objectreference)_ | ParentRef references the kubernetes resource it attached to when its scope is "attached". Currently only KongPlugin/KongClusterPlugin allowed. This will make the custom entity to be attached to the entity(service/route/consumer) where the plugin is attached. |
 
 _Appears in:_
-- [KongCustomEntity](#kongcustomentity)
+
+- [KongCustomEntity](#configuration-konghq-com-v1alpha1-types-kongcustomentity)
 
 #### KongCustomEntityStatus
 
@@ -1060,10 +1095,11 @@ KongCustomEntityStatus defines the status of the KongCustomEntity.
 
 | Field | Description |
 | --- | --- |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongCustomEntityStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KongCustomEntityStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 
 _Appears in:_
-- [KongCustomEntity](#kongcustomentity)
+
+- [KongCustomEntity](#configuration-konghq-com-v1alpha1-types-kongcustomentity)
 
 #### KongDataPlaneClientCertificateAPISpec
 
@@ -1077,7 +1113,8 @@ KongDataPlaneClientCertificateAPISpec defines the attributes of a Kong DP certif
 | `cert` _string_ | Cert is the certificate in PEM format. Once the certificate gets programmed this field becomes immutable. |
 
 _Appears in:_
-- [KongDataPlaneClientCertificateSpec](#kongdataplaneclientcertificatespec)
+
+- [KongDataPlaneClientCertificateSpec](#configuration-konghq-com-v1alpha1-types-kongdataplaneclientcertificatespec)
 
 #### KongDataPlaneClientCertificateSpec
 
@@ -1088,12 +1125,13 @@ KongDataPlaneClientCertificateSpec defines the spec for a KongDataPlaneClientCer
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane this KongDataPlaneClientCertificate is associated with. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a key from an existing key in Konnect. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane this KongDataPlaneClientCertificate is associated with. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a key from an existing key in Konnect. |
 | `cert` _string_ | Cert is the certificate in PEM format. Once the certificate gets programmed this field becomes immutable. |
 
 _Appears in:_
-- [KongDataPlaneClientCertificate](#kongdataplaneclientcertificate)
+
+- [KongDataPlaneClientCertificate](#configuration-konghq-com-v1alpha1-types-kongdataplaneclientcertificate)
 
 #### KongDataPlaneClientCertificateStatus
 
@@ -1104,11 +1142,12 @@ KongDataPlaneClientCertificateStatus defines the status for a KongDataPlaneClien
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongDataPlaneClientCertificate](#kongdataplaneclientcertificate)
+
+- [KongDataPlaneClientCertificate](#configuration-konghq-com-v1alpha1-types-kongdataplaneclientcertificate)
 
 
 
@@ -1122,13 +1161,14 @@ KongKeyAPISpec defines the attributes of a Kong Key.
 | Field | Description |
 | --- | --- |
 | `kid` _string_ | KID is a unique identifier for a key. When JWK is provided, KID has to match the KID in the JWK. |
-| `name` _string_ | Name is an optional name to associate with the given key. |
-| `jwk` _string_ | JWK is a JSON Web Key represented as a string. The JWK must contain a KID field that matches the KID in the KongKey. Either JWK or PEM must be set. |
-| `pem` _[PEMKeyPair](#pemkeypair)_ | PEM is a keypair in PEM format. Either JWK or PEM must be set. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of strings associated with the Key for grouping and filtering. |
+| `name` _*string_ | Name is an optional name to associate with the given key. |
+| `jwk` _*string_ | JWK is a JSON Web Key represented as a string. The JWK must contain a KID field that matches the KID in the KongKey. Either JWK or PEM must be set. |
+| `pem` _[PEMKeyPair](#configuration-konghq-com-v1alpha1-types-pemkeypair)_ | PEM is a keypair in PEM format. Either JWK or PEM must be set. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Key for grouping and filtering. |
 
 _Appears in:_
-- [KongKeySpec](#kongkeyspec)
+
+- [KongKeySpec](#configuration-konghq-com-v1alpha1-types-kongkeyspec)
 
 #### KongKeySetAPISpec
 
@@ -1140,10 +1180,11 @@ KongKeySetAPISpec defines the attributes of a Kong KeySet.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Name is a name of the KeySet. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of strings associated with the KeySet for grouping and filtering. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the KeySet for grouping and filtering. |
 
 _Appears in:_
-- [KongKeySetSpec](#kongkeysetspec)
+
+- [KongKeySetSpec](#configuration-konghq-com-v1alpha1-types-kongkeysetspec)
 
 #### KongKeySetSpec
 
@@ -1154,13 +1195,14 @@ KongKeySetSpec defines the spec for a KongKeySet.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane with which KongKeySet is associated. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a key set from an existing key set in Konnect. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane with which KongKeySet is associated. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a key set from an existing key set in Konnect. |
 | `name` _string_ | Name is a name of the KeySet. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of strings associated with the KeySet for grouping and filtering. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the KeySet for grouping and filtering. |
 
 _Appears in:_
-- [KongKeySet](#kongkeyset)
+
+- [KongKeySet](#configuration-konghq-com-v1alpha1-types-kongkeyset)
 
 #### KongKeySetStatus
 
@@ -1171,11 +1213,12 @@ KongKeySetStatus defines the status for a KongKeySet.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongKeySet](#kongkeyset)
+
+- [KongKeySet](#configuration-konghq-com-v1alpha1-types-kongkeyset)
 
 #### KongKeySpec
 
@@ -1186,17 +1229,18 @@ KongKeySpec defines the spec for a KongKey.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane this KongKey is associated with. |
-| `keySetRef` _[KeySetRef](#keysetref)_ | KeySetRef is a reference to a KongKeySet this KongKey is attached to. ControlPlane referenced by a KongKeySet must be the same as the ControlPlane referenced by the KongKey. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a key from an existing key in Konnect. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane this KongKey is associated with. |
+| `keySetRef` _[KeySetRef](#configuration-konghq-com-v1alpha1-types-keysetref)_ | KeySetRef is a reference to a KongKeySet this KongKey is attached to. ControlPlane referenced by a KongKeySet must be the same as the ControlPlane referenced by the KongKey. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a key from an existing key in Konnect. |
 | `kid` _string_ | KID is a unique identifier for a key. When JWK is provided, KID has to match the KID in the JWK. |
-| `name` _string_ | Name is an optional name to associate with the given key. |
-| `jwk` _string_ | JWK is a JSON Web Key represented as a string. The JWK must contain a KID field that matches the KID in the KongKey. Either JWK or PEM must be set. |
-| `pem` _[PEMKeyPair](#pemkeypair)_ | PEM is a keypair in PEM format. Either JWK or PEM must be set. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of strings associated with the Key for grouping and filtering. |
+| `name` _*string_ | Name is an optional name to associate with the given key. |
+| `jwk` _*string_ | JWK is a JSON Web Key represented as a string. The JWK must contain a KID field that matches the KID in the KongKey. Either JWK or PEM must be set. |
+| `pem` _[PEMKeyPair](#configuration-konghq-com-v1alpha1-types-pemkeypair)_ | PEM is a keypair in PEM format. Either JWK or PEM must be set. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Key for grouping and filtering. |
 
 _Appears in:_
-- [KongKey](#kongkey)
+
+- [KongKey](#configuration-konghq-com-v1alpha1-types-kongkey)
 
 #### KongKeyStatus
 
@@ -1207,11 +1251,12 @@ KongKeyStatus defines the status for a KongKey.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneAndKeySetRef](#konnectentitystatuswithcontrolplaneandkeysetref)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndKeySetRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandkeysetref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongKey](#kongkey)
+
+- [KongKey](#configuration-konghq-com-v1alpha1-types-kongkey)
 
 #### KongLicenseControllerStatus
 
@@ -1224,11 +1269,12 @@ identified by the controllerName field.
 | Field | Description |
 | --- | --- |
 | `controllerName` _string_ | ControllerName is an identifier of the controller to reconcile this KongLicense. Should be unique in the list of controller statuses. |
-| `controllerRef` _[ControllerReference](#controllerreference)_ | ControllerRef is the reference of the controller to reconcile this KongLicense. It is usually the name of (KIC/KGO) pod that reconciles it. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongLicense on the controller. |
+| `controllerRef` _[ControllerReference](#configuration-konghq-com-v1alpha1-types-controllerreference)_ | ControllerRef is the reference of the controller to reconcile this KongLicense. It is usually the name of (KIC/KGO) pod that reconciles it. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KongLicense on the controller. |
 
 _Appears in:_
-- [KongLicenseStatus](#konglicensestatus)
+
+- [KongLicenseStatus](#configuration-konghq-com-v1alpha1-types-konglicensestatus)
 
 #### KongLicenseStatus
 
@@ -1239,15 +1285,15 @@ KongLicenseStatus stores the status of the KongLicense being processesed in each
 
 | Field | Description |
 | --- | --- |
-| `controllers` _[KongLicenseControllerStatus](#konglicensecontrollerstatus) array_ |  |
+| `controllers` _[KongLicenseControllerStatus](#configuration-konghq-com-v1alpha1-types-konglicensecontrollerstatus)_ |  |
 
 _Appears in:_
-- [KongLicense](#konglicense)
+
+- [KongLicense](#configuration-konghq-com-v1alpha1-types-konglicense)
 
 #### KongPluginBindingScope
 
 _Underlying type:_ `string`
-
 
 KongPluginBindingScope defines the scope of the plugin binding.
 Allowed values are:
@@ -1258,7 +1304,8 @@ Allowed values are:
 
 
 _Appears in:_
-- [KongPluginBindingSpec](#kongpluginbindingspec)
+
+- [KongPluginBindingSpec](#configuration-konghq-com-v1alpha1-types-kongpluginbindingspec)
 
 Allowed values:
 
@@ -1276,14 +1323,15 @@ KongPluginBindingSpec defines specification of a KongPluginBinding.
 
 | Field | Description |
 | --- | --- |
-| `pluginRef` _[PluginRef](#pluginref)_ | PluginReference is a reference to the KongPlugin or KongClusterPlugin resource. |
-| `targets` _[KongPluginBindingTargets](#kongpluginbindingtargets)_ | Targets contains the targets references. It is possible to set multiple combinations of references, as described in https://docs.konghq.com/gateway/latest/key-concepts/plugins/#precedence The complete set of allowed combinations and their order of precedence for plugins configured to multiple entities is:<br /><br />1. Consumer + route + service 2. Consumer group + service + route 3. Consumer + route 4. Consumer + service 5. Consumer group + route 6. Consumer group + service 7. Route + service 8. Consumer 9. Consumer group 10. Route 11. Service |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongPluginBinding is associated with. |
-| `scope` _[KongPluginBindingScope](#kongpluginbindingscope)_ | Scope defines the scope of the plugin binding. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a plugin instance from an existing plugin in Konnect. |
+| `pluginRef` _[PluginRef](#configuration-konghq-com-v1alpha1-types-pluginref)_ | PluginReference is a reference to the KongPlugin or KongClusterPlugin resource. |
+| `targets` _[KongPluginBindingTargets](#configuration-konghq-com-v1alpha1-types-kongpluginbindingtargets)_ | Targets contains the targets references. It is possible to set multiple combinations of references, as described in https://docs.konghq.com/gateway/latest/key-concepts/plugins/#precedence The complete set of allowed combinations and their order of precedence for plugins configured to multiple entities is:<br /><br />1. Consumer + route + service 2. Consumer group + service + route 3. Consumer + route 4. Consumer + service 5. Consumer group + route 6. Consumer group + service 7. Route + service 8. Consumer 9. Consumer group 10. Route 11. Service |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongPluginBinding is associated with. |
+| `scope` _[KongPluginBindingScope](#configuration-konghq-com-v1alpha1-types-kongpluginbindingscope)_ | Scope defines the scope of the plugin binding. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a plugin instance from an existing plugin in Konnect. |
 
 _Appears in:_
-- [KongPluginBinding](#kongpluginbinding)
+
+- [KongPluginBinding](#configuration-konghq-com-v1alpha1-types-kongpluginbinding)
 
 #### KongPluginBindingStatus
 
@@ -1294,11 +1342,12 @@ KongPluginBindingStatus represents the current status of the KongBinding resourc
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongPluginBinding](#kongpluginbinding)
+
+- [KongPluginBinding](#configuration-konghq-com-v1alpha1-types-kongpluginbinding)
 
 #### KongPluginBindingTargets
 
@@ -1309,13 +1358,14 @@ KongPluginBindingTargets contains the targets references.
 
 | Field | Description |
 | --- | --- |
-| `routeRef` _[TargetRefWithGroupKind](#targetrefwithgroupkind)_ | RouteReference can be used to reference one of the following resouces: - networking.k8s.io/Ingress - gateway.networking.k8s.io/HTTPRoute - gateway.networking.k8s.io/GRPCRoute - configuration.konghq.com/KongRoute |
-| `serviceRef` _[TargetRefWithGroupKind](#targetrefwithgroupkind)_ | ServiceReference can be used to reference one of the following resouces: - core/Service or /Service - configuration.konghq.com/KongService |
-| `consumerRef` _[TargetRef](#targetref)_ | ConsumerReference is used to reference a configuration.konghq.com/Consumer resource. The group/kind is fixed, therefore the reference is performed only by name. |
-| `consumerGroupRef` _[TargetRef](#targetref)_ | ConsumerGroupReference is used to reference a configuration.konghq.com/ConsumerGroup resource. The group/kind is fixed, therefore the reference is performed only by name. |
+| `routeRef` _[TargetRefWithGroupKind](#configuration-konghq-com-v1alpha1-types-targetrefwithgroupkind)_ | RouteReference can be used to reference one of the following resouces: - networking.k8s.io/Ingress - gateway.networking.k8s.io/HTTPRoute - gateway.networking.k8s.io/GRPCRoute - configuration.konghq.com/KongRoute |
+| `serviceRef` _[TargetRefWithGroupKind](#configuration-konghq-com-v1alpha1-types-targetrefwithgroupkind)_ | ServiceReference can be used to reference one of the following resouces: - core/Service or /Service - configuration.konghq.com/KongService |
+| `consumerRef` _[TargetRef](#configuration-konghq-com-v1alpha1-types-targetref)_ | ConsumerReference is used to reference a configuration.konghq.com/Consumer resource. The group/kind is fixed, therefore the reference is performed only by name. |
+| `consumerGroupRef` _[TargetRef](#configuration-konghq-com-v1alpha1-types-targetref)_ | ConsumerGroupReference is used to reference a configuration.konghq.com/ConsumerGroup resource. The group/kind is fixed, therefore the reference is performed only by name. |
 
 _Appears in:_
-- [KongPluginBindingSpec](#kongpluginbindingspec)
+
+- [KongPluginBindingSpec](#configuration-konghq-com-v1alpha1-types-kongpluginbindingspec)
 
 #### KongRouteAPISpec
 
@@ -1327,26 +1377,27 @@ Currently, this only supports the JSON route fields.
 
 | Field | Description |
 | --- | --- |
-| `destinations` _Destinations array_ | A list of IP destinations of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port". |
-| `headers` _object (keys:string, values:string array)_ | One or more lists of values indexed by header name that will cause this Route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression. |
-| `hosts` _string array_ | A list of domain names that match this Route. Note that the hosts value is case sensitive. |
-| `https_redirect_status_code` _[HTTPSRedirectStatusCode](#httpsredirectstatuscode)_ | The status code Kong responds with when all properties of a Route match except the protocol i.e. if the protocol of the request is `HTTP` instead of `HTTPS`. `Location` header is injected by Kong if the field is set to 301, 302, 307 or 308. Note: This config applies only if the Route is configured to only accept the `https` protocol. |
-| `methods` _string array_ | A list of HTTP methods that match this Route. |
-| `name` _string_ | The name of the Route. Route names must be unique, and they are case sensitive. For example, there can be two different Routes named "test" and "Test". |
-| `path_handling` _[PathHandling](#pathhandling)_ | Controls how the Service path, Route path and requested path are combined when sending a request to the upstream. See above for a detailed description of each behavior. |
-| `paths` _string array_ | A list of paths that match this Route. |
-| `preserve_host` _boolean_ | When matching a Route via one of the `hosts` domain names, use the request `Host` header in the upstream request headers. If set to `false`, the upstream `Host` header will be that of the Service's `host`. |
-| `protocols` _RouteJSONProtocols array_ | An array of the protocols this Route should allow. See KongRoute for a list of accepted protocols. When set to only `"https"`, HTTP requests are answered with an upgrade error. When set to only `"http"`, HTTPS requests are answered with an error. |
-| `regex_priority` _integer_ | A number used to choose which route resolves a given request when several routes match it using regexes simultaneously. When two routes match the path and have the same `regex_priority`, the older one (lowest `created_at`) is used. Note that the priority for non-regex routes is different (longer non-regex routes are matched before shorter ones). |
-| `request_buffering` _boolean_ | Whether to enable request body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that receive data with chunked transfer encoding. |
-| `response_buffering` _boolean_ | Whether to enable response body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that send data with chunked transfer encoding. |
-| `snis` _string array_ | A list of SNIs that match this Route when using stream routing. |
-| `sources` _Sources array_ | A list of IP sources of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port". |
-| `strip_path` _boolean_ | When matching a Route via one of the `paths`, strip the matching prefix from the upstream request URL. |
-| `tags` _[Tags](#tags)_ | An optional set of strings associated with the Route for grouping and filtering. |
+| `destinations` _[]github.com/Kong/sdk-konnect-go/models/components.Destinations_ | A list of IP destinations of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port". |
+| `headers` _map[string][]string_ | One or more lists of values indexed by header name that will cause this Route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression. |
+| `hosts` _[]string_ | A list of domain names that match this Route. Note that the hosts value is case sensitive. |
+| `https_redirect_status_code` _*github.com/Kong/sdk-konnect-go/models/components.HTTPSRedirectStatusCode_ | The status code Kong responds with when all properties of a Route match except the protocol i.e. if the protocol of the request is `HTTP` instead of `HTTPS`. `Location` header is injected by Kong if the field is set to 301, 302, 307 or 308. Note: This config applies only if the Route is configured to only accept the `https` protocol. |
+| `methods` _[]string_ | A list of HTTP methods that match this Route. |
+| `name` _*string_ | The name of the Route. Route names must be unique, and they are case sensitive. For example, there can be two different Routes named "test" and "Test". |
+| `path_handling` _*github.com/Kong/sdk-konnect-go/models/components.PathHandling_ | Controls how the Service path, Route path and requested path are combined when sending a request to the upstream. See above for a detailed description of each behavior. |
+| `paths` _[]string_ | A list of paths that match this Route. |
+| `preserve_host` _*bool_ | When matching a Route via one of the `hosts` domain names, use the request `Host` header in the upstream request headers. If set to `false`, the upstream `Host` header will be that of the Service's `host`. |
+| `protocols` _[]github.com/Kong/sdk-konnect-go/models/components.RouteJSONProtocols_ | An array of the protocols this Route should allow. See KongRoute for a list of accepted protocols. When set to only `"https"`, HTTP requests are answered with an upgrade error. When set to only `"http"`, HTTPS requests are answered with an error. |
+| `regex_priority` _*int64_ | A number used to choose which route resolves a given request when several routes match it using regexes simultaneously. When two routes match the path and have the same `regex_priority`, the older one (lowest `created_at`) is used. Note that the priority for non-regex routes is different (longer non-regex routes are matched before shorter ones). |
+| `request_buffering` _*bool_ | Whether to enable request body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that receive data with chunked transfer encoding. |
+| `response_buffering` _*bool_ | Whether to enable response body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that send data with chunked transfer encoding. |
+| `snis` _[]string_ | A list of SNIs that match this Route when using stream routing. |
+| `sources` _[]github.com/Kong/sdk-konnect-go/models/components.Sources_ | A list of IP sources of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port". |
+| `strip_path` _*bool_ | When matching a Route via one of the `paths`, strip the matching prefix from the upstream request URL. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | An optional set of strings associated with the Route for grouping and filtering. |
 
 _Appears in:_
-- [KongRouteSpec](#kongroutespec)
+
+- [KongRouteSpec](#configuration-konghq-com-v1alpha1-types-kongroutespec)
 
 #### KongRouteSpec
 
@@ -1357,29 +1408,30 @@ KongRouteSpec defines spec of a Kong Route.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongRoute is associated with. Route can either specify a ControlPlaneRef and be 'serviceless' route or specify a ServiceRef and be associated with a Service. |
-| `serviceRef` _[ServiceRef](#serviceref)_ | ServiceRef is a reference to a Service this KongRoute is associated with. Route can either specify a ControlPlaneRef and be 'serviceless' route or specify a ServiceRef and be associated with a Service. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a route from an existing route in Konnect. |
-| `destinations` _Destinations array_ | A list of IP destinations of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port". |
-| `headers` _object (keys:string, values:string array)_ | One or more lists of values indexed by header name that will cause this Route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression. |
-| `hosts` _string array_ | A list of domain names that match this Route. Note that the hosts value is case sensitive. |
-| `https_redirect_status_code` _[HTTPSRedirectStatusCode](#httpsredirectstatuscode)_ | The status code Kong responds with when all properties of a Route match except the protocol i.e. if the protocol of the request is `HTTP` instead of `HTTPS`. `Location` header is injected by Kong if the field is set to 301, 302, 307 or 308. Note: This config applies only if the Route is configured to only accept the `https` protocol. |
-| `methods` _string array_ | A list of HTTP methods that match this Route. |
-| `name` _string_ | The name of the Route. Route names must be unique, and they are case sensitive. For example, there can be two different Routes named "test" and "Test". |
-| `path_handling` _[PathHandling](#pathhandling)_ | Controls how the Service path, Route path and requested path are combined when sending a request to the upstream. See above for a detailed description of each behavior. |
-| `paths` _string array_ | A list of paths that match this Route. |
-| `preserve_host` _boolean_ | When matching a Route via one of the `hosts` domain names, use the request `Host` header in the upstream request headers. If set to `false`, the upstream `Host` header will be that of the Service's `host`. |
-| `protocols` _RouteJSONProtocols array_ | An array of the protocols this Route should allow. See KongRoute for a list of accepted protocols. When set to only `"https"`, HTTP requests are answered with an upgrade error. When set to only `"http"`, HTTPS requests are answered with an error. |
-| `regex_priority` _integer_ | A number used to choose which route resolves a given request when several routes match it using regexes simultaneously. When two routes match the path and have the same `regex_priority`, the older one (lowest `created_at`) is used. Note that the priority for non-regex routes is different (longer non-regex routes are matched before shorter ones). |
-| `request_buffering` _boolean_ | Whether to enable request body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that receive data with chunked transfer encoding. |
-| `response_buffering` _boolean_ | Whether to enable response body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that send data with chunked transfer encoding. |
-| `snis` _string array_ | A list of SNIs that match this Route when using stream routing. |
-| `sources` _Sources array_ | A list of IP sources of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port". |
-| `strip_path` _boolean_ | When matching a Route via one of the `paths`, strip the matching prefix from the upstream request URL. |
-| `tags` _[Tags](#tags)_ | An optional set of strings associated with the Route for grouping and filtering. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongRoute is associated with. Route can either specify a ControlPlaneRef and be 'serviceless' route or specify a ServiceRef and be associated with a Service. |
+| `serviceRef` _[ServiceRef](#configuration-konghq-com-v1alpha1-types-serviceref)_ | ServiceRef is a reference to a Service this KongRoute is associated with. Route can either specify a ControlPlaneRef and be 'serviceless' route or specify a ServiceRef and be associated with a Service. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a route from an existing route in Konnect. |
+| `destinations` _[]github.com/Kong/sdk-konnect-go/models/components.Destinations_ | A list of IP destinations of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port". |
+| `headers` _map[string][]string_ | One or more lists of values indexed by header name that will cause this Route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression. |
+| `hosts` _[]string_ | A list of domain names that match this Route. Note that the hosts value is case sensitive. |
+| `https_redirect_status_code` _*github.com/Kong/sdk-konnect-go/models/components.HTTPSRedirectStatusCode_ | The status code Kong responds with when all properties of a Route match except the protocol i.e. if the protocol of the request is `HTTP` instead of `HTTPS`. `Location` header is injected by Kong if the field is set to 301, 302, 307 or 308. Note: This config applies only if the Route is configured to only accept the `https` protocol. |
+| `methods` _[]string_ | A list of HTTP methods that match this Route. |
+| `name` _*string_ | The name of the Route. Route names must be unique, and they are case sensitive. For example, there can be two different Routes named "test" and "Test". |
+| `path_handling` _*github.com/Kong/sdk-konnect-go/models/components.PathHandling_ | Controls how the Service path, Route path and requested path are combined when sending a request to the upstream. See above for a detailed description of each behavior. |
+| `paths` _[]string_ | A list of paths that match this Route. |
+| `preserve_host` _*bool_ | When matching a Route via one of the `hosts` domain names, use the request `Host` header in the upstream request headers. If set to `false`, the upstream `Host` header will be that of the Service's `host`. |
+| `protocols` _[]github.com/Kong/sdk-konnect-go/models/components.RouteJSONProtocols_ | An array of the protocols this Route should allow. See KongRoute for a list of accepted protocols. When set to only `"https"`, HTTP requests are answered with an upgrade error. When set to only `"http"`, HTTPS requests are answered with an error. |
+| `regex_priority` _*int64_ | A number used to choose which route resolves a given request when several routes match it using regexes simultaneously. When two routes match the path and have the same `regex_priority`, the older one (lowest `created_at`) is used. Note that the priority for non-regex routes is different (longer non-regex routes are matched before shorter ones). |
+| `request_buffering` _*bool_ | Whether to enable request body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that receive data with chunked transfer encoding. |
+| `response_buffering` _*bool_ | Whether to enable response body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that send data with chunked transfer encoding. |
+| `snis` _[]string_ | A list of SNIs that match this Route when using stream routing. |
+| `sources` _[]github.com/Kong/sdk-konnect-go/models/components.Sources_ | A list of IP sources of incoming connections that match this Route when using stream routing. Each entry is an object with fields "ip" (optionally in CIDR range notation) and/or "port". |
+| `strip_path` _*bool_ | When matching a Route via one of the `paths`, strip the matching prefix from the upstream request URL. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | An optional set of strings associated with the Route for grouping and filtering. |
 
 _Appears in:_
-- [KongRoute](#kongroute)
+
+- [KongRoute](#configuration-konghq-com-v1alpha1-types-kongroute)
 
 #### KongRouteStatus
 
@@ -1390,11 +1442,12 @@ KongRouteStatus represents the current status of the Kong Route resource.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneAndServiceRefs](#konnectentitystatuswithcontrolplaneandservicerefs)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndServiceRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandservicerefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongRoute](#kongroute)
+
+- [KongRoute](#configuration-konghq-com-v1alpha1-types-kongroute)
 
 #### KongSNIAPISpec
 
@@ -1406,10 +1459,11 @@ KongSNIAPISpec defines the spec of an SNI.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Name is the name of the SNI. Required and must be a host or wildcard host. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of strings associated with the SNI for grouping and filtering. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the SNI for grouping and filtering. |
 
 _Appears in:_
-- [KongSNISpec](#kongsnispec)
+
+- [KongSNISpec](#configuration-konghq-com-v1alpha1-types-kongsnispec)
 
 #### KongSNISpec
 
@@ -1420,13 +1474,14 @@ KongSNISpec defines specification of a Kong SNI.
 
 | Field | Description |
 | --- | --- |
-| `certificateRef` _[NameRef](#nameref)_ | CertificateRef is the reference to the certificate to which the KongSNI is attached. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting an SNI from an existing SNI in Konnect. |
+| `certificateRef` _[NameRef](#common-konghq-com-v1alpha1-types-nameref)_ | CertificateRef is the reference to the certificate to which the KongSNI is attached. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting an SNI from an existing SNI in Konnect. |
 | `name` _string_ | Name is the name of the SNI. Required and must be a host or wildcard host. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of strings associated with the SNI for grouping and filtering. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the SNI for grouping and filtering. |
 
 _Appears in:_
-- [KongSNI](#kongsni)
+
+- [KongSNI](#configuration-konghq-com-v1alpha1-types-kongsni)
 
 #### KongSNIStatus
 
@@ -1437,11 +1492,12 @@ KongSNIStatus defines the status for a KongSNI.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnectentitystatuswithcontrolplaneandcertificaterefs)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndCertificateRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandcertificaterefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongSNI](#kongsni)
+
+- [KongSNI](#configuration-konghq-com-v1alpha1-types-kongsni)
 
 #### KongServiceAPISpec
 
@@ -1452,23 +1508,24 @@ KongServiceAPISpec defines the specification of a Kong Service.
 
 | Field | Description |
 | --- | --- |
-| `url` _string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
-| `connect_timeout` _integer_ | The timeout in milliseconds for establishing a connection to the upstream server. |
-| `enabled` _boolean_ | Whether the Service is active. If set to `false`, the proxy behavior will be as if any routes attached to it do not exist (404). Default: `true`. |
+| `url` _*string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
+| `connect_timeout` _*int64_ | The timeout in milliseconds for establishing a connection to the upstream server. |
+| `enabled` _*bool_ | Whether the Service is active. If set to `false`, the proxy behavior will be as if any routes attached to it do not exist (404). Default: `true`. |
 | `host` _string_ | The host of the upstream server. Note that the host value is case sensitive. |
-| `name` _string_ | The Service name. |
-| `path` _string_ | The path to be used in requests to the upstream server. |
-| `port` _integer_ | The upstream server port. |
-| `protocol` _[Protocol](#protocol)_ | The protocol used to communicate with the upstream. |
-| `read_timeout` _integer_ | The timeout in milliseconds between two successive read operations for transmitting a request to the upstream server. |
-| `retries` _integer_ | The number of retries to execute upon failure to proxy. |
-| `tags` _[Tags](#tags)_ | An optional set of strings associated with the Service for grouping and filtering. |
-| `tls_verify` _boolean_ | Whether to enable verification of upstream server TLS certificate. If set to `null`, then the Nginx default is respected. |
-| `tls_verify_depth` _integer_ | Maximum depth of chain while verifying Upstream server's TLS certificate. If set to `null`, then the Nginx default is respected. |
-| `write_timeout` _integer_ | The timeout in milliseconds between two successive write operations for transmitting a request to the upstream server. |
+| `name` _*string_ | The Service name. |
+| `path` _*string_ | The path to be used in requests to the upstream server. |
+| `port` _int64_ | The upstream server port. |
+| `protocol` _github.com/Kong/sdk-konnect-go/models/components.Protocol_ | The protocol used to communicate with the upstream. |
+| `read_timeout` _*int64_ | The timeout in milliseconds between two successive read operations for transmitting a request to the upstream server. |
+| `retries` _*int64_ | The number of retries to execute upon failure to proxy. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | An optional set of strings associated with the Service for grouping and filtering. |
+| `tls_verify` _*bool_ | Whether to enable verification of upstream server TLS certificate. If set to `null`, then the Nginx default is respected. |
+| `tls_verify_depth` _*int64_ | Maximum depth of chain while verifying Upstream server's TLS certificate. If set to `null`, then the Nginx default is respected. |
+| `write_timeout` _*int64_ | The timeout in milliseconds between two successive write operations for transmitting a request to the upstream server. |
 
 _Appears in:_
-- [KongServiceSpec](#kongservicespec)
+
+- [KongServiceSpec](#configuration-konghq-com-v1alpha1-types-kongservicespec)
 
 #### KongServiceSpec
 
@@ -1479,25 +1536,26 @@ KongServiceSpec defines specification of a Kong Service.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongService is associated with. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a service from an existing service in Konnect. |
-| `url` _string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
-| `connect_timeout` _integer_ | The timeout in milliseconds for establishing a connection to the upstream server. |
-| `enabled` _boolean_ | Whether the Service is active. If set to `false`, the proxy behavior will be as if any routes attached to it do not exist (404). Default: `true`. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongService is associated with. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a service from an existing service in Konnect. |
+| `url` _*string_ | Helper field to set `protocol`, `host`, `port` and `path` using a URL. This field is write-only and is not returned in responses. |
+| `connect_timeout` _*int64_ | The timeout in milliseconds for establishing a connection to the upstream server. |
+| `enabled` _*bool_ | Whether the Service is active. If set to `false`, the proxy behavior will be as if any routes attached to it do not exist (404). Default: `true`. |
 | `host` _string_ | The host of the upstream server. Note that the host value is case sensitive. |
-| `name` _string_ | The Service name. |
-| `path` _string_ | The path to be used in requests to the upstream server. |
-| `port` _integer_ | The upstream server port. |
-| `protocol` _[Protocol](#protocol)_ | The protocol used to communicate with the upstream. |
-| `read_timeout` _integer_ | The timeout in milliseconds between two successive read operations for transmitting a request to the upstream server. |
-| `retries` _integer_ | The number of retries to execute upon failure to proxy. |
-| `tags` _[Tags](#tags)_ | An optional set of strings associated with the Service for grouping and filtering. |
-| `tls_verify` _boolean_ | Whether to enable verification of upstream server TLS certificate. If set to `null`, then the Nginx default is respected. |
-| `tls_verify_depth` _integer_ | Maximum depth of chain while verifying Upstream server's TLS certificate. If set to `null`, then the Nginx default is respected. |
-| `write_timeout` _integer_ | The timeout in milliseconds between two successive write operations for transmitting a request to the upstream server. |
+| `name` _*string_ | The Service name. |
+| `path` _*string_ | The path to be used in requests to the upstream server. |
+| `port` _int64_ | The upstream server port. |
+| `protocol` _github.com/Kong/sdk-konnect-go/models/components.Protocol_ | The protocol used to communicate with the upstream. |
+| `read_timeout` _*int64_ | The timeout in milliseconds between two successive read operations for transmitting a request to the upstream server. |
+| `retries` _*int64_ | The number of retries to execute upon failure to proxy. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | An optional set of strings associated with the Service for grouping and filtering. |
+| `tls_verify` _*bool_ | Whether to enable verification of upstream server TLS certificate. If set to `null`, then the Nginx default is respected. |
+| `tls_verify_depth` _*int64_ | Maximum depth of chain while verifying Upstream server's TLS certificate. If set to `null`, then the Nginx default is respected. |
+| `write_timeout` _*int64_ | The timeout in milliseconds between two successive write operations for transmitting a request to the upstream server. |
 
 _Appears in:_
-- [KongService](#kongservice)
+
+- [KongService](#configuration-konghq-com-v1alpha1-types-kongservice)
 
 #### KongServiceStatus
 
@@ -1508,11 +1566,12 @@ KongServiceStatus represents the current status of the Kong Service resource.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongService](#kongservice)
+
+- [KongService](#configuration-konghq-com-v1alpha1-types-kongservice)
 
 #### KongTargetAPISpec
 
@@ -1524,11 +1583,12 @@ KongTargetAPISpec are the attributes of the Kong Target itself.
 | Field | Description |
 | --- | --- |
 | `target` _string_ | Target is the target address of the upstream. |
-| `weight` _integer_ | Weight is the weight this target gets within the upstream loadbalancer. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
+| `weight` _int_ | Weight is the weight this target gets within the upstream loadbalancer. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
 
 _Appears in:_
-- [KongTargetSpec](#kongtargetspec)
+
+- [KongTargetSpec](#configuration-konghq-com-v1alpha1-types-kongtargetspec)
 
 #### KongTargetSpec
 
@@ -1539,14 +1599,15 @@ KongTargetSpec defines the spec of KongTarget.
 
 | Field | Description |
 | --- | --- |
-| `upstreamRef` _[NameRef](#nameref)_ | UpstreamRef is a reference to a KongUpstream this KongTarget is attached to. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a target from an existing target in Konnect. |
+| `upstreamRef` _[NameRef](#common-konghq-com-v1alpha1-types-nameref)_ | UpstreamRef is a reference to a KongUpstream this KongTarget is attached to. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a target from an existing target in Konnect. |
 | `target` _string_ | Target is the target address of the upstream. |
-| `weight` _integer_ | Weight is the weight this target gets within the upstream loadbalancer. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
+| `weight` _int_ | Weight is the weight this target gets within the upstream loadbalancer. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
 
 _Appears in:_
-- [KongTarget](#kongtarget)
+
+- [KongTarget](#configuration-konghq-com-v1alpha1-types-kongtarget)
 
 #### KongTargetStatus
 
@@ -1557,11 +1618,12 @@ KongTargetStatus defines the observed state of KongTarget.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneAndUpstreamRefs](#konnectentitystatuswithcontrolplaneandupstreamrefs)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneAndUpstreamRefs](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneandupstreamrefs)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongTarget](#kongtarget)
+
+- [KongTarget](#configuration-konghq-com-v1alpha1-types-kongtarget)
 
 #### KongUpstreamAPISpec
 
@@ -1572,27 +1634,28 @@ KongUpstreamAPISpec defines specification of a Kong Upstream.
 
 | Field | Description |
 | --- | --- |
-| `algorithm` _[UpstreamAlgorithm](#upstreamalgorithm)_ | Which load balancing algorithm to use. |
-| `client_certificate` _[UpstreamClientCertificate](#upstreamclientcertificate)_ | If set, the certificate to be used as client certificate while TLS handshaking to the upstream server. |
-| `hash_fallback` _[HashFallback](#hashfallback)_ | What to use as hashing input if the primary `hash_on` does not return a hash (eg. header is missing, or no Consumer identified). Not available if `hash_on` is set to `cookie`. |
-| `hash_fallback_header` _string_ | The header name to take the value from as hash input. Only required when `hash_fallback` is set to `header`. |
-| `hash_fallback_query_arg` _string_ | The name of the query string argument to take the value from as hash input. Only required when `hash_fallback` is set to `query_arg`. |
-| `hash_fallback_uri_capture` _string_ | The name of the route URI capture to take the value from as hash input. Only required when `hash_fallback` is set to `uri_capture`. |
-| `hash_on` _[HashOn](#hashon)_ | What to use as hashing input. Using `none` results in a weighted-round-robin scheme with no hashing. |
-| `hash_on_cookie` _string_ | The cookie name to take the value from as hash input. Only required when `hash_on` or `hash_fallback` is set to `cookie`. If the specified cookie is not in the request, Kong will generate a value and set the cookie in the response. |
-| `hash_on_cookie_path` _string_ | The cookie path to set in the response headers. Only required when `hash_on` or `hash_fallback` is set to `cookie`. |
-| `hash_on_header` _string_ | The header name to take the value from as hash input. Only required when `hash_on` is set to `header`. |
-| `hash_on_query_arg` _string_ | The name of the query string argument to take the value from as hash input. Only required when `hash_on` is set to `query_arg`. |
-| `hash_on_uri_capture` _string_ | The name of the route URI capture to take the value from as hash input. Only required when `hash_on` is set to `uri_capture`. |
-| `healthchecks` _[Healthchecks](#healthchecks)_ | Healthchecks is the configuration of upstream's healthchecks. |
-| `host_header` _string_ | The hostname to be used as `Host` header when proxying requests through Kong. |
+| `algorithm` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamAlgorithm_ | Which load balancing algorithm to use. |
+| `client_certificate` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamClientCertificate_ | If set, the certificate to be used as client certificate while TLS handshaking to the upstream server. |
+| `hash_fallback` _*github.com/Kong/sdk-konnect-go/models/components.HashFallback_ | What to use as hashing input if the primary `hash_on` does not return a hash (eg. header is missing, or no Consumer identified). Not available if `hash_on` is set to `cookie`. |
+| `hash_fallback_header` _*string_ | The header name to take the value from as hash input. Only required when `hash_fallback` is set to `header`. |
+| `hash_fallback_query_arg` _*string_ | The name of the query string argument to take the value from as hash input. Only required when `hash_fallback` is set to `query_arg`. |
+| `hash_fallback_uri_capture` _*string_ | The name of the route URI capture to take the value from as hash input. Only required when `hash_fallback` is set to `uri_capture`. |
+| `hash_on` _*github.com/Kong/sdk-konnect-go/models/components.HashOn_ | What to use as hashing input. Using `none` results in a weighted-round-robin scheme with no hashing. |
+| `hash_on_cookie` _*string_ | The cookie name to take the value from as hash input. Only required when `hash_on` or `hash_fallback` is set to `cookie`. If the specified cookie is not in the request, Kong will generate a value and set the cookie in the response. |
+| `hash_on_cookie_path` _*string_ | The cookie path to set in the response headers. Only required when `hash_on` or `hash_fallback` is set to `cookie`. |
+| `hash_on_header` _*string_ | The header name to take the value from as hash input. Only required when `hash_on` is set to `header`. |
+| `hash_on_query_arg` _*string_ | The name of the query string argument to take the value from as hash input. Only required when `hash_on` is set to `query_arg`. |
+| `hash_on_uri_capture` _*string_ | The name of the route URI capture to take the value from as hash input. Only required when `hash_on` is set to `uri_capture`. |
+| `healthchecks` _*github.com/Kong/sdk-konnect-go/models/components.Healthchecks_ | Healthchecks is the configuration of upstream's healthchecks. |
+| `host_header` _*string_ | The hostname to be used as `Host` header when proxying requests through Kong. |
 | `name` _string_ | This is a hostname, which must be equal to the `host` of a Service. |
-| `slots` _integer_ | The number of slots in the load balancer algorithm. If `algorithm` is set to `round-robin`, this setting determines the maximum number of slots. If `algorithm` is set to `consistent-hashing`, this setting determines the actual number of slots in the algorithm. Accepts an integer in the range `10`-`65536`. |
-| `tags` _[Tags](#tags)_ | An optional set of strings associated with the Upstream for grouping and filtering. |
-| `use_srv_name` _boolean_ | If set, the balancer will use SRV hostname(if DNS Answer has SRV record) as the proxy upstream `Host`. |
+| `slots` _*int64_ | The number of slots in the load balancer algorithm. If `algorithm` is set to `round-robin`, this setting determines the maximum number of slots. If `algorithm` is set to `consistent-hashing`, this setting determines the actual number of slots in the algorithm. Accepts an integer in the range `10`-`65536`. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | An optional set of strings associated with the Upstream for grouping and filtering. |
+| `use_srv_name` _*bool_ | If set, the balancer will use SRV hostname(if DNS Answer has SRV record) as the proxy upstream `Host`. |
 
 _Appears in:_
-- [KongUpstreamSpec](#kongupstreamspec)
+
+- [KongUpstreamSpec](#configuration-konghq-com-v1alpha1-types-kongupstreamspec)
 
 #### KongUpstreamSpec
 
@@ -1603,29 +1666,30 @@ KongUpstreamSpec defines the spec of Kong Upstream.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongUpstream is associated with. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting an upstream from an existing upstream in Konnect. |
-| `algorithm` _[UpstreamAlgorithm](#upstreamalgorithm)_ | Which load balancing algorithm to use. |
-| `client_certificate` _[UpstreamClientCertificate](#upstreamclientcertificate)_ | If set, the certificate to be used as client certificate while TLS handshaking to the upstream server. |
-| `hash_fallback` _[HashFallback](#hashfallback)_ | What to use as hashing input if the primary `hash_on` does not return a hash (eg. header is missing, or no Consumer identified). Not available if `hash_on` is set to `cookie`. |
-| `hash_fallback_header` _string_ | The header name to take the value from as hash input. Only required when `hash_fallback` is set to `header`. |
-| `hash_fallback_query_arg` _string_ | The name of the query string argument to take the value from as hash input. Only required when `hash_fallback` is set to `query_arg`. |
-| `hash_fallback_uri_capture` _string_ | The name of the route URI capture to take the value from as hash input. Only required when `hash_fallback` is set to `uri_capture`. |
-| `hash_on` _[HashOn](#hashon)_ | What to use as hashing input. Using `none` results in a weighted-round-robin scheme with no hashing. |
-| `hash_on_cookie` _string_ | The cookie name to take the value from as hash input. Only required when `hash_on` or `hash_fallback` is set to `cookie`. If the specified cookie is not in the request, Kong will generate a value and set the cookie in the response. |
-| `hash_on_cookie_path` _string_ | The cookie path to set in the response headers. Only required when `hash_on` or `hash_fallback` is set to `cookie`. |
-| `hash_on_header` _string_ | The header name to take the value from as hash input. Only required when `hash_on` is set to `header`. |
-| `hash_on_query_arg` _string_ | The name of the query string argument to take the value from as hash input. Only required when `hash_on` is set to `query_arg`. |
-| `hash_on_uri_capture` _string_ | The name of the route URI capture to take the value from as hash input. Only required when `hash_on` is set to `uri_capture`. |
-| `healthchecks` _[Healthchecks](#healthchecks)_ | Healthchecks is the configuration of upstream's healthchecks. |
-| `host_header` _string_ | The hostname to be used as `Host` header when proxying requests through Kong. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongUpstream is associated with. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting an upstream from an existing upstream in Konnect. |
+| `algorithm` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamAlgorithm_ | Which load balancing algorithm to use. |
+| `client_certificate` _*github.com/Kong/sdk-konnect-go/models/components.UpstreamClientCertificate_ | If set, the certificate to be used as client certificate while TLS handshaking to the upstream server. |
+| `hash_fallback` _*github.com/Kong/sdk-konnect-go/models/components.HashFallback_ | What to use as hashing input if the primary `hash_on` does not return a hash (eg. header is missing, or no Consumer identified). Not available if `hash_on` is set to `cookie`. |
+| `hash_fallback_header` _*string_ | The header name to take the value from as hash input. Only required when `hash_fallback` is set to `header`. |
+| `hash_fallback_query_arg` _*string_ | The name of the query string argument to take the value from as hash input. Only required when `hash_fallback` is set to `query_arg`. |
+| `hash_fallback_uri_capture` _*string_ | The name of the route URI capture to take the value from as hash input. Only required when `hash_fallback` is set to `uri_capture`. |
+| `hash_on` _*github.com/Kong/sdk-konnect-go/models/components.HashOn_ | What to use as hashing input. Using `none` results in a weighted-round-robin scheme with no hashing. |
+| `hash_on_cookie` _*string_ | The cookie name to take the value from as hash input. Only required when `hash_on` or `hash_fallback` is set to `cookie`. If the specified cookie is not in the request, Kong will generate a value and set the cookie in the response. |
+| `hash_on_cookie_path` _*string_ | The cookie path to set in the response headers. Only required when `hash_on` or `hash_fallback` is set to `cookie`. |
+| `hash_on_header` _*string_ | The header name to take the value from as hash input. Only required when `hash_on` is set to `header`. |
+| `hash_on_query_arg` _*string_ | The name of the query string argument to take the value from as hash input. Only required when `hash_on` is set to `query_arg`. |
+| `hash_on_uri_capture` _*string_ | The name of the route URI capture to take the value from as hash input. Only required when `hash_on` is set to `uri_capture`. |
+| `healthchecks` _*github.com/Kong/sdk-konnect-go/models/components.Healthchecks_ | Healthchecks is the configuration of upstream's healthchecks. |
+| `host_header` _*string_ | The hostname to be used as `Host` header when proxying requests through Kong. |
 | `name` _string_ | This is a hostname, which must be equal to the `host` of a Service. |
-| `slots` _integer_ | The number of slots in the load balancer algorithm. If `algorithm` is set to `round-robin`, this setting determines the maximum number of slots. If `algorithm` is set to `consistent-hashing`, this setting determines the actual number of slots in the algorithm. Accepts an integer in the range `10`-`65536`. |
-| `tags` _[Tags](#tags)_ | An optional set of strings associated with the Upstream for grouping and filtering. |
-| `use_srv_name` _boolean_ | If set, the balancer will use SRV hostname(if DNS Answer has SRV record) as the proxy upstream `Host`. |
+| `slots` _*int64_ | The number of slots in the load balancer algorithm. If `algorithm` is set to `round-robin`, this setting determines the maximum number of slots. If `algorithm` is set to `consistent-hashing`, this setting determines the actual number of slots in the algorithm. Accepts an integer in the range `10`-`65536`. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | An optional set of strings associated with the Upstream for grouping and filtering. |
+| `use_srv_name` _*bool_ | If set, the balancer will use SRV hostname(if DNS Answer has SRV record) as the proxy upstream `Host`. |
 
 _Appears in:_
-- [KongUpstream](#kongupstream)
+
+- [KongUpstream](#configuration-konghq-com-v1alpha1-types-kongupstream)
 
 #### KongUpstreamStatus
 
@@ -1636,11 +1700,12 @@ KongUpstreamStatus represents the current status of the Kong Upstream resource.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the status of the Konnect entity. |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_
-- [KongUpstream](#kongupstream)
+
+- [KongUpstream](#configuration-konghq-com-v1alpha1-types-kongupstream)
 
 #### KongVaultSpec
 
@@ -1654,13 +1719,14 @@ KongVaultSpec defines specification of a custom Kong vault.
 | `backend` _string_ | Backend is the type of the backend storing the secrets in the vault. The supported backends of Kong is listed here: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/backends/ |
 | `prefix` _string_ | Prefix is the prefix of vault URI for referencing values in the vault. It is immutable after created. |
 | `description` _string_ | Description is the additional information about the vault. |
-| `config` _[JSON](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#json-v1-apiextensions-k8s-io)_ | Config is the configuration of the vault. Varies for different backends. |
-| `tags` _[Tags](#tags)_ | Tags are the tags associated to the vault for grouping and filtering. |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane this KongVault is associated with. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a vault from an existing vault in Konnect. |
+| `config` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | Config is the configuration of the vault. Varies for different backends. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags are the tags associated to the vault for grouping and filtering. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a Konnect ControlPlane this KongVault is associated with. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a vault from an existing vault in Konnect. |
 
 _Appears in:_
-- [KongVault](#kongvault)
+
+- [KongVault](#configuration-konghq-com-v1alpha1-types-kongvault)
 
 #### KongVaultStatus
 
@@ -1671,11 +1737,12 @@ KongVaultStatus represents the current status of the KongVault resource.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongVaultStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KongVaultStatus.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 
 _Appears in:_
-- [KongVault](#kongvault)
+
+- [KongVault](#configuration-konghq-com-v1alpha1-types-kongvault)
 
 
 
@@ -1683,19 +1750,18 @@ _Appears in:_
 
 _Underlying type:_ `string`
 
-
 Namespace refers to a Kubernetes namespace. It must be a RFC 1123 label.
 
 
 
 
 _Appears in:_
-- [ControllerReference](#controllerreference)
+
+- [ControllerReference](#configuration-konghq-com-v1alpha1-types-controllerreference)
 
 #### ObjectName
 
 _Underlying type:_ `string`
-
 
 ObjectName refers to the name of a Kubernetes object.
 Object names can have a variety of forms, including RFC1123 subdomains,
@@ -1705,7 +1771,8 @@ RFC 1123 labels, or RFC 1035 labels.
 
 
 _Appears in:_
-- [ControllerReference](#controllerreference)
+
+- [ControllerReference](#configuration-konghq-com-v1alpha1-types-controllerreference)
 
 #### ObjectReference
 
@@ -1716,13 +1783,14 @@ ObjectReference defines reference of a kubernetes object.
 
 | Field | Description |
 | --- | --- |
-| `group` _string_ | Group defines the API group of the referred object. |
-| `kind` _string_ | Kind defines the kind of the referred object. |
-| `namespace` _string_ | Empty namespace means the same namespace of the owning object. |
+| `group` _*string_ | Group defines the API group of the referred object. |
+| `kind` _*string_ | Kind defines the kind of the referred object. |
+| `namespace` _*string_ | Empty namespace means the same namespace of the owning object. |
 | `name` _string_ | Name defines the name of the referred object. |
 
 _Appears in:_
-- [KongCustomEntitySpec](#kongcustomentityspec)
+
+- [KongCustomEntitySpec](#configuration-konghq-com-v1alpha1-types-kongcustomentityspec)
 
 #### PEMKeyPair
 
@@ -1737,8 +1805,9 @@ PEMKeyPair defines a keypair in PEM format.
 | `public_key` _string_ | The public key in PEM format. |
 
 _Appears in:_
-- [KongKeyAPISpec](#kongkeyapispec)
-- [KongKeySpec](#kongkeyspec)
+
+- [KongKeyAPISpec](#configuration-konghq-com-v1alpha1-types-kongkeyapispec)
+- [KongKeySpec](#configuration-konghq-com-v1alpha1-types-kongkeyspec)
 
 #### PluginRef
 
@@ -1750,10 +1819,11 @@ PluginRef is a reference to a KongPlugin or KongClusterPlugin resource.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Name is the name of the KongPlugin or KongClusterPlugin resource. |
-| `kind` _string_ | Kind can be KongPlugin or KongClusterPlugin. If not set, it is assumed to be KongPlugin. |
+| `kind` _*string_ | Kind can be KongPlugin or KongClusterPlugin. If not set, it is assumed to be KongPlugin. |
 
 _Appears in:_
-- [KongPluginBindingSpec](#kongpluginbindingspec)
+
+- [KongPluginBindingSpec](#configuration-konghq-com-v1alpha1-types-kongpluginbindingspec)
 
 #### ServiceRef
 
@@ -1765,10 +1835,11 @@ ServiceRef is a reference to a KongService.
 | Field | Description |
 | --- | --- |
 | `type` _string_ | Type can be one of: - namespacedRef |
-| `namespacedRef` _[NameRef](#nameref)_ | NamespacedRef is a reference to a KongService. |
+| `namespacedRef` _[NameRef](#common-konghq-com-v1alpha1-types-nameref)_ | NamespacedRef is a reference to a KongService. |
 
 _Appears in:_
-- [KongRouteSpec](#kongroutespec)
+
+- [KongRouteSpec](#configuration-konghq-com-v1alpha1-types-kongroutespec)
 
 #### TargetRef
 
@@ -1782,7 +1853,8 @@ TargetRef is a reference based on the object's name.
 | `name` _string_ | Name is the name of the entity. |
 
 _Appears in:_
-- [KongPluginBindingTargets](#kongpluginbindingtargets)
+
+- [KongPluginBindingTargets](#configuration-konghq-com-v1alpha1-types-kongpluginbindingtargets)
 
 #### TargetRefWithGroupKind
 
@@ -1798,16 +1870,17 @@ TargetRefWithGroupKind is a reference based on the object's group, kind, and nam
 | `group` _string_ |  |
 
 _Appears in:_
-- [KongPluginBindingTargets](#kongpluginbindingtargets)
 
-## <a id="configuration-konghq-com-v1beta1">configuration.konghq.com/v1beta1</a>
+- [KongPluginBindingTargets](#configuration-konghq-com-v1alpha1-types-kongpluginbindingtargets)
+
+## configuration.konghq.com/v1beta1
 
 Package v1beta1 contains API Schema definitions for the configuration.konghq.com v1beta1 API group.
 
-- [KongConsumerGroup](#github-com-kong-kong-operator-api-configuration-v1beta1-kongconsumergroup)
-- [KongUpstreamPolicy](#github-com-kong-kong-operator-api-configuration-v1beta1-kongupstreampolicy)
+- [KongConsumerGroup](#configuration-konghq-com-v1beta1-kongconsumergroup)
+- [KongUpstreamPolicy](#configuration-konghq-com-v1beta1-kongupstreampolicy)
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1beta1-kongconsumergroup">KongConsumerGroup</a>
+### KongConsumerGroup
 
 
 KongConsumerGroup is the Schema for the kongconsumergroups API.
@@ -1818,11 +1891,11 @@ KongConsumerGroup is the Schema for the kongconsumergroups API.
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
 | `kind` _string_ | `KongConsumerGroup`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongConsumerGroupSpec](#kongconsumergroupspec)_ |  |
-| `status` _[KongConsumerGroupStatus](#kongconsumergroupstatus)_ | Status represents the current status of the KongConsumerGroup resource. |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongConsumerGroupSpec](#configuration-konghq-com-v1beta1-types-kongconsumergroupspec)_ |  |
+| `status` _[KongConsumerGroupStatus](#configuration-konghq-com-v1beta1-types-kongconsumergroupstatus)_ | Status represents the current status of the KongConsumerGroup resource. |
 
-### <a id="github-com-kong-kong-operator-api-configuration-v1beta1-kongupstreampolicy">KongUpstreamPolicy</a>
+### KongUpstreamPolicy
 
 
 KongUpstreamPolicy allows configuring algorithm that should be used for load balancing traffic between Kong
@@ -1840,9 +1913,9 @@ used instead. This is to allow reusing the same KongUpstreamPolicy for multiple 
 | --- | --- |
 | `apiVersion` _string_ | `configuration.konghq.com/v1beta1`
 | `kind` _string_ | `KongUpstreamPolicy`
-| `metadata` _[ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#objectmeta-v1-meta)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[KongUpstreamPolicySpec](#kongupstreampolicyspec)_ | Spec contains the configuration of the Kong upstream. |
-| `status` _[PolicyStatus](#policystatus)_ | Status defines the current state of KongUpstreamPolicy |
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongUpstreamPolicySpec](#configuration-konghq-com-v1beta1-types-kongupstreampolicyspec)_ | Spec contains the configuration of the Kong upstream. |
+| `status` _sigs.k8s.io/gateway-api/apis/v1alpha2.PolicyStatus_ | Status defines the current state of KongUpstreamPolicy |
 
 ### Types
 
@@ -1851,20 +1924,19 @@ In this section you will find types that the CRDs rely on.
 
 _Underlying type:_ `integer`
 
-
 HTTPStatus is an HTTP status code.
 
 
 
 
 _Appears in:_
-- [KongUpstreamHealthcheckHealthy](#kongupstreamhealthcheckhealthy)
-- [KongUpstreamHealthcheckUnhealthy](#kongupstreamhealthcheckunhealthy)
+
+- [KongUpstreamHealthcheckHealthy](#configuration-konghq-com-v1beta1-types-kongupstreamhealthcheckhealthy)
+- [KongUpstreamHealthcheckUnhealthy](#configuration-konghq-com-v1beta1-types-kongupstreamhealthcheckunhealthy)
 
 #### HashInput
 
 _Underlying type:_ `string`
-
 
 HashInput is the input for consistent-hashing load balancing algorithm.
 Use "none" to disable hashing, it is required for sticky sessions.
@@ -1873,7 +1945,8 @@ Use "none" to disable hashing, it is required for sticky sessions.
 
 
 _Appears in:_
-- [KongUpstreamHash](#kongupstreamhash)
+
+- [KongUpstreamHash](#configuration-konghq-com-v1beta1-types-kongupstreamhash)
 
 #### KongConsumerGroupSpec
 
@@ -1885,12 +1958,13 @@ KongConsumerGroupSpec defines the desired state of KongConsumerGroup.
 | Field | Description |
 | --- | --- |
 | `name` _string_ | Name is the name of the ConsumerGroup in Kong. |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this ConsumerGroup is associated with. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a consumer group from an existing consumer group in Konnect. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of tags applied to the ConsumerGroup. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this ConsumerGroup is associated with. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a consumer group from an existing consumer group in Konnect. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the ConsumerGroup. |
 
 _Appears in:_
-- [KongConsumerGroup](#kongconsumergroup)
+
+- [KongConsumerGroup](#configuration-konghq-com-v1beta1-types-kongconsumergroup)
 
 #### KongConsumerGroupStatus
 
@@ -1901,11 +1975,12 @@ KongConsumerGroupStatus represents the current status of the KongConsumerGroup r
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
-| `conditions` _[Condition](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#condition-v1-meta) array_ | Conditions describe the current conditions of the KongConsumerGroup.<br /><br />Known condition types are:<br /><br />* "Programmed" |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the current conditions of the KongConsumerGroup.<br /><br />Known condition types are:<br /><br />* "Programmed" |
 
 _Appears in:_
-- [KongConsumerGroup](#kongconsumergroup)
+
+- [KongConsumerGroup](#configuration-konghq-com-v1beta1-types-kongconsumergroup)
 
 #### KongUpstreamActiveHealthcheck
 
@@ -1916,18 +1991,19 @@ KongUpstreamActiveHealthcheck configures active health check probing.
 
 | Field | Description |
 | --- | --- |
-| `type` _string_ | Type determines whether to perform active health checks using HTTP or HTTPS, or just attempt a TCP connection. Accepted values are "http", "https", "tcp", "grpc", "grpcs". |
-| `concurrency` _integer_ | Concurrency is the number of targets to check concurrently. |
-| `healthy` _[KongUpstreamHealthcheckHealthy](#kongupstreamhealthcheckhealthy)_ | Healthy configures thresholds and HTTP status codes to mark targets healthy for an upstream. |
-| `unhealthy` _[KongUpstreamHealthcheckUnhealthy](#kongupstreamhealthcheckunhealthy)_ | Unhealthy configures thresholds and HTTP status codes to mark targets unhealthy for an upstream. |
-| `httpPath` _string_ | HTTPPath is the path to use in GET HTTP request to run as a probe. |
-| `httpsSni` _string_ | HTTPSSNI is the SNI to use in GET HTTPS request to run as a probe. |
-| `httpsVerifyCertificate` _boolean_ | HTTPSVerifyCertificate is a boolean value that indicates if the certificate should be verified. |
-| `timeout` _integer_ | Timeout is the probe timeout in seconds. |
-| `headers` _object (keys:string, values:string array)_ | Headers is a list of HTTP headers to add to the probe request. |
+| `type` _*string_ | Type determines whether to perform active health checks using HTTP or HTTPS, or just attempt a TCP connection. Accepted values are "http", "https", "tcp", "grpc", "grpcs". |
+| `concurrency` _*int_ | Concurrency is the number of targets to check concurrently. |
+| `healthy` _[KongUpstreamHealthcheckHealthy](#configuration-konghq-com-v1beta1-types-kongupstreamhealthcheckhealthy)_ | Healthy configures thresholds and HTTP status codes to mark targets healthy for an upstream. |
+| `unhealthy` _[KongUpstreamHealthcheckUnhealthy](#configuration-konghq-com-v1beta1-types-kongupstreamhealthcheckunhealthy)_ | Unhealthy configures thresholds and HTTP status codes to mark targets unhealthy for an upstream. |
+| `httpPath` _*string_ | HTTPPath is the path to use in GET HTTP request to run as a probe. |
+| `httpsSni` _*string_ | HTTPSSNI is the SNI to use in GET HTTPS request to run as a probe. |
+| `httpsVerifyCertificate` _*bool_ | HTTPSVerifyCertificate is a boolean value that indicates if the certificate should be verified. |
+| `timeout` _*int_ | Timeout is the probe timeout in seconds. |
+| `headers` _map[string][]string_ | Headers is a list of HTTP headers to add to the probe request. |
 
 _Appears in:_
-- [KongUpstreamHealthcheck](#kongupstreamhealthcheck)
+
+- [KongUpstreamHealthcheck](#configuration-konghq-com-v1beta1-types-kongupstreamhealthcheck)
 
 #### KongUpstreamHash
 
@@ -1939,15 +2015,16 @@ Only one of the fields must be set.
 
 | Field | Description |
 | --- | --- |
-| `input` _[HashInput](#hashinput)_ | Input allows using one of the predefined inputs (ip, consumer, path, none). Set this to `none` if you want to use sticky sessions. For other parameterized inputs, use one of the fields below. |
-| `header` _string_ | Header is the name of the header to use as hash input. |
-| `cookie` _string_ | Cookie is the name of the cookie to use as hash input. |
-| `cookiePath` _string_ | CookiePath is cookie path to set in the response headers. |
-| `queryArg` _string_ | QueryArg is the name of the query argument to use as hash input. |
-| `uriCapture` _string_ | URICapture is the name of the URI capture group to use as hash input. |
+| `input` _[HashInput](#configuration-konghq-com-v1beta1-types-hashinput)_ | Input allows using one of the predefined inputs (ip, consumer, path, none). Set this to `none` if you want to use sticky sessions. For other parameterized inputs, use one of the fields below. |
+| `header` _*string_ | Header is the name of the header to use as hash input. |
+| `cookie` _*string_ | Cookie is the name of the cookie to use as hash input. |
+| `cookiePath` _*string_ | CookiePath is cookie path to set in the response headers. |
+| `queryArg` _*string_ | QueryArg is the name of the query argument to use as hash input. |
+| `uriCapture` _*string_ | URICapture is the name of the URI capture group to use as hash input. |
 
 _Appears in:_
-- [KongUpstreamPolicySpec](#kongupstreampolicyspec)
+
+- [KongUpstreamPolicySpec](#configuration-konghq-com-v1beta1-types-kongupstreampolicyspec)
 
 #### KongUpstreamHealthcheck
 
@@ -1958,12 +2035,13 @@ KongUpstreamHealthcheck represents a health-check config of an Upstream in Kong.
 
 | Field | Description |
 | --- | --- |
-| `active` _[KongUpstreamActiveHealthcheck](#kongupstreamactivehealthcheck)_ | Active configures active health check probing. |
-| `passive` _[KongUpstreamPassiveHealthcheck](#kongupstreampassivehealthcheck)_ | Passive configures passive health check probing. |
-| `threshold` _integer_ | Threshold is the minimum percentage of the upstream’s targets’ weight that must be available for the whole upstream to be considered healthy. |
+| `active` _[KongUpstreamActiveHealthcheck](#configuration-konghq-com-v1beta1-types-kongupstreamactivehealthcheck)_ | Active configures active health check probing. |
+| `passive` _[KongUpstreamPassiveHealthcheck](#configuration-konghq-com-v1beta1-types-kongupstreampassivehealthcheck)_ | Passive configures passive health check probing. |
+| `threshold` _*int_ | Threshold is the minimum percentage of the upstream’s targets’ weight that must be available for the whole upstream to be considered healthy. |
 
 _Appears in:_
-- [KongUpstreamPolicySpec](#kongupstreampolicyspec)
+
+- [KongUpstreamPolicySpec](#configuration-konghq-com-v1beta1-types-kongupstreampolicyspec)
 
 #### KongUpstreamHealthcheckHealthy
 
@@ -1974,13 +2052,14 @@ KongUpstreamHealthcheckHealthy configures thresholds and HTTP status codes to ma
 
 | Field | Description |
 | --- | --- |
-| `httpStatuses` _[HTTPStatus](#httpstatus) array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a success. |
-| `interval` _integer_ | Interval is the interval between active health checks for an upstream in seconds when in a healthy state. |
-| `successes` _integer_ | Successes is the number of successes to consider a target healthy. |
+| `httpStatuses` _[HTTPStatus](#configuration-konghq-com-v1beta1-types-httpstatus)_ | HTTPStatuses is a list of HTTP status codes that Kong considers a success. |
+| `interval` _*int_ | Interval is the interval between active health checks for an upstream in seconds when in a healthy state. |
+| `successes` _*int_ | Successes is the number of successes to consider a target healthy. |
 
 _Appears in:_
-- [KongUpstreamActiveHealthcheck](#kongupstreamactivehealthcheck)
-- [KongUpstreamPassiveHealthcheck](#kongupstreampassivehealthcheck)
+
+- [KongUpstreamActiveHealthcheck](#configuration-konghq-com-v1beta1-types-kongupstreamactivehealthcheck)
+- [KongUpstreamPassiveHealthcheck](#configuration-konghq-com-v1beta1-types-kongupstreampassivehealthcheck)
 
 #### KongUpstreamHealthcheckUnhealthy
 
@@ -1991,15 +2070,16 @@ KongUpstreamHealthcheckUnhealthy configures thresholds and HTTP status codes to 
 
 | Field | Description |
 | --- | --- |
-| `httpFailures` _integer_ | HTTPFailures is the number of failures to consider a target unhealthy. |
-| `httpStatuses` _[HTTPStatus](#httpstatus) array_ | HTTPStatuses is a list of HTTP status codes that Kong considers a failure. |
-| `tcpFailures` _integer_ | TCPFailures is the number of TCP failures in a row to consider a target unhealthy. |
-| `timeouts` _integer_ | Timeouts is the number of timeouts in a row to consider a target unhealthy. |
-| `interval` _integer_ | Interval is the interval between active health checks for an upstream in seconds when in an unhealthy state. |
+| `httpFailures` _*int_ | HTTPFailures is the number of failures to consider a target unhealthy. |
+| `httpStatuses` _[HTTPStatus](#configuration-konghq-com-v1beta1-types-httpstatus)_ | HTTPStatuses is a list of HTTP status codes that Kong considers a failure. |
+| `tcpFailures` _*int_ | TCPFailures is the number of TCP failures in a row to consider a target unhealthy. |
+| `timeouts` _*int_ | Timeouts is the number of timeouts in a row to consider a target unhealthy. |
+| `interval` _*int_ | Interval is the interval between active health checks for an upstream in seconds when in an unhealthy state. |
 
 _Appears in:_
-- [KongUpstreamActiveHealthcheck](#kongupstreamactivehealthcheck)
-- [KongUpstreamPassiveHealthcheck](#kongupstreampassivehealthcheck)
+
+- [KongUpstreamActiveHealthcheck](#configuration-konghq-com-v1beta1-types-kongupstreamactivehealthcheck)
+- [KongUpstreamPassiveHealthcheck](#configuration-konghq-com-v1beta1-types-kongupstreampassivehealthcheck)
 
 #### KongUpstreamPassiveHealthcheck
 
@@ -2011,12 +2091,13 @@ passive health checks.
 
 | Field | Description |
 | --- | --- |
-| `type` _string_ | Type determines whether to perform passive health checks interpreting HTTP/HTTPS statuses, or just check for TCP connection success. Accepted values are "http", "https", "tcp", "grpc", "grpcs". |
-| `healthy` _[KongUpstreamHealthcheckHealthy](#kongupstreamhealthcheckhealthy)_ | Healthy configures thresholds and HTTP status codes to mark targets healthy for an upstream. |
-| `unhealthy` _[KongUpstreamHealthcheckUnhealthy](#kongupstreamhealthcheckunhealthy)_ | Unhealthy configures thresholds and HTTP status codes to mark targets unhealthy. |
+| `type` _*string_ | Type determines whether to perform passive health checks interpreting HTTP/HTTPS statuses, or just check for TCP connection success. Accepted values are "http", "https", "tcp", "grpc", "grpcs". |
+| `healthy` _[KongUpstreamHealthcheckHealthy](#configuration-konghq-com-v1beta1-types-kongupstreamhealthcheckhealthy)_ | Healthy configures thresholds and HTTP status codes to mark targets healthy for an upstream. |
+| `unhealthy` _[KongUpstreamHealthcheckUnhealthy](#configuration-konghq-com-v1beta1-types-kongupstreamhealthcheckunhealthy)_ | Unhealthy configures thresholds and HTTP status codes to mark targets unhealthy. |
 
 _Appears in:_
-- [KongUpstreamHealthcheck](#kongupstreamhealthcheck)
+
+- [KongUpstreamHealthcheck](#configuration-konghq-com-v1beta1-types-kongupstreamhealthcheck)
 
 #### KongUpstreamPolicySpec
 
@@ -2027,15 +2108,16 @@ KongUpstreamPolicySpec contains the specification for KongUpstreamPolicy.
 
 | Field | Description |
 | --- | --- |
-| `algorithm` _string_ | Algorithm is the load balancing algorithm to use. Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency", "sticky-sessions" |
-| `slots` _integer_ | Slots is the number of slots in the load balancer algorithm. If not set, the default value in Kong for the algorithm is used. |
-| `hashOn` _[KongUpstreamHash](#kongupstreamhash)_ | HashOn defines how to calculate hash for consistent-hashing or sticky-sessions load balancing algorithm. Algorithm must be set to "consistent-hashing" or "sticky-sessions" for this field to have effect. |
-| `hashOnFallback` _[KongUpstreamHash](#kongupstreamhash)_ | HashOnFallback defines how to calculate hash for consistent-hashing load balancing algorithm if the primary hash function fails. Algorithm must be set to "consistent-hashing" for this field to have effect. |
-| `healthchecks` _[KongUpstreamHealthcheck](#kongupstreamhealthcheck)_ | Healthchecks defines the health check configurations in Kong. |
-| `stickySessions` _[KongUpstreamStickySessions](#kongupstreamstickysessions)_ | StickySessions defines the sticky session configuration for the upstream. When enabled, clients will be routed to the same backend target based on a cookie. This requires Kong Enterprise Gateway and setting `hash_on` to `none`. |
+| `algorithm` _*string_ | Algorithm is the load balancing algorithm to use. Accepted values are: "round-robin", "consistent-hashing", "least-connections", "latency", "sticky-sessions" |
+| `slots` _*int_ | Slots is the number of slots in the load balancer algorithm. If not set, the default value in Kong for the algorithm is used. |
+| `hashOn` _[KongUpstreamHash](#configuration-konghq-com-v1beta1-types-kongupstreamhash)_ | HashOn defines how to calculate hash for consistent-hashing or sticky-sessions load balancing algorithm. Algorithm must be set to "consistent-hashing" or "sticky-sessions" for this field to have effect. |
+| `hashOnFallback` _[KongUpstreamHash](#configuration-konghq-com-v1beta1-types-kongupstreamhash)_ | HashOnFallback defines how to calculate hash for consistent-hashing load balancing algorithm if the primary hash function fails. Algorithm must be set to "consistent-hashing" for this field to have effect. |
+| `healthchecks` _[KongUpstreamHealthcheck](#configuration-konghq-com-v1beta1-types-kongupstreamhealthcheck)_ | Healthchecks defines the health check configurations in Kong. |
+| `stickySessions` _[KongUpstreamStickySessions](#configuration-konghq-com-v1beta1-types-kongupstreamstickysessions)_ | StickySessions defines the sticky session configuration for the upstream. When enabled, clients will be routed to the same backend target based on a cookie. This requires Kong Enterprise Gateway and setting `hash_on` to `none`. |
 
 _Appears in:_
-- [KongUpstreamPolicy](#kongupstreampolicy)
+
+- [KongUpstreamPolicy](#configuration-konghq-com-v1beta1-types-kongupstreampolicy)
 
 #### KongUpstreamStickySessions
 
@@ -2049,8 +2131,9 @@ This is achieved using cookies and requires Kong Enterprise Gateway.
 | Field | Description |
 | --- | --- |
 | `cookie` _string_ | Cookie is the name of the cookie to use for sticky sessions. Kong will generate this cookie if it doesn't exist in the request. |
-| `cookiePath` _string_ | CookiePath is the path to set in the cookie. |
+| `cookiePath` _*string_ | CookiePath is the path to set in the cookie. |
 
 _Appears in:_
-- [KongUpstreamPolicySpec](#kongupstreampolicyspec)
+
+- [KongUpstreamPolicySpec](#configuration-konghq-com-v1beta1-types-kongupstreampolicyspec)
 
