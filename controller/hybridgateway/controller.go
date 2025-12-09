@@ -49,8 +49,6 @@ type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPt
 	client.Client
 	// EventRecorder is used to record Kubernetes events for HTTPRoute operations.
 	eventRecorder record.EventRecorder
-	// ReferenceGrantEnabled indicates whether ReferenceGrants are enabled in the cluster (i.e., the CRD is available)
-	referenceGrantEnabled bool
 	// FQDNMode indicates whether to use FQDN endpoints for service discovery.
 	fqdnMode bool
 	// ClusterDomain is the cluster domain to use for FQDN (empty uses service.namespace.svc format).
@@ -59,13 +57,12 @@ type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPt
 
 // NewHybridGatewayReconciler creates a new instance of GatewayAPIHybridReconciler for the specified
 // generic types t and tPtr. It initializes the reconciler with the client from the provided manager.
-func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, referenceGrantEnabled bool, fqdnMode bool, clusterDomain string) *HybridGatewayReconciler[t, tPtr] {
+func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, fqdnMode bool, clusterDomain string) *HybridGatewayReconciler[t, tPtr] {
 	return &HybridGatewayReconciler[t, tPtr]{
-		Client:                mgr.GetClient(),
-		eventRecorder:         mgr.GetEventRecorderFor(ControllerName),
-		referenceGrantEnabled: referenceGrantEnabled,
-		fqdnMode:              fqdnMode,
-		clusterDomain:         clusterDomain,
+		Client:        mgr.GetClient(),
+		eventRecorder: mgr.GetEventRecorderFor(ControllerName),
+		fqdnMode:      fqdnMode,
+		clusterDomain: clusterDomain,
 	}
 }
 
@@ -106,7 +103,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context,
 	}
 
 	// Add watches for other resources.
-	for _, w := range watch.Watches(obj, r.Client, r.referenceGrantEnabled) {
+	for _, w := range watch.Watches(obj, r.Client) {
 		builder = builder.Watches(w.Object, handler.EnqueueRequestsFromMapFunc(w.MapFunc))
 	}
 
@@ -149,7 +146,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	conv, err := converter.NewConverter(rootObj, r.Client, r.referenceGrantEnabled, r.fqdnMode, r.clusterDomain)
+	conv, err := converter.NewConverter(rootObj, r.Client, r.fqdnMode, r.clusterDomain)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -262,7 +259,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 	log.Debug(logger, "Handling Route deletion")
 
 	// Create converter to get the cleanup logic
-	conv, err := converter.NewConverter(rootObj, r.Client, r.referenceGrantEnabled, r.fqdnMode, r.clusterDomain)
+	conv, err := converter.NewConverter(rootObj, r.Client, r.fqdnMode, r.clusterDomain)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to create converter for cleanup: %w", err)
 	}
