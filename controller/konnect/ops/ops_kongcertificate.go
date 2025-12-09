@@ -197,22 +197,29 @@ func adoptCertificate(
 	return nil
 }
 
-func fetchTLSDataFromSecret(ctx context.Context, cl client.Client, secretRef *corev1.SecretReference) (certData, keyData string, err error) {
+func fetchTLSDataFromSecret(ctx context.Context, cl client.Client, parentNamespace string, secretRef *commonv1alpha1.NamespacedRef) (certData, keyData string, err error) {
+	if secretRef == nil {
+		return "", "", fmt.Errorf("secretRef is nil")
+	}
+	ns := parentNamespace
+	if secretRef.Namespace != nil && *secretRef.Namespace != "" {
+		ns = *secretRef.Namespace
+	}
 	secret := &corev1.Secret{}
 	if err := cl.Get(ctx, client.ObjectKey{
-		Namespace: secretRef.Namespace,
+		Namespace: ns,
 		Name:      secretRef.Name,
 	}, secret); err != nil {
-		return "", "", fmt.Errorf("failed to fetch Secret %s/%s: %w", secretRef.Namespace, secretRef.Name, err)
+		return "", "", fmt.Errorf("failed to fetch Secret %s/%s: %w", ns, secretRef.Name, err)
 	}
 
 	certBytes, ok := secret.Data["tls.crt"]
 	if !ok {
-		return "", "", fmt.Errorf("secret %s/%s is missing key 'tls.crt'", secretRef.Namespace, secretRef.Name)
+		return "", "", fmt.Errorf("secret %s/%s is missing key 'tls.crt'", ns, secretRef.Name)
 	}
 	keyBytes, ok := secret.Data["tls.key"]
 	if !ok {
-		return "", "", fmt.Errorf("secret %s/%s is missing key 'tls.key'", secretRef.Namespace, secretRef.Name)
+		return "", "", fmt.Errorf("secret %s/%s is missing key 'tls.key'", ns, secretRef.Name)
 	}
 
 	return string(certBytes), string(keyBytes), nil
@@ -231,14 +238,15 @@ func kongCertificateToCertificateInput(ctx context.Context, cl client.Client, ce
 		}
 
 		var err error
-		certData, keyData, err = fetchTLSDataFromSecret(ctx, cl, secretRef)
+		parentNamespace := cert.GetNamespace()
+		certData, keyData, err = fetchTLSDataFromSecret(ctx, cl, parentNamespace, secretRef)
 		if err != nil {
 			return sdkkonnectcomp.Certificate{}, err
 		}
 
 		// Optional alternative cert/key.
 		if cert.Spec.SecretRefAlt != nil {
-			certAltData, keyAltData, err = fetchTLSDataFromSecret(ctx, cl, cert.Spec.SecretRefAlt)
+			certAltData, keyAltData, err = fetchTLSDataFromSecret(ctx, cl, parentNamespace, cert.Spec.SecretRefAlt)
 			if err != nil {
 				return sdkkonnectcomp.Certificate{}, err
 			}

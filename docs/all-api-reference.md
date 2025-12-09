@@ -763,15 +763,35 @@ KongCertificateAPISpec contains the API specification for the KongCertificate.
 
 | Field | Description |
 | --- | --- |
-| `cert` _string_ | Cert is the PEM-encoded certificate. |
-| `cert_alt` _string_ | CertAlt is the PEM-encoded certificate. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. |
-| `key` _string_ | Key is the PEM-encoded private key. |
-| `key_alt` _string_ | KeyAlt is the PEM-encoded private key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of tags applied to the certificate. |
+| `cert` _string_ | Cert is the PEM-encoded certificate. This field is used when type is 'inline'. |
+| `cert_alt` _string_ | CertAlt is the PEM-encoded certificate. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'inline'. |
+| `key` _string_ | Key is the PEM-encoded private key. This field is used when type is 'inline'. |
+| `key_alt` _string_ | KeyAlt is the PEM-encoded private key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'inline'. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the certificate. Tags will be applied when type is 'inline' or 'secretRef'. This field allows you to attach metadata to the certificate for identification or organization purposes. |
+
+_Appears in:_
+
+- [KongCertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcertificatespec)
+
+#### KongCertificateSourceType
+
+_Underlying type:_ `string`
+
+KongCertificateSourceType is the type of source for the certificate data.
+
+
 
 
 _Appears in:_
-- [KongCertificateSpec](#kongcertificatespec)
+
+- [KongCertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcertificatespec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` | KongCertificateSourceTypeInline indicates that the certificate data is provided inline in the spec.<br /> |
+| `secretRef` | KongCertificateSourceTypeSecretRef indicates that the certificate data is sourced from a Kubernetes Secret.<br /> |
 
 #### KongCertificateSpec
 
@@ -782,14 +802,16 @@ KongCertificateSpec contains the specification for the KongCertificate.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#controlplaneref)_ | ControlPlaneRef references the Konnect Control Plane that this KongCertificate should be created in. |
-| `adopt` _[AdoptOptions](#adoptoptions)_ | Adopt is the options for adopting a certificate from an existing certificate in Konnect. |
-| `cert` _string_ | Cert is the PEM-encoded certificate. |
-| `cert_alt` _string_ | CertAlt is the PEM-encoded certificate. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. |
-| `key` _string_ | Key is the PEM-encoded private key. |
-| `key_alt` _string_ | KeyAlt is the PEM-encoded private key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. |
-| `tags` _[Tags](#tags)_ | Tags is an optional set of tags applied to the certificate. |
-
+| `type` _[KongCertificateSourceType](#configuration-konghq-com-v1alpha1-types-kongcertificatesourcetype)_ | Type indicates the source of the certificate data. Can be 'inline' or 'secretRef'. |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the Konnect Control Plane that this KongCertificate should be created in. |
+| `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a certificate from an existing certificate in Konnect. |
+| `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to a Kubernetes Secret containing the certificate and key. This field is used when type is 'secretRef'. The Secret must contain keys named 'tls.crt' and 'tls.key'. The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented. |
+| `secretRefAlt` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRefAlt is a reference to a Kubernetes Secret containing the alternative certificate and key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'secretRef'. The Secret must contain keys named 'tls.crt' and 'tls.key'. The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented. |
+| `cert` _string_ | Cert is the PEM-encoded certificate. This field is used when type is 'inline'. |
+| `cert_alt` _string_ | CertAlt is the PEM-encoded certificate. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'inline'. |
+| `key` _string_ | Key is the PEM-encoded private key. This field is used when type is 'inline'. |
+| `key_alt` _string_ | KeyAlt is the PEM-encoded private key. This should only be set if you have both RSA and ECDSA types of certificate available and would like Kong to prefer serving using ECDSA certs when client advertises support for it. This field is used when type is 'inline'. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the certificate. Tags will be applied when type is 'inline' or 'secretRef'. This field allows you to attach metadata to the certificate for identification or organization purposes. |
 
 _Appears in:_
 
@@ -5754,6 +5776,10 @@ _Appears in:_
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanestatus)
 - [KonnectGatewayControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanestatus)
 
+#### KonnectEntityStatusWithControlPlaneAndCertificateRefs
+
+
+KonnectEntityStatusWithControlPlaneAndCertificateRefs represents the status of a Konnect entity with references to a ControlPlane and a Certificate.
 
 
 

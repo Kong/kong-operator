@@ -24,7 +24,6 @@ import (
 	"github.com/Kong/sdk-konnect-go/models/components"
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	"github.com/kong/kong-operator/api/konnect/v1alpha2"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 )
@@ -413,13 +412,13 @@ func (in *KongCertificateSpec) DeepCopyInto(out *KongCertificateSpec) {
 	}
 	if in.SecretRef != nil {
 		in, out := &in.SecretRef, &out.SecretRef
-		*out = new(corev1.SecretReference)
-		**out = **in
+		*out = new(commonv1alpha1.NamespacedRef)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.SecretRefAlt != nil {
 		in, out := &in.SecretRefAlt, &out.SecretRefAlt
-		*out = new(corev1.SecretReference)
-		**out = **in
+		*out = new(commonv1alpha1.NamespacedRef)
+		(*in).DeepCopyInto(*out)
 	}
 	in.KongCertificateAPISpec.DeepCopyInto(&out.KongCertificateAPISpec)
 }

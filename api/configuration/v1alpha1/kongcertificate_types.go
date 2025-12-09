@@ -1,7 +1,6 @@
 package v1alpha1
 
 import (
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
@@ -49,8 +48,11 @@ type KongCertificate struct {
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
 // +kubebuilder:validation:XValidation:rule="self.type != 'inline' || (has(self.cert) && self.cert.size() != 0)", message="spec.cert is required when type is 'inline'"
 // +kubebuilder:validation:XValidation:rule="self.type != 'inline' || (has(self.key) && self.key.size() != 0)", message="spec.key is required when type is 'inline'"
-// +kubebuilder:validation:XValidation:rule="self.type != 'secretRef' ||  has(self.secretRef)", message="spec.secretRef is required when type is 'secretRef'"// +kubebuilder:validation:XValidation:rule="!((has(self.cert) || has(self.key)) && (has(self.secretRef) || has(self.secretRefAlt)))", message="cert/key and secretRef/secretRefAlt cannot be set at the same time"
+// +kubebuilder:validation:XValidation:rule="self.type != 'secretRef' ||  has(self.secretRef)", message="spec.secretRef is required when type is 'secretRef'"
+// +kubebuilder:validation:XValidation:rule="!((has(self.cert) || has(self.key)) && (has(self.secretRef) || has(self.secretRefAlt)))", message="cert/key and secretRef/secretRefAlt cannot be set at the same time"
 // +kubebuilder:validation:XValidation:rule="!((has(self.cert_alt) || has(self.key_alt)) && (has(self.secretRef) || has(self.secretRefAlt)))", message="cert_alt/key_alt and secretRef/secretRefAlt cannot be set at the same time"
+// +kubebuilder:validation:XValidation:rule="!has(self.secretRef) || !has(self.secretRef.__namespace__) || self.secretRef.__namespace__.size() == 0", message="spec.secretRef.namespace is not allowed until ReferenceGrant support is implemented"
+// +kubebuilder:validation:XValidation:rule="!has(self.secretRefAlt) || !has(self.secretRefAlt.__namespace__) || self.secretRefAlt.__namespace__.size() == 0", message="spec.secretRefAlt.namespace is not allowed until ReferenceGrant support is implemented"
 // +apireference:kgo:include
 type KongCertificateSpec struct {
 	// Type indicates the source of the certificate data.
@@ -72,16 +74,18 @@ type KongCertificateSpec struct {
 	// SecretRef is a reference to a Kubernetes Secret containing the certificate and key.
 	// This field is used when type is 'secretRef'.
 	// The Secret must contain keys named 'tls.crt' and 'tls.key'.
+	// The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented.
 	// +optional
-	SecretRef *corev1.SecretReference `json:"secretRef,omitempty"`
+	SecretRef *commonv1alpha1.NamespacedRef `json:"secretRef,omitempty"`
 
 	// SecretRefAlt is a reference to a Kubernetes Secret containing the alternative certificate and key.
 	// This should only be set if you have both RSA and ECDSA types of certificate available
 	// and would like Kong to prefer serving using ECDSA certs when client advertises support for it.
 	// This field is used when type is 'secretRef'.
 	// The Secret must contain keys named 'tls.crt' and 'tls.key'.
+	// The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented.
 	// +optional
-	SecretRefAlt *corev1.SecretReference `json:"secretRefAlt,omitempty"`
+	SecretRefAlt *commonv1alpha1.NamespacedRef `json:"secretRefAlt,omitempty"`
 
 	KongCertificateAPISpec `json:",inline"`
 }

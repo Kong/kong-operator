@@ -214,17 +214,26 @@ spec:
                   SecretRef is a reference to a Kubernetes Secret containing the certificate and key.
                   This field is used when type is 'secretRef'.
                   The Secret must contain keys named 'tls.crt' and 'tls.key'.
+                  The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented.
                 properties:
                   name:
-                    description: name is unique within a namespace to reference a
-                      secret resource.
+                    description: Name is the name of the referred resource.
+                    maxLength: 253
+                    minLength: 1
                     type: string
                   namespace:
-                    description: namespace defines the space within which the secret
-                      name must be unique.
+                    description: |-
+                      Namespace is the namespace of the referred resource.
+
+                      For namespace-scoped resources if no Namespace is provided then the
+                      namespace of the parent object MUST be used.
+
+                      This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
                     type: string
+                required:
+                - name
                 type: object
-                x-kubernetes-map-type: atomic
               secretRefAlt:
                 description: |-
                   SecretRefAlt is a reference to a Kubernetes Secret containing the alternative certificate and key.
@@ -232,17 +241,26 @@ spec:
                   and would like Kong to prefer serving using ECDSA certs when client advertises support for it.
                   This field is used when type is 'secretRef'.
                   The Secret must contain keys named 'tls.crt' and 'tls.key'.
+                  The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented.
                 properties:
                   name:
-                    description: name is unique within a namespace to reference a
-                      secret resource.
+                    description: Name is the name of the referred resource.
+                    maxLength: 253
+                    minLength: 1
                     type: string
                   namespace:
-                    description: namespace defines the space within which the secret
-                      name must be unique.
+                    description: |-
+                      Namespace is the namespace of the referred resource.
+
+                      For namespace-scoped resources if no Namespace is provided then the
+                      namespace of the parent object MUST be used.
+
+                      This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
                     type: string
+                required:
+                - name
                 type: object
-                x-kubernetes-map-type: atomic
               tags:
                 description: |-
                   Tags is an optional set of tags applied to the certificate.
@@ -284,7 +302,7 @@ spec:
               rule: self.type != 'inline' || (has(self.key) && self.key.size() !=
                 0)
             - message: spec.secretRef is required when type is 'secretRef'
-              rule: 'self.type == ''secretRef'' ? has(self.secretRef) : true'
+              rule: self.type != 'secretRef' ||  has(self.secretRef)
             - message: cert/key and secretRef/secretRefAlt cannot be set at the same
                 time
               rule: '!((has(self.cert) || has(self.key)) && (has(self.secretRef) ||
@@ -293,6 +311,14 @@ spec:
                 the same time
               rule: '!((has(self.cert_alt) || has(self.key_alt)) && (has(self.secretRef)
                 || has(self.secretRefAlt)))'
+            - message: spec.secretRef.namespace is not allowed until ReferenceGrant
+                support is implemented
+              rule: '!has(self.secretRef) || !has(self.secretRef.__namespace__) ||
+                self.secretRef.__namespace__.size() == 0'
+            - message: spec.secretRefAlt.namespace is not allowed until ReferenceGrant
+                support is implemented
+              rule: '!has(self.secretRefAlt) || !has(self.secretRefAlt.__namespace__)
+                || self.secretRefAlt.__namespace__.size() == 0'
           status:
             default:
               conditions:

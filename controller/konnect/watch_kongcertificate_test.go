@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -12,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/internal/utils/index"
 	"github.com/kong/kong-operator/modules/manager/scheme"
@@ -27,13 +29,13 @@ func TestEnqueueKongCertificateForSecret(t *testing.T) {
 	cert := &configurationv1alpha1.KongCertificate{
 		ObjectMeta: metav1.ObjectMeta{Name: "cert1", Namespace: "ns"},
 		Spec: configurationv1alpha1.KongCertificateSpec{
-			SecretRef: &corev1.SecretReference{Namespace: "ns", Name: "mysecret"},
+			SecretRef: &commonv1alpha1.NamespacedRef{Name: "mysecret", Namespace: lo.ToPtr("ns")},
 		},
 	}
 
 	s := scheme.Get()
 
-	tests := []struct {
+	testCases := []struct {
 		name               string
 		client             client.Client
 		input              client.Object
@@ -46,13 +48,7 @@ func TestEnqueueKongCertificateForSecret(t *testing.T) {
 			client: fake.NewClientBuilder().
 				WithScheme(s).
 				WithObjects(secret, cert).
-				WithIndex(&configurationv1alpha1.KongCertificate{}, index.IndexFieldKongCertificateReferencesSecrets, func(obj client.Object) []string {
-					kc := obj.(*configurationv1alpha1.KongCertificate)
-					if kc.Spec.SecretRef == nil {
-						return nil
-					}
-					return []string{kc.Spec.SecretRef.Namespace + "/" + kc.Spec.SecretRef.Name}
-				}).
+				WithIndex(&configurationv1alpha1.KongCertificate{}, index.IndexFieldKongCertificateReferencesSecrets, index.SecretOnKongCertificate).
 				Build(),
 			input:              secret,
 			wantLen:            1,
@@ -64,13 +60,7 @@ func TestEnqueueKongCertificateForSecret(t *testing.T) {
 			client: fake.NewClientBuilder().
 				WithScheme(s).
 				WithObjects(secret, cert).
-				WithIndex(&configurationv1alpha1.KongCertificate{}, index.IndexFieldKongCertificateReferencesSecrets, func(obj client.Object) []string {
-					kc := obj.(*configurationv1alpha1.KongCertificate)
-					if kc.Spec.SecretRef == nil {
-						return nil
-					}
-					return []string{kc.Spec.SecretRef.Namespace + "/" + kc.Spec.SecretRef.Name}
-				}).
+				WithIndex(&configurationv1alpha1.KongCertificate{}, index.IndexFieldKongCertificateReferencesSecrets, index.SecretOnKongCertificate).
 				Build(),
 			input:   cert, // passing KongCertificate instead of Secret
 			wantLen: 0,
@@ -86,13 +76,7 @@ func TestEnqueueKongCertificateForSecret(t *testing.T) {
 						Namespace: "ns",
 					},
 				}, cert).
-				WithIndex(&configurationv1alpha1.KongCertificate{}, index.IndexFieldKongCertificateReferencesSecrets, func(obj client.Object) []string {
-					kc := obj.(*configurationv1alpha1.KongCertificate)
-					if kc.Spec.SecretRef == nil {
-						return nil
-					}
-					return []string{kc.Spec.SecretRef.Namespace + "/" + kc.Spec.SecretRef.Name}
-				}).
+				WithIndex(&configurationv1alpha1.KongCertificate{}, index.IndexFieldKongCertificateReferencesSecrets, index.SecretOnKongCertificate).
 				Build(),
 			input: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
@@ -108,13 +92,7 @@ func TestEnqueueKongCertificateForSecret(t *testing.T) {
 			client: fake.NewClientBuilder().
 				WithScheme(s).
 				WithObjects(secret, cert).
-				WithIndex(&configurationv1alpha1.KongCertificate{}, index.IndexFieldKongCertificateReferencesSecrets, func(obj client.Object) []string {
-					kc := obj.(*configurationv1alpha1.KongCertificate)
-					if kc.Spec.SecretRef == nil {
-						return nil
-					}
-					return []string{kc.Spec.SecretRef.Namespace + "/" + kc.Spec.SecretRef.Name}
-				}).
+				WithIndex(&configurationv1alpha1.KongCertificate{}, index.IndexFieldKongCertificateReferencesSecrets, index.SecretOnKongCertificate).
 				WithInterceptorFuncs(interceptor.Funcs{
 					List: func(ctx context.Context, _ client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
 						return assert.AnError
@@ -127,7 +105,7 @@ func TestEnqueueKongCertificateForSecret(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			fn := enqueueKongCertificateForSecret(tt.client)
 			requests := fn(context.Background(), tt.input)

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/samber/lo"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
@@ -213,7 +212,7 @@ func TestKongCertificate(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						SecretRef: &corev1.SecretReference{
+						SecretRef: &commonv1alpha1.NamespacedRef{
 							Name: "test-secret",
 						},
 					},
@@ -252,7 +251,7 @@ func TestKongCertificate(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						SecretRef: &corev1.SecretReference{
+						SecretRef: &commonv1alpha1.NamespacedRef{
 							Name: "test-secret",
 						},
 						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
@@ -274,7 +273,7 @@ func TestKongCertificate(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						SecretRefAlt: &corev1.SecretReference{
+						SecretRefAlt: &commonv1alpha1.NamespacedRef{
 							Name: "test-secret-alt",
 						},
 						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
@@ -296,7 +295,7 @@ func TestKongCertificate(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						SecretRef: &corev1.SecretReference{
+						SecretRef: &commonv1alpha1.NamespacedRef{
 							Name: "test-secret",
 						},
 						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
@@ -317,7 +316,7 @@ func TestKongCertificate(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						SecretRef: &corev1.SecretReference{
+						SecretRef: &commonv1alpha1.NamespacedRef{
 							Name: "test-secret",
 						},
 						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
@@ -339,7 +338,7 @@ func TestKongCertificate(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						SecretRefAlt: &corev1.SecretReference{
+						SecretRefAlt: &commonv1alpha1.NamespacedRef{
 							Name: "test-secret-alt",
 						},
 						KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
@@ -361,10 +360,10 @@ func TestKongCertificate(t *testing.T) {
 								Name: "test-konnect-control-plane",
 							},
 						},
-						SecretRef: &corev1.SecretReference{
+						SecretRef: &commonv1alpha1.NamespacedRef{
 							Name: "test-secret",
 						},
-						SecretRefAlt: &corev1.SecretReference{
+						SecretRefAlt: &commonv1alpha1.NamespacedRef{
 							Name: "test-secret-alt",
 						},
 					},
@@ -387,6 +386,94 @@ func TestKongCertificate(t *testing.T) {
 							Key:     "test-key",
 							CertAlt: "test-cert-alt",
 							KeyAlt:  "test-key-alt",
+						},
+					},
+				},
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("namespace validation for secretRef", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongCertificate]{
+			{
+				Name: "secretRef.namespace cannot be set (ReferenceGrant not yet supported)",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name:      "test-secret",
+							Namespace: lo.ToPtr("other-namespace"),
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.secretRef.namespace is not allowed until ReferenceGrant support is implemented"),
+			},
+			{
+				Name: "secretRefAlt.namespace cannot be set (ReferenceGrant not yet supported)",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+						SecretRefAlt: &commonv1alpha1.NamespacedRef{
+							Name:      "test-secret-alt",
+							Namespace: lo.ToPtr("other-namespace"),
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("spec.secretRefAlt.namespace is not allowed until ReferenceGrant support is implemented"),
+			},
+			{
+				Name: "valid: secretRef without namespace is allowed",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+					},
+				},
+			},
+			{
+				Name: "valid: both secretRef and secretRefAlt without namespace are allowed",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret",
+						},
+						SecretRefAlt: &commonv1alpha1.NamespacedRef{
+							Name: "test-secret-alt",
 						},
 					},
 				},
