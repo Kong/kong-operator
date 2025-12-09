@@ -21,6 +21,7 @@ import (
 	ctrlref "github.com/kong/kong-operator/ingress-controller/internal/controllers/reference"
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/labels"
+	"github.com/kong/kong-operator/ingress-controller/internal/metrics"
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
 )
 
@@ -38,6 +39,9 @@ type RequestHandler struct {
 	// routing incoming requests to the appropriate validator.
 	validatorsMut sync.RWMutex
 	validators    map[string]KongValidator
+
+	// PromMetrics provides the Prometheus registry to record metrics.
+	PromMetrics *metrics.GlobalCtrlRuntimeMetricsRecorder
 
 	Logger logr.Logger
 }
@@ -191,6 +195,15 @@ func (h *RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			"message", response.Result.Message,
 		)
 	}
+
+	resource := review.Request.Resource
+	h.PromMetrics.RecordAdmissionResult(
+		response.Allowed,
+		fmt.Sprintf(
+			"%s.%s/%s",
+			resource.Resource, resource.Group, resource.Version,
+		),
+	)
 
 	review.Response = response
 
