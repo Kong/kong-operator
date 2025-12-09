@@ -263,11 +263,8 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 		list.SetGroupVersionKind(gvk)
 		selector := metadata.LabelSelectorForOwnedResources(rootObjPtr, nil)
 
-		// List all resources of this GVK owned by the root object in the same namespace.
-		ns := rootObjPtr.GetNamespace()
-
-		if err := cl.List(ctx, list, selector, client.InNamespace(ns)); err != nil {
-			return false, fmt.Errorf("unable to list objects with gvk %s in namespace %s: %w", gvk.String(), ns, err)
+		if err := cl.List(ctx, list, selector); err != nil {
+			return false, fmt.Errorf("unable to list objects with gvk %s: %w", gvk.String(), err)
 		}
 
 		log.Debug(logger, "Found existing resources for GVK", "gvk", gvk.String(), "resourceCount", len(list.Items))
