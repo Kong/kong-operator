@@ -9,7 +9,13 @@
 {{- if regexMatch $reg $typString }}
 {{- $apiGroupVersion := regexReplaceAll $reg $typString "${1}-konghq-com-${2}" -}}
 {{- $apiGroupVersion = $apiGroupVersion | trimAll "*[]" -}}
+
+{{- if .GVK -}}
+[{{ $kind }}](#{{ $apiGroupVersion }}-{{ $kind | lower }})
+{{- else -}}
 [{{ $kind }}](#{{ $apiGroupVersion }}-types-{{ $kind | lower }})
+{{- end -}}
+
 {{- else -}}
 {{ $typ }}
 {{- end -}}

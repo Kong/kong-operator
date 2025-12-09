@@ -213,7 +213,7 @@ AIGatewaySpec defines the desired state of an AIGateway.
 
 _Appears in:_
 
-- [AIGateway](#gateway-operator-konghq-com-v1alpha1-types-aigateway)
+- [AIGateway](#gateway-operator-konghq-com-v1alpha1-aigateway)
 
 #### AIGatewayStatus
 
@@ -229,7 +229,7 @@ AIGatewayStatus defines the observed state of AIGateway.
 
 _Appears in:_
 
-- [AIGateway](#gateway-operator-konghq-com-v1alpha1-types-aigateway)
+- [AIGateway](#gateway-operator-konghq-com-v1alpha1-aigateway)
 
 #### CloudHostedLargeLanguageModel
 
@@ -267,7 +267,7 @@ DataPlaneMetricsExtensionSpec defines the spec for the DataPlaneMetricsExtension
 
 _Appears in:_
 
-- [DataPlaneMetricsExtension](#gateway-operator-konghq-com-v1alpha1-types-dataplanemetricsextension)
+- [DataPlaneMetricsExtension](#gateway-operator-konghq-com-v1alpha1-dataplanemetricsextension)
 
 #### DataPlaneMetricsExtensionStatus
 
@@ -282,7 +282,7 @@ DataPlaneMetricsExtensionStatus defines the status of the DataPlaneMetricsExtens
 
 _Appears in:_
 
-- [DataPlaneMetricsExtension](#gateway-operator-konghq-com-v1alpha1-types-dataplanemetricsextension)
+- [DataPlaneMetricsExtension](#gateway-operator-konghq-com-v1alpha1-dataplanemetricsextension)
 
 #### EndpointNetworkAccessHint
 
@@ -324,7 +324,7 @@ KongPluginInstallationSpec provides the information necessary to retrieve and in
 
 _Appears in:_
 
-- [KongPluginInstallation](#gateway-operator-konghq-com-v1alpha1-types-kongplugininstallation)
+- [KongPluginInstallation](#gateway-operator-konghq-com-v1alpha1-kongplugininstallation)
 
 #### KongPluginInstallationStatus
 
@@ -340,7 +340,7 @@ KongPluginInstallationStatus defines the observed state of KongPluginInstallatio
 
 _Appears in:_
 
-- [KongPluginInstallation](#gateway-operator-konghq-com-v1alpha1-types-kongplugininstallation)
+- [KongPluginInstallation](#gateway-operator-konghq-com-v1alpha1-kongplugininstallation)
 
 #### LLMPrompt
 
@@ -517,7 +517,7 @@ WatchNamespaceGrantSpec defines the desired state of an WatchNamespaceGrant.
 
 _Appears in:_
 
-- [WatchNamespaceGrant](#gateway-operator-konghq-com-v1alpha1-types-watchnamespacegrant)
+- [WatchNamespaceGrant](#gateway-operator-konghq-com-v1alpha1-watchnamespacegrant)
 
 ## gateway-operator.konghq.com/v1beta1
 
@@ -714,7 +714,7 @@ ControlPlaneSpec defines the desired state of ControlPlane
 
 _Appears in:_
 
-- [ControlPlane](#gateway-operator-konghq-com-v1beta1-types-controlplane)
+- [ControlPlane](#gateway-operator-konghq-com-v1beta1-controlplane)
 
 #### ControlPlaneStatus
 
@@ -729,7 +729,7 @@ ControlPlaneStatus defines the observed state of ControlPlane
 
 _Appears in:_
 
-- [ControlPlane](#gateway-operator-konghq-com-v1beta1-types-controlplane)
+- [ControlPlane](#gateway-operator-konghq-com-v1beta1-controlplane)
 
 #### DataPlaneDeploymentOptions
 
@@ -925,7 +925,7 @@ DataPlaneSpec defines the desired state of DataPlane
 
 _Appears in:_
 
-- [DataPlane](#gateway-operator-konghq-com-v1beta1-types-dataplane)
+- [DataPlane](#gateway-operator-konghq-com-v1beta1-dataplane)
 
 #### DataPlaneStatus
 
@@ -946,7 +946,7 @@ DataPlaneStatus defines the observed state of DataPlane
 
 _Appears in:_
 
-- [DataPlane](#gateway-operator-konghq-com-v1beta1-types-dataplane)
+- [DataPlane](#gateway-operator-konghq-com-v1beta1-dataplane)
 
 #### DeploymentOptions
 
@@ -1091,7 +1091,7 @@ GatewayConfigurationSpec defines the desired state of GatewayConfiguration
 
 _Appears in:_
 
-- [GatewayConfiguration](#gateway-operator-konghq-com-v1beta1-types-gatewayconfiguration)
+- [GatewayConfiguration](#gateway-operator-konghq-com-v1beta1-gatewayconfiguration)
 
 #### GatewayConfigurationStatus
 
@@ -1106,7 +1106,7 @@ GatewayConfigurationStatus defines the observed state of GatewayConfiguration
 
 _Appears in:_
 
-- [GatewayConfiguration](#gateway-operator-konghq-com-v1beta1-types-gatewayconfiguration)
+- [GatewayConfiguration](#gateway-operator-konghq-com-v1beta1-gatewayconfiguration)
 
 
 
@@ -1936,7 +1936,7 @@ ControlPlaneSpec defines the desired state of ControlPlane
 
 _Appears in:_
 
-- [ControlPlane](#gateway-operator-konghq-com-v2beta1-types-controlplane)
+- [ControlPlane](#gateway-operator-konghq-com-v2beta1-controlplane)
 
 #### ControlPlaneStatus
 
@@ -1954,7 +1954,7 @@ ControlPlaneStatus defines the observed state of ControlPlane
 
 _Appears in:_
 
-- [ControlPlane](#gateway-operator-konghq-com-v2beta1-types-controlplane)
+- [ControlPlane](#gateway-operator-konghq-com-v2beta1-controlplane)
 
 #### ControlPlaneTranslationOptions
 
@@ -2204,7 +2204,7 @@ GatewayConfigurationSpec defines the desired state of GatewayConfiguration
 
 _Appears in:_
 
-- [GatewayConfiguration](#gateway-operator-konghq-com-v2beta1-types-gatewayconfiguration)
+- [GatewayConfiguration](#gateway-operator-konghq-com-v2beta1-gatewayconfiguration)
 
 #### GatewayConfigurationStatus
 
@@ -2219,7 +2219,7 @@ GatewayConfigurationStatus defines the observed state of GatewayConfiguration
 
 _Appears in:_
 
-- [GatewayConfiguration](#gateway-operator-konghq-com-v2beta1-types-gatewayconfiguration)
+- [GatewayConfiguration](#gateway-operator-konghq-com-v2beta1-gatewayconfiguration)
 
 
 

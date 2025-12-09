@@ -351,7 +351,7 @@ KonnectAPIAuthConfigurationSpec is the specification of the KonnectAPIAuthConfig
 
 _Appears in:_
 
-- [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-types-konnectapiauthconfiguration)
+- [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-konnectapiauthconfiguration)
 
 #### KonnectAPIAuthConfigurationStatus
 
@@ -368,7 +368,7 @@ KonnectAPIAuthConfigurationStatus is the status of the KonnectAPIAuthConfigurati
 
 _Appears in:_
 
-- [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-types-konnectapiauthconfiguration)
+- [KonnectAPIAuthConfiguration](#konnect-konghq-com-v1alpha1-konnectapiauthconfiguration)
 
 #### KonnectAPIAuthType
 
@@ -407,7 +407,7 @@ KonnectCloudGatewayDataPlaneGroupConfigurationSpec defines the desired state of 
 
 _Appears in:_
 
-- [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfiguration)
+- [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
 
 #### KonnectCloudGatewayDataPlaneGroupConfigurationStatus
 
@@ -427,7 +427,7 @@ KonnectCloudGatewayDataPlaneGroupConfigurationStatus defines the observed state 
 
 _Appears in:_
 
-- [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaydataplanegroupconfiguration)
+- [KonnectCloudGatewayDataPlaneGroupConfiguration](#konnect-konghq-com-v1alpha1-konnectcloudgatewaydataplanegroupconfiguration)
 
 #### KonnectCloudGatewayDataPlaneGroupConfigurationStatusGroup
 
@@ -470,7 +470,7 @@ KonnectCloudGatewayNetworkSpec defines the desired state of KonnectCloudGatewayN
 
 _Appears in:_
 
-- [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetwork)
+- [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
 
 #### KonnectCloudGatewayNetworkStatus
 
@@ -489,7 +489,7 @@ KonnectCloudGatewayNetworkStatus defines the observed state of KonnectCloudGatew
 
 _Appears in:_
 
-- [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetwork)
+- [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
 
 #### KonnectCloudGatewayTransitGatewaySpec
 
@@ -508,7 +508,7 @@ KonnectCloudGatewayTransitGatewaySpec defines the desired state of KonnectCloudG
 
 _Appears in:_
 
-- [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgateway)
+- [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-konnectcloudgatewaytransitgateway)
 
 #### KonnectCloudGatewayTransitGatewayStatus
 
@@ -528,7 +528,7 @@ KonnectCloudGatewayTransitGatewayStatus defines the current state of KonnectClou
 
 _Appears in:_
 
-- [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaytransitgateway)
+- [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-konnectcloudgatewaytransitgateway)
 
 #### KonnectConfigurationDataPlaneGroup
 
@@ -681,7 +681,7 @@ KonnectExtensionSpec defines the desired state of KonnectExtension.
 
 _Appears in:_
 
-- [KonnectExtension](#konnect-konghq-com-v1alpha1-types-konnectextension)
+- [KonnectExtension](#konnect-konghq-com-v1alpha1-konnectextension)
 
 #### KonnectExtensionStatus
 
@@ -700,7 +700,7 @@ KonnectExtensionStatus defines the observed state of KonnectExtension.
 
 _Appears in:_
 
-- [KonnectExtension](#konnect-konghq-com-v1alpha1-types-konnectextension)
+- [KonnectExtension](#konnect-konghq-com-v1alpha1-konnectextension)
 
 #### KonnectGatewayControlPlaneSpec
 
@@ -725,7 +725,7 @@ KonnectGatewayControlPlaneSpec defines the desired state of KonnectGatewayContro
 
 _Appears in:_
 
-- [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplane)
+- [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 
 #### KonnectGatewayControlPlaneStatus
 
@@ -744,7 +744,7 @@ KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayCon
 
 _Appears in:_
 
-- [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplane)
+- [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 
 #### KonnectTransitGatewayAPISpec
 
@@ -1195,7 +1195,7 @@ KonnectExtensionSpec defines the desired state of KonnectExtension.
 
 _Appears in:_
 
-- [KonnectExtension](#konnect-konghq-com-v1alpha2-types-konnectextension)
+- [KonnectExtension](#konnect-konghq-com-v1alpha2-konnectextension)
 
 #### KonnectExtensionStatus
 
@@ -1214,7 +1214,7 @@ KonnectExtensionStatus defines the observed state of KonnectExtension.
 
 _Appears in:_
 
-- [KonnectExtension](#konnect-konghq-com-v1alpha2-types-konnectextension)
+- [KonnectExtension](#konnect-konghq-com-v1alpha2-konnectextension)
 
 #### KonnectGatewayControlPlaneSpec
 
@@ -1233,7 +1233,7 @@ KonnectGatewayControlPlaneSpec defines the desired state of KonnectGatewayContro
 
 _Appears in:_
 
-- [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplane)
+- [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha2-konnectgatewaycontrolplane)
 
 #### KonnectGatewayControlPlaneStatus
 
@@ -1253,7 +1253,7 @@ KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayCon
 
 _Appears in:_
 
-- [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplane)
+- [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha2-konnectgatewaycontrolplane)
 
 #### MirrorKonnect
 

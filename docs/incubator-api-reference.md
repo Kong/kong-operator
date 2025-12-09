@@ -63,7 +63,7 @@ KongServiceFacadeSpec defines the desired state of KongServiceFacade.
 
 _Appears in:_
 
-- [KongServiceFacade](#incubator-konghq-com-v1alpha1-types-kongservicefacade)
+- [KongServiceFacade](#incubator-konghq-com-v1alpha1-kongservicefacade)
 
 #### KongServiceFacadeStatus
 
@@ -78,5 +78,5 @@ KongServiceFacadeStatus defines the observed state of KongServiceFacade.
 
 _Appears in:_
 
-- [KongServiceFacade](#incubator-konghq-com-v1alpha1-types-kongservicefacade)
+- [KongServiceFacade](#incubator-konghq-com-v1alpha1-kongservicefacade)
 
