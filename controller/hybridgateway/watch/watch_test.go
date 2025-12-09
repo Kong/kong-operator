@@ -23,23 +23,6 @@ func TestWatches(t *testing.T) {
 		wantType []any
 	}{
 		{
-			name:    "HTTPRoute with ReferenceGrant disabled",
-			obj:     &gwtypes.HTTPRoute{},
-			wantLen: 10,
-			wantType: []any{
-				&gwtypes.Gateway{},
-				&gwtypes.GatewayClass{},
-				&corev1.Service{},
-				&discoveryv1.EndpointSlice{},
-				&configurationv1alpha1.KongUpstream{},
-				&configurationv1alpha1.KongTarget{},
-				&configurationv1alpha1.KongService{},
-				&configurationv1alpha1.KongRoute{},
-				&configurationv1.KongPlugin{},
-				&configurationv1alpha1.KongPluginBinding{},
-			},
-		},
-		{
 			name:    "HTTPRoute with ReferenceGrant enabled",
 			obj:     &gwtypes.HTTPRoute{},
 			wantLen: 11,

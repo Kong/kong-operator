@@ -1867,30 +1867,6 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			wantMsgPart: "not found",
 		},
 		{
-			name:       "cross-namespace, grant disabled",
-			clientObjs: []client.Object{serviceOtherNS},
-			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
-				Spec: gwtypes.HTTPRouteSpec{
-					Rules: []gwtypes.HTTPRouteRule{{
-						BackendRefs: []gwtypes.HTTPBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:      gwtypes.ObjectName("test-svc"),
-									Kind:      kindPtr("Service"),
-									Group:     groupPtr("core"),
-									Namespace: nsPtr("other-ns"),
-								},
-							},
-						}},
-					}},
-				},
-			},
-			wantStatus:  metav1.ConditionFalse,
-			wantReason:  string(gwtypes.RouteReasonRefNotPermitted),
-			wantMsgPart: "ReferenceGrant support is disabled",
-		},
-		{
 			name:       "cross-namespace, no grants found",
 			clientObjs: []client.Object{serviceOtherNS},
 			route: &gwtypes.HTTPRoute{

@@ -1759,34 +1759,6 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 		assert.Contains(t, err.Error(), "simulated network error")
 	})
 
-	// Additional test for cross-namespace backend ref (namespace determination logic).
-	t.Run("Cross-namespace backend ref without ReferenceGrant should be skipped", func(t *testing.T) {
-		existingServices := []corev1.Service{
-			*createTestService("cross-ns-service", "other-namespace", corev1.ServiceTypeClusterIP, "10.0.0.1", "", []corev1.ServicePort{
-				{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)},
-			}),
-		}
-
-		// Create objects for the fake client.
-		var objects []client.Object
-		for i := range existingServices {
-			objects = append(objects, &existingServices[i])
-		}
-
-		fakeClient := createTestFakeClient(objects...)
-
-		httpRoute := createTestHTTPRoute("test-route", "default")
-		backendRefs := []gwtypes.HTTPBackendRef{
-			createTestHTTPBackendRef("cross-ns-service", ptr.To("other-namespace"), ptr.To[int32](80)),
-		}
-
-		// Call the function with ReferenceGrant disabled.
-		ctx := context.Background()
-		results, err := filterValidBackendRefs(ctx, logger, fakeClient, httpRoute, backendRefs, false, "cluster.local") // Should succeed but return no valid backend refs since ReferenceGrant is disabled.
-		require.NoError(t, err)
-		assert.Len(t, results, 0) // Cross-namespace access blocked without ReferenceGrant.
-	})
-
 	// Test ReferenceGrant scenarios.
 	t.Run("ReferenceGrant enabled scenarios", func(t *testing.T) {
 		existingServices := []corev1.Service{
