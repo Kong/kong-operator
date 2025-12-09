@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,8 +30,7 @@ type APIConverter[t RootObject] interface {
 // RootObject is an interface that represents all resource types that can be loaded
 // as root by the APIConverter.
 type RootObject interface {
-	corev1.Service |
-		gwtypes.HTTPRoute
+	gwtypes.HTTPRoute
 }
 
 // RootObjectPtr is a generic interface that represents a pointer to a type T,
