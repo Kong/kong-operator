@@ -44,4 +44,4 @@ kube-linter: "0.7.6"
 # renovate: datasource=github-tags depName=DavidAnson/markdownlint-cli2
 markdownlint-cli2: "0.20.0"
 # renovate: datasource=github-releases depName=cert-manager/cert-manager
-cert-manager: "1.19.1"
+cert-manager: "1.19.2"
