@@ -428,7 +428,6 @@ func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client
 //   - logger: Logger for debugging information
 //   - cl: Kubernetes client for resource operations
 //   - route: The HTTPRoute whose BackendRefs are being checked
-//   - referenceGrantEnabled: Whether ReferenceGrant support is enabled
 //
 // Returns:
 //   - *metav1.Condition: Condition indicating resolved refs status
