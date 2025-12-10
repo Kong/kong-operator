@@ -1820,22 +1820,20 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 	}
 
 	tests := []struct {
-		name                  string
-		clientObjs            []client.Object
-		route                 *gwtypes.HTTPRoute
-		referenceGrantEnabled bool
-		wantStatus            metav1.ConditionStatus
-		wantReason            string
-		wantMsgPart           string
+		name        string
+		clientObjs  []client.Object
+		route       *gwtypes.HTTPRoute
+		wantStatus  metav1.ConditionStatus
+		wantReason  string
+		wantMsgPart string
 	}{
 		{
-			name:                  "all references resolved - same namespace",
-			clientObjs:            []client.Object{serviceDefault},
-			route:                 routeBase,
-			referenceGrantEnabled: false,
-			wantStatus:            metav1.ConditionTrue,
-			wantReason:            string(gwtypes.RouteReasonResolvedRefs),
-			wantMsgPart:           "All references resolved",
+			name:        "all references resolved - same namespace",
+			clientObjs:  []client.Object{serviceDefault},
+			route:       routeBase,
+			wantStatus:  metav1.ConditionTrue,
+			wantReason:  string(gwtypes.RouteReasonResolvedRefs),
+			wantMsgPart: "All references resolved",
 		},
 		{
 			name:       "unsupported group/kind",
@@ -1856,44 +1854,17 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 					}},
 				},
 			},
-			referenceGrantEnabled: false,
-			wantStatus:            metav1.ConditionFalse,
-			wantReason:            string(gwtypes.RouteReasonInvalidKind),
-			wantMsgPart:           "Unsupported BackendRef",
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  string(gwtypes.RouteReasonInvalidKind),
+			wantMsgPart: "Unsupported BackendRef",
 		},
 		{
-			name:                  "service not found",
-			clientObjs:            []client.Object{},
-			route:                 routeBase,
-			referenceGrantEnabled: false,
-			wantStatus:            metav1.ConditionFalse,
-			wantReason:            string(gwtypes.RouteReasonBackendNotFound),
-			wantMsgPart:           "not found",
-		},
-		{
-			name:       "cross-namespace, grant disabled",
-			clientObjs: []client.Object{serviceOtherNS},
-			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
-				Spec: gwtypes.HTTPRouteSpec{
-					Rules: []gwtypes.HTTPRouteRule{{
-						BackendRefs: []gwtypes.HTTPBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:      gwtypes.ObjectName("test-svc"),
-									Kind:      kindPtr("Service"),
-									Group:     groupPtr("core"),
-									Namespace: nsPtr("other-ns"),
-								},
-							},
-						}},
-					}},
-				},
-			},
-			referenceGrantEnabled: false,
-			wantStatus:            metav1.ConditionFalse,
-			wantReason:            string(gwtypes.RouteReasonRefNotPermitted),
-			wantMsgPart:           "ReferenceGrant support is disabled",
+			name:        "service not found",
+			clientObjs:  []client.Object{},
+			route:       routeBase,
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  string(gwtypes.RouteReasonBackendNotFound),
+			wantMsgPart: "not found",
 		},
 		{
 			name:       "cross-namespace, no grants found",
@@ -1915,10 +1886,9 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 					}},
 				},
 			},
-			referenceGrantEnabled: true,
-			wantStatus:            metav1.ConditionFalse,
-			wantReason:            string(gwtypes.RouteReasonRefNotPermitted),
-			wantMsgPart:           "No ReferenceGrants found",
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  string(gwtypes.RouteReasonRefNotPermitted),
+			wantMsgPart: "No ReferenceGrants found",
 		},
 		{
 			name: "cross-namespace, grant exists but not permitted",
@@ -1965,10 +1935,9 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 					}},
 				},
 			},
-			referenceGrantEnabled: true,
-			wantStatus:            metav1.ConditionFalse,
-			wantReason:            string(gwtypes.RouteReasonRefNotPermitted),
-			wantMsgPart:           "not permitted by any ReferenceGrant",
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  string(gwtypes.RouteReasonRefNotPermitted),
+			wantMsgPart: "not permitted by any ReferenceGrant",
 		},
 		{
 			name: "cross-namespace, grant permits reference",
@@ -2010,10 +1979,9 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 					}},
 				},
 			},
-			referenceGrantEnabled: true,
-			wantStatus:            metav1.ConditionTrue,
-			wantReason:            string(gwtypes.RouteReasonResolvedRefs),
-			wantMsgPart:           "All references resolved",
+			wantStatus:  metav1.ConditionTrue,
+			wantReason:  string(gwtypes.RouteReasonResolvedRefs),
+			wantMsgPart: "All references resolved",
 		},
 		{
 			name:       "multiple refs, first fails",
@@ -2045,10 +2013,9 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 					}},
 				},
 			},
-			referenceGrantEnabled: false,
-			wantStatus:            metav1.ConditionFalse,
-			wantReason:            string(gwtypes.RouteReasonBackendNotFound),
-			wantMsgPart:           "not found",
+			wantStatus:  metav1.ConditionFalse,
+			wantReason:  string(gwtypes.RouteReasonBackendNotFound),
+			wantMsgPart: "not found",
 		},
 		{
 			name:       "empty group uses implicit core",
@@ -2069,22 +2036,20 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 					}},
 				},
 			},
-			referenceGrantEnabled: false,
-			wantStatus:            metav1.ConditionTrue,
-			wantReason:            string(gwtypes.RouteReasonResolvedRefs),
-			wantMsgPart:           "All references resolved",
+			wantStatus:  metav1.ConditionTrue,
+			wantReason:  string(gwtypes.RouteReasonResolvedRefs),
+			wantMsgPart: "All references resolved",
 		},
 	}
 
 	// Test cases that expect errors need special handling.
 	errorTests := []struct {
-		name                  string
-		clientObjs            []client.Object
-		route                 *gwtypes.HTTPRoute
-		referenceGrantEnabled bool
-		clientFactory         func([]client.Object) client.Client
-		wantError             bool
-		wantErrorContains     string
+		name              string
+		clientObjs        []client.Object
+		route             *gwtypes.HTTPRoute
+		clientFactory     func([]client.Object) client.Client
+		wantError         bool
+		wantErrorContains string
 	}{
 		{
 			name:       "error listing reference grants",
@@ -2106,7 +2071,6 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 					}},
 				},
 			},
-			referenceGrantEnabled: true,
 			clientFactory: func(objs []client.Object) client.Client {
 				s := runtime.NewScheme()
 				_ = corev1.AddToScheme(s)
@@ -2138,7 +2102,6 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 					}},
 				},
 			},
-			referenceGrantEnabled: false,
 			clientFactory: func(objs []client.Object) client.Client {
 				s := runtime.NewScheme()
 				_ = corev1.AddToScheme(s)
@@ -2164,7 +2127,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 
 			cl := clientBuilder.Build()
 
-			cond, err := BuildResolvedRefsCondition(ctx, logger, cl, tt.route, tt.referenceGrantEnabled)
+			cond, err := BuildResolvedRefsCondition(ctx, logger, cl, tt.route)
 			require.NoError(t, err)
 			require.NotNil(t, cond)
 
@@ -2189,7 +2152,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 
 			cl := tt.clientFactory(tt.clientObjs)
 
-			cond, err := BuildResolvedRefsCondition(ctx, logger, cl, tt.route, tt.referenceGrantEnabled)
+			cond, err := BuildResolvedRefsCondition(ctx, logger, cl, tt.route)
 			if tt.wantError {
 				require.Error(t, err)
 				require.Nil(t, cond)
