@@ -713,12 +713,32 @@ KongCACertificateAPISpec contains the API specification for the KongCACertificat
 
 | Field | Description |
 | --- | --- |
-| `cert` _string_ | Cert is the PEM-encoded CA certificate. |
-| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the certificate. |
+| `cert` _string_ | Cert is the PEM-encoded CA certificate. This field is used when type is 'inline'. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the certificate. Tags will be applied when type is 'inline' or 'secretRef'. This field allows you to attach metadata to the certificate for identification or organization purposes. |
 
 _Appears in:_
 
 - [KongCACertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcacertificatespec)
+
+#### KongCACertificateSourceType
+
+_Underlying type:_ `string`
+
+KongCACertificateSourceType is the type of source for the CA certificate data.
+
+
+
+
+_Appears in:_
+
+- [KongCACertificateSpec](#configuration-konghq-com-v1alpha1-types-kongcacertificatespec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` | KongCACertificateSourceTypeInline indicates that the CA certificate data is provided inline in the spec.<br /> |
+| `secretRef` | KongCACertificateSourceTypeSecretRef indicates that the CA certificate data is sourced from a Kubernetes Secret.<br /> |
 
 #### KongCACertificateSpec
 
@@ -729,10 +749,12 @@ KongCACertificateSpec contains the specification for the KongCACertificate.
 
 | Field | Description |
 | --- | --- |
+| `type` _[KongCACertificateSourceType](#configuration-konghq-com-v1alpha1-types-kongcacertificatesourcetype)_ | Type indicates the source of the CA certificate data. Can be 'inline' or 'secretRef'. |
 | `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the Konnect Control Plane that this KongCACertificate should be created in. |
 | `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a CA certificate from an existing CA certificate in Konnect. |
-| `cert` _string_ | Cert is the PEM-encoded CA certificate. |
-| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the certificate. |
+| `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to a Kubernetes Secret containing the CA certificate. This field is used when type is 'secretRef'. The Secret must contain a key named 'ca.crt'. The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented. |
+| `cert` _string_ | Cert is the PEM-encoded CA certificate. This field is used when type is 'inline'. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of tags applied to the certificate. Tags will be applied when type is 'inline' or 'secretRef'. This field allows you to attach metadata to the certificate for identification or organization purposes. |
 
 _Appears in:_
 
