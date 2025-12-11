@@ -51,8 +51,6 @@ type KongCertificate struct {
 // +kubebuilder:validation:XValidation:rule="self.type != 'secretRef' ||  has(self.secretRef)", message="spec.secretRef is required when type is 'secretRef'"
 // +kubebuilder:validation:XValidation:rule="!((has(self.cert) || has(self.key)) && (has(self.secretRef) || has(self.secretRefAlt)))", message="cert/key and secretRef/secretRefAlt cannot be set at the same time"
 // +kubebuilder:validation:XValidation:rule="!((has(self.cert_alt) || has(self.key_alt)) && (has(self.secretRef) || has(self.secretRefAlt)))", message="cert_alt/key_alt and secretRef/secretRefAlt cannot be set at the same time"
-// +kubebuilder:validation:XValidation:rule="!has(self.secretRef) || !has(self.secretRef.__namespace__) || self.secretRef.__namespace__.size() == 0", message="spec.secretRef.namespace is not allowed until ReferenceGrant support is implemented"
-// +kubebuilder:validation:XValidation:rule="!has(self.secretRefAlt) || !has(self.secretRefAlt.__namespace__) || self.secretRefAlt.__namespace__.size() == 0", message="spec.secretRefAlt.namespace is not allowed until ReferenceGrant support is implemented"
 // +apireference:kgo:include
 type KongCertificateSpec struct {
 	// Type indicates the source of the certificate data.

@@ -46512,10 +46512,6 @@ spec:
               rule: '!((has(self.cert) || has(self.key)) && (has(self.secretRef) || has(self.secretRefAlt)))'
             - message: cert_alt/key_alt and secretRef/secretRefAlt cannot be set at the same time
               rule: '!((has(self.cert_alt) || has(self.key_alt)) && (has(self.secretRef) || has(self.secretRefAlt)))'
-            - message: spec.secretRef.namespace is not allowed until ReferenceGrant support is implemented
-              rule: '!has(self.secretRef) || !has(self.secretRef.__namespace__) || self.secretRef.__namespace__.size() == 0'
-            - message: spec.secretRefAlt.namespace is not allowed until ReferenceGrant support is implemented
-              rule: '!has(self.secretRefAlt) || !has(self.secretRefAlt.__namespace__) || self.secretRefAlt.__namespace__.size() == 0'
           status:
             default:
               conditions:
@@ -51090,6 +51086,157 @@ spec:
     storage: true
     subresources:
       status: {}
+---
+# Source: kong-operator/charts/ko-crds/templates/ko-crds.yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.1.0-alpha.0
+  name: kongreferencegrants.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  names:
+    categories:
+    - kong
+    kind: KongReferenceGrant
+    listKind: KongReferenceGrantList
+    plural: kongreferencegrants
+    singular: kongreferencegrant
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          KongReferenceGrant identifies kinds of resources in other namespaces that are
+          trusted to reference the specified kinds of resources in the same namespace
+          as the policy.
+
+          Each KongReferenceGrant can be used to represent a unique trust relationship.
+          Additional Reference Grants can be used to add to the set of trusted
+          sources of inbound references for the namespace they are defined within.
+
+          All cross-namespace references in Kong APIs require a KongReferenceGrant.
+
+          KongReferenceGrant is a form of runtime verification allowing users to assert
+          which cross-namespace object references are permitted.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the desired state of KongReferenceGrant.
+            properties:
+              from:
+                description: |-
+                  From describes the trusted namespaces and kinds that can reference the
+                  resources described in "To". Each entry in this list MUST be considered
+                  to be an additional place that references can be valid from, or to put
+                  this another way, entries MUST be combined using OR.
+                items:
+                  description: ReferenceGrantFrom describes trusted namespaces and kinds.
+                  properties:
+                    group:
+                      description: Group is the group of the referent.
+                      enum:
+                      - configuration.konghq.com
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    kind:
+                      description: Kind is the kind of the referent.
+                      enum:
+                      - KongCertificate
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                      type: string
+                    namespace:
+                      description: Namespace is the namespace of the referent.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - namespace
+                  type: object
+                maxItems: 16
+                minItems: 1
+                type: array
+                x-kubernetes-list-type: atomic
+              to:
+                description: |-
+                  To describes the resources that may be referenced by the resources
+                  described in "From". Each entry in this list MUST be considered to be an
+                  additional place that references can be valid to, or to put this another
+                  way, entries MUST be combined using OR.
+                items:
+                  description: |-
+                    ReferenceGrantTo describes what Kinds are allowed as targets of the
+                    references.
+                  properties:
+                    group:
+                      description: Group is the group of the referent.
+                      enum:
+                      - core
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    kind:
+                      description: Kind is the kind of the referent.
+                      enum:
+                      - Secret
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                      type: string
+                    name:
+                      description: |-
+                        Name is the name of the referent. When unspecified, this policy
+                        refers to all resources of the specified Group and Kind in the local
+                        namespace.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  type: object
+                maxItems: 16
+                minItems: 1
+                type: array
+                x-kubernetes-list-type: atomic
+            required:
+            - from
+            - to
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources: {}
 ---
 # Source: kong-operator/charts/ko-crds/templates/ko-crds.yaml
 apiVersion: apiextensions.k8s.io/v1
