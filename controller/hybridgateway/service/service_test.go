@@ -150,7 +150,7 @@ func TestServiceForRule(t *testing.T) {
 				WithObjects(objects...).
 				Build()
 
-			service, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
+			service, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
 
 			assert.NoError(t, err)
 			assert.NotNil(t, service)

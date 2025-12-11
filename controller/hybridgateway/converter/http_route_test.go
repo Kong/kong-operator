@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -106,11 +107,28 @@ func TestHostnamesIntersection(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
 			converter := newHTTPRouteConverter(tt.route, fakeClient, false, "")
-			_, err := converter.Translate(t.Context(), logr.Discard())
-			require.NoError(t, err)
 
-			output, err := converter.GetOutputStore(context.TODO(), logr.Discard())
-			require.NoError(t, err)
+			var output []unstructured.Unstructured
+			for {
+				needsRequeue, err := converter.Translate(t.Context(), logr.Discard())
+				require.NoError(t, err)
+
+				if !needsRequeue {
+					break
+				}
+				output, err = converter.GetOutputStore(context.TODO(), logr.Discard())
+				require.NoError(t, err)
+
+				// Add the output objects to the fake client for the next iteration
+				for _, obj := range output {
+					objCopy := obj.DeepCopy()
+					err := fakeClient.Create(context.TODO(), objCopy)
+					if err != nil {
+						// Ignore already exists errors, update instead
+						_ = fakeClient.Update(context.TODO(), objCopy)
+					}
+				}
+			}
 
 			// Extract KongRoute objects from the output
 			var kongRoutes []*configurationv1alpha1.KongRoute
