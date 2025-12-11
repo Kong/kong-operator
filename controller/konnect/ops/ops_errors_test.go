@@ -2,7 +2,9 @@ package ops
 
 import (
 	"errors"
+	"net/http"
 	"testing"
+	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
@@ -475,4 +477,164 @@ func TestErrorIsConflictError(t *testing.T) {
 			require.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestErrorIsRateLimited(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "error is RateLimited",
+			err:  &sdkkonnecterrs.RateLimited{Status: toPtr(int64(429)), Title: toPtr("Too Many Requests")},
+			want: true,
+		},
+		{
+			name: "error is SDKError with 429 status code",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: http.StatusTooManyRequests,
+				Body:       `{"error": "rate limited"}`,
+			},
+			want: true,
+		},
+		{
+			name: "error is SDKError with non-429 status code",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: http.StatusInternalServerError,
+				Body:       `{"error": "internal server error"}`,
+			},
+			want: false,
+		},
+		{
+			name: "error is not rate limit related",
+			err:  errors.New("some other error"),
+			want: false,
+		},
+		{
+			name: "nil error",
+			err:  nil,
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ErrorIsRateLimited(tt.err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestGetRetryAfterFromRateLimitError(t *testing.T) {
+	tests := []struct {
+		name              string
+		err               error
+		wantDuration      time.Duration
+		wantIsRateLimited bool
+	}{
+		{
+			name:              "non-rate-limit error returns false",
+			err:               errors.New("some other error"),
+			wantDuration:      0,
+			wantIsRateLimited: false,
+		},
+		{
+			name: "SDKError with Retry-After header in seconds",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: http.StatusTooManyRequests,
+				Body:       `{"error": "rate limited"}`,
+				RawResponse: &http.Response{
+					Header: http.Header{
+						"Retry-After": []string{"30"},
+					},
+				},
+			},
+			wantDuration:      30 * time.Second,
+			wantIsRateLimited: true,
+		},
+		{
+			name: "SDKError with no Retry-After header returns default",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: http.StatusTooManyRequests,
+				Body:       `{"error": "rate limited"}`,
+				RawResponse: &http.Response{
+					Header: http.Header{},
+				},
+			},
+			wantDuration:      DefaultRateLimitRetryAfter,
+			wantIsRateLimited: true,
+		},
+		{
+			name: "SDKError with nil RawResponse returns default",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: http.StatusTooManyRequests,
+				Body:       `{"error": "rate limited"}`,
+			},
+			wantDuration:      DefaultRateLimitRetryAfter,
+			wantIsRateLimited: true,
+		},
+		{
+			name: "SDKError with invalid Retry-After header returns default",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: http.StatusTooManyRequests,
+				Body:       `{"error": "rate limited"}`,
+				RawResponse: &http.Response{
+					Header: http.Header{
+						"Retry-After": []string{"invalid"},
+					},
+				},
+			},
+			wantDuration:      DefaultRateLimitRetryAfter,
+			wantIsRateLimited: true,
+		},
+		{
+			name: "SDKError with zero Retry-After header returns default",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: http.StatusTooManyRequests,
+				Body:       `{"error": "rate limited"}`,
+				RawResponse: &http.Response{
+					Header: http.Header{
+						"Retry-After": []string{"0"},
+					},
+				},
+			},
+			wantDuration:      DefaultRateLimitRetryAfter,
+			wantIsRateLimited: true,
+		},
+		{
+			name: "SDKError with negative Retry-After header returns default",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: http.StatusTooManyRequests,
+				Body:       `{"error": "rate limited"}`,
+				RawResponse: &http.Response{
+					Header: http.Header{
+						"Retry-After": []string{"-5"},
+					},
+				},
+			},
+			wantDuration:      DefaultRateLimitRetryAfter,
+			wantIsRateLimited: true,
+		},
+		{
+			name:              "RateLimited error returns default (no RawResponse)",
+			err:               &sdkkonnecterrs.RateLimited{Status: toPtr(int64(429)), Title: toPtr("Too Many Requests")},
+			wantDuration:      DefaultRateLimitRetryAfter,
+			wantIsRateLimited: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotDuration, gotIsRateLimited := GetRetryAfterFromRateLimitError(tt.err)
+			require.Equal(t, tt.wantIsRateLimited, gotIsRateLimited)
+			if tt.wantIsRateLimited {
+				require.Equal(t, tt.wantDuration, gotDuration)
+			}
+		})
+	}
+}
+
+func toPtr[T any](v T) *T {
+	return &v
 }
