@@ -135,7 +135,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	}
 
 	// Phase 1: Status Update.
-	statusChanged, err := enforceStatus(ctx, logger, conv)
+	statusChanged, stop, err := enforceStatus(ctx, logger, conv)
 	if err != nil && !k8serrors.IsConflict(err) {
 		// Record status update failure event.
 		r.eventRecorder.Event(
@@ -147,6 +147,10 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	} else if k8serrors.IsConflict(err) {
 		return ctrl.Result{Requeue: true}, nil
+	}
+	if stop {
+		log.Debug(logger, "Stopping further reconciliation as the resource is not ready for processing")
+		return ctrl.Result{}, nil
 	}
 
 	// Only emit success event if status was actually changed.

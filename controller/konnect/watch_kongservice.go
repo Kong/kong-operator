@@ -70,7 +70,7 @@ func KongServiceReconciliationWatchOptions(
 			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectForKongReferenceGrant[configurationv1alpha1.KongServiceList](cl),
+					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.KongServiceList](cl),
 				),
 			)
 		},

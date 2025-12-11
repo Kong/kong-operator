@@ -3,11 +3,13 @@ package konnect
 import (
 	"context"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/internal/utils/index"
@@ -46,6 +48,20 @@ func KonnectGatewayControlPlaneReconciliationWatchOptions(
 				&konnectv1alpha2.KonnectGatewayControlPlane{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueKonnectGatewayControlPlaneGroupForMembers(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongReferenceGrant{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForKongReferenceGrant[konnectv1alpha2.KonnectGatewayControlPlaneList](
+						cl,
+						metav1.GroupKind{
+							Group: konnectv1alpha2.GroupVersion.Group,
+							Kind:  "KonnectGatewayControlPlane",
+						},
+					),
 				),
 			)
 		},

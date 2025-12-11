@@ -76,6 +76,10 @@
   automatically create the necessary KongCertificate and KongSNI resources to configure the data plane.
   This allows for managing TLS certificates for Gateways in a Kubernetes-native way.
   [#2915](https://github.com/Kong/kong-operator/pull/2915)
+- Cross-namespace references from `KonnectGatewayControlPlane` to `KonnectAPIAuthConfiguration` and
+  from `HTTPRoute` to `Service` is fully supported and protected by `KongReferenceGrant`s for the
+  former reference and by `ReferenceGrant` for the latter.
+  [#2483](https://github.com/Kong/kong-operator/issues/2483)
 
 ### Changed
 

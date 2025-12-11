@@ -89,7 +89,7 @@ type KonnectGatewayControlPlaneSpec struct {
 	// KonnectConfiguration contains the Konnect configuration for the control plane.
 	//
 	// +optional
-	KonnectConfiguration KonnectConfiguration `json:"konnect,omitempty"`
+	KonnectConfiguration ControlPlaneKonnectConfiguration `json:"konnect,omitempty"`
 }
 
 // MirrorSpec contains the Konnect Mirror configuration.
@@ -259,7 +259,7 @@ func (c *KonnectGatewayControlPlane) SetKonnectDescription(description *string) 
 }
 
 // GetKonnectAPIAuthConfigurationRef returns the Konnect API Auth Configuration Ref.
-func (c *KonnectGatewayControlPlane) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigurationRef {
+func (c *KonnectGatewayControlPlane) GetKonnectAPIAuthConfigurationRef() ControlPlaneKonnectAPIAuthConfigurationRef {
 	return c.Spec.KonnectConfiguration.APIAuthConfigurationRef
 }
 

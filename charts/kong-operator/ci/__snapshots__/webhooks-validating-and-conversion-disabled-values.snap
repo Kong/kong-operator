@@ -19967,6 +19967,12 @@ spec:
                         description: Name is the name of the KonnectAPIAuthConfiguration resource.
                         minLength: 1
                         type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
+                          If not specified, defaults to the same namespace as the KonnectConfiguration resource.
+                        minLength: 1
+                        type: string
                     required:
                     - name
                     type: object
@@ -30096,6 +30102,12 @@ spec:
                         description: Name is the name of the KonnectAPIAuthConfiguration resource.
                         minLength: 1
                         type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
+                          If not specified, defaults to the same namespace as the KonnectConfiguration resource.
+                        minLength: 1
+                        type: string
                     required:
                     - name
                     type: object
@@ -30264,6 +30276,12 @@ spec:
                     properties:
                       name:
                         description: Name is the name of the KonnectAPIAuthConfiguration resource.
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
+                          If not specified, defaults to the same namespace as the KonnectConfiguration resource.
                         minLength: 1
                         type: string
                     required:

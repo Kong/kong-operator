@@ -1887,7 +1887,7 @@ func TestIsGatewayHybrid(t *testing.T) {
 			name: "konnect with source Origin and auth ref",
 			konnect: &operatorv2beta1.KonnectOptions{
 				Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
-				APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+				APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 					Name: "test-auth",
 				},
 			},
@@ -1904,7 +1904,7 @@ func TestIsGatewayHybrid(t *testing.T) {
 			name: "konnect with source Mirror and auth ref",
 			konnect: &operatorv2beta1.KonnectOptions{
 				Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
-				APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+				APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 					Name: "test-auth",
 				},
 			},
@@ -1913,7 +1913,7 @@ func TestIsGatewayHybrid(t *testing.T) {
 		{
 			name: "konnect with default source (Origin) and auth ref",
 			konnect: &operatorv2beta1.KonnectOptions{
-				APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+				APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 					Name: "test-auth",
 				},
 			},

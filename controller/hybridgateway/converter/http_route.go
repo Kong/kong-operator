@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -197,16 +198,18 @@ func (c *httpRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 //
 // The function respects controller ownership and only manages ParentStatus entries
 // for Gateways controlled by this controller, leaving other controllers' entries untouched.
-func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error) {
+func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
 	logger = logger.WithValues("phase", "httproute-status")
 	log.Debug(logger, "Starting UpdateRootObjectStatus")
-	updated := false
+
+	// unneeded assignment to make explicit that we are using stop variable as return value
+	stop = false
 
 	// First, build the resolvedRefs conditons for the HTTPRoute since it is the same for all ParentRefs.
 	log.Debug(logger, "Building ResolvedRefs condition for HTTPRoute")
 	resolvedRefsCond, err := route.BuildResolvedRefsCondition(ctx, logger, c.Client, c.route)
 	if err != nil {
-		return false, fmt.Errorf("failed to build resolvedRefs condition for HTTPRoute %s: %w", c.route.Name, err)
+		return false, stop, fmt.Errorf("failed to build resolvedRefs condition for HTTPRoute %s: %w", c.route.Name, err)
 	}
 
 	// For each parentRef in the HTTPRoute, build the conditions and set them in the status.
@@ -227,24 +230,29 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 					// If we removed the status, we need to mark the update as true.
 					log.Debug(logger, "Removed ParentStatus for unsupported ParentReference", "parentRef", pRef)
 					updated = true
+					stop = false
 				}
 				continue
 			default:
 				log.Error(logger, err, "Failed to get supported gateway for ParentReference", "parentRef", pRef)
-				return false, fmt.Errorf("failed to get supported gateway for parentRef %s: %w", pRef.Name, err)
+				return false, stop, fmt.Errorf("failed to get supported gateway for parentRef %s: %w", pRef.Name, err)
 			}
 		}
 
 		log.Debug(logger, "Building Accepted condition", "parentRef", pRef, "gateway", gateway.Name)
 		acceptedCondition, err := route.BuildAcceptedCondition(ctx, logger, c.Client, gateway, c.route, pRef)
 		if err != nil {
-			return false, fmt.Errorf("failed to build accepted condition for parentRef %s: %w", pRef.Name, err)
+			return false, stop, fmt.Errorf("failed to build accepted condition for parentRef %s: %w", pRef.Name, err)
+		}
+		// If the Accepted or ResolvedRefs condition is False, we should stop further processing.
+		if acceptedCondition.Status == metav1.ConditionFalse || resolvedRefsCond.Status == metav1.ConditionFalse {
+			stop = true
 		}
 
 		log.Debug(logger, "Building Programmed conditions", "parentRef", pRef, "gateway", gateway.Name)
 		programmedConditions, err := route.BuildProgrammedCondition(ctx, logger, c.Client, c.route, pRef, c.expectedGVKs)
 		if err != nil {
-			return false, fmt.Errorf("failed to build programmed condition for parentRef %s: %w", pRef.Name, err)
+			return false, stop, fmt.Errorf("failed to build programmed condition for parentRef %s: %w", pRef.Name, err)
 		}
 
 		// Combine all conditions.
@@ -268,14 +276,14 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 		log.Debug(logger, "Updating HTTPRoute status in cluster", "status", c.route.Status)
 		if err := c.Status().Update(ctx, c.route); err != nil {
 			log.Error(logger, err, "Failed to update HTTPRoute status in cluster")
-			return false, fmt.Errorf("failed to update HTTPRoute status: %w", err)
+			return false, stop, fmt.Errorf("failed to update HTTPRoute status: %w", err)
 		}
 	} else {
 		log.Debug(logger, "No status update required for HTTPRoute")
 	}
 
 	log.Debug(logger, "Finished UpdateRootObjectStatus", "updated", updated)
-	return updated, nil
+	return updated, stop, nil
 }
 
 // translate converts the HTTPRoute to Kong resources and stores them in outputStore.

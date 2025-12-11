@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/patch"
 	"github.com/kong/kong-operator/internal/metrics"
+	"github.com/kong/kong-operator/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -354,6 +355,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
+		if crossnamespace.IsCrossNamespaceReferenceNotGranted(err) {
+			log.Info(logger, "cross-namespace reference to KonnectAPIAuthConfiguration is not granted", "error", err.Error())
+			if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, konnectv1alpha1.KonnectAPIAuthConfiguration{}, apiAuthRef, err); requeue {
+				return res, retErr
+			}
+		}
+
 		return ctrl.Result{}, fmt.Errorf("failed to get APIAuth ref for %s: %w", client.ObjectKeyFromObject(ent), err)
 	}
 
