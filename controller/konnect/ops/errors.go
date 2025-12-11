@@ -2,6 +2,7 @@ package ops
 
 import (
 	"fmt"
+	"time"
 
 	kcfgconsts "github.com/kong/kong-operator/api/common/consts"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
@@ -107,4 +108,22 @@ type KonnectEntityAdoptionNotMatchError struct {
 // Error implements the error interface.
 func (e KonnectEntityAdoptionNotMatchError) Error() string {
 	return fmt.Sprintf("Konnect entity (ID: %s) does not match the spec of the object when adopting in match mode", e.KonnectID)
+}
+
+// RateLimitError is an error type returned when a Konnect API operation
+// fails due to rate limiting (HTTP 429 Too Many Requests).
+// It includes the retry-after duration to indicate when the operation can be retried.
+type RateLimitError struct {
+	Err        error
+	RetryAfter time.Duration
+}
+
+// Error implements the error interface.
+func (e RateLimitError) Error() string {
+	return fmt.Sprintf("rate limited by Konnect API, retry after %s: %v", e.RetryAfter, e.Err)
+}
+
+// Unwrap returns the underlying error.
+func (e RateLimitError) Unwrap() error {
+	return e.Err
 }
