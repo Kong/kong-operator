@@ -397,7 +397,7 @@ func TestKongCertificate(t *testing.T) {
 	t.Run("namespace validation for secretRef", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongCertificate]{
 			{
-				Name: "secretRef.namespace cannot be set (ReferenceGrant not yet supported)",
+				Name: "secretRef.namespace set",
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
@@ -414,10 +414,9 @@ func TestKongCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.secretRef.namespace is not allowed until ReferenceGrant support is implemented"),
 			},
 			{
-				Name: "secretRefAlt.namespace cannot be set (ReferenceGrant not yet supported)",
+				Name: "secretRefAlt.namespace set",
 				TestObject: &configurationv1alpha1.KongCertificate{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: configurationv1alpha1.KongCertificateSpec{
@@ -437,7 +436,6 @@ func TestKongCertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.secretRefAlt.namespace is not allowed until ReferenceGrant support is implemented"),
 			},
 			{
 				Name: "valid: secretRef without namespace is allowed",
@@ -474,6 +472,29 @@ func TestKongCertificate(t *testing.T) {
 						},
 						SecretRefAlt: &commonv1alpha1.NamespacedRef{
 							Name: "test-secret-alt",
+						},
+					},
+				},
+			},
+			{
+				Name: "valid: both secretRef and secretRefAlt with namespace are allowed",
+				TestObject: &configurationv1alpha1.KongCertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongCertificateSpec{
+						Type: lo.ToPtr(configurationv1alpha1.KongCertificateSourceTypeSecretRef),
+						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name: "test-konnect-control-plane",
+							},
+						},
+						SecretRef: &commonv1alpha1.NamespacedRef{
+							Name:      "test-secret",
+							Namespace: lo.ToPtr("other-namespace"),
+						},
+						SecretRefAlt: &commonv1alpha1.NamespacedRef{
+							Name:      "test-secret-alt",
+							Namespace: lo.ToPtr("other-namespace"),
 						},
 					},
 				},
