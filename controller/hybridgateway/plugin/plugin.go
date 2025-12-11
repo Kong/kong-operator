@@ -14,6 +14,7 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
@@ -91,7 +92,7 @@ func PluginForFilter(
 		return nil, false, false, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
 	}
 
-	exists, err = metadata.AppendRouteToAnnotationIfObjExists(ctx, logger, cl, &plugin, httpRoute, false)
+	exists, err = translator.VerifyAndUpdate(ctx, logger, cl, &plugin, httpRoute, false)
 	if err != nil {
 		return nil, false, false, err
 	}

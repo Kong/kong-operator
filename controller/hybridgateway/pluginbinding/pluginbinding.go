@@ -12,6 +12,7 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
@@ -67,7 +68,7 @@ func BindingForPluginAndRoute(
 		return nil, false, fmt.Errorf("failed to build KongPluginBinding %s: %w", bindingName, err)
 	}
 
-	exists, err = metadata.AppendRouteToAnnotationIfObjExists(ctx, logger, cl, &binding, httpRoute, true)
+	exists, err = translator.VerifyAndUpdate(ctx, logger, cl, &binding, httpRoute, true)
 	if err != nil {
 		return nil, false, err
 	}

@@ -12,6 +12,7 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
@@ -69,7 +70,7 @@ func ServiceForRule(
 		return nil, false, fmt.Errorf("failed to build KongService %s: %w", serviceName, err)
 	}
 
-	exists, err = metadata.AppendRouteToAnnotationIfObjExists(ctx, logger, cl, &service, httpRoute, false)
+	exists, err = translator.VerifyAndUpdate(ctx, logger, cl, &service, httpRoute, false)
 	if err != nil {
 		return nil, false, err
 	}
