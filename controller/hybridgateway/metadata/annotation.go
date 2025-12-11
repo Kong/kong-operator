@@ -1,10 +1,13 @@
 package metadata
 
 import (
+	"context"
+	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/go-logr/logr"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -145,6 +148,88 @@ func (am *AnnotationManager) AppendRouteToAnnotation(obj metav1.Object, route cl
 		"objectName", obj.GetName())
 
 	return true
+}
+
+// AppendRouteToAnnotationIfObjExists checks if an object exists and appends a route to the hybrid-routes annotation.
+// This is a generic function that works with any type that implements client.Object.
+//
+// Parameters:
+//   - ctx: The context for API calls and cancellation
+//   - logger: Logger for structured logging
+//   - cl: Kubernetes client for API operations
+//   - obj: The Kubernetes object to check and update (must implement client.Object)
+//   - route: The Route to append to the hybrid-routes annotation
+//   - exclusive: If true, checks that only the given route is present in the annotation
+//
+// Returns:
+//   - exists: A boolean indicating whether the object exists (true) or not yet (false)
+//   - err: Any error that occurred during the process
+func AppendRouteToAnnotationIfObjExists[T client.Object](
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	obj T,
+	route client.Object,
+	exclusive bool,
+) (exists bool, err error) {
+	am := NewAnnotationManager(logger)
+	existingObj := obj.DeepCopyObject().(T)
+	objKey := client.ObjectKeyFromObject(obj)
+	if err = cl.Get(ctx, objKey, existingObj); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Debug(am.logger, "Object not found")
+			return false, nil
+		}
+		log.Error(am.logger, err, "Failed to check for existing object",
+			"objectType", fmt.Sprintf("%T", existingObj),
+			"objectName", objKey.Name,
+			"objectNamespace", objKey.Namespace)
+		return false, fmt.Errorf("failed to get %T %s/%s: %w", existingObj, objKey.Namespace, objKey.Name, err)
+	}
+
+	if exclusive {
+		// Check if only the given route is present in the annotation
+		ownersCsv := existingObj.GetAnnotations()[consts.GatewayOperatorHybridRoutesAnnotation]
+		owners := strings.Split(ownersCsv, ",")
+		if len(owners) == 1 && strings.TrimSpace(owners[0]) == ObjectToNameString(route) {
+			// Only the expected route is present, nothing to update
+			log.Debug(am.logger, "Exclusive tracking annotation check passed, no update needed",
+				"objectType", fmt.Sprintf("%T", existingObj),
+				"objectName", objKey.Name,
+				"objectNamespace", objKey.Namespace,
+				"trackingAnnotation", ownersCsv,
+			)
+			return true, nil
+		}
+
+		// Tracking annotation contains something unexpected
+		if len(owners) == 0 {
+			err = fmt.Errorf("exclusive tracking annotation check failed for %T %s/%s: expected route %s, found none",
+				existingObj, objKey.Namespace, objKey.Name, ObjectToNameString(route))
+		} else {
+			err = fmt.Errorf("exclusive tracking annotation check failed for %T %s/%s: expected route %s, found %s",
+				existingObj, objKey.Namespace, objKey.Name, ObjectToNameString(route), ownersCsv)
+		}
+
+		log.Error(am.logger, err, "Exclusive tracking annotation check failed",
+			"objectType", fmt.Sprintf("%T", existingObj),
+			"objectName", objKey.Name,
+			"objectNamespace", objKey.Namespace,
+			"trackingAnnotation", ownersCsv,
+		)
+		return true, err
+	}
+
+	log.Debug(am.logger, "Object found, appending route to annotation",
+		"objectType", fmt.Sprintf("%T", existingObj),
+		"objectName", objKey.Name,
+		"objectNamespace", objKey.Namespace)
+
+	routes := am.GetRoutes(existingObj)
+	am.SetRoutes(obj, routes)
+	am.AppendRouteToAnnotation(obj, route)
+
+	return true, nil
 }
 
 // RemoveRouteFromAnnotation removes the given route from the hybrid-routes annotation

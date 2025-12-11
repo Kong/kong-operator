@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
@@ -16,7 +14,6 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/consts"
 )
 
 // BindingForPluginAndRoute creates or updates a KongPluginBinding for the given plugin and route.
@@ -70,32 +67,10 @@ func BindingForPluginAndRoute(
 		return nil, false, fmt.Errorf("failed to build KongPluginBinding %s: %w", bindingName, err)
 	}
 
-	// Check if KongPluginBinding already exists
-	existingBinding := &configurationv1alpha1.KongPluginBinding{}
-	namespacedName := types.NamespacedName{
-		Name:      bindingName,
-		Namespace: httpRoute.Namespace,
-	}
-	if err = cl.Get(ctx, namespacedName, existingBinding); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(logger, err, "Failed to check for existing KongPluginBinding")
-		return nil, false, fmt.Errorf("failed to check for existing KongPluginBinding %s: %w", bindingName, err)
+	exists, err = metadata.AppendRouteToAnnotationIfObjExists(ctx, logger, cl, &binding, httpRoute, true)
+	if err != nil {
+		return nil, false, err
 	}
 
-	if apierrors.IsNotFound(err) {
-		// KongPluginBinding doesn't exist, create a new one
-		log.Debug(logger, "New KongPluginBinding generated successfully")
-		return &binding, false, nil
-	}
-
-	// KongPluginBinding exists, update annotations to include current HTTPRoute
-	log.Debug(logger, "KongPluginBinding found")
-	binding.Annotations[consts.GatewayOperatorHybridRoutesAnnotation] = existingBinding.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
-	annotationManager := metadata.NewAnnotationManager(logger)
-	annotationManager.AppendRouteToAnnotation(&binding, httpRoute)
-
-	// TODO: we should check that the existingBinding.Spec matches what we expect
-	// https://github.com/Kong/kong-operator/issues/2687
-	log.Debug(logger, "Successfully updated existing KongPluginBinding")
-
-	return &binding, true, nil
+	return &binding, exists, nil
 }
