@@ -8,10 +8,8 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
@@ -21,7 +19,6 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/consts"
 )
 
 // validBackendRef represents a BackendRef that has passed all validation checks.
@@ -432,33 +429,10 @@ func createTargetsFromValidBackendRefs(ctx context.Context, logger logr.Logger, 
 				return nil, fmt.Errorf("failed to build KongTarget %s: %w", targetName, err)
 			}
 
-			// Check if the KongTarget already exists
-			existingTarget := &configurationv1alpha1.KongTarget{}
-			namespacedName := types.NamespacedName{
-				Name:      targetName,
-				Namespace: httpRoute.Namespace,
+			_, err = metadata.AppendRouteToAnnotationIfObjExists(ctx, logger, cl, &target, httpRoute, false)
+			if err != nil {
+				return nil, err
 			}
-			if err = cl.Get(ctx, namespacedName, existingTarget); err != nil && !apierrors.IsNotFound(err) {
-				log.Error(logger, err, "Failed to check for existing KongTarget")
-				return nil, fmt.Errorf("failed to get existing KongTarget %s: %w", targetName, err)
-			}
-
-			if apierrors.IsNotFound(err) {
-				// Create target with explicit endpoint address (works for all cases: real endpoints, FQDN, external names).
-				log.Debug(logger, "New KongTarget generated successfully")
-				targets = append(targets, target)
-				continue
-			}
-
-			// KongTarget exists, update annotations to include current HTTPRoute
-			log.Debug(logger, "KongTarget found")
-			target.Annotations[consts.GatewayOperatorHybridRoutesAnnotation] = existingTarget.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
-			annotationManager := metadata.NewAnnotationManager(logger)
-			annotationManager.AppendRouteToAnnotation(&target, httpRoute)
-
-			// TODO: we should check that the existingTarget.Spec matches what we expect
-			// https://github.com/Kong/kong-operator/issues/2687
-			log.Debug(logger, "Successfully updated existing KongTarget")
 
 			targets = append(targets, target)
 		}

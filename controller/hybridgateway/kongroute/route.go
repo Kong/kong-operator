@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
@@ -57,15 +55,6 @@ func RouteForRule(
 	logger = logger.WithValues("kongroute", routeName)
 	log.Debug(logger, "Creating KongRoute for HTTPRoute rule")
 
-	// Check if the route already exists
-	existingRoute := &configurationv1alpha1.KongRoute{}
-	namespacedName := types.NamespacedName{
-		Name:      routeName,
-		Namespace: httpRoute.Namespace,
-	}
-
-	log.Debug(logger, "Creating a new KongRoute resource")
-
 	routeBuilder := builder.NewKongRoute().
 		WithName(routeName).
 		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
@@ -86,28 +75,10 @@ func RouteForRule(
 		return nil, false, fmt.Errorf("failed to build KongRoute %s: %w", routeName, err)
 	}
 
-	err = cl.Get(ctx, namespacedName, existingRoute)
-	if err != nil && !apierrors.IsNotFound(err) {
-		log.Error(logger, err, "Failed to check for existing KongRoute")
-		return nil, false, fmt.Errorf("failed to check for existing KongRoute %s: %w", routeName, err)
-	}
-
-	// Route doesn't exist yet
-	if apierrors.IsNotFound(err) {
-		log.Debug(logger, "Successfully created new KongRoute")
-		return &newRoute, false, nil
-	}
-
-	// Route is already there, check it is managed by this HTTPRoute
-	annotationManager := metadata.NewAnnotationManager(logger)
-	if !annotationManager.ContainsRoute(existingRoute, httpRoute) {
-		// This should never happen as the HTTPRoute name is used to generate the KongRoute name.
-		err := fmt.Errorf("KongRoute %s already exists and is managed by another HTTPRoute", routeName)
-		log.Error(logger, err, "Failed to create/update KongRoute resource, skipping rule")
+	exists, err = metadata.AppendRouteToAnnotationIfObjExists(ctx, logger, cl, &newRoute, httpRoute, true)
+	if err != nil {
 		return nil, false, err
 	}
 
-	log.Debug(logger, "Successfully updated existing KongRoute")
-
-	return &newRoute, true, nil
+	return &newRoute, exists, nil
 }
