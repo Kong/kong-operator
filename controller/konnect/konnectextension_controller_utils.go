@@ -187,20 +187,26 @@ func (r *KonnectExtensionReconciler) ensureExtendablesReferencesInStatus(
 	return ctrl.Result{Requeue: true}, nil
 }
 
-func getKonnectAPIAuthRefNN(ctx context.Context, cl client.Client, ext *konnectv1alpha2.KonnectExtension) (types.NamespacedName, error) {
-	cpRef := ext.Spec.Konnect.ControlPlane.Ref.KonnectNamespacedRef
-	kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{}
-	err := cl.Get(ctx, client.ObjectKey{
-		// TODO: handle cross namespace refs to KonnectGatewayControlPlane when referencing CP from another namespace is supported.
-		Namespace: ext.Namespace,
-		Name:      cpRef.Name,
-	}, kgcp)
-	if err != nil {
-		return types.NamespacedName{}, err
+func getKonnectAPIAuthRefNN(cp *konnectv1alpha2.KonnectGatewayControlPlane, ext *konnectv1alpha2.KonnectExtension) (types.NamespacedName, error) {
+	var authRef konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef
+
+	if ext.Status.Konnect != nil && ext.Status.Konnect.AuthRef != nil {
+		// Use the AuthRef from the status if available.
+		authRef = *ext.Status.Konnect.AuthRef
+	} else {
+		if cp == nil {
+			return types.NamespacedName{}, fmt.Errorf("cannot determine KonnectAPIAuthConfiguration reference")
+		}
+		// Fallback to the CP spec reference.
+		authRef = cp.Spec.KonnectConfiguration.APIAuthConfigurationRef
+		if authRef.Namespace == nil {
+			authRef.Namespace = &cp.Namespace
+		}
 	}
+
 	return types.NamespacedName{
-		Namespace: kgcp.Namespace,
-		Name:      kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+		Name:      authRef.Name,
+		Namespace: *authRef.Namespace,
 	}, nil
 }
 
@@ -260,7 +266,7 @@ func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, e
 
 func enforceKonnectExtensionStatus(
 	cp konnectv1alpha2.KonnectGatewayControlPlane,
-	apiAuthRef konnectv1alpha2.KonnectAPIAuthConfigurationRef,
+	apiAuthRef konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef,
 	certificateSecret corev1.Secret,
 	ext *konnectv1alpha2.KonnectExtension,
 ) bool {

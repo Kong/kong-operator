@@ -387,7 +387,6 @@ func BuildAcceptedCondition(ctx context.Context, logger logr.Logger, cl client.C
 func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute,
 	pRef gwtypes.ParentReference, expectedGVKs []schema.GroupVersionKind) ([]metav1.Condition, error) {
 	var conditions []metav1.Condition
-	ns := route.GetNamespace()
 
 	// Skip setting programmed conditions for KongPlugins because they lack a status field.
 	expectedGVKs = FilterOutGVKByKind(expectedGVKs, "KongPlugin")
@@ -399,8 +398,8 @@ func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client
 		selector := metadata.LabelSelectorForOwnedResources(route, &pRef)
 
 		// List all resources of this GVK owned by the route object in the same namespace.
-		if err := cl.List(ctx, list, selector, client.InNamespace(ns)); err != nil {
-			return nil, fmt.Errorf("unable to list objects with gvk %s in namespace %s: %w", gvk.String(), ns, err)
+		if err := cl.List(ctx, list, selector); err != nil {
+			return nil, fmt.Errorf("unable to list objects with gvk %s: %w", gvk.String(), err)
 		}
 
 		for _, item := range list.Items {
@@ -920,6 +919,12 @@ func IsHTTPReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gwt
 		}
 
 		for _, to := range grantSpec.To {
+			if to.Group == "" {
+				to.Group = "core"
+			}
+			if backendRefGroup == "" {
+				backendRefGroup = "core"
+			}
 			if backendRefGroup == to.Group &&
 				backendRefKind == to.Kind &&
 				(to.Name == nil || *to.Name == backendRef.Name) {

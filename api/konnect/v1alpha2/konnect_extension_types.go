@@ -262,7 +262,7 @@ type KonnectExtensionControlPlaneStatus struct {
 	// For particular KonnectExtension and ControlPlane combination.
 	//
 	// +optional
-	AuthRef *KonnectAPIAuthConfigurationRef `json:"authRef,omitempty"`
+	AuthRef *ControlPlaneKonnectAPIAuthConfigurationRef `json:"authRef,omitempty"`
 }
 
 // DataPlaneClientAuthStatus contains the status information related to the ClientAuth configuration.
@@ -274,9 +274,9 @@ type DataPlaneClientAuthStatus struct {
 }
 
 // GetKonnectAPIAuthConfigurationRef returns the KonnectAPIAuthConfigurationRef from the KonnectExtension status.
-func (ke *KonnectExtension) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigurationRef {
+func (ke *KonnectExtension) GetKonnectAPIAuthConfigurationRef() ControlPlaneKonnectAPIAuthConfigurationRef {
 	if ke.Status.Konnect == nil || ke.Status.Konnect.AuthRef == nil {
-		return KonnectAPIAuthConfigurationRef{}
+		return ControlPlaneKonnectAPIAuthConfigurationRef{}
 	}
 	return *ke.Status.Konnect.AuthRef
 }

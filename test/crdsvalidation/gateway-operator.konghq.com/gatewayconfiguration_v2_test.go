@@ -288,7 +288,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
-							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 								Name: "my-konnect-auth-config",
 							},
 						},
@@ -301,7 +301,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
-							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 								Name: "my-konnect-auth-config",
 							},
 							Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),
@@ -320,7 +320,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
-							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 								Name: "my-konnect-auth-config",
 							},
 							Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
@@ -334,7 +334,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
-							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 								Name: "my-konnect-auth-config",
 							},
 							Source: lo.ToPtr(commonv1alpha1.EntitySourceOrigin),
@@ -354,7 +354,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
-							APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 								Name: "my-konnect-auth-config",
 							},
 							Source: lo.ToPtr(commonv1alpha1.EntitySourceMirror),

@@ -27,7 +27,7 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
 // +kong:channels=kong-operator
 // +apireference:kgo:include
-
+//
 // KongReferenceGrant identifies kinds of resources in other namespaces that are
 // trusted to reference the specified kinds of resources in the same namespace
 // as the policy.
@@ -90,17 +90,19 @@ type KongReferenceGrantSpec struct {
 }
 
 // ReferenceGrantFrom describes trusted namespaces and kinds.
+//
+// +kubebuilder:validation:XValidation:rule="self.group == 'configuration.konghq.com' && self.kind == 'KongCertificate' || self.group == 'konnect.konghq.com' && self.kind == 'KonnectGatewayControlPlane'",message="pair group/kind is not allowed"
 type ReferenceGrantFrom struct {
 	// Group is the group of the referent.
 	//
 	// +required
-	// +kubebuilder:validation:Enum=configuration.konghq.com
+	// +kubebuilder:validation:Enum=configuration.konghq.com;konnect.konghq.com
 	Group Group `json:"group"`
 
 	// Kind is the kind of the referent.
 	//
 	// +required
-	// +kubebuilder:validation:Enum=KongCertificate
+	// +kubebuilder:validation:Enum=KongCertificate;KonnectGatewayControlPlane
 	Kind Kind `json:"kind"`
 
 	// Namespace is the namespace of the referent.
@@ -112,17 +114,19 @@ type ReferenceGrantFrom struct {
 
 // ReferenceGrantTo describes what Kinds are allowed as targets of the
 // references.
+//
+// +kubebuilder:validation:XValidation:rule="self.group == 'core' && self.kind == 'Secret' || self.group == 'konnect.konghq.com' && self.kind == 'KonnectAPIAuthConfiguration'",message="pair group/kind is not allowed"
 type ReferenceGrantTo struct {
 	// Group is the group of the referent.
 	//
 	// +required
-	// +kubebuilder:validation:Enum=core
+	// +kubebuilder:validation:Enum=core;konnect.konghq.com
 	Group Group `json:"group"`
 
 	// Kind is the kind of the referent.
 	//
 	// +required
-	// +kubebuilder:validation:Enum=Secret
+	// +kubebuilder:validation:Enum=Secret;KonnectAPIAuthConfiguration
 	Kind Kind `json:"kind"`
 
 	// Name is the name of the referent. When unspecified, this policy
@@ -131,4 +135,8 @@ type ReferenceGrantTo struct {
 	//
 	// +optional
 	Name *ObjectName `json:"name,omitempty"`
+}
+
+func init() {
+	SchemeBuilder.Register(&KongReferenceGrant{}, &KongReferenceGrantList{})
 }
