@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/controller/hybridgateway/route"
+	"github.com/kong/kong-operator/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
@@ -429,7 +430,7 @@ func createTargetsFromValidBackendRefs(ctx context.Context, logger logr.Logger, 
 				return nil, fmt.Errorf("failed to build KongTarget %s: %w", targetName, err)
 			}
 
-			_, err = metadata.AppendRouteToAnnotationIfObjExists(ctx, logger, cl, &target, httpRoute, false)
+			_, err = translator.VerifyAndUpdate(ctx, logger, cl, &target, httpRoute, false)
 			if err != nil {
 				return nil, err
 			}
