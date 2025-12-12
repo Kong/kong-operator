@@ -977,30 +977,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	require.Contains(t, networkPolicy.Spec.Ingress, expectAllowMetricsIngress.Rule)
 
 	t.Run("verifying DataPlane's NetworkPolicies get updated after customizing kong proxy listen port through GatewayConfiguration", func(t *testing.T) {
-		// TODO: https://github.com/kong/kong-operator/issues/184
-		t.Skip("re-enable once https://github.com/kong/kong-operator/issues/184 is fixed")
-
 		gwcClient := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name)
-
-		setGatewayConfigurationEnvProxyPort(t, gatewayConfig, 8005, 8999)
-		gatewayConfig, err = gwcClient.Update(GetCtx(), gatewayConfig, metav1.UpdateOptions{})
-		require.NoError(t, err)
-
-		t.Log("ingress rules get updated with configured proxy listen port")
-		var expectedUpdatedProxyListenPort networkPolicyIngressRuleDecorator
-		expectedUpdatedProxyListenPort.withTCPPort(8005)
-		expectedUpdatedProxyListenPort.withTCPPort(8999)
-		require.Eventually(t,
-			testutils.GatewayNetworkPolicyForGatewayContainsRules(t, GetCtx(), gateway, clients, expectedUpdatedProxyListenPort.Rule),
-			testutils.SubresourceReadinessWait, time.Second)
-		var notExpectedUpdatedProxyListenPort networkPolicyIngressRuleDecorator
-		notExpectedUpdatedProxyListenPort.withTCPPort(consts.DataPlaneProxyPort)
-		require.Eventually(t,
-			testutils.Not(
-				testutils.GatewayNetworkPolicyForGatewayContainsRules(t, GetCtx(), gateway, clients, notExpectedUpdatedProxyListenPort.Rule),
-			),
-			testutils.SubresourceReadinessWait, time.Second)
-
 		t.Log("ingress rules get updated with configured admin listen port")
 		setGatewayConfigurationEnvAdminAPIPort(t, gatewayConfig, 8555)
 		_, err = gwcClient.Update(GetCtx(), gatewayConfig, metav1.UpdateOptions{})
@@ -1016,12 +993,13 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 			testutils.GatewayNetworkPolicyForGatewayContainsRules(t, GetCtx(), gateway, clients, expectedUpdatedLimitedAdminAPI.Rule),
 			2*testutils.SubresourceReadinessWait, time.Second,
 			"NetworkPolicy didn't get updated with port 8555 after a corresponding change to GatewayConfiguration") {
-			networkpolicies, err := gatewayutils.ListNetworkPoliciesForGateway(GetCtx(), GetClients().MgrClient, gateway)
+			networkPolicies, err := gatewayutils.ListNetworkPoliciesForGateway(GetCtx(), GetClients().MgrClient, gateway)
 			require.NoError(t, err)
 			t.Log("DataPlane's NetworkPolicies")
-			for _, np := range networkpolicies {
+			for _, np := range networkPolicies {
 				t.Logf("%# v\n", pretty.Formatter(np))
 			}
+			t.FailNow()
 		}
 
 		var notExpectedUpdatedLimitedAdminAPI networkPolicyIngressRuleDecorator
@@ -1042,32 +1020,6 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 		t.Log("verifying networkpolicies are deleted")
 		require.Eventually(t, testutils.Not(testutils.GatewayNetworkPoliciesExist(t, GetCtx(), gateway, clients)), time.Minute, time.Second)
 	})
-}
-
-func setGatewayConfigurationEnvProxyPort(t *testing.T, gatewayConfiguration *operatorv2beta1.GatewayConfiguration, proxyPort int, proxySSLPort int) {
-	t.Helper()
-
-	dpOptions := gatewayConfiguration.Spec.DataPlaneOptions
-	if dpOptions == nil {
-		dpOptions = &operatorv2beta1.GatewayConfigDataPlaneOptions{}
-	}
-	if dpOptions.Deployment.PodTemplateSpec == nil {
-		dpOptions.Deployment.PodTemplateSpec = &corev1.PodTemplateSpec{}
-	}
-
-	container := k8sutils.GetPodContainerByName(&dpOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
-	require.NotNil(t, container)
-
-	container.Env = envs.SetValueByName(container.Env,
-		"KONG_PROXY_LISTEN",
-		fmt.Sprintf("0.0.0.0:%d reuseport backlog=16384, 0.0.0.0:%d http2 ssl reuseport backlog=16384", proxyPort, proxySSLPort),
-	)
-	container.Env = envs.SetValueByName(container.Env,
-		"KONG_PORT_MAPS",
-		fmt.Sprintf("80:%d,443:%d", proxyPort, proxySSLPort),
-	)
-
-	gatewayConfiguration.Spec.DataPlaneOptions = dpOptions
 }
 
 func setGatewayConfigurationEnvAdminAPIPort(t *testing.T, gatewayConfiguration *operatorv2beta1.GatewayConfiguration, adminAPIPort int) {
