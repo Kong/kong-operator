@@ -326,10 +326,12 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 
 		if orphansForGVK > 0 {
 			log.Debug(logger, "Deleted orphaned resources for GVK", "gvk", gvk.String(), "orphansDeleted", orphansForGVK)
-		} else if orphansBeingDeleted > 0 {
-			log.Debug(logger, "Found resources being deleted for GVK, will requeue", "gvk", gvk.String(), "orphansBeingDeleted", orphansBeingDeleted)
 		} else {
-			log.Debug(logger, "No orphaned resources found for GVK", "gvk", gvk.String())
+			if orphansBeingDeleted > 0 {
+				log.Debug(logger, "Resources are being deleted for GVK, will requeue", "gvk", gvk.String(), "orphansBeingDeleted", orphansBeingDeleted)
+			} else {
+				log.Debug(logger, "No orphaned resources found for GVK", "gvk", gvk.String())
+			}
 		}
 
 		// If we found orphans that are currently being deleted, return true to trigger a requeue.
