@@ -107,11 +107,22 @@ func NewCRDValidationTestCasesGroupCPRefChange[
 					Namespace: "another-namespace",
 				},
 			})
-			ret = append(ret, TestCase[T]{
-				Name:                 "cpRef (type=konnectNamespacedRef) cannot have namespace",
-				TestObject:           obj,
-				ExpectedErrorMessage: lo.ToPtr("spec.controlPlaneRef cannot specify namespace for namespaced resource"),
-			})
+
+			testcase := TestCase[T]{
+				TestObject: obj,
+			}
+			// TODO: This list has to be updated as we progress through implementing
+			// ControlPlane cross namespaces references for various kinds.
+			// https://github.com/Kong/kong-operator/issues/2873
+			if lo.Contains([]string{"KongService"}, obj.GetObjectKind().GroupVersionKind().Kind) {
+				testcase.Name = "cpRef (type=konnectNamespacedRef) can have namespace"
+				testcase.ExpectedErrorMessage = nil
+			} else {
+				testcase.Name = "cpRef (type=konnectNamespacedRef) cannot have namespace"
+				testcase.ExpectedErrorMessage = lo.ToPtr("spec.controlPlaneRef cannot specify namespace for namespaced resource")
+			}
+
+			ret = append(ret, testcase)
 		}
 	}
 	{

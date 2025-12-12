@@ -110,6 +110,19 @@ func HasCondition(cType kcfgconsts.ConditionType, resource ConditionsAware) bool
 	return false
 }
 
+// RemoveCondition returns true if the condition on the resource exists and has
+// been removed.
+func RemoveCondition(cType kcfgconsts.ConditionType, resource ConditionsAware) bool {
+	conds := resource.GetConditions()
+	for i, condition := range conds {
+		if condition.Type == string(cType) {
+			resource.SetConditions(append(conds[:i], conds[i+1:]...))
+			return true
+		}
+	}
+	return false
+}
+
 // InitReady initializes the Ready status to False if Ready condition is not
 // yet set on the resource.
 func InitReady(resource ConditionsAndGenerationAware) bool {

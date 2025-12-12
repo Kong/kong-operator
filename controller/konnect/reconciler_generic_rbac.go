@@ -99,3 +99,5 @@ package konnect
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongvaults,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongvaults/status,verbs=update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongvaults/finalizers,verbs=update;patch
+
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongreferencegrants,verbs=get;list;watch

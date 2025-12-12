@@ -53,18 +53,12 @@ func getCPForNamespacedRef(
 	ref commonv1alpha1.ControlPlaneRef,
 	namespace string,
 ) (*konnectv1alpha2.KonnectGatewayControlPlane, error) {
-	// TODO(pmalek): handle cross namespace refs
-	if namespace != "" && ref.KonnectNamespacedRef.Namespace != "" && ref.KonnectNamespacedRef.Namespace != namespace {
-		return nil, fmt.Errorf("%s ControlPlaneRef from different namespace than %s", ref.KonnectNamespacedRef.Namespace, namespace)
-	}
-
 	nn := types.NamespacedName{
 		Name:      ref.KonnectNamespacedRef.Name,
 		Namespace: namespace,
 	}
 
-	// Set namespace of control plane when it is non-empty. Only applies for cluster-scoped resources (KongVault).
-	if namespace == "" && ref.KonnectNamespacedRef.Namespace != "" {
+	if ref.KonnectNamespacedRef.Namespace != "" {
 		nn.Namespace = ref.KonnectNamespacedRef.Namespace
 	}
 

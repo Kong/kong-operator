@@ -70,15 +70,11 @@ spec:
                   properties:
                     group:
                       description: Group is the group of the referent.
-                      enum:
-                      - configuration.konghq.com
                       maxLength: 253
                       pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                       type: string
                     kind:
                       description: Kind is the kind of the referent.
-                      enum:
-                      - KongCertificate
                       maxLength: 63
                       minLength: 1
                       pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -94,6 +90,11 @@ spec:
                   - kind
                   - namespace
                   type: object
+                  x-kubernetes-validations:
+                  - message: Only KongCertificate and KongService kinds are supported
+                      for 'configuration.konghq.com' group
+                    rule: .self.group != 'configuration.konghq.com' || .self.kind
+                      in ['KongService', 'KongCertificate' ]
                 maxItems: 16
                 minItems: 1
                 type: array
@@ -111,15 +112,11 @@ spec:
                   properties:
                     group:
                       description: Group is the group of the referent.
-                      enum:
-                      - core
                       maxLength: 253
                       pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                       type: string
                     kind:
                       description: Kind is the kind of the referent.
-                      enum:
-                      - Secret
                       maxLength: 63
                       minLength: 1
                       pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -136,6 +133,12 @@ spec:
                   - group
                   - kind
                   type: object
+                  x-kubernetes-validations:
+                  - message: Only 'Secret' kind is supported for 'core' group
+                    rule: .self.group != 'core' || .self.kind == 'Secret'
+                  - message: Only 'KonnectGatewayControlPlane' kind is supported for
+                      'konnect.konghq.com' group
+                    rule: .self.group != 'konnect.konghq.com' || .self.kind == 'KonnectGatewayControlPlane'
                 maxItems: 16
                 minItems: 1
                 type: array

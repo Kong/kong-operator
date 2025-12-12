@@ -89,6 +89,32 @@ func StatusWithConditions[T interface {
 	return ctrl.Result{}, false, nil
 }
 
+// StatusWithoutCondition patches the status of the provided object without the
+// given condition.
+// If the condition is not set, it returns without patching.
+func StatusWithoutCondition[T interface {
+	client.Object
+	k8sutils.ConditionsAware
+}](
+	ctx context.Context,
+	cl client.Client,
+	ent T,
+	conditionType string,
+) (res ctrl.Result, err error) {
+	if !k8sutils.RemoveCondition(kcfgconsts.ConditionType(conditionType), ent) {
+		return ctrl.Result{}, nil
+	}
+
+	old := ent.DeepCopyObject().(T)
+	if err := cl.Status().Patch(ctx, ent, client.MergeFrom(old)); err != nil {
+		if k8serrors.IsConflict(err) {
+			return ctrl.Result{Requeue: true}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("failed to patch status without condition %v: %w", conditionType, err)
+	}
+	return ctrl.Result{}, nil
+}
+
 // StatusWithCondition patches the status of the provided object with the
 // given condition.
 // If the condition is already set and it's as expected, it returns without patching.
