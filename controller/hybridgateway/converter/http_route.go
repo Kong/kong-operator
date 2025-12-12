@@ -422,7 +422,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					}
 				}
 				// Create a KongPluginBinding to bind the KongPlugin to each KongRoute.
-				bindingPtr, exists, err := pluginbinding.BindingForPluginAndRoute(
+				bindingPtr, _, err := pluginbinding.BindingForPluginAndRoute(
 					ctx,
 					logger,
 					c.Client,
