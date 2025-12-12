@@ -290,6 +290,7 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [KongKeySet](#configuration-konghq-com-v1alpha1-kongkeyset)
 - [KongLicense](#configuration-konghq-com-v1alpha1-konglicense)
 - [KongPluginBinding](#configuration-konghq-com-v1alpha1-kongpluginbinding)
+- [KongReferenceGrant](#configuration-konghq-com-v1alpha1-kongreferencegrant)
 - [KongRoute](#configuration-konghq-com-v1alpha1-kongroute)
 - [KongSNI](#configuration-konghq-com-v1alpha1-kongsni)
 - [KongService](#configuration-konghq-com-v1alpha1-kongservice)
@@ -507,6 +508,25 @@ KongPluginBinding is the schema for Plugin Bindings API which defines a Kong Plu
 | `spec` _[KongPluginBindingSpec](#configuration-konghq-com-v1alpha1-types-kongpluginbindingspec)_ |  |
 | `status` _[KongPluginBindingStatus](#configuration-konghq-com-v1alpha1-types-kongpluginbindingstatus)_ |  |
 
+### KongReferenceGrant
+
+
+KongReferenceGrant identifies kinds of resources in other namespaces that are
+trusted to reference the specified kinds of resources in the same namespace
+as the policy.<br /><br />Each KongReferenceGrant can be used to represent a unique trust relationship.
+Additional Reference Grants can be used to add to the set of trusted
+sources of inbound references for the namespace they are defined within.<br /><br />All cross-namespace references in Kong APIs require a KongReferenceGrant.<br /><br />KongReferenceGrant is a form of runtime verification allowing users to assert
+which cross-namespace object references are permitted.
+
+<!-- kong_reference_grant description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `KongReferenceGrant`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongReferenceGrantSpec](#configuration-konghq-com-v1alpha1-types-kongreferencegrantspec)_ | Spec defines the desired state of KongReferenceGrant. |
+
 ### KongRoute
 
 
@@ -636,6 +656,8 @@ RFC 1123 subdomain.
 _Appears in:_
 
 - [ControllerReference](#configuration-konghq-com-v1alpha1-types-controllerreference)
+- [ReferenceGrantFrom](#configuration-konghq-com-v1alpha1-types-referencegrantfrom)
+- [ReferenceGrantTo](#configuration-konghq-com-v1alpha1-types-referencegrantto)
 
 #### IngressClassParametersSpec
 
@@ -703,6 +725,8 @@ Kind refers to a Kubernetes kind.
 _Appears in:_
 
 - [ControllerReference](#configuration-konghq-com-v1alpha1-types-controllerreference)
+- [ReferenceGrantFrom](#configuration-konghq-com-v1alpha1-types-referencegrantfrom)
+- [ReferenceGrantTo](#configuration-konghq-com-v1alpha1-types-referencegrantto)
 
 #### KongCACertificateAPISpec
 
@@ -1418,6 +1442,23 @@ _Appears in:_
 
 - [KongPluginBindingSpec](#configuration-konghq-com-v1alpha1-types-kongpluginbindingspec)
 
+#### KongReferenceGrantSpec
+
+
+KongReferenceGrantSpec identifies a cross namespace relationship that is trusted
+for Kong APIs.
+
+
+
+| Field | Description |
+| --- | --- |
+| `from` _[ReferenceGrantFrom](#configuration-konghq-com-v1alpha1-types-referencegrantfrom)_ | From describes the trusted namespaces and kinds that can reference the resources described in "To". Each entry in this list MUST be considered to be an additional place that references can be valid from, or to put this another way, entries MUST be combined using OR. |
+| `to` _[ReferenceGrantTo](#configuration-konghq-com-v1alpha1-types-referencegrantto)_ | To describes the resources that may be referenced by the resources described in "From". Each entry in this list MUST be considered to be an additional place that references can be valid to, or to put this another way, entries MUST be combined using OR. |
+
+_Appears in:_
+
+- [KongReferenceGrant](#configuration-konghq-com-v1alpha1-kongreferencegrant)
+
 #### KongRouteAPISpec
 
 
@@ -1809,6 +1850,7 @@ Namespace refers to a Kubernetes namespace. It must be a RFC 1123 label.
 _Appears in:_
 
 - [ControllerReference](#configuration-konghq-com-v1alpha1-types-controllerreference)
+- [ReferenceGrantFrom](#configuration-konghq-com-v1alpha1-types-referencegrantfrom)
 
 #### ObjectName
 
@@ -1824,6 +1866,7 @@ RFC 1123 labels, or RFC 1035 labels.
 _Appears in:_
 
 - [ControllerReference](#configuration-konghq-com-v1alpha1-types-controllerreference)
+- [ReferenceGrantTo](#configuration-konghq-com-v1alpha1-types-referencegrantto)
 
 #### ObjectReference
 
@@ -1875,6 +1918,41 @@ PluginRef is a reference to a KongPlugin or KongClusterPlugin resource.
 _Appears in:_
 
 - [KongPluginBindingSpec](#configuration-konghq-com-v1alpha1-types-kongpluginbindingspec)
+
+#### ReferenceGrantFrom
+
+
+ReferenceGrantFrom describes trusted namespaces and kinds.
+
+
+
+| Field | Description |
+| --- | --- |
+| `group` _[Group](#configuration-konghq-com-v1alpha1-types-group)_ | Group is the group of the referent. |
+| `kind` _[Kind](#configuration-konghq-com-v1alpha1-types-kind)_ | Kind is the kind of the referent. |
+| `namespace` _[Namespace](#configuration-konghq-com-v1alpha1-types-namespace)_ | Namespace is the namespace of the referent. |
+
+_Appears in:_
+
+- [KongReferenceGrantSpec](#configuration-konghq-com-v1alpha1-types-kongreferencegrantspec)
+
+#### ReferenceGrantTo
+
+
+ReferenceGrantTo describes what Kinds are allowed as targets of the
+references.
+
+
+
+| Field | Description |
+| --- | --- |
+| `group` _[Group](#configuration-konghq-com-v1alpha1-types-group)_ | Group is the group of the referent. |
+| `kind` _[Kind](#configuration-konghq-com-v1alpha1-types-kind)_ | Kind is the kind of the referent. |
+| `name` _[ObjectName](#configuration-konghq-com-v1alpha1-types-objectname)_ | Name is the name of the referent. When unspecified, this policy refers to all resources of the specified Group and Kind in the local namespace. |
+
+_Appears in:_
+
+- [KongReferenceGrantSpec](#configuration-konghq-com-v1alpha1-types-kongreferencegrantspec)
 
 #### ServiceRef
 

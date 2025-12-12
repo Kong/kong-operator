@@ -1,0 +1,101 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cert-namespace
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: secret-namespace
+---
+# Secret in secret-namespace that will be referenced
+apiVersion: v1
+kind: Secret
+metadata:
+  name: my-tls-secret
+  namespace: secret-namespace
+type: kubernetes.io/tls
+stringData:
+  tls.crt: |
+    -----BEGIN CERTIFICATE-----
+    MIIDXTCCAkWgAwIBAgIJAKZ6Z0Z6Z0Z6MA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNV
+    BAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHwYDVQQKDBhJbnRlcm5ldCBX
+    aWRnaXRzIFB0eSBMdGQwHhcNMjMwMTAxMDAwMDAwWhcNMjQwMTAxMDAwMDAwWjBF
+    MQswCQYDVQQGEwJBVTETMBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50
+    ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+    CgKCAQEA0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z
+    0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z
+    0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z
+    0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z
+    0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z
+    0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z
+    0QIDAQABo1AwTjAdBgNVHQ4EFgQU0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z4wHwYDVR0j
+    BBgwFoAU0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z4wDAYDVR0TBAUwAwEB/zANBgkqhkiG
+    9w0BAQsFAAOCAQEA0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z
+    0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z
+    0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z
+    0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z
+    0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z
+    0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z
+    0Z6Z0g==
+    -----END CERTIFICATE-----
+  tls.key: |
+    -----BEGIN PRIVATE KEY-----
+    MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDRnpnRnpnRnpnR
+    npnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnR
+    npnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnR
+    npnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnR
+    npnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnR
+    npnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnR
+    npnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnR
+    0QIDAQABAoIBAQDRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnR
+    npnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnR
+    npnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnR
+    npnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnR
+    npnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnR
+    npnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRAoGB
+    AOZ6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6
+    Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6
+    Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6
+    Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0Z6Z0CgYEA
+    5npnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpn
+    RnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpn
+    RnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpn
+    RnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRnpnRg==
+    -----END PRIVATE KEY-----
+---
+# KongReferenceGrant that allows KongCertificate in cert-namespace
+# to reference the Secret in secret-namespace
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-cert-to-secret
+  namespace: secret-namespace
+spec:
+  from:
+    - group: configuration.konghq.com
+      kind: KongCertificate
+      namespace: cert-namespace
+  to:
+    - group: core
+      kind: Secret
+      # Optionally specify a specific Secret name
+      # name: my-tls-secret
+---
+# KongCertificate in cert-namespace that references the Secret in secret-namespace
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongCertificate
+metadata:
+  name: cross-namespace-cert
+  namespace: cert-namespace
+spec:
+  type: secretRef
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: my-control-plane
+  # This cross-namespace reference is allowed by the KongReferenceGrant above
+  secretRef:
+    name: my-tls-secret
+    namespace: secret-namespace

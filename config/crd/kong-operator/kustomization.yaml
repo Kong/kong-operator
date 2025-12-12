@@ -20,6 +20,7 @@ resources:
   - configuration.konghq.com_konglicenses.yaml
   - configuration.konghq.com_kongpluginbindings.yaml
   - configuration.konghq.com_kongplugins.yaml
+  - configuration.konghq.com_kongreferencegrants.yaml
   - configuration.konghq.com_kongroutes.yaml
   - configuration.konghq.com_kongservices.yaml
   - configuration.konghq.com_kongsnis.yaml

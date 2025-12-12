@@ -40,17 +40,21 @@
 
 ### Added
 
-- DataPlane: Enable incremental config sync by default when using Konnect as control plane.
+- `DataPlane`: Enable incremental config sync by default when using Konnect as control plane.
   This improves performance of config syncs for large configurations.
   [#2759](https://github.com/Kong/kong-operator/pull/2759)
-- KongCertificate: Add support for sourcing certificates from Kubernetes Secrets.                                                                                                      │
-  This allows users to define KongCertificates that reference existing Kubernetes                                                                                                      │
-  Secrets containing TLS certificate and key data, instead of embedding them inline.                                                                                                   │
+- `KongCertificate`: Add support for sourcing certificates from Kubernetes Secrets.
+  This allows users to define KongCertificates that reference existing Kubernetes
+  Secrets containing TLS certificate and key data, instead of embedding them inline.
   [#2802](https://github.com/Kong/kong-operator/pull/2802)  
-- KongCACertificate: Add support for sourcing CA certificates from Kubernetes Secrets.
+- `KongCACertificate`: Add support for sourcing CA certificates from Kubernetes Secrets.
   This allows users to define KongCACertificates that references exsiting Kubernetes
   Secrets containing TLS CA certificate instead of embedding them inline
   [#2482](https://github.com/Kong/kong-operator/pull/2842)
+- `KongReferenceGrant` CRD has been added to allow cross-namespace references
+  among Konnect entities API. This new resource is to be intended as the Kong
+  version of the original Gateway API `ReferenceGrant` CRD.
+  [#2855](https://github.com/Kong/kong-operator/pull/2855)
 
 ### Changed
 
