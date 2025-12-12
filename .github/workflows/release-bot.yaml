@@ -81,7 +81,7 @@ jobs:
           version_extractor_regex: "(.*)$"
 
       - name: check if tag already exists
-        uses: mukunku/tag-exists-action@bdad1eaa119ce71b150b952c97351c75025c06a9 # v1.6.0
+        uses: mukunku/tag-exists-action@5c39604fe8aef7e65acb6fbcf96ec580f7680313 # v1.7.0
         id: tag_exists
         with:
           tag: ${{ env.VERSION }}
