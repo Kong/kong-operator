@@ -35,23 +35,21 @@ var _ APIConverter[gwtypes.HTTPRoute] = &httpRouteConverter{}
 type httpRouteConverter struct {
 	client.Client
 
-	route                 *gwtypes.HTTPRoute
-	outputStore           []client.Object
-	expectedGVKs          []schema.GroupVersionKind
-	referenceGrantEnabled bool
-	fqdnMode              bool
-	clusterDomain         string
+	route         *gwtypes.HTTPRoute
+	outputStore   []client.Object
+	expectedGVKs  []schema.GroupVersionKind
+	fqdnMode      bool
+	clusterDomain string
 }
 
 // NewHTTPRouteConverter returns a new instance of httpRouteConverter.
-func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client, referenceGrantEnabled bool, fqdnMode bool, clusterDomain string) APIConverter[gwtypes.HTTPRoute] {
+func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client, fqdnMode bool, clusterDomain string) APIConverter[gwtypes.HTTPRoute] {
 	return &httpRouteConverter{
-		Client:                cl,
-		outputStore:           []client.Object{},
-		route:                 httpRoute,
-		referenceGrantEnabled: referenceGrantEnabled,
-		fqdnMode:              fqdnMode,
-		clusterDomain:         clusterDomain,
+		Client:        cl,
+		outputStore:   []client.Object{},
+		route:         httpRoute,
+		fqdnMode:      fqdnMode,
+		clusterDomain: clusterDomain,
 		expectedGVKs: []schema.GroupVersionKind{
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongRoute"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongService"},
@@ -198,7 +196,7 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 
 	// First, build the resolvedRefs conditons for the HTTPRoute since it is the same for all ParentRefs.
 	log.Debug(logger, "Building ResolvedRefs condition for HTTPRoute")
-	resolvedRefsCond, err := route.BuildResolvedRefsCondition(ctx, logger, c.Client, c.route, c.referenceGrantEnabled)
+	resolvedRefsCond, err := route.BuildResolvedRefsCondition(ctx, logger, c.Client, c.route)
 	if err != nil {
 		return false, fmt.Errorf("failed to build resolvedRefs condition for HTTPRoute %s: %w", c.route.Name, err)
 	}
@@ -357,7 +355,6 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				rule.BackendRefs,
 				&pRef,
 				upstreamName,
-				c.referenceGrantEnabled,
 				c.fqdnMode,
 				c.clusterDomain,
 			)

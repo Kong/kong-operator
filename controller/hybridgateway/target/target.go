@@ -47,12 +47,11 @@ func TargetsForBackendRefs(
 	backendRefs []gwtypes.HTTPBackendRef,
 	pRef *gwtypes.ParentReference,
 	upstreamName string,
-	referenceGrantEnabled bool,
 	fqdn bool,
 	clusterDomain string,
 ) ([]configurationv1alpha1.KongTarget, error) {
 	// Step 1: Filter and validate all BackendRefs, extracting endpoints.
-	validBackendRefs, err := filterValidBackendRefs(ctx, logger, cl, httpRoute, backendRefs, referenceGrantEnabled, fqdn, clusterDomain)
+	validBackendRefs, err := filterValidBackendRefs(ctx, logger, cl, httpRoute, backendRefs, fqdn, clusterDomain)
 	if err != nil {
 		return nil, fmt.Errorf("failed to filter valid BackendRefs: %w", err)
 	}
@@ -271,7 +270,6 @@ func filterValidBackendRefs(
 	cl client.Client,
 	httpRoute *gwtypes.HTTPRoute,
 	backendRefs []gwtypes.HTTPBackendRef,
-	referenceGrantEnabled bool,
 	fqdn bool,
 	clusterDomain string,
 ) ([]validBackendRef, error) {
@@ -306,7 +304,7 @@ func filterValidBackendRefs(
 		}
 
 		// Check ReferenceGrant permission for cross-namespace access.
-		if referenceGrantEnabled && bRefNamespace != httpRoute.Namespace {
+		if bRefNamespace != httpRoute.Namespace {
 			permitted, found, err := route.CheckReferenceGrant(ctx, cl, &bRef, httpRoute.Namespace)
 			if err != nil {
 				return nil, fmt.Errorf("error checking ReferenceGrant for BackendRef %s: %w", bRef.Name, err)

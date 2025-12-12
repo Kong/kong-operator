@@ -20302,7 +20302,9 @@ spec:
                 - message: konnect.id is immutable
                   rule: 'has(self.konnect) ? (self.konnect.id == oldSelf.konnect.id) : true'
               cert:
-                description: Cert is the PEM-encoded CA certificate.
+                description: |-
+                  Cert is the PEM-encoded CA certificate.
+                  This field is used when type is 'inline'.
                 type: string
               controlPlaneRef:
                 description: ControlPlaneRef references the Konnect Control Plane that this KongCACertificate should be created in.
@@ -20368,8 +20370,36 @@ spec:
                   rule: '!has(self.type) ? !has(self.konnectID) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
+              secretRef:
+                description: |-
+                  SecretRef is a reference to a Kubernetes Secret containing the CA certificate.
+                  This field is used when type is 'secretRef'.
+                  The Secret must contain a key named 'ca.crt'.
+                  The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented.
+                properties:
+                  name:
+                    description: Name is the name of the referred resource.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referred resource.
+
+                      For namespace-scoped resources if no Namespace is provided then the
+                      namespace of the parent object MUST be used.
+
+                      This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
+                    type: string
+                required:
+                - name
+                type: object
               tags:
-                description: Tags is an optional set of tags applied to the certificate.
+                description: |-
+                  Tags is an optional set of tags applied to the certificate.
+                  Tags will be applied when type is 'inline' or 'secretRef'.
+                  This field allows you to attach metadata to the certificate for identification or organization purposes.
                 items:
                   type: string
                 maxItems: 20
@@ -20377,8 +20407,16 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+              type:
+                default: inline
+                description: |-
+                  Type indicates the source of the CA certificate data.
+                  Can be 'inline' or 'secretRef'.
+                enum:
+                - inline
+                - secretRef
+                type: string
             required:
-            - cert
             - controlPlaneRef
             type: object
             x-kubernetes-validations:
@@ -20388,6 +20426,14 @@ spec:
               rule: '!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == ''konnectNamespacedRef'')'
             - message: Cannot set or unset spec.adopt in updates
               rule: (has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))
+            - message: spec.cert is required when type is 'inline'
+              rule: self.type != 'inline' || (has(self.cert) && self.cert.size() != 0)
+            - message: spec.secretRef is required when type is 'secretRef'
+              rule: self.type != 'secretRef' || has(self.secretRef)
+            - message: cert and secretRef cannot be set at the same time
+              rule: '!(has(self.cert) && has(self.secretRef))'
+            - message: spec.secretRef.namespace is not allowed until ReferenceGrant support is implemented
+              rule: '!has(self.secretRef) || !has(self.secretRef.__namespace__) || self.secretRef.__namespace__.size() == 0'
           status:
             default:
               conditions:
@@ -20603,7 +20649,9 @@ spec:
                 - message: konnect.id is immutable
                   rule: 'has(self.konnect) ? (self.konnect.id == oldSelf.konnect.id) : true'
               cert:
-                description: Cert is the PEM-encoded certificate.
+                description: |-
+                  Cert is the PEM-encoded certificate.
+                  This field is used when type is 'inline'.
                 type: string
               cert_alt:
                 description: |-
@@ -20611,6 +20659,7 @@ spec:
                   This should only be set if you have both RSA and ECDSA types of
                   certificate available and would like Kong to prefer serving using ECDSA certs
                   when client advertises support for it.
+                  This field is used when type is 'inline'.
                 type: string
               controlPlaneRef:
                 description: ControlPlaneRef references the Konnect Control Plane that this KongCertificate should be created in.
@@ -20677,7 +20726,9 @@ spec:
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               key:
-                description: Key is the PEM-encoded private key.
+                description: |-
+                  Key is the PEM-encoded private key.
+                  This field is used when type is 'inline'.
                 type: string
               key_alt:
                 description: |-
@@ -20685,9 +20736,65 @@ spec:
                   This should only be set if you have both RSA and ECDSA types of
                   certificate available and would like Kong to prefer serving using ECDSA certs
                   when client advertises support for it.
+                  This field is used when type is 'inline'.
                 type: string
+              secretRef:
+                description: |-
+                  SecretRef is a reference to a Kubernetes Secret containing the certificate and key.
+                  This field is used when type is 'secretRef'.
+                  The Secret must contain keys named 'tls.crt' and 'tls.key'.
+                  The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented.
+                properties:
+                  name:
+                    description: Name is the name of the referred resource.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referred resource.
+
+                      For namespace-scoped resources if no Namespace is provided then the
+                      namespace of the parent object MUST be used.
+
+                      This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
+                    type: string
+                required:
+                - name
+                type: object
+              secretRefAlt:
+                description: |-
+                  SecretRefAlt is a reference to a Kubernetes Secret containing the alternative certificate and key.
+                  This should only be set if you have both RSA and ECDSA types of certificate available
+                  and would like Kong to prefer serving using ECDSA certs when client advertises support for it.
+                  This field is used when type is 'secretRef'.
+                  The Secret must contain keys named 'tls.crt' and 'tls.key'.
+                  The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented.
+                properties:
+                  name:
+                    description: Name is the name of the referred resource.
+                    maxLength: 253
+                    minLength: 1
+                    type: string
+                  namespace:
+                    description: |-
+                      Namespace is the namespace of the referred resource.
+
+                      For namespace-scoped resources if no Namespace is provided then the
+                      namespace of the parent object MUST be used.
+
+                      This field MUST not be set when referring to cluster-scoped resources.
+                    maxLength: 253
+                    type: string
+                required:
+                - name
+                type: object
               tags:
-                description: Tags is an optional set of tags applied to the certificate.
+                description: |-
+                  Tags is an optional set of tags applied to the certificate.
+                  Tags will be applied when type is 'inline' or 'secretRef'.
+                  This field allows you to attach metadata to the certificate for identification or organization purposes.
                 items:
                   type: string
                 maxItems: 20
@@ -20695,10 +20802,17 @@ spec:
                 x-kubernetes-validations:
                 - message: tags entries must not be longer than 128 characters
                   rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
+              type:
+                default: inline
+                description: |-
+                  Type indicates the source of the certificate data.
+                  Can be 'inline' or 'secretRef'.
+                enum:
+                - inline
+                - secretRef
+                type: string
             required:
-            - cert
             - controlPlaneRef
-            - key
             type: object
             x-kubernetes-validations:
             - message: KIC is not supported as control plane
@@ -20707,6 +20821,16 @@ spec:
               rule: '!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == ''konnectNamespacedRef'')'
             - message: Cannot set or unset spec.adopt in updates
               rule: (has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))
+            - message: spec.cert is required when type is 'inline'
+              rule: self.type != 'inline' || (has(self.cert) && self.cert.size() != 0)
+            - message: spec.key is required when type is 'inline'
+              rule: self.type != 'inline' || (has(self.key) && self.key.size() != 0)
+            - message: spec.secretRef is required when type is 'secretRef'
+              rule: self.type != 'secretRef' ||  has(self.secretRef)
+            - message: cert/key and secretRef/secretRefAlt cannot be set at the same time
+              rule: '!((has(self.cert) || has(self.key)) && (has(self.secretRef) || has(self.secretRefAlt)))'
+            - message: cert_alt/key_alt and secretRef/secretRefAlt cannot be set at the same time
+              rule: '!((has(self.cert_alt) || has(self.key_alt)) && (has(self.secretRef) || has(self.secretRefAlt)))'
           status:
             default:
               conditions:
@@ -25281,6 +25405,157 @@ spec:
     storage: true
     subresources:
       status: {}
+---
+# Source: kong-operator/charts/ko-crds/templates/ko-crds.yaml
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    helm.sh/resource-policy: keep
+    kubernetes-configuration.konghq.com/channels: kong-operator
+    kubernetes-configuration.konghq.com/version: v2.1.0-alpha.0
+  name: kongreferencegrants.configuration.konghq.com
+spec:
+  group: configuration.konghq.com
+  names:
+    categories:
+    - kong
+    kind: KongReferenceGrant
+    listKind: KongReferenceGrantList
+    plural: kongreferencegrants
+    singular: kongreferencegrant
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          KongReferenceGrant identifies kinds of resources in other namespaces that are
+          trusted to reference the specified kinds of resources in the same namespace
+          as the policy.
+
+          Each KongReferenceGrant can be used to represent a unique trust relationship.
+          Additional Reference Grants can be used to add to the set of trusted
+          sources of inbound references for the namespace they are defined within.
+
+          All cross-namespace references in Kong APIs require a KongReferenceGrant.
+
+          KongReferenceGrant is a form of runtime verification allowing users to assert
+          which cross-namespace object references are permitted.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Spec defines the desired state of KongReferenceGrant.
+            properties:
+              from:
+                description: |-
+                  From describes the trusted namespaces and kinds that can reference the
+                  resources described in "To". Each entry in this list MUST be considered
+                  to be an additional place that references can be valid from, or to put
+                  this another way, entries MUST be combined using OR.
+                items:
+                  description: ReferenceGrantFrom describes trusted namespaces and kinds.
+                  properties:
+                    group:
+                      description: Group is the group of the referent.
+                      enum:
+                      - configuration.konghq.com
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    kind:
+                      description: Kind is the kind of the referent.
+                      enum:
+                      - KongCertificate
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                      type: string
+                    namespace:
+                      description: Namespace is the namespace of the referent.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  - namespace
+                  type: object
+                maxItems: 16
+                minItems: 1
+                type: array
+                x-kubernetes-list-type: atomic
+              to:
+                description: |-
+                  To describes the resources that may be referenced by the resources
+                  described in "From". Each entry in this list MUST be considered to be an
+                  additional place that references can be valid to, or to put this another
+                  way, entries MUST be combined using OR.
+                items:
+                  description: |-
+                    ReferenceGrantTo describes what Kinds are allowed as targets of the
+                    references.
+                  properties:
+                    group:
+                      description: Group is the group of the referent.
+                      enum:
+                      - core
+                      maxLength: 253
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                    kind:
+                      description: Kind is the kind of the referent.
+                      enum:
+                      - Secret
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                      type: string
+                    name:
+                      description: |-
+                        Name is the name of the referent. When unspecified, this policy
+                        refers to all resources of the specified Group and Kind in the local
+                        namespace.
+                      maxLength: 253
+                      minLength: 1
+                      type: string
+                  required:
+                  - group
+                  - kind
+                  type: object
+                maxItems: 16
+                minItems: 1
+                type: array
+                x-kubernetes-list-type: atomic
+            required:
+            - from
+            - to
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources: {}
 ---
 # Source: kong-operator/charts/ko-crds/templates/ko-crds.yaml
 apiVersion: apiextensions.k8s.io/v1

@@ -428,12 +428,11 @@ func BuildProgrammedCondition(ctx context.Context, logger logr.Logger, cl client
 //   - logger: Logger for debugging information
 //   - cl: Kubernetes client for resource operations
 //   - route: The HTTPRoute whose BackendRefs are being checked
-//   - referenceGrantEnabled: Whether ReferenceGrant support is enabled
 //
 // Returns:
 //   - *metav1.Condition: Condition indicating resolved refs status
 //   - error: Any error encountered during evaluation
-func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute, referenceGrantEnabled bool) (*metav1.Condition, error) {
+func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute) (*metav1.Condition, error) {
 	conditionSet := false
 	cond := &metav1.Condition{
 		Type:    string(gwtypes.RouteConditionResolvedRefs),
@@ -482,15 +481,6 @@ func BuildResolvedRefsCondition(ctx context.Context, logger logr.Logger, cl clie
 
 			// Check if the referenced object is permitted by the reference grant if in a different namespace.
 			if bRefNamespace != route.Namespace {
-				if !referenceGrantEnabled {
-					log.Debug(logger, "BackendRef in different namespace but ReferenceGrant support is disabled", "namespace", bRefNamespace, "name", bRef.Name)
-					cond.Reason = string(gwtypes.RouteReasonRefNotPermitted)
-					cond.Status = metav1.ConditionFalse
-					cond.Message = fmt.Sprintf("BackendRef %s/%s in different namespace and ReferenceGrant support is disabled", bRefNamespace, bRef.Name)
-					conditionSet = true
-					break
-				}
-
 				// Use CheckReferenceGrant helper to check if the reference is permitted.
 				permitted, found, err := CheckReferenceGrant(ctx, cl, &bRef, route.Namespace)
 				if err != nil {

@@ -7,6 +7,16 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 )
 
+// KongCertificateSourceType is the type of source for the certificate data.
+type KongCertificateSourceType string
+
+const (
+	// KongCertificateSourceTypeInline indicates that the certificate data is provided inline in the spec.
+	KongCertificateSourceTypeInline KongCertificateSourceType = "inline"
+	// KongCertificateSourceTypeSecretRef indicates that the certificate data is sourced from a Kubernetes Secret.
+	KongCertificateSourceTypeSecretRef KongCertificateSourceType = "secretRef"
+)
+
 // KongCertificate is the schema for Certificate API which defines a Kong Certificate.
 //
 // +genclient
@@ -36,8 +46,20 @@ type KongCertificate struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
 // +kubebuilder:validation:XValidation:rule="!has(self.adopt) ? true : (has(self.controlPlaneRef) && self.controlPlaneRef.type == 'konnectNamespacedRef')", message="spec.adopt is allowed only when controlPlaneRef is konnectNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="(has(oldSelf.adopt) && has(self.adopt)) || (!has(oldSelf.adopt) && !has(self.adopt))", message="Cannot set or unset spec.adopt in updates"
+// +kubebuilder:validation:XValidation:rule="self.type != 'inline' || (has(self.cert) && self.cert.size() != 0)", message="spec.cert is required when type is 'inline'"
+// +kubebuilder:validation:XValidation:rule="self.type != 'inline' || (has(self.key) && self.key.size() != 0)", message="spec.key is required when type is 'inline'"
+// +kubebuilder:validation:XValidation:rule="self.type != 'secretRef' ||  has(self.secretRef)", message="spec.secretRef is required when type is 'secretRef'"
+// +kubebuilder:validation:XValidation:rule="!((has(self.cert) || has(self.key)) && (has(self.secretRef) || has(self.secretRefAlt)))", message="cert/key and secretRef/secretRefAlt cannot be set at the same time"
+// +kubebuilder:validation:XValidation:rule="!((has(self.cert_alt) || has(self.key_alt)) && (has(self.secretRef) || has(self.secretRefAlt)))", message="cert_alt/key_alt and secretRef/secretRefAlt cannot be set at the same time"
 // +apireference:kgo:include
 type KongCertificateSpec struct {
+	// Type indicates the source of the certificate data.
+	// Can be 'inline' or 'secretRef'.
+	// +kubebuilder:validation:Enum=inline;secretRef
+	// +kubebuilder:default=inline
+	// +optional
+	Type *KongCertificateSourceType `json:"type,omitempty"`
+
 	// ControlPlaneRef references the Konnect Control Plane that this KongCertificate should be created in.
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
 	// +required
@@ -47,6 +69,22 @@ type KongCertificateSpec struct {
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`
 
+	// SecretRef is a reference to a Kubernetes Secret containing the certificate and key.
+	// This field is used when type is 'secretRef'.
+	// The Secret must contain keys named 'tls.crt' and 'tls.key'.
+	// The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented.
+	// +optional
+	SecretRef *commonv1alpha1.NamespacedRef `json:"secretRef,omitempty"`
+
+	// SecretRefAlt is a reference to a Kubernetes Secret containing the alternative certificate and key.
+	// This should only be set if you have both RSA and ECDSA types of certificate available
+	// and would like Kong to prefer serving using ECDSA certs when client advertises support for it.
+	// This field is used when type is 'secretRef'.
+	// The Secret must contain keys named 'tls.crt' and 'tls.key'.
+	// The namespace field is optional, but will be restricted by validation until ReferenceGrant support is implemented.
+	// +optional
+	SecretRefAlt *commonv1alpha1.NamespacedRef `json:"secretRefAlt,omitempty"`
+
 	KongCertificateAPISpec `json:",inline"`
 }
 
@@ -54,23 +92,31 @@ type KongCertificateSpec struct {
 // +apireference:kgo:include
 type KongCertificateAPISpec struct {
 	// Cert is the PEM-encoded certificate.
-	// +required
+	// This field is used when type is 'inline'.
+	// +optional
 	Cert string `json:"cert,omitempty"`
 	// CertAlt is the PEM-encoded certificate.
 	// This should only be set if you have both RSA and ECDSA types of
 	// certificate available and would like Kong to prefer serving using ECDSA certs
 	// when client advertises support for it.
+	// This field is used when type is 'inline'.
+	// +optional
 	CertAlt string `json:"cert_alt,omitempty"`
 	// Key is the PEM-encoded private key.
-	// +required
+	// This field is used when type is 'inline'.
+	// +optional
 	Key string `json:"key,omitempty"`
 	// KeyAlt is the PEM-encoded private key.
 	// This should only be set if you have both RSA and ECDSA types of
 	// certificate available and would like Kong to prefer serving using ECDSA certs
 	// when client advertises support for it.
+	// This field is used when type is 'inline'.
+	// +optional
 	KeyAlt string `json:"key_alt,omitempty"`
 
 	// Tags is an optional set of tags applied to the certificate.
+	// Tags will be applied when type is 'inline' or 'secretRef'.
+	// This field allows you to attach metadata to the certificate for identification or organization purposes.
 	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
 }
 

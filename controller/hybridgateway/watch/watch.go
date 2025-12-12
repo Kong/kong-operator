@@ -20,10 +20,10 @@ type Watcher struct {
 }
 
 // Watches returns a list of Watcher objects for the given resource type.
-func Watches(obj client.Object, cl client.Client, referenceGrantEnabled bool) []Watcher {
+func Watches(obj client.Object, cl client.Client) []Watcher {
 	switch obj.(type) {
 	case *gwtypes.HTTPRoute:
-		watcher := []Watcher{
+		return []Watcher{
 			{
 				&gwtypes.Gateway{},
 				MapHTTPRouteForGateway(cl),
@@ -64,15 +64,11 @@ func Watches(obj client.Object, cl client.Client, referenceGrantEnabled bool) []
 				&configurationv1alpha1.KongPluginBinding{},
 				MapHTTPRouteForKongResource[*configurationv1alpha1.KongPluginBinding](cl),
 			},
-		}
-
-		if referenceGrantEnabled {
-			watcher = append(watcher, Watcher{
+			{
 				&gwtypes.ReferenceGrant{},
 				MapHTTPRouteForReferenceGrant(cl),
-			})
+			},
 		}
-		return watcher
 	default:
 		return nil
 	}

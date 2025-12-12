@@ -81,7 +81,7 @@ jobs:
           version_extractor_regex: "(.*)$"
 
       - name: check if tag already exists
-        uses: mukunku/tag-exists-action@bdad1eaa119ce71b150b952c97351c75025c06a9 # v1.6.0
+        uses: mukunku/tag-exists-action@5c39604fe8aef7e65acb6fbcf96ec580f7680313 # v1.7.0
         id: tag_exists
         with:
           tag: ${{ env.VERSION }}
@@ -182,7 +182,7 @@ jobs:
           # Amend the commit message to avoid infinite loop of this workflow (it's triggered by the commit message).
           git commit --amend -m "chore: cherry-pick ${{ needs.semver.outputs.version }} commit (${{ github.sha }}) onto main"
 
-      - uses: peter-evans/create-pull-request@84ae59a2cdc2258d6fa0732dd66352dddae2a412 # v7.0.6
+      - uses: peter-evans/create-pull-request@22a9089034f40e5a961c8808d113e2c98fb63676 # v7.0.6
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: ${{ env.CHERRYPICK_BRANCH }}

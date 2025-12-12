@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -31,8 +30,7 @@ type APIConverter[t RootObject] interface {
 // RootObject is an interface that represents all resource types that can be loaded
 // as root by the APIConverter.
 type RootObject interface {
-	corev1.Service |
-		gwtypes.HTTPRoute
+	gwtypes.HTTPRoute
 }
 
 // RootObjectPtr is a generic interface that represents a pointer to a type T,
@@ -46,11 +44,11 @@ type RootObjectPtr[T RootObject] interface {
 // NewConverter is a factory function that creates and returns an APIConverter instance
 // based on the type of the provided root object. It supports different types of root objects
 // and returns an error if the type is unsupported.
-func NewConverter[t RootObject](obj t, cl client.Client, referenceGrantEnabled bool, fqdnMode bool, clusterDomain string) (APIConverter[t], error) {
+func NewConverter[t RootObject](obj t, cl client.Client, fqdnMode bool, clusterDomain string) (APIConverter[t], error) {
 	switch o := any(obj).(type) {
 	// TODO: add other types here
 	case gwtypes.HTTPRoute:
-		return newHTTPRouteConverter(&o, cl, referenceGrantEnabled, fqdnMode, clusterDomain).(APIConverter[t]), nil
+		return newHTTPRouteConverter(&o, cl, fqdnMode, clusterDomain).(APIConverter[t]), nil
 	default:
 		return nil, fmt.Errorf("unsupported root object type: %T", obj)
 	}

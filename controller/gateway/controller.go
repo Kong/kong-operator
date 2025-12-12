@@ -313,6 +313,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// condition to the Gateway status if the dataplane is ready. If not ready
 	// the status DataPlaneReady=False will be set instead.
 	dataplane, provisionErr := r.provisionDataPlane(ctx, logger, &gateway, gatewayConfig, konnectExtension)
+	if provisionErr == nil && k8sutils.RunningOnKubernetes() {
+		// DataPlane NetworkPolicies
+		// Only create network policies if KO is running inside k8s.
+		// If the code is run outside of k8s (like in envtest or integration test), do not create network policies.
+		log.Trace(logger, "ensuring DataPlane's NetworkPolicy exists")
+		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, dataplane)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if createdOrUpdated {
+			log.Debug(logger, "networkPolicy updated")
+			return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
+		}
+	}
 
 	// Set the DataPlaneReady Condition to False. This happens only if:
 	// * the new status is false and there was no DataPlaneReady condition in the old gateway, or
@@ -480,21 +494,6 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if !k8sutils.HasConditionTrue(kcfggateway.DataPlaneReadyType, gwConditionAware) {
 		log.Debug(logger, "dataplane is not ready yet")
 		return ctrl.Result{}, nil
-	}
-
-	// DataPlane NetworkPolicies
-	// Only create network policies if KO is running inside k8s.
-	// If the code is run outside of k8s (like in envtest or integration test), do not create network policies.
-	if k8sutils.RunningOnKubernetes() {
-		log.Trace(logger, "ensuring DataPlane's NetworkPolicy exists")
-		createdOrUpdated, err := r.ensureDataPlaneHasNetworkPolicy(ctx, &gateway, dataplane)
-		if err != nil {
-			return ctrl.Result{}, err
-		}
-		if createdOrUpdated {
-			log.Debug(logger, "networkPolicy updated")
-			return ctrl.Result{}, nil // requeue will be triggered by the creation or update of the owned object
-		}
 	}
 
 	log.Trace(logger, "ensuring DataPlane connectivity for Gateway")

@@ -139,13 +139,6 @@ func TestCleanOrphanedResources(t *testing.T) {
 			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2"}},
 		},
 		{
-			name:         "Orphans in different namespace are not deleted",
-			gvks:         []schema.GroupVersionKind{gvks[0]},
-			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
-			orphanNames:  map[schema.GroupVersionKind][]string{gvks[0]: {"route2"}},
-			wantNames:    map[schema.GroupVersionKind][]string{gvks[0]: {"route1", "route2"}}, // route2 is in a different namespace, should not be deleted
-		},
-		{
 			name:         "Orphan with label mismatch is not deleted",
 			gvks:         []schema.GroupVersionKind{gvks[0]},
 			desiredNames: map[schema.GroupVersionKind][]string{gvks[0]: {"route1"}},
