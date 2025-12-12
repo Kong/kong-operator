@@ -1,4 +1,4 @@
-package helpers
+package webhook
 
 import (
 	"fmt"
@@ -25,12 +25,12 @@ import (
 //
 // This works if the test runs against a KIND cluster, and does not work against cloud providers (like GKE).
 
-// GetAdmissionWebhookListenHost returns the host IP address depends on environment where the test is running.
-func GetAdmissionWebhookListenHost() string {
-	return admissionWebhookListenHost
+// getLocalOperatorListenHost returns the host IP address depends on environment where the test is running.
+func getLocalOperatorListenHost() string {
+	return localOperatorListenHost
 }
 
-var admissionWebhookListenHost = getHostIPbyType(getHostType())
+var localOperatorListenHost = getHostIPbyType(getHostType())
 
 type hostType string
 
@@ -60,7 +60,7 @@ func getHostType() hostType {
 	out, err := cmd.CombinedOutput()
 	output := string(out)
 	if err != nil {
-		fmt.Printf("Failed to run %q command %s\n%s\n", cmd.String(), err, output)
+		fmt.Printf("ERROR: failed to run %q command %s\n%s\n", cmd.String(), err, output)
 		return defaultDocker
 	}
 	switch {

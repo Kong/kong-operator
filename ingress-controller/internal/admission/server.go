@@ -13,23 +13,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/certwatcher"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
+	mgrconsts "github.com/kong/kong-operator/ingress-controller/internal/manager/consts"
+	"github.com/kong/kong-operator/ingress-controller/pkg/validation/consts"
 )
 
 var (
 	scheme = runtime.NewScheme()
 	codecs = serializer.NewCodecFactory(scheme)
-)
-
-// NOTE: These paths have to match paths used in Helm Chart.
-// E.g. in
-const (
-	// DefaultAdmissionWebhookBasePath is the default path to validating admission webhook files.
-	DefaultAdmissionWebhookBasePath = "/tmp/k8s-webhook-server/serving-certs/validating-admission-webhook/"
-	// DefaultAdmissionWebhookCertPath is the default path to the any (validation, conversion) webhook server TLS certificate.
-	DefaultAdmissionWebhookCertPath = DefaultAdmissionWebhookBasePath + "tls.crt"
-	// DefaultAdmissionWebhookKeyPath is the default path to the any (validation, conversion) webhook server TLS key.
-	DefaultAdmissionWebhookKeyPath = DefaultAdmissionWebhookBasePath + "tls.key"
 )
 
 type Server struct {
@@ -40,7 +30,7 @@ type Server struct {
 func MakeTLSServer(port int32, handler http.Handler) (*Server, error) {
 	const defaultHTTPReadHeaderTimeout = 10 * time.Second
 
-	watcher, err := certwatcher.New(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath)
+	watcher, err := certwatcher.New(consts.DefaultAdmissionWebhookCertPath, consts.DefaultAdmissionWebhookKeyPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CertWatcher: %w", err)
 	}
@@ -64,7 +54,7 @@ func MakeTLSServer(port int32, handler http.Handler) (*Server, error) {
 func (s *Server) Start(ctx context.Context) error {
 	logger := ctrllog.FromContext(ctx)
 	go func() {
-		if err := s.s.ListenAndServeTLS(DefaultAdmissionWebhookCertPath, DefaultAdmissionWebhookKeyPath); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := s.s.ListenAndServeTLS(consts.DefaultAdmissionWebhookCertPath, consts.DefaultAdmissionWebhookKeyPath); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error(err, "Failed to start admission server")
 		}
 	}()
@@ -77,7 +67,7 @@ func (s *Server) Start(ctx context.Context) error {
 
 	<-ctx.Done()
 
-	ctx, cancel := context.WithTimeout(context.Background(), consts.DefaultGracefulShutdownTimeout) //nolint:contextcheck
+	ctx, cancel := context.WithTimeout(context.Background(), mgrconsts.DefaultGracefulShutdownTimeout) //nolint:contextcheck
 	defer cancel()
 	return s.s.Shutdown(ctx)
 }
