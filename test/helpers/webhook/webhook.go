@@ -1,4 +1,4 @@
-package helpers
+package webhook
 
 import (
 	"fmt"

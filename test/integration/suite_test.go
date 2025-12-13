@@ -7,12 +7,14 @@ import (
 	"runtime/debug"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/certmanager"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
+	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/networking"
 
 	"github.com/kong/kong-operator/modules/manager"
 	"github.com/kong/kong-operator/modules/manager/metadata"
@@ -125,6 +127,9 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 	defer cleanupPodLabels()
 
+	fmt.Println("INFO: configuring admission webhook")
+	exitOnErr(ensureAdmissionRegistration(GetCtx(), clients.K8sClient))
+
 	fmt.Println("INFO: starting the operator's controller manager")
 	// Spawn the controller manager based on passed config in
 	// a separate goroutine and report whether that succeeded.
@@ -140,6 +145,13 @@ func TestMain(m *testing.M) {
 	httpClient, err := helpers.CreateHTTPClient(nil, "")
 	exitOnErr(err)
 	exitOnErr(testutils.BuildMTLSCredentials(GetCtx(), GetClients().K8sClient, httpClient))
+
+	fmt.Println("waiting for webhook service to be connective")
+	waitCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	exitOnErr(networking.WaitForConnectionOnServicePort(
+		waitCtx, clients.K8sClient, "kong-system", "gateway-operator-webhook-service", 5443, 30*time.Second,
+	))
 
 	fmt.Println("INFO: environment is ready, starting tests")
 	code = m.Run()

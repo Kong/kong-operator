@@ -27,7 +27,6 @@ func TestGatewayValidationWebhook(t *testing.T) {
 	if env.Cluster().Type() != kind.KindClusterType {
 		t.Skip("webhook tests are only available on KIND clusters currently")
 	}
-	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-gateway", ns.Name)
 
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
