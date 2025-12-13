@@ -6,6 +6,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/admission"
+	"github.com/kong/kong-operator/ingress-controller/pkg/validation/consts"
 )
 
 // SetupAdmissionServer sets up the admission webhook server.
@@ -18,7 +19,7 @@ func SetupAdmissionServer(
 	admissionReqHandler := &admission.RequestHandler{
 		Logger: admissionLogger,
 	}
-	srv, err := admission.MakeTLSServer(5443, admissionReqHandler)
+	srv, err := admission.MakeTLSServer(consts.WebhookPort, admissionReqHandler)
 	if err != nil {
 		return nil, err
 	}

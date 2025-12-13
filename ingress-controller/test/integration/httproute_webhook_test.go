@@ -211,7 +211,6 @@ func setUpEnvForTestingHTTPRouteValidationWebhook(ctx context.Context, t *testin
 ) {
 	ns, cleaner := helpers.Setup(ctx, t, env)
 	namespace = ns.Name
-	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-gateway", ns.Name)
 
 	t.Log("creating a gateway client")
 	gatewayClient, err := gatewayclient.NewForConfig(env.Cluster().Config())

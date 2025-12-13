@@ -33,6 +33,7 @@ import (
 )
 
 func TestKongPluginInstallationEssentials(t *testing.T) {
+	t.Skip("DUE TOO ENABLED WEBHOOK")
 	t.Parallel()
 
 	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())

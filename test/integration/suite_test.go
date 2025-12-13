@@ -127,7 +127,7 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 	defer cleanupPodLabels()
 
-	fmt.Println("INFO: preparing admission webhook for testing")
+	fmt.Println("INFO: configuring admission webhook")
 	exitOnErr(ensureAdmissionRegistration(GetCtx(), clients.K8sClient))
 
 	fmt.Println("INFO: starting the operator's controller manager")

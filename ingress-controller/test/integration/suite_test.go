@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -22,12 +21,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	"github.com/kong/kong-operator/ingress-controller/internal/admission"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
 	testutils "github.com/kong/kong-operator/ingress-controller/test/util"
@@ -60,7 +57,7 @@ func TestMain(m *testing.M) {
 	}
 
 	fmt.Println("INFO: setting up test environment")
-	kongbuilder, extraControllerArgs, err := helpers.GenerateKongBuilder(ctx)
+	kongbuilder, _, err := helpers.GenerateKongBuilder(ctx)
 	helpers.ExitOnErrWithCode(ctx, err, consts.ExitCodeEnvSetupFailed)
 	if testenv.KongImage() != "" && testenv.KongTag() != "" {
 		fmt.Printf("INFO: custom kong image specified via env: %s:%s\n", testenv.KongImage(), testenv.KongTag())
@@ -196,13 +193,6 @@ func TestMain(m *testing.M) {
 		helpers.ExitOnErr(ctx, testutils.PrepareClusterForRunningControllerManager(ctx, env.Cluster()))
 
 		fmt.Println("INFO: starting the controller manager")
-		cert, key := certificate.GetKongSystemSelfSignedCerts()
-		helpers.ExitOnErr(ctx, os.MkdirAll(filepath.Dir(admission.DefaultAdmissionWebhookCertPath), 0755))
-		helpers.ExitOnErr(ctx, os.WriteFile(admission.DefaultAdmissionWebhookCertPath, cert, 0600))
-		helpers.ExitOnErr(ctx, os.MkdirAll(filepath.Dir(admission.DefaultAdmissionWebhookKeyPath), 0755))
-		helpers.ExitOnErr(ctx, os.WriteFile(admission.DefaultAdmissionWebhookKeyPath, key, 0600))
-
-		_ = extraControllerArgs
 		cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, env.Cluster(), kongAddon, func(c *managercfg.Config) {
 			c.IngressClassName = consts.IngressClass
 			c.EnableProfiling = true
@@ -261,7 +251,5 @@ func TestMain(m *testing.M) {
 		ctx, cancel := context.WithTimeout(context.Background(), test.EnvironmentCleanupTimeout)
 		defer cancel()
 		helpers.ExitOnErr(ctx, helpers.RemoveCluster(ctx, env.Cluster()))
-		helpers.ExitOnErr(ctx, os.Remove(admission.DefaultAdmissionWebhookCertPath))
-		helpers.ExitOnErr(ctx, os.Remove(admission.DefaultAdmissionWebhookKeyPath))
 	}
 }
