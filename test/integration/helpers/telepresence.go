@@ -6,9 +6,44 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"sync"
 
 	"github.com/kong/kong-operator/test"
 )
+
+// SetupTelepresence installs the telepresence traffic manager in the cluster and connects to it.
+// It returns a cleanup function that should be called when the test is done.
+var (
+	telepresencePathOnce sync.Once
+	telepresencePath     string
+	telepresencePathErr  error
+)
+
+// resolveTelepresenceExecutable returns the absolute path to the telepresence executable.
+// It respects the TELEPRESENCE_BIN environment variable and falls back to the
+// binary available in PATH.
+func resolveTelepresenceExecutable() (string, error) {
+	telepresencePathOnce.Do(func() {
+		execPath := os.Getenv("TELEPRESENCE_BIN")
+		if execPath == "" {
+			execPath = "telepresence"
+		}
+
+		var err error
+		telepresencePath, err = exec.LookPath(execPath)
+		if err != nil {
+			telepresencePathErr = fmt.Errorf("failed to locate telepresence binary %q: %w", execPath, err)
+			return
+		}
+
+		if err := os.Setenv("TELEPRESENCE_BIN", telepresencePath); err != nil {
+			telepresencePathErr = fmt.Errorf("failed setting TELEPRESENCE_BIN: %w", err)
+			return
+		}
+	})
+
+	return telepresencePath, telepresencePathErr
+}
 
 // SetupTelepresence installs the telepresence traffic manager in the cluster and connects to it.
 // It returns a cleanup function that should be called when the test is done.
@@ -19,14 +54,19 @@ func SetupTelepresence(ctx context.Context) (func(), error) {
 	}
 
 	fmt.Println("INFO: installing telepresence traffic manager in the cluster")
-	const telepresenceBin = "TELEPRESENCE_BIN"
-	telepresenceExecutable := os.Getenv(telepresenceBin)
-	if telepresenceExecutable == "" {
-		telepresenceExecutable = "telepresence"
-		fmt.Printf("WARN: environment variable %s is not set, try to fallback to a system wide 'telepresnce'", telepresenceBin)
-	} else {
-		fmt.Printf("INFO: path to binary from %s environment variable is %s\n", telepresenceBin, telepresenceExecutable)
+	telepresenceExecutable, err := resolveTelepresenceExecutable()
+	if err != nil {
+		return nil, err
 	}
+
+	// Set pod labels on traffic-manager to match the labels expected by NetworkPolicy.
+	// This allows traffic from the local test process (via telepresence) to be allowed
+	// by the DataPlane's NetworkPolicy which restricts admin API access.
+	// NOTE: We use "app.kubernetes.io/name" instead of "app" because "app" conflicts
+	// with telepresence's deployment selector.
+	// NOTE: We install traffic-manager in kong-system namespace to match the NetworkPolicy
+	// rules which only allow traffic from kong-system namespace.
+	fmt.Printf("INFO: path to telepresence is %s\n", telepresenceExecutable)
 
 	// Set pod labels on traffic-manager to match the labels expected by NetworkPolicy.
 	// This allows traffic from the local test process (via telepresence) to be allowed
@@ -49,15 +89,6 @@ func SetupTelepresence(ctx context.Context) (func(), error) {
 		}
 	} else if err != nil {
 		return nil, fmt.Errorf("failed to install telepresence traffic manager: %w, %s", err, string(out))
-	}
-
-	fmt.Println("INFO: connecting to the cluster with telepresence")
-	// NOTE: We need to specify --manager-namespace to connect to the traffic-manager
-	// installed in kong-system namespace above.
-	connectArgs := []string{"connect", "--manager-namespace", "kong-system"}
-	out, err = exec.CommandContext(ctx, telepresenceExecutable, connectArgs...).CombinedOutput()
-	if err != nil {
-		return nil, fmt.Errorf("failed to connect to the cluster with telepresence: %w, %s", err, string(out))
 	}
 
 	return func() {

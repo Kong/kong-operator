@@ -20,8 +20,8 @@ import (
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test"
-	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/kcfg"
+	"github.com/kong/kong-operator/test/integration/helpers"
 )
 
 // -----------------------------------------------------------------------------
