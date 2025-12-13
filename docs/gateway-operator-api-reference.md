@@ -2252,7 +2252,7 @@ KonnectOptions contains the options for configuring a Konnect-managed ControlPla
 
 | Field | Description |
 | --- | --- |
-| `authRef` _[KonnectAPIAuthConfigurationRef](#konnect-konghq-com-v1alpha2-types-konnectapiauthconfigurationref)_ | APIAuthConfigurationRef contains the Konnect API authentication configuration. If this field is not set, the operator will not be able to connect the Gateway to Konnect. |
+| `authRef` _[ControlPlaneKonnectAPIAuthConfigurationRef](#konnect-konghq-com-v1alpha2-types-controlplanekonnectapiauthconfigurationref)_ | APIAuthConfigurationRef contains the Konnect API authentication configuration. If this field is not set, the operator will not be able to connect the Gateway to Konnect. |
 | `source` _[EntitySource](#common-konghq-com-v1alpha1-types-entitysource)_ | Source represents the source type of the Konnect entity. |
 | `mirror` _[MirrorSpec](#konnect-konghq-com-v1alpha1-types-mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
 

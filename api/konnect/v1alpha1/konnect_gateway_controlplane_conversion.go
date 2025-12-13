@@ -40,7 +40,11 @@ func (src *KonnectGatewayControlPlane) ConvertTo(dstRaw conversion.Hub) error {
 	dst.Spec.Source = src.Spec.Source
 	dst.Spec.Members = src.Spec.Members
 
-	dst.Spec.KonnectConfiguration = src.Spec.KonnectConfiguration
+	dst.Spec.KonnectConfiguration = konnectv1alpha2.ControlPlaneKonnectConfiguration{
+		APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+			Name: src.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+		},
+	}
 
 	return nil
 }
@@ -68,7 +72,11 @@ func (dst *KonnectGatewayControlPlane) ConvertFrom(srcRaw conversion.Hub) error 
 	dst.Spec.Source = src.Spec.Source
 	dst.Spec.Members = src.Spec.Members
 
-	dst.Spec.KonnectConfiguration = src.Spec.KonnectConfiguration
+	dst.Spec.KonnectConfiguration = konnectv1alpha2.KonnectConfiguration{
+		APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+			Name: src.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name,
+		},
+	}
 
 	return nil
 }

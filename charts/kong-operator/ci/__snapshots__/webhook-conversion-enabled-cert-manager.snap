@@ -45602,6 +45602,12 @@ spec:
                         description: Name is the name of the KonnectAPIAuthConfiguration resource.
                         minLength: 1
                         type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
+                          If not specified, defaults to the same namespace as the KonnectConfiguration resource.
+                        minLength: 1
+                        type: string
                     required:
                     - name
                     type: object
@@ -51111,6 +51117,7 @@ spec:
                       description: Group is the group of the referent.
                       enum:
                       - configuration.konghq.com
+                      - konnect.konghq.com
                       maxLength: 253
                       pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                       type: string
@@ -51118,6 +51125,7 @@ spec:
                       description: Kind is the kind of the referent.
                       enum:
                       - KongCertificate
+                      - KonnectGatewayControlPlane
                       maxLength: 63
                       minLength: 1
                       pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -51133,6 +51141,9 @@ spec:
                   - kind
                   - namespace
                   type: object
+                  x-kubernetes-validations:
+                  - message: pair group/kind is not allowed
+                    rule: self.group == 'configuration.konghq.com' && self.kind == 'KongCertificate' || self.group == 'konnect.konghq.com' && self.kind == 'KonnectGatewayControlPlane'
                 maxItems: 16
                 minItems: 1
                 type: array
@@ -51152,6 +51163,7 @@ spec:
                       description: Group is the group of the referent.
                       enum:
                       - core
+                      - konnect.konghq.com
                       maxLength: 253
                       pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                       type: string
@@ -51159,6 +51171,7 @@ spec:
                       description: Kind is the kind of the referent.
                       enum:
                       - Secret
+                      - KonnectAPIAuthConfiguration
                       maxLength: 63
                       minLength: 1
                       pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
@@ -51175,6 +51188,9 @@ spec:
                   - group
                   - kind
                   type: object
+                  x-kubernetes-validations:
+                  - message: pair group/kind is not allowed
+                    rule: self.group == 'core' && self.kind == 'Secret' || self.group == 'konnect.konghq.com' && self.kind == 'KonnectAPIAuthConfiguration'
                 maxItems: 16
                 minItems: 1
                 type: array
@@ -56082,6 +56098,12 @@ spec:
                         description: Name is the name of the KonnectAPIAuthConfiguration resource.
                         minLength: 1
                         type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
+                          If not specified, defaults to the same namespace as the KonnectConfiguration resource.
+                        minLength: 1
+                        type: string
                     required:
                     - name
                     type: object
@@ -56559,6 +56581,12 @@ spec:
                     properties:
                       name:
                         description: Name is the name of the KonnectAPIAuthConfiguration resource.
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
+                          If not specified, defaults to the same namespace as the KonnectConfiguration resource.
                         minLength: 1
                         type: string
                     required:

@@ -11,6 +11,7 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/controller/pkg/patch"
+	"github.com/kong/kong-operator/internal/utils/crossnamespace"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
@@ -44,6 +45,20 @@ func handleAPIAuthStatusCondition[T interface {
 		if k8serrors.IsNotFound(err) {
 			resolvedRefCondition.Reason = konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound
 			resolvedRefCondition.Message = fmt.Sprintf("Referenced KonnectAPIAuthConfiguration %s not found", apiAuthNN)
+			if res, _, err := patch.StatusWithConditions(
+				ctx,
+				cl,
+				ent,
+				append(dependingConditions, resolvedRefCondition)...,
+			); err != nil || !res.IsZero() {
+				return true, ctrl.Result{}, err
+			}
+			return true, ctrl.Result{}, nil
+		}
+
+		if crossnamespace.IsCrossNamespaceReferenceNotGranted(err) {
+			resolvedRefCondition.Reason = konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotPermitted
+			resolvedRefCondition.Message = err.Error()
 			if res, _, err := patch.StatusWithConditions(
 				ctx,
 				cl,
@@ -91,7 +106,6 @@ func handleAPIAuthStatusCondition[T interface {
 		Message: conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthNN),
 	}
 
-	// Check if the referenced APIAuthConfiguration is valid.
 	if cond, present := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType, &apiAuth); !present ||
 		cond.Status != metav1.ConditionTrue ||
 		cond.Reason != konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid {

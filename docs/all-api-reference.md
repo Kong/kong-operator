@@ -4512,7 +4512,7 @@ KonnectOptions contains the options for configuring a Konnect-managed ControlPla
 
 | Field | Description |
 | --- | --- |
-| `authRef` _[KonnectAPIAuthConfigurationRef](#konnect-konghq-com-v1alpha2-types-konnectapiauthconfigurationref)_ | APIAuthConfigurationRef contains the Konnect API authentication configuration. If this field is not set, the operator will not be able to connect the Gateway to Konnect. |
+| `authRef` _[ControlPlaneKonnectAPIAuthConfigurationRef](#konnect-konghq-com-v1alpha2-types-controlplanekonnectapiauthconfigurationref)_ | APIAuthConfigurationRef contains the Konnect API authentication configuration. If this field is not set, the operator will not be able to connect the Gateway to Konnect. |
 | `source` _[EntitySource](#common-konghq-com-v1alpha1-types-entitysource)_ | Source represents the source type of the Konnect entity. |
 | `mirror` _[MirrorSpec](#konnect-konghq-com-v1alpha1-types-mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
 
@@ -5768,6 +5768,40 @@ _Appears in:_
 
 - [KonnectExtensionClientAuth](#konnect-konghq-com-v1alpha2-types-konnectextensionclientauth)
 
+#### ControlPlaneKonnectAPIAuthConfigurationRef
+
+
+ControlPlaneKonnectAPIAuthConfigurationRef is a reference to a KonnectAPIAuthConfiguration resource
+in the control plane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the KonnectAPIAuthConfiguration resource. |
+| `namespace` _*string_ | Namespace is the namespace of the KonnectAPIAuthConfiguration resource. If not specified, defaults to the same namespace as the KonnectConfiguration resource. |
+
+_Appears in:_
+
+- [ControlPlaneKonnectConfiguration](#konnect-konghq-com-v1alpha2-types-controlplanekonnectconfiguration)
+- [KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectextensioncontrolplanestatus)
+- [KonnectOptions](#gateway-operator-konghq-com-v2beta1-types-konnectoptions)
+
+#### ControlPlaneKonnectConfiguration
+
+
+ControlPlaneKonnectConfiguration is the Schema for the KonnectConfiguration API in the control plane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `authRef` _[ControlPlaneKonnectAPIAuthConfigurationRef](#konnect-konghq-com-v1alpha2-types-controlplanekonnectapiauthconfigurationref)_ | APIAuthConfigurationRef is the reference to the API Auth Configuration that should be used for this Konnect Configuration. |
+
+_Appears in:_
+
+- [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanespec)
+
 #### DataPlaneClientAuthStatus
 
 
@@ -5810,8 +5844,6 @@ KonnectAPIAuthConfigurationRef is a reference to a KonnectAPIAuthConfiguration r
 _Appears in:_
 
 - [KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)
-- [KonnectExtensionControlPlaneStatus](#konnect-konghq-com-v1alpha2-types-konnectextensioncontrolplanestatus)
-- [KonnectOptions](#gateway-operator-konghq-com-v2beta1-types-konnectoptions)
 
 #### KonnectConfiguration
 
@@ -5829,7 +5861,6 @@ _Appears in:_
 - [KonnectCloudGatewayNetworkSpec](#konnect-konghq-com-v1alpha1-types-konnectcloudgatewaynetworkspec)
 - [KonnectExtensionKonnectSpec](#konnect-konghq-com-v1alpha1-types-konnectextensionkonnectspec)
 - [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha1-types-konnectgatewaycontrolplanespec)
-- [KonnectGatewayControlPlaneSpec](#konnect-konghq-com-v1alpha2-types-konnectgatewaycontrolplanespec)
 
 #### KonnectEndpoints
 
@@ -6085,7 +6116,7 @@ KonnectExtensionControlPlaneStatus contains the Konnect Control Plane status inf
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the ControlPlane this KonnectExtension is associated with. |
 | `clusterType` _[KonnectExtensionClusterType](#konnect-konghq-com-v1alpha2-types-konnectextensionclustertype)_ | ClusterType is the type of the Konnect Control Plane. |
 | `endpoints` _[KonnectEndpoints](#konnect-konghq-com-v1alpha2-types-konnectendpoints)_ | Endpoints defines the Konnect endpoints for the control plane. |
-| `authRef` _[KonnectAPIAuthConfigurationRef](#konnect-konghq-com-v1alpha2-types-konnectapiauthconfigurationref)_ | AuthRef is the reference to the KonnectAPIAuthConfiguration used to authenticate with Konnect. For particular KonnectExtension and ControlPlane combination. |
+| `authRef` _[ControlPlaneKonnectAPIAuthConfigurationRef](#konnect-konghq-com-v1alpha2-types-controlplanekonnectapiauthconfigurationref)_ | AuthRef is the reference to the KonnectAPIAuthConfiguration used to authenticate with Konnect. For particular KonnectExtension and ControlPlane combination. |
 
 _Appears in:_
 
@@ -6170,7 +6201,7 @@ KonnectGatewayControlPlaneSpec defines the desired state of KonnectGatewayContro
 | `mirror` _[MirrorSpec](#konnect-konghq-com-v1alpha2-types-mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for ControlPlanes that are created as Mirrors. |
 | `source` _[EntitySource](#common-konghq-com-v1alpha1-types-entitysource)_ | Source represents the source type of the Konnect entity. |
 | `members` _[LocalObjectReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#localobjectreference-v1-core) array_ | Members is a list of references to the KonnectGatewayControlPlaneMembers that are part of this control plane group. Only applicable for ControlPlanes that are created as groups. |
-| `konnect` _[KonnectConfiguration](#konnect-konghq-com-v1alpha2-types-konnectconfiguration)_ | KonnectConfiguration contains the Konnect configuration for the control plane. |
+| `konnect` _[ControlPlaneKonnectConfiguration](#konnect-konghq-com-v1alpha2-types-controlplanekonnectconfiguration)_ | KonnectConfiguration contains the Konnect configuration for the control plane. |
 
 _Appears in:_
 
