@@ -14,8 +14,9 @@ import (
 	"github.com/kong/kong-operator/pkg/consts"
 )
 
-// VerifyAndUpdate checks if the given object exists in the cluster. If it exists, it verifies
-// the hybrid routes annotation and updates it to include the provided route.
+// VerifyAndUpdate verifies if the object passaed as parameter already exists or not in the cluster.
+// If it exists, VerifyAndUpdate updates the hybrid-routes annotation in the object to include the provided route.
+// For more information about the hybrid-routes annotation, see https://github.com/Kong/kong-operator/blob/main/docs/internal/hybridgateway/autogen-resource-naming.md .
 //
 // Parameters:
 //   - ctx: Context for API calls.
@@ -37,6 +38,7 @@ func VerifyAndUpdate[T client.Object](
 	exclusiveRoute bool,
 ) (exists bool, err error) {
 	existingObj := obj.DeepCopyObject().(T)
+	// Verify: check if obj already exists
 	if err = cl.Get(ctx, client.ObjectKeyFromObject(obj), existingObj); err != nil {
 		if apierrors.IsNotFound(err) {
 			log.Debug(logger, "Object not found")
@@ -50,6 +52,7 @@ func VerifyAndUpdate[T client.Object](
 		return false, err
 	}
 
+	// Update: verify and update the hybrid-routes annotation
 	routesCSV := existingObj.GetAnnotations()[consts.GatewayOperatorHybridRoutesAnnotation]
 	routes := strings.Split(routesCSV, ",")
 	if len(routes) == 0 {
@@ -58,7 +61,11 @@ func VerifyAndUpdate[T client.Object](
 		log.Error(logger, err, "Tracking annotation check failed")
 		return true, err
 	}
-
+	// If exclusiveRoute is true, ensure that the existing object is only associated with the provided route
+	// A resource is exclusive to a route if it cannot be shared among multiple routes, e.g., each KongRoute is derived
+	// from a single HTTPRoute only and is not shared with other HTTPRoutes by design.
+	// See https://github.com/Kong/kong-operator/blob/main/docs/internal/hybridgateway/autogen-resource-naming.md for more details of
+	// how the resource are generated and associated with routes.
 	if exclusiveRoute {
 		if len(routes) > 1 || strings.TrimSpace(routes[0]) != metadata.ObjectToNameString(route) {
 			err = fmt.Errorf("existing %s object %s/%s is associated with multiple routes %s",
