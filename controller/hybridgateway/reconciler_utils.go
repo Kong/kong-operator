@@ -22,10 +22,9 @@ const (
 )
 
 // translate performs the full translation process using the provided APIConverter.
-// Returns a boolean indicating if a requeue is needed, and an integer representing the number of translated resources, and an error if the translation fails.
+// Returns a boolean indicating if a requeue is needed, an integer representing the number of translated resources, and an error if the translation fails.
 func translate[t converter.RootObject](conv converter.APIConverter[t], ctx context.Context, logger logr.Logger) (requeue bool, num int, err error) {
-	requeue, err = conv.Translate(ctx, logger)
-	return requeue, conv.GetOutputStoreLen(ctx, logger), err
+	return conv.Translate(ctx, logger)
 }
 
 // enforceState ensures that the desired state of Kubernetes resources, as provided by the APIConverter,

@@ -110,7 +110,7 @@ func TestHostnamesIntersection(t *testing.T) {
 
 			var output []unstructured.Unstructured
 			for {
-				needsRequeue, err := converter.Translate(t.Context(), logr.Discard())
+				needsRequeue, _, err := converter.Translate(t.Context(), logr.Discard())
 				require.NoError(t, err)
 
 				if !needsRequeue {

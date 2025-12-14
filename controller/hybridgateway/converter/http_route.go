@@ -92,13 +92,14 @@ func (c *httpRouteConverter) GetRootObject() gwtypes.HTTPRoute {
 //   - logger: Logger for structured logging with httproute-translate phase
 //
 // Returns:
+//   - bool: true if any resource is going to be created anew and we need to requeue translation
 //   - int: Number of Kong resources created during translation
 //   - error: Aggregated translation errors or nil if successful
-func (c *httpRouteConverter) Translate(ctx context.Context, logger logr.Logger) (needsRequeue bool, err error) {
+func (c *httpRouteConverter) Translate(ctx context.Context, logger logr.Logger) (needsRequeue bool, numTranslated int, err error) {
 	if needsRequeue, err = c.translate(ctx, logger); err != nil {
-		return false, err
+		return false, 0, err
 	}
-	return needsRequeue, nil
+	return needsRequeue, len(c.outputStore), nil
 }
 
 // GetOutputStore implements APIConverter.
