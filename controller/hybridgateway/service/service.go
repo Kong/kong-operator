@@ -65,6 +65,7 @@ func ServiceForRule(
 		WithAnnotations(httpRoute, pRef).
 		WithSpecName(serviceName).
 		WithSpecHost(upstreamName).
+		WithProtocol("http").
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
