@@ -35,10 +35,11 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
+	ctrlClient := client.NewNamespacedClient(GetClients().MgrClient, namespace.Name)
+
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
 	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
-	gatewayConfig, err := GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name).Create(GetCtx(), gatewayConfig, metav1.CreateOptions{})
-	require.NoError(t, err)
+	require.NoError(t, ctrlClient.Create(ctx, gatewayConfig))
 	cleaner.Add(gatewayConfig)
 
 	gatewayClass := helpers.MustGenerateGatewayClass(t, gatewayv1.ParametersReference{
@@ -48,8 +49,7 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		Name:      gatewayConfig.Name,
 	})
 	t.Logf("deploying GatewayClass %s", gatewayClass.Name)
-	gatewayClass, err = GetClients().GatewayClient.GatewayV1().GatewayClasses().Create(GetCtx(), gatewayClass, metav1.CreateOptions{})
-	require.NoError(t, err)
+	require.NoError(t, ctrlClient.Create(ctx, gatewayClass))
 	cleaner.Add(gatewayClass)
 
 	gatewayNSN := types.NamespacedName{
@@ -59,15 +59,13 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 
 	gateway := helpers.GenerateGateway(gatewayNSN, gatewayClass)
 	t.Logf("deploying Gateway %s/%s", gateway.Namespace, gateway.Name)
-	gateway, err = GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Create(GetCtx(), gateway, metav1.CreateOptions{})
-	require.NoError(t, err)
+	require.NoError(t, ctrlClient.Create(ctx, gateway))
 	cleaner.Add(gateway)
 
 	t.Logf("verifying Gateway %s/%s gets marked as Accepted", gateway.Namespace, gateway.Name)
 	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNSN, clients), 3*time.Minute, time.Second)
 	t.Log("Gateway is programmed, proceeding with the test cases")
 
-	ctrlClient := client.NewNamespacedClient(GetClients().MgrClient, namespace.Name)
 	// highEndConsumerUsageCount indicates a number of consumers with credentials
 	// that we consider a large number and is used to generate background
 	// consumers for testing validation (since validation relies on listing all
