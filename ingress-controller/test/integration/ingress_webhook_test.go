@@ -84,7 +84,6 @@ func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
 
 	ctx := t.Context()
 	ns, _ := helpers.Setup(ctx, t, env)
-	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-ingress", ns.Name)
 
 	testCases := append(
 		commonIngressValidationTestCases(),
@@ -101,12 +100,12 @@ func TestIngressValidationWebhookTraditionalRouter(t *testing.T) {
 }
 
 func TestIngressValidationWebhookExpressionsRouter(t *testing.T) {
+	t.Skip("skipping until https://github.com/Kong/kong-operator/issues/2176 is resolved")
 	skipTestForNonKindCluster(t)
 	skipTestForRouterFlavors(t.Context(), t, traditional, traditionalCompatible)
 
 	ctx := t.Context()
 	ns, _ := helpers.Setup(ctx, t, env)
-	ensureAdmissionRegistration(ctx, t, env.Cluster().Client(), "kong-validations-ingress", ns.Name)
 
 	testCases := append(
 		commonIngressValidationTestCases(),

@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kong-operator/test"
 	"github.com/kong/kong-operator/test/helpers"
 	"github.com/kong/kong-operator/test/helpers/kcfg"
+	"github.com/kong/kong-operator/test/helpers/webhook"
 )
 
 // -----------------------------------------------------------------------------
@@ -125,6 +126,13 @@ func TestMain(m *testing.M) {
 	exitOnErr(err)
 	defer cleanupPodLabels()
 
+	fmt.Println("INFO: configuring validating webhook")
+	checkConnectivityToWebhook, cleanupWebhook, err := webhook.EnsureValidatingWebhookRegistration(
+		GetCtx(), clients.K8sClient,
+	)
+	exitOnErr(err)
+	defer cleanupWebhook()
+
 	fmt.Println("INFO: starting the operator's controller manager")
 	// Spawn the controller manager based on passed config in
 	// a separate goroutine and report whether that succeeded.
@@ -140,6 +148,9 @@ func TestMain(m *testing.M) {
 	httpClient, err := helpers.CreateHTTPClient(nil, "")
 	exitOnErr(err)
 	exitOnErr(testutils.BuildMTLSCredentials(GetCtx(), GetClients().K8sClient, httpClient))
+
+	fmt.Println("INFO: waiting for webhook Service to be connective")
+	exitOnErr(checkConnectivityToWebhook())
 
 	fmt.Println("INFO: environment is ready, starting tests")
 	code = m.Run()

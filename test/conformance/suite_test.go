@@ -160,6 +160,9 @@ func startControllerManager(metadata metadata.Info) <-chan struct{} {
 	// https://github.com/kubernetes-sigs/gateway-api/issues/4056
 	cfg.SecretLabelSelector = ""
 	cfg.ConfigMapLabelSelector = ""
+	// Disable validating webhook, since some tests checks statuses
+	// for invalid resources, that would be blocked by the webhook.
+	cfg.ValidatingWebhookEnabled = false
 
 	startedChan := make(chan struct{})
 	go func() {

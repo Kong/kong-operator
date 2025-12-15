@@ -25,9 +25,6 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/labels"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/webhook"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/testenv"
 )
 
@@ -42,11 +39,6 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		ctrlClient = NewControllerClient(t, scheme, envcfg)
 		ns         = CreateNamespace(ctx, t, ctrlClient)
 
-		webhookCert, _ = certificate.MustGenerateCertPEMFormat(
-			certificate.WithDNSNames("localhost"),
-		)
-		admissionWebhookPort = helpers.GetFreePort(t)
-
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
@@ -57,7 +49,6 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		WithUpdateStatus(),
 	)
 	WaitForManagerStart(t, logs)
-	setupValidatingWebhookConfigurationForEnvTest(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
 
 	const prefixForDuplicationTest = "duplicate-prefix"
 	prepareKongVaultAlreadyProgrammedInGateway(ctx, t, ctrlClient, prefixForDuplicationTest)
@@ -187,11 +178,6 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, _ = certificate.MustGenerateCertPEMFormat(
-			certificate.WithDNSNames("localhost"),
-		)
-		admissionWebhookPort = helpers.GetFreePort(t)
-
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
@@ -201,7 +187,6 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
-	setupValidatingWebhookConfigurationForEnvTest(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
 
 	testCases := []struct {
 		name                string
@@ -441,11 +426,6 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, _ = certificate.MustGenerateCertPEMFormat(
-			certificate.WithDNSNames("localhost"),
-		)
-		admissionWebhookPort = helpers.GetFreePort(t)
-
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
@@ -455,7 +435,6 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
-	setupValidatingWebhookConfigurationForEnvTest(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
 
 	testCases := []struct {
 		name                string
@@ -705,11 +684,6 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, _ = certificate.MustGenerateCertPEMFormat(
-			certificate.WithDNSNames("localhost"),
-		)
-		admissionWebhookPort = helpers.GetFreePort(t)
-
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
@@ -719,7 +693,6 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
-	setupValidatingWebhookConfigurationForEnvTest(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
 
 	t.Logf("creating some static credentials in %s namespace which will be used to test global validation", ns.Name)
 	for _, secret := range []*corev1.Secret{
@@ -1048,11 +1021,6 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, _ = certificate.MustGenerateCertPEMFormat(
-			certificate.WithDNSNames("localhost"),
-		)
-		admissionWebhookPort = helpers.GetFreePort(t)
-
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
@@ -1062,7 +1030,6 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
-	setupValidatingWebhookConfigurationForEnvTest(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
 
 	createKongConsumers(ctx, t, ctrlClient, highEndConsumerUsageCount)
 
@@ -1247,11 +1214,6 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		ns               = CreateNamespace(ctx, t, ctrlClientGlobal)
 		ctrlClient       = client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
 
-		webhookCert, _ = certificate.MustGenerateCertPEMFormat(
-			certificate.WithDNSNames("localhost"),
-		)
-		admissionWebhookPort = helpers.GetFreePort(t)
-
 		kongContainer = runKongEnterprise(ctx, t)
 	)
 
@@ -1261,7 +1223,6 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
 	WaitForManagerStart(t, logs)
-	setupValidatingWebhookConfigurationForEnvTest(ctx, t, admissionWebhookPort, webhookCert, ctrlClient)
 
 	testCases := []struct {
 		name                     string
@@ -1501,21 +1462,4 @@ func prepareKongVaultAlreadyProgrammedInGateway(
 		})
 		return ok && programmed.Status == metav1.ConditionTrue
 	}, programmedWaitTimeout, programmedWaitInterval, "KongVault %s was expected to be programmed", name)
-}
-
-func setupValidatingWebhookConfigurationForEnvTest(
-	ctx context.Context,
-	t *testing.T,
-	webhookServerListenPort int,
-	cert []byte,
-	ctrlClient client.Client,
-) {
-	webhookConfig := webhook.GetWebhookConfigWithKustomize(t)
-	for i := range webhookConfig.Webhooks {
-		webhookConfig.Webhooks[i].ClientConfig = admregv1.WebhookClientConfig{
-			URL:      lo.ToPtr(fmt.Sprintf("https://localhost:%d/", webhookServerListenPort)),
-			CABundle: cert,
-		}
-	}
-	require.NoError(t, ctrlClient.Create(ctx, webhookConfig))
 }
