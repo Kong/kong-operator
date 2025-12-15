@@ -9,7 +9,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/blang/semver/v4 v4.0.0
-	github.com/cert-manager/cert-manager v1.19.1
+	github.com/cert-manager/cert-manager v1.19.2
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/cnf/structhash v0.0.0-20250313080605-df4c6cc74a9a
 	github.com/docker/docker v28.5.2+incompatible
