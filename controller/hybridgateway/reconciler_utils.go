@@ -22,8 +22,8 @@ const (
 )
 
 // translate performs the full translation process using the provided APIConverter.
-// Returns a boolean indicating if a requeue is needed, an integer representing the number of translated resources, and an error if the translation fails.
-func translate[t converter.RootObject](conv converter.APIConverter[t], ctx context.Context, logger logr.Logger) (requeue bool, num int, err error) {
+// Returns an integer representing the number of translated resources, and an error if the translation fails.
+func translate[t converter.RootObject](conv converter.APIConverter[t], ctx context.Context, logger logr.Logger) (int, error) {
 	return conv.Translate(ctx, logger)
 }
 
@@ -75,7 +75,16 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		objectsSkipped = 0
 	)
 
+	// In order to ensure proper ordering of resource creation/update, track the kind of the last created resource in the
+	// loop and skip further processing if we move to a different desired kind which may dependend on the just generated
+	// resource.
+	stopAtKind := ""
 	for i, desired := range desiredObjects {
+		if stopAtKind != "" && desired.GetKind() != stopAtKind {
+			log.Debug(logger, "Waiting for previous resource kind to be fully created/updated before processing next kind", "waitingForKind", stopAtKind, "currentKind", desired.GetKind())
+			objectsSkipped++
+			continue
+		}
 		log.Debug(logger, "Processing desired object", "index", i, "kind", desired.GetKind(), "name", desired.GetName())
 		// Get the existing object by name from the API server.
 		existing := &unstructured.Unstructured{}
@@ -103,6 +112,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 				}
 				objectsCreated++
 				log.Debug(logger, "Successfully created object", "kind", desired.GetKind(), "obj", namespacedNameDesired)
+				stopAtKind = desired.GetKind()
 				continue
 			} else {
 				// Other error getting the object.
@@ -114,6 +124,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		if !existing.GetDeletionTimestamp().IsZero() {
 			log.Debug(logger, "Existing object is marked for deletion, will not enforce state", "kind", existing.GetKind(), "obj", namespacedNameDesired)
 			objectsSkipped++
+			stopAtKind = existing.GetKind()
 			continue
 		}
 
@@ -172,7 +183,9 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 
 	// Return true if any resources were created or updated
 	stateChanged := (objectsCreated + objectsUpdated) > 0
-	return stateChanged, nil
+	// Return true also if any resources were skipped to ensure requeue for proper ordering
+	waitingForSkipped := objectsSkipped > 0
+	return stateChanged && waitingForSkipped, nil
 }
 
 // enforceStatus updates the status of the root object managed by the provided APIConverter.

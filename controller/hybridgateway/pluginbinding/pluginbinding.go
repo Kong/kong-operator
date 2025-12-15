@@ -38,7 +38,6 @@ import (
 //
 // Returns:
 //   - kongPluginBinding: The created or updated KongPluginBinding resource
-//   - exists: A boolean indicating whether the KongPluginBinding already exists (true) or must be created (false)
 //   - err: Any error that occurred during the process
 func BindingForPluginAndRoute(
 	ctx context.Context,
@@ -49,7 +48,7 @@ func BindingForPluginAndRoute(
 	cp *commonv1alpha1.ControlPlaneRef,
 	pluginName string,
 	routeName string,
-) (kongPluginBinding *configurationv1alpha1.KongPluginBinding, exists bool, err error) {
+) (kongPluginBinding *configurationv1alpha1.KongPluginBinding, err error) {
 	bindingName := namegen.NewKongPluginBindingName(routeName, pluginName)
 	logger = logger.WithValues("kongpluginbinding", bindingName)
 	log.Debug(logger, "Generating KongPluginBinding for KongPlugin and KongRoute")
@@ -65,13 +64,12 @@ func BindingForPluginAndRoute(
 		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongPluginBinding resource")
-		return nil, false, fmt.Errorf("failed to build KongPluginBinding %s: %w", bindingName, err)
+		return nil, fmt.Errorf("failed to build KongPluginBinding %s: %w", bindingName, err)
 	}
 
-	exists, err = translator.VerifyAndUpdate(ctx, logger, cl, &binding, httpRoute, true)
-	if err != nil {
-		return nil, false, err
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &binding, httpRoute, true); err != nil {
+		return nil, err
 	}
 
-	return &binding, exists, nil
+	return &binding, nil
 }

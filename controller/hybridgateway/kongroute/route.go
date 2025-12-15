@@ -39,7 +39,6 @@ import (
 //
 // Returns:
 //   - kongRoute: The created or updated KongRoute resource
-//   - exists: A boolean indicating whether the KongRoute already exists (true) or must be created (false)
 //   - err: Any error that occurred during the process
 func RouteForRule(
 	ctx context.Context,
@@ -51,7 +50,7 @@ func RouteForRule(
 	cp *commonv1alpha1.ControlPlaneRef,
 	serviceName string,
 	hostnames []string,
-) (kongRoute *configurationv1alpha1.KongRoute, exists bool, err error) {
+) (kongRoute *configurationv1alpha1.KongRoute, err error) {
 	routeName := namegen.NewKongRouteName(httpRoute, cp, rule)
 	logger = logger.WithValues("kongroute", routeName)
 	log.Debug(logger, "Creating KongRoute for HTTPRoute rule")
@@ -73,13 +72,12 @@ func RouteForRule(
 	newRoute, err := routeBuilder.Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongRoute resource")
-		return nil, false, fmt.Errorf("failed to build KongRoute %s: %w", routeName, err)
+		return nil, fmt.Errorf("failed to build KongRoute %s: %w", routeName, err)
 	}
 
-	exists, err = translator.VerifyAndUpdate(ctx, logger, cl, &newRoute, httpRoute, true)
-	if err != nil {
-		return nil, false, err
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &newRoute, httpRoute, true); err != nil {
+		return nil, err
 	}
 
-	return &newRoute, exists, nil
+	return &newRoute, nil
 }

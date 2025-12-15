@@ -41,7 +41,6 @@ import (
 //
 // Returns:
 //   - kongService: The created or updated service resource
-//   - exists: A boolean indicating whether the KongService already exists (true) or must be created (false)
 //   - err: Any error that occurred during the process
 func ServiceForRule(
 	ctx context.Context,
@@ -52,7 +51,7 @@ func ServiceForRule(
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
 	upstreamName string,
-) (kongService *configurationv1alpha1.KongService, exists bool, err error) {
+) (kongService *configurationv1alpha1.KongService, err error) {
 	serviceName := namegen.NewKongServiceName(cp, rule)
 	logger = logger.WithValues("kongservice", serviceName)
 	log.Debug(logger, "Generating KongService for HTTPRoute rule")
@@ -67,13 +66,12 @@ func ServiceForRule(
 		WithControlPlaneRef(*cp).Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongService resource")
-		return nil, false, fmt.Errorf("failed to build KongService %s: %w", serviceName, err)
+		return nil, fmt.Errorf("failed to build KongService %s: %w", serviceName, err)
 	}
 
-	exists, err = translator.VerifyAndUpdate(ctx, logger, cl, &service, httpRoute, false)
-	if err != nil {
-		return nil, false, err
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &service, httpRoute, false); err != nil {
+		return nil, err
 	}
 
-	return &service, exists, nil
+	return &service, nil
 }

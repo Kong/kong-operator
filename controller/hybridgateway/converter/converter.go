@@ -18,9 +18,8 @@ type APIConverter[t RootObject] interface {
 	// GetExpectedGVKs returns the list of GroupVersionKinds for resources expected to be created by this converter.
 	// The order of the returned slice is preserved during cleanup operations.
 	GetExpectedGVKs() []schema.GroupVersionKind
-	// Translate performs the conversion or translation logic for the root object, returning a boolean indicating if a requeue is needed, an int
-	// representing the number of resources translated and an error if the process fails.
-	Translate(ctx context.Context, logger logr.Logger) (bool, int, error)
+	// Translate performs the conversion or translation logic for the root object, returning the number of Kong resources translated and an error if the process fails.
+	Translate(ctx context.Context, logger logr.Logger) (int, error)
 	// GetRootObject returns the current root object of type t.
 	GetRootObject() t
 	// GetOutputStore returns a slice of unstructured.Unstructured objects representing the current state of the store, using the provided context.

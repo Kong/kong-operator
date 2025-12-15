@@ -37,7 +37,6 @@ import (
 //
 // Returns:
 //   - kongUpstream: The translated KongUpstream resource
-//   - exists: A boolean indicating whether the KongUpstream already exists (true) or must be created (false)
 //   - err: Any error that occurred during the process
 func UpstreamForRule(
 	ctx context.Context,
@@ -47,7 +46,7 @@ func UpstreamForRule(
 	rule gwtypes.HTTPRouteRule,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
-) (kongUpstream *configurationv1alpha1.KongUpstream, exists bool, err error) {
+) (kongUpstream *configurationv1alpha1.KongUpstream, err error) {
 	upstreamName := namegen.NewKongUpstreamName(cp, rule)
 	logger = logger.WithValues("kongupstream", upstreamName)
 	log.Debug(logger, "Creating KongUpstream for HTTPRoute rule")
@@ -62,13 +61,12 @@ func UpstreamForRule(
 		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongUpstream resource")
-		return nil, false, fmt.Errorf("failed to build KongUpstream %s: %w", upstreamName, err)
+		return nil, fmt.Errorf("failed to build KongUpstream %s: %w", upstreamName, err)
 	}
 
-	exists, err = translator.VerifyAndUpdate(ctx, logger, cl, &upstream, httpRoute, false)
-	if err != nil {
-		return nil, false, err
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &upstream, httpRoute, false); err != nil {
+		return nil, err
 	}
 
-	return &upstream, exists, nil
+	return &upstream, nil
 }

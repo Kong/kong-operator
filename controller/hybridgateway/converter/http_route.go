@@ -92,14 +92,13 @@ func (c *httpRouteConverter) GetRootObject() gwtypes.HTTPRoute {
 //   - logger: Logger for structured logging with httproute-translate phase
 //
 // Returns:
-//   - bool: true if any resource is going to be created anew and we need to requeue translation
 //   - int: Number of Kong resources created during translation
 //   - error: Aggregated translation errors or nil if successful
-func (c *httpRouteConverter) Translate(ctx context.Context, logger logr.Logger) (needsRequeue bool, numTranslated int, err error) {
-	if needsRequeue, err = c.translate(ctx, logger); err != nil {
-		return false, 0, err
+func (c *httpRouteConverter) Translate(ctx context.Context, logger logr.Logger) (int, error) {
+	if err := c.translate(ctx, logger); err != nil {
+		return 0, err
 	}
-	return needsRequeue, len(c.outputStore), nil
+	return len(c.outputStore), nil
 }
 
 // GetOutputStore implements APIConverter.
@@ -302,12 +301,11 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 //   - logger: Logger for structured logging with httproute-translate phase.
 //
 // Returns:
-//   - bool: true if any resource is going to be created anew and we need to requeue translation.
 //   - error: Aggregated translation errors or nil if successful.
 //
 // The function prioritizes complete error visibility over fail-fast behavior, allowing
 // users to see all translation issues at once rather than fixing them one by one.
-func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) (bool, error) {
+func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) error {
 	logger = logger.WithValues("phase", "httproute-translate")
 	log.Debug(logger, "Starting HTTPRoute translation")
 
@@ -316,19 +314,16 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 	supportedParentRefs, err := c.getHybridGatewayParents(ctx, logger)
 	if err != nil {
 		log.Error(logger, err, "Failed to get supported parent references")
-		return false, err
+		return err
 	}
 	if len(supportedParentRefs) == 0 {
 		log.Info(logger, "No supported parent references found, skipping translation")
-		return false, nil
+		return nil
 	}
 
 	log.Debug(logger, "Found supported parent references",
 		"parentRefCount", len(supportedParentRefs))
 
-	// Track if any we need to requeue the translation due to a Kong resource going to be created anew and required by
-	// other Kong resources requiring its prior existence.
-	needsRequeue := false
 	for _, pRefData := range supportedParentRefs {
 		pRef := pRefData.parentRef
 		cp := pRefData.cpRef
@@ -347,7 +342,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				"filterCount", len(rule.Filters))
 
 			// Build the KongUpstream resource.
-			upstreamPtr, exists, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
+			upstreamPtr, err := upstream.UpstreamForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongUpstream resource for rule, skipping rule",
 					"controlPlane", cp.KonnectNamespacedRef)
@@ -358,13 +353,9 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			c.outputStore = append(c.outputStore, upstreamPtr)
 			log.Debug(logger, "Successfully translated KongUpstream resource",
 				"upstream", upstreamName)
-			if !exists {
-				needsRequeue = true
-				continue
-			}
 
 			// Build the KongService resource.
-			servicePtr, exists, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
+			servicePtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongService resource, skipping rule",
 					"controlPlane", cp.KonnectNamespacedRef,
@@ -376,13 +367,9 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			c.outputStore = append(c.outputStore, servicePtr)
 			log.Debug(logger, "Successfully translated KongService resource",
 				"service", serviceName)
-			if !exists {
-				needsRequeue = true
-				continue
-			}
 
 			// Build the KongRoute resource.
-			routePtr, exists, err := kongroute.RouteForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)
+			routePtr, err := kongroute.RouteForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, serviceName, hostnames)
 			if err != nil {
 				log.Error(logger, err, "Failed to translate KongRoute resource, skipping rule",
 					"service", serviceName,
@@ -394,10 +381,6 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			c.outputStore = append(c.outputStore, routePtr)
 			log.Debug(logger, "Successfully translated KongRoute resource",
 				"route", routeName)
-			if !exists {
-				needsRequeue = true
-				continue
-			}
 
 			// Build the KongPlugin and KongPluginBinding resources.
 			log.Debug(logger, "Processing filters for rule",
@@ -405,7 +388,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				"filterCount", len(rule.Filters))
 
 			for _, filter := range rule.Filters {
-				pluginPtr, exists, selfManagedPlugin, err := plugin.PluginForFilter(ctx, logger, c.Client, c.route, filter, &pRef)
+				pluginPtr, selfManagedPlugin, err := plugin.PluginForFilter(ctx, logger, c.Client, c.route, filter, &pRef)
 				if err != nil {
 					log.Error(logger, err, "Failed to translate KongPlugin resource, skipping filter",
 						"filter", filter.Type)
@@ -417,13 +400,9 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 					c.outputStore = append(c.outputStore, pluginPtr)
 					log.Debug(logger, "Successfully translated KongPlugin resource",
 						"plugin", pluginName)
-					if !exists {
-						needsRequeue = true
-						continue
-					}
 				}
 				// Create a KongPluginBinding to bind the KongPlugin to each KongRoute.
-				bindingPtr, _, err := pluginbinding.BindingForPluginAndRoute(
+				bindingPtr, err := pluginbinding.BindingForPluginAndRoute(
 					ctx,
 					logger,
 					c.Client,
@@ -446,11 +425,6 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				log.Debug(logger, "Successfully translated KongPlugin and KongPluginBinding resources",
 					"plugin", pluginName,
 					"binding", bindingName)
-			}
-
-			// Wait for plugins to be configured before creating targets.
-			if needsRequeue {
-				continue
 			}
 
 			// Build the KongTarget resources.
@@ -490,14 +464,13 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			"errorCount", len(translationErrors))
 
 		// Join all errors using errors.Join for better error handling
-		return needsRequeue, fmt.Errorf("translation failed with %d errors: %w", len(translationErrors), errors.Join(translationErrors...))
+		return fmt.Errorf("translation failed with %d errors: %w", len(translationErrors), errors.Join(translationErrors...))
 	}
 
 	log.Debug(logger, "Successfully completed HTTPRoute translation",
-		"totalResourcesCreated", len(c.outputStore),
-		"needsRequeue", needsRequeue)
+		"totalResourcesCreated", len(c.outputStore))
 
-	return needsRequeue, nil
+	return nil
 }
 
 type hybridGatewayParent struct {

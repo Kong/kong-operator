@@ -53,7 +53,6 @@ import (
 //
 // Returns:
 //   - kongPlugin: The translated plugin.
-//   - exists: True if the KongPlugin already exists.
 //   - selfManaged: True if sourced from ExtensionRef.
 //   - err: Any error encountered.
 func PluginForFilter(
@@ -63,7 +62,7 @@ func PluginForFilter(
 	httpRoute *gwtypes.HTTPRoute,
 	filter gwtypes.HTTPRouteFilter,
 	pRef *gwtypes.ParentReference,
-) (kongPlugin *configurationv1.KongPlugin, exists, selfManaged bool, err error) {
+) (kongPlugin *configurationv1.KongPlugin, selfManaged bool, err error) {
 	pluginName := namegen.NewKongPluginName(filter)
 	logger = logger.WithValues("kongplugin", pluginName)
 	log.Debug(logger, "Generating KongPlugin for HTTPRoute filter")
@@ -74,10 +73,10 @@ func PluginForFilter(
 		plugin, err := getReferencedKongPlugin(ctx, cl, httpRoute.Namespace, filter)
 		if err != nil {
 			log.Error(logger, err, "Failed to retrieve referenced KongPlugin")
-			return nil, false, false, fmt.Errorf("failed to retrieve referenced KongPlugin %s: %w", pluginName, err)
+			return nil, false, fmt.Errorf("failed to retrieve referenced KongPlugin %s: %w", pluginName, err)
 		}
 		log.Debug(logger, "Successfully retrieved referenced KongPlugin")
-		return plugin, true, true, nil
+		return plugin, true, nil
 	}
 
 	plugin, err := builder.NewKongPlugin().
@@ -89,15 +88,14 @@ func PluginForFilter(
 		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongPlugin resource")
-		return nil, false, false, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
+		return nil, false, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
 	}
 
-	exists, err = translator.VerifyAndUpdate(ctx, logger, cl, &plugin, httpRoute, false)
-	if err != nil {
-		return nil, false, false, err
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &plugin, httpRoute, false); err != nil {
+		return nil, false, err
 	}
 
-	return &plugin, exists, false, nil
+	return &plugin, false, nil
 }
 
 func getReferencedKongPlugin(ctx context.Context, cl client.Client, namespace string, filter gwtypes.HTTPRouteFilter) (*configurationv1.KongPlugin, error) {
