@@ -56,6 +56,7 @@
   version of the original Gateway API `ReferenceGrant` CRD.
   [#2855](https://github.com/Kong/kong-operator/pull/2855)
 - Hybrid Gateway: specify the protocol field of the generated `KongService` resources
+  [#2872](https://github.com/Kong/kong-operator/pull/2872)
 
 ### Changed
 
