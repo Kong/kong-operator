@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
@@ -88,6 +89,20 @@ func (b *KongServiceBuilder) WithOwner(owner *gwtypes.HTTPRoute) *KongServiceBui
 	err := controllerutil.SetControllerReference(owner, &b.service, scheme.Get(), controllerutil.WithBlockOwnerDeletion(true))
 	if err != nil {
 		b.errors = append(b.errors, fmt.Errorf("failed to set owner reference: %w", err))
+	}
+	return b
+}
+
+// WithProtocol sets the protocols for the KongService being built.
+func (b *KongServiceBuilder) WithProtocol(protocol string) *KongServiceBuilder {
+	if protocol == "" {
+		protocol = "http"
+	}
+	switch protocol {
+	case "http", "HTTP":
+		b.service.Spec.Protocol = sdkkonnectcomp.ProtocolHTTP
+	default:
+		b.errors = append(b.errors, fmt.Errorf("unsupported protocol: %s", protocol))
 	}
 	return b
 }
