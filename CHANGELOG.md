@@ -55,6 +55,9 @@
   among Konnect entities API. This new resource is to be intended as the Kong
   version of the original Gateway API `ReferenceGrant` CRD.
   [#2855](https://github.com/Kong/kong-operator/pull/2855)
+- Hybdrid Gateway: the creation and deletion of the Kong resources derived from `HTTPRoute`s is now
+  performed in multiple steps that account for dependencies among the generated resources.
+  [#2857](https://github.com/Kong/kong-operator/pull/2857)
 
 ### Changed
 
