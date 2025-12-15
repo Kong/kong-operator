@@ -281,8 +281,8 @@ func (f *fakeHTTPRouteConverter) GetOutputStoreLen(ctx context.Context, logger l
 }
 func (f *fakeHTTPRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind { return f.gvks }
 func (f *fakeHTTPRouteConverter) GetRootObject() gwtypes.HTTPRoute           { return f.root }
-func (f *fakeHTTPRouteConverter) Translate(ctx context.Context, logger logr.Logger) (bool, int, error) {
-	return len(f.desired) > 0, len(f.desired), nil
+func (f *fakeHTTPRouteConverter) Translate(ctx context.Context, logger logr.Logger) (int, error) {
+	return len(f.desired), nil
 }
 func (f *fakeHTTPRouteConverter) ListExistingObjects(ctx context.Context) ([]unstructured.Unstructured, error) {
 	return nil, nil

@@ -209,7 +209,7 @@ func TestBindingForPluginAndRoute(t *testing.T) {
 				WithRuntimeObjects(objects...).
 				Build()
 
-			binding, _, err := BindingForPluginAndRoute(
+			binding, err := BindingForPluginAndRoute(
 				ctx,
 				logger,
 				fakeClient,

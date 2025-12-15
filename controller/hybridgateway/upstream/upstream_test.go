@@ -269,7 +269,7 @@ func TestUpstreamForRule_NewUpstream(t *testing.T) {
 		},
 	}
 
-	upstream, _, err := UpstreamForRule(ctx, logger, client, httpRoute, rule, pRef, cp)
+	upstream, err := UpstreamForRule(ctx, logger, client, httpRoute, rule, pRef, cp)
 	require.NoError(t, err)
 	require.NotNil(t, upstream)
 

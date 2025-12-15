@@ -93,7 +93,7 @@ func TestRouteForRule(t *testing.T) {
 			}
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			result, exists, err := RouteForRule(ctx, logger, fakeClient, httpRoute, rule, pRef, cpRef, tt.serviceName, tt.hostnames)
+			result, err := RouteForRule(ctx, logger, fakeClient, httpRoute, rule, pRef, cpRef, tt.serviceName, tt.hostnames)
 
 			if tt.expectError {
 				assert.Error(t, err)
@@ -103,9 +103,6 @@ func TestRouteForRule(t *testing.T) {
 
 			require.NoError(t, err)
 			require.NotNil(t, result)
-
-			// Verify exists flag matches expectation
-			assert.Equal(t, tt.expectUpdate, exists)
 
 			// Verify the route has correct properties
 			assert.Equal(t, "test-namespace", result.Namespace)
