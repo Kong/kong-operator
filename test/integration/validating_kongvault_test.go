@@ -7,71 +7,27 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/e2e-framework/pkg/envconf"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	operatorv2beta1 "github.com/kong/kong-operator/api/gateway-operator/v2beta1"
 	"github.com/kong/kong-operator/internal/annotations"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test/helpers"
 )
 
 func TestAdmissionWebhook_KongVault(t *testing.T) {
 	t.Parallel()
 
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
-	ctrlClient := client.NewNamespacedClient(GetClients().MgrClient, namespace.Name)
-
-	ingressClass := envconf.RandomName("ingressclass", 16)
-
-	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name, func(gc *operatorv2beta1.GatewayConfiguration) {
-		gc.Spec.ControlPlaneOptions = &operatorv2beta1.GatewayConfigControlPlaneOptions{
-			ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-				IngressClass: lo.ToPtr(ingressClass),
-			},
-		}
-	})
-	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
-	require.NoError(t, ctrlClient.Create(ctx, gatewayConfig))
-	cleaner.Add(gatewayConfig)
-
-	gatewayClass := helpers.MustGenerateGatewayClass(t, gatewayv1.ParametersReference{
-		Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
-		Kind:      gatewayv1.Kind("GatewayConfiguration"),
-		Namespace: (*gatewayv1.Namespace)(&gatewayConfig.Namespace),
-		Name:      gatewayConfig.Name,
-	})
-	t.Logf("deploying GatewayClass %s", gatewayClass.Name)
-	require.NoError(t, ctrlClient.Create(ctx, gatewayClass))
-	cleaner.Add(gatewayClass)
-
-	gatewayNSN := types.NamespacedName{
-		Name:      uuid.NewString(),
-		Namespace: namespace.Name,
-	}
-
-	gateway := helpers.GenerateGateway(gatewayNSN, gatewayClass)
-	t.Logf("deploying Gateway %s/%s", gateway.Namespace, gateway.Name)
-	require.NoError(t, ctrlClient.Create(ctx, gateway))
-	cleaner.Add(gateway)
-
-	t.Logf("verifying Gateway %s/%s gets marked as Programmed", gateway.Namespace, gateway.Name)
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNSN, clients), 3*time.Minute, time.Second)
-	t.Log("Gateway is programmed, proceeding with the test cases")
+	_, cleaner, ingressClass, ctrlClient := bootstrapGateway(
+		t.Context(), t, env, GetClients().MgrClient,
+	)
 
 	const prefixForDuplicationTest = "duplicate-prefix"
-	prepareKongVaultAlreadyProgrammedInGateway(ctx, t, GetClients().MgrClient, prefixForDuplicationTest, ingressClass)
+	prepareKongVaultAlreadyProgrammedInGateway(ctx, t, cleaner, ctrlClient, prefixForDuplicationTest, ingressClass)
 
 	testCases := []struct {
 		name                string
@@ -181,6 +137,7 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 				require.Contains(t, err.Error(), tc.expectErrorContains)
 			} else {
 				require.NoError(t, err)
+				cleaner.Add(tc.kongVault)
 			}
 		})
 	}
@@ -190,6 +147,7 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 func prepareKongVaultAlreadyProgrammedInGateway(
 	ctx context.Context,
 	t *testing.T,
+	cleaner *clusters.Cleaner,
 	ctrlClient client.Client,
 	vaultPrefix string,
 	ingressClass string,
@@ -217,6 +175,7 @@ func prepareKongVaultAlreadyProgrammedInGateway(
 	}
 	err := ctrlClient.Create(ctx, vault)
 	require.NoError(t, err)
+	cleaner.Add(vault)
 
 	t.Logf("Waiting for KongVault %s to be programmed...", name)
 	require.Eventuallyf(t, func() bool {
