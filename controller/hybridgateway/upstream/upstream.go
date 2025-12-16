@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
@@ -14,9 +12,9 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/consts"
 )
 
 // UpstreamForRule creates or updates a KongUpstream for the given HTTPRoute rule.
@@ -38,8 +36,8 @@ import (
 //   - cp: The control plane reference for the KongUpstream
 //
 // Returns:
-//   - *configurationv1alpha1.KongUpstream: The created or updated KongUpstream resource
-//   - error: Any error that occurred during the process
+//   - kongUpstream: The translated KongUpstream resource
+//   - err: Any error that occurred during the process
 func UpstreamForRule(
 	ctx context.Context,
 	logger logr.Logger,
@@ -48,7 +46,7 @@ func UpstreamForRule(
 	rule gwtypes.HTTPRouteRule,
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
-) (*configurationv1alpha1.KongUpstream, error) {
+) (kongUpstream *configurationv1alpha1.KongUpstream, err error) {
 	upstreamName := namegen.NewKongUpstreamName(cp, rule)
 	logger = logger.WithValues("kongupstream", upstreamName)
 	log.Debug(logger, "Creating KongUpstream for HTTPRoute rule")
@@ -66,32 +64,9 @@ func UpstreamForRule(
 		return nil, fmt.Errorf("failed to build KongUpstream %s: %w", upstreamName, err)
 	}
 
-	// Check if KongUpstream already exists
-	existingUpstream := &configurationv1alpha1.KongUpstream{}
-	upstreamKey := types.NamespacedName{
-		Name:      upstreamName,
-		Namespace: httpRoute.Namespace,
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &upstream, httpRoute, false); err != nil {
+		return nil, err
 	}
-	if err = cl.Get(ctx, upstreamKey, existingUpstream); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(logger, err, "Failed to check for existing KongUpstream")
-		return nil, fmt.Errorf("failed to check for existing KongUpstream %s: %w", upstreamName, err)
-	}
-
-	if apierrors.IsNotFound(err) {
-		// KongUpstream doesn't exist, create a new one
-		log.Debug(logger, "Creating a new KongUpstream resource")
-		return &upstream, nil
-	}
-
-	// KongUpstream exists, update annotations to include current HTTPRoute
-	log.Debug(logger, "KongUpstream found")
-	upstream.Annotations[consts.GatewayOperatorHybridRoutesAnnotation] = existingUpstream.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
-	annotationManager := metadata.NewAnnotationManager(logger)
-	annotationManager.AppendRouteToAnnotation(&upstream, httpRoute)
-
-	// TODO: we should check that the existingUpstream.Spec matches what we expect
-	// https://github.com/Kong/kong-operator/issues/2687
-	log.Debug(logger, "Successfully updated existing KongUpstream")
 
 	return &upstream, nil
 }

@@ -6,7 +6,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -15,9 +14,9 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/consts"
 )
 
 // PluginForFilter creates or retrieves a KongPlugin for the given HTTPRoute filter.
@@ -45,18 +44,17 @@ import (
 //
 // Parameters:
 //
-//	ctx        - Context for API calls.
-//	logger     - Structured logger.
-//	cl         - Kubernetes client.
-//	httpRoute  - Source HTTPRoute.
-//	filter     - The HTTPRouteFilter being processed.
-//	pRef       - Parent (Gateway) reference.
+//   - ctx: Context for API calls.
+//   - logger: Structured logger.
+//   - cl: Kubernetes client.
+//   - httpRoute: Source HTTPRoute.
+//   - filter: The HTTPRouteFilter being processed.
+//   - pRef: Parent (Gateway) reference.
 //
 // Returns:
-//
-//	*configurationv1.KongPlugin - Built or retrieved plugin.
-//	selfManaged                 - True if sourced from ExtensionRef.
-//	error                       - Any error encountered.
+//   - kongPlugin: The translated plugin.
+//   - selfManaged: True if sourced from ExtensionRef.
+//   - err: Any error encountered.
 func PluginForFilter(
 	ctx context.Context,
 	logger logr.Logger,
@@ -93,33 +91,9 @@ func PluginForFilter(
 		return nil, false, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
 	}
 
-	// Check if KongPlugin already exists
-	existingPlugin := &configurationv1.KongPlugin{}
-	namespacedName := types.NamespacedName{
-		Name:      plugin.Name,
-		Namespace: httpRoute.Namespace,
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &plugin, httpRoute, false); err != nil {
+		return nil, false, err
 	}
-	if err = cl.Get(ctx, namespacedName, existingPlugin); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(logger, err, "Failed to check for existing KongPlugin")
-		return nil, false, fmt.Errorf("failed to check for existing KongPlugin %s: %w", pluginName, err)
-	}
-
-	if apierrors.IsNotFound(err) {
-		// KongPlugin doesn't exist, create a new one
-		log.Debug(logger, "New KongPlugin generated successfully")
-		return &plugin, false, nil
-	}
-
-	// KongPlugin exists, update annotations to include current HTTPRoute
-	log.Debug(logger, "KongPlugin found")
-
-	plugin.Annotations[consts.GatewayOperatorHybridRoutesAnnotation] = existingPlugin.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
-	annotationManager := metadata.NewAnnotationManager(logger)
-	annotationManager.AppendRouteToAnnotation(&plugin, httpRoute)
-	// TODO: we should check that the existingPlugin.Spec matches what we expect
-	// https://github.com/Kong/kong-operator/issues/2687
-
-	log.Debug(logger, "Successfully updated existing KongPlugin")
 
 	return &plugin, false, nil
 }

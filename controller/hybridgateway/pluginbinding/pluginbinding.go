@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
@@ -14,9 +12,9 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/consts"
 )
 
 // BindingForPluginAndRoute creates or updates a KongPluginBinding for the given plugin and route.
@@ -39,8 +37,8 @@ import (
 //   - routeName: The name of the KongRoute to bind to
 //
 // Returns:
-//   - *configurationv1alpha1.KongPluginBinding: The created or updated KongPluginBinding resource
-//   - error: Any error that occurred during the process
+//   - kongPluginBinding: The created or updated KongPluginBinding resource
+//   - err: Any error that occurred during the process
 func BindingForPluginAndRoute(
 	ctx context.Context,
 	logger logr.Logger,
@@ -50,7 +48,7 @@ func BindingForPluginAndRoute(
 	cp *commonv1alpha1.ControlPlaneRef,
 	pluginName string,
 	routeName string,
-) (*configurationv1alpha1.KongPluginBinding, error) {
+) (kongPluginBinding *configurationv1alpha1.KongPluginBinding, err error) {
 	bindingName := namegen.NewKongPluginBindingName(routeName, pluginName)
 	logger = logger.WithValues("kongpluginbinding", bindingName)
 	log.Debug(logger, "Generating KongPluginBinding for KongPlugin and KongRoute")
@@ -69,32 +67,9 @@ func BindingForPluginAndRoute(
 		return nil, fmt.Errorf("failed to build KongPluginBinding %s: %w", bindingName, err)
 	}
 
-	// Check if KongPluginBinding already exists
-	existingBinding := &configurationv1alpha1.KongPluginBinding{}
-	namespacedName := types.NamespacedName{
-		Name:      bindingName,
-		Namespace: httpRoute.Namespace,
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &binding, httpRoute, true); err != nil {
+		return nil, err
 	}
-	if err = cl.Get(ctx, namespacedName, existingBinding); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(logger, err, "Failed to check for existing KongPluginBinding")
-		return nil, fmt.Errorf("failed to check for existing KongPluginBinding %s: %w", bindingName, err)
-	}
-
-	if apierrors.IsNotFound(err) {
-		// KongPluginBinding doesn't exist, create a new one
-		log.Debug(logger, "New KongPluginBinding generated successfully")
-		return &binding, nil
-	}
-
-	// KongPluginBinding exists, update annotations to include current HTTPRoute
-	log.Debug(logger, "KongPluginBinding found")
-	binding.Annotations[consts.GatewayOperatorHybridRoutesAnnotation] = existingBinding.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
-	annotationManager := metadata.NewAnnotationManager(logger)
-	annotationManager.AppendRouteToAnnotation(&binding, httpRoute)
-
-	// TODO: we should check that the existingBinding.Spec matches what we expect
-	// https://github.com/Kong/kong-operator/issues/2687
-	log.Debug(logger, "Successfully updated existing KongPluginBinding")
 
 	return &binding, nil
 }

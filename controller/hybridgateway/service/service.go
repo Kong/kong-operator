@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
@@ -14,9 +12,9 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/consts"
 )
 
 // ServiceForRule creates or updates a KongService for the given HTTPRoute rule.
@@ -42,8 +40,8 @@ import (
 //   - upstreamName: The name of the KongUpstream this service should point to
 //
 // Returns:
-//   - *configurationv1alpha1.KongService: The created or updated service resource
-//   - error: Any error that occurred during the process
+//   - kongService: The created or updated service resource
+//   - err: Any error that occurred during the process
 func ServiceForRule(
 	ctx context.Context,
 	logger logr.Logger,
@@ -53,7 +51,7 @@ func ServiceForRule(
 	pRef *gwtypes.ParentReference,
 	cp *commonv1alpha1.ControlPlaneRef,
 	upstreamName string,
-) (*configurationv1alpha1.KongService, error) {
+) (kongService *configurationv1alpha1.KongService, err error) {
 	serviceName := namegen.NewKongServiceName(cp, rule)
 	logger = logger.WithValues("kongservice", serviceName)
 	log.Debug(logger, "Generating KongService for HTTPRoute rule")
@@ -72,32 +70,9 @@ func ServiceForRule(
 		return nil, fmt.Errorf("failed to build KongService %s: %w", serviceName, err)
 	}
 
-	// Check if the service already exists
-	existingService := &configurationv1alpha1.KongService{}
-	namespacedName := types.NamespacedName{
-		Name:      serviceName,
-		Namespace: httpRoute.Namespace,
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &service, httpRoute, false); err != nil {
+		return nil, err
 	}
-	if err = cl.Get(ctx, namespacedName, existingService); err != nil && !apierrors.IsNotFound(err) {
-		log.Error(logger, err, "Failed to check for existing KongService")
-		return nil, fmt.Errorf("failed to check for existing KongService %s: %w", serviceName, err)
-	}
-
-	if apierrors.IsNotFound(err) {
-		// KongService doesn't exist, create a new one
-		log.Debug(logger, "New KongService generated successfully")
-		return &service, nil
-	}
-
-	// KongService exists, update annotations to include current HTTPRoute
-	log.Debug(logger, "KongService found")
-	annotationManager := metadata.NewAnnotationManager(logger)
-	service.Annotations[consts.GatewayOperatorHybridRoutesAnnotation] = existingService.Annotations[consts.GatewayOperatorHybridRoutesAnnotation]
-	annotationManager.AppendRouteToAnnotation(&service, httpRoute)
-
-	// TODO: we should check that the existingService.Spec matches what we expect
-	// https://github.com/Kong/kong-operator/issues/2687
-	log.Debug(logger, "Successfully updated existing KongService")
 
 	return &service, nil
 }

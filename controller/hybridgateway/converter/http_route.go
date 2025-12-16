@@ -50,13 +50,16 @@ func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client, fqdnM
 		route:         httpRoute,
 		fqdnMode:      fqdnMode,
 		clusterDomain: clusterDomain,
+		// IMPORTANT: The order of this slice is significant during resource cleanup operations.
+		// While resources deletion order should take into account dependencies their main goal is to ensure safe cleanup preventing
+		// security issues (e.g., scenarios where routes remain active while security plugins are deleted first).
 		expectedGVKs: []schema.GroupVersionKind{
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongRoute"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongTarget"},
+			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongPluginBinding"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongService"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongUpstream"},
-			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongTarget"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1.GroupVersion.Version, Kind: "KongPlugin"},
-			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongPluginBinding"},
 		},
 	}
 }
@@ -161,6 +164,11 @@ func (c *httpRouteConverter) GetOutputStore(ctx context.Context, logger logr.Log
 
 	log.Debug(logger, "Finished output store conversion", "totalObjectsConverted", len(objects))
 	return objects, nil
+}
+
+// GetOutputStoreLen returns the number of objects in the output store.
+func (c *httpRouteConverter) GetOutputStoreLen(ctx context.Context, logger logr.Logger) int {
+	return len(c.outputStore)
 }
 
 // GetExpectedGVKs returns the list of GroupVersionKinds that this converter expects to manage for HTTPRoute resources.
@@ -346,33 +354,6 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 			log.Debug(logger, "Successfully translated KongUpstream resource",
 				"upstream", upstreamName)
 
-			// Build the KongTarget resources.
-			targets, err := target.TargetsForBackendRefs(
-				ctx,
-				logger.WithValues("upstream", upstreamName),
-				c.Client,
-				c.route,
-				rule.BackendRefs,
-				&pRef,
-				upstreamName,
-				c.fqdnMode,
-				c.clusterDomain,
-			)
-			if err != nil {
-				log.Error(logger, err, "Failed to translate KongTarget resources for rule, skipping rule",
-					"upstream", upstreamName,
-					"backendRefs", rule.BackendRefs,
-					"parentRef", pRef)
-				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongTarget resources for upstream %s: %w", upstreamName, err))
-				continue
-			}
-			log.Debug(logger, "Successfully translated KongTarget resources",
-				"upstream", upstreamName,
-				"targetCount", len(targets))
-			for _, tgt := range targets {
-				c.outputStore = append(c.outputStore, &tgt)
-			}
-
 			// Build the KongService resource.
 			servicePtr, err := service.ServiceForRule(ctx, logger, c.Client, c.route, rule, &pRef, cp, upstreamName)
 			if err != nil {
@@ -417,8 +398,9 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				pluginName := pluginPtr.Name
 				if !selfManagedPlugin {
 					c.outputStore = append(c.outputStore, pluginPtr)
+					log.Debug(logger, "Successfully translated KongPlugin resource",
+						"plugin", pluginName)
 				}
-
 				// Create a KongPluginBinding to bind the KongPlugin to each KongRoute.
 				bindingPtr, err := pluginbinding.BindingForPluginAndRoute(
 					ctx,
@@ -443,6 +425,34 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				log.Debug(logger, "Successfully translated KongPlugin and KongPluginBinding resources",
 					"plugin", pluginName,
 					"binding", bindingName)
+			}
+
+			// Build the KongTarget resources.
+			// Leave them as the last step since we want everything fully configured before enabling the traffic to the backends.
+			targets, err := target.TargetsForBackendRefs(
+				ctx,
+				logger.WithValues("upstream", upstreamName),
+				c.Client,
+				c.route,
+				rule.BackendRefs,
+				&pRef,
+				upstreamName,
+				c.fqdnMode,
+				c.clusterDomain,
+			)
+			if err != nil {
+				log.Error(logger, err, "Failed to translate KongTarget resources for rule, skipping rule",
+					"upstream", upstreamName,
+					"backendRefs", rule.BackendRefs,
+					"parentRef", pRef)
+				translationErrors = append(translationErrors, fmt.Errorf("failed to translate KongTarget resources for upstream %s: %w", upstreamName, err))
+				continue
+			}
+			log.Debug(logger, "Successfully translated KongTarget resources",
+				"upstream", upstreamName,
+				"targetCount", len(targets))
+			for _, tgt := range targets {
+				c.outputStore = append(c.outputStore, &tgt)
 			}
 		}
 	}

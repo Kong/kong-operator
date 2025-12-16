@@ -5,8 +5,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
@@ -14,6 +12,7 @@ import (
 	"github.com/kong/kong-operator/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/namegen"
+	"github.com/kong/kong-operator/controller/hybridgateway/translator"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
@@ -39,8 +38,8 @@ import (
 //   - hostnames: The hostnames for the KongRoute
 //
 // Returns:
-//   - *configurationv1alpha1.KongRoute: The created or updated KongRoute resource
-//   - error: Any error that occurred during the process
+//   - kongRoute: The created or updated KongRoute resource
+//   - err: Any error that occurred during the process
 func RouteForRule(
 	ctx context.Context,
 	logger logr.Logger,
@@ -51,19 +50,10 @@ func RouteForRule(
 	cp *commonv1alpha1.ControlPlaneRef,
 	serviceName string,
 	hostnames []string,
-) (*configurationv1alpha1.KongRoute, error) {
+) (kongRoute *configurationv1alpha1.KongRoute, err error) {
 	routeName := namegen.NewKongRouteName(httpRoute, cp, rule)
 	logger = logger.WithValues("kongroute", routeName)
 	log.Debug(logger, "Creating KongRoute for HTTPRoute rule")
-
-	// Check if the route already exists
-	existingRoute := &configurationv1alpha1.KongRoute{}
-	namespacedName := types.NamespacedName{
-		Name:      routeName,
-		Namespace: httpRoute.Namespace,
-	}
-
-	log.Debug(logger, "Creating a new KongRoute resource")
 
 	routeBuilder := builder.NewKongRoute().
 		WithName(routeName).
@@ -85,28 +75,9 @@ func RouteForRule(
 		return nil, fmt.Errorf("failed to build KongRoute %s: %w", routeName, err)
 	}
 
-	err = cl.Get(ctx, namespacedName, existingRoute)
-	if err != nil && !apierrors.IsNotFound(err) {
-		log.Error(logger, err, "Failed to check for existing KongRoute")
-		return nil, fmt.Errorf("failed to check for existing KongRoute %s: %w", routeName, err)
-	}
-
-	// Route doesn't exist yet
-	if apierrors.IsNotFound(err) {
-		log.Debug(logger, "Successfully created new KongRoute")
-		return &newRoute, nil
-	}
-
-	// Route is already there, check it is managed by this HTTPRoute
-	annotationManager := metadata.NewAnnotationManager(logger)
-	if !annotationManager.ContainsRoute(existingRoute, httpRoute) {
-		// This should never happen as the HTTPRoute name is used to generate the KongRoute name.
-		err := fmt.Errorf("KongRoute %s already exists and is managed by another HTTPRoute", routeName)
-		log.Error(logger, err, "Failed to create/update KongRoute resource, skipping rule")
+	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &newRoute, httpRoute, true); err != nil {
 		return nil, err
 	}
-
-	log.Debug(logger, "Successfully updated existing KongRoute")
 
 	return &newRoute, nil
 }
