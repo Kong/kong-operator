@@ -42,7 +42,7 @@
         "\\.mise\\.toml$"
       ],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( registryUrl=(?<registryUrl>.*?))?\\n.+\"v(?<currentValue>.*?)\""
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)( registryUrl=(?<registryUrl>.*?))?\\nversion\\s*=\\s*\"v?(?<currentValue>.*?)\""
       ]
     },
     {
