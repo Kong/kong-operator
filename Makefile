@@ -53,19 +53,27 @@ tools: controller-gen kustomize client-gen golangci-lint gotestsum skaffold yq c
 
 MISE := $(shell which mise)
 MISE_FILE := .mise.toml
+MISE_DATA_DIR ?= $(PROJECT_DIR)/bin/
+
 .PHONY: mise
 mise:
 	@mise -V >/dev/null 2>/dev/null || (echo "mise - https://github.com/jdx/mise - not found. Please install it." && exit 1)
 
 .PHONY: mise-plugin-install
 mise-plugin-install: mise
-	@$(MISE) plugin install --yes -q $(DEP) $(URL)
+	$(MISE) plugin install --yes -q $(DEP) $(URL)
 
 .PHONY: mise-install
 mise-install: mise
-	@$(MISE) install -q $(DEP_VER)
+	MISE_DATA_DIR=$(PROJECT_DIR)/bin/ $(MISE) install -q $(DEP_VER)
 
-export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
+# NOTE: some tools like helm are to be used by users inside the operator directory.
+# Installing them to bin/ will make them unavailable unless MISE_DATA_DIR env variable
+# is set to $(PROJECT_DIR)/bin/, which is not outside of this Makefile.
+# Hence installing such tools globally on the system.
+.PHONY: mise-install-global
+mise-install-global: mise
+	@$(MISE) install -q $(DEP_VER)
 
 OS := $(shell uname | tr '[:upper:]' '[:lower:]')
 ARCH := $(shell uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/')
@@ -184,10 +192,10 @@ download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if nec
 	$(MAKE) mise-install DEP_VER=npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION)
 
 HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["http:helm"].version' < $(MISE_FILE))
-HELM = $(PROJECT_DIR)/bin/installs/http-helm/$(HELM_VERSION)/helm
+HELM = helm
 .PHONY: download.helm
 download.helm: mise yq ## Download helm locally if necessary.
-	$(MAKE) mise-install DEP_VER=http:helm
+	$(MAKE) mise-install-global DEP_VER=http:helm
 
 KUBE_API_LINTER_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"].version' < $(MISE_FILE))
 KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter
