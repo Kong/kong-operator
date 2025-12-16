@@ -183,8 +183,10 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 				Append: transformerTargetSlice{
 					Headers: []string{"X-Custom-Header:custom-value", "X-Another-Header:another-value"},
 				},
-				Replace: transformerTargetSlice{
-					Headers: []string{"X-Custom-Header:custom-value", "X-Another-Header:another-value"},
+				Replace: transformerTargetSliceReplace{
+					transformerTargetSlice: transformerTargetSlice{
+						Headers: []string{"X-Custom-Header:custom-value", "X-Another-Header:another-value"},
+					},
 				},
 			},
 		},
@@ -221,8 +223,10 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 				Add: transformerTargetSlice{
 					Headers: []string{"Authorization:Bearer token123"},
 				},
-				Replace: transformerTargetSlice{
-					Headers: []string{"Authorization:Bearer token123"},
+				Replace: transformerTargetSliceReplace{
+					transformerTargetSlice: transformerTargetSlice{
+						Headers: []string{"Authorization:Bearer token123"},
+					},
 				},
 			},
 		},
@@ -248,8 +252,10 @@ func TestKongPluginBuilder_WithFilter_RequestHeaderModifier(t *testing.T) {
 				Append: transformerTargetSlice{
 					Headers: []string{"X-Add-Header:add-value"},
 				},
-				Replace: transformerTargetSlice{
-					Headers: []string{"X-Add-Header:add-value"},
+				Replace: transformerTargetSliceReplace{
+					transformerTargetSlice: transformerTargetSlice{
+						Headers: []string{"X-Set-Header:set-value"},
+					},
 				},
 				Remove: transformerTargetSlice{
 					Headers: []string{"X-Remove-Header"},
@@ -354,8 +360,10 @@ func TestKongPluginBuilder_WithFilter_ResponseHeaderModifier(t *testing.T) {
 				Add: transformerTargetSlice{
 					Headers: []string{"Authorization:Bearer token123"},
 				},
-				Replace: transformerTargetSlice{
-					Headers: []string{"Authorization:Bearer token123"},
+				Replace: transformerTargetSliceReplace{
+					transformerTargetSlice: transformerTargetSlice{
+						Headers: []string{"Authorization:Bearer token123"},
+					},
 				},
 			},
 		},
@@ -381,8 +389,10 @@ func TestKongPluginBuilder_WithFilter_ResponseHeaderModifier(t *testing.T) {
 				Append: transformerTargetSlice{
 					Headers: []string{"X-Add-Header:add-value"},
 				},
-				Replace: transformerTargetSlice{
-					Headers: []string{"X-Set-Header:set-value"},
+				Replace: transformerTargetSliceReplace{
+					transformerTargetSlice: transformerTargetSlice{
+						Headers: []string{"X-Set-Header:set-value"},
+					},
 				},
 				Remove: transformerTargetSlice{
 					Headers: []string{"X-Remove-Header"},
@@ -470,8 +480,10 @@ func TestTranslateRequestModifier(t *testing.T) {
 				Append: transformerTargetSlice{
 					Headers: []string{"X-Add:add-val"},
 				},
-				Replace: transformerTargetSlice{
-					Headers: []string{"X-Set:set-val"},
+				Replace: transformerTargetSliceReplace{
+					transformerTargetSlice: transformerTargetSlice{
+						Headers: []string{"X-Set:set-val"},
+					},
 				},
 				Remove: transformerTargetSlice{
 					Headers: []string{"X-Remove"},

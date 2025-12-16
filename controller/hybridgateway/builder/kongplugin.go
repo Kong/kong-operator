@@ -151,6 +151,21 @@ func (b *KongPluginBuilder) WithFilter(filter gwtypes.HTTPRouteFilter) *KongPlug
 			return b
 		}
 		b.plugin.Config.Raw = configJSON
+	case gatewayv1.HTTPRouteFilterURLRewrite:
+		pluginConf, err := translateURLRewrite(filter)
+		if err != nil {
+			b.errors = append(b.errors, err)
+			return b
+		}
+
+		b.plugin.PluginName = "request-transformer"
+
+		configJSON, err := json.Marshal(pluginConf)
+		if err != nil {
+			b.errors = append(b.errors, fmt.Errorf("failed to marshal %q plugin config: %w", b.plugin.PluginName, err))
+			return b
+		}
+		b.plugin.Config.Raw = configJSON
 	default:
 		b.errors = append(b.errors, fmt.Errorf("unsupported filter type: %s", filter.Type))
 	}
@@ -163,15 +178,20 @@ type transformerTargetSlice struct {
 	Headers []string `json:"headers,omitempty"`
 }
 
+type transformerTargetSliceReplace struct {
+	transformerTargetSlice
+	Uri string `json:"uri,omitempty"`
+}
+
 type transformerData struct {
 	// Add: adds an header only if the header is not existent.
 	// Append: adds a new header even if the header is already existent (adds a new instance).
 	// Remove: removes an entry.
 	// Replace: overwrites an header value only if the header exists.
-	Add     transformerTargetSlice `json:"add,omitzero"`
-	Append  transformerTargetSlice `json:"append,omitzero"`
-	Remove  transformerTargetSlice `json:"remove,omitzero"`
-	Replace transformerTargetSlice `json:"replace,omitzero"`
+	Add     transformerTargetSlice        `json:"add,omitzero"`
+	Append  transformerTargetSlice        `json:"append,omitzero"`
+	Remove  transformerTargetSlice        `json:"remove,omitzero"`
+	Replace transformerTargetSliceReplace `json:"replace,omitzero"`
 }
 
 func translateRequestModifier(filter gwtypes.HTTPRouteFilter) (transformerData, error) {
@@ -194,7 +214,7 @@ func translateRequestModifier(filter gwtypes.HTTPRouteFilter) (transformerData, 
 	// Add for GWAPI equals "append" for Kong Plugins (it will add another instance of the header).
 	if len(filter.RequestHeaderModifier.Add) > 0 {
 		for _, v := range filter.RequestHeaderModifier.Add {
-			plugin.Append.Headers = append(plugin.Append.Headers, string(v.Name)+":"+v.Value)
+			plugin.Append.Headers = append(plugin.Append.Headers, string(v.Name)+" :"+v.Value)
 		}
 	}
 	if len(filter.RequestHeaderModifier.Remove) > 0 {
@@ -322,4 +342,27 @@ func translateRequestRedirectPathPrefixMatch(prefixMatch *string) string {
 	// KIC in Konnect just ignores PrefixMatch filters, let's do the same.
 	// Tracker: https://github.com/Kong/kong-operator/issues/2466
 	return "/"
+}
+
+func translateURLRewrite(filter gwtypes.HTTPRouteFilter) (transformerData, error) {
+	ur := filter.URLRewrite
+	pluginConf := transformerData{}
+
+	if ur == nil {
+		return pluginConf, errors.New("URLRewrite filter config is missing")
+
+	}
+
+	if ur.Path != nil && ur.Path.Type == gatewayv1.FullPathHTTPPathModifier {
+		pluginConf.Replace.Uri = translateURLRewritePathFullPath(ur.Path.ReplaceFullPath)
+	}
+
+	return pluginConf, nil
+}
+
+func translateURLRewritePathFullPath(replaceFullPath *string) string {
+	if replaceFullPath == nil || *replaceFullPath == "" {
+		return "/"
+	}
+	return *replaceFullPath
 }
