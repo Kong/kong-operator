@@ -44,7 +44,7 @@ jobs:
       docs_only: ${{ steps.check-files.outputs.docs_only }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
         with:
           egress-policy: audit
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -58,7 +58,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -85,7 +85,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - name: Checkout repository
@@ -140,7 +140,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - name: Checkout repository
@@ -160,7 +160,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - name: Checkout repository
@@ -218,7 +218,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - name: Checkout repository
@@ -264,7 +264,7 @@ jobs:
       CLUSTER_NAME: install-with-kustomize
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - name: Checkout repository
@@ -315,7 +315,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -336,7 +336,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - name: checkout repository
@@ -359,14 +359,14 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: collect test coverage
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: coverage-unit-tests
         path: coverage.unit.out
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: tests-report-unit-tests
         path: unit-tests.xml
@@ -382,7 +382,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -421,7 +421,7 @@ jobs:
           - .
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - name: checkout repository
@@ -455,14 +455,14 @@ jobs:
         make test.envtest CLUSTER_VERSION=${VERSION} TEST_DIR=${{ matrix.directory }}
 
     - name: collect test coverage
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: ${{ matrix.directory == '.' && 'ko' || matrix.directory }}-coverage-envtest-tests
         path: ${{ matrix.directory }}/coverage.envtest.out
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: ${{ matrix.directory == '.' && 'ko' || matrix.directory }}-tests-report-envtest-tests
         path: ${{ matrix.directory }}/envtest-tests.xml
@@ -485,7 +485,7 @@ jobs:
         - router-flavor: expressions
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - name: checkout repository
@@ -513,7 +513,7 @@ jobs:
 
     - name: upload diagnostics
       if: ${{ always() }}
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: diagnostics-conformance-${{ matrix.router-flavor }}
         path: /tmp/ktf-diag*
@@ -521,13 +521,13 @@ jobs:
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: tests-report-conformance-${{ matrix.router-flavor }}
         path: conformance-tests-${{ matrix.router-flavor }}.xml
 
     - name: collect conformance report
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: conformance-report-${{ matrix.router-flavor }}
         path: experimental-*-report.yaml
@@ -546,7 +546,7 @@ jobs:
           - .
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - name: checkout repository
@@ -576,21 +576,21 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: diagnostics-integration-${{ matrix.directory }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: ${{ matrix.directory == '.' && 'ko' || matrix.directory }}-coverage-integration
         path: ${{ matrix.directory }}/coverage.integration.out
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: ${{ matrix.directory == '.' && 'ko' || matrix.directory }}-tests-report-integration
         path: ${{ matrix.directory }}/integration-tests.xml
@@ -602,7 +602,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - name: checkout repository
@@ -628,21 +628,21 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: diagnostics-integration-bluegreen
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: coverage-integration-bluegreen
         path: coverage.integration-bluegreen.out
 
     - name: collect test report
       if: always()
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: tests-report-integration-bluegreen
         path: integration-tests-bluegreen.xml
@@ -653,7 +653,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Harden Runner
-      uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
       with:
         egress-policy: audit
     - name: checkout repository
@@ -685,7 +685,7 @@ jobs:
 
     - name: upload diagnostics
       if: always()
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: diagnostics-e2e
         path: /tmp/ktf-diag*
@@ -693,7 +693,7 @@ jobs:
 
     - name: collect test report
       if: ${{ always() }}
-      uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
       with:
         name: tests-report-e2e
         path: e2e-tests.xml
@@ -710,7 +710,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
         with:
           egress-policy: audit
 
@@ -763,7 +763,7 @@ jobs:
     if: always()
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@df199fb7be9f65074067a9eb93f12bb4c5547cf2 # v2.13.3
+        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
         with:
           egress-policy: audit
       - name: Check if docs-only changes

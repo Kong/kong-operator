@@ -5,7 +5,7 @@ go 1.25.5
 require (
 	cloud.google.com/go/container v1.45.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/sdk-konnect-go v0.14.2
+	github.com/Kong/sdk-konnect-go v0.15.0
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.7.0
 	github.com/blang/semver/v4 v4.0.0
@@ -53,11 +53,11 @@ require (
 	github.com/tonglil/buflogr v1.1.1
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.1
-	golang.org/x/mod v0.30.0
+	golang.org/x/mod v0.31.0
 	golang.org/x/sync v0.19.0
 	google.golang.org/api v0.257.0
 	google.golang.org/grpc v1.77.0
-	google.golang.org/protobuf v1.36.10
+	google.golang.org/protobuf v1.36.11
 	k8s.io/api v0.34.2
 	k8s.io/apiextensions-apiserver v0.34.1
 	k8s.io/apimachinery v0.34.2
