@@ -2,76 +2,39 @@ package integration
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
-	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/internal/annotations"
 	"github.com/kong/kong-operator/modules/manager/config"
-	testutils "github.com/kong/kong-operator/pkg/utils/test"
-	"github.com/kong/kong-operator/test/helpers"
 )
 
 func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 	t.Parallel()
 
-	namespace, cleaner := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
-	ctrlClient := client.NewNamespacedClient(GetClients().MgrClient, namespace.Name)
-
-	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
-	t.Logf("deploying GatewayConfiguration %s/%s", gatewayConfig.Namespace, gatewayConfig.Name)
-	require.NoError(t, ctrlClient.Create(ctx, gatewayConfig))
-	cleaner.Add(gatewayConfig)
-
-	gatewayClass := helpers.MustGenerateGatewayClass(t, gatewayv1.ParametersReference{
-		Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
-		Kind:      gatewayv1.Kind("GatewayConfiguration"),
-		Namespace: (*gatewayv1.Namespace)(&gatewayConfig.Namespace),
-		Name:      gatewayConfig.Name,
-	})
-	t.Logf("deploying GatewayClass %s", gatewayClass.Name)
-	require.NoError(t, ctrlClient.Create(ctx, gatewayClass))
-	cleaner.Add(gatewayClass)
-
-	gatewayNSN := types.NamespacedName{
-		Name:      uuid.NewString(),
-		Namespace: namespace.Name,
-	}
-
-	gateway := helpers.GenerateGateway(gatewayNSN, gatewayClass)
-	t.Logf("deploying Gateway %s/%s", gateway.Namespace, gateway.Name)
-	require.NoError(t, ctrlClient.Create(ctx, gateway))
-	cleaner.Add(gateway)
-
-	t.Logf("verifying Gateway %s/%s gets marked as Accepted", gateway.Namespace, gateway.Name)
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNSN, clients), 3*time.Minute, time.Second)
-	t.Log("Gateway is programmed, proceeding with the test cases")
+	_, cleaner, ingressClass, ctrlClient := bootstrapGateway(
+		t.Context(), t, env, GetClients().MgrClient,
+	)
 
 	// highEndConsumerUsageCount indicates a number of consumers with credentials
 	// that we consider a large number and is used to generate background
 	// consumers for testing validation (since validation relies on listing all
 	// consumers from the controller runtime cached client).
 	const highEndConsumerUsageCount = 50
-	createKongConsumers(ctx, t, ctrlClient, highEndConsumerUsageCount, gatewayClass.Name)
+	createKongConsumers(ctx, t, cleaner, ctrlClient, highEndConsumerUsageCount)
 
 	t.Run("attaching secret to consumer", func(t *testing.T) {
 		t.Log("verifying that a secret with unsupported but valid credential type passes the validation")
@@ -141,19 +104,14 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 			},
 		}
 		require.NoError(t, ctrlClient.Create(ctx, validCredential))
-		t.Cleanup(func() {
-			err := ctrlClient.Delete(ctx, validCredential)
-			if err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
-				assert.NoError(t, err)
-			}
-		})
+		cleaner.Add(validCredential)
 
 		t.Log("verifying that valid credentials assigned to a consumer pass validation")
 		validConsumerLinkedToValidCredentials := &configurationv1.KongConsumer{
 			ObjectMeta: metav1.ObjectMeta{
 				GenerateName: "valid-consumer-",
 				Annotations: map[string]string{
-					annotations.IngressClassKey: gatewayClass.Name,
+					annotations.IngressClassKey: ingressClass,
 				},
 			},
 			Username: "brokenfence",
@@ -163,12 +121,7 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 			},
 		}
 		require.NoError(t, ctrlClient.Create(ctx, validConsumerLinkedToValidCredentials))
-		t.Cleanup(func() {
-			err := ctrlClient.Delete(ctx, validConsumerLinkedToValidCredentials)
-			if err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
-				assert.NoError(t, err)
-			}
-		})
+		cleaner.Add(validConsumerLinkedToValidCredentials)
 
 		t.Log("verifying that the valid credentials which include a unique-constrained key can be updated in place")
 		validCredential.Data["value"] = []byte("newpassword")
@@ -252,7 +205,9 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 // createKongConsumers creates a provider number of consumers on the cluster.
 // Resources will be created in client's default namespace. When using controller-runtime's
 // client you can specify that by calling client.NewNamespacedClient(client, namespace).
-func createKongConsumers(ctx context.Context, t *testing.T, cl client.Client, count int, gwClass string) {
+func createKongConsumers(
+	ctx context.Context, t *testing.T, cleaner *clusters.Cleaner, client client.Client, count int,
+) {
 	t.Helper()
 
 	t.Logf("creating #%d of consumers on the cluster to verify the performance of the cached client during validation", count)
@@ -279,21 +234,14 @@ func createKongConsumers(ctx context.Context, t *testing.T, cl client.Client, co
 					},
 				}
 				t.Logf("creating %s Secret that contains credentials", credentialName)
-				require.NoError(t, cl.Create(ctx, credential))
-				t.Cleanup(func() {
-					if err := cl.Delete(ctx, credential); err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
-						assert.NoError(t, err)
-					}
-				})
+				require.NoError(t, client.Create(ctx, credential))
+				cleaner.Add(credential)
 			}
 
 			// create the consumer referencing its credentials
 			consumer := &configurationv1.KongConsumer{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: consumerName,
-					Annotations: map[string]string{
-						annotations.IngressClassKey: gwClass,
-					},
 				},
 				Username: consumerName,
 				CustomID: uuid.NewString(),
@@ -304,13 +252,9 @@ func createKongConsumers(ctx context.Context, t *testing.T, cl client.Client, co
 			}
 			t.Logf("creating %s KongConsumer", consumerName)
 			require.EventuallyWithT(t, func(c *assert.CollectT) {
-				assert.NoError(c, cl.Create(ctx, consumer))
-			}, 10*time.Second, 100*time.Millisecond)
-			t.Cleanup(func() {
-				if err := cl.Delete(ctx, consumer); err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
-					assert.NoError(t, err)
-				}
-			})
+				assert.NoError(c, client.Create(ctx, consumer))
+			}, 30*time.Second, 100*time.Millisecond)
+			cleaner.Add(consumer)
 			return nil
 		})
 	}
