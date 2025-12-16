@@ -108,8 +108,10 @@ func TestMain(m *testing.M) {
 	clients, err = testutils.NewK8sClients(GetEnv())
 	exitOnErr(err)
 
-	// Normally this is obtained from the downward API. the tests fake it.
+	// Normally this is obtained from the downward API, fake it here for testing.
 	err = os.Setenv("POD_NAMESPACE", "kong-system")
+	exitOnErr(err)
+	err = os.Setenv("POD_NAME", "kong-operator-controller-manager")
 	exitOnErr(err)
 
 	fmt.Println("INFO: Deploying all required Kubernetes Configuration (RBAC, CRDs, etc.) for the operator")
