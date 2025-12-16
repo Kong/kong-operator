@@ -532,6 +532,14 @@ jobs:
         name: conformance-report-${{ matrix.router-flavor }}
         path: experimental-*-report.yaml
 
+    - name: upload controller logs
+      if: ${{ always() }}
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: controller-logs-${{ matrix.router-flavor }}
+        path: /tmp/kong-operator-controller-logs*
+        if-no-files-found: error
+
   integration-tests:
     runs-on: ubuntu-latest
     name: integration-tests

@@ -37,7 +37,7 @@ func SetupControllerLogger(controllerManagerOut string) (func() error, error) {
 	var destWriter io.Writer = os.Stdout
 
 	if controllerManagerOut != "stdout" {
-		out, err := os.CreateTemp("", "gateway-operator-controller-logs")
+		out, err := os.CreateTemp("", "kong-operator-controller-logs")
 		if err != nil {
 			// noOpClose
 			return func() error {
