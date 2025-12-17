@@ -664,12 +664,63 @@ test.integration_bluegreen:
 		COVERPROFILE="coverage.integration-bluegreen.out" \
 		GOTESTPATH=./test/integration/
 
+# Prevent the following data race by not running via gotestsum:
+# WARNING: DATA RACE
+# Read at 0x00000bcabcb0 by goroutine 1080:
+#   k8s.io/klog/v2.(*loggingT).output()
+#       /home/runner/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:888 +0x81a
+#   k8s.io/klog/v2.(*loggingT).printWithInfos()
+#       /home/runner/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:733 +0x319
+#   k8s.io/klog/v2.(*loggingT).printDepth()
+#       /home/runner/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:715 +0xe9
+#   k8s.io/klog/v2.(*loggingT).printS()
+#       /home/runner/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:822 +0x285
+#   k8s.io/klog/v2.(*loggingT).infoS()
+#       /home/runner/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:806 +0x176
+#   k8s.io/klog/v2.Verbose.InfoSDepth()
+#       /home/runner/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klog.go:1467 +0x175
+#   k8s.io/klog/v2.(*klogger).Info()
+#       /home/runner/go/pkg/mod/k8s.io/klog/v2@v2.130.1/klogr.go:58 +0xb4
+#   github.com/go-logr/logr.Logger.Info()
+#       /home/runner/go/pkg/mod/github.com/go-logr/logr@v1.4.3/logr.go:280 +0x107
+#   sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[go.shape.struct { k8s.io/apimachinery/pkg/types.NamespacedName }]).Start.func1()
+#       /home/runner/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/controller/controller.go:286 +0x214
+#   sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[go.shape.struct { k8s.io/apimachinery/pkg/types.NamespacedName }]).Start()
+#       /home/runner/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/controller/controller.go:303 +0x188
+#   sigs.k8s.io/controller-runtime/pkg/internal/controller.(*Controller[sigs.k8s.io/controller-runtime/pkg/reconcile.Request]).Start()
+#       /home/runner/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/internal/controller/controller.go:259 +0x4a
+#   sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile.func1()
+#       /home/runner/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:260 +0x1e1
+#   sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile.gowrap1()
+#       /home/runner/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:283 +0x41
+
+# Previous write at 0x00000bcabcb0 by main goroutine:
+#   testing.(*M).Run()
+#       /opt/hostedtoolcache/go/1.25.5/x64/src/testing/testing.go:2285 +0x294
+#   github.com/kong/kong-operator/test/integration.Suite()
+#       /home/runner/work/kong-operator/kong-operator/test/integration/suite.go:161 +0xf97
+#   github.com/kong/kong-operator/test/integration/validatingwebhook.TestMain()
+#       /home/runner/work/kong-operator/kong-operator/test/integration/validatingwebhook/suite_test.go:10 +0x172
+#   main.main()
+#       _testmain.go:67 +0x16d
+
+# Goroutine 1080 (running) created at:
+#   sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile()
+#       /home/runner/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:244 +0x23c
+#   sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1.gowrap2()
+#       /home/runner/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0x33
 .PHONY: test.integration_validatingwebhook
-test.integration_validatingwebhook:
-	@$(MAKE) _test.integration \
-		GOTESTFLAGS="-run='TestAdmissionWebhook_' $(GOTESTFLAGS)" \
-		COVERPROFILE="coverage.integration-validatingwebhook.out" \
-		GOTESTPATH=./test/integration/validatingwebhook/
+test.integration_validatingwebhook: download.telepresence
+	KUBECONFIG=$(KUBECONFIG) \
+	TELEPRESENCE_BIN=$(TELEPRESENCE) \
+	GOFLAGS=$(GOFLAGS) \
+	go test \
+	-run='TestAdmissionWebhook_' $(GOTESTFLAGS) \
+	-timeout $(INTEGRATION_TEST_TIMEOUT) \
+	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
+	-race -v \
+	-coverprofile="coverage.integration-validatingwebhook.out" \
+	./test/integration/validatingwebhook/
 
 .PHONY: _test.e2e
 _test.e2e: gotestsum
