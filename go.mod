@@ -64,7 +64,7 @@ require (
 	k8s.io/cli-runtime v0.34.3
 	k8s.io/client-go v0.34.3
 	k8s.io/kubectl v0.34.3
-	k8s.io/kubernetes v1.34.2
+	k8s.io/kubernetes v1.34.3
 	k8s.io/utils v0.0.0-20250820121507-0af2bda4dd1d
 	oras.land/oras-go/v2 v2.6.0
 	sigs.k8s.io/controller-runtime v0.22.4
