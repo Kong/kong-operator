@@ -830,6 +830,7 @@ jobs:
           --create-namespace \
           --set image.repository=${{ env.IMG }} \
           --set image.tag=${{ env.TAG }} \
+          --set env.enable_controller_konnect=true \
           --wait
 
     - name: run chainsaw e2e tests

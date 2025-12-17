@@ -10,7 +10,7 @@ spec:
   
   timeouts:
     apply: 120s
-    assert: 120s
+    assert: 300s
     delete: 120s
   
   steps:
