@@ -679,21 +679,21 @@ func GatewayNotExist(t *testing.T, ctx context.Context, gatewayNSN types.Namespa
 // GatewayIsAccepted returns a function that checks if a Gateway is scheduled.
 func GatewayIsAccepted(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
-		return gatewayutils.IsAccepted(MustGetGateway(t, ctx, gatewayNSN, clients))
+		return gatewayutils.IsAccepted(MustGetGateway(t, ctx, gatewayNSN, clients.MgrClient))
 	}
 }
 
 // GatewayIsProgrammed returns a function that checks if a Gateway is programmed.
-func GatewayIsProgrammed(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
+func GatewayIsProgrammed(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, cl client.Client) func() bool {
 	return func() bool {
-		return gatewayutils.IsProgrammed(MustGetGateway(t, ctx, gatewayNSN, clients))
+		return gatewayutils.IsProgrammed(MustGetGateway(t, ctx, gatewayNSN, cl))
 	}
 }
 
 // GatewayListenersAreProgrammed returns a function that checks if a Gateway's listeners are programmed.
 func GatewayListenersAreProgrammed(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
-		return gatewayutils.AreListenersProgrammed(MustGetGateway(t, ctx, gatewayNSN, clients))
+		return gatewayutils.AreListenersProgrammed(MustGetGateway(t, ctx, gatewayNSN, clients.MgrClient))
 	}
 }
 
@@ -860,7 +860,7 @@ func networkPolicyRuleSliceContainsRule[T ingressRuleT](rules []T, rule T) bool 
 // GatewayIPAddressExist checks if a Gateway has IP addresses.
 func GatewayIPAddressExist(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) func() bool {
 	return func() bool {
-		gateway := MustGetGateway(t, ctx, gatewayNSN, clients)
+		gateway := MustGetGateway(t, ctx, gatewayNSN, clients.MgrClient)
 		if len(gateway.Status.Addresses) > 0 && *gateway.Status.Addresses[0].Type == gatewayv1.IPAddressType {
 			return true
 		}

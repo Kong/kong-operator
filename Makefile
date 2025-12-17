@@ -647,13 +647,14 @@ _test.integration: gotestsum download.telepresence
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 	-race \
 	-coverprofile=$(COVERPROFILE) \
-	./test/integration/...
+	$(GOTESTPATH)
 
 .PHONY: test.integration
 test.integration:
 	@$(MAKE) _test.integration \
-		GOTESTFLAGS="-skip='BlueGreen' $(GOTESTFLAGS)" \
-		COVERPROFILE="coverage.integration.out"
+		GOTESTFLAGS="-skip='BlueGreen|TestAdmissionWebhook_' $(GOTESTFLAGS)" \
+		COVERPROFILE="coverage.integration.out" \
+		GOTESTPATH=./test/integration/
 
 .PHONY: test.integration_bluegreen
 test.integration_bluegreen:
@@ -661,6 +662,14 @@ test.integration_bluegreen:
 		KONG_OPERATOR_BLUEGREEN_CONTROLLER="true" \
 		GOTESTFLAGS="-run='BlueGreen|TestDataPlane' $(GOTESTFLAGS)" \
 		COVERPROFILE="coverage.integration-bluegreen.out" \
+		GOTESTPATH=./test/integration/
+
+.PHONY: test.integration_validatingwebhook
+test.integration_validatingwebhook:
+	@$(MAKE) _test.integration \
+		GOTESTFLAGS="-run='TestAdmissionWebhook_' $(GOTESTFLAGS)" \
+		COVERPROFILE="coverage.integration-validatingwebhook.out" \
+		GOTESTPATH=./test/integration/validatingwebhook/
 
 .PHONY: _test.e2e
 _test.e2e: gotestsum

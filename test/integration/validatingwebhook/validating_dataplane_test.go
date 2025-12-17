@@ -1,4 +1,4 @@
-package integration
+package validatingwebhook
 
 import (
 	"fmt"
@@ -14,18 +14,20 @@ import (
 	kcfgdataplane "github.com/kong/kong-operator/api/gateway-operator/dataplane"
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/test/helpers"
+	"github.com/kong/kong-operator/test/integration"
 )
 
 func TestDataPlaneValidation(t *testing.T) {
-	t.Parallel()
-	namespace, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
+	namespace, _ := helpers.SetupTestEnv(t, integration.GetCtx(), integration.GetEnv())
 
 	t.Log("running tests for validation performed during reconciling")
-	testDataPlaneReconcileValidation(t, namespace)
+	clients := integration.GetClients()
+	testDataPlaneReconcileValidation(t, namespace, clients)
 }
 
-func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace) {
+func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace, clients test.K8sClients) {
 	testCases := []struct {
 		name             string
 		dataplane        *operatorv1beta1.DataPlane
@@ -46,10 +48,12 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 		},
 	}
 
-	dataplaneClient := GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
+	ctx := t.Context()
+
+	dataplaneClient := clients.OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			dataplane, err := dataplaneClient.Create(GetCtx(), tc.dataplane, metav1.CreateOptions{})
+			dataplane, err := dataplaneClient.Create(ctx, tc.dataplane, metav1.CreateOptions{})
 			if tc.creationErr {
 				require.Error(t, err, "should return error when create dataplane for case %s", tc.name)
 				return
@@ -59,7 +63,7 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 
 			if tc.validatingOK {
 				t.Logf("%s: verifying deployments managed by the dataplane", t.Name())
-				w, err := GetClients().K8sClient.AppsV1().Deployments(namespace.Name).Watch(GetCtx(), metav1.ListOptions{
+				w, err := clients.K8sClient.AppsV1().Deployments(namespace.Name).Watch(ctx, metav1.ListOptions{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "Deployment",
 						APIVersion: "apps/v1",
@@ -70,8 +74,8 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				t.Cleanup(func() { w.Stop() })
 				for {
 					select {
-					case <-GetCtx().Done():
-						t.Fatalf("context expired: %v", GetCtx().Err())
+					case <-ctx.Done():
+						t.Fatalf("context expired: %v", ctx.Err())
 					case event := <-w.ResultChan():
 						deployment, ok := event.Object.(*appsv1.Deployment)
 						require.True(t, ok)
@@ -89,7 +93,7 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				}
 			} else {
 				t.Logf("%s: verifying DataPlane conditions", t.Name())
-				w, err := dataplaneClient.Watch(GetCtx(), metav1.ListOptions{
+				w, err := dataplaneClient.Watch(ctx, metav1.ListOptions{
 					TypeMeta: metav1.TypeMeta{
 						Kind:       "DataPlane",
 						APIVersion: operatorv1beta1.SchemeGroupVersion.String(),
@@ -100,8 +104,8 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace)
 				t.Cleanup(func() { w.Stop() })
 				for {
 					select {
-					case <-GetCtx().Done():
-						t.Fatalf("context expired: %v", GetCtx().Err())
+					case <-ctx.Done():
+						t.Fatalf("context expired: %v", ctx.Err())
 					case event := <-w.ResultChan():
 						dataplane, ok := event.Object.(*operatorv1beta1.DataPlane)
 						require.True(t, ok)

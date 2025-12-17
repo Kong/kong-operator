@@ -43,6 +43,8 @@ func DefaultControllerConfigForTests(opts ...ControllerConfigOption) manager.Con
 	// TODO: https://github.com/Kong/kong-operator/issues/1986
 	cfg.ConversionWebhookEnabled = false
 	cfg.ValidatingWebhookEnabled = true
+	cfg.APIServerQPS = -1
+	cfg.APIServerBurst = -1
 
 	// Apply all the provided options
 	for _, opt := range opts {

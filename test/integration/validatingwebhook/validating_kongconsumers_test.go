@@ -1,4 +1,4 @@
-package integration
+package validatingwebhook
 
 import (
 	"context"
@@ -15,13 +15,13 @@ import (
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/internal/annotations"
 	"github.com/kong/kong-operator/modules/manager/config"
+	"github.com/kong/kong-operator/test/integration"
 )
 
 func TestAdmissionWebhook_KongConsumers(t *testing.T) {
-	t.Parallel()
-
+	ctx := t.Context()
 	namespace, cleaner, ingressClass, ctrlClient := bootstrapGateway(
-		t.Context(), t, env, GetClients().MgrClient,
+		ctx, t, integration.GetEnv(), integration.GetClients().MgrClient,
 	)
 
 	t.Logf("creating some static credentials in %s namespace which will be used to test global validation", namespace.Name)

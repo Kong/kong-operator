@@ -147,11 +147,10 @@ func MustListDataPlanesForGateway(t *testing.T, ctx context.Context, gateway *gw
 
 // MustGetGateway is a helper function for tests that conveniently gets a gateway by name.
 // It will fail the test if getting the gateway fails.
-func MustGetGateway(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, clients K8sClients) *gwtypes.Gateway {
-	gateways := clients.GatewayClient.GatewayV1().Gateways(gatewayNSN.Namespace)
-	gateway, err := gateways.Get(ctx, gatewayNSN.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	return gateway
+func MustGetGateway(t *testing.T, ctx context.Context, gatewayNSN types.NamespacedName, cl client.Client) *gwtypes.Gateway {
+	var gateway gwtypes.Gateway
+	require.NoError(t, cl.Get(ctx, gatewayNSN, &gateway))
+	return &gateway
 }
 
 // MustGetGatewayClass is a helper function for tests that conveniently gets a gatewayclass by name.

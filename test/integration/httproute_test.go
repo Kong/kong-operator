@@ -58,13 +58,13 @@ func TestHTTPRoute(t *testing.T) {
 	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Logf("verifying Gateway %s/%s gets marked as Programmed", gateway.Namespace, gateway.Name)
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNSN, clients.MgrClient), testutils.GatewayReadyTimeLimit, time.Second)
 	t.Logf("verifying Gateway %s/%s Listeners get marked as Programmed", gateway.Namespace, gateway.Name)
 	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Logf("verifying Gateway %s/%s gets an IP address", gateway.Namespace, gateway.Name)
 	require.Eventually(t, testutils.GatewayIPAddressExist(t, GetCtx(), gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
-	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayNSN, clients)
+	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayNSN, clients.MgrClient)
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Log("deploying backend deployment (httpbin) of HTTPRoute")
@@ -186,13 +186,13 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayNSN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Logf("verifying Gateway %s/%s gets marked as Programmed", gateway.Namespace, gateway.Name)
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayNSN, clients.MgrClient), testutils.GatewayReadyTimeLimit, time.Second)
 	t.Logf("verifying Gateway %s/%s Listeners get marked as Programmed", gateway.Namespace, gateway.Name)
 	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayNSN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Logf("verifying Gateway %s/%s gets an IP address", gateway.Namespace, gateway.Name)
 	require.Eventually(t, testutils.GatewayIPAddressExist(t, GetCtx(), gatewayNSN, clients), testutils.SubresourceReadinessWait, time.Second)
-	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayNSN, clients)
+	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayNSN, clients.MgrClient)
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Log("deploying httpbin backend deployment")
