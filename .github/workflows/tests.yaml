@@ -811,7 +811,6 @@ jobs:
       uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab # v1.13.0
       with:
         cluster_name: ${{ env.CLUSTER_NAME }}
-        version: v0.30.0
         node_image: kindest/node:${{ needs.matrix_k8s_node_versions.outputs.latest }}
 
     - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
@@ -821,13 +820,17 @@ jobs:
     - name: Load image to kind cluster
       run: kind load docker-image ${{ env.IMG }}:${{ env.TAG }} --name ${{ env.CLUSTER_NAME }}
 
-    - name: Install CRDs
-      run: make install
+    - name: Install cert-manager
+      run: make install.helm.cert-manager
 
-    - name: Deploy operator
-      env:
-        VERSION: ${{ env.TAG }}
-      run: make deploy
+    - name: Deploy operator with Helm
+      run: |
+        helm install kong-operator charts/kong-operator \
+          --namespace kong-system \
+          --create-namespace \
+          --set image.repository=${{ env.IMG }} \
+          --set image.tag=${{ env.TAG }} \
+          --wait
 
     - name: run chainsaw e2e tests
       run: make test.e2e.chainsaw
