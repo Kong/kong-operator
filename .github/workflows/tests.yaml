@@ -183,9 +183,9 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        timeout_minutes: 5
-        max_attempts: 5
-        retry_wait_seconds: 20
+        timeout_minutes: 8
+        max_attempts: 3
+        retry_wait_seconds: 30
         command: make verify.generators
 
   matrix_k8s_node_versions:
