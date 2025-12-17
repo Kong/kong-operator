@@ -277,8 +277,20 @@ func translateURLRewrite(filter gwtypes.HTTPRouteFilter) (transformerData, error
 
 	}
 
-	if ur.Path != nil && ur.Path.Type == gatewayv1.FullPathHTTPPathModifier {
-		pluginConf.Replace.Uri = translateURLRewritePathFullPath(ur.Path.ReplaceFullPath)
+	if ur.Hostname != nil {
+		headers := []string{"host:" + string(*ur.Hostname)}
+		pluginConf.Replace.Headers = headers
+		pluginConf.Add.Headers = headers
+	}
+	if ur.Path != nil {
+		switch ur.Path.Type {
+		case gatewayv1.FullPathHTTPPathModifier:
+			pluginConf.Replace.Uri = translateURLRewritePathFullPath(ur.Path.ReplaceFullPath)
+		case gatewayv1.PrefixMatchHTTPPathModifier:
+			fallthrough
+		default:
+			return pluginConf, fmt.Errorf("unsupported URLRewrite path modifier type: %s", ur.Path.Type)
+		}
 	}
 
 	return pluginConf, nil
