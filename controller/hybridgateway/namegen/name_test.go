@@ -323,9 +323,9 @@ func TestNewKongPluginName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := NewKongPluginName(tt.filter)
+			result := NewKongPluginName(tt.filter, "request-transformer")
 			assert.NotEmpty(t, result)
-			assert.True(t, strings.HasPrefix(result, "pl"))
+			assert.True(t, strings.HasPrefix(result, "request-transformer."), "should start with plugin name prefix")
 		})
 	}
 }
@@ -509,8 +509,8 @@ func TestNameGenerationConsistency(t *testing.T) {
 	})
 
 	t.Run("plugin name consistency", func(t *testing.T) {
-		result1 := NewKongPluginName(filter)
-		result2 := NewKongPluginName(filter)
+		result1 := NewKongPluginName(filter, "request-transformer")
+		result2 := NewKongPluginName(filter, "request-transformer")
 		assert.Equal(t, result1, result2)
 	})
 
