@@ -19,28 +19,22 @@ import (
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
-// PluginForFilter creates or retrieves a KongPlugin for the given HTTPRoute filter.
+// PluginsForFilter creates or retrieves KongPlugins for the given HTTPRoute filter.
 //
 // Workflow:
-//  1. Derives the KongPlugin name (namegen) and enriches the logger context.
-//  2. If the filter type is ExtensionRef:
-//     - Validates group/kind.
-//     - Retrieves the referenced KongPlugin directly (no build, no mutation).
-//     - Returns it with selfManaged=true.
-//  3. Otherwise builds a new KongPlugin (builder chain: name, namespace, labels, annotations, filter).
-//  4. Attempts to GET an existing KongPlugin with the same name/namespace:
-//     - If an API error (other than NotFound) occurs, returns the error.
-//     - If NotFound, returns the freshly built plugin (selfManaged=false) for creation.
-//     - If found:
-//     a. Preserves the existing hybrid routes annotation value.
-//     b. Uses AnnotationManager to append the current HTTPRoute reference.
-//     c. Returns the updated (rebuilt) plugin (selfManaged=false).
-//  5. Spec reconciliation for existing plugins is not performed yet (see TODO / issue 2687).
+//  1. If the filter type is ExtensionRef retrieve the referenced KongPlugin.
+//  2. Otherwise, translates the filter into one or more plugin configurations.
+//  3. For each plugin configuration:
+//     - Derives the KongPlugin name using namegen.
+//     - Builds a new KongPlugin resource with appropriate name, namespace, labels, annotations, and config.
+//     - Calls translator.VerifyAndUpdate to handle existing plugin reconciliation.
+//  4. Returns all translated plugins.
 //
 // Self-managed plugin:
 //
 //	A plugin referenced via ExtensionRef. These are returned as-is without rebuild,
-//	annotation modification, or existence checks.
+//	annotation modification, or existence checks. The user is responsible for managing
+//	the plugin lifecycle.
 //
 // Parameters:
 //
@@ -52,50 +46,64 @@ import (
 //   - pRef: Parent (Gateway) reference.
 //
 // Returns:
-//   - kongPlugin: The translated plugin.
+//   - kongPlugins: The translated plugin(s).
 //   - selfManaged: True if sourced from ExtensionRef.
 //   - err: Any error encountered.
-func PluginForFilter(
+func PluginsForFilter(
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
 	httpRoute *gwtypes.HTTPRoute,
 	filter gwtypes.HTTPRouteFilter,
 	pRef *gwtypes.ParentReference,
-) (kongPlugin *configurationv1.KongPlugin, selfManaged bool, err error) {
-	pluginName := namegen.NewKongPluginName(filter)
-	logger = logger.WithValues("kongplugin", pluginName)
-	log.Debug(logger, "Generating KongPlugin for HTTPRoute filter")
+) ([]configurationv1.KongPlugin, bool, error) {
+	logger = logger.WithValues("filter-type", filter.Type)
+	plugins := []configurationv1.KongPlugin{}
 
 	// In case the filter is an ExtensionRef, retrieve the referenced KongPlugin and return early
 	if filter.Type == gatewayv1.HTTPRouteFilterExtensionRef {
 		log.Debug(logger, "Filter is an ExtensionRef, retrieving referenced KongPlugin")
 		plugin, err := getReferencedKongPlugin(ctx, cl, httpRoute.Namespace, filter)
+		pluginName := plugin.Name
 		if err != nil {
 			log.Error(logger, err, "Failed to retrieve referenced KongPlugin")
 			return nil, false, fmt.Errorf("failed to retrieve referenced KongPlugin %s: %w", pluginName, err)
 		}
 		log.Debug(logger, "Successfully retrieved referenced KongPlugin")
-		return plugin, true, nil
+		plugins = append(plugins, *plugin)
+		return plugins, true, nil
 	}
 
-	plugin, err := builder.NewKongPlugin().
-		WithName(pluginName).
-		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
-		WithLabels(httpRoute, pRef).
-		WithAnnotations(httpRoute, pRef).
-		WithFilter(filter).
-		Build()
+	pluginConfs, err := translateFromFilter(filter)
 	if err != nil {
-		log.Error(logger, err, "Failed to build KongPlugin resource")
-		return nil, false, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
+		return nil, false, fmt.Errorf("translating filter to KongPlugins: %w", err)
+	}
+	for i := range pluginConfs {
+		pConf := &pluginConfs[i]
+		pluginName := namegen.NewKongPluginName(filter, pConf.name)
+		logger := logger.WithValues("kongplugin", pluginName)
+		log.Debug(logger, "Generating KongPlugin for HTTPRoute filter")
+
+		plugin, err := builder.NewKongPlugin().
+			WithName(pluginName).
+			WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
+			WithLabels(httpRoute, pRef).
+			WithPluginName(pConf.name).
+			WithPluginConfig(pConf.config).
+			WithAnnotations(httpRoute, pRef).
+			Build()
+		if err != nil {
+			log.Error(logger, err, "Failed to build KongPlugin resource")
+			return nil, false, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
+		}
+
+		if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &plugin, httpRoute, false); err != nil {
+			return nil, false, err
+		}
+		plugins = append(plugins, plugin)
 	}
 
-	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &plugin, httpRoute, false); err != nil {
-		return nil, false, err
-	}
-
-	return &plugin, false, nil
+	return plugins, false, nil
 }
 
 func getReferencedKongPlugin(ctx context.Context, cl client.Client, namespace string, filter gwtypes.HTTPRouteFilter) (*configurationv1.KongPlugin, error) {
