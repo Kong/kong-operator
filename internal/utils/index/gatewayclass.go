@@ -13,6 +13,7 @@ const (
 	GatewayClassOnGatewayConfigurationIndex = "GatewayClassOnGatewayConfiguration"
 )
 
+// OptionsForGatewayClass returns the index options for GatewayClass objects.
 func OptionsForGatewayClass() []Option {
 	return []Option{
 		{
@@ -23,6 +24,10 @@ func OptionsForGatewayClass() []Option {
 	}
 }
 
+// GatewayConfigurationOnGatewayClass returns the index key for the provided
+// GatewayClass object.
+// The index key is in the format "namespace/name" of the referenced GatewayConfiguration.
+// If the GatewayClass does not reference a GatewayConfiguration, nil is returned.
 func GatewayConfigurationOnGatewayClass(o client.Object) []string {
 	gwc, ok := o.(*gatewayv1.GatewayClass)
 	if !ok {

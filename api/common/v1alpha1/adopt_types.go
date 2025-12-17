@@ -1,6 +1,7 @@
 package v1alpha1
 
 // AdoptOptions is the options for CRDs to attach to an existing Kong entity.
+//
 // +kubebuilder:object:generate=true
 // +kubebuilder:validation:XValidation:rule="self.from == oldSelf.from",message="'from'(adopt source) is immutable"
 // +kubebuilder:validation:XValidation:rule="self.from == 'konnect' ? has(self.konnect) : true",message="Must specify Konnect options when from='konnect'"

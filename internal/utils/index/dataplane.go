@@ -26,6 +26,8 @@ type DataPlaneFlags struct {
 	GatewayAPIGatewayControllerEnabled      bool
 }
 
+// OptionsForDataPlane returns indexing options for the DataPlane object,
+// based on the provided flags.
 func OptionsForDataPlane(flags DataPlaneFlags) []Option {
 	var opts []Option
 
@@ -71,6 +73,9 @@ func kongPluginInstallationsOnDataPlane(o client.Object) []string {
 	return result
 }
 
+// OwnerGatewayOnDataPlane indexes the DataPlane based on its owner Gateway reference.
+// It returns a 1 element slice with "namespace/name" of the owner Gateway,
+// or an empty slice if no such owner reference exists.
 func OwnerGatewayOnDataPlane(o client.Object) []string {
 	dp, ok := o.(*operatorv1beta1.DataPlane)
 	if !ok {

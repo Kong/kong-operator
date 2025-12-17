@@ -17,7 +17,9 @@ var SupportedTypes = sets.NewString(
 	"mtls-auth",
 )
 
-// ValidTypes are all types considered as valid. It's a sum of `SupportedTypes` (the ones that KIC reconciles) and other credential types supported outside of KIC (i.e. in KGO).
+// ValidTypes are all types considered as valid.
+// It's a sum of `SupportedTypes` (the ones that KIC reconciles) and other credential types
+// supported outside of KIC (i.e. in KGO).
 var ValidTypes = sets.NewString(
 	append(
 		SupportedTypes.UnsortedList(),

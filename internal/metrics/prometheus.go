@@ -22,11 +22,15 @@ const (
 	// KonnectServerURLKey is the key for the Konnect server URL which accepts the requests of entity opertions.
 	KonnectServerURLKey = "server_url"
 	// KonnectEntityOperationTypeKey is the key for the opertion type:  `create`, `update`, or `delete`.
-	KonnectEntityOperationTypeKey                        = "operation_type"
-	KonnectEntityOperationCreate  KonnectEntityOperation = "create"
-	KonnectEntityOperationUpdate  KonnectEntityOperation = "update"
-	KonnectEntityOperationDelete  KonnectEntityOperation = "delete"
-	KonnectEntityOperationAdopt   KonnectEntityOperation = "adopt"
+	KonnectEntityOperationTypeKey = "operation_type"
+	// KonnectEntityOperationCreate is the key for the create operation.
+	KonnectEntityOperationCreate KonnectEntityOperation = "create"
+	// KonnectEntityOperationUpdate is the key for the update operation.
+	KonnectEntityOperationUpdate KonnectEntityOperation = "update"
+	// KonnectEntityOperationDelete is the key for the delete operation.
+	KonnectEntityOperationDelete KonnectEntityOperation = "delete"
+	// KonnectEntityOperationAdopt is the key for the adopt operation.
+	KonnectEntityOperationAdopt KonnectEntityOperation = "adopt"
 	// KonnectEntityTypeKey indicates the type of the operated Konnect entity.
 	KonnectEntityTypeKey = "entity_type"
 	// SuccessKey indicates whether the operation is successfully done.
@@ -43,7 +47,8 @@ const (
 
 // metric names for konnect entity operations.
 const (
-	// MetricNameKonnectEntityOperationCount is the metric of number of operations, grouped by server URL, entity type, successful status and status code.
+	// MetricNameKonnectEntityOperationCount is the metric of number of operations,
+	// grouped by server URL, entity type, successful status and status code.
 	MetricNameKonnectEntityOperationCount = "gateway_operator_konnect_entity_operation_count"
 	// MetricNameKonnectEntityOperationDuration is the metric of durations of the operations.
 	MetricNameKonnectEntityOperationDuration = "gateway_operator_konnect_entity_operation_duration_milliseconds"
@@ -107,6 +112,7 @@ type GlobalCtrlRuntimeMetricsRecorder struct{}
 
 var _ Recorder = &GlobalCtrlRuntimeMetricsRecorder{}
 
+// NewGlobalCtrlRuntimeMetricsRecorder creates a new GlobalCtrlRuntimeMetricsRecorder instance.
 func NewGlobalCtrlRuntimeMetricsRecorder() *GlobalCtrlRuntimeMetricsRecorder {
 	return &GlobalCtrlRuntimeMetricsRecorder{}
 }

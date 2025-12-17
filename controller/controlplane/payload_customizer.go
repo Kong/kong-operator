@@ -33,7 +33,8 @@ func withHostnameRetriever(fn hostnameRetriever) payloadCustomizerOption {
 
 // defaultPayloadCustomizer creates a PayloadCustomizer that injects the hostname into the payload
 // and removes unnecessary fields.
-// TODO: Consider setting the hostname via an environment variable using the node name and the Kubernetes Downward API for improved configurability.
+// TODO: Consider setting the hostname via an environment variable using the node name
+// and the Kubernetes Downward API for improved configurability.
 // https://github.com/Kong/kong-operator/issues/1783
 func defaultPayloadCustomizer(opts ...payloadCustomizerOption) (types.PayloadCustomizer, error) {
 	var (

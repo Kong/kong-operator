@@ -8,6 +8,7 @@ import (
 // Region represents a Konnect region.
 type Region string
 
+// String returns the string representation of the Region.
 func (r Region) String() string {
 	return string(r)
 }

@@ -158,6 +158,8 @@ func GenerateNewDeploymentForDataPlane(
 	return &wrapped, nil
 }
 
+// VolumesFromPodTemplateSpecOrNil returns volumes from a PodTemplateSpec,
+// or nil if the PodTemplateSpec or volumes are not found.
 func VolumesFromPodTemplateSpecOrNil(pts *corev1.PodTemplateSpec) []corev1.Volume {
 	if pts == nil || pts.Spec.Volumes == nil {
 		return nil
@@ -219,6 +221,8 @@ func GenerateDataPlaneContainer(image string, pts *corev1.PodTemplateSpec) corev
 	}
 }
 
+// VolumeMountsFromPodTemplateSpecContainerOrNil returns volume mounts for a container from a PodTemplateSpec,
+// or nil if the PodTemplateSpec or container is not found.
 func VolumeMountsFromPodTemplateSpecContainerOrNil(pts *corev1.PodTemplateSpec, containerName string) []corev1.VolumeMount {
 	if pts == nil || pts.Spec.Containers == nil {
 		return nil
@@ -333,6 +337,7 @@ func ClusterCertificateVolumeMount() corev1.VolumeMount {
 // of existing configuration is uncertain, you must check before invoking them.
 type Deployment appsv1.Deployment
 
+// Unwrap returns the underlying appsv1.Deployment.
 func (d *Deployment) Unwrap() *appsv1.Deployment {
 	return (*appsv1.Deployment)(d)
 }

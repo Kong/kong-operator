@@ -30,6 +30,7 @@ const (
 
 // KonnectExtension is the Schema for the KonnectExtension API, and is intended to be referenced as
 // extension by the DataPlane, ControlPlane or GatewayConfiguration APIs.
+//
 // If one of the above mentioned resources successfully refers a KonnectExtension, the underlying
 // deployment(s) spec gets customized to include the konnect-related configuration.
 //
