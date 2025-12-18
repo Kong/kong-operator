@@ -178,7 +178,7 @@ func TestOperatorLogs(t *testing.T) {
 	t.Log("verifying all the Gateways get marked as Programmed")
 	for _, gateway := range gateways.Items {
 		t.Logf("verifying gateway %q is ready", gateway.Name)
-		require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name}, *clients), concurrentGatewaysReadyTimeLimit, time.Second)
+		require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name}, clients.MgrClient), concurrentGatewaysReadyTimeLimit, time.Second)
 		require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, ctx, types.NamespacedName{Namespace: gateway.Namespace, Name: gateway.Name}, *clients), concurrentGatewaysReadyTimeLimit, time.Second)
 	}
 

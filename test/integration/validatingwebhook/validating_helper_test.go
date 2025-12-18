@@ -1,4 +1,4 @@
-package integration
+package validatingwebhook
 
 import (
 	"context"
@@ -63,7 +63,7 @@ func bootstrapGateway(ctx context.Context, t *testing.T, env environments.Enviro
 	cleaner.Add(gateway)
 
 	t.Logf("verifying Gateway %s/%s gets marked as Programmed", gateway.Namespace, gateway.Name)
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, clients), 3*time.Minute, time.Second)
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, ctx, gatewayNSN, mgrClient), 3*time.Minute, time.Second)
 	t.Log("Gateway is programmed, proceeding with the test cases")
 
 	return namespace, cleaner, ingressClass, ctrlClient

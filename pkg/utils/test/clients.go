@@ -35,21 +35,24 @@ func NewK8sClients(env environments.Environment) (K8sClients, error) {
 	var err error
 	var clients K8sClients
 
+	restConfig := env.Cluster().Config()
+
 	clients.K8sClient = env.Cluster().Client()
-	clients.OperatorClient, err = configurationclient.NewForConfig(env.Cluster().Config())
+	clients.OperatorClient, err = configurationclient.NewForConfig(restConfig)
 	if err != nil {
 		return clients, err
 	}
-	clients.GatewayClient, err = gatewayclient.NewForConfig(env.Cluster().Config())
+	clients.GatewayClient, err = gatewayclient.NewForConfig(restConfig)
 	if err != nil {
 		return clients, err
 	}
-	clients.ConfigurationClient, err = configurationclient.NewForConfig(env.Cluster().Config())
+	clients.ConfigurationClient, err = configurationclient.NewForConfig(restConfig)
 	if err != nil {
 		return clients, err
 	}
 
-	clients.MgrClient, err = ctrlruntimeclient.New(env.Cluster().Config(), ctrlruntimeclient.Options{})
+	ctrlOpts := ctrlruntimeclient.Options{}
+	clients.MgrClient, err = ctrlruntimeclient.New(restConfig, ctrlOpts)
 	if err != nil {
 		return clients, err
 	}

@@ -89,7 +89,7 @@ func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfiguration
 										Image: GetDefaultDataPlaneImage(),
 										ReadinessProbe: &corev1.Probe{
 											FailureThreshold:    3,
-											InitialDelaySeconds: 0,
+											InitialDelaySeconds: 1,
 											PeriodSeconds:       1,
 											SuccessThreshold:    1,
 											TimeoutSeconds:      1,

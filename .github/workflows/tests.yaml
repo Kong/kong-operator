@@ -603,6 +603,59 @@ jobs:
         name: ${{ matrix.directory == '.' && 'ko' || matrix.directory }}-tests-report-integration
         path: ${{ matrix.directory }}/integration-tests.xml
 
+  integration-tests-validating-webhook:
+    runs-on: ubuntu-latest
+    needs:
+      - check-docs-only
+      - matrix_k8s_node_versions
+    if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+      with:
+        egress-policy: audit
+    - name: checkout repository
+      uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+    - name: setup golang
+      uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+      with:
+        go-version-file: go.mod
+
+    - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
+      with:
+        install: false
+
+    - name: run integration tests
+      run: make test.integration_validatingwebhook
+      env:
+        KONG_CONTROLLER_OUT: stdout
+        GOTESTSUM_JUNITFILE: integration-tests.xml
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        KONG_CLUSTER_VERSION: ${{ needs.matrix_k8s_node_versions.outputs.latest }}
+
+    - name: upload diagnostics
+      if: always()
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: diagnostics-integration-validating-webhook
+        path: /tmp/ktf-diag*
+        if-no-files-found: ignore
+
+    - name: collect test coverage
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: coverage-integration-validating-webhook
+        path: coverage.integration-validatingwebhook.out
+
+    - name: collect test report
+      if: always()
+      uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+      with:
+        name: tests-report-integration-validating-webhook
+        path: integration-tests.xml
+
   integration-tests-bluegreen:
     runs-on: ubuntu-latest
     name: integration-tests-bluegreen
@@ -766,6 +819,7 @@ jobs:
       - conformance-tests
       - integration-tests
       - integration-tests-bluegreen
+      - integration-tests-validating-webhook
       - e2e-tests
       - buildpulse-report
     if: always()
