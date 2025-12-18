@@ -185,64 +185,6 @@ func TestKongCertificate(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, sdk.CertificatesSDK, waitTime, tickTime)
 	})
 
-	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
-		t.Skip("konnectID control plane reference not supported yet: https://github.com/kong/kong-operator/issues/1469")
-		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
-		cpID := cp.GetKonnectStatus().GetKonnectID()
-
-		t.Log("Setting up SDK expectations on KongCertificate creation")
-
-		sdk.CertificatesSDK.EXPECT().
-			ListCertificate(
-				mock.Anything,
-				mock.MatchedBy(func(req sdkkonnectops.ListCertificateRequest) bool {
-					return req.ControlPlaneID == cpID &&
-						strings.Contains(*req.Tags, "tag2")
-				}),
-			).
-			Return(
-				&sdkkonnectops.ListCertificateResponse{}, nil,
-			)
-
-		sdk.CertificatesSDK.EXPECT().CreateCertificate(mock.Anything, cpID,
-			mock.MatchedBy(func(input sdkkonnectcomp.Certificate) bool {
-				return input.Cert == deploy.TestValidCertPEM &&
-					input.Key == deploy.TestValidCertKeyPEM &&
-					slices.Contains(input.Tags, "tag2")
-			}),
-		).Return(&sdkkonnectops.CreateCertificateResponse{
-			Certificate: &sdkkonnectcomp.Certificate{
-				ID: lo.ToPtr("cert-12345"),
-			},
-		}, nil)
-
-		w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
-		t.Log("Creating KongCertificate with ControlPlaneRef type=konnectID")
-		createdCert := deploy.KongCertificateAttachedToCP(t, ctx, clientNamespaced, cp,
-			func(obj client.Object) {
-				cert := obj.(*configurationv1alpha1.KongCertificate)
-				cert.Spec.Tags = []string{"tag2"}
-			},
-			deploy.WithKonnectIDControlPlaneRef(cp),
-		)
-
-		t.Log("Waiting for KongCertificate to be programmed")
-		watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongCertificate) bool {
-			if c.GetName() != createdCert.GetName() {
-				return false
-			}
-			if c.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
-				return false
-			}
-			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
-		}, "KongCertificate's Programmed condition should be true eventually")
-
-		eventuallyAssertSDKExpectations(t, factory.SDK.CertificatesSDK, waitTime, tickTime)
-	})
-
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
 		const (
 			id = "abc-12345"

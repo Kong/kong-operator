@@ -15,13 +15,11 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/modules/manager/scheme"
@@ -177,42 +175,6 @@ func TestKongKeySet(t *testing.T) {
 		}, "KeySet should be programmed and have ID in status after handling conflict")
 
 		eventuallyAssertSDKExpectations(t, factory.SDK.ConsumersSDK, waitTime, tickTime)
-	})
-
-	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
-		t.Skip("konnectID control plane reference not supported yet: https://github.com/kong/kong-operator/issues/1469")
-		t.Log("Setting up SDK expectations on KongKeySet creation")
-		sdk.KeySetsSDK.EXPECT().CreateKeySet(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input *sdkkonnectcomp.KeySet) bool {
-				return input.Name != nil && *input.Name == keySetName
-			}),
-		).Return(&sdkkonnectops.CreateKeySetResponse{
-			KeySet: &sdkkonnectcomp.KeySet{
-				ID: lo.ToPtr(keySetID),
-			},
-		}, nil)
-
-		w := setupWatch[configurationv1alpha1.KongKeySetList](t, ctx, cl, client.InNamespace(ns.Name))
-		t.Log("Creating KongKeySet with ControlPlaneRef type=konnectID")
-		createdKeySet := deploy.KongKeySet(t, ctx, clientNamespaced, keySetName,
-			deploy.WithKonnectIDControlPlaneRef(cp),
-		)
-
-		t.Log("Waiting for KongKeySet to be programmed")
-		watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongKeySet) bool {
-			if c.GetName() != createdKeySet.GetName() {
-				return false
-			}
-			if c.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
-				return false
-			}
-			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
-		}, "KongKeySet's Programmed condition should be true eventually")
-
-		eventuallyAssertSDKExpectations(t, factory.SDK.KeySetsSDK, waitTime, tickTime)
 	})
 
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {

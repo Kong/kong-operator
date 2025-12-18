@@ -129,51 +129,6 @@ func TestKongUpstream(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
 	})
 
-	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
-		t.Skip("konnectID control plane reference not supported yet: https://github.com/kong/kong-operator/issues/1469")
-		const upstreamID = "upstream-12345"
-
-		t.Log("Setting up SDK expectations on Upstream creation")
-		sdk.UpstreamsSDK.EXPECT().
-			CreateUpstream(
-				mock.Anything,
-				cp.GetKonnectID(),
-				mock.MatchedBy(func(req sdkkonnectcomp.Upstream) bool {
-					return req.Algorithm != nil && *req.Algorithm == "round-robin"
-				}),
-			).
-			Return(
-				&sdkkonnectops.CreateUpstreamResponse{
-					Upstream: &sdkkonnectcomp.Upstream{
-						ID: lo.ToPtr(upstreamID),
-					},
-				},
-				nil,
-			)
-
-		t.Log("Creating a KongUpstream with ControlPlaneRef type=konnectID")
-		createdUpstream := deploy.KongUpstream(t, ctx, clientNamespaced,
-			deploy.WithKonnectIDControlPlaneRef(cp),
-			func(obj client.Object) {
-				s := obj.(*configurationv1alpha1.KongUpstream)
-				s.Spec.Algorithm = sdkkonnectcomp.UpstreamAlgorithmRoundRobin.ToPointer()
-			},
-		)
-
-		t.Log("Waiting for Upstream to be programmed and get Konnect ID")
-		watchFor(t, ctx, w, apiwatch.Modified, func(r *configurationv1alpha1.KongUpstream) bool {
-			if r.GetName() != createdUpstream.GetName() {
-				return false
-			}
-			if r.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
-				return false
-			}
-			return r.GetKonnectID() == upstreamID && k8sutils.IsProgrammed(r)
-		}, "KongUpstream didn't get Programmed status condition or didn't get the correct (upstream-12345) Konnect ID assigned")
-
-		eventuallyAssertSDKExpectations(t, factory.SDK.UpstreamsSDK, waitTime, tickTime)
-	})
-
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
 		const (
 			id = "abc-12345"

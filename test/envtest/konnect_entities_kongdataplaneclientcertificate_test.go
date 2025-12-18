@@ -100,45 +100,6 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	t.Log("Waiting for KongDataPlaneClientCertificate to be deleted in the SDK")
 	eventuallyAssertSDKExpectations(t, factory.SDK.DataPlaneCertificatesSDK, waitTime, tickTime)
 
-	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
-		t.Skip("konnectID control plane reference not supported yet: https://github.com/kong/kong-operator/issues/1469")
-		t.Log("Setting up SDK expectations on KongDataPlaneClientCertificate creation")
-		const dpCertID = "dp-cert-id-with-konnectid-cp-ref"
-		sdk.DataPlaneCertificatesSDK.EXPECT().CreateDataplaneCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input *sdkkonnectcomp.DataPlaneClientCertificateRequest) bool {
-				return input.Cert == deploy.TestValidCACertPEM
-			}),
-		).Return(&sdkkonnectops.CreateDataplaneCertificateResponse{
-			DataPlaneClientCertificateResponse: &sdkkonnectcomp.DataPlaneClientCertificateResponse{
-				Item: &sdkkonnectcomp.DataPlaneClientCertificate{
-					ID:   lo.ToPtr(dpCertID),
-					Cert: lo.ToPtr(deploy.TestValidCACertPEM),
-				},
-			},
-		}, nil)
-
-		t.Log("Creating KongDataPlaneClientCertificate with ControlPlaneRef type=konnectID")
-		createdCert := deploy.KongDataPlaneClientCertificateAttachedToCP(t, ctx, clientNamespaced,
-			deploy.WithKonnectIDControlPlaneRef(cp),
-		)
-
-		t.Log("Waiting for KongDataPlaneClientCertificate to be programmed")
-		watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongDataPlaneClientCertificate) bool {
-			if c.GetName() != createdCert.GetName() {
-				return false
-			}
-			if c.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
-				return false
-			}
-			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
-		}, "KongDataPlaneClientCertificate's Programmed condition should be true eventually")
-
-		eventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
-	})
-
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
 		const (
 			id = "abc-12345"

@@ -268,42 +268,6 @@ func TestKongKey(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
 	})
 
-	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
-		t.Skip("konnectID control plane reference not supported yet: https://github.com/kong/kong-operator/issues/1469")
-		t.Log("Setting up SDK expectations on KongKey creation")
-		sdk.KeysSDK.EXPECT().CreateKey(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input sdkkonnectcomp.Key) bool {
-				return input.Kid == keyKid &&
-					input.Name != nil && *input.Name == keyName
-			}),
-		).Return(&sdkkonnectops.CreateKeyResponse{
-			Key: &sdkkonnectcomp.Key{
-				ID: lo.ToPtr(keyID),
-			},
-		}, nil)
-
-		t.Log("Creating KongKey with ControlPlaneRef type=konnectID")
-		createdKey := deploy.KongKey(t, ctx, clientNamespaced, keyKid, keyName,
-			deploy.WithKonnectIDControlPlaneRef(cp),
-		)
-
-		t.Log("Waiting for KongKey to be programmed")
-		watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongKey) bool {
-			if c.GetName() != createdKey.GetName() {
-				return false
-			}
-			if c.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
-				return false
-			}
-			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
-		}, "KongKey's Programmed condition should be true eventually")
-
-		eventuallyAssertSDKExpectations(t, factory.SDK.KeysSDK, waitTime, tickTime)
-	})
-
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
 		const (
 			id = "abc-12345"
