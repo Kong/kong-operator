@@ -193,7 +193,7 @@ func ensureKongReferenceGrant[
 		cpRef.KonnectNamespacedRef.Name == ent.GetNamespace() {
 		if res, errStatus := patch.StatusWithoutCondition(
 			ctx, cl, ent,
-			configurationv1alpha1.KongReferenceGrantConditionType,
+			configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
@@ -204,12 +204,15 @@ func ensureKongReferenceGrant[
 	gvk := ent.GetObjectKind().GroupVersionKind()
 	mapping, err := cl.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
 	if err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to get REST mapping for %s: %w", gvk.String(), err)
+		return ctrl.Result{}, fmt.Errorf(
+			"failed to get REST mapping for %s %s: %w",
+			gvk.String(), client.ObjectKeyFromObject(ent), err,
+		)
 	}
 	if mapping.Scope.Name() != meta.RESTScopeNameNamespace {
 		if res, errStatus := patch.StatusWithoutCondition(
 			ctx, cl, ent,
-			configurationv1alpha1.KongReferenceGrantConditionType,
+			configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
@@ -229,9 +232,9 @@ func ensureKongReferenceGrant[
 	if !isAllowed {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
-			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionType),
+			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
 			metav1.ConditionFalse,
-			configurationv1alpha1.KongReferenceGrantReasonInvalid,
+			configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
 			fmt.Sprintf("KongReferenceGrant %s does not allow access to KonnectGatewayControlPlane %s", nn, cpRef),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
@@ -241,9 +244,9 @@ func ensureKongReferenceGrant[
 
 	if res, errStatus := patch.StatusWithCondition(
 		ctx, cl, ent,
-		consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionType),
+		consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
 		metav1.ConditionTrue,
-		configurationv1alpha1.KongReferenceGrantReasonValid,
+		configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
 		fmt.Sprintf("KongReferenceGrant %s allows access to KonnectGatewayControlPlane %s", nn, cpRef),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus

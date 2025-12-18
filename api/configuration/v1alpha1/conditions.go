@@ -1,14 +1,14 @@
 package v1alpha1
 
 const (
-	// KongReferenceGrantConditionType is the condition type used to indicate
+	// KongReferenceGrantConditionTypeResolvedRefs is the condition type used to indicate
 	// whether a KongReferenceGrant is valid for cross-namespace references.
-	KongReferenceGrantConditionType = "KongReferenceGrantValid"
+	KongReferenceGrantConditionTypeResolvedRefs = "ResolvedRefs"
 
-	// KongReferenceGrantReasonInvalid is the reason used when a KongReferenceGrant
+	// KongReferenceGrantReasonRefNotPermitted is the reason used when a KongReferenceGrant
 	// is invalid or missing for a cross-namespace reference.
-	KongReferenceGrantReasonInvalid = "KongReferenceGrantInvalid"
-	// KongReferenceGrantReasonValid is the reason used when a KongReferenceGrant
-	// is valid for a cross-namespace reference.
-	KongReferenceGrantReasonValid = "KongReferenceGrantValid"
+	KongReferenceGrantReasonRefNotPermitted = "RefNotPermitted"
+	// KongReferenceGrantReasonResolvedRefs is the reason used when a valid
+	// KongReferenceGrant is found and it permits for a cross-namespace reference.
+	KongReferenceGrantReasonResolvedRefs = "RefNotPermitted"
 )
