@@ -215,18 +215,21 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 		// Check if the parentRef belongs to a Gateway managed by us.
 		gateway, err := refs.GetSupportedGatewayForParentRef(ctx, logger, c.Client, pRef, c.route.Namespace)
 		if err != nil {
-			if errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound) ||
-				errors.Is(err, hybridgatewayerrors.ErrNoGatewayController) ||
-				errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound) {
+			switch {
+			case errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound),
+				errors.Is(err, hybridgatewayerrors.ErrNoGatewayController),
+				errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound),
+				errors.Is(err, hybridgatewayerrors.ErrUnsupportedKind),
+				errors.Is(err, hybridgatewayerrors.ErrUnsupportedGroup):
 				// If the gateway is not managed by us or not found we skip setting conditions.
-				log.Debug(logger, "Skipping status update for unsupported or non-existent Gateway", "parentRef", pRef)
+				log.Debug(logger, "Skipping status update Gateway", "parentRef", pRef, "reason", err)
 				if route.RemoveStatusForParentRef(logger, c.route, pRef, vars.ControllerName()) {
 					// If we removed the status, we need to mark the update as true.
 					log.Debug(logger, "Removed ParentStatus for unsupported ParentReference", "parentRef", pRef)
 					updated = true
 				}
 				continue
-			} else {
+			default:
 				log.Error(logger, err, "Failed to get supported gateway for ParentReference", "parentRef", pRef)
 				return false, fmt.Errorf("failed to get supported gateway for parentRef %s: %w", pRef.Name, err)
 			}
@@ -493,7 +496,8 @@ func (c *httpRouteConverter) getHybridGatewayParents(ctx context.Context, logger
 			case errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound),
 				errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound),
 				errors.Is(err, hybridgatewayerrors.ErrNoGatewayController),
-				errors.Is(err, hybridgatewayerrors.ErrKonnectExtensionCrossNamespaceReference):
+				errors.Is(err, hybridgatewayerrors.ErrUnsupportedKind),
+				errors.Is(err, hybridgatewayerrors.ErrUnsupportedGroup):
 				// These are expected errors to be handled gracefully. Log and skip this ParentRef, continue with others.
 				log.Debug(logger, "Skipping ParentRef due to expected error", "parentRef", pRef, "error", err)
 				continue

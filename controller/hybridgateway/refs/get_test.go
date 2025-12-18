@@ -74,28 +74,28 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 			pRef:    gwtypes.ParentReference{Kind: kindPtr("OtherKind"), Name: "my-gateway"},
 			routeNS: "default",
 			objs:    []client.Object{gateway, gatewayClass},
-			wantNil: true,
+			wantErr: hybridgatewayerrors.ErrUnsupportedKind,
 		},
 		{
 			name:    "unsupported group",
 			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("other.group"), Name: "my-gateway"},
 			routeNS: "default",
 			objs:    []client.Object{gateway, gatewayClass},
-			wantNil: true,
+			wantErr: hybridgatewayerrors.ErrUnsupportedGroup,
 		},
 		{
 			name:    "gateway not found",
 			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "notfound"},
 			routeNS: "default",
 			objs:    []client.Object{},
-			wantErr: fmt.Errorf("no supported gateway found"),
+			wantErr: hybridgatewayerrors.ErrNoGatewayFound,
 		},
 		{
 			name:    "gateway class not found",
 			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "my-gateway"},
 			routeNS: "default",
 			objs:    []client.Object{gateway},
-			wantErr: fmt.Errorf("no gatewayClass found for gateway"),
+			wantErr: hybridgatewayerrors.ErrNoGatewayClassFound,
 		},
 		{
 			name:    "gateway class wrong controller",
@@ -105,7 +105,7 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: "my-class"},
 				Spec:       gwtypes.GatewayClassSpec{ControllerName: "wrong-controller"},
 			}},
-			wantErr: fmt.Errorf("gatewayClass is not controlled by this controller"),
+			wantErr: hybridgatewayerrors.ErrNoGatewayController,
 		},
 		{
 			name:    "gateway class empty controller",
@@ -115,7 +115,7 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: "my-class"},
 				Spec:       gwtypes.GatewayClassSpec{ControllerName: ""},
 			}},
-			wantErr: fmt.Errorf("gatewayClass is not controlled by this controller"),
+			wantErr: hybridgatewayerrors.ErrNoGatewayController,
 		},
 		{
 			name:    "supported parent ref",
@@ -191,8 +191,9 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 			gw, err := GetSupportedGatewayForParentRef(ctx, logger, cl, tt.pRef, tt.routeNS)
 			if tt.wantErr != nil {
 				require.Error(t, err)
-				if errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound) || errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound) || errors.Is(err, hybridgatewayerrors.ErrNoGatewayController) {
+				if errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound) || errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound) || errors.Is(err, hybridgatewayerrors.ErrNoGatewayController) || errors.Is(err, hybridgatewayerrors.ErrUnsupportedKind) || errors.Is(err, hybridgatewayerrors.ErrUnsupportedGroup) {
 					// Specific error type matches
+					require.ErrorIs(t, err, tt.wantErr)
 					return
 				}
 				require.Contains(t, err.Error(), tt.wantErr.Error())
