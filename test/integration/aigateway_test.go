@@ -160,12 +160,12 @@ func TestAIGatewayCreation(t *testing.T) {
 	require.Eventually(t, testutils.GatewayIsAccepted(t, GetCtx(), gatewayExpectedNN, clients), testutils.GatewaySchedulingTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets marked as Programmed")
-	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayExpectedNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
+	require.Eventually(t, testutils.GatewayIsProgrammed(t, GetCtx(), gatewayExpectedNN, clients.MgrClient), testutils.GatewayReadyTimeLimit, time.Second)
 	require.Eventually(t, testutils.GatewayListenersAreProgrammed(t, GetCtx(), gatewayExpectedNN, clients), testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("verifying Gateway gets an IP address")
 	require.Eventually(t, testutils.GatewayIPAddressExist(t, GetCtx(), gatewayExpectedNN, clients), testutils.SubresourceReadinessWait, time.Second)
-	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayExpectedNN, clients)
+	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayExpectedNN, clients.MgrClient)
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Logf("verifying that the DataPlane becomes Ready for Gateway [%s]", gateway.Name)

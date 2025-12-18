@@ -1,4 +1,4 @@
-package integration
+package validatingwebhook
 
 import (
 	"context"
@@ -17,13 +17,13 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/internal/annotations"
+	"github.com/kong/kong-operator/test/integration"
 )
 
 func TestAdmissionWebhook_KongVault(t *testing.T) {
-	t.Parallel()
-
+	ctx := t.Context()
 	_, cleaner, ingressClass, ctrlClient := bootstrapGateway(
-		t.Context(), t, env, GetClients().MgrClient,
+		ctx, t, integration.GetEnv(), integration.GetClients().MgrClient,
 	)
 
 	const prefixForDuplicationTest = "duplicate-prefix"

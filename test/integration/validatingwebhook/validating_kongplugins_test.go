@@ -1,6 +1,7 @@
-package integration
+package validatingwebhook
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -14,6 +15,7 @@ import (
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	"github.com/kong/kong-operator/internal/annotations"
 	"github.com/kong/kong-operator/modules/manager/config"
+	"github.com/kong/kong-operator/test/integration"
 )
 
 // secretLabels is the set of labels applied to Secrets to be validated by the webhook.
@@ -23,9 +25,7 @@ var secretLabels = map[string]string{
 }
 
 func TestAdmissionWebhook_KongPlugins(t *testing.T) {
-	t.Parallel()
-
-	_, _, _, ctrlClient := bootstrapGateway(t.Context(), t, env, GetClients().MgrClient) //nolint:dogsled
+	_, _, _, ctrlClient := bootstrapGateway(t.Context(), t, integration.GetEnv(), integration.GetClients().MgrClient) //nolint:dogsled
 
 	testCases := []struct {
 		name          string
@@ -159,7 +159,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := t.Context()
 			t.Cleanup(func() {
+				ctx := context.Background()
 				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.secretBefore)))
 				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.secretAfter)))
 				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.kongPlugin)))
@@ -189,6 +191,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 	// is "validating-webhook-configuration" (see config/webhook/base/manifests.yaml) is hardcoded here.
 	for _, tc := range testCases {
 		t.Run(tc.name+" (without selector)", func(t *testing.T) {
+			ctx := t.Context()
 			// Annoyingly, Create forcibly stores the resulting object in the tc field object we want to reuse.
 			// Clearing it manually is a bit silly, but works to let us reuse them.
 			tc.secretBefore.ResourceVersion = ""
@@ -198,6 +201,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 			tc.kongPlugin.ResourceVersion = ""
 			tc.kongPlugin.UID = ""
 			t.Cleanup(func() {
+				ctx := context.Background()
 				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.secretBefore)))
 				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.secretAfter)))
 				require.NoError(t, client.IgnoreNotFound(ctrlClient.Delete(ctx, tc.kongPlugin)))
@@ -224,11 +228,9 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 	t.Parallel()
 
-	ctrlClientGlobal := GetClients().MgrClient
+	ctrlClientGlobal := integration.GetClients().MgrClient
 
-	ns, _, ingressClass, ctrlClient := bootstrapGateway(
-		t.Context(), t, env, GetClients().MgrClient,
-	)
+	ns, _, ingressClass, ctrlClient := bootstrapGateway(t.Context(), t, integration.GetEnv(), ctrlClientGlobal)
 
 	testCases := []struct {
 		name                string
@@ -417,8 +419,11 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 	)
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			ctx := t.Context()
+
 			require.NoError(t, ctrlClient.Create(ctx, tc.secretBefore))
 			t.Cleanup(func() {
+				ctx := context.Background()
 				require.NoError(t, ctrlClient.Delete(ctx, tc.secretBefore))
 			})
 
@@ -431,6 +436,7 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 			}, waitTime, tickTime,
 			)
 			t.Cleanup(func() {
+				ctx := context.Background()
 				require.NoError(t, ctrlClientGlobal.Delete(ctx, tc.kongClusterPlugin))
 			})
 

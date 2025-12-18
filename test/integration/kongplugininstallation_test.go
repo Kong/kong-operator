@@ -247,7 +247,7 @@ func deployGatewayWithKPI(
 
 	t.Logf("verifying Gateway %s/%s gets an IP address", gateway.Namespace, gateway.Name)
 	require.Eventually(t, testutils.GatewayIPAddressExist(t, GetCtx(), gatewayNSN, clients), 4*testutils.SubresourceReadinessWait, time.Second)
-	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayNSN, clients)
+	gateway = testutils.MustGetGateway(t, GetCtx(), gatewayNSN, clients.MgrClient)
 
 	t.Log("deploying backend deployment (httpbin) of HTTPRoute")
 	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
