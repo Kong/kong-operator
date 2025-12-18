@@ -179,10 +179,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// and continue.
 		case errors.As(err, &ReferencedKongServiceIsBeingDeleted{}):
 			log.Info(logger, "referenced KongService is being deleted, proceeding with reconciliation", "error", err.Error())
-		case errors.As(err, &ReferencedObjectDoesNotExist{}):
-			if ent.GetDeletionTimestamp().IsZero() {
-				log.Info(logger, "referenced KongService does not exist, proceeding with reconciliation", "error", err.Error())
-			}
+		case errors.As(err, &ReferencedObjectDoesNotExist{}), errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}):
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {
@@ -261,7 +258,8 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		// and let the deletion proceed without trying to delete the entity from Konnect
 		// as the KongUpstream deletion will (or already has - in case of the upstream being gone)
 		// take care of it on the Konnect side.
-		if errors.As(err, &ReferencedKongUpstreamDoesNotExist{}) {
+		// In case the ControlPlane referenced by the KongUpstream is not found, do the same.
+		if errors.As(err, &ReferencedKongUpstreamDoesNotExist{}) || errors.As(err, &controlplane.ReferencedControlPlaneDoesNotExistError{}) {
 			if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {

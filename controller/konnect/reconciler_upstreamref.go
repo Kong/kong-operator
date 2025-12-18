@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
@@ -17,6 +18,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
+	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
@@ -79,20 +81,28 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		}
 	}
 
-	// requeue it if referenced KongUpstream is not programmed yet so we cannot do the following work.
+	old := ent.DeepCopyObject().(TEnt)
+
 	cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectEntityProgrammedConditionType, kongUpstream)
 	if !ok || cond.Status != metav1.ConditionTrue {
 		ent.SetKonnectID("")
-		if res, err := patch.StatusWithCondition(
-			ctx, cl, ent,
+		_ = patch.SetStatusWithConditionIfDifferent(ent,
 			konnectv1alpha1.KongUpstreamRefValidConditionType,
 			metav1.ConditionFalse,
 			konnectv1alpha1.KongUpstreamRefReasonInvalid,
 			fmt.Sprintf("Referenced KongUpstream %s is not programmed yet", nn),
-		); err != nil || !res.IsZero() {
+		)
+
+		res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
+		if err != nil {
+			if k8serrors.IsConflict(err) {
+				return ctrl.Result{Requeue: true}, nil
+			}
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{Requeue: true}, nil
+		if res == op.Updated {
+			return ctrl.Result{}, nil
+		}
 	}
 
 	// TODO: make this more generic.
@@ -113,14 +123,12 @@ func handleKongUpstreamRef[T constraints.SupportedKonnectEntityType, TEnt constr
 		return res, errStatus
 	}
 
+	// Check and handle the ControlPlaneRef of the referenced KongUpstream.
 	cpRef, ok := controlplane.GetControlPlaneRef(kongUpstream).Get()
-	// TODO: ignore the entity if referenced KongUpstream does not have a Konnect control plane reference
-	// because this situation is likely to mean that they are not controlled by us:
-	// https://github.com/kong/kong-operator/issues/629
 	if !ok {
 		return ctrl.Result{}, fmt.Errorf(
-			"%T references a KongUpstream %s which does not have a ControlPlane ref",
-			ent, client.ObjectKeyFromObject(kongUpstream),
+			"KongTarget references a KongUpstream %s which does not have a ControlPlane ref",
+			client.ObjectKeyFromObject(kongUpstream),
 		)
 	}
 	cp, err := controlplane.GetCPForRef(ctx, cl, cpRef, ent.GetNamespace())

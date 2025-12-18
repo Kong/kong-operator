@@ -17,6 +17,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
+	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/patch"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
@@ -130,15 +131,16 @@ func handleKongServiceRef[T constraints.SupportedKonnectEntityType, TEnt constra
 			fmt.Sprintf("Referenced KongService %s is not programmed yet", nn),
 		)
 
-		_, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
+		res, err := patch.ApplyStatusPatchIfNotEmpty(ctx, cl, ctrllog.FromContext(ctx), ent, old)
 		if err != nil {
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, err
 		}
-
-		return ctrl.Result{Requeue: true}, nil
+		if res == op.Updated {
+			return ctrl.Result{}, nil
+		}
 	}
 
 	// TODO(pmalek): make this generic.

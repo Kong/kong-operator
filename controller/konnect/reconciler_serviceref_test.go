@@ -200,7 +200,7 @@ func TestHandleServiceRef(t *testing.T) {
 				testControlPlaneOK,
 			},
 			expectResult: ctrl.Result{
-				Requeue: true,
+				Requeue: false,
 			},
 			expectError: false,
 			updatedEntAssertions: []func(*configurationv1alpha1.KongRoute) (bool, string){
