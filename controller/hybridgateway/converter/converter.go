@@ -26,6 +26,8 @@ type APIConverter[t RootObject] interface {
 	GetOutputStore(ctx context.Context, logger logr.Logger) ([]unstructured.Unstructured, error)
 	// UpdateRootObjectStatus updates the status for the root object.
 	UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error)
+	// HandleOrphanedResource is called before deleting orphaned resources to allow the converter to perform custom cleanup logic and skip the deletion.
+	HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error)
 }
 
 // RootObject is an interface that represents all resource types that can be loaded

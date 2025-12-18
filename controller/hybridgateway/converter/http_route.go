@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -17,6 +18,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	hybridgatewayerrors "github.com/kong/kong-operator/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/controller/hybridgateway/kongroute"
+	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/controller/hybridgateway/plugin"
 	"github.com/kong/kong-operator/controller/hybridgateway/pluginbinding"
 	"github.com/kong/kong-operator/controller/hybridgateway/refs"
@@ -282,6 +284,48 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 
 	log.Debug(logger, "Finished UpdateRootObjectStatus", "updated", updated)
 	return updated, stop, nil
+}
+
+// HandleOrphanedResource implements APIConverter.
+//
+// Processes orphaned resources by checking and updating hybrid-routes annotations.
+// This method is called during cleanup when a resource is no longer in the desired state.
+// For HTTPRoute, it removes the route reference from the hybrid-routes annotation and
+// determines whether the resource should be deleted or just updated.
+//
+// Parameters:
+//   - ctx: The context for API calls and cancellation
+//   - cl: The Kubernetes client for CRUD operations
+//   - logger: Logger for debugging information
+//   - resource: The orphaned resource to process
+//
+// Returns:
+//   - delete: true if the resource should be deleted, false if it should be skipped
+//   - updated: true if the resource was updated (annotation modified and patched)
+//   - err: any error that occurred during processing
+func (c *httpRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
+	am := metadata.NewAnnotationManager(logger)
+
+	// If the route is not present in the the hybrid-routes annotation of the Kong resource, don't touch it.
+	if !am.ContainsRoute(resource, c.route) {
+		log.Trace(logger, "Route annotation not found, skipping resource", "kind", resource.GetKind(), "obj", client.ObjectKeyFromObject(resource))
+		return true, nil
+	}
+
+	oldResource := resource.DeepCopy()
+	am.RemoveRouteFromAnnotation(resource, c.route)
+
+	// If other Routes are still present in the annotation, we just need to update the resource.
+	if len(am.GetRoutes(resource)) > 0 {
+		log.Debug(logger, "Updating hybrid-routes annotation", "kind", resource.GetKind(), "obj", client.ObjectKeyFromObject(resource))
+		if err := c.Patch(ctx, resource, client.MergeFrom(oldResource)); err != nil && !k8serrors.IsNotFound(err) {
+			return true, fmt.Errorf("failed to update resource: %w", err)
+		}
+		return true, nil
+	}
+
+	// No other routes in the annotation, the resource is orphaned.
+	return false, nil
 }
 
 // translate converts the HTTPRoute to Kong resources and stores them in outputStore.

@@ -2,6 +2,7 @@ package hybridgateway
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr"
@@ -235,7 +236,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 			var err error
 			requeue := true
 			for requeue {
-				_, requeue, err = cleanOrphanedResources(context.Background(), cl, logger, fakeConv)
+				requeue, err = cleanOrphanedResources(context.Background(), cl, logger, fakeConv)
 				assert.NoError(t, err)
 			}
 			for _, gvk := range tt.gvks {
@@ -293,4 +294,25 @@ func (f *fakeHTTPRouteConverter) UpdateSharedRouteStatus([]unstructured.Unstruct
 
 func (f *fakeHTTPRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
 	return false, false, nil
+}
+
+func (f *fakeHTTPRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (bool, error) {
+	annotations := resource.GetAnnotations()
+	if annotations == nil {
+		return true, nil
+	}
+
+	annotationValue, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	if !exists {
+		return true, nil
+	}
+
+	// Check if the annotation contains our root object
+	expectedAnnotation := fmt.Sprintf("%s/%s", f.root.GetNamespace(), f.root.GetName())
+	if annotationValue != expectedAnnotation {
+		return true, nil
+	}
+
+	// Annotation exists and matches our root - allow deletion
+	return false, nil
 }
