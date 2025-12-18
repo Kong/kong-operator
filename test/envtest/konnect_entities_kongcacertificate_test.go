@@ -176,46 +176,6 @@ func TestKongCACertificate(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, sdk.CACertificatesSDK, waitTime, tickTime)
 	})
 
-	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
-		t.Skip("konnectID control plane reference not supported yet: https://github.com/kong/kong-operator/issues/1469")
-		t.Log("Setting up SDK expectations on KongCACertificate creation")
-		sdk.CACertificatesSDK.EXPECT().CreateCaCertificate(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-			mock.MatchedBy(func(input sdkkonnectcomp.CACertificate) bool {
-				return input.Cert == deploy.TestValidCACertPEM &&
-					slices.Contains(input.Tags, tagName)
-			}),
-		).Return(&sdkkonnectops.CreateCaCertificateResponse{
-			CACertificate: &sdkkonnectcomp.CACertificate{
-				ID: lo.ToPtr("12345"),
-			},
-		}, nil)
-
-		t.Log("Creating KongCACertificate with ControlPlaneRef type=konnectID")
-		createdCert := deploy.KongCACertificateAttachedToCP(t, ctx, clientNamespaced, cp,
-			func(obj client.Object) {
-				cert := obj.(*configurationv1alpha1.KongCACertificate)
-				cert.Spec.Tags = []string{tagName}
-			},
-			deploy.WithKonnectIDControlPlaneRef(cp),
-		)
-
-		t.Log("Waiting for KongCACertificate to be programmed")
-		watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongCACertificate) bool {
-			if c.GetName() != createdCert.GetName() {
-				return false
-			}
-			if c.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
-				return false
-			}
-			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
-		}, "KongCACertificate's Programmed condition should be true eventually")
-
-		eventuallyAssertSDKExpectations(t, factory.SDK.CACertificatesSDK, waitTime, tickTime)
-	})
-
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
 		const (
 			id = "abc-12345"

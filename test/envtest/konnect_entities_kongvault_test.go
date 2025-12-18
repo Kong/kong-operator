@@ -174,43 +174,6 @@ func TestKongVault(t *testing.T) {
 		eventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
 	})
 
-	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
-		t.Skip("konnectID control plane reference not supported yet: https://github.com/kong/kong-operator/issues/1469")
-		const (
-			vaultBackend   = "env"
-			vaultPrefix    = "env-vault"
-			vaultRawConfig = `{"prefix":"env_vault"}`
-			vaultID        = "vault-12345"
-		)
-
-		t.Log("Setting up mock SDK for vault creation")
-		sdk.VaultSDK.EXPECT().CreateVault(mock.Anything, cp.GetKonnectStatus().GetKonnectID(), mock.MatchedBy(func(input sdkkonnectcomp.Vault) bool {
-			return input.Name == vaultBackend && input.Prefix == vaultPrefix
-		})).Return(&sdkkonnectops.CreateVaultResponse{
-			Vault: &sdkkonnectcomp.Vault{
-				ID: lo.ToPtr(vaultID),
-			},
-		}, nil)
-
-		t.Log("Creating a KongVault with ControlPlaneRef type=konnectID")
-		vault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, []byte(vaultRawConfig), cp,
-			deploy.WithKonnectIDControlPlaneRef(cp),
-		)
-
-		t.Log("Waiting for KongVault to be programmed")
-		watchFor(t, ctx, vaultWatch, apiwatch.Modified, func(v *configurationv1alpha1.KongVault) bool {
-			if vault.GetName() != v.GetName() {
-				return false
-			}
-			if vault.GetControlPlaneRef().Type != configurationv1alpha1.ControlPlaneRefKonnectID {
-				return false
-			}
-			return v.GetKonnectID() == vaultID && k8sutils.IsProgrammed(v)
-		}, "KongVault didn't get Programmed status condition or didn't get the correct (vault-12345) Konnect ID assigned")
-
-		eventuallyAssertSDKExpectations(t, factory.SDK.VaultSDK, waitTime, tickTime)
-	})
-
 	t.Run("Adopting existing vault", func(t *testing.T) {
 		vaultID := uuid.NewString()
 

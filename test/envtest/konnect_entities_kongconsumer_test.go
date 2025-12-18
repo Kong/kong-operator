@@ -349,60 +349,6 @@ func TestKongConsumer(t *testing.T) {
 		}, "KongConsumer should be programmed and have ID in status after handling conflict")
 	})
 
-	t.Run("should handle konnectID control plane reference", func(t *testing.T) {
-		t.Skip("konnectID control plane reference not supported yet: https://github.com/kong/kong-operator/issues/1469")
-		const (
-			consumerID = "consumer-with-cp-konnect-id"
-			username   = "user-with-cp-konnect-id"
-		)
-		t.Log("Setting up SDK expectations on KongConsumer creation")
-		sdk.ConsumersSDK.EXPECT().
-			CreateConsumer(mock.Anything, cp.GetKonnectStatus().GetKonnectID(),
-				mock.MatchedBy(func(input sdkkonnectcomp.Consumer) bool {
-					return input.Username != nil && *input.Username == username
-				}),
-			).Return(&sdkkonnectops.CreateConsumerResponse{
-			Consumer: &sdkkonnectcomp.Consumer{
-				ID: lo.ToPtr(consumerID),
-			},
-		}, nil)
-
-		t.Log("Setting up SDK expectation on possibly updating KongConsumer ( due to asynchronous nature of updates between KongConsumer and KongConsumerGroup)")
-		sdk.ConsumersSDK.EXPECT().
-			UpsertConsumer(mock.Anything, mock.MatchedBy(func(r sdkkonnectops.UpsertConsumerRequest) bool {
-				return r.ConsumerID == consumerID
-			})).
-			Return(&sdkkonnectops.UpsertConsumerResponse{}, nil).
-			Maybe()
-
-		t.Log("Setting up SDK expectation on KongConsumerGroups listing")
-		sdk.ConsumersSDK.EXPECT().
-			ListConsumerGroupsForConsumer(mock.Anything, sdkkonnectops.ListConsumerGroupsForConsumerRequest{
-				ConsumerID:     consumerID,
-				ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
-			}).Return(&sdkkonnectops.ListConsumerGroupsForConsumerResponse{}, nil)
-
-		t.Log("Creating KongConsumer with ControlPlaneRef type=konnectID")
-		createdConsumer := deploy.KongConsumer(t, ctx, clientNamespaced, username,
-			deploy.WithKonnectNamespacedRefControlPlaneRef(cp),
-			deploy.WithKonnectIDControlPlaneRef(cp),
-		)
-
-		t.Log("Waiting for KongConsumer to be programmed")
-		watchFor(t, ctx, wConsumer, apiwatch.Modified, func(c *configurationv1.KongConsumer) bool {
-			if c.GetName() != createdConsumer.GetName() {
-				return false
-			}
-			if c.GetControlPlaneRef().Type != commonv1alpha1.ControlPlaneRefKonnectID {
-				return false
-			}
-			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
-				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
-					condition.Status == metav1.ConditionTrue
-			})
-		}, "KongConsumer's Programmed condition should be true eventually")
-	})
-
 	t.Run("removing referenced CP sets the status conditions properly", func(t *testing.T) {
 		const (
 			id   = "abc-12345"
