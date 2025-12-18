@@ -286,22 +286,20 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 	return updated, stop, nil
 }
 
-// HandleOrphanedResource implements APIConverter.
+// HandleOrphanedResource implements OrphanedResourceHandler.
 //
 // Processes orphaned resources by checking and updating hybrid-routes annotations.
-// This method is called during cleanup when a resource is no longer in the desired state.
-// For HTTPRoute, it removes the route reference from the hybrid-routes annotation and
-// determines whether the resource should be deleted or just updated.
+// This method is called during cleanup to check if the resource passed as argument was part of the set of translated resources
+// derived from the source HTTPRoute. If so, it removes the route reference from the hybrid-routes annotation and determines whether
+// to update the resource and if it should be skipped from deletion.
 //
 // Parameters:
 //   - ctx: The context for API calls and cancellation
-//   - cl: The Kubernetes client for CRUD operations
 //   - logger: Logger for debugging information
 //   - resource: The orphaned resource to process
 //
 // Returns:
-//   - delete: true if the resource should be deleted, false if it should be skipped
-//   - updated: true if the resource was updated (annotation modified and patched)
+//   - skipDelete: true if the resource should NOT be deleted (skip deletion), false if it should be deleted
 //   - err: any error that occurred during processing
 func (c *httpRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
 	am := metadata.NewAnnotationManager(logger)
@@ -324,7 +322,7 @@ func (c *httpRouteConverter) HandleOrphanedResource(ctx context.Context, logger 
 		return true, nil
 	}
 
-	// No other routes in the annotation, the resource is orphaned.
+	// No other routes in the annotation, don't skip deletion.
 	return false, nil
 }
 

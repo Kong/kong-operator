@@ -301,16 +301,16 @@ func cleanOrphanedResources[t converter.RootObject, tPtr converter.RootObjectPtr
 				continue
 			}
 
-			// Allow the converter to check if deletion or requeue (because resource has been updated) is needed.
-			skipDelete, err := conv.HandleOrphanedResource(ctx, logger, &item)
-			if err != nil {
-				return false, fmt.Errorf("failed to handle orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
-			}
-
-			// If converter indicates resource should not be deleted, skip it.
-			if skipDelete {
-				log.Trace(logger, "Skipping orphaned resource as per converter decision", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
-				continue
+			// If the converter implements OrphanedResourceHandler, give it a chance to perform custom cleanup logic.
+			if customHandler, ok := conv.(converter.OrphanedResourceHandler); ok {
+				skipDelete, err := customHandler.HandleOrphanedResource(ctx, logger, &item)
+				if err != nil {
+					return false, fmt.Errorf("failed to handle orphaned resource kind %s obj %s: %w", item.GetKind(), client.ObjectKeyFromObject(&item), err)
+				}
+				if skipDelete {
+					log.Trace(logger, "Skipping orphaned resource as per converter decision", "kind", item.GetKind(), "obj", client.ObjectKeyFromObject(&item))
+					continue
+				}
 			}
 
 			// Check if the resource is already being deleted (has deletionTimestamp set).
