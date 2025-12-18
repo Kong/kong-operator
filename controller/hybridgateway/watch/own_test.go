@@ -32,8 +32,17 @@ func TestOwns(t *testing.T) {
 			},
 		},
 		{
-			name:    "OtherType",
+			name:    "Gateway",
 			obj:     &gwtypes.Gateway{},
+			wantLen: 2,
+			want: []any{
+				&configurationv1alpha1.KongCertificate{},
+				&configurationv1alpha1.KongSNI{},
+			},
+		},
+		{
+			name:    "OtherType",
+			obj:     &gwtypes.GatewayClass{},
 			wantLen: 0,
 		},
 	}

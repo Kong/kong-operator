@@ -14,6 +14,7 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
+	"github.com/kong/kong-operator/controller/hybridgateway/errors"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
@@ -481,6 +482,206 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 	}
 }
 
+func TestGetControlPlaneRefByGateway(t *testing.T) {
+	tests := []struct {
+		name     string
+		setup    func() (client.Client, *gwtypes.Gateway)
+		wantRef  *commonv1alpha1.ControlPlaneRef
+		wantErr  error
+		errMatch string
+	}{
+		{
+			name: "no control plane",
+			setup: func() (client.Client, *gwtypes.Gateway) {
+				gw := &gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-gateway",
+						Namespace: "test-ns",
+					},
+					Spec: gwtypes.GatewaySpec{
+						GatewayClassName: "test-gateway-class",
+					},
+				}
+				cl := fake.NewClientBuilder().WithScheme(newTestScheme()).WithObjects(gw).Build()
+				return cl, gw
+			},
+			wantRef: nil,
+			wantErr: errors.ErrGatewayNotReferencingControlPlane,
+		},
+		{
+			name: "valid konnect control plane",
+			setup: func() (client.Client, *gwtypes.Gateway) {
+				gw := &gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-gateway",
+						Namespace: "test-ns",
+						UID:       "gw-uid-1",
+					},
+					Spec: gwtypes.GatewaySpec{
+						GatewayClassName: "test-gateway-class",
+					},
+				}
+				gatewayClass := &gwtypes.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-gateway-class",
+					},
+					Spec: gwtypes.GatewayClassSpec{
+						ControllerName: "konghq.com/gateway-operator",
+					},
+				}
+				controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cp",
+						Namespace: "test-ns",
+					},
+				}
+				konnectExtension := &konnectv1alpha2.KonnectExtension{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-konnect-extension",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/managed-by": "gateway",
+						},
+						OwnerReferences: []metav1.OwnerReference{{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "gw-uid-1",
+						}},
+					},
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name:      "cp",
+										Namespace: "test-ns",
+									},
+								},
+							},
+						},
+					},
+				}
+				cl := fake.NewClientBuilder().WithScheme(newTestScheme()).WithObjects(gw, gatewayClass, controlPlane, konnectExtension).Build()
+				return cl, gw
+			},
+			wantRef: &commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+					Name:      "cp",
+					Namespace: "test-ns",
+				},
+			},
+			wantErr: nil,
+		},
+		{
+			name: "multiple konnect extensions",
+			setup: func() (client.Client, *gwtypes.Gateway) {
+				gw := &gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-gateway",
+						Namespace: "test-ns",
+						UID:       "gw-uid-2",
+					},
+					Spec: gwtypes.GatewaySpec{
+						GatewayClassName: "test-gateway-class",
+					},
+				}
+				gatewayClass := &gwtypes.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "test-gateway-class",
+					},
+					Spec: gwtypes.GatewayClassSpec{
+						ControllerName: "konghq.com/gateway-operator",
+					},
+				}
+				konnectExtension1 := &konnectv1alpha2.KonnectExtension{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ext1",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/managed-by": "gateway",
+						},
+						OwnerReferences: []metav1.OwnerReference{{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "gw-uid-2",
+						}},
+					},
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name:      "cp",
+										Namespace: "test-ns",
+									},
+								},
+							},
+						},
+					},
+				}
+				konnectExtension2 := &konnectv1alpha2.KonnectExtension{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "ext2",
+						Namespace: "test-ns",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/managed-by": "gateway",
+						},
+						OwnerReferences: []metav1.OwnerReference{{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "gw-uid-2",
+						}},
+					},
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name:      "cp",
+										Namespace: "test-ns",
+									},
+								},
+							},
+						},
+					},
+				}
+				cl := fake.NewClientBuilder().WithScheme(newTestScheme()).WithObjects(gw, gatewayClass, konnectExtension1, konnectExtension2).Build()
+				return cl, gw
+			},
+			wantRef:  nil,
+			wantErr:  nil,
+			errMatch: "multiple KonnectExtensions found for a single Gateway, which is not supported",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cl, gw := tt.setup()
+			ref, err := GetControlPlaneRefByGateway(context.Background(), cl, gw)
+			switch {
+			case tt.wantErr != nil:
+				assert.Nil(t, ref)
+				assert.ErrorIs(t, err, tt.wantErr)
+			case tt.errMatch != "":
+				assert.Nil(t, ref)
+				if assert.Error(t, err) {
+					assert.Contains(t, err.Error(), "unable to get ControlPlaneRef for Gateway")
+					assert.Contains(t, err.Error(), tt.errMatch)
+				}
+			default:
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantRef, ref)
+			}
+		})
+	}
+}
+
 func TestGetListenersByParentRef(t *testing.T) {
 	gatewayGroup := gwtypes.Group(gwtypes.GroupName)
 	gatewayKind := gwtypes.Kind("Gateway")
@@ -566,151 +767,4 @@ func TestGetListenersByParentRef(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestByKonnectExtension(t *testing.T) {
-	tests := []struct {
-		name        string
-		setup       func() (client.Client, konnectv1alpha2.KonnectExtension)
-		expected    *commonv1alpha1.KonnectNamespacedRef
-		wantErr     bool
-		description string
-	}{
-		{
-			name: "KonnectExtension without ControlPlaneRef",
-			setup: func() (client.Client, konnectv1alpha2.KonnectExtension) {
-				cl := fake.NewClientBuilder().Build()
-				konnectExtension := konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-konnect-extension",
-						Namespace: "test-namespace",
-					},
-				}
-				return cl, konnectExtension
-			},
-			expected:    nil,
-			wantErr:     false,
-			description: "should return nil when no ControlPlaneRef is set",
-		},
-		{
-			name: "KonnectExtension with cross-namespace reference",
-			setup: func() (client.Client, konnectv1alpha2.KonnectExtension) {
-				cl := fake.NewClientBuilder().Build()
-				konnectExtension := konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-konnect-extension",
-						Namespace: "test-namespace",
-					},
-					Spec: konnectv1alpha2.KonnectExtensionSpec{
-						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
-							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
-								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
-									Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
-									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
-										Name:      "test-cp",
-										Namespace: "other-namespace",
-									},
-								},
-							},
-						},
-					},
-				}
-				return cl, konnectExtension
-			},
-			expected:    nil,
-			wantErr:     true,
-			description: "should return error for cross-namespace references",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cl, konnectExt := tt.setup()
-			result, err := byKonnectExtension(context.Background(), cl, konnectExt)
-
-			if tt.wantErr {
-				assert.Error(t, err, tt.description)
-			} else {
-				assert.NoError(t, err, tt.description)
-				assert.Equal(t, tt.expected, result, tt.description)
-			}
-		})
-	}
-}
-
-func TestByHTTPRoute(t *testing.T) {
-	tests := []struct {
-		name        string
-		setup       func() (client.Client, gwtypes.HTTPRoute)
-		expected    map[string]GatewaysByNamespacedRef
-		wantErr     bool
-		description string
-	}{
-		{
-			name: "HTTPRoute without parentRefs",
-			setup: func() (client.Client, gwtypes.HTTPRoute) {
-				cl := fake.NewClientBuilder().Build()
-				httpRoute := gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
-				}
-				return cl, httpRoute
-			},
-			expected:    map[string]GatewaysByNamespacedRef{},
-			wantErr:     false,
-			description: "should return empty map for HTTPRoute without parentRefs",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cl, httpRoute := tt.setup()
-			result, err := byHTTPRoute(context.Background(), cl, httpRoute)
-
-			if tt.wantErr {
-				assert.Error(t, err, tt.description)
-			} else {
-				assert.NoError(t, err, tt.description)
-				assert.Equal(t, tt.expected, result, tt.description)
-			}
-		})
-	}
-}
-
-func TestGatewaysByNamespacedRefStructure(t *testing.T) {
-	ref := commonv1alpha1.KonnectNamespacedRef{
-		Name:      "test-ref",
-		Namespace: "test-namespace",
-	}
-
-	gateways := []gwtypes.Gateway{
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gateway1",
-				Namespace: "test-namespace",
-			},
-		},
-		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "gateway2",
-				Namespace: "test-namespace",
-			},
-		},
-	}
-
-	gatewaysByRef := GatewaysByNamespacedRef{
-		Ref:      ref,
-		Gateways: gateways,
-	}
-
-	t.Run("stores correct reference", func(t *testing.T) {
-		assert.Equal(t, ref, gatewaysByRef.Ref, "should store the correct reference")
-	})
-
-	t.Run("stores correct gateways", func(t *testing.T) {
-		assert.Equal(t, gateways, gatewaysByRef.Gateways, "should store the correct gateways")
-		assert.Len(t, gatewaysByRef.Gateways, 2, "should have the right number of gateways")
-	})
 }

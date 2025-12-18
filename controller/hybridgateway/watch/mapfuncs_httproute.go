@@ -38,6 +38,32 @@ func listHTTPRoutesForGateway(ctx context.Context, cl client.Client, gatewayName
 	return requests, nil
 }
 
+// listHTTPRoutesForService lists all HTTPRoutes that reference a specific Service using the BackendServicesOnHTTPRouteIndex.
+// It returns a slice of reconcile.Requests for each matching HTTPRoute, enabling efficient event handling
+// and reconciliation when a Service changes.
+func listHTTPRoutesForService(ctx context.Context, cl client.Client, svcNamespace, svcName string) ([]reconcile.Request, error) {
+	httpRoutes := &gwtypes.HTTPRouteList{}
+
+	// List all HTTPRoutes that reference this Service using the index.
+	err := cl.List(ctx, httpRoutes, client.MatchingFields{
+		index.BackendServicesOnHTTPRouteIndex: svcNamespace + "/" + svcName,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	requests := make([]reconcile.Request, len(httpRoutes.Items))
+	for i, httpRoute := range httpRoutes.Items {
+		requests[i] = reconcile.Request{
+			NamespacedName: client.ObjectKey{
+				Namespace: httpRoute.Namespace,
+				Name:      httpRoute.Name,
+			},
+		}
+	}
+	return requests, nil
+}
+
 // MapHTTPRouteForGateway returns a handler.MapFunc that, given a Gateway object,
 // lists all HTTPRoutes referencing that Gateway (via ParentRefs) using the GatewayOnHTTPRouteIndex.
 // It returns a slice of reconcile.Requests for each matching HTTPRoute, enabling efficient event handling
@@ -87,32 +113,6 @@ func MapHTTPRouteForGatewayClass(cl client.Client) handler.MapFunc {
 		}
 		return requests
 	}
-}
-
-// listHTTPRoutesForService lists all HTTPRoutes that reference a specific Service using the BackendServicesOnHTTPRouteIndex.
-// It returns a slice of reconcile.Requests for each matching HTTPRoute, enabling efficient event handling
-// and reconciliation when a Service changes.
-func listHTTPRoutesForService(ctx context.Context, cl client.Client, svcNamespace, svcName string) ([]reconcile.Request, error) {
-	httpRoutes := &gwtypes.HTTPRouteList{}
-
-	// List all HTTPRoutes that reference this Service using the index.
-	err := cl.List(ctx, httpRoutes, client.MatchingFields{
-		index.BackendServicesOnHTTPRouteIndex: svcNamespace + "/" + svcName,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	requests := make([]reconcile.Request, len(httpRoutes.Items))
-	for i, httpRoute := range httpRoutes.Items {
-		requests[i] = reconcile.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: httpRoute.Namespace,
-				Name:      httpRoute.Name,
-			},
-		}
-	}
-	return requests, nil
 }
 
 // MapHTTPRouteForService returns a handler.MapFunc that, given a Service object,

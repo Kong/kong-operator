@@ -43,6 +43,29 @@ func GetGatewaysByHTTPRoute(ctx context.Context, cl client.Client, r gwtypes.HTT
 	return gatewayRefs
 }
 
+// IsGatewaySupported checks if the given Gateway is controlled by this controller.
+// It returns true if the Gateway's GatewayClass exists and is controlled by this controller,
+// false if the GatewayClass is not controlled by this controller.
+// Returns an error if there's a problem accessing the GatewayClass.
+func IsGatewaySupported(ctx context.Context, cl client.Client, gateway *gwtypes.Gateway) (bool, error) {
+	// Get the GatewayClass reference from the Gateway.
+	gatewayClass := gwtypes.GatewayClass{}
+	if err := cl.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
+		if k8serrors.IsNotFound(err) {
+			// GatewayClass doesn't exist, not supported.
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to get gatewayClass %s: %w", gateway.Spec.GatewayClassName, err)
+	}
+
+	// Check if the gatewayClass is controlled by us.
+	if string(gatewayClass.Spec.ControllerName) != vars.ControllerName() {
+		return false, nil
+	}
+
+	return true, nil
+}
+
 // GetSupportedGatewayForParentRef checks if the given ParentRef is supported by this controller
 // and returns the associated Gateway if it is supported.
 //
@@ -113,7 +136,6 @@ func GetSupportedGatewayForParentRef(ctx context.Context, logger logr.Logger, cl
 	if string(gatewayClass.Spec.ControllerName) != vars.ControllerName() {
 		return nil, hybridgatewayerrors.ErrNoGatewayController
 	}
-
 	// All checks passed, this ParentRef is supported.
 	return &gateway, nil
 }
