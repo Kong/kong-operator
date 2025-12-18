@@ -6,10 +6,7 @@ import (
 	"github.com/samber/lo"
 )
 
-func (r *ControlPlaneRef) String() string {
-	if r == nil {
-		return "<nil>"
-	}
+func (r ControlPlaneRef) String() string {
 	switch r.Type {
 	case ControlPlaneRefKonnectID:
 		// It's safe to assume KonnectID is not nil as it's guarded by CEL rules, but just in case let's have a fallback.

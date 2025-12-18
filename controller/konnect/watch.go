@@ -20,7 +20,7 @@ import (
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
 	operatorerrors "github.com/kong/kong-operator/internal/errors"
-	index2 "github.com/kong/kong-operator/internal/utils/index"
+	"github.com/kong/kong-operator/internal/utils/index"
 )
 
 // ReconciliationWatchOptionsForEntity returns the watch options for the given
@@ -168,7 +168,7 @@ func enqueueObjectForKonnectGatewayControlPlane[
 	TT constraints.EntityType[T],
 ](
 	cl client.Client,
-	index string,
+	indexName string,
 ) func(context.Context, client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		cp, ok := obj.(*konnectv1alpha2.KonnectGatewayControlPlane)
@@ -180,10 +180,8 @@ func enqueueObjectForKonnectGatewayControlPlane[
 			lPtr TListPtr = &l
 		)
 		if err := cl.List(ctx, lPtr,
-			// TODO: change this when cross namespace refs are allowed.
-			client.InNamespace(cp.GetNamespace()),
 			client.MatchingFields{
-				index: cp.GetNamespace() + "/" + cp.GetName(),
+				indexName: cp.GetNamespace() + "/" + cp.GetName(),
 			},
 		); err != nil {
 			return nil
@@ -214,7 +212,7 @@ func enqueueObjectForAPIAuthThroughControlPlaneRef[
 	TT constraints.EntityType[T],
 ](
 	cl client.Client,
-	index string,
+	indexName string,
 ) func(context.Context, client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		auth, ok := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
@@ -227,7 +225,7 @@ func enqueueObjectForAPIAuthThroughControlPlaneRef[
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(auth.GetNamespace()),
 			client.MatchingFields{
-				index2.IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration: auth.Name,
+				index.IndexFieldKonnectGatewayControlPlaneOnAPIAuthConfiguration: auth.Name,
 			},
 		); err != nil {
 			return nil
@@ -243,7 +241,7 @@ func enqueueObjectForAPIAuthThroughControlPlaneRef[
 				// TODO: change this when cross namespace refs are allowed.
 				client.InNamespace(auth.GetNamespace()),
 				client.MatchingFields{
-					index: client.ObjectKeyFromObject(&cp).String(),
+					indexName: client.ObjectKeyFromObject(&cp).String(),
 				},
 			); err != nil {
 				return nil
@@ -270,7 +268,7 @@ func enqueueObjectsForKonnectAPIAuthConfiguration[
 	TT constraints.EntityTypeObject[T],
 ](
 	cl client.Client,
-	index string,
+	indexName string,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		auth, ok := obj.(*konnectv1alpha1.KonnectAPIAuthConfiguration)
@@ -285,7 +283,7 @@ func enqueueObjectsForKonnectAPIAuthConfiguration[
 			// TODO: change this when cross namespace refs are allowed.
 			client.InNamespace(auth.GetNamespace()),
 			client.MatchingFields{
-				index: auth.Name,
+				indexName: auth.Name,
 			},
 		); err != nil {
 			return nil

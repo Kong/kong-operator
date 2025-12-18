@@ -60,6 +60,15 @@
 - Hybdrid Gateway: the creation and deletion of the Kong resources derived from `HTTPRoute`s is now
   performed in multiple steps that account for dependencies among the generated resources.
   [#2857](https://github.com/Kong/kong-operator/pull/2857)
+- Added support for cross namespace references between the following Konnect
+  entities and `KonnectGatewayControlPlane`
+
+  - `KongService`
+
+  To allow these references, users need to define a `KongReferenceGrant` resource
+  in the namespace of the referenced resource, allowing access to the
+  `KonnectGatewayControlPlane`.
+  [#2892](https://github.com/Kong/kong-operator/pull/2892)
 
 ### Changed
 

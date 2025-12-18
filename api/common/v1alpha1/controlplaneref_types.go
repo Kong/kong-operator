@@ -95,7 +95,9 @@ type KonnectNamespacedRef struct {
 	// https://github.com/Kong/kubernetes-configuration/issues/36
 
 	// Namespace is the namespace where the Konnect Control Plane is in.
-	// Currently only cluster scoped resources (KongVault) are allowed to set `konnectNamespacedRef.namespace`.
+	// Currently the following resources are allowed to set this:
+	// - cluster scoped resources (KongVault)
+	// - KongService
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253

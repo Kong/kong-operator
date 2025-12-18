@@ -644,3 +644,174 @@ func TestNeedsUpdate(t *testing.T) {
 		})
 	}
 }
+
+func TestRemoveCondition(t *testing.T) {
+	for _, tt := range []struct {
+		name               string
+		conditions         []metav1.Condition
+		conditionToRemove  kcfgconsts.ConditionType
+		expectedRemoved    bool
+		expectedConditions []metav1.Condition
+	}{
+		{
+			name:               "empty_conditions",
+			conditions:         []metav1.Condition{},
+			conditionToRemove:  "example",
+			expectedRemoved:    false,
+			expectedConditions: []metav1.Condition{},
+		},
+		{
+			name: "condition_not_found",
+			conditions: []metav1.Condition{
+				{
+					Type:   "example1",
+					Status: metav1.ConditionTrue,
+					Reason: "reason1",
+				},
+				{
+					Type:   "example2",
+					Status: metav1.ConditionFalse,
+					Reason: "reason2",
+				},
+			},
+			conditionToRemove: "example3",
+			expectedRemoved:   false,
+			expectedConditions: []metav1.Condition{
+				{
+					Type:   "example1",
+					Status: metav1.ConditionTrue,
+					Reason: "reason1",
+				},
+				{
+					Type:   "example2",
+					Status: metav1.ConditionFalse,
+					Reason: "reason2",
+				},
+			},
+		},
+		{
+			name: "remove_first_condition",
+			conditions: []metav1.Condition{
+				{
+					Type:   "example1",
+					Status: metav1.ConditionTrue,
+					Reason: "reason1",
+				},
+				{
+					Type:   "example2",
+					Status: metav1.ConditionFalse,
+					Reason: "reason2",
+				},
+				{
+					Type:   "example3",
+					Status: metav1.ConditionTrue,
+					Reason: "reason3",
+				},
+			},
+			conditionToRemove: "example1",
+			expectedRemoved:   true,
+			expectedConditions: []metav1.Condition{
+				{
+					Type:   "example2",
+					Status: metav1.ConditionFalse,
+					Reason: "reason2",
+				},
+				{
+					Type:   "example3",
+					Status: metav1.ConditionTrue,
+					Reason: "reason3",
+				},
+			},
+		},
+		{
+			name: "remove_middle_condition",
+			conditions: []metav1.Condition{
+				{
+					Type:   "example1",
+					Status: metav1.ConditionTrue,
+					Reason: "reason1",
+				},
+				{
+					Type:   "example2",
+					Status: metav1.ConditionFalse,
+					Reason: "reason2",
+				},
+				{
+					Type:   "example3",
+					Status: metav1.ConditionTrue,
+					Reason: "reason3",
+				},
+			},
+			conditionToRemove: "example2",
+			expectedRemoved:   true,
+			expectedConditions: []metav1.Condition{
+				{
+					Type:   "example1",
+					Status: metav1.ConditionTrue,
+					Reason: "reason1",
+				},
+				{
+					Type:   "example3",
+					Status: metav1.ConditionTrue,
+					Reason: "reason3",
+				},
+			},
+		},
+		{
+			name: "remove_last_condition",
+			conditions: []metav1.Condition{
+				{
+					Type:   "example1",
+					Status: metav1.ConditionTrue,
+					Reason: "reason1",
+				},
+				{
+					Type:   "example2",
+					Status: metav1.ConditionFalse,
+					Reason: "reason2",
+				},
+				{
+					Type:   "example3",
+					Status: metav1.ConditionTrue,
+					Reason: "reason3",
+				},
+			},
+			conditionToRemove: "example3",
+			expectedRemoved:   true,
+			expectedConditions: []metav1.Condition{
+				{
+					Type:   "example1",
+					Status: metav1.ConditionTrue,
+					Reason: "reason1",
+				},
+				{
+					Type:   "example2",
+					Status: metav1.ConditionFalse,
+					Reason: "reason2",
+				},
+			},
+		},
+		{
+			name: "remove_only_condition",
+			conditions: []metav1.Condition{
+				{
+					Type:   "example1",
+					Status: metav1.ConditionTrue,
+					Reason: "reason1",
+				},
+			},
+			conditionToRemove:  "example1",
+			expectedRemoved:    true,
+			expectedConditions: []metav1.Condition{},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			resource := &TestResource{
+				Conditions: tt.conditions,
+			}
+			removed := RemoveCondition(tt.conditionToRemove, resource)
+			assert.Equal(t, tt.expectedRemoved, removed)
+			assert.Equal(t, tt.expectedConditions, resource.GetConditions())
+		})
+	}
+}

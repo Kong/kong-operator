@@ -377,3 +377,348 @@ func testGetControlPlaneRef[
 		})
 	}
 }
+
+func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
+	testCases := []struct {
+		name     string
+		krgs     []configurationv1alpha1.KongReferenceGrant
+		obj      client.Object
+		cpRef    commonv1alpha1.KonnectNamespacedRef
+		expected bool
+	}{
+		{
+			name:     "empty KongReferenceGrant list",
+			krgs:     []configurationv1alpha1.KongReferenceGrant{},
+			obj:      &configurationv1alpha1.KongService{},
+			cpRef:    commonv1alpha1.KonnectNamespacedRef{},
+			expected: false,
+		},
+		{
+			name: "KongReferenceGrant allows access - matching from and to",
+			krgs: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "target-ns",
+						Name:      "krg-1",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:      "KongService",
+								Namespace: "source-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: configurationv1alpha1.Group(konnectv1alpha2.SchemeGroupVersion.Group),
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+			},
+			obj: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "source-ns",
+					Name:      "svc-1",
+				},
+			},
+			cpRef: commonv1alpha1.KonnectNamespacedRef{
+				Namespace: "target-ns",
+				Name:      "cp-1",
+			},
+			expected: true,
+		},
+		{
+			name: "KongReferenceGrant does not allow - from namespace mismatch",
+			krgs: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "target-ns",
+						Name:      "krg-1",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:      "KongService",
+								Namespace: "wrong-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: configurationv1alpha1.Group(konnectv1alpha2.SchemeGroupVersion.Group),
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+			},
+			obj: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "source-ns",
+					Name:      "svc-1",
+				},
+			},
+			cpRef: commonv1alpha1.KonnectNamespacedRef{
+				Namespace: "target-ns",
+				Name:      "cp-1",
+			},
+			expected: false,
+		},
+		{
+			name: "KongReferenceGrant does not allow - from kind mismatch",
+			krgs: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "target-ns",
+						Name:      "krg-1",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:      "KongRoute",
+								Namespace: "source-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: configurationv1alpha1.Group(konnectv1alpha2.SchemeGroupVersion.Group),
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+			},
+			obj: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "source-ns",
+					Name:      "svc-1",
+				},
+			},
+			cpRef: commonv1alpha1.KonnectNamespacedRef{
+				Namespace: "target-ns",
+				Name:      "cp-1",
+			},
+			expected: false,
+		},
+		{
+			name: "KongReferenceGrant does not allow - from group mismatch",
+			krgs: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "target-ns",
+						Name:      "krg-1",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     "wrong.group",
+								Kind:      "KongService",
+								Namespace: "source-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: configurationv1alpha1.Group(konnectv1alpha2.SchemeGroupVersion.Group),
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+			},
+			obj: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "source-ns",
+					Name:      "svc-1",
+				},
+			},
+			cpRef: commonv1alpha1.KonnectNamespacedRef{
+				Namespace: "target-ns",
+				Name:      "cp-1",
+			},
+			expected: false,
+		},
+		{
+			name: "KongReferenceGrant does not allow - to kind mismatch",
+			krgs: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "target-ns",
+						Name:      "krg-1",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:      "KongService",
+								Namespace: "source-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: configurationv1alpha1.Group(konnectv1alpha2.SchemeGroupVersion.Group),
+								Kind:  "WrongKind",
+							},
+						},
+					},
+				},
+			},
+			obj: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "source-ns",
+					Name:      "svc-1",
+				},
+			},
+			cpRef: commonv1alpha1.KonnectNamespacedRef{
+				Namespace: "target-ns",
+				Name:      "cp-1",
+			},
+			expected: false,
+		},
+		{
+			name: "KongReferenceGrant does not allow - to group mismatch",
+			krgs: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "target-ns",
+						Name:      "krg-1",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:      "KongService",
+								Namespace: "source-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "wrong.group",
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+			},
+			obj: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "source-ns",
+					Name:      "svc-1",
+				},
+			},
+			cpRef: commonv1alpha1.KonnectNamespacedRef{
+				Namespace: "target-ns",
+				Name:      "cp-1",
+			},
+			expected: false,
+		},
+		{
+			name: "KongReferenceGrant with specific name - matching",
+			krgs: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "target-ns",
+						Name:      "krg-1",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:      "KongService",
+								Namespace: "source-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: configurationv1alpha1.Group(konnectv1alpha2.SchemeGroupVersion.Group),
+								Kind:  "KonnectGatewayControlPlane",
+								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("different-name")),
+							},
+						},
+					},
+				},
+			},
+			obj: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "source-ns",
+					Name:      "svc-1",
+				},
+			},
+			cpRef: commonv1alpha1.KonnectNamespacedRef{
+				Namespace: "target-ns",
+				Name:      "different-name",
+			},
+			expected: true,
+		},
+		{
+			name: "multiple KongReferenceGrants - one allows",
+			krgs: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "target-ns",
+						Name:      "krg-1",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:      "KongRoute",
+								Namespace: "source-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: configurationv1alpha1.Group(konnectv1alpha2.SchemeGroupVersion.Group),
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "target-ns",
+						Name:      "krg-2",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:      "KongService",
+								Namespace: "source-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: configurationv1alpha1.Group(konnectv1alpha2.SchemeGroupVersion.Group),
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+			},
+			obj: &configurationv1alpha1.KongService{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "source-ns",
+					Name:      "svc-1",
+				},
+			},
+			cpRef: commonv1alpha1.KonnectNamespacedRef{
+				Namespace: "target-ns",
+				Name:      "cp-1",
+			},
+			expected: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.obj.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("KongService"))
+
+			result := kongReferenceGrantsAllowsCPRef(tc.krgs, tc.obj, tc.cpRef)
+			require.Equal(t, tc.expected, result)
+		})
+	}
+}

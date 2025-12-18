@@ -144,6 +144,7 @@ rules:
   - kongclusterplugins
   - kongcustomentities
   - konglicenses
+  - kongreferencegrants
   - kongupstreampolicies
   verbs:
   - get
