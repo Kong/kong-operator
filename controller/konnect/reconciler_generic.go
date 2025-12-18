@@ -160,6 +160,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
 					}
+					// in case the finalizer removal fails because the resource does not exist, ignore the error.
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
+					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
 			}
@@ -183,6 +187,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{RequeueAfter: time.Second}, nil
+					}
+					// in case the finalizer removal fails because the resource does not exist, ignore the error.
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
@@ -217,6 +225,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
+					}
+					// in case the finalizer removal fails because the resource does not exist, ignore the error.
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
@@ -290,6 +302,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 				if err := r.Client.Update(ctx, ent); err != nil {
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
+					}
+					// in case the finalizer removal fails because the resource does not exist, ignore the error.
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
 					}
 					return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 				}
@@ -418,6 +434,10 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			if err := r.Client.Update(ctx, ent); err != nil {
 				if k8serrors.IsConflict(err) {
 					return ctrl.Result{Requeue: true}, nil
+				}
+				// in case the finalizer removal fails because the resource does not exist, ignore the error.
+				if k8serrors.IsNotFound(err) {
+					return ctrl.Result{}, nil
 				}
 				return ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
 			}
