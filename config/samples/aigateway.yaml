@@ -24,6 +24,8 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: acme-ai-cloud-providers
+  labels:
+    konghq.com/secret: "true"
 type: Opaque
 stringData:
   openai: "<INSERT TOKEN HERE>"

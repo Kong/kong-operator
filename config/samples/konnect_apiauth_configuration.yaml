@@ -30,5 +30,6 @@ metadata:
     # NOTE: this label is required on Konnect credential secrets to make
     # Secret watch efficient in the operator.
     konghq.com/credential: konnect
+    konghq.com/secret: "true"
 stringData:
   token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
