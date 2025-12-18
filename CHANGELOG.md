@@ -75,6 +75,9 @@
 - `DataPlane`'s `spec.network.services.ingress.ports` now allows up to 64 ports
   to be specified. This aligns `DataPlane` with Gateway APIs' `Gateway`.
   [#2722](https://github.com/Kong/kong-operator/pull/2722)
+- In Konnect controllers, ignore `NotFound` errors when removing the finalizer
+  from the resource.
+  [#2911](https://github.com/Kong/kong-operator/pull/2911)
 
 ### Fixed
 
