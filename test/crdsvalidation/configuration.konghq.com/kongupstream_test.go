@@ -76,7 +76,7 @@ func TestKongUpstream(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Invalid value: \"object\": hash_fallback_header is required when `hash_fallback` is set to `header`"),
+				ExpectedErrorMessage: lo.ToPtr("hash_fallback_header is required when `hash_fallback` is set to `header`"),
 			},
 			{
 				Name: "hash_fallback_query_arg is required when hash_fallback is set to 'query_arg'",
@@ -112,7 +112,7 @@ func TestKongUpstream(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Invalid value: \"object\": hash_fallback_query_arg is required when `hash_fallback` is set to `query_arg`"),
+				ExpectedErrorMessage: lo.ToPtr("hash_fallback_query_arg is required when `hash_fallback` is set to `query_arg`"),
 			},
 			{
 				Name: "hash_fallback_uri_capture is required when hash_fallback is set to 'uri_capture'",
@@ -148,7 +148,7 @@ func TestKongUpstream(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Invalid value: \"object\": hash_fallback_uri_capture is required when `hash_fallback` is set to `uri_capture`"),
+				ExpectedErrorMessage: lo.ToPtr("hash_fallback_uri_capture is required when `hash_fallback` is set to `uri_capture`"),
 			},
 			{
 				Name: "hash_on_cookie and hash_on_cookie_path are required when hash_on is set to 'cookie'",
@@ -316,7 +316,7 @@ func TestKongUpstream(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Invalid value: \"object\": hash_on_header is required when hash_on is set to `header`"),
+				ExpectedErrorMessage: lo.ToPtr("hash_on_header is required when hash_on is set to `header`"),
 			},
 			{
 				Name: "hash_on_query_arg is required when hash_on is set to 'query_arg'",
@@ -352,7 +352,7 @@ func TestKongUpstream(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Invalid value: \"object\": hash_on_query_arg is required when `hash_on` is set to `query_arg`"),
+				ExpectedErrorMessage: lo.ToPtr("hash_on_query_arg is required when `hash_on` is set to `query_arg`"),
 			},
 			{
 				Name: "hash_on_uri_capture is required when hash_on is set to 'uri_capture'",
@@ -388,7 +388,7 @@ func TestKongUpstream(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Invalid value: \"object\": hash_on_uri_capture is required when `hash_on` is set to `uri_capture`"),
+				ExpectedErrorMessage: lo.ToPtr("hash_on_uri_capture is required when `hash_on` is set to `uri_capture`"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)
