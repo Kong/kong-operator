@@ -807,21 +807,17 @@ jobs:
     - name: build docker image
       run: make docker.build
 
-    - name: Create k8s KinD Cluster
-      uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab # v1.13.0
-      with:
-        cluster_name: ${{ env.CLUSTER_NAME }}
-        node_image: kindest/node:${{ needs.matrix_k8s_node_versions.outputs.latest }}
-
     - uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
       with:
         install: false
 
+    - name: Create k8s KinD Cluster with ktf
+      run: |
+        go install github.com/kong/kubernetes-testing-framework/cmd/ktf@latest
+        ktf environments create --name ${{ env.CLUSTER_NAME }} --addon metallb --addon cert-manager
+
     - name: Load image to kind cluster
       run: kind load docker-image ${{ env.IMG }}:${{ env.TAG }} --name ${{ env.CLUSTER_NAME }}
-
-    - name: Install cert-manager
-      run: make install.helm.cert-manager
 
     - name: Deploy operator with Helm
       run: |
