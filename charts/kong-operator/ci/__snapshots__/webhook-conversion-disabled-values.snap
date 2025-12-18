@@ -25589,8 +25589,8 @@ spec:
                   x-kubernetes-validations:
                   - message: Only 'Secret' kind is supported for 'core' group
                     rule: .self.group != 'core' || .self.kind == 'Secret'
-                  - message: Only 'KonnectGatewayControlPlane' kind is supported for 'konnect.konghq.com' group
-                    rule: .self.group != 'konnect.konghq.com' || .self.kind == 'KonnectGatewayControlPlane'
+                  - message: Only 'KonnectGatewayControlPlane' and 'KonnectAPIAuthConfiguration' kinds are supported for 'konnect.konghq.com' group
+                    rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration']
                 maxItems: 16
                 minItems: 1
                 type: array
