@@ -185,9 +185,11 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		cleanup = true
 	}
 
+	var isFinalizerToBeRemoved bool
 	switch {
 	case len(dataPlaneList.Items)+len(controlPlaneList.Items) == 0:
 		updated = controllerutil.RemoveFinalizer(&ext, consts.ExtensionInUseFinalizer)
+		isFinalizerToBeRemoved = true
 	default:
 		updated = controllerutil.AddFinalizer(&ext, consts.ExtensionInUseFinalizer)
 	}
@@ -195,6 +197,10 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		if err := r.Update(ctx, &ext); err != nil {
 			if k8serrors.IsConflict(err) {
 				return ctrl.Result{Requeue: true}, nil
+			}
+			// in case the finalizer removal fails because the resource does not exist, ignore the error.
+			if isFinalizerToBeRemoved && k8serrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
 			}
 			return ctrl.Result{}, err
 		}
@@ -236,6 +242,10 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				if err := r.Update(ctx, &ext); err != nil {
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
+					}
+					// in case the finalizer removal fails because the resource does not exist, ignore the error.
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
 					}
 					return ctrl.Result{}, err
 				}
@@ -759,6 +769,10 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				if err := r.Update(ctx, certificateSecret); err != nil {
 					if k8serrors.IsConflict(err) {
 						return ctrl.Result{Requeue: true}, nil
+					}
+					// in case the finalizer removal fails because the resource does not exist, ignore the error.
+					if k8serrors.IsNotFound(err) {
+						return ctrl.Result{}, nil
 					}
 					return ctrl.Result{}, err
 				}
