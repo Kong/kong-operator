@@ -64,11 +64,13 @@
   entities and `KonnectGatewayControlPlane`
 
   - `KongService`
+  - `KongRoute`
 
   To allow these references, users need to define a `KongReferenceGrant` resource
   in the namespace of the referenced resource, allowing access to the
   `KonnectGatewayControlPlane`.
   [#2892](https://github.com/Kong/kong-operator/pull/2892)
+  [#2913](https://github.com/Kong/kong-operator/pull/2913)
 
 ### Changed
 
