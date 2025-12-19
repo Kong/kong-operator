@@ -3,7 +3,6 @@ package konnect
 import (
 	"context"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -55,13 +54,7 @@ func KonnectGatewayControlPlaneReconciliationWatchOptions(
 			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForKongReferenceGrant[konnectv1alpha2.KonnectGatewayControlPlaneList](
-						cl,
-						metav1.GroupKind{
-							Group: konnectv1alpha2.GroupVersion.Group,
-							Kind:  "KonnectGatewayControlPlane",
-						},
-					),
+					enqueueObjectsForKongReferenceGrant[konnectv1alpha2.KonnectGatewayControlPlaneList](cl),
 				),
 			)
 		},
