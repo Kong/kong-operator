@@ -34,7 +34,9 @@ func getExtension(ctx context.Context, cl client.Client, objNamespace string, ex
 		}
 		return nil, err
 	}
-	if !k8sutils.HasConditionTrue(konnectv1alpha2.KonnectExtensionReadyConditionType, &konnectExt) {
+	if !k8sutils.HasConditionTrue(konnectv1alpha2.KonnectExtensionReadyConditionType, &konnectExt) ||
+		konnectExt.Status.Konnect == nil ||
+		konnectExt.Status.Konnect.ClusterType == "" {
 		return nil, errors.Join(extensionserrors.ErrKonnectExtensionNotReady, fmt.Errorf("the extension %s/%s is not ready", objNamespace, extRef.Name))
 	}
 
