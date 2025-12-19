@@ -184,10 +184,10 @@ func (c *gatewayConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 // Returns:
 //   - bool: true if the status was updated, false if no changes were made
 //   - error: Any error that occurred during status processing
-func (c *gatewayConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error) {
+func (c *gatewayConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, bool, error) {
 	// TODO: implement status update logic
 
-	return false, nil
+	return false, false, nil
 }
 
 // processListenerCertificate processes a certificate reference from a listener,

@@ -89,11 +89,7 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 			return types.NamespacedName{}, fmt.Errorf("failed to get ControlPlane for %s: %w", client.ObjectKeyFromObject(ent), err)
 		}
 
-		cpNamespace := ent.GetNamespace()
-		if ent.GetNamespace() == "" && cp.GetNamespace() != "" {
-			cpNamespace = cp.GetNamespace()
-		}
-		return getCPAuthRefForRef(ctx, cl, cpRef, cpNamespace)
+		return getCPAuthRefForRef(ctx, cl, cpRef, cp.Namespace)
 	}
 
 	// If the entity has a KongServiceRef, get the KonnectAPIAuthConfiguration
