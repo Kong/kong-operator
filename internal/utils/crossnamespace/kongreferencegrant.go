@@ -125,8 +125,27 @@ func isXNamespaceRefGranted(cl client.Client, ctx context.Context, fromNamespace
 	if err := cl.List(ctx, &refGrants, client.InNamespace(toNamespace)); err != nil {
 		return false, fmt.Errorf("failed to list KongReferenceGrants in namespace %q: %w", toNamespace, err)
 	}
+	return ReferenceGrantsAllow(refGrants.Items, fromNamespace, toName, fromGVK, toGVK), nil
+}
 
-	for _, refGrant := range refGrants.Items {
+// ReferenceGrantsAllow checks if any of the provided KongReferenceGrants allow a reference
+// from a resource in fromNamespace with the specified fromGVK to a resource named toName
+// with the specified toGVK.
+//
+// The function iterates through all grants and returns true if it finds a grant that:
+//   - Has a matching 'from' entry with the specified namespace, group, and kind
+//   - Has a matching 'to' entry with the specified name (or no name specified), group, and kind
+//
+// Parameters:
+//   - grants: slice of KongReferenceGrants to check
+//   - fromNamespace: namespace of the referencing resource
+//   - toName: name of the referenced resource
+//   - fromGVK: GroupVersionKind of the referencing resource
+//   - toGVK: GroupVersionKind of the referenced resource
+//
+// Returns true if at least one grant allows the reference, false otherwise.
+func ReferenceGrantsAllow(grants []configurationv1alpha1.KongReferenceGrant, fromNamespace string, toName string, fromGVK, toGVK metav1.GroupVersionKind) bool {
+	for _, refGrant := range grants {
 		fromMatched := false
 		for _, from := range refGrant.Spec.From {
 			if from.Namespace == configurationv1alpha1.Namespace(fromNamespace) &&
@@ -141,13 +160,13 @@ func isXNamespaceRefGranted(cl client.Client, ctx context.Context, fromNamespace
 		}
 
 		for _, to := range refGrant.Spec.To {
-			if to.Name == nil || (to.Name != nil && *to.Name == configurationv1alpha1.ObjectName(toName)) &&
+			if (to.Name == nil || (to.Name != nil && *to.Name == configurationv1alpha1.ObjectName(toName))) &&
 				to.Group == configurationv1alpha1.Group(toGVK.Group) &&
 				to.Kind == configurationv1alpha1.Kind(toGVK.Kind) {
-				return true, nil
+				return true
 			}
 		}
 	}
 
-	return false, nil
+	return false
 }
