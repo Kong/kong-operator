@@ -67,6 +67,9 @@ metadata:
   name: allow-kong-cp-to-auth
   namespace: auth
 spec:
+  # We need to allow the KonnectGatewayControlPlane in the 'kong' namespace to reference
+  # the KonnectAPIAuthConfiguration in the 'auth' namespace.
+  # The KonnectGatewayControlPlane is created by the Gateway Controller in the 'kong' namespace.
   from:
     - group: konnect.konghq.com
       kind: KonnectGatewayControlPlane
