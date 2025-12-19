@@ -8,7 +8,7 @@ const (
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-{{- range .AdditionalImports }}
+{{ range .AdditionalImports }}
 	{{ . }}
 {{- end }}
 )
@@ -99,6 +99,7 @@ func (obj {{ .Type }}) GetTypeName() string {
 	return "{{ .Type }}"
 }
 
+{{- if not .NoStatusConditions }}
 // GetConditions returns the Status Conditions
 func (obj *{{ .Type }}) GetConditions() []metav1.Condition {
 	return obj.Status.Conditions
@@ -108,6 +109,7 @@ func (obj *{{ .Type }}) GetConditions() []metav1.Condition {
 func (obj *{{ .Type }}) SetConditions(conditions []metav1.Condition) {
 	obj.Status.Conditions = conditions
 }
+{{- end }}
 {{- if .ControlPlaneRefType }}
 
 {{- $cpRefFieldPath := "Spec.ControlPlaneRef" }}

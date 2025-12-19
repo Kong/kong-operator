@@ -61,6 +61,14 @@ func KongRouteReconciliationWatchOptions(
 				),
 			)
 		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongReferenceGrant{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectForKongReferenceGrant[configurationv1alpha1.KongRouteList](cl),
+				),
+			)
+		},
 	}
 }
 

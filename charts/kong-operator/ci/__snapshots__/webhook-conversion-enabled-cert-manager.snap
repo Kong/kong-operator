@@ -51613,8 +51613,6 @@ spec:
         x-kubernetes-validations:
         - message: If protocols has 'http', at least one of 'hosts', 'methods', 'paths' or 'headers' must be set
           rule: 'has(self.spec.protocols) && self.spec.protocols.exists(p, p == ''http'') ? (has(self.spec.hosts) || has(self.spec.methods) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.paths) || has(self.spec.headers) ) : true'
-        - message: spec.controlPlaneRef cannot specify namespace for namespaced resource
-          rule: '(!has(self.spec.controlPlaneRef) || !has(self.spec.controlPlaneRef.konnectNamespacedRef)) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)'
         - message: controlPlaneRef is required once set
           rule: '!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)'
         - message: spec.controlPlaneRef is immutable when an entity is already Programmed

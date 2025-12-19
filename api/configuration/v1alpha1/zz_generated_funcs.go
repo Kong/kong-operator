@@ -777,6 +777,11 @@ func (obj *KongService) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
 }
 
+// GetTypeName returns the KongReferenceGrant Kind name
+func (obj KongReferenceGrant) GetTypeName() string {
+	return "KongReferenceGrant"
+}
+
 func (obj *KongRoute) initKonnectStatus() {
 	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndServiceRefs{}
 }
