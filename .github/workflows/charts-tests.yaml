@@ -23,6 +23,10 @@ on:
       - '*'
   workflow_dispatch: {}
 
+# NOTE: Some jobs require GITHUB_TOKEN env which is used by mise itself to access
+# GitHub's API authenticated and thus not get rate-limited (which causes failures).
+# Ref: https://mise.jdx.dev/getting-started.html#github-api-rate-limiting.
+
 permissions:
   contents: read
 
@@ -73,6 +77,8 @@ jobs:
 
       - name: Run manifests.charts
         run: make manifests.charts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check generated files for diff
         run: make verify.diff
