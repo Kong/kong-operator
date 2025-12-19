@@ -397,6 +397,15 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			// In case if KonnectExtension is during deletion and respective KonnectGatewayControlPlane
 			// has been already deleted, take apiAuthRef from the status, because it contains the last
 			// known reference and it is needed to perform all reconciliation steps.
+			// If the status doesn't contain the AuthRef, remove the finalizer and allow deletion.
+			if ext.Status.Konnect == nil || ext.Status.Konnect.AuthRef == nil || ext.Status.Konnect.AuthRef.Name == "" {
+				if controllerutil.RemoveFinalizer(&ext, KonnectCleanupFinalizer) {
+					if err := r.Update(ctx, &ext); err != nil {
+						return ctrl.Result{}, fmt.Errorf("failed to remove finalizer: %w", err)
+					}
+				}
+				return ctrl.Result{}, nil
+			}
 			apiAuthRef = types.NamespacedName{
 				Name: ext.Status.Konnect.AuthRef.Name,
 				// For now the referenced KonnectAPIAuthConfiguration is in the same namespace as the KonnectExtension.
