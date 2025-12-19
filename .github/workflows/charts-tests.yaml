@@ -26,9 +26,13 @@ on:
 # NOTE: Some jobs require GITHUB_TOKEN env which is used by mise itself to access
 # GitHub's API authenticated and thus not get rate-limited (which causes failures).
 # Ref: https://mise.jdx.dev/getting-started.html#github-api-rate-limiting.
+#
+# Recent versions of mise started to also accept MISE_GITHUB_TOKEN as an alternative to
+# GITHUB_TOKEN. That env var is set by the mise-action automatically.
 
 permissions:
   contents: read
+  attestations: read
 
 env:
   MISE_VERBOSE: 1
@@ -77,8 +81,6 @@ jobs:
 
       - name: Run manifests.charts
         run: make manifests.charts
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Check generated files for diff
         run: make verify.diff
@@ -101,8 +103,6 @@ jobs:
 
       - name: Run linters
         run: make lint.charts
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   matrix_k8s_node_versions:
     runs-on: ubuntu-latest
@@ -171,12 +171,8 @@ jobs:
       
       - name: Install cert-manager
         run: make install.helm.cert-manager
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run chart-testing (install)
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           kubectl create ns kong-test
           make install.helm.cert-manager
@@ -202,8 +198,6 @@ jobs:
 
       - name: run golden tests
         run: make test.charts.golden
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   # Workaround to allow checking the matrix tests as required tests without adding the individual cases
   # Ref: https://github.com/orgs/community/discussions/26822#discussioncomment-3305794
