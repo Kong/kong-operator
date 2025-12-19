@@ -47,6 +47,9 @@ type templateDataT struct {
 	// ServiceRefType is the ServiceRef type to be used in the template (with the package name if it's outside
 	// the type's package).
 	ServiceRefType string
+
+	// NoStatusConditions is true if the type does not have status conditions.
+	NoStatusConditions bool
 }
 
 const (

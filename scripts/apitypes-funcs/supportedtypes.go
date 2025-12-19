@@ -140,6 +140,10 @@ var supportedKonnectTypesWithControlPlaneConfig = []supportedTypesT{
 				ControlPlaneRefType:        "commonv1alpha1.ControlPlaneRef",
 			},
 			{
+				Type:               "KongReferenceGrant",
+				NoStatusConditions: true,
+			},
+			{
 				Type:                       "KongRoute",
 				KonnectStatusType:          "*konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndServiceRefs",
 				GetKonnectStatusReturnType: "*konnectv1alpha2.KonnectEntityStatus",

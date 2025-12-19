@@ -291,3 +291,79 @@ func enqueueObjectsForKonnectAPIAuthConfiguration[
 		return objectListToReconcileRequests[T, TT](lPtr.GetItems())
 	}
 }
+
+// enqueueObjectForKongReferenceGrant returns a function that enqueues
+// reconcile.Requests for KongServices that are allowed by the KongReferenceGrant.
+// This is useful for situations where a KongReferenceGrant is created/updated/deleted
+// and we need to reconcile the KongServices that are affected by it.
+func enqueueObjectForKongReferenceGrant[
+	TList interface {
+		GetItems() []T
+	},
+	TListPtr interface {
+		*TList
+		client.ObjectList
+		GetItems() []T
+	},
+	T constraints.SupportedKonnectEntityType,
+	TT constraints.EntityType[T],
+](
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		krg, ok := obj.(*configurationv1alpha1.KongReferenceGrant)
+		if !ok {
+			return nil
+		}
+
+		var e T
+		kind := e.GetTypeName()
+
+		var fromNamespaces []string
+		for _, from := range krg.Spec.From {
+			if string(from.Group) != configurationv1alpha1.GroupVersion.Group {
+				continue
+			}
+			if string(from.Kind) != kind {
+				continue
+			}
+
+			fromNamespaces = append(fromNamespaces, string(from.Namespace))
+		}
+
+		if len(fromNamespaces) == 0 {
+			return nil
+		}
+
+		var ret []reconcile.Request
+		for _, ns := range fromNamespaces {
+			var (
+				l    TList
+				lPtr TListPtr = &l
+			)
+
+			if err := cl.List(ctx, lPtr, client.InNamespace(ns)); err != nil {
+				continue
+			}
+			for _, ks := range lPtr.GetItems() {
+				// Note: we only care about objects that reference
+				// KonnectGatewayControlPlane but also those that do not.
+				// This is to ensure that we reconcile all objects: those that
+				// stopped referencing KonnectGatewayControlPlane will need to have its
+				// status conditions updated accordingly.
+
+				ksPtr := TT(&ks)
+
+				ret = append(ret, reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Namespace: ksPtr.GetNamespace(),
+						Name:      ksPtr.GetName(),
+					},
+				},
+				)
+			}
+		}
+
+		return ret
+	}
+}
