@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -18,6 +17,7 @@ import (
 
 	hybridgatewayerrors "github.com/kong/kong-operator/controller/hybridgateway/errors"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/vars"
 )
 
@@ -28,8 +28,7 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 	controllerName := vars.DefaultControllerName
 	vars.SetControllerName(controllerName)
 
-	s := runtime.NewScheme()
-	_ = gatewayv1.Install(s)
+	s := scheme.Get()
 
 	gateway := &gwtypes.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
@@ -74,28 +73,28 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 			pRef:    gwtypes.ParentReference{Kind: kindPtr("OtherKind"), Name: "my-gateway"},
 			routeNS: "default",
 			objs:    []client.Object{gateway, gatewayClass},
-			wantNil: true,
+			wantErr: hybridgatewayerrors.ErrUnsupportedKind,
 		},
 		{
 			name:    "unsupported group",
 			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr("other.group"), Name: "my-gateway"},
 			routeNS: "default",
 			objs:    []client.Object{gateway, gatewayClass},
-			wantNil: true,
+			wantErr: hybridgatewayerrors.ErrUnsupportedGroup,
 		},
 		{
 			name:    "gateway not found",
 			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "notfound"},
 			routeNS: "default",
 			objs:    []client.Object{},
-			wantErr: fmt.Errorf("no supported gateway found"),
+			wantErr: hybridgatewayerrors.ErrNoGatewayFound,
 		},
 		{
 			name:    "gateway class not found",
 			pRef:    gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "my-gateway"},
 			routeNS: "default",
 			objs:    []client.Object{gateway},
-			wantErr: fmt.Errorf("no gatewayClass found for gateway"),
+			wantErr: hybridgatewayerrors.ErrNoGatewayClassFound,
 		},
 		{
 			name:    "gateway class wrong controller",
@@ -105,7 +104,7 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: "my-class"},
 				Spec:       gwtypes.GatewayClassSpec{ControllerName: "wrong-controller"},
 			}},
-			wantErr: fmt.Errorf("gatewayClass is not controlled by this controller"),
+			wantErr: hybridgatewayerrors.ErrNoGatewayController,
 		},
 		{
 			name:    "gateway class empty controller",
@@ -115,7 +114,7 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{Name: "my-class"},
 				Spec:       gwtypes.GatewayClassSpec{ControllerName: ""},
 			}},
-			wantErr: fmt.Errorf("gatewayClass is not controlled by this controller"),
+			wantErr: hybridgatewayerrors.ErrNoGatewayController,
 		},
 		{
 			name:    "supported parent ref",
@@ -191,8 +190,9 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 			gw, err := GetSupportedGatewayForParentRef(ctx, logger, cl, tt.pRef, tt.routeNS)
 			if tt.wantErr != nil {
 				require.Error(t, err)
-				if errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound) || errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound) || errors.Is(err, hybridgatewayerrors.ErrNoGatewayController) {
+				if errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound) || errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound) || errors.Is(err, hybridgatewayerrors.ErrNoGatewayController) || errors.Is(err, hybridgatewayerrors.ErrUnsupportedKind) || errors.Is(err, hybridgatewayerrors.ErrUnsupportedGroup) {
 					// Specific error type matches
+					require.ErrorIs(t, err, tt.wantErr)
 					return
 				}
 				require.Contains(t, err.Error(), tt.wantErr.Error())
@@ -210,3 +210,138 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 func groupPtr(s string) *gatewayv1.Group  { g := gatewayv1.Group(s); return &g }
 func kindPtr(s string) *gatewayv1.Kind    { k := gatewayv1.Kind(s); return &k }
 func nsPtr(s string) *gatewayv1.Namespace { n := gatewayv1.Namespace(s); return &n }
+
+func TestIsGatewaySupported(t *testing.T) {
+	ctx := context.Background()
+
+	controllerName := vars.DefaultControllerName
+	vars.SetControllerName(controllerName)
+
+	s := scheme.Get()
+
+	tests := []struct {
+		name           string
+		gateway        *gwtypes.Gateway
+		existingObjs   []client.Object
+		expectedResult bool
+		expectError    bool
+		errorContains  string
+	}{
+		{
+			name: "supported gateway with matching controller",
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+				},
+				Spec: gwtypes.GatewaySpec{
+					GatewayClassName: "supported-class",
+				},
+			},
+			existingObjs: []client.Object{
+				&gwtypes.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "supported-class",
+					},
+					Spec: gwtypes.GatewayClassSpec{
+						ControllerName: gwtypes.GatewayController(controllerName),
+					},
+				},
+			},
+			expectedResult: true,
+			expectError:    false,
+		},
+		{
+			name: "unsupported gateway with different controller",
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+				},
+				Spec: gwtypes.GatewaySpec{
+					GatewayClassName: "other-class",
+				},
+			},
+			existingObjs: []client.Object{
+				&gwtypes.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "other-class",
+					},
+					Spec: gwtypes.GatewayClassSpec{
+						ControllerName: "some.other/controller",
+					},
+				},
+			},
+			expectedResult: false,
+			expectError:    false,
+		},
+		{
+			name: "gateway with non-existent gatewayclass",
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+				},
+				Spec: gwtypes.GatewaySpec{
+					GatewayClassName: "non-existent-class",
+				},
+			},
+			existingObjs:   []client.Object{},
+			expectedResult: false,
+			expectError:    false,
+		},
+		{
+			name: "error getting gatewayclass",
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+				},
+				Spec: gwtypes.GatewaySpec{
+					GatewayClassName: "error-class",
+				},
+			},
+			existingObjs:   []client.Object{},
+			expectedResult: false,
+			expectError:    true,
+			errorContains:  "failed to get gatewayClass",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			clientBuilder := fake.NewClientBuilder().WithScheme(s)
+
+			if len(tt.existingObjs) > 0 {
+				clientBuilder = clientBuilder.WithObjects(tt.existingObjs...)
+			}
+
+			// For the error test case, add an interceptor to simulate API errors
+			if tt.expectError && tt.errorContains != "" {
+				clientBuilder = clientBuilder.WithInterceptorFuncs(interceptor.Funcs{
+					Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						if key.Name == "error-class" {
+							return fmt.Errorf("simulated API error")
+						}
+						return client.Get(ctx, key, obj, opts...)
+					},
+				})
+			}
+
+			cl := clientBuilder.Build()
+
+			result, err := IsGatewaySupported(ctx, cl, tt.gateway)
+
+			if tt.expectError {
+				require.Error(t, err)
+				if tt.errorContains != "" {
+					require.Contains(t, err.Error(), tt.errorContains)
+				}
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tt.expectedResult, result)
+		})
+	}
+}

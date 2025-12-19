@@ -281,7 +281,7 @@ func TestHandleUpstreamRef(t *testing.T) {
 			},
 			objects:      []client.Object{testKongUpstreamNotProgrammed},
 			expectError:  false,
-			expectResult: ctrl.Result{Requeue: true},
+			expectResult: ctrl.Result{Requeue: false},
 			updatedEntAssertions: []func(*configurationv1alpha1.KongTarget) (bool, string){
 				func(kt *configurationv1alpha1.KongTarget) (bool, string) {
 					return lo.ContainsBy(kt.Status.Conditions, func(c metav1.Condition) bool {

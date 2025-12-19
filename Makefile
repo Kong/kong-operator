@@ -656,14 +656,6 @@ test.integration:
 		COVERPROFILE="coverage.integration.out" \
 		GOTESTPATH=./test/integration/
 
-.PHONY: test.integration_bluegreen
-test.integration_bluegreen:
-	@$(MAKE) _test.integration \
-		KONG_OPERATOR_BLUEGREEN_CONTROLLER="true" \
-		GOTESTFLAGS="-run='BlueGreen|TestDataPlane' $(GOTESTFLAGS)" \
-		COVERPROFILE="coverage.integration-bluegreen.out" \
-		GOTESTPATH=./test/integration/
-
 # Prevent the following data race by not running via gotestsum:
 # WARNING: DATA RACE
 # Read at 0x00000bcabcb0 by goroutine 1080:
@@ -709,6 +701,21 @@ test.integration_bluegreen:
 #       /home/runner/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:244 +0x23c
 #   sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).Start.func1.gowrap2()
 #       /home/runner/go/pkg/mod/sigs.k8s.io/controller-runtime@v0.22.4/pkg/manager/runnable_group.go:173 +0x33
+
+.PHONY: test.integration_bluegreen
+test.integration_bluegreen: download.telepresence
+	KUBECONFIG=$(KUBECONFIG) \
+	TELEPRESENCE_BIN=$(TELEPRESENCE) \
+	GOFLAGS=$(GOFLAGS) \
+	KONG_OPERATOR_BLUEGREEN_CONTROLLER="true" \
+	go test \
+	-run='BlueGreen|TestDataPlane' $(GOTESTFLAGS) \
+	-timeout $(INTEGRATION_TEST_TIMEOUT) \
+	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
+	-race -v \
+	-coverprofile="coverage.integration-bluegreen.out" \
+	./test/integration/
+
 .PHONY: test.integration_validatingwebhook
 test.integration_validatingwebhook: download.telepresence
 	KUBECONFIG=$(KUBECONFIG) \

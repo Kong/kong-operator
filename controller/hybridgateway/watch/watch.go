@@ -69,6 +69,17 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 				MapHTTPRouteForReferenceGrant(cl),
 			},
 		}
+	case *gwtypes.Gateway:
+		return []Watcher{
+			{
+				&corev1.Secret{},
+				MapGatewayForTLSSecret(cl),
+			},
+			{
+				&gwtypes.ReferenceGrant{},
+				MapGatewayForReferenceGrant(cl),
+			},
+		}
 	default:
 		return nil
 	}

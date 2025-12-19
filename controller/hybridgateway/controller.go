@@ -7,17 +7,16 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
-	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	routeconst "github.com/kong/kong-operator/controller/hybridgateway/const/route"
+	eventconst "github.com/kong/kong-operator/controller/hybridgateway/const/events"
+	finalizerconst "github.com/kong/kong-operator/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/controller/hybridgateway/converter"
+	"github.com/kong/kong-operator/controller/hybridgateway/events"
 	"github.com/kong/kong-operator/controller/hybridgateway/watch"
 	"github.com/kong/kong-operator/controller/pkg/finalizer"
 	"github.com/kong/kong-operator/controller/pkg/log"
@@ -47,8 +46,8 @@ const (
 // RootObjectPtr interfaces, allowing flexible reconciliation logic for different resource types.
 type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]] struct {
 	client.Client
-	// EventRecorder is used to record Kubernetes events for HTTPRoute operations.
-	eventRecorder record.EventRecorder
+	// EventRecorder is used to record Kubernetes events with type-specific reasons.
+	eventRecorder *events.TypedEventRecorder
 	// FQDNMode indicates whether to use FQDN endpoints for service discovery.
 	fqdnMode bool
 	// ClusterDomain is the cluster domain to use for FQDN (empty uses service.namespace.svc format).
@@ -60,7 +59,7 @@ type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPt
 func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, fqdnMode bool, clusterDomain string) *HybridGatewayReconciler[t, tPtr] {
 	return &HybridGatewayReconciler[t, tPtr]{
 		Client:        mgr.GetClient(),
-		eventRecorder: mgr.GetEventRecorderFor(ControllerName),
+		eventRecorder: events.NewTypedEventRecorder(mgr.GetEventRecorderFor(ControllerName)),
 		fqdnMode:      fqdnMode,
 		clusterDomain: clusterDomain,
 	}
@@ -70,32 +69,15 @@ func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjec
 // It registers the reconciler to watch and manage resources of type 'u'.
 func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	obj := any(new(t)).(tPtr)
-	filter, err := watch.FilterBy(r.Client, obj)
-	if err != nil {
+
+	builder := ctrl.NewControllerManagedBy(mgr).For(obj)
+
+	// Add filtering predicates if applicable.
+	if predicateFuncs, err := watch.FilterBy(ctx, r.Client, obj); err != nil {
 		return err
+	} else if predicateFuncs != nil {
+		builder = builder.WithEventFilter(*predicateFuncs)
 	}
-	builder := ctrl.NewControllerManagedBy(mgr).
-		For(obj).
-		WithEventFilter(
-			predicate.Funcs{
-				CreateFunc: func(e event.CreateEvent) bool {
-					return filter(e.Object)
-				},
-				UpdateFunc: func(e event.UpdateEvent) bool {
-					// If either the old or new object passes the filter, we want to reconcile.
-					// This ensures we handle cases where the object starts or stops matching the filter criteria.
-					if filter(e.ObjectNew) {
-						return true
-					}
-					return filter(e.ObjectOld)
-				},
-				DeleteFunc: func(e event.DeleteEvent) bool {
-					return filter(e.Object)
-				},
-				GenericFunc: func(e event.GenericEvent) bool {
-					return filter(e.Object)
-				},
-			})
 
 	// Add watches for owned resources.
 	for _, owned := range watch.Owns(obj) {
@@ -135,12 +117,13 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	}
 
 	// Ensure finalizer is present
-	if !controllerutil.ContainsFinalizer(obj, routeconst.RouteFinalizer) {
-		log.Debug(logger, "Adding finalizer")
+	finalizerName := finalizerconst.GetFinalizerForType(rootObj)
+	if !controllerutil.ContainsFinalizer(obj, finalizerName) {
+		log.Debug(logger, "Adding finalizer", "finalizer", finalizerName)
 		old := obj.DeepCopyObject().(tPtr)
-		controllerutil.AddFinalizer(obj, routeconst.RouteFinalizer)
+		controllerutil.AddFinalizer(obj, finalizerName)
 		if err := r.Patch(ctx, obj, client.MergeFrom(old)); err != nil {
-			log.Error(logger, err, "Failed to add finalizer")
+			log.Error(logger, err, "Failed to add finalizer", "finalizer", finalizerName)
 			return finalizer.HandlePatchOrUpdateError(err, logger)
 		}
 		return ctrl.Result{Requeue: true}, nil
@@ -158,7 +141,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		r.eventRecorder.Event(
 			obj,
 			corev1.EventTypeWarning,
-			routeconst.EventReasonHTTPRouteStatusUpdateFailed,
+			eventconst.EventReasonStatusUpdateFailed,
 			fmt.Sprintf("Status update failed: %v", err),
 		)
 		return ctrl.Result{}, err
@@ -171,8 +154,8 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		r.eventRecorder.Event(
 			obj,
 			corev1.EventTypeNormal,
-			routeconst.EventReasonHTTPRouteStatusUpdateSucceeded,
-			"HTTPRoute status successfully updated",
+			eventconst.EventReasonStatusUpdateSucceeded,
+			"Status successfully updated",
 		)
 		log.Trace(logger, "Status updated, requeueing")
 		return ctrl.Result{Requeue: true}, nil
@@ -185,7 +168,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		r.eventRecorder.Event(
 			obj,
 			corev1.EventTypeWarning,
-			routeconst.EventReasonHTTPRouteTranslationFailed,
+			eventconst.EventReasonTranslationFailed,
 			fmt.Sprintf("Translation failed: %v", err),
 		)
 		return ctrl.Result{}, err
@@ -195,8 +178,8 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	r.eventRecorder.Event(
 		obj,
 		corev1.EventTypeNormal,
-		routeconst.EventReasonHTTPRouteTranslationSucceeded,
-		fmt.Sprintf("HTTPRoute successfully translated to %d Kong resources", resourceCount),
+		eventconst.EventReasonTranslationSucceeded,
+		fmt.Sprintf("Successfully translated to %d Kong resources", resourceCount),
 	)
 
 	// Phase 3: State Enforcement.
@@ -206,7 +189,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		r.eventRecorder.Event(
 			obj,
 			corev1.EventTypeWarning,
-			routeconst.EventReasonStateEnforcementFailed,
+			eventconst.EventReasonStateEnforcementFailed,
 			fmt.Sprintf("State enforcement failed: %v", err),
 		)
 		return ctrl.Result{}, err
@@ -217,7 +200,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		r.eventRecorder.Event(
 			obj,
 			corev1.EventTypeNormal,
-			routeconst.EventReasonStateEnforcementSucceeded,
+			eventconst.EventReasonStateEnforcementSucceeded,
 			fmt.Sprintf("Kong resources successfully enforced: %d total", resourceCount),
 		)
 		log.Trace(logger, "State changed, requeueing")
@@ -231,7 +214,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		r.eventRecorder.Event(
 			obj,
 			corev1.EventTypeWarning,
-			routeconst.EventReasonOrphanCleanupFailed,
+			eventconst.EventReasonOrphanCleanupFailed,
 			fmt.Sprintf("Orphan cleanup failed: %v", err),
 		)
 		return ctrl.Result{}, err
@@ -247,7 +230,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 			r.eventRecorder.Event(
 				obj,
 				corev1.EventTypeNormal,
-				routeconst.EventReasonOrphanCleanupSucceeded,
+				eventconst.EventReasonOrphanCleanupSucceeded,
 				"Orphan cleanup in progress",
 			)
 		}
@@ -259,11 +242,11 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	return ctrl.Result{}, nil
 }
 
-// handleDeletion handles the deletion of a Route object by cleaning up generated resources
-// and removing the finalizer. This ensures that all Kong resources generated from the Route
-// are properly cleaned up before the Route is deleted from the cluster.
+// handleDeletion handles the deletion of a resource object by cleaning up generated resources
+// and removing the finalizer. This ensures that all Kong resources generated from the resource
+// are properly cleaned up before the resource is deleted from the cluster.
 func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, logger logr.Logger, obj tPtr, rootObj t) (ctrl.Result, error) {
-	log.Debug(logger, "Handling Route deletion")
+	log.Debug(logger, "Handling resource deletion")
 
 	// Create converter to get the cleanup logic
 	conv, err := converter.NewConverter(rootObj, r.Client, r.fqdnMode, r.clusterDomain)
@@ -279,8 +262,8 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 		r.eventRecorder.Event(
 			obj,
 			corev1.EventTypeWarning,
-			routeconst.EventReasonOrphanCleanupFailed,
-			fmt.Sprintf("Route deletion cleanup failed: %v", err),
+			eventconst.EventReasonOrphanCleanupFailed,
+			fmt.Sprintf("Deletion cleanup failed: %v", err),
 		)
 		return ctrl.Result{}, fmt.Errorf("failed to cleanup generated resources: %w", err)
 	}
@@ -288,30 +271,32 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 	// If resources are still being deleted, requeue to continue the multi-step deletion process.
 	// We must wait for all resources to be fully deleted before removing the finalizer.
 	if needsRequeue {
-		log.Debug(logger, "Route deletion cleanup in progress, requeueing to continue")
+		log.Debug(logger, "Resource deletion cleanup in progress, requeueing to continue")
 		if orphansDeleted {
 			r.eventRecorder.Event(
 				obj,
 				corev1.EventTypeNormal,
-				routeconst.EventReasonOrphanCleanupSucceeded,
-				"Route deletion cleanup in progress",
+				eventconst.EventReasonOrphanCleanupSucceeded,
+				"Deletion cleanup in progress",
 			)
 		}
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// All resources have been deleted, now we can remove the finalizer
+	// All resources have been deleted, now we can remove the finalizer.
 	log.Debug(logger, "All generated resources deleted, removing finalizer")
 
-	// Remove finalizer using patch for safer concurrent updates
+	// Remove finalizer using patch for safer concurrent updates.
+	finalizerName := finalizerconst.GetFinalizerForType(rootObj)
 	old := obj.DeepCopyObject().(tPtr)
-	if controllerutil.RemoveFinalizer(obj, routeconst.RouteFinalizer) {
+	if controllerutil.RemoveFinalizer(obj, finalizerName) {
+		log.Debug(logger, "Removing finalizer", "finalizer", finalizerName)
 		if err := r.Patch(ctx, obj, client.MergeFrom(old)); err != nil {
 			return finalizer.HandlePatchOrUpdateError(err, logger)
 		}
 	}
 
-	log.Debug(logger, "Route deletion completed successfully")
+	log.Debug(logger, "Resource deletion completed successfully")
 	return ctrl.Result{}, nil
 }
 

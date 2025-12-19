@@ -42,4 +42,9 @@ const (
 	// used to label resources created for hybrid gateways, indicating the namespace of the gateway
 	// associated with the resource.
 	GatewayOperatorHybridGatewaysNamespaceLabel = OperatorAnnotationPrefix + HybridGatewaysAnnotation + "-namespace"
+
+	// GatewayOperatorHybridListenerPortLabel is the fully qualified label key
+	// used to label resources created for hybrid gateways, indicating the listener port
+	// associated with the resource.
+	GatewayOperatorHybridListenerPortLabel = OperatorAnnotationPrefix + "listener-port"
 )

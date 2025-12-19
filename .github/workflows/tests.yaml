@@ -31,11 +31,11 @@ on:
 # GitHub's API authenticated and thus not get rate-limited (which causes failures).
 # Ref: https://mise.jdx.dev/getting-started.html#github-api-rate-limiting.
 
-env:
-  MISE_VERBOSE: 1
-
 permissions:
   contents: read
+
+env:
+  MISE_VERBOSE: 1
 
 jobs:
   check-docs-only:
