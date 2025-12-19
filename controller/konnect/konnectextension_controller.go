@@ -397,6 +397,13 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			// In case if KonnectExtension is during deletion and respective KonnectGatewayControlPlane
 			// has been already deleted, take apiAuthRef from the status, because it contains the last
 			// known reference and it is needed to perform all reconciliation steps.
+
+			// If the status was never populated (e.g., extension deleted before reaching ready state),
+			// we cannot proceed with cleanup that requires Konnect API access.
+			if ext.Status.Konnect == nil || ext.Status.Konnect.AuthRef == nil {
+				log.Debug(logger, "KonnectExtension status not populated, skipping Konnect API cleanup")
+				return ctrl.Result{}, nil
+			}
 			apiAuthRef = types.NamespacedName{
 				Name: ext.Status.Konnect.AuthRef.Name,
 				// For now the referenced KonnectAPIAuthConfiguration is in the same namespace as the KonnectExtension.
