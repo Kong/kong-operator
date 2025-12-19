@@ -91,6 +91,9 @@
 - Fixed an issue where users could set the secret of configmap label selectors
   to empty when the other one was left non-empty.
   [#2810](https://github.com/Kong/kong-operator/pull/2810)
+- Handle Konnect API 429 rate limit responses by requeuing resources with
+  the appropriate retry-after duration from the response header.
+  [#2856](https://github.com/Kong/kong-operator/pull/2856)
 
 ## [v2.1.0-alpha.0]
 

@@ -190,7 +190,6 @@ func ErrorIsRateLimited(err error) bool {
 const (
 	// DefaultRateLimitRetryAfter is the default retry-after duration when the
 	// Retry-After header is not present in the rate limit response.
-	// TODO: for reviewer, maybe we need a discussion about this value
 	DefaultRateLimitRetryAfter = 15 * time.Second
 )
 

@@ -8,6 +8,7 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 )
 
@@ -487,7 +488,7 @@ func TestErrorIsRateLimited(t *testing.T) {
 	}{
 		{
 			name: "error is RateLimited",
-			err:  &sdkkonnecterrs.RateLimited{Status: toPtr(int64(429)), Title: toPtr("Too Many Requests")},
+			err:  &sdkkonnecterrs.RateLimited{Status: lo.ToPtr(int64(429)), Title: lo.ToPtr("Too Many Requests")},
 			want: true,
 		},
 		{
@@ -618,7 +619,7 @@ func TestGetRetryAfterFromRateLimitError(t *testing.T) {
 		},
 		{
 			name:              "RateLimited error returns default (no RawResponse)",
-			err:               &sdkkonnecterrs.RateLimited{Status: toPtr(int64(429)), Title: toPtr("Too Many Requests")},
+			err:               &sdkkonnecterrs.RateLimited{Status: lo.ToPtr(int64(429)), Title: lo.ToPtr("Too Many Requests")},
 			wantDuration:      DefaultRateLimitRetryAfter,
 			wantIsRateLimited: true,
 		},
@@ -633,8 +634,4 @@ func TestGetRetryAfterFromRateLimitError(t *testing.T) {
 			}
 		})
 	}
-}
-
-func toPtr[T any](v T) *T {
-	return &v
 }
