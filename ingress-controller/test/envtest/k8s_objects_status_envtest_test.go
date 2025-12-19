@@ -17,6 +17,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
+	"github.com/kong/kong-operator/test/helpers/asserts"
 )
 
 func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExceeded(t *testing.T) {
@@ -146,7 +147,7 @@ func Test_WatchNamespaces(t *testing.T) {
 			cfg.WatchNamespaces = []string{gw.Namespace}
 		})
 
-	backendService := corev1.Service{
+	backendService := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: gw.Namespace,
 			Name:      "backend-svc",
@@ -160,16 +161,13 @@ func Test_WatchNamespaces(t *testing.T) {
 		},
 	}
 
-	hiddenService := backendService
+	hiddenService := backendService.DeepCopy()
 	hiddenService.Namespace = hidden.Name
 
-	require.NoError(t, ctrlClient.Create(ctx, &backendService))
-	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &backendService) })
+	require.NoError(t, ctrlClient.Create(ctx, backendService))
+	require.NoError(t, ctrlClient.Create(ctx, hiddenService))
 
-	require.NoError(t, ctrlClient.Create(ctx, &hiddenService))
-	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &hiddenService) })
-
-	httpRoute := gatewayapi.HTTPRoute{
+	httpRoute := &gatewayapi.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: gw.Namespace,
 			Name:      uuid.NewString(),
@@ -191,20 +189,19 @@ func Test_WatchNamespaces(t *testing.T) {
 		},
 	}
 
-	hiddenRoute := httpRoute
+	hiddenRoute := httpRoute.DeepCopy()
 	hiddenRoute.Namespace = hidden.Name
+	hiddenNN := client.ObjectKeyFromObject(hiddenRoute)
 
-	require.NoError(t, ctrlClient.Create(ctx, &httpRoute))
-	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &httpRoute) })
+	require.NoError(t, ctrlClient.Create(ctx, httpRoute))
+	require.NoError(t, ctrlClient.Create(ctx, hiddenRoute))
 
-	require.NoError(t, ctrlClient.Create(ctx, &hiddenRoute))
-	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &hiddenRoute) })
-
-	require.Eventually(t, httpRouteGetsProgrammed(ctx, t, ctrlClient, httpRoute),
+	require.Eventually(t, httpRouteGetsProgrammed(ctx, t, ctrlClient, *httpRoute),
 		waitTime, tickTime)
 
-	require.Never(t, func() bool {
-		if err := ctrlClient.Get(ctx, client.ObjectKeyFromObject(&hiddenRoute), &hiddenRoute); err != nil {
+	asserts.Never(t, func(ctx context.Context) bool {
+		if err := ctrlClient.Get(ctx, hiddenNN, hiddenRoute); err != nil {
+			t.Logf("failed to get hidden httpRoute: %v", err)
 			return false
 		}
 		if len(hiddenRoute.Status.Parents) != 0 {
