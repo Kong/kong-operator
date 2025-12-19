@@ -87,22 +87,23 @@ func IsGatewaySupported(ctx context.Context, cl client.Client, gateway *gwtypes.
 //   - error: Specific error indicating why the ParentRef is not supported, or nil if validation passes.
 //
 // The function returns specific errors to help callers understand why a ParentRef is not supported:
+// - hybridgatewayerrors.ErrUnsupportedKind: The ParentRef references a non-Gateway resource kind.
+// - hybridgatewayerrors.ErrUnsupportedGroup: The ParentRef references an unsupported API group.
 // - hybridgatewayerrors.ErrNoGatewayFound: The referenced Gateway doesn't exist.
 // - hybridgatewayerrors.ErrNoGatewayClassFound: The Gateway's GatewayClass doesn't exist.
 // - hybridgatewayerrors.ErrNoGatewayController: The GatewayClass is not controlled by this controller.
-// - nil error with nil Gateway: The ParentRef is valid but not supported (wrong kind/group).
 func GetSupportedGatewayForParentRef(ctx context.Context, logger logr.Logger, cl client.Client, pRef gwtypes.ParentReference,
 	routeNamespace string) (*gwtypes.Gateway, error) {
 	// Only support Gateway kind.
 	if pRef.Kind != nil && *pRef.Kind != "Gateway" {
 		log.Debug(logger, "Ignoring ParentRef, unsupported kind", "pRef", pRef, "kind", *pRef.Kind)
-		return nil, nil
+		return nil, hybridgatewayerrors.ErrUnsupportedKind
 	}
 
 	// Only support gateway.networking.k8s.io group (or empty group which defaults to this).
 	if pRef.Group != nil && *pRef.Group != gwtypes.GroupName {
 		log.Debug(logger, "Ignoring ParentRef, unsupported group", "pRef", pRef, "group", *pRef.Group)
-		return nil, nil
+		return nil, hybridgatewayerrors.ErrUnsupportedGroup
 	}
 
 	// Determine the namespace - use route's namespace if not specified.

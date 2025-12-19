@@ -44,11 +44,6 @@ func GetControlPlaneRefByParentRef(ctx context.Context, logger logr.Logger, cl c
 		return nil, err
 	}
 
-	// If the gateway is nil, it means the ParentRef is not supported (wrong group/kind).
-	if gw == nil {
-		return nil, nil
-	}
-
 	konnectNamespacedRef, err := byGateway(ctx, cl, *gw)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get ControlPlaneRef for ParentRef %+v in route %q: %w", pRef, client.ObjectKeyFromObject(route), err)

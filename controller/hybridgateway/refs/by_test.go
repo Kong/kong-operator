@@ -109,8 +109,8 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 				}
 			},
 			expected:    nil,
-			wantErr:     false,
-			description: "should return nil for invalid group",
+			wantErr:     true,
+			description: "should return error for invalid group",
 		},
 		{
 			name: "invalid kind",
@@ -129,8 +129,8 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 				}
 			},
 			expected:    nil,
-			wantErr:     false,
-			description: "should return nil for invalid kind",
+			wantErr:     true,
+			description: "should return error for invalid kind",
 		},
 		{
 			name: "gateway not found",
