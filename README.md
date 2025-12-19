@@ -119,6 +119,7 @@ Whenever you add a new CRD:
 Every night a new container image is built from the main development branch.
 
 It can be installed using the helm chart from the main repo:
+
 ```console
 git clone https://github.com/kong/kong-operator && cd kong-operator
 
