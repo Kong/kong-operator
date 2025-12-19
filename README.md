@@ -114,6 +114,21 @@ Whenever you add a new CRD:
 
 [community-operators]: https://github.com/k8s-operatorhub/community-operators/
 
+### Install the Nightly Build
+
+Every night a new container image is built from the main development branch.
+
+It can be installed using the helm chart from the main repo:
+```console
+git clone https://github.com/kong/kong-operator && cd kong-operator
+
+helm upgrade --install kong-operator ./charts/kong-operator -n kong-system \
+  --create-namespace \
+  --set image.tag=nightly \
+  --set image.repository=kong/nightly-kong-operator \
+  --set env.ENABLE_CONTROLLER_KONNECT=true
+```
+
 ## Seeking Help
 
 Please search through the posts on the [discussions page][disc] as it's likely
