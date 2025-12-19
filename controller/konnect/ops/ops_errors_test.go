@@ -623,6 +623,21 @@ func TestGetRetryAfterFromRateLimitError(t *testing.T) {
 			wantDuration:      DefaultRateLimitRetryAfter,
 			wantIsRateLimited: true,
 		},
+		{
+			name: "SDKError with Retry-After header as HTTP date in the past returns default",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: http.StatusTooManyRequests,
+				Body:       `{"error": "rate limited"}`,
+				RawResponse: &http.Response{
+					Header: http.Header{
+						// RFC 1123 format date in the past
+						"Retry-After": []string{"Wed, 21 Oct 2015 07:28:00 GMT"},
+					},
+				},
+			},
+			wantDuration:      DefaultRateLimitRetryAfter,
+			wantIsRateLimited: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -634,4 +649,25 @@ func TestGetRetryAfterFromRateLimitError(t *testing.T) {
 			}
 		})
 	}
+
+	// Test HTTP date format in the future separately since duration depends on current time
+	t.Run("SDKError with Retry-After header as HTTP date in the future", func(t *testing.T) {
+		futureTime := time.Now().Add(60 * time.Second)
+		err := &sdkkonnecterrs.SDKError{
+			StatusCode: http.StatusTooManyRequests,
+			Body:       `{"error": "rate limited"}`,
+			RawResponse: &http.Response{
+				Header: http.Header{
+					// RFC 1123 format (HTTP date)
+					"Retry-After": []string{futureTime.UTC().Format(http.TimeFormat)},
+				},
+			},
+		}
+
+		gotDuration, gotIsRateLimited := GetRetryAfterFromRateLimitError(err)
+		require.True(t, gotIsRateLimited)
+		// The duration should be approximately 60 seconds (allowing some tolerance for test execution time)
+		require.Greater(t, gotDuration, 55*time.Second)
+		require.LessOrEqual(t, gotDuration, 60*time.Second)
+	})
 }
