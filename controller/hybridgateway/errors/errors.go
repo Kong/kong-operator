@@ -16,4 +16,7 @@ var (
 
 	// ErrKonnectExtensionCrossNamespaceReference is returned when a KonnectExtension references a ControlPlane in a different namespace.
 	ErrKonnectExtensionCrossNamespaceReference = fmt.Errorf("cross-namespace references between KonnectExtension and ControlPlane are not supported")
+
+	// ErrGatewayNotReferencingControlPlane is returned when a Gateway does not reference a ControlPlane.
+	ErrGatewayNotReferencingControlPlane = fmt.Errorf("gateway does not reference a ControlPlane")
 )

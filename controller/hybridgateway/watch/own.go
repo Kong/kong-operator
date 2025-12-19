@@ -21,6 +21,11 @@ func Owns(obj client.Object) []client.Object {
 			&configurationv1alpha1.KongPluginBinding{},
 			&configurationv1.KongPlugin{},
 		}
+	case *gwtypes.Gateway:
+		return []client.Object{
+			&configurationv1alpha1.KongCertificate{},
+			&configurationv1alpha1.KongSNI{},
+		}
 	default:
 		return nil
 	}

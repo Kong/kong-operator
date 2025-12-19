@@ -68,6 +68,25 @@ func GetControlPlaneRefByParentRef(ctx context.Context, logger logr.Logger, cl c
 	}, nil
 }
 
+// GetControlPlaneRefByGateway retrieves the control plane reference for a given Gateway.
+// Returns an error if the Gateway does not reference a ControlPlane.
+func GetControlPlaneRefByGateway(ctx context.Context, cl client.Client, gateway *gwtypes.Gateway) (*commonv1alpha1.ControlPlaneRef, error) {
+	konnectNamespacedRef, err := byGateway(ctx, cl, *gateway)
+	if err != nil {
+		return nil, fmt.Errorf("unable to get ControlPlaneRef for Gateway %q: %w", client.ObjectKeyFromObject(gateway), err)
+	}
+
+	// If the KonnectNamespacedRef is nil, it means the Gateway does not reference a ControlPlane.
+	if konnectNamespacedRef == nil {
+		return nil, hybridgatewayerrors.ErrGatewayNotReferencingControlPlane
+	}
+
+	return &commonv1alpha1.ControlPlaneRef{
+		Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: konnectNamespacedRef,
+	}, nil
+}
+
 // GetListenersByParentRef retrieves the listeners for a given parent reference.
 func GetListenersByParentRef(ctx context.Context, cl client.Client, route *gwtypes.HTTPRoute, pRef gwtypes.ParentReference) ([]gwtypes.Listener, error) {
 	var namespace string

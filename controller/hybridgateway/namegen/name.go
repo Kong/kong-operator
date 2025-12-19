@@ -11,10 +11,21 @@ import (
 )
 
 const (
+	// httpProcolPrefix is the prefix used for HTTP-related resources.
 	httpProcolPrefix = "http"
-	defaultCPPrefix  = "cp"
-	namegenPrefix    = "ngn"
-	maxLen           = 253
+
+	// defaultCPPrefix is the prefix used when including a control-plane identifier.
+	defaultCPPrefix = "cp"
+
+	// namegenPrefix is used as the prefix for hashed names when concatenated
+	// components exceed the maximum Kubernetes resource name length.
+	namegenPrefix = "ngn"
+
+	// certPrefix is the default prefix for KongCertificate names.
+	certPrefix = "cert"
+
+	// maxLen is the maximum length for Kubernetes resource names.
+	maxLen = 253
 )
 
 // newName generates a name by concatenating the given components if the length is within the limit of
@@ -78,4 +89,14 @@ func NewKongTargetName(upstreamID, endpointID string, port int, br *gwtypes.HTTP
 		backend:    br,
 	}
 	return newName(upstreamID, utils.Hash32(obj))
+}
+
+// NewKongCertificateName generates a KongCertificate name based on the Gateway name and listener port.
+// It uses the hybrid naming approach: readable names for short combinations, hashed names for long ones.
+func NewKongCertificateName(gatewayName, listenerPort string) string {
+	return newName(
+		certPrefix,
+		gatewayName,
+		listenerPort,
+	)
 }

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -520,5 +521,51 @@ func TestNameGenerationConsistency(t *testing.T) {
 		result1 := NewKongTargetName(upstreamID, endpointID, port, br)
 		result2 := NewKongTargetName(upstreamID, endpointID, port, br)
 		assert.Equal(t, result1, result2)
+	})
+}
+
+func TestNewKongCertificateName_Generated(t *testing.T) {
+	tests := []struct {
+		name         string
+		gatewayName  string
+		listenerPort string
+		expected     string
+	}{
+		{
+			name:         "short gateway and port",
+			gatewayName:  "my-gateway",
+			listenerPort: "443",
+			expected:     "cert.my-gateway.443",
+		},
+		{
+			name:         "gateway with namespace prefix",
+			gatewayName:  "prod-api-gateway",
+			listenerPort: "8443",
+			expected:     "cert.prod-api-gateway.8443",
+		},
+		{
+			name:         "different port",
+			gatewayName:  "test-gw",
+			listenerPort: "80",
+			expected:     "cert.test-gw.80",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := NewKongCertificateName(tt.gatewayName, tt.listenerPort)
+			require.NotEmpty(t, result)
+			require.Equal(t, tt.expected, result)
+		})
+	}
+
+	t.Run("very long gateway name should hash", func(t *testing.T) {
+		// Create a gateway name that when combined with "cert" and port exceeds 253 chars
+		// "cert." (5) + longName + "." (1) + "443" (3) = need longName > 244 chars
+		longGatewayName := strings.Repeat("very-long-gateway-name-segment-", 8) + "final-segment-to-exceed-limit"
+		result := NewKongCertificateName(longGatewayName, "443")
+		require.NotEmpty(t, result)
+		require.True(t, strings.HasPrefix(result, namegenPrefix), "should hash when exceeding max length")
+		require.LessOrEqual(t, len(result), maxLen)
 	})
 }

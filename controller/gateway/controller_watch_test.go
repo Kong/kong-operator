@@ -277,7 +277,7 @@ func TestReconciler_listGatewayReconcileRequestsForSecret(t *testing.T) {
 			}
 
 			// Register the TLS certificate index.
-			for _, opt := range index.OptionsForGatewayTLSSecret() {
+			for _, opt := range index.OptionsForGateway() {
 				clientBuilder.WithIndex(opt.Object, opt.Field, opt.ExtractValueFn)
 			}
 

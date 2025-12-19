@@ -39,21 +39,29 @@ func ExtractStripPath(anns map[string]string) bool {
 	return stripPath
 }
 
-// BuildAnnotations creates the standard annotations map for Kong resources managed by HTTPRoute.
-func BuildAnnotations(route *gwtypes.HTTPRoute, parentRef *gwtypes.ParentReference) map[string]string {
+// BuildAnnotations creates the standard annotations map for Kong resources managed by Gateway API objects.
+// For HTTPRoute, it includes both route and gateway annotations.
+// For Gateway, it only includes the gateway annotation.
+func BuildAnnotations(obj client.Object, parentRef *gwtypes.ParentReference) map[string]string {
 	gwObjKey := client.ObjectKey{
 		Name: string(parentRef.Name),
 	}
 	if parentRef.Namespace != nil && *parentRef.Namespace != "" {
 		gwObjKey.Namespace = string(*parentRef.Namespace)
 	} else {
-		gwObjKey.Namespace = route.GetNamespace()
+		gwObjKey.Namespace = obj.GetNamespace()
 	}
 
-	return map[string]string{
-		consts.GatewayOperatorHybridRoutesAnnotation:   client.ObjectKeyFromObject(route).String(),
+	annotations := map[string]string{
 		consts.GatewayOperatorHybridGatewaysAnnotation: gwObjKey.String(),
 	}
+
+	// Add route annotation only for HTTPRoute objects
+	if _, ok := obj.(*gwtypes.HTTPRoute); ok {
+		annotations[consts.GatewayOperatorHybridRoutesAnnotation] = client.ObjectKeyFromObject(obj).String()
+	}
+
+	return annotations
 }
 
 // AnnotationManager provides comma-separated annotations that track Route references on Kubernetes objects.
