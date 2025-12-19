@@ -110,9 +110,13 @@ jobs:
 
     - name: run lint.api
       run: make lint.api
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: run lint.actions
       run: make lint.actions
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   lint-markdownlint:
     runs-on: ubuntu-latest
@@ -133,6 +137,8 @@ jobs:
 
     - name: run lint.markdownlint
       run: make lint.markdownlint
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   govulncheck:
     runs-on: ubuntu-latest
@@ -153,6 +159,8 @@ jobs:
       with:
         install: false
     - run: make govulncheck
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   verify:
     runs-on: ubuntu-latest
@@ -177,6 +185,8 @@ jobs:
 
     - name: Verify manifests consistency
       run: make verify.manifests
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Verify generators consistency
       uses: nick-fields/retry@ce71cc2ab81d554ebbe88c79ab5975992d79ba08 # v3.0.2
@@ -245,9 +255,13 @@ jobs:
     # in base kustomization (e.g. currently AIGateway) but which have samples defined.
     - name: Verify installing CRDs via kustomize works
       run: make install.all
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Install and delete each sample one by one
       run: make test.samples
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Verify that uninstalling operator CRDs via kustomize works
       run: make ignore-not-found=true uninstall.all
@@ -293,6 +307,8 @@ jobs:
 
     - name: Verify installing CRDs via kustomize works
       run: make install
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Load image to kind cluster
       run: kind load docker-image kong-operator:e2e-${{ github.sha }} --name $CLUSTER_NAME
@@ -301,6 +317,7 @@ jobs:
       env:
         IMG: kong-operator
         VERSION: e2e-${{ github.sha }}
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: make deploy
 
     - name: Verify that undeploying operator via kustomize works
@@ -396,6 +413,8 @@ jobs:
         install: false
 
     - name: Run the crds validation tests
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         VERSION="${{ matrix.kubernetes-node-version }}"
         # Remove leading 'v'
@@ -406,6 +425,8 @@ jobs:
         make test.crds-validation CLUSTER_VERSION=${VERSION}
 
     - name: Run the API tests
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: make test.api
 
   envtest-tests:
@@ -445,6 +466,7 @@ jobs:
       env:
         KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
         GOTESTSUM_JUNITFILE: "${{ matrix.directory }}/envtest-tests.xml"
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
         VERSION="${{ needs.matrix_k8s_node_versions.outputs.latest }}"
         # Remove leading 'v'
