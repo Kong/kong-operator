@@ -199,12 +199,13 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 //
 // Returns:
 //   - bool: true if the status was actually updated in the cluster
+//   - bool: true if the reconciliation loop should stop further processing
 //   - error: Any error that occurred during status processing
 //
 // This is a generic wrapper function that works with any converter implementing
 // the APIConverter interface, providing a consistent interface for status enforcement
 // across different resource types.
-func enforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logger, conv converter.APIConverter[t]) (bool, error) {
+func enforceStatus[t converter.RootObject](ctx context.Context, logger logr.Logger, conv converter.APIConverter[t]) (updated bool, stop bool, err error) {
 	return conv.UpdateRootObjectStatus(ctx, logger)
 }
 

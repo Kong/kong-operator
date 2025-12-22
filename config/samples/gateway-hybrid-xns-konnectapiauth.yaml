@@ -1,0 +1,79 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: auth
+---
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth
+  namespace: auth
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  serverURL: us.api.konghq.tech
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kong
+---
+kind: GatewayConfiguration
+apiVersion: gateway-operator.konghq.com/v2beta1
+metadata:
+  name: jw-gwc
+  namespace: kong
+spec:
+  konnect:
+    authRef:
+      name: konnect-api-auth
+      namespace: auth
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            image: kong/kong-gateway:3.12
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: kong-v2beta1
+spec:
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: jw-gwc
+    namespace: kong
+---
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: jw-gw
+  namespace: kong
+spec:
+  gatewayClassName: kong-v2beta1
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-kong-cp-to-auth
+  namespace: auth
+spec:
+  # We need to allow the KonnectGatewayControlPlane in the 'kong' namespace to reference
+  # the KonnectAPIAuthConfiguration in the 'auth' namespace.
+  # The KonnectGatewayControlPlane is created by the Gateway Controller in the 'kong' namespace.
+  from:
+    - group: konnect.konghq.com
+      kind: KonnectGatewayControlPlane
+      namespace: kong
+  to:
+    - group: konnect.konghq.com
+      kind: KonnectAPIAuthConfiguration

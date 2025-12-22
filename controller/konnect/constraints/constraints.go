@@ -120,5 +120,5 @@ type SupportedKonnectEntityPluginReferenceableType interface {
 type EntityWithKonnectAPIAuthConfigurationRef interface {
 	client.Object
 
-	GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.KonnectAPIAuthConfigurationRef
+	GetKonnectAPIAuthConfigurationRef() konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef
 }

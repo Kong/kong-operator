@@ -29,7 +29,7 @@ func TestEnforceKonnectExtensionStatus(t *testing.T) {
 			},
 		},
 	}
-	apiAuthRef := konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+	apiAuthRef := konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 		Name: "my-auth-config",
 	}
 	certificateSecret := corev1.Secret{
@@ -134,7 +134,7 @@ func TestEnforceKonnectExtensionStatus(t *testing.T) {
 	})
 
 	t.Run("updates when apiAuthRef changes", func(t *testing.T) {
-		oldAuthRef := konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+		oldAuthRef := konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 			Name: "old-auth-config",
 		}
 		konnectStatus := &konnectv1alpha2.KonnectExtensionControlPlaneStatus{

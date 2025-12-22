@@ -291,6 +291,6 @@ func (f *fakeHTTPRouteConverter) UpdateSharedRouteStatus([]unstructured.Unstruct
 	return nil
 }
 
-func (f *fakeHTTPRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error) {
-	return false, nil
+func (f *fakeHTTPRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
+	return false, false, nil
 }

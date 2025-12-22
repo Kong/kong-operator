@@ -178,16 +178,17 @@ func (c *gatewayConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 // UpdateRootObjectStatus updates the status of the Gateway resource.
 //
 // Parameters:
-//   - ctx: The context for API calls
-//   - logger: Logger for debugging information
+//   - ctx: The context for the operation, used for cancellation and timeouts
+//   - logger: A logger instance for recording operational information and errors
 //
 // Returns:
-//   - bool: true if the status was updated, false if no changes were made
-//   - error: Any error that occurred during status processing
-func (c *gatewayConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error) {
+//   - updated: true if the status was modified
+//   - stop: true if reconciliation should halt
+//   - err: any error encountered during status update processing
+func (c *gatewayConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
 	// TODO: implement status update logic
 
-	return false, nil
+	return false, false, nil
 }
 
 // processListenerCertificate processes a certificate reference from a listener,
