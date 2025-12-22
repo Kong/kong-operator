@@ -193,17 +193,15 @@ func (c *httpRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 //   - logger: Logger for debugging information
 //
 // Returns:
-//   - bool: true if the status was updated, false if no changes were made
-//   - error: Any error that occurred during status processing
+//   - updated: true if the status was modified
+//   - stop: true if reconciliation should halt
+//   - err: any error encountered during status update processing
 //
 // The function respects controller ownership and only manages ParentStatus entries
 // for Gateways controlled by this controller, leaving other controllers' entries untouched.
 func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
 	logger = logger.WithValues("phase", "httproute-status")
 	log.Debug(logger, "Starting UpdateRootObjectStatus")
-
-	// unneeded assignment to make explicit that we are using stop variable as return value
-	stop = false
 
 	// First, build the resolvedRefs conditons for the HTTPRoute since it is the same for all ParentRefs.
 	log.Debug(logger, "Building ResolvedRefs condition for HTTPRoute")

@@ -666,7 +666,7 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 				WithObjects(objs...).
 				Build()
 
-			result, err := isXNamespaceRefGranted(
+			result, err := isReferenceGranted(
 				cl,
 				ctx,
 				tc.fromNamespace,

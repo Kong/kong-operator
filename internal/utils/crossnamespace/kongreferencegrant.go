@@ -11,9 +11,9 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 )
 
-// ErrCrossNamespaceReferenceNotGranted is an error type that indicates a cross-namespace
+// ErrReferenceNotGranted is an error type that indicates a cross-namespace
 // reference is not granted by any KongReferenceGrant.
-type ErrCrossNamespaceReferenceNotGranted struct {
+type ErrReferenceNotGranted struct {
 	FromNamespace string
 	FromGVK       metav1.GroupVersionKind
 	ToNamespace   string
@@ -23,7 +23,7 @@ type ErrCrossNamespaceReferenceNotGranted struct {
 
 // Error returns a formatted error message indicating that a cross-namespace reference
 // is not permitted.
-func (e *ErrCrossNamespaceReferenceNotGranted) Error() string {
+func (e *ErrReferenceNotGranted) Error() string {
 	return fmt.Sprintf("cross-namespace reference to %s %s in namespace %s from %s.%s in namespace %s is not granted by any KongReferenceGrant",
 		e.ToGVK.Kind,
 		e.ToName,
@@ -34,12 +34,12 @@ func (e *ErrCrossNamespaceReferenceNotGranted) Error() string {
 	)
 }
 
-// IsCrossNamespaceReferenceNotGranted checks if the provided error is or wraps
-// an ErrCrossNamespaceReferenceNotGranted error, indicating that a cross-namespace
+// IsReferenceNotGranted checks if the provided error is or wraps
+// an ErrReferenceNotGranted error, indicating that a cross-namespace
 // reference was attempted without the proper ReferenceGrant permissions.
 // It returns true if the error matches this type, false otherwise.
-func IsCrossNamespaceReferenceNotGranted(err error) bool {
-	var target *ErrCrossNamespaceReferenceNotGranted
+func IsReferenceNotGranted(err error) bool {
+	var target *ErrReferenceNotGranted
 	return errors.As(err, &target)
 }
 
@@ -62,15 +62,15 @@ func IsCrossNamespaceReferenceNotGranted(err error) bool {
 //
 // Returns nil if the cross-namespace reference is properly granted.
 func CheckKongReferenceGrantForResource(
-	cl client.Client,
 	ctx context.Context,
+	cl client.Client,
 	fromNamespace string,
 	toNamespace string,
 	toName string,
 	fromGVK,
 	toGVK metav1.GroupVersionKind,
 ) error {
-	granted, err := isXNamespaceRefGranted(
+	granted, err := isReferenceGranted(
 		cl,
 		ctx,
 		fromNamespace,
@@ -90,7 +90,7 @@ func CheckKongReferenceGrantForResource(
 		)
 	}
 	if !granted {
-		return &ErrCrossNamespaceReferenceNotGranted{
+		return &ErrReferenceNotGranted{
 			FromNamespace: fromNamespace,
 			FromGVK:       fromGVK,
 			ToNamespace:   toNamespace,
@@ -101,7 +101,7 @@ func CheckKongReferenceGrantForResource(
 	return nil
 }
 
-// isXNamespaceRefGranted checks if a cross-namespace reference from one resource to another
+// isReferenceGranted checks if a cross-namespace reference from one resource to another
 // is granted by a KongReferenceGrant in the target namespace.
 //
 // It verifies that a KongReferenceGrant exists in the toNamespace that:
@@ -120,7 +120,7 @@ func CheckKongReferenceGrantForResource(
 // Returns:
 //   - bool: true if a matching KongReferenceGrant is found, false otherwise
 //   - error: any error encountered while listing KongReferenceGrants
-func isXNamespaceRefGranted(cl client.Client, ctx context.Context, fromNamespace string, toNamespace string, toName string, fromGVK, toGVK metav1.GroupVersionKind) (bool, error) {
+func isReferenceGranted(cl client.Client, ctx context.Context, fromNamespace string, toNamespace string, toName string, fromGVK, toGVK metav1.GroupVersionKind) (bool, error) {
 	var refGrants configurationv1alpha1.KongReferenceGrantList
 	if err := cl.List(ctx, &refGrants, client.InNamespace(toNamespace)); err != nil {
 		return false, fmt.Errorf("failed to list KongReferenceGrants in namespace %q: %w", toNamespace, err)

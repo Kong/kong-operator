@@ -168,15 +168,16 @@ func ensureKongReferenceGrant[
 		return ctrl.Result{}, nil
 	}
 
-	err = crossnamespace.CheckKongReferenceGrantForResource(cl,
+	err = crossnamespace.CheckKongReferenceGrantForResource(
 		ctx,
+		cl,
 		ent.GetNamespace(),
 		cpRef.KonnectNamespacedRef.Namespace,
 		cpRef.KonnectNamespacedRef.Name,
 		metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
 		metav1.GroupVersionKind(konnectv1alpha2.SchemeGroupVersion.WithKind("KonnectGatewayControlPlane")),
 	)
-	if crossnamespace.IsCrossNamespaceReferenceNotGranted(err) {
+	if crossnamespace.IsReferenceNotGranted(err) {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),

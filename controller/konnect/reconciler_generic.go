@@ -355,7 +355,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
-		if crossnamespace.IsCrossNamespaceReferenceNotGranted(err) {
+		if crossnamespace.IsReferenceNotGranted(err) {
 			log.Info(logger, "cross-namespace reference to KonnectAPIAuthConfiguration is not granted", "error", err.Error())
 			if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, konnectv1alpha1.KonnectAPIAuthConfiguration{}, apiAuthRef, err); requeue {
 				return res, retErr

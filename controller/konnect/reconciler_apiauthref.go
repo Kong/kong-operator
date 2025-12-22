@@ -31,8 +31,9 @@ func getCPAuthRefForRef(
 	apiAuthNamespace := namespace
 	if cp.GetKonnectAPIAuthConfigurationRef().Namespace != nil && *cp.GetKonnectAPIAuthConfigurationRef().Namespace != namespace {
 		apiAuthNamespace = *cp.GetKonnectAPIAuthConfigurationRef().Namespace
-		if err := crossnamespace.CheckKongReferenceGrantForResource(cl,
+		if err := crossnamespace.CheckKongReferenceGrantForResource(
 			ctx,
+			cl,
 			namespace,
 			apiAuthNamespace,
 			cp.GetKonnectAPIAuthConfigurationRef().Name,
@@ -59,8 +60,9 @@ func getAPIAuthRefNN[T constraints.SupportedKonnectEntityType, TEnt constraints.
 		apiAuthNamespace := ent.GetNamespace()
 		if ref.GetKonnectAPIAuthConfigurationRef().Namespace != nil && *ref.GetKonnectAPIAuthConfigurationRef().Namespace != ent.GetNamespace() {
 			apiAuthNamespace = *ref.GetKonnectAPIAuthConfigurationRef().Namespace
-			if err := crossnamespace.CheckKongReferenceGrantForResource(cl,
+			if err := crossnamespace.CheckKongReferenceGrantForResource(
 				ctx,
+				cl,
 				ent.GetNamespace(),
 				apiAuthNamespace,
 				ref.GetKonnectAPIAuthConfigurationRef().Name,

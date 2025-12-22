@@ -56,7 +56,7 @@ func handleAPIAuthStatusCondition[T interface {
 			return true, ctrl.Result{}, nil
 		}
 
-		if crossnamespace.IsCrossNamespaceReferenceNotGranted(err) {
+		if crossnamespace.IsReferenceNotGranted(err) {
 			resolvedRefCondition.Reason = konnectv1alpha1.KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotPermitted
 			resolvedRefCondition.Message = err.Error()
 			if res, _, err := patch.StatusWithConditions(
