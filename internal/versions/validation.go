@@ -28,6 +28,8 @@ var (
 	semverKongEnterpriseRE         = regexp.MustCompile(`^([0-9]+\.[0-9]+)(\.[0-9]+)?(\.[0-9]+)?(-.+)?$`)
 )
 
+// ErrExpectedSemverVersion indicates that the provided image string
+// does not conform to the expected "<image>:<tag>" format.
 var ErrExpectedSemverVersion = errors.New(`expected "<image>:<tag>" format`)
 
 // FromImage takes a container image in the format "<image>:<version>"

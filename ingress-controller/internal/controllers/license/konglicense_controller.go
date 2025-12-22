@@ -97,6 +97,7 @@ const (
 )
 
 const (
+	// ConditionTypeProgrammed is the type of condition indicating whether the KongLicense is currently programmed in the Kong instance.
 	ConditionTypeProgrammed = "Programmed"
 	// ConditionReasonPickedAsLatest represents that the KongLicense being picked as the newest one.
 	ConditionReasonPickedAsLatest = "PickedAsLatest"

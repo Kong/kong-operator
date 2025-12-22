@@ -12,6 +12,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
+// WebhookToConfigure holds the configuration for a conversion webhook.
 type WebhookToConfigure struct {
 	// ForType is the type for which the webhook should be configured,
 	// it must implement the Hub interface.

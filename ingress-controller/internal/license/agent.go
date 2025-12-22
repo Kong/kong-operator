@@ -187,7 +187,8 @@ func (a *Agent) resolvePollingPeriod() time.Duration {
 	return a.initialPollingPeriod
 }
 
-// reconcileLicenseWithKonnect retrieves a license from upstream and caches it if it is newer than the cached license or there is no cached license.
+// reconcileLicenseWithKonnect retrieves a license from upstream and caches it
+// if it is newer than the cached license or there is no cached license.
 func (a *Agent) reconcileLicenseWithKonnect(ctx context.Context) error {
 	retrievedLicenseOpt, err := a.retrieveLicenseFromUpstream(ctx)
 	if err != nil {

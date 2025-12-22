@@ -11,6 +11,7 @@ const (
 	IndexFieldKonnectCloudGatewayTransitGatewayOnKonnectNetworkRef = "KonnectCloudGatewayTransitGatewayOnKonnectNetworkRef"
 )
 
+// OptionsForKonnectCloudGatewayTransitGateway returns the index options for KonnectCloudGatewayTransitGateway.
 func OptionsForKonnectCloudGatewayTransitGateway() []Option {
 	return []Option{
 		{

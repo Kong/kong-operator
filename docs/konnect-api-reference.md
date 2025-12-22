@@ -879,8 +879,7 @@ Package v1alpha2 contains API Schema definitions for the konnect.konghq.com v1al
 
 
 KonnectExtension is the Schema for the KonnectExtension API, and is intended to be referenced as
-extension by the DataPlane, ControlPlane or GatewayConfiguration APIs.
-If one of the above mentioned resources successfully refers a KonnectExtension, the underlying
+extension by the DataPlane, ControlPlane or GatewayConfiguration APIs.<br /><br />If one of the above mentioned resources successfully refers a KonnectExtension, the underlying
 deployment(s) spec gets customized to include the konnect-related configuration.
 
 <!-- konnect_extension description placeholder -->
@@ -1078,7 +1077,8 @@ _Appears in:_
 #### KonnectEntityStatusWithControlPlaneRef
 
 
-KonnectEntityStatusWithControlPlaneRef represents the status of a Konnect entity with a reference to a ControlPlane.
+KonnectEntityStatusWithControlPlaneRef represents the status of a Konnect entity
+with a reference to a ControlPlane.
 
 
 
@@ -1096,7 +1096,8 @@ _Appears in:_
 #### KonnectEntityStatusWithNetworkRef
 
 
-KonnectEntityStatusWithNetworkRef represents the status of a Konnect entity with reference to a Konnect cloud gateway network.
+KonnectEntityStatusWithNetworkRef represents the status of a Konnect entity
+with reference to a Konnect cloud gateway network.
 
 
 
