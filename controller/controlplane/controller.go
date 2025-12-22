@@ -413,6 +413,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 
 			return r.initStatusToWaitingToBecomeReady(ctx, logger, cp)
 		}
+
+		// Ensure the status reflects the current config even when the hash matches.
+		// This handles cases where the status was not yet updated (e.g., after an update
+		// to the spec that changed controllers/feature gates).
+		r.ensureControlPlaneStatus(cp, mgrCfg)
 	}
 
 	markAsProvisioned(cp)
