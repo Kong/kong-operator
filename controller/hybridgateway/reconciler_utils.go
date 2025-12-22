@@ -199,6 +199,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 //
 // Returns:
 //   - bool: true if the status was actually updated in the cluster
+//   - bool: true if the reconciliation loop should stop further processing
 //   - error: Any error that occurred during status processing
 //
 // This is a generic wrapper function that works with any converter implementing
