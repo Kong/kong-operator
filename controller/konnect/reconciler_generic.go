@@ -353,6 +353,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
+	// If a type has a Secret ref, handle it.
+	res, stop, err := handleSecretRef(ctx, r.Client, ent)
+	if err != nil || !res.IsZero() {
+		return res, err
+	}
+	if stop {
+		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
+	}
+
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
 		if crossnamespace.IsReferenceNotGranted(err) {

@@ -145,6 +145,9 @@ func isReferenceGranted(cl client.Client, ctx context.Context, fromNamespace str
 //
 // Returns true if at least one grant allows the reference, false otherwise.
 func ReferenceGrantsAllow(grants []configurationv1alpha1.KongReferenceGrant, fromNamespace string, toName string, fromGVK, toGVK metav1.GroupVersionKind) bool {
+	if toGVK.Group == "" {
+		toGVK.Group = "core"
+	}
 	for _, refGrant := range grants {
 		fromMatched := false
 		for _, from := range refGrant.Spec.From {

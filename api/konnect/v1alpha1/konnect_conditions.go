@@ -138,6 +138,18 @@ const (
 )
 
 const (
+	// SecretRefValidConditionType is the type of the condition that indicates
+	// whether the Secret reference is valid and points to an existing Secret.
+	SecretRefValidConditionType = "SecretRefValid"
+	// SecretRefReasonValid is the reason used with the SecretRefValid
+	// condition type indicating that the Secret reference is valid.
+	SecretRefReasonValid = "Valid"
+	// SecretRefReasonInvalid is the reason used with the SecretRefValid
+	// condition type indicating that the Secret reference is invalid.
+	SecretRefReasonInvalid = "Invalid"
+)
+
+const (
 	// KeySetRefValidConditionType is the type of the condition that indicates
 	// whether the KeySet reference is valid and points to an existing
 	// KeySet.

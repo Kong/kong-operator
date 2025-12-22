@@ -154,3 +154,15 @@ type ReferencedObjectIsInvalid struct {
 func (e ReferencedObjectIsInvalid) Error() string {
 	return fmt.Sprintf("referenced object %s is invalid: %v", e.Reference, e.Msg)
 }
+
+// ReferencedSecretDoesNotExist is an error type that is returned when
+// a Konnect entity references a Secret which does not exist.
+type ReferencedSecretDoesNotExist struct {
+	Reference types.NamespacedName
+	Err       error
+}
+
+// Error implements the error interface.
+func (e ReferencedSecretDoesNotExist) Error() string {
+	return fmt.Sprintf("referenced Secret %s does not exist: %v", e.Reference, e.Err)
+}

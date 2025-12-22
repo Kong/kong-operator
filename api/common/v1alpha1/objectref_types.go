@@ -61,9 +61,6 @@ type NamespacedRef struct {
 	// +kubebuilder:validation:MaxLength=253
 	Name string `json:"name,omitempty"`
 
-	// TODO: Implement cross namespace references:
-	// https://github.com/Kong/kubernetes-configuration/issues/36
-
 	// Namespace is the namespace of the referred resource.
 	//
 	// For namespace-scoped resources if no Namespace is provided then the
