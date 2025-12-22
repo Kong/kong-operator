@@ -28,6 +28,19 @@ type APIConverter[t RootObject] interface {
 	UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error)
 }
 
+// OrphanedResourceHandler is an optional interface that converters can implement
+// to provide custom cleanup logic for orphaned resources. If a converter implements
+// this interface, the HandleOrphanedResource method will be called before deleting
+// orphaned resources, allowing the converter to perform custom logic such as
+// updating the resource or deciding whether to skip deletion.
+type OrphanedResourceHandler interface {
+	// HandleOrphanedResource is called before deleting orphaned resources.
+	// Returns:
+	//   - skipDelete: true if the resource should not be deleted, false to proceed with deletion
+	//   - err: any error that occurred during processing
+	HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error)
+}
+
 // RootObject is an interface that represents all resource types that can be loaded
 // as root by the APIConverter.
 type RootObject interface {
