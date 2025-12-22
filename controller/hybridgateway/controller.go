@@ -111,6 +111,11 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	log.Debug(logger, "Reconciling object", "Group", gvk.Group, "Kind", gvk.Kind)
 
+	// Determine if we should process this object.
+	if !shouldProcessObject[t](ctx, r.Client, obj, logger) {
+		return ctrl.Result{}, nil
+	}
+
 	// Handle deletion and finalizer cleanup
 	if obj.GetDeletionTimestamp() != nil {
 		return r.handleDeletion(ctx, logger, obj, rootObj)
@@ -237,6 +242,18 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 			"Orphan cleanup in progress",
 		)
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// Remove finalizer if it is no longer needed.
+	// This is done after all processing to ensure that if the object is still
+	// being managed by us, the finalizer remains.
+	removed, err := removeFinalizerIfNotManaged[t](ctx, r.Client, obj, logger)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if removed {
+		log.Debug(logger, "Finalizer removed, from object no longer managed by us")
 	}
 
 	log.Debug(logger, "Object reconciliation completed", "Group", gvk.Group, "Kind", gvk.Kind)
