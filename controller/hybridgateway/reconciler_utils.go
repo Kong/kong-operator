@@ -8,12 +8,16 @@ import (
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	finalizerconst "github.com/kong/kong-operator/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/controller/hybridgateway/converter"
 	"github.com/kong/kong-operator/controller/hybridgateway/managedfields"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
+	"github.com/kong/kong-operator/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/controller/pkg/log"
+	gwtypes "github.com/kong/kong-operator/internal/types"
 )
 
 const (
@@ -352,4 +356,147 @@ func pruneDesiredObj(obj unstructured.Unstructured) *unstructured.Unstructured {
 	unstructured.RemoveNestedField(u.Object, "metadata", "namespace")
 	managedfields.PruneEmptyFields(u)
 	return u
+}
+
+// shouldProcessObject determines if an object should be processed in the reconcile loop.
+// It filters objects based on finalizer presence and Gateway references to handle three scenarios:
+//
+// 1. Objects that have our finalizer - always process them (we own/owned them, need to continue/cleanup)
+// 2. Objects without our finalizer but referencing our Gateway - process them (new objects we should manage)
+// 3. Objects without our finalizer and not referencing our Gateway - skip them (not meant for us)
+//
+// This filtering is necessary because watch-level predicates may pass objects that:
+// - Were owned by us previously but ownership was transferred to another controller
+// - Match watch criteria but were never managed by this controller
+// - An error occurred during predicate evaluation
+//
+// The presence of our finalizer indicates that we have processed the object before and are
+// responsible for its cleanup. Objects without our finalizer are checked for Gateway references
+// to determine if they should be newly managed by us.
+//
+// Parameters:
+//   - ctx: The context for API calls
+//   - cl: The Kubernetes client for API operations
+//   - obj: The object to check (must be a converter.RootObject)
+//   - logger: Logger for debugging information
+//
+// Returns:
+//   - bool: true if the object should be processed, false if it should be skipped
+func shouldProcessObject[t converter.RootObject](ctx context.Context, cl client.Client, obj client.Object, logger logr.Logger) bool {
+	// Check if the object has our finalizer, which indicates we've processed it before
+	// and are responsible for its lifecycle management.
+	var rootObj t
+	finalizerName := finalizerconst.GetFinalizerForType(rootObj)
+	if controllerutil.ContainsFinalizer(obj, finalizerName) {
+		log.Trace(logger, "Object has our finalizer, will process", "finalizer", finalizerName)
+		return true
+	}
+
+	// Object doesn't have our finalizer. Check if it references a supported Gateway
+	// This determines if we should start managing this object.
+	if hasSupportedGateway := referencesSupportedGateway(ctx, cl, obj, logger); hasSupportedGateway {
+		log.Debug(logger, "Object references supported Gateway, will process")
+		return true
+	}
+
+	// Object doesn't have our finalizer and doesn't reference our Gateway then skip it.
+	log.Debug(logger, "Skipping object reconciliation", "reason", "object does not have our finalizer and does not reference a supported gateway")
+	return false
+}
+
+// removeFinalizerIfNotManaged removes our finalizer from the object if it's present
+// but the object is not (or is no longer) managed by our controller.
+//
+// This function should be called when an object that was previously managed by us
+// is no longer under our control (e.g., GatewayClass changed to a different controller).
+// It ensures proper cleanup by removing our finalizer so the object can be deleted
+// or managed by another controller without being blocked.
+//
+// Parameters:
+//   - ctx: The context for API calls
+//   - cl: The Kubernetes client for update operations
+//   - obj: The object to check and potentially update (must be a converter.RootObject)
+//   - logger: Logger for debugging information
+//
+// Returns:
+//   - bool: true if the finalizer was removed (object was updated)
+//   - error: Any error that occurred during the update
+func removeFinalizerIfNotManaged[t converter.RootObject](ctx context.Context, cl client.Client, obj client.Object, logger logr.Logger) (bool, error) {
+	var rootObj t
+	finalizerName := finalizerconst.GetFinalizerForType(rootObj)
+
+	// Check if our finalizer is present.
+	if !controllerutil.ContainsFinalizer(obj, finalizerName) {
+		// No finalizer present, nothing to do
+		log.Trace(logger, "Object does not have our finalizer, no cleanup needed", "finalizer", finalizerName)
+		return false, nil
+	}
+
+	// Check if the object is managed by us.
+	if hasSupportedGateway := referencesSupportedGateway(ctx, cl, obj, logger); hasSupportedGateway {
+		// Object is managed by us, don't remove the finalizer
+		log.Trace(logger, "Object is managed by us, keeping finalizer", "finalizer", finalizerName)
+		return false, nil
+	}
+
+	// Finalizer is present but object is not managed by us, remove it.
+	log.Debug(logger, "Removing finalizer from object no longer managed by us",
+		"obj", client.ObjectKeyFromObject(obj),
+		"finalizer", finalizerName)
+
+	// Create a patch from the original object.
+	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
+
+	// Remove the finalizer.
+	controllerutil.RemoveFinalizer(obj, finalizerName)
+
+	// Patch the object.
+	if err := cl.Patch(ctx, obj, patch); err != nil {
+		if errors.IsNotFound(err) {
+			// Object was already deleted, this is fine.
+			log.Trace(logger, "Object already deleted, finalizer removal not needed")
+			return false, nil
+		}
+		return false, fmt.Errorf("failed to remove finalizer from object: %w", err)
+	}
+
+	log.Debug(logger, "Successfully removed finalizer from unmanaged object",
+		"obj", client.ObjectKeyFromObject(obj),
+		"finalizer", finalizerName)
+	return true, nil
+}
+
+// referencesSupportedGateway checks if the given object references at least one Gateway
+// that is supported by this controller (has a GatewayClass controlled by us).
+func referencesSupportedGateway(ctx context.Context, cl client.Client, obj client.Object, logger logr.Logger) bool {
+	switch o := obj.(type) {
+	case *gwtypes.HTTPRoute:
+		// Check if any of the ParentRefs reference a supported Gateway.
+		for _, pRef := range o.Spec.ParentRefs {
+			gw, err := refs.GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, o.Namespace)
+			if err != nil {
+				// Log the error but continue checking other ParentRefs.
+				log.Trace(logger, "Error checking ParentRef", "parentRef", pRef, "error", err)
+				continue
+			}
+			if gw != nil {
+				// Found at least one supported Gateway reference.
+				log.Trace(logger, "Found supported Gateway reference", "gateway", client.ObjectKeyFromObject(gw))
+				return true
+			}
+		}
+		return false
+
+	case *gwtypes.Gateway:
+		// For Gateway objects, check if they are supported by checking their GatewayClass.
+		supported, err := refs.IsGatewaySupported(ctx, cl, o)
+		if err != nil {
+			log.Debug(logger, "Error checking if Gateway is supported", "error", err)
+			return false
+		}
+		return supported
+	}
+
+	// This should never be reached due to type constraints on RootObject.
+	return false
 }

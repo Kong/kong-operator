@@ -765,6 +765,7 @@ func TestTranslate(t *testing.T) {
 					UID:       "gateway-uid-1",
 				},
 				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
 						{
 							Name:     "https",
@@ -783,6 +784,17 @@ func TestTranslate(t *testing.T) {
 				},
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
+				// Create GatewayClass
+				gwClass := &gatewayv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kong",
+					},
+					Spec: gatewayv1.GatewayClassSpec{
+						ControllerName: "konghq.com/gateway-operator",
+					},
+				}
+				require.NoError(t, cl.Create(context.Background(), gwClass))
+
 				// Create KonnectGatewayControlPlane.
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
@@ -870,6 +882,7 @@ func TestTranslate(t *testing.T) {
 					UID:       "gateway-uid-2",
 				},
 				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
 						{
 							Name:     "https-443",
@@ -897,6 +910,17 @@ func TestTranslate(t *testing.T) {
 				},
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
+				// Create GatewayClass
+				gwClass := &gatewayv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kong",
+					},
+					Spec: gatewayv1.GatewayClassSpec{
+						ControllerName: "konghq.com/gateway-operator",
+					},
+				}
+				require.NoError(t, cl.Create(context.Background(), gwClass))
+
 				// Create KonnectGatewayControlPlane.
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
@@ -969,6 +993,7 @@ func TestTranslate(t *testing.T) {
 					UID:       "gateway-uid-3",
 				},
 				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
 						{
 							Name:     "http",
@@ -990,6 +1015,17 @@ func TestTranslate(t *testing.T) {
 				},
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
+				// Create GatewayClass.
+				gwc := &gatewayv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kong",
+					},
+					Spec: gatewayv1.GatewayClassSpec{
+						ControllerName: "konghq.com/gateway-operator",
+					},
+				}
+				require.NoError(t, cl.Create(context.Background(), gwc))
+
 				// Create KonnectGatewayControlPlane.
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1060,6 +1096,7 @@ func TestTranslate(t *testing.T) {
 					UID:       "gateway-uid-4",
 				},
 				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
 						{
 							Name:     "https",
@@ -1076,6 +1113,17 @@ func TestTranslate(t *testing.T) {
 				},
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
+				// Create GatewayClass.
+				gwc := &gatewayv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kong",
+					},
+					Spec: gatewayv1.GatewayClassSpec{
+						ControllerName: "konghq.com/gateway-operator",
+					},
+				}
+				require.NoError(t, cl.Create(context.Background(), gwc))
+
 				// No KonnectExtension created, gateway doesn't reference control plane.
 			},
 			expectError:   true,
@@ -1091,6 +1139,7 @@ func TestTranslate(t *testing.T) {
 					UID:       "gateway-uid-5",
 				},
 				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
 						{
 							Name:     "https-1",
@@ -1118,6 +1167,17 @@ func TestTranslate(t *testing.T) {
 				},
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
+				// Create GatewayClass.
+				gwc := &gatewayv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kong",
+					},
+					Spec: gatewayv1.GatewayClassSpec{
+						ControllerName: "konghq.com/gateway-operator",
+					},
+				}
+				require.NoError(t, cl.Create(context.Background(), gwc))
+
 				// Create KonnectGatewayControlPlane.
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1175,6 +1235,7 @@ func TestTranslate(t *testing.T) {
 					UID:       "gateway-uid-6",
 				},
 				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
 						{
 							Name:     "https-valid",
@@ -1202,6 +1263,17 @@ func TestTranslate(t *testing.T) {
 				},
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
+				// Create GatewayClass.
+				gwc := &gatewayv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kong",
+					},
+					Spec: gatewayv1.GatewayClassSpec{
+						ControllerName: "konghq.com/gateway-operator",
+					},
+				}
+				require.NoError(t, cl.Create(context.Background(), gwc))
+
 				// Create KonnectGatewayControlPlane.
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1272,6 +1344,7 @@ func TestTranslate(t *testing.T) {
 					UID:       "gateway-uid-7",
 				},
 				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
 						{
 							Name:     "https-invalid-1",
@@ -1299,6 +1372,17 @@ func TestTranslate(t *testing.T) {
 				},
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
+				// Create GatewayClass.
+				gwc := &gatewayv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kong",
+					},
+					Spec: gatewayv1.GatewayClassSpec{
+						ControllerName: "konghq.com/gateway-operator",
+					},
+				}
+				require.NoError(t, cl.Create(context.Background(), gwc))
+
 				// Create KonnectGatewayControlPlane.
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1371,6 +1455,7 @@ func TestTranslate(t *testing.T) {
 					UID:       "gateway-uid-8",
 				},
 				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
 						{
 							Name:     "https-valid",
@@ -1398,6 +1483,17 @@ func TestTranslate(t *testing.T) {
 				},
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
+				// Create GatewayClass.
+				gwc := &gatewayv1.GatewayClass{
+					ObjectMeta: metav1.ObjectMeta{
+						Name: "kong",
+					},
+					Spec: gatewayv1.GatewayClassSpec{
+						ControllerName: "konghq.com/gateway-operator",
+					},
+				}
+				require.NoError(t, cl.Create(context.Background(), gwc))
+
 				// Create KonnectGatewayControlPlane.
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 					ObjectMeta: metav1.ObjectMeta{

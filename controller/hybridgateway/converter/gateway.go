@@ -81,6 +81,23 @@ func (c *gatewayConverter) GetRootObject() gwtypes.Gateway {
 //   - int: Number of Kong resources created during translation
 //   - error: Accumulated errors from listener processing, or nil if all successful
 func (c *gatewayConverter) Translate(ctx context.Context, logger logr.Logger) (int, error) {
+	logger = logger.WithValues("phase", "gateway-translate")
+	log.Debug(logger, "Starting Gateway translation")
+
+	// Check if the gateway is handled by this controller.
+	// It could happen when the GatewayClass is changed to an unsupported one.
+	// This check prevents the translation from proceeding in such cases and allows
+	// the reconciler to clean up any previously created resources.
+	supported, err := refs.IsGatewaySupported(ctx, c.Client, c.gateway)
+	if err != nil {
+		return 0, fmt.Errorf("failed to check if Gateway is supported: %w", err)
+	}
+
+	if !supported {
+		log.Debug(logger, "Gateway is not supported by this controller, skipping translation", "gateway", client.ObjectKeyFromObject(c.gateway))
+		return 0, nil
+	}
+
 	// Get the ControlPlaneRef for this Gateway from its KonnectExtension.
 	controlPlaneRef, err := refs.GetControlPlaneRefByGateway(ctx, c.Client, c.gateway)
 	if err != nil {
