@@ -256,7 +256,8 @@ type HTTPRoutePriorityTraits struct {
 //
 // If ties exist across multiple Routes, the matching precedence rules for HTTPRouteMatches takes over.
 //
-// Proxy or Load Balancer routing configuration generated from HTTPRoutes MUST prioritize matches based on the following criteria, continuing on ties.
+// Proxy or Load Balancer routing configuration generated from HTTPRoutes MUST
+// prioritize matches based on the following criteria, continuing on ties.
 // Across all rules specified on applicable Routes, precedence must be given to the match having:
 //
 //   - "Exact” path match.

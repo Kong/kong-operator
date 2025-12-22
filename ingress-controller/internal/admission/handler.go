@@ -285,6 +285,7 @@ func (h *RequestHandler) handleValidation(ctx context.Context, request admission
 }
 
 // +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongconsumers,versions=v1,name=kongconsumers.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+
 func (h *RequestHandler) handleKongConsumer(
 	ctx context.Context,
 	request admissionv1.AdmissionRequest,

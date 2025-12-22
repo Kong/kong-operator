@@ -51,11 +51,14 @@ const (
 	// KongConfigurationApplyFailedEventReason defines an event reason used for creating all config apply resource failure events.
 	KongConfigurationApplyFailedEventReason = "KongConfigurationApplyFailed"
 
-	// FallbackKongConfigurationApplySucceededEventReason defines an event reason to tell the updating of fallback Kong configuration succeeded.
+	// FallbackKongConfigurationApplySucceededEventReason defines an event reason
+	// to tell the updating of fallback Kong configuration succeeded.
 	FallbackKongConfigurationApplySucceededEventReason = "FallbackKongConfigurationSucceeded"
-	// FallbackKongConfigurationTranslationFailedEventReason defines an event reason used for creating fallback translation resource failure events.
+	// FallbackKongConfigurationTranslationFailedEventReason defines an event reason
+	// used for creating fallback translation resource failure events.
 	FallbackKongConfigurationTranslationFailedEventReason = "FallbackKongConfigurationTranslationFailed"
-	// FallbackKongConfigurationApplyFailedEventReason defines an event reason used for creating fallback config apply resource failure events.
+	// FallbackKongConfigurationApplyFailedEventReason defines an event reason
+	// used for creating fallback config apply resource failure events.
 	FallbackKongConfigurationApplyFailedEventReason = "FallbackKongConfigurationApplyFailed"
 )
 

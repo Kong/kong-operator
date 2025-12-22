@@ -18,7 +18,8 @@ const (
 	EmptyControlPlaneRefNotAllowed EmptyControlPlaneRefAllowedT = false
 )
 
-// NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes returns a test cases group for testing control plane ref change to KIC unsupported types
+// NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes returns a group
+// of test cases for testing control plane ref change to KIC unsupported types
 func NewCRDValidationTestCasesGroupCPRefChangeKICUnsupportedTypes[
 	T ObjectWithControlPlaneRef[T],
 ](

@@ -164,6 +164,7 @@ func (c Kong) ProxyURL(ctx context.Context, t *testing.T) string {
 	return fmt.Sprintf("http://localhost:%s", port.Port())
 }
 
+// Terminate stops and removes the Kong container.
 func (c Kong) Terminate(ctx context.Context) error {
 	return c.container.Terminate(ctx)
 }

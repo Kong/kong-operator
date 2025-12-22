@@ -1275,7 +1275,8 @@ func KonnectExtension(
 	return ke
 }
 
-// KonnectExtensionReferencingKonnectGatewayControlPlane deploys a KonnectExtension attached to a Konnect CP represented by the given KonnectGatewayControlPlane.
+// KonnectExtensionReferencingKonnectGatewayControlPlane deploys a KonnectExtension
+// attached to a Konnect CP represented by the given KonnectGatewayControlPlane.
 func KonnectExtensionReferencingKonnectGatewayControlPlane(
 	t *testing.T,
 	ctx context.Context,

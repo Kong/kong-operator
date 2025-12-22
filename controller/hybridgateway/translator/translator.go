@@ -16,7 +16,8 @@ import (
 
 // VerifyAndUpdate verifies if the object passaed as parameter already exists or not in the cluster.
 // If it exists, VerifyAndUpdate updates the hybrid-routes annotation in the object to include the provided route.
-// For more information about the hybrid-routes annotation, see https://github.com/Kong/kong-operator/blob/main/docs/internal/hybridgateway/autogen-resource-naming.md .
+// For more information about the hybrid-routes annotation, see [this doc](link).
+// [link]: https://github.com/Kong/kong-operator/blob/main/docs/internal/hybridgateway/autogen-resource-naming.md
 //
 // Parameters:
 //   - ctx: Context for API calls.

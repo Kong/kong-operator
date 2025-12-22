@@ -728,7 +728,8 @@ func (r *Reconciler) handleScheduleInstanceOutcome(
 
 // validateControlPlaneOptions checks if the ControlPlane's options are valid with the operator specific configuration.
 // It returns a boolean as the validation result and a string as the error message when the validation fails.
-// For example, it fails when the label selectors of `Secret` and `ConfigMap` in `spec.objectFilters` conflict with opertor's label selectors for them.
+// For example, it fails when the label selectors of `Secret` and `ConfigMap`
+// in `spec.objectFilters` conflict with opertor's label selectors for them.
 func (r *Reconciler) validateControlPlaneOptions(cp *ControlPlane) (string, bool) {
 	if cp.Spec.ObjectFilters != nil {
 

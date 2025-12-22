@@ -18,6 +18,7 @@ linters:
     - exhaustive
     - forbidigo
     - gocritic
+    - godoclint
     - gomodguard
     - gosec
     - importas
@@ -36,6 +37,15 @@ linters:
     - usetesting
     - wastedassign
   settings:
+    godoclint:
+      default: all
+      disable:
+        - require-pkg-doc
+        - start-with-name
+      options:
+        max-len:
+          # Maximum line length for godocs, not including the `// `, or `/*` or `*/` tokens.
+          length: 140
     staticcheck:
       checks:
         - all
@@ -198,6 +208,68 @@ linters:
           - forbidigo
         path: test/crdsvalidation/gateway-operator.konghq.com/controlplane_test.go
         text: use of `operatorv1beta1.(ControlPlane\w*)` forbidden
+      - linters:
+          - godoclint
+        path: .*/zz_generated.*\.go
+        text: godoc line is too long
+      # Cannot configure godoclint to ignore +kubebuilder comments.
+      # Ref: https://github.com/godoc-lint/godoc-lint/issues/80
+      - linters:
+          - godoclint
+        path: api/(configuration|gateway-operator|konnect|common)/.*\.go
+        text: godoc line is too long
+      - linters:
+          - godoclint
+        path: scripts/.*\.go
+        text: godoc line is too long
+      - linters:
+          - godoclint
+        path: internal/types/operatortypes.go
+        text: godoc line is too long
+      - linters:
+          - godoclint
+        path: controller/controlplane/controller_consts.go
+        text: godoc line is too long
+      - linters:
+          - godoclint
+        path: internal/utils/index/.*\.go
+        text: godoc line is too long
+      - linters:
+          - godoclint
+        path: .*_test\.go
+        text: symbol should have a godoc
+      - linters:
+          - godoclint
+        path: internal/(types/gatewaytypes.go|telemetry)
+        text: symbol should have a godoc
+      - linters:
+          - godoclint
+        path: ingress-controller/internal/(metrics|admission|konnect|util|manager|dataplane|annotations|gatewayapi/aliases\.go|gatewayapi|controllers|clients|store|adminapi|license|diagnostics)
+        text: symbol should have a godoc
+      - linters:
+          - godoclint
+        path: ingress-controller/pkg/(manager|telemetry)
+        text: symbol should have a godoc
+      - linters:
+          - godoclint
+        path: ingress-controller/test/(consts\.go|envtest|mocks|internal|helpers|integration/isolated|kongintegration)
+        text: symbol should have a godoc
+      - linters:
+          - godoclint
+        path: test/(mocks|helpers|integration/utils.go)
+        text: symbol should have a godoc
+      - linters:
+          - godoclint
+        path: controller/konnect/ops/
+        text: symbol should have a godoc
+      # No need to document the sort, error or stringer interface methods.
+      - linters:
+          - godoclint
+        text: symbol should have a godoc \(\"(Swap|Len|Less|Error|String)\"\)
+      - linters:
+          - godoclint
+        text: symbol should have a godoc
+        path: api/configuration/v1alpha1/zz_generated_funcs.go
     paths:
       - pkg/clientset
       - config/
