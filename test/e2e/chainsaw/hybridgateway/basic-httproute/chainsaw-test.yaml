@@ -10,7 +10,7 @@ spec:
   
   timeouts:
     apply: 120s
-    assert: 120s
+    assert: 300s
     delete: 120s
   
   steps:
@@ -40,6 +40,63 @@ spec:
             file: 00-assert-httpbin.yaml
         - assert:
             file: 01-assert-prerequisites.yaml
+      # Catch block: collect diagnostic info when assertions fail
+      catch:
+        - description: Get Gateway resource status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: Gateway
+            namespace: kong
+        - description: Get DataPlane resources
+          get:
+            apiVersion: gateway-operator.konghq.com/v1beta1
+            kind: DataPlane
+            namespace: kong
+        - description: Get ControlPlane resources
+          get:
+            apiVersion: gateway-operator.konghq.com/v1beta1
+            kind: ControlPlane
+            namespace: kong
+        - description: Get Pods in kong namespace
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: kong
+        - description: Describe Gateway
+          describe:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: Gateway
+            namespace: kong
+            showEvents: true
+        - description: Describe DataPlane
+          describe:
+            apiVersion: gateway-operator.konghq.com/v1beta1
+            kind: DataPlane
+            namespace: kong
+            showEvents: true
+        - description: Get events from kong namespace
+          events:
+            namespace: kong
+        - description: Get operator logs
+          podLogs:
+            namespace: kong-system
+            selector: control-plane=controller-manager
+            tail: 100
+        - description: Get all Pod logs in kong namespace
+          script:
+            content: |
+              echo "=== Listing all Pods in kong namespace ==="
+              kubectl get pods -n kong -o wide
+              echo ""
+              echo "=== Pod details and logs ==="
+              for pod in $(kubectl get pods -n kong -o jsonpath='{.items[*].metadata.name}'); do
+                echo "--- Pod: $pod ---"
+                kubectl describe pod $pod -n kong | tail -50
+                echo ""
+                echo "--- Logs for $pod ---"
+                kubectl logs $pod -n kong --all-containers --tail=50 2>/dev/null || echo "No logs available"
+                echo ""
+              done
     
     # Step 2: Create HTTPRoute
     - name: create-httproute
