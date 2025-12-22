@@ -898,7 +898,9 @@ jobs:
       - integration-tests-bluegreen
       - integration-tests-validating-webhook
       - e2e-tests
-      - e2e-tests-chainsaw
+      # TODO: reenable when chainsaw e2e tests are stable
+      # https://github.com/Kong/kong-operator/issues/2960
+      # - e2e-tests-chainsaw
       - buildpulse-report
     if: always()
     steps:
