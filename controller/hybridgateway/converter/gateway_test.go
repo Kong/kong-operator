@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -1645,4 +1646,174 @@ func TestGatewayConverter_GetOutputStore(t *testing.T) {
 // Helper function to create pointer to value.
 func ptrTo[T any](v T) *T {
 	return &v
+}
+
+func TestHandleOrphanedResource(t *testing.T) {
+	tests := []struct {
+		name               string
+		gatewayUID         string
+		resource           func(gatewayUID string) map[string]any
+		expectedSkipDelete bool
+		expectError        bool
+	}{
+		{
+			name:       "resource owned by this gateway - should not skip delete",
+			gatewayUID: "gateway-uid-123",
+			resource: func(gatewayUID string) map[string]any {
+				return map[string]any{
+					"apiVersion": "configuration.konghq.com/v1alpha1",
+					"kind":       "KongCertificate",
+					"metadata": map[string]any{
+						"name":      "test-cert",
+						"namespace": "default",
+						"ownerReferences": []any{
+							map[string]any{
+								"apiVersion": "gateway.networking.k8s.io/v1",
+								"kind":       "Gateway",
+								"name":       "test-gateway",
+								"uid":        gatewayUID,
+							},
+						},
+					},
+				}
+			},
+			expectedSkipDelete: false,
+			expectError:        false,
+		},
+		{
+			name:       "resource not owned by this gateway - should skip delete",
+			gatewayUID: "gateway-uid-123",
+			resource: func(gatewayUID string) map[string]any {
+				return map[string]any{
+					"apiVersion": "configuration.konghq.com/v1alpha1",
+					"kind":       "KongCertificate",
+					"metadata": map[string]any{
+						"name":      "test-cert",
+						"namespace": "default",
+						"ownerReferences": []any{
+							map[string]any{
+								"apiVersion": "gateway.networking.k8s.io/v1",
+								"kind":       "Gateway",
+								"name":       "other-gateway",
+								"uid":        "other-uid-456",
+							},
+						},
+					},
+				}
+			},
+			expectedSkipDelete: true,
+			expectError:        false,
+		},
+		{
+			name:       "resource with no owner references - should skip delete",
+			gatewayUID: "gateway-uid-123",
+			resource: func(gatewayUID string) map[string]any {
+				return map[string]any{
+					"apiVersion": "configuration.konghq.com/v1alpha1",
+					"kind":       "KongCertificate",
+					"metadata": map[string]any{
+						"name":      "test-cert",
+						"namespace": "default",
+					},
+				}
+			},
+			expectedSkipDelete: true,
+			expectError:        false,
+		},
+		{
+			name:       "resource with multiple owners including this gateway - should not skip delete",
+			gatewayUID: "gateway-uid-123",
+			resource: func(gatewayUID string) map[string]any {
+				return map[string]any{
+					"apiVersion": "configuration.konghq.com/v1alpha1",
+					"kind":       "KongSNI",
+					"metadata": map[string]any{
+						"name":      "test-sni",
+						"namespace": "default",
+						"ownerReferences": []any{
+							map[string]any{
+								"apiVersion": "gateway.networking.k8s.io/v1",
+								"kind":       "Gateway",
+								"name":       "other-gateway",
+								"uid":        "other-uid-456",
+							},
+							map[string]any{
+								"apiVersion": "gateway.networking.k8s.io/v1",
+								"kind":       "Gateway",
+								"name":       "test-gateway",
+								"uid":        gatewayUID,
+							},
+						},
+					},
+				}
+			},
+			expectedSkipDelete: false,
+			expectError:        false,
+		},
+		{
+			name:       "resource with multiple owners not including this gateway - should skip delete",
+			gatewayUID: "gateway-uid-123",
+			resource: func(gatewayUID string) map[string]any {
+				return map[string]any{
+					"apiVersion": "configuration.konghq.com/v1alpha1",
+					"kind":       "KongSNI",
+					"metadata": map[string]any{
+						"name":      "test-sni",
+						"namespace": "default",
+						"ownerReferences": []any{
+							map[string]any{
+								"apiVersion": "gateway.networking.k8s.io/v1",
+								"kind":       "Gateway",
+								"name":       "other-gateway-1",
+								"uid":        "other-uid-1",
+							},
+							map[string]any{
+								"apiVersion": "gateway.networking.k8s.io/v1",
+								"kind":       "Gateway",
+								"name":       "other-gateway-2",
+								"uid":        "other-uid-2",
+							},
+						},
+					},
+				}
+			},
+			expectedSkipDelete: true,
+			expectError:        false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx := context.Background()
+			logger := logr.Discard()
+
+			gateway := &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+					UID:       "gateway-uid-123",
+				},
+			}
+
+			fakeClient := fake.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				Build()
+
+			converter := newGatewayConverter(gateway, fakeClient).(*gatewayConverter)
+
+			resourceMap := tt.resource(tt.gatewayUID)
+			unstructuredObj := &unstructured.Unstructured{}
+			unstructuredObj.SetUnstructuredContent(resourceMap)
+
+			skipDelete, err := converter.HandleOrphanedResource(ctx, logger, unstructuredObj)
+
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tt.expectedSkipDelete, skipDelete,
+					"skipDelete should be %v but got %v", tt.expectedSkipDelete, skipDelete)
+			}
+		})
+	}
 }
