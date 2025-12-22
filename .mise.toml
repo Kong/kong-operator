@@ -1,3 +1,6 @@
+[settings.github]
+github_attestations = false
+
 # NOTE: The reason for tool version being set here and not in .tools-versions.toml
 # is that mise requires the version to be specified when using version_prefix
 # and we need to set the latter for kustomize because its tags on GitHub are prefixed
