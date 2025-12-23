@@ -114,7 +114,7 @@ type KonnectOptions struct {
 	// the Gateway to Konnect.
 	//
 	// +optional
-	APIAuthConfigurationRef *konnectv1alpha2.KonnectAPIAuthConfigurationRef `json:"authRef,omitempty"`
+	APIAuthConfigurationRef *konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef `json:"authRef,omitempty"`
 
 	// Source represents the source type of the Konnect entity.
 	//

@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/patch"
 	"github.com/kong/kong-operator/internal/metrics"
+	"github.com/kong/kong-operator/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -354,6 +355,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 	apiAuthRef, err := getAPIAuthRefNN(ctx, r.Client, ent)
 	if err != nil {
+		if crossnamespace.IsReferenceNotGranted(err) {
+			log.Info(logger, "cross-namespace reference to KonnectAPIAuthConfiguration is not granted", "error", err.Error())
+			if requeue, res, retErr := handleAPIAuthStatusCondition(ctx, r.Client, ent, konnectv1alpha1.KonnectAPIAuthConfiguration{}, apiAuthRef, err); requeue {
+				return res, retErr
+			}
+		}
+
 		return ctrl.Result{}, fmt.Errorf("failed to get APIAuth ref for %s: %w", client.ObjectKeyFromObject(ent), err)
 	}
 
@@ -418,6 +426,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 
 		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 			if err := ops.Delete(ctx, sdk, r.Client, r.MetricRecorder, ent); err != nil {
+				// If the error is a rate limit error, requeue after the retry-after duration
+				// instead of returning an error.
+				if retryAfter, isRateLimited := ops.GetRetryAfterFromRateLimitError(err); isRateLimited {
+					logger.Info("rate limited by Konnect API during delete, requeueing", "retry_after", retryAfter.String())
+					return ctrl.Result{RequeueAfter: retryAfter}, nil
+				}
 				if res, errStatus := patch.StatusWithCondition(
 					ctx, r.Client, ent,
 					konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -502,6 +516,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		}
 
 		if err != nil {
+			// If the error is a rate limit error, requeue after the retry-after duration
+			// instead of returning an error.
+			var rateLimitErr ops.RateLimitError
+			if errors.As(err, &rateLimitErr) {
+				return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
+			}
 			return ctrl.Result{}, ops.FailedKonnectOpError[T]{
 				Op:  ops.CreateOp,
 				Err: err,
@@ -523,6 +543,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		return ctrl.Result{}, fmt.Errorf("failed to update in cluster resource after Konnect update: %w %w", errUpd, err)
 	}
 	if err != nil {
+		// If the error is a rate limit error, requeue after the retry-after duration
+		// instead of returning an error.
+		var rateLimitErr ops.RateLimitError
+		if errors.As(err, &rateLimitErr) {
+			return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
+		}
 		logger.Error(err, "failed to update")
 	} else if !res.IsZero() {
 		return res, nil
@@ -597,6 +623,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) adoptFromExistingEntity(
 	}
 
 	if retErr != nil {
+		// If the error is a rate limit error, requeue after the retry-after duration
+		// instead of returning an error.
+		var rateLimitErr ops.RateLimitError
+		if errors.As(retErr, &rateLimitErr) {
+			return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
+		}
 		return ctrl.Result{}, ops.FailedKonnectOpError[T]{
 			Op:  ops.AdoptOp,
 			Err: retErr,

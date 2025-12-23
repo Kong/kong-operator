@@ -30,6 +30,7 @@ const (
 
 // KonnectExtension is the Schema for the KonnectExtension API, and is intended to be referenced as
 // extension by the DataPlane, ControlPlane or GatewayConfiguration APIs.
+//
 // If one of the above mentioned resources successfully refers a KonnectExtension, the underlying
 // deployment(s) spec gets customized to include the konnect-related configuration.
 //
@@ -262,7 +263,7 @@ type KonnectExtensionControlPlaneStatus struct {
 	// For particular KonnectExtension and ControlPlane combination.
 	//
 	// +optional
-	AuthRef *KonnectAPIAuthConfigurationRef `json:"authRef,omitempty"`
+	AuthRef *ControlPlaneKonnectAPIAuthConfigurationRef `json:"authRef,omitempty"`
 }
 
 // DataPlaneClientAuthStatus contains the status information related to the ClientAuth configuration.
@@ -274,9 +275,9 @@ type DataPlaneClientAuthStatus struct {
 }
 
 // GetKonnectAPIAuthConfigurationRef returns the KonnectAPIAuthConfigurationRef from the KonnectExtension status.
-func (ke *KonnectExtension) GetKonnectAPIAuthConfigurationRef() KonnectAPIAuthConfigurationRef {
+func (ke *KonnectExtension) GetKonnectAPIAuthConfigurationRef() ControlPlaneKonnectAPIAuthConfigurationRef {
 	if ke.Status.Konnect == nil || ke.Status.Konnect.AuthRef == nil {
-		return KonnectAPIAuthConfigurationRef{}
+		return ControlPlaneKonnectAPIAuthConfigurationRef{}
 	}
 	return *ke.Status.Konnect.AuthRef
 }

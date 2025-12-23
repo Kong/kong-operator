@@ -5,6 +5,8 @@ const (
 	// by the Service controller.
 	ServiceManagedByLabel = "service"
 
+	// HTTPRouteManagedByLabel indicates that an object's lifecycle is managed
+	// by the HTTPRoute controller.
 	HTTPRouteManagedByLabel = "httproute"
 
 	// HashSpecValueLabel is the label's suffix used to indicate the hash of an object's spec.

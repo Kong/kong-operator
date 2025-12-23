@@ -81,10 +81,10 @@ func WithTestIDLabel(testID string) func(obj client.Object) {
 // WithKonnectNamespacedRefControlPlaneRef returns an ObjOption that sets
 // the ControlPlaneRef on the object to a namespaced ref.
 //
-// NOTE: This only works with namespaced resources. Using it with cluster-scoped
+// NOTE:
 // resources requires additional handling ( to only set the namespace when the resource
 // is cluster-scoped).
-func WithKonnectNamespacedRefControlPlaneRef(cp *konnectv1alpha2.KonnectGatewayControlPlane) ObjOption {
+func WithKonnectNamespacedRefControlPlaneRef(cp *konnectv1alpha2.KonnectGatewayControlPlane, ns ...string) ObjOption {
 	return func(obj client.Object) {
 		o, ok := obj.(interface {
 			GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef
@@ -100,6 +100,9 @@ func WithKonnectNamespacedRefControlPlaneRef(cp *konnectv1alpha2.KonnectGatewayC
 			KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
 				Name: cp.GetName(),
 			},
+		}
+		if len(ns) > 0 {
+			cpRef.KonnectNamespacedRef.Namespace = ns[0]
 		}
 
 		o.SetControlPlaneRef(cpRef)
@@ -276,8 +279,8 @@ func KonnectGatewayControlPlane(
 			Name: name,
 		},
 		Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
-			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
-				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+			KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 					Name: apiAuth.Name,
 				},
 			},
@@ -1272,7 +1275,8 @@ func KonnectExtension(
 	return ke
 }
 
-// KonnectExtensionReferencingKonnectGatewayControlPlane deploys a KonnectExtension attached to a Konnect CP represented by the given KonnectGatewayControlPlane.
+// KonnectExtensionReferencingKonnectGatewayControlPlane deploys a KonnectExtension
+// attached to a Konnect CP represented by the given KonnectGatewayControlPlane.
 func KonnectExtensionReferencingKonnectGatewayControlPlane(
 	t *testing.T,
 	ctx context.Context,
@@ -1302,20 +1306,6 @@ func KonnectExtensionReferencingKonnectGatewayControlPlane(
 type ObjectSupportingKonnectConfiguration interface {
 	*konnectv1alpha2.KonnectGatewayControlPlane |
 		*konnectv1alpha1.KonnectCloudGatewayNetwork
-}
-
-// WithKonnectConfiguration returns an option function that sets the `KonnectConfiguration` in the object.
-func WithKonnectConfiguration[T ObjectSupportingKonnectConfiguration](
-	konnectConfiguration konnectv1alpha2.KonnectConfiguration,
-) ObjOption {
-	return func(obj client.Object) {
-		switch o := any(obj).(type) {
-		case *konnectv1alpha2.KonnectGatewayControlPlane:
-			o.Spec.KonnectConfiguration = konnectConfiguration
-		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
-			o.Spec.KonnectConfiguration = konnectConfiguration
-		}
-	}
 }
 
 // ObjectSupportingAdoption defines the interface of types supporting adoption.
@@ -1388,6 +1378,73 @@ func WithKongPluginBindingTarget[T ObjectSupportingBindingPlugins](
 			}
 		}
 	}
+}
+
+// KongReferenceGrant deploys a KongReferenceGrant resource and returns the resource.
+func KongReferenceGrant(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	opts ...ObjOption,
+) *configurationv1alpha1.KongReferenceGrant {
+	t.Helper()
+
+	name := "kongreferencegrant-" + uuid.NewString()[:8]
+	krg := configurationv1alpha1.KongReferenceGrant{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: name,
+		},
+		Spec: configurationv1alpha1.KongReferenceGrantSpec{},
+	}
+
+	for _, opt := range opts {
+		opt(&krg)
+	}
+	require.NoError(t, cl.Create(ctx, &krg))
+	logObjectCreate(t, &krg)
+
+	return &krg
+}
+
+// KongReferenceGrantTos returns an option function that appends the given ReferenceGrantTo entries.
+func KongReferenceGrantTos(tos ...configurationv1alpha1.ReferenceGrantTo) ObjOption {
+	return func(obj client.Object) {
+		krg, ok := obj.(*configurationv1alpha1.KongReferenceGrant)
+		if !ok {
+			return
+		}
+		krg.Spec.To = append(krg.Spec.To, tos...)
+	}
+}
+
+// KongReferenceGrantFroms returns an option function that appends the given ReferenceGrantFrom entries.
+func KongReferenceGrantFroms(froms ...configurationv1alpha1.ReferenceGrantFrom) ObjOption {
+	return func(obj client.Object) {
+		krg, ok := obj.(*configurationv1alpha1.KongReferenceGrant)
+		if !ok {
+			return
+		}
+		krg.Spec.From = append(krg.Spec.From, froms...)
+	}
+}
+
+// Namespace deploys a Namespace and returns it.
+func Namespace(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+) *corev1.Namespace {
+	t.Helper()
+
+	ns := &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			GenerateName: "ns-",
+		},
+	}
+
+	require.NoError(t, cl.Create(ctx, ns))
+
+	return ns
 }
 
 func logObjectCreate[

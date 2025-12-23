@@ -32,8 +32,10 @@ import (
 // restartAnnotationKey is the annotation key used to mark a Deployment as restarted.
 // This is used to detect if a Deployment was restarted using `kubectl rollout restart`.
 // The value is a timestamp in RFC3339 format.
-// It's hardcoded here to match the annotation used by the kubectl command.
+// It's hardcoded here to match the annotation used by the kubectl command:
 // https://github.com/kubernetes/kubernetes/blob/82db38a23c7820b1924d89f458fd368023f3980c/staging/src/k8s.io/kubectl/pkg/polymorphichelpers/objectrestarter.go#L51
+//
+//godoclint:disable max-len
 const restartAnnotationKey = "kubectl.kubernetes.io/restartedAt"
 
 // DeploymentBuilder builds a Deployment for a DataPlane.

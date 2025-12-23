@@ -5,6 +5,7 @@ import "fmt"
 // Mode is the type for the logging mode.
 type Mode string
 
+// String returns the string representation of the Mode.
 func (l Mode) String() string {
 	return string(l)
 }

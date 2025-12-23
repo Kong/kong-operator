@@ -57,6 +57,11 @@ func (obj KongServiceList) GetItems() []KongService {
 	return obj.Items
 }
 
+// GetItems returns the list of KongReferenceGrant items.
+func (obj KongReferenceGrantList) GetItems() []KongReferenceGrant {
+	return obj.Items
+}
+
 // GetItems returns the list of KongRoute items.
 func (obj KongRouteList) GetItems() []KongRoute {
 	return obj.Items

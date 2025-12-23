@@ -123,6 +123,7 @@ func (sl sizeLimitBytes) int64() int64 {
 	return int64(sl)
 }
 
+// String returns the human-readable representation of the size limit in MiB.
 func (sl sizeLimitBytes) String() string {
 	return fmt.Sprintf("%.2f MiB", float64(sl)/(1024*1024))
 }

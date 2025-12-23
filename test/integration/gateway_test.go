@@ -233,7 +233,7 @@ func TestGatewayHybridFull(t *testing.T) {
 
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name)
 	gatewayConfig.Spec.Konnect = &operatorv2beta1.KonnectOptions{
-		APIAuthConfigurationRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+		APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 			Name: authCfg.Name,
 		},
 	}

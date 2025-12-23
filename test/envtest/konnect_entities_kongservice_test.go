@@ -46,12 +46,18 @@ func TestKongService(t *testing.T) {
 		),
 	)
 
+	ns2 := deploy.Namespace(t, ctx, mgr.GetClient())
 	t.Log("Setting up clients")
-	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
+	clientOptions := client.Options{
 		Scheme: scheme.Get(),
-	})
+	}
+	cl, err := client.NewWithWatch(mgr.GetConfig(), clientOptions)
 	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
+
+	cl2, err := client.NewWithWatch(mgr.GetConfig(), clientOptions)
+	require.NoError(t, err)
+	clientNamespaced2 := client.NewNamespacedClient(mgr.GetClient(), ns2.Name)
 
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
@@ -490,5 +496,106 @@ func TestKongService(t *testing.T) {
 		)
 
 		t.Log(createdService.GetConditions())
+	})
+
+	t.Run("Cross namespace ref KongService -> KonnectNamespacedRefControlPlane yields ResolvedRefs=False without KongReferenceGrant", func(t *testing.T) {
+		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl2, client.InNamespace(ns2.Name))
+
+		t.Log("Don't setting SDK expectations on Service creation as we do not expect any operations to be made upstream")
+
+		t.Log("Creating a KongService with ControlPlaneRef type=konnectID")
+		createdService := deploy.KongService(t, ctx, clientNamespaced2,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp, ns.Name),
+		)
+
+		t.Log("Waiting for Service to get ResolvedRefs condition with status=False")
+		watchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			if ks.GetName() != createdService.GetName() {
+				return false
+			}
+
+			cpRef := ks.GetControlPlaneRef()
+			if cpRef == nil {
+				return false
+			}
+
+			if cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef ||
+				cpRef.KonnectNamespacedRef == nil ||
+				cpRef.KonnectNamespacedRef.Name != cp.GetName() ||
+				cpRef.KonnectNamespacedRef.Namespace != cp.GetNamespace() {
+				return false
+			}
+			return k8sutils.HasConditionFalse(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, ks)
+		}, "KongService didn't get ResolvedRefs status condition set to False")
+	})
+
+	t.Run("Cross namespace ref KongService -> KonnectNamespacedRefControlPlane yields ResolvedRefs=True with valid KongReferenceGrant", func(t *testing.T) {
+		const (
+			host = "example1234566.com"
+			id   = "service-1234566"
+		)
+
+		w := setupWatch[configurationv1alpha1.KongServiceList](t, ctx, cl2, client.InNamespace(ns2.Name))
+
+		t.Log("Setting up SDK expectations on Service creation")
+		sdk.ServicesSDK.EXPECT().
+			CreateService(
+				mock.Anything,
+				cp.GetKonnectID(),
+				mock.MatchedBy(func(req sdkkonnectcomp.Service) bool {
+					return req.Host == host
+				}),
+			).
+			Return(
+				&sdkkonnectops.CreateServiceResponse{
+					Service: &sdkkonnectcomp.ServiceOutput{
+						ID: lo.ToPtr(id),
+					},
+				},
+				nil,
+			)
+
+		_ = deploy.KongReferenceGrant(t, ctx, clientNamespaced,
+			deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
+				Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:      "KongService",
+				Namespace: configurationv1alpha1.Namespace(ns2.Name),
+			}),
+			deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
+				Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+				Kind:  "KonnectGatewayControlPlane",
+			}),
+		)
+
+		t.Log("Creating a KongService with ControlPlaneRef type=konnectID")
+		createdService := deploy.KongService(t, ctx, clientNamespaced2,
+			deploy.WithKonnectNamespacedRefControlPlaneRef(cp, ns.Name),
+			func(obj client.Object) {
+				s := obj.(*configurationv1alpha1.KongService)
+				s.Spec.Host = host
+			},
+		)
+
+		t.Log("Waiting for Service to get ResolvedRefs condition with status=False")
+		watchFor(t, ctx, w, apiwatch.Modified, func(ks *configurationv1alpha1.KongService) bool {
+			if ks.GetName() != createdService.GetName() {
+				return false
+			}
+
+			cpRef := ks.GetControlPlaneRef()
+			if cpRef == nil {
+				return false
+			}
+
+			if cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef ||
+				cpRef.KonnectNamespacedRef == nil ||
+				cpRef.KonnectNamespacedRef.Name != cp.GetName() ||
+				cpRef.KonnectNamespacedRef.Namespace != cp.GetNamespace() {
+				return false
+			}
+			return k8sutils.HasConditionTrue(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, ks)
+		}, "KongService didn't get ResolvedRefs status condition set to True")
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.ServicesSDK, waitTime, tickTime)
 	})
 }

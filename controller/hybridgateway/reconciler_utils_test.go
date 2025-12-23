@@ -2,19 +2,29 @@ package hybridgateway
 
 import (
 	"context"
+	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	finalizerconst "github.com/kong/kong-operator/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/consts"
+	"github.com/kong/kong-operator/pkg/vars"
 )
 
 func newUnstructured(ns, name string, gvk schema.GroupVersionKind, labels map[string]string) unstructured.Unstructured {
@@ -235,7 +245,7 @@ func TestCleanOrphanedResources(t *testing.T) {
 			var err error
 			requeue := true
 			for requeue {
-				_, requeue, err = cleanOrphanedResources(context.Background(), cl, logger, fakeConv)
+				requeue, err = cleanOrphanedResources(context.Background(), cl, logger, fakeConv)
 				assert.NoError(t, err)
 			}
 			for _, gvk := range tt.gvks {
@@ -291,6 +301,977 @@ func (f *fakeHTTPRouteConverter) UpdateSharedRouteStatus([]unstructured.Unstruct
 	return nil
 }
 
-func (f *fakeHTTPRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error) {
+func (f *fakeHTTPRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
+	return false, false, nil
+}
+
+func (f *fakeHTTPRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (bool, error) {
+	annotations := resource.GetAnnotations()
+	if annotations == nil {
+		return true, nil
+	}
+
+	annotationValue, exists := annotations[consts.GatewayOperatorHybridRoutesAnnotation]
+	if !exists {
+		return true, nil
+	}
+
+	// Check if the annotation contains our root object
+	expectedAnnotation := fmt.Sprintf("%s/%s", f.root.GetNamespace(), f.root.GetName())
+	if annotationValue != expectedAnnotation {
+		return true, nil
+	}
+
+	// Annotation exists and matches our root - allow deletion
 	return false, nil
+}
+
+func TestShouldProcessObject_HTTPRoute(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	// Create a test GatewayClass controlled by us.
+	ourGatewayClass := &gwtypes.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "our-gatewayclass",
+		},
+		Spec: gwtypes.GatewayClassSpec{
+			ControllerName: gwtypes.GatewayController(vars.ControllerName()),
+		},
+	}
+
+	// Create a test GatewayClass controlled by someone else.
+	otherGatewayClass := &gwtypes.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "other-gatewayclass",
+		},
+		Spec: gwtypes.GatewayClassSpec{
+			ControllerName: "other.controller/gateway",
+		},
+	}
+
+	// Create a test Gateway using our GatewayClass.
+	ourGateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "our-gateway",
+			Namespace: "default",
+		},
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: "our-gatewayclass",
+		},
+	}
+
+	// Create a test Gateway using other GatewayClass.
+	otherGateway := &gwtypes.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "other-gateway",
+			Namespace: "default",
+		},
+		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: "other-gatewayclass",
+		},
+	}
+
+	testCases := []struct {
+		name             string
+		setupRoute       func() *gwtypes.HTTPRoute
+		clientObjects    []client.Object
+		interceptorFuncs *interceptor.Funcs
+		expectedResult   bool
+		description      string
+	}{
+		{
+			name: "object with finalizer should be processed",
+			setupRoute: func() *gwtypes.HTTPRoute {
+				route := &gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-route",
+						Namespace:  "default",
+						Finalizers: []string{finalizerconst.HTTPRouteFinalizer},
+					},
+				}
+				return route
+			},
+			clientObjects:    []client.Object{},
+			interceptorFuncs: nil,
+			expectedResult:   true,
+			description:      "Objects with our finalizer should be processed regardless of Gateway reference.",
+		},
+		{
+			name: "object without finalizer but referencing our Gateway should be processed",
+			setupRoute: func() *gwtypes.HTTPRoute {
+				gatewayName := gwtypes.ObjectName("our-gateway")
+				route := &gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-route",
+						Namespace:  "default",
+						Finalizers: []string{},
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name: gatewayName,
+								},
+							},
+						},
+					},
+				}
+				return route
+			},
+			clientObjects:    []client.Object{ourGatewayClass, ourGateway},
+			interceptorFuncs: nil,
+			expectedResult:   true,
+			description:      "Objects without finalizer but referencing our Gateway should be processed.",
+		},
+		{
+			name: "object without finalizer referencing other Gateway should be skipped",
+			setupRoute: func() *gwtypes.HTTPRoute {
+				gatewayName := gwtypes.ObjectName("other-gateway")
+				route := &gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-route",
+						Namespace:  "default",
+						Finalizers: []string{},
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name: gatewayName,
+								},
+							},
+						},
+					},
+				}
+				return route
+			},
+			clientObjects:    []client.Object{otherGatewayClass, otherGateway},
+			interceptorFuncs: nil,
+			expectedResult:   false,
+			description:      "Objects without finalizer referencing unsupported Gateway should be skipped.",
+		},
+		{
+			name: "object without finalizer and no Gateway reference should be skipped",
+			setupRoute: func() *gwtypes.HTTPRoute {
+				route := &gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-route",
+						Namespace:  "default",
+						Finalizers: []string{},
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{},
+						},
+					},
+				}
+				return route
+			},
+			clientObjects:    []client.Object{},
+			interceptorFuncs: nil,
+			expectedResult:   false,
+			description:      "Objects without finalizer and no Gateway reference should be skipped.",
+		},
+		{
+			name: "object with finalizer referencing other Gateway should still be processed",
+			setupRoute: func() *gwtypes.HTTPRoute {
+				gatewayName := gwtypes.ObjectName("other-gateway")
+				route := &gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-route",
+						Namespace:  "default",
+						Finalizers: []string{finalizerconst.HTTPRouteFinalizer},
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{
+									Name: gatewayName,
+								},
+							},
+						},
+					},
+				}
+				return route
+			},
+			clientObjects:    []client.Object{otherGatewayClass, otherGateway},
+			interceptorFuncs: nil,
+			expectedResult:   true,
+			description:      "Objects with finalizer should be processed for cleanup even if referencing other Gateway.",
+		},
+		{
+			name: "object without finalizer referencing mix of our and other Gateway should be processed",
+			setupRoute: func() *gwtypes.HTTPRoute {
+				ourGatewayName := gwtypes.ObjectName("our-gateway")
+				otherGatewayName := gwtypes.ObjectName("other-gateway")
+				route := &gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-route",
+						Namespace:  "default",
+						Finalizers: []string{},
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{Name: otherGatewayName},
+								{Name: ourGatewayName},
+							},
+						},
+					},
+				}
+				return route
+			},
+			clientObjects:    []client.Object{ourGatewayClass, ourGateway, otherGatewayClass, otherGateway},
+			interceptorFuncs: nil,
+			expectedResult:   true,
+			description:      "Objects referencing at least one supported Gateway should be processed.",
+		},
+		{
+			name: "object without finalizer referencing non-existent Gateway should be skipped",
+			setupRoute: func() *gwtypes.HTTPRoute {
+				gatewayName := gwtypes.ObjectName("non-existent-gateway")
+				route := &gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-route",
+						Namespace:  "default",
+						Finalizers: []string{},
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{Name: gatewayName},
+							},
+						},
+					},
+				}
+				return route
+			},
+			clientObjects:    []client.Object{},
+			interceptorFuncs: nil,
+			expectedResult:   false,
+			description:      "Objects referencing non-existent Gateway should be skipped.",
+		},
+		{
+			name: "object without finalizer with API error when fetching Gateway should be skipped",
+			setupRoute: func() *gwtypes.HTTPRoute {
+				gatewayName := gwtypes.ObjectName("test-gateway")
+				route := &gwtypes.HTTPRoute{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-route",
+						Namespace:  "default",
+						Finalizers: []string{},
+					},
+					Spec: gwtypes.HTTPRouteSpec{
+						CommonRouteSpec: gwtypes.CommonRouteSpec{
+							ParentRefs: []gwtypes.ParentReference{
+								{Name: gatewayName},
+							},
+						},
+					},
+				}
+				return route
+			},
+			clientObjects: []client.Object{},
+			interceptorFuncs: &interceptor.Funcs{
+				Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if _, ok := obj.(*gwtypes.Gateway); ok {
+						return assert.AnError // Simulate an unexpected API error.
+					}
+					return client.Get(ctx, key, obj, opts...)
+				},
+			},
+			expectedResult: false,
+			description:    "Objects with API error when fetching Gateway should be skipped.",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			route := tc.setupRoute()
+			route.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   gwtypes.GroupName,
+				Version: "v1",
+				Kind:    "HTTPRoute",
+			})
+
+			scheme := runtime.NewScheme()
+			scheme.AddKnownTypes(
+				schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version},
+				&gwtypes.HTTPRoute{}, &gwtypes.Gateway{}, &gwtypes.GatewayClass{},
+			)
+			require.NoError(t, gatewayv1.Install(scheme))
+
+			builder := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tc.clientObjects...)
+			if tc.interceptorFuncs != nil {
+				builder = builder.WithInterceptorFuncs(*tc.interceptorFuncs)
+			}
+			cl := builder.Build()
+
+			shouldProcess := shouldProcessObject[gwtypes.HTTPRoute](ctx, cl, route, logger)
+			assert.Equal(t, tc.expectedResult, shouldProcess, tc.description)
+		})
+	}
+}
+
+func TestShouldProcessObject_Gateway(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	// Create a test GatewayClass controlled by us.
+	ourGatewayClass := &gwtypes.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "our-gatewayclass",
+		},
+		Spec: gwtypes.GatewayClassSpec{
+			ControllerName: gwtypes.GatewayController(vars.ControllerName()),
+		},
+	}
+
+	// Create a test GatewayClass controlled by someone else.
+	otherGatewayClass := &gwtypes.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "other-gatewayclass",
+		},
+		Spec: gwtypes.GatewayClassSpec{
+			ControllerName: "other.controller/gateway",
+		},
+	}
+
+	testCases := []struct {
+		name             string
+		setupGateway     func() *gwtypes.Gateway
+		clientObjects    []client.Object
+		interceptorFuncs *interceptor.Funcs
+		expectedResult   bool
+		description      string
+	}{
+		{
+			name: "gateway with finalizer should be processed",
+			setupGateway: func() *gwtypes.Gateway {
+				gateway := &gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-gateway",
+						Namespace:  "default",
+						Finalizers: []string{finalizerconst.GatewayFinalizer},
+					},
+					Spec: gwtypes.GatewaySpec{
+						GatewayClassName: "our-gatewayclass",
+					},
+				}
+				return gateway
+			},
+			clientObjects:    []client.Object{ourGatewayClass},
+			interceptorFuncs: nil,
+			expectedResult:   true,
+			description:      "Gateway with our finalizer should be processed.",
+		},
+		{
+			name: "gateway without finalizer but with our GatewayClass should be processed",
+			setupGateway: func() *gwtypes.Gateway {
+				gateway := &gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-gateway",
+						Namespace:  "default",
+						Finalizers: []string{},
+					},
+					Spec: gwtypes.GatewaySpec{
+						GatewayClassName: "our-gatewayclass",
+					},
+				}
+				return gateway
+			},
+			clientObjects:    []client.Object{ourGatewayClass},
+			interceptorFuncs: nil,
+			expectedResult:   true,
+			description:      "Gateway using our GatewayClass should be processed.",
+		},
+		{
+			name: "gateway without finalizer and other GatewayClass should be skipped",
+			setupGateway: func() *gwtypes.Gateway {
+				gateway := &gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-gateway",
+						Namespace:  "default",
+						Finalizers: []string{},
+					},
+					Spec: gwtypes.GatewaySpec{
+						GatewayClassName: "other-gatewayclass",
+					},
+				}
+				return gateway
+			},
+			clientObjects:    []client.Object{otherGatewayClass},
+			interceptorFuncs: nil,
+			expectedResult:   false,
+			description:      "Gateway using other GatewayClass should be skipped.",
+		},
+		{
+			name: "gateway without finalizer and non-existent GatewayClass should be skipped",
+			setupGateway: func() *gwtypes.Gateway {
+				gateway := &gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-gateway",
+						Namespace:  "default",
+						Finalizers: []string{},
+					},
+					Spec: gwtypes.GatewaySpec{
+						GatewayClassName: "non-existent-gatewayclass",
+					},
+				}
+				return gateway
+			},
+			clientObjects:    []client.Object{},
+			interceptorFuncs: nil,
+			expectedResult:   false,
+			description:      "Gateway with non-existent GatewayClass should be skipped (not found case).",
+		},
+		{
+			name: "gateway without finalizer with API error when fetching GatewayClass should be skipped",
+			setupGateway: func() *gwtypes.Gateway {
+				gateway := &gwtypes.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:       "test-gateway",
+						Namespace:  "default",
+						Finalizers: []string{},
+					},
+					Spec: gwtypes.GatewaySpec{
+						GatewayClassName: "test-gatewayclass",
+					},
+				}
+				return gateway
+			},
+			clientObjects: []client.Object{},
+			interceptorFuncs: &interceptor.Funcs{
+				Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if _, ok := obj.(*gwtypes.GatewayClass); ok {
+						return assert.AnError
+					}
+					return client.Get(ctx, key, obj, opts...)
+				},
+			},
+			expectedResult: false,
+			description:    "Gateway with API error when fetching GatewayClass should be skipped.",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gateway := tc.setupGateway()
+			gateway.SetGroupVersionKind(schema.GroupVersionKind{
+				Group:   gwtypes.GroupName,
+				Version: "v1",
+				Kind:    "Gateway",
+			})
+
+			scheme := runtime.NewScheme()
+			scheme.AddKnownTypes(
+				schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version},
+				&gwtypes.Gateway{}, &gwtypes.GatewayClass{},
+			)
+			require.NoError(t, gatewayv1.Install(scheme))
+
+			builder := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tc.clientObjects...)
+			if tc.interceptorFuncs != nil {
+				builder = builder.WithInterceptorFuncs(*tc.interceptorFuncs)
+			}
+			cl := builder.Build()
+
+			shouldProcess := shouldProcessObject[gwtypes.Gateway](ctx, cl, gateway, logger)
+			assert.Equal(t, tc.expectedResult, shouldProcess, tc.description)
+		})
+	}
+}
+
+func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	// Create a supported GatewayClass
+	supportedGatewayClass := &gatewayv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kong",
+		},
+		Spec: gatewayv1.GatewayClassSpec{
+			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
+		},
+	}
+
+	// Create a supported Gateway
+	supportedGateway := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "supported-gateway",
+			Namespace: "default",
+		},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "kong",
+		},
+	}
+
+	// Create an unsupported GatewayClass
+	unsupportedGatewayClass := &gatewayv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "other",
+		},
+		Spec: gatewayv1.GatewayClassSpec{
+			ControllerName: "other-controller",
+		},
+	}
+
+	// Create an unsupported Gateway
+	unsupportedGateway := &gatewayv1.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "unsupported-gateway",
+			Namespace: "default",
+		},
+		Spec: gatewayv1.GatewaySpec{
+			GatewayClassName: "other",
+		},
+	}
+
+	tests := []struct {
+		name                 string
+		httpRoute            *gwtypes.HTTPRoute
+		existingObjects      []client.Object
+		interceptorFuncs     *interceptor.Funcs
+		expectedRemoved      bool
+		expectError          bool
+		verifyFinalizer      bool
+		expectedHasFinalizer bool
+	}{
+		{
+			name: "no finalizer present - returns false",
+			httpRoute: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{
+							{
+								Name: "unsupported-gateway",
+							},
+						},
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				supportedGatewayClass,
+				supportedGateway,
+				unsupportedGatewayClass,
+				unsupportedGateway,
+			},
+			expectedRemoved: false,
+			expectError:     false,
+		},
+		{
+			name: "finalizer present and object is managed - keeps finalizer",
+			httpRoute: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{finalizerconst.HTTPRouteFinalizer},
+				},
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{
+							{
+								Name: "supported-gateway",
+							},
+						},
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				supportedGatewayClass,
+				supportedGateway,
+				unsupportedGatewayClass,
+				unsupportedGateway,
+			},
+			expectedRemoved:      false,
+			expectError:          false,
+			verifyFinalizer:      true,
+			expectedHasFinalizer: true,
+		},
+		{
+			name: "finalizer present and object not managed - removes finalizer",
+			httpRoute: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{finalizerconst.HTTPRouteFinalizer},
+				},
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{
+							{
+								Name: "unsupported-gateway",
+							},
+						},
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				supportedGatewayClass,
+				supportedGateway,
+				unsupportedGatewayClass,
+				unsupportedGateway,
+			},
+			expectedRemoved:      true,
+			expectError:          false,
+			verifyFinalizer:      true,
+			expectedHasFinalizer: false,
+		},
+		{
+			name: "finalizer present, not managed, object already deleted - returns false",
+			httpRoute: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{finalizerconst.HTTPRouteFinalizer},
+				},
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{
+							{
+								Name: "unsupported-gateway",
+							},
+						},
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				supportedGatewayClass,
+				supportedGateway,
+				unsupportedGatewayClass,
+				unsupportedGateway,
+			},
+			interceptorFuncs: &interceptor.Funcs{
+				Patch: func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					return k8serrors.NewNotFound(schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "httproutes"}, "test-route")
+				},
+			},
+			expectedRemoved: false,
+			expectError:     false,
+		},
+		{
+			name: "finalizer present, not managed, patch fails - returns error",
+			httpRoute: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{finalizerconst.HTTPRouteFinalizer},
+				},
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{
+							{
+								Name: "unsupported-gateway",
+							},
+						},
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				supportedGatewayClass,
+				supportedGateway,
+				unsupportedGatewayClass,
+				unsupportedGateway,
+			},
+			interceptorFuncs: &interceptor.Funcs{
+				Patch: func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					return assert.AnError
+				},
+			},
+			expectedRemoved: false,
+			expectError:     true,
+		},
+		{
+			name: "finalizer present with multiple finalizers, not managed - removes only our finalizer",
+			httpRoute: &gwtypes.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+					Finalizers: []string{
+						"some-other-finalizer",
+						finalizerconst.HTTPRouteFinalizer,
+						"yet-another-finalizer",
+					},
+				},
+				Spec: gatewayv1.HTTPRouteSpec{
+					CommonRouteSpec: gatewayv1.CommonRouteSpec{
+						ParentRefs: []gatewayv1.ParentReference{
+							{
+								Name: "unsupported-gateway",
+							},
+						},
+					},
+				},
+			},
+			existingObjects: []client.Object{
+				supportedGatewayClass,
+				supportedGateway,
+				unsupportedGatewayClass,
+				unsupportedGateway,
+			},
+			expectedRemoved:      true,
+			expectError:          false,
+			verifyFinalizer:      true,
+			expectedHasFinalizer: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Build the client with existing objects
+			clientBuilder := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(tt.existingObjects...)
+
+			// Add the HTTPRoute to the client
+			clientBuilder = clientBuilder.WithObjects(tt.httpRoute)
+
+			// Add interceptor if provided
+			if tt.interceptorFuncs != nil {
+				clientBuilder = clientBuilder.WithInterceptorFuncs(*tt.interceptorFuncs)
+			}
+
+			cl := clientBuilder.Build()
+
+			// Call the function
+			removed, err := removeFinalizerIfNotManaged[gwtypes.HTTPRoute](ctx, cl, tt.httpRoute, logger)
+
+			// Verify expectations
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			assert.Equal(t, tt.expectedRemoved, removed)
+
+			// Verify finalizer state if requested
+			if tt.verifyFinalizer {
+				// Get the updated object from the client
+				updated := &gwtypes.HTTPRoute{}
+				err := cl.Get(ctx, client.ObjectKeyFromObject(tt.httpRoute), updated)
+				require.NoError(t, err)
+
+				assert.Equal(t, tt.expectedHasFinalizer, slices.Contains(updated.GetFinalizers(), finalizerconst.HTTPRouteFinalizer), "finalizer presence mismatch")
+			}
+		})
+	}
+}
+
+func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	// Create a supported GatewayClass
+	supportedGatewayClass := &gatewayv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kong",
+		},
+		Spec: gatewayv1.GatewayClassSpec{
+			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
+		},
+	}
+
+	// Create an unsupported GatewayClass
+	unsupportedGatewayClass := &gatewayv1.GatewayClass{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "other",
+		},
+		Spec: gatewayv1.GatewayClassSpec{
+			ControllerName: "other-controller",
+		},
+	}
+
+	tests := []struct {
+		name                 string
+		gateway              *gatewayv1.Gateway
+		existingObjects      []client.Object
+		interceptorFuncs     *interceptor.Funcs
+		expectedRemoved      bool
+		expectError          bool
+		verifyFinalizer      bool
+		expectedHasFinalizer bool
+	}{
+		{
+			name: "no finalizer present - returns false",
+			gateway: &gatewayv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+				},
+				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "other",
+				},
+			},
+			existingObjects: []client.Object{
+				supportedGatewayClass,
+				unsupportedGatewayClass,
+			},
+			expectedRemoved: false,
+			expectError:     false,
+		},
+		{
+			name: "finalizer present and gateway is managed - keeps finalizer",
+			gateway: &gatewayv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-gateway",
+					Namespace:  "default",
+					Finalizers: []string{finalizerconst.GatewayFinalizer},
+				},
+				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "kong",
+				},
+			},
+			existingObjects: []client.Object{
+				supportedGatewayClass,
+				unsupportedGatewayClass,
+			},
+			expectedRemoved:      false,
+			expectError:          false,
+			verifyFinalizer:      true,
+			expectedHasFinalizer: true,
+		},
+		{
+			name: "finalizer present and gateway not managed - removes finalizer",
+			gateway: &gatewayv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-gateway",
+					Namespace:  "default",
+					Finalizers: []string{finalizerconst.GatewayFinalizer},
+				},
+				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "other",
+				},
+			},
+			existingObjects: []client.Object{
+				supportedGatewayClass,
+				unsupportedGatewayClass,
+			},
+			expectedRemoved:      true,
+			expectError:          false,
+			verifyFinalizer:      true,
+			expectedHasFinalizer: false,
+		},
+		{
+			name: "finalizer present, not managed, object already deleted - returns false",
+			gateway: &gatewayv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-gateway",
+					Namespace:  "default",
+					Finalizers: []string{finalizerconst.GatewayFinalizer},
+				},
+				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "other",
+				},
+			},
+			existingObjects: []client.Object{
+				supportedGatewayClass,
+				unsupportedGatewayClass,
+			},
+			interceptorFuncs: &interceptor.Funcs{
+				Patch: func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					return k8serrors.NewNotFound(schema.GroupResource{Group: "gateway.networking.k8s.io", Resource: "gateways"}, "test-gateway")
+				},
+			},
+			expectedRemoved: false,
+			expectError:     false,
+		},
+		{
+			name: "finalizer present, not managed, patch fails - returns error",
+			gateway: &gatewayv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:       "test-gateway",
+					Namespace:  "default",
+					Finalizers: []string{finalizerconst.GatewayFinalizer},
+				},
+				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "other",
+				},
+			},
+			existingObjects: []client.Object{
+				supportedGatewayClass,
+				unsupportedGatewayClass,
+			},
+			interceptorFuncs: &interceptor.Funcs{
+				Patch: func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+					return assert.AnError
+				},
+			},
+			expectedRemoved: false,
+			expectError:     true,
+		},
+		{
+			name: "finalizer present with multiple finalizers, not managed - removes only our finalizer",
+			gateway: &gatewayv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+					Finalizers: []string{
+						"some-other-finalizer",
+						finalizerconst.GatewayFinalizer,
+						"yet-another-finalizer",
+					},
+				},
+				Spec: gatewayv1.GatewaySpec{
+					GatewayClassName: "other",
+				},
+			},
+			existingObjects: []client.Object{
+				supportedGatewayClass,
+				unsupportedGatewayClass,
+			},
+			expectedRemoved:      true,
+			expectError:          false,
+			verifyFinalizer:      true,
+			expectedHasFinalizer: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Build the client with existing objects
+			clientBuilder := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(tt.existingObjects...)
+
+			// Add the Gateway to the client
+			clientBuilder = clientBuilder.WithObjects(tt.gateway)
+
+			// Add interceptor if provided
+			if tt.interceptorFuncs != nil {
+				clientBuilder = clientBuilder.WithInterceptorFuncs(*tt.interceptorFuncs)
+			}
+
+			cl := clientBuilder.Build()
+
+			// Call the function
+			removed, err := removeFinalizerIfNotManaged[gwtypes.Gateway](ctx, cl, tt.gateway, logger)
+
+			// Verify expectations
+			if tt.expectError {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+
+			assert.Equal(t, tt.expectedRemoved, removed)
+
+			// Verify finalizer state if requested
+			if tt.verifyFinalizer {
+				// Get the updated object from the client
+				updated := &gatewayv1.Gateway{}
+				err := cl.Get(ctx, client.ObjectKeyFromObject(tt.gateway), updated)
+				require.NoError(t, err)
+
+				assert.Equal(t, tt.expectedHasFinalizer, slices.Contains(updated.GetFinalizers(), finalizerconst.GatewayFinalizer), "finalizer presence mismatch")
+
+			}
+		})
+	}
 }

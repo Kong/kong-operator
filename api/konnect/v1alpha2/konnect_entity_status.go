@@ -1,6 +1,7 @@
 package v1alpha2
 
 // KonnectEntityStatus represents the status of a Konnect entity.
+//
 // +apireference:kgo:include
 type KonnectEntityStatus struct {
 	// ID is the unique identifier of the Konnect entity as assigned by Konnect API.
@@ -59,7 +60,9 @@ func (in *KonnectEntityStatus) SetServerURL(s string) {
 	in.ServerURL = s
 }
 
-// KonnectEntityStatusWithControlPlaneRef represents the status of a Konnect entity with a reference to a ControlPlane.
+// KonnectEntityStatusWithControlPlaneRef represents the status of a Konnect entity
+// with a reference to a ControlPlane.
+//
 // +apireference:kgo:include
 type KonnectEntityStatusWithControlPlaneRef struct {
 	KonnectEntityStatus `json:",inline"`
@@ -80,7 +83,9 @@ func (in *KonnectEntityStatusWithControlPlaneRef) GetControlPlaneID() string {
 	return in.ControlPlaneID
 }
 
-// KonnectEntityStatusWithControlPlaneAndConsumerRefs represents the status of a Konnect entity with references to a ControlPlane and a Consumer.
+// KonnectEntityStatusWithControlPlaneAndConsumerRefs represents the status
+// of a Konnect entity with references to a ControlPlane and a Consumer.
+//
 // +apireference:kgo:include
 type KonnectEntityStatusWithControlPlaneAndConsumerRefs struct {
 	KonnectEntityStatus `json:",inline"`
@@ -116,7 +121,9 @@ func (in *KonnectEntityStatusWithControlPlaneAndConsumerRefs) GetConsumerID() st
 	return in.ConsumerID
 }
 
-// KonnectEntityStatusWithControlPlaneAndServiceRefs represents the status of a Konnect entity with references to a ControlPlane and a Service.
+// KonnectEntityStatusWithControlPlaneAndServiceRefs represents the status
+// of a Konnect entity with references to a ControlPlane and a Service.
+//
 // +apireference:kgo:include
 type KonnectEntityStatusWithControlPlaneAndServiceRefs struct {
 	KonnectEntityStatus `json:",inline"`
@@ -142,7 +149,9 @@ func (in *KonnectEntityStatusWithControlPlaneAndServiceRefs) GetControlPlaneID()
 	return in.ControlPlaneID
 }
 
-// KonnectEntityStatusWithControlPlaneAndUpstreamRefs represents the status of a Konnect entity with references to a ControlPlane and an Upstream.
+// KonnectEntityStatusWithControlPlaneAndUpstreamRefs represents the status
+// of a Konnect entity with references to a ControlPlane and an Upstream.
+//
 // +apireference:kgo:include
 type KonnectEntityStatusWithControlPlaneAndUpstreamRefs struct {
 	KonnectEntityStatus `json:",inline"`
@@ -158,7 +167,9 @@ type KonnectEntityStatusWithControlPlaneAndUpstreamRefs struct {
 	UpstreamID string `json:"upstreamID,omitempty"`
 }
 
-// KonnectEntityStatusWithControlPlaneAndKeySetRef represents the status of a Konnect entity with references to a ControlPlane and a KeySet.
+// KonnectEntityStatusWithControlPlaneAndKeySetRef represents the status
+// of a Konnect entity with references to a ControlPlane and a KeySet.
+//
 // +apireference:kgo:include
 type KonnectEntityStatusWithControlPlaneAndKeySetRef struct {
 	KonnectEntityStatus `json:",inline"`
@@ -194,7 +205,9 @@ func (in *KonnectEntityStatusWithControlPlaneAndKeySetRef) GetKeySetID() string 
 	return in.KeySetID
 }
 
-// KonnectEntityStatusWithControlPlaneAndCertificateRefs represents the status of a Konnect entity with references to a ControlPlane and a Certificate.
+// KonnectEntityStatusWithControlPlaneAndCertificateRefs represents the status
+// of a Konnect entity with references to a ControlPlane and a Certificate.
+//
 // +apireference:kgo:include
 type KonnectEntityStatusWithControlPlaneAndCertificateRefs struct {
 	KonnectEntityStatus `json:",inline"`
@@ -210,7 +223,8 @@ type KonnectEntityStatusWithControlPlaneAndCertificateRefs struct {
 	CertificateID string `json:"certificateID,omitempty"`
 }
 
-// KonnectEntityStatusWithNetworkRef represents the status of a Konnect entity with reference to a Konnect cloud gateway network.
+// KonnectEntityStatusWithNetworkRef represents the status of a Konnect entity
+// with reference to a Konnect cloud gateway network.
 type KonnectEntityStatusWithNetworkRef struct {
 	KonnectEntityStatus `json:",inline"`
 	// NetworkID is the Konnect ID of the Konnect cloud gateway network this entity is associated with.

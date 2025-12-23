@@ -303,6 +303,11 @@ func TestKonnectExtension(t *testing.T) {
 			assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, konnectExtension.Status.Conditions)
 		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
+		t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s/%s", konnectExtension.Namespace, konnectExtension.Name)
+		require.EventuallyWithT(t,
+			checkKonnectExtensionStatus(konnectExtension, cp.GetKonnectID(), ""),
+			testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+
 		t.Log("Test deletion")
 
 		// Enforce order explicitly to check the behavior.
@@ -569,6 +574,9 @@ func checkKonnectExtensionStatus(
 		require.NoError(t, err)
 		// Check Konnect control plane ID
 		require.NotNil(t, ke.Status.Konnect, "status.konnect should be present")
+		require.NotEmpty(t, ke.Status.Konnect.ControlPlaneID, "status.konnect.controlPlaneID should be present")
+		require.NotEmpty(t, ke.Status.Konnect.Endpoints.ControlPlaneEndpoint, "status.konnect.endpoints.controlPlaneEndpoint should be present")
+		require.NotEmpty(t, ke.Status.Konnect.Endpoints.TelemetryEndpoint, "status.konnect.endpoints.telemetryEndpoint should be present")
 		assert.Equal(t, expectedKonnectCPID, ke.Status.Konnect.ControlPlaneID, "Konnect control plane ID should be set in status")
 		// Check dataplane client auth
 		require.NotNil(t, ke.Status.DataPlaneClientAuth, "status.dataPlaneClientAuth should be present")

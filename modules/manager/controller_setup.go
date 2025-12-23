@@ -17,6 +17,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
@@ -183,6 +184,11 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					Group:    gatewayv1.SchemeGroupVersion.Group,
 					Version:  gatewayv1.SchemeGroupVersion.Version,
 					Resource: "gateways",
+				},
+				{
+					Group:    gatewayv1beta1.SchemeGroupVersion.Group,
+					Version:  gatewayv1beta1.SchemeGroupVersion.Version,
+					Resource: "referencegrants",
 				},
 				operatorv1alpha1.KongPluginInstallationGVR(),
 			},

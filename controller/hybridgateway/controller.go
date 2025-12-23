@@ -111,6 +111,11 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	gvk := obj.GetObjectKind().GroupVersionKind()
 	log.Debug(logger, "Reconciling object", "Group", gvk.Group, "Kind", gvk.Kind)
 
+	// Determine if we should process this object.
+	if !shouldProcessObject[t](ctx, r.Client, obj, logger) {
+		return ctrl.Result{}, nil
+	}
+
 	// Handle deletion and finalizer cleanup
 	if obj.GetDeletionTimestamp() != nil {
 		return r.handleDeletion(ctx, logger, obj, rootObj)
@@ -135,7 +140,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	}
 
 	// Phase 1: Status Update.
-	statusChanged, err := enforceStatus(ctx, logger, conv)
+	statusChanged, stop, err := enforceStatus(ctx, logger, conv)
 	if err != nil && !k8serrors.IsConflict(err) {
 		// Record status update failure event.
 		r.eventRecorder.Event(
@@ -147,6 +152,10 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	} else if k8serrors.IsConflict(err) {
 		return ctrl.Result{Requeue: true}, nil
+	}
+	if stop {
+		log.Debug(logger, "Stopping further reconciliation as the resource is not ready for processing")
+		return ctrl.Result{}, nil
 	}
 
 	// Only emit success event if status was actually changed.
@@ -208,7 +217,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	}
 
 	// Phase 4: Orphan Cleanup.
-	orphansDeleted, needsRequeue, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)
+	orphansDeleted, err := cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)
 	if err != nil {
 		// Record orphan cleanup failure event.
 		r.eventRecorder.Event(
@@ -224,17 +233,27 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, req ct
 	// This is critical for security: we process one resource type at a time, waiting for each
 	// type to be fully deleted before moving to the next type (e.g., delete KongRoute before
 	// KongPluginBinding to prevent routes from being active without security plugins).
-	if needsRequeue {
+	if orphansDeleted {
 		log.Debug(logger, "Orphan cleanup in progress, requeueing to continue multi-step deletion")
-		if orphansDeleted {
-			r.eventRecorder.Event(
-				obj,
-				corev1.EventTypeNormal,
-				eventconst.EventReasonOrphanCleanupSucceeded,
-				"Orphan cleanup in progress",
-			)
-		}
+		r.eventRecorder.Event(
+			obj,
+			corev1.EventTypeNormal,
+			eventconst.EventReasonOrphanCleanupSucceeded,
+			"Orphan cleanup in progress",
+		)
 		return ctrl.Result{Requeue: true}, nil
+	}
+
+	// Remove finalizer if it is no longer needed.
+	// This is done after all processing to ensure that if the object is still
+	// being managed by us, the finalizer remains.
+	removed, err := removeFinalizerIfNotManaged[t](ctx, r.Client, obj, logger)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	if removed {
+		log.Debug(logger, "Finalizer removed, from object no longer managed by us")
 	}
 
 	log.Debug(logger, "Object reconciliation completed", "Group", gvk.Group, "Kind", gvk.Kind)
@@ -256,7 +275,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 
 	// Clean up all generated resources by calling the same cleanup logic as orphan cleanup
 	// but with no desired resources (simulating what cleanOrphanedResources does when desiredObjects is empty)
-	orphansDeleted, needsRequeue, err := r.cleanupGeneratedResources(ctx, logger, conv)
+	orphansDeleted, err := r.cleanupGeneratedResources(ctx, logger, conv)
 	if err != nil {
 		// Record cleanup failure event
 		r.eventRecorder.Event(
@@ -270,16 +289,14 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 
 	// If resources are still being deleted, requeue to continue the multi-step deletion process.
 	// We must wait for all resources to be fully deleted before removing the finalizer.
-	if needsRequeue {
+	if orphansDeleted {
 		log.Debug(logger, "Resource deletion cleanup in progress, requeueing to continue")
-		if orphansDeleted {
-			r.eventRecorder.Event(
-				obj,
-				corev1.EventTypeNormal,
-				eventconst.EventReasonOrphanCleanupSucceeded,
-				"Deletion cleanup in progress",
-			)
-		}
+		r.eventRecorder.Event(
+			obj,
+			corev1.EventTypeNormal,
+			eventconst.EventReasonOrphanCleanupSucceeded,
+			"Deletion cleanup in progress",
+		)
 		return ctrl.Result{Requeue: true}, nil
 	}
 
@@ -304,14 +321,13 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 // This is similar to cleanOrphanedResources but treats all owned resources as orphans
 // since we want to delete everything when the Route is being deleted.
 // Returns:
-//   - orphansDeleted: true if any resources were deleted in this iteration
-//   - requeueNeeded: true if a requeue is needed to continue the multi-step deletion
+//   - bool: true if any resources were deleted and a requeue is needed
 //   - error: any error that occurred during cleanup
 func (r *HybridGatewayReconciler[t, tPtr]) cleanupGeneratedResources(
 	ctx context.Context,
 	logger logr.Logger,
 	conv converter.APIConverter[t],
-) (orphansDeleted bool, requeueNeeded bool, err error) {
+) (bool, error) {
 	// Use the existing cleanup logic but with an empty desired set,
 	// which will cause all owned resources to be considered orphans and deleted
 	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv)

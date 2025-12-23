@@ -13,6 +13,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
@@ -24,6 +25,7 @@ func TestWatchOptions(t *testing.T) {
 	testReconciliationWatchOptionsForEntity(t, &konnectv1alpha2.KonnectGatewayControlPlane{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongService{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1.KongConsumer{})
+	testReconciliationWatchOptionsForEntity(t, &configurationv1beta1.KongConsumerGroup{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongRoute{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongCACertificate{})
 	testReconciliationWatchOptionsForEntity(t, &configurationv1alpha1.KongCertificate{})
@@ -214,6 +216,294 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 				requests := f(t.Context(), cp)
 				require.Len(t, requests, len(tt.expected))
 				require.Equal(t, tt.expected, requests)
+			})
+		}
+	})
+}
+
+func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
+	t.Run("KongService", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			grant    *configurationv1alpha1.KongReferenceGrant
+			services []client.Object
+			expected []ctrl.Request
+		}{
+			{
+				name: "no matching services",
+				grant: &configurationv1alpha1.KongReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grant1",
+						Namespace: "target-ns",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:      "KongService",
+								Namespace: "source-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+				services: []client.Object{
+					&configurationv1alpha1.KongService{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service1",
+							Namespace: "other-ns",
+						},
+					},
+				},
+				expected: []ctrl.Request{},
+			},
+			{
+				name: "single matching service",
+				grant: &configurationv1alpha1.KongReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grant1",
+						Namespace: "target-ns",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:      "KongService",
+								Namespace: "source-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+				services: []client.Object{
+					&configurationv1alpha1.KongService{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service1",
+							Namespace: "source-ns",
+						},
+					},
+				},
+				expected: []ctrl.Request{
+					{
+						NamespacedName: types.NamespacedName{
+							Name:      "service1",
+							Namespace: "source-ns",
+						},
+					},
+				},
+			},
+			{
+				name: "multiple matching services from same namespace",
+				grant: &configurationv1alpha1.KongReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grant1",
+						Namespace: "target-ns",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:      "KongService",
+								Namespace: "source-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+				services: []client.Object{
+					&configurationv1alpha1.KongService{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service1",
+							Namespace: "source-ns",
+						},
+					},
+					&configurationv1alpha1.KongService{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service2",
+							Namespace: "source-ns",
+						},
+					},
+					&configurationv1alpha1.KongService{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service3",
+							Namespace: "other-ns",
+						},
+					},
+				},
+				expected: []ctrl.Request{
+					{
+						NamespacedName: types.NamespacedName{
+							Name:      "service1",
+							Namespace: "source-ns",
+						},
+					},
+					{
+						NamespacedName: types.NamespacedName{
+							Name:      "service2",
+							Namespace: "source-ns",
+						},
+					},
+				},
+			},
+			{
+				name: "multiple from namespaces",
+				grant: &configurationv1alpha1.KongReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grant1",
+						Namespace: "target-ns",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:      "KongService",
+								Namespace: "source-ns-1",
+							},
+							{
+								Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:      "KongService",
+								Namespace: "source-ns-2",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+				services: []client.Object{
+					&configurationv1alpha1.KongService{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service1",
+							Namespace: "source-ns-1",
+						},
+					},
+					&configurationv1alpha1.KongService{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service2",
+							Namespace: "source-ns-2",
+						},
+					},
+					&configurationv1alpha1.KongService{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service3",
+							Namespace: "other-ns",
+						},
+					},
+				},
+				expected: []ctrl.Request{
+					{
+						NamespacedName: types.NamespacedName{
+							Name:      "service1",
+							Namespace: "source-ns-1",
+						},
+					},
+					{
+						NamespacedName: types.NamespacedName{
+							Name:      "service2",
+							Namespace: "source-ns-2",
+						},
+					},
+				},
+			},
+			{
+				name: "from references different kind",
+				grant: &configurationv1alpha1.KongReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grant1",
+						Namespace: "target-ns",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+								Kind:      "KongConsumer",
+								Namespace: "source-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+				services: []client.Object{
+					&configurationv1alpha1.KongService{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service1",
+							Namespace: "source-ns",
+						},
+					},
+				},
+				expected: []ctrl.Request{},
+			},
+			{
+				name: "from references different group",
+				grant: &configurationv1alpha1.KongReferenceGrant{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "grant1",
+						Namespace: "target-ns",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     "other.group",
+								Kind:      "KongService",
+								Namespace: "source-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+				services: []client.Object{
+					&configurationv1alpha1.KongService{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      "service1",
+							Namespace: "source-ns",
+						},
+					},
+				},
+				expected: []ctrl.Request{},
+			},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				cl := fakectrlruntimeclient.NewClientBuilder().
+					WithScheme(scheme.Get()).
+					WithObjects(append(tt.services, tt.grant)...).
+					Build()
+				require.NotNil(t, cl)
+
+				f := enqueueObjectsForKongReferenceGrant[configurationv1alpha1.KongServiceList](cl)
+
+				requests := f(t.Context(), tt.grant)
+				require.Len(t, requests, len(tt.expected))
+				require.ElementsMatch(t, tt.expected, requests)
 			})
 		}
 	})

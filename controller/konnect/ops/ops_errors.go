@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
@@ -167,6 +169,59 @@ func ErrorIsSDKError400(err error) bool {
 	}
 
 	return errSDK.StatusCode == 400
+}
+
+// ErrorIsRateLimited returns true if the provided error is a 429 Too Many Requests error.
+// This can happen when the Konnect API rate limit is exhausted.
+func ErrorIsRateLimited(err error) bool {
+	var errRateLimited *sdkkonnecterrs.RateLimited
+	if errors.As(err, &errRateLimited) {
+		return true
+	}
+
+	var errSDK *sdkkonnecterrs.SDKError
+	if errors.As(err, &errSDK) {
+		return errSDK.StatusCode == http.StatusTooManyRequests
+	}
+
+	return false
+}
+
+const (
+	// DefaultRateLimitRetryAfter is the default retry-after duration when the
+	// Retry-After header is not present in the rate limit response.
+	DefaultRateLimitRetryAfter = 15 * time.Second
+)
+
+// GetRetryAfterFromRateLimitError extracts the Retry-After duration from a rate limit error.
+// It checks for the Retry-After header in the HTTP response.
+// If the header is not present or cannot be parsed, it returns the default retry-after duration.
+// If the error is not a rate limit error, it returns 0 and false.
+func GetRetryAfterFromRateLimitError(err error) (time.Duration, bool) {
+	if !ErrorIsRateLimited(err) {
+		return 0, false
+	}
+
+	var errSDK *sdkkonnecterrs.SDKError
+	if errors.As(err, &errSDK) && errSDK.RawResponse != nil {
+		if retryAfter := errSDK.RawResponse.Header.Get("Retry-After"); retryAfter != "" {
+			// Try parsing as seconds (integer)
+			if seconds, parseErr := strconv.ParseInt(retryAfter, 10, 64); parseErr == nil && seconds > 0 {
+				return time.Duration(seconds) * time.Second, true
+			}
+
+			// Try parsing as HTTP-date
+			if t, parseErr := http.ParseTime(retryAfter); parseErr == nil {
+				duration := time.Until(t)
+				if duration > 0 {
+					return duration, true
+				}
+			}
+		}
+	}
+
+	// Return default retry-after duration if we couldn't extract a value
+	return DefaultRateLimitRetryAfter, true
 }
 
 // ErrorIsConflictError returns true if the provided error is a 409 ConflictError.
@@ -341,7 +396,7 @@ func handleDeleteError[
 }
 
 // IgnoreUnrecoverableAPIErr ignores unrecoverable errors that would cause the
-// reconciler to endlessly requeue.
+// reconciler to endlessly requeue, and wraps rate limit errors with retry-after duration.
 func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 	// If the error is a type field error or bad request error, then don't propagate
 	// it to the caller.
@@ -353,6 +408,16 @@ func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 		ErrorIsConflictError(err) {
 		log.Debug(logger, "ignoring unrecoverable API error, consult object's status for details", "err", err)
 		return nil
+	}
+
+	// If the error is a rate limit error, wrap it with the retry-after duration
+	// so the reconciler can use it to set RequeueAfter.
+	if retryAfter, isRateLimited := GetRetryAfterFromRateLimitError(err); isRateLimited {
+		logger.Info("rate limited by Konnect API", "retry_after", retryAfter.String())
+		return RateLimitError{
+			Err:        err,
+			RetryAfter: retryAfter,
+		}
 	}
 
 	return err

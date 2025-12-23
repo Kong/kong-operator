@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
 	"github.com/kong/kong-operator/controller/pkg/patch"
+	"github.com/kong/kong-operator/internal/utils/crossnamespace"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
@@ -128,58 +129,6 @@ func conditionMessageReferenceKonnectAPIAuthConfigurationValid(apiAuthRef types.
 	return fmt.Sprintf("referenced KonnectAPIAuthConfiguration %s is valid", apiAuthRef)
 }
 
-func kongReferenceGrantsAllowsCPRef(
-	krgs []configurationv1alpha1.KongReferenceGrant,
-	obj client.Object,
-	cpRef commonv1alpha1.KonnectNamespacedRef,
-) bool {
-	var (
-		gvk       = obj.GetObjectKind().GroupVersionKind()
-		fromKind  = gvk.Kind
-		fromGroup = gvk.Group
-		fromNs    = obj.GetNamespace()
-	)
-
-	for _, krg := range krgs {
-		// This is already enforced at the call site but in case this is used elsewhere, double check.
-		if krg.Namespace != cpRef.Namespace {
-			continue
-		}
-
-		var (
-			allowedFrom bool
-			allowedTo   bool
-		)
-		for _, from := range krg.Spec.From {
-			if string(from.Namespace) == fromNs &&
-				string(from.Kind) == fromKind &&
-				string(from.Group) == fromGroup {
-				allowedFrom = true
-				break
-			}
-		}
-		if !allowedFrom {
-			continue
-		}
-
-		for _, to := range krg.Spec.To {
-			if (to.Name == nil || cpRef.Name == string(*to.Name)) &&
-				string(to.Kind) == "KonnectGatewayControlPlane" &&
-				string(to.Group) == konnectv1alpha2.SchemeGroupVersion.Group {
-				allowedTo = true
-				break
-			}
-		}
-		if !allowedTo {
-			continue
-		}
-
-		return true
-	}
-
-	return false
-}
-
 func ensureKongReferenceGrant[
 	T constraints.SupportedKonnectEntityType, TEnt constraints.EntityType[T],
 ](
@@ -219,23 +168,22 @@ func ensureKongReferenceGrant[
 		return ctrl.Result{}, nil
 	}
 
-	nn := types.NamespacedName{
-		Name:      cpRef.KonnectNamespacedRef.Name,
-		Namespace: cpRef.KonnectNamespacedRef.Namespace,
-	}
-	var krgs configurationv1alpha1.KongReferenceGrantList
-	if err := cl.List(ctx, &krgs, client.InNamespace(nn.Namespace)); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to list KongReferenceGrants in namespace %s: %w", nn.Namespace, err)
-	}
-
-	isAllowed := kongReferenceGrantsAllowsCPRef(krgs.Items, ent, *cpRef.KonnectNamespacedRef)
-	if !isAllowed {
+	err = crossnamespace.CheckKongReferenceGrantForResource(
+		ctx,
+		cl,
+		ent.GetNamespace(),
+		cpRef.KonnectNamespacedRef.Namespace,
+		cpRef.KonnectNamespacedRef.Name,
+		metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
+		metav1.GroupVersionKind(konnectv1alpha2.SchemeGroupVersion.WithKind("KonnectGatewayControlPlane")),
+	)
+	if crossnamespace.IsReferenceNotGranted(err) {
 		if res, errStatus := patch.StatusWithCondition(
 			ctx, cl, ent,
 			consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
 			metav1.ConditionFalse,
 			configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted,
-			fmt.Sprintf("KongReferenceGrant %s does not allow access to KonnectGatewayControlPlane %s", nn, cpRef),
+			fmt.Sprintf("KongReferenceGrants do not allow access to KonnectGatewayControlPlane %s", cpRef),
 		); errStatus != nil || !res.IsZero() {
 			return res, errStatus
 		}
@@ -247,7 +195,7 @@ func ensureKongReferenceGrant[
 		consts.ConditionType(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs),
 		metav1.ConditionTrue,
 		configurationv1alpha1.KongReferenceGrantReasonResolvedRefs,
-		fmt.Sprintf("KongReferenceGrant %s allows access to KonnectGatewayControlPlane %s", nn, cpRef),
+		fmt.Sprintf("KongReferenceGrants allow access to KonnectGatewayControlPlane %s", cpRef),
 	); errStatus != nil || !res.IsZero() {
 		return res, errStatus
 	}

@@ -103,10 +103,12 @@ const (
 	ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled = operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled
 )
 
+// ControlPlaneGVR is an alias for the current ControlPlane GVR.
 func ControlPlaneGVR() schema.GroupVersionResource {
 	return operatorv2beta1.ControlPlaneGVR()
 }
 
+// GatewayConfigurationGVR is an alias for the current GatewayConfiguration GVR.
 func GatewayConfigurationGVR() schema.GroupVersionResource {
 	return operatorv2beta1.GatewayConfigurationGVR()
 }
