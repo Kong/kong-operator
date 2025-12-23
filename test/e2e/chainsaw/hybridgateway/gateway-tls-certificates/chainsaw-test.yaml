@@ -1,0 +1,156 @@
+# Gateway TLS certificates test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gateway-tls-certificates
+spec:
+  description: |
+    This test validates that the hybrid gateway controller correctly
+    processes Gateway TLS listeners and creates KongCertificate and KongSNI
+    resources from the referenced TLS secrets.
+  
+  timeouts:
+    apply: 120s
+    assert: 30s
+    delete: 120s
+  
+  # Namespace that will be created by chainsaw for the test.
+  namespace: kong
+
+  bindings:
+    # Common bindings
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: sni_hostname
+      value: (join('.', ['*', ($test_name), 'example.com']))
+    - name: cert_secret_name
+      value: test-tls-secret
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: listener_https_port
+      value: 443
+    - name: listener_http_port
+      value: 80
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: http_route_name
+      value: (join('-', [($test_name), 'echo-route']))
+    - name: http_route_namespace
+      value: ($namespace)
+
+  steps:
+    # Creates and asserts prerequisite resources, like namespace and control plane resources.
+    - name: Create-tls-secret
+      description: Create TLS Secret for the Gateway TLS listener.
+      use:
+        template: ../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: Create-gateway-configuration
+      description: Create GatewayConfiguration for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    - name: Create-gateway-class
+      description: Create GatewayClass for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    - name: Create-gateway
+      description: Create Gateway with TLS listener for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-gateway.yaml
+
+    - name: Assert-konnect-gateway-control-plane
+      description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
+      use:
+        template: ../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    - name: Assert-kong-certificate
+      description: Assert that the KongCertificate resource is created for the TLS secret.
+      use:
+       template: ../common/_step_templates/assert-kongCertificate.yaml
+  
+    - name: Assert-kong-sni
+      description: Assert that the KongSNI resource is created for the SNI hostname.
+      use:
+       template: ../common/_step_templates/assert-kongSNI.yaml
+  
+    - name: Create-echo-service
+      description: Create and assert an echo service to route traffic to.
+      use:
+        template: ../common/_step_templates/apply-assert-echoService.yaml
+      bindings:
+        - name: echo_name
+          value: echo
+        - name: echo_namespace
+          value: ($namespace)
+    
+    # Create HTTPRoute to route traffic to the echo service.
+    # the httpRoute is not templated because it is specific to this test case.
+    - name: Create-httproute-echo
+      description: Create HTTPRoute to route traffic to the echo service.
+      try:
+        - apply:
+            file: 01-httproute-echo.yaml
+        - assert:
+            file: 02-httproute-echo-assert.yaml
+      bindings:
+        - name: service_name
+          value: echo
+        - name: route_name
+          value: echo-route
+        - name: route_namespace
+          value: ($namespace)
+        - name: route_hosts
+          value:
+            - (join('.', [$service_name, $test_name, 'example.com']))
+    
+    # Verify that the HTTPRoute is translated into a KongRoute resource.
+    - name: Assert-kong-route
+      description: Assert that the KongRoute resource is created for the HTTPRoute.
+      use:
+        template: ../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value: ["/echo"]
+        - name: strip_path
+          value: true
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+    
+    # Verify that the HTTPRoute backend is translated into a KongService resource.
+    - name: Assert-kong-service
+      description: Assert that the KongService resource is created for the HTTPRoute.
+      use:
+        template: ../common/_step_templates/assert-kongService.yaml
+
+    # Verify that the HTTPRoute backend is translated into a KongUpstream resource.
+    - name: Assert-kong-upstream
+      description: Assert that the KongUpstream resource is created for the HTTPRoute.
+      use:
+        template: ../common/_step_templates/assert-kongUstream.yaml
+    
+    # Verify that the KongUpstream has KongTarget resources created for it.
+    - name: Assert-kong-target
+      description: Assert that the KongTarget resource is created for the KongUpstream.
+      use:
+        template: ../common/_step_templates/assert-kongTarget.yaml
+      bindings:
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: target_weight
+          value: 1
+    

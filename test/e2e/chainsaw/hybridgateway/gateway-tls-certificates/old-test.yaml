@@ -1,0 +1,718 @@
+# Gateway TLS certificates test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gateway-tls-certificates
+spec:
+  description: |
+    This test validates that the hybrid gateway controller correctly
+    processes Gateway TLS listeners and creates KongCertificate and KongSNI
+    resources from the referenced TLS secrets.
+  
+  timeouts:
+    apply: 120s
+    assert: 30s
+    delete: 120s
+  
+  bindings:
+    # Common bindings
+    - name: test_namespace
+      value: gateway-tls-certificates
+  
+  
+  steps:
+    - name: create-namespace
+      description: Create Namespace for the test
+      use:
+        template: ../common/_step_templates/create_namespace.yaml
+    # Step 1: Create prerequisite resources including TLS secrets.
+    - name: Create prerequisites
+      description: Create GatewayClass, Gateway with TLS listeners, and TLS secrets
+      try:
+        - apply:
+            file: 01-prerequisites.yaml
+        # Assert test-specific resources.
+        - assert:
+            file: 01-assert-prerequisites.yaml
+    
+    # Step 2: Deploy control plane and data plane for hybrid gateway.
+    - name: Create controlplane and dataplane
+      description: Create KonnectAPIAuthConfiguration and GatewayConfiguration, Gateway for hybrid gateway.
+      try:
+        - apply:
+            file: 02-controlplane-dataplane.yaml
+        # Collect bindings from source resources
+        - script:
+            content: |
+              # Exit immediately if a command fails
+              set -e
+
+              # 1. Fetch values and store in shell variables
+              # We use '|| exit 1' to be explicit, though set -e handles this
+              CP_NAME=$(kubectl get konnectgatewaycontrolplane -n kong -l gateway-operator.konghq.com/managed-by=gateway -o jsonpath='{.items[0].metadata.name}')
+              GW_NAME=$(kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}')
+              GW_NS=$(kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}')
+              SEC_NS=$(kubectl get secret test-tls-secret -n kong -o jsonpath='{.metadata.namespace}')
+
+              # For SNI and Listener, we handle potential empty results carefully
+              SNI=$(kubectl get gateway -n kong -o jsonpath='{.items[0].spec.listeners[?(@.protocol=="HTTPS")].hostname}' | tr -d '[]"' || echo "")
+              L_NAME=$(kubectl get gateway -n kong -o jsonpath='{.items[0].spec.listeners[?(@.protocol=="HTTPS")].name}' | head -n1 || echo "")
+
+              # 2. Final validation: Ensure critical variables are not empty
+              if [ -z "$CP_NAME" ] || [ -z "$GW_NAME" ]; then
+                echo "Error: Required resources not found" >&2
+                exit 1
+              fi
+
+              # 3. Output the JSON block for Chainsaw to parse
+              cat <<EOF
+              {
+                "cp_name": "$CP_NAME",
+                "gw_name": "$GW_NAME",
+                "gw_ns": "$GW_NS",
+                "sec_ns": "$SEC_NS",
+                "sni": "$SNI",
+                "l_name": "$L_NAME"
+              }
+              EOF
+            outputs:
+              - name: konnectgatewaycontrolplane_name
+                value: json_parse($stdout).cp_name
+              - name: gateway_name
+                value: json_parse($stdout).gw_name
+              - name: gateway_namespace
+                value: json_parse($stdout).gw_ns
+              - name: namespace
+                value: json_parse($stdout).gw_ns
+              - name: secret_namespace
+                value: json_parse($stdout).sec_ns
+              - name: sni_hostname
+                value: json_parse($stdout).sni
+              - name: listener_name
+                value: json_parse($stdout).l_name
+        # Assert ControlPlane resources are created and configured correctly.
+        - assert:
+            file: ../common/assertions/gateway.yaml
+        - assert:
+            file: ../common/assertions/konnect-gateway-controlplane.yaml
+        - assert:
+            file: ../common/assertions/konnect-extension.yaml
+        - assert:
+            file: ../common/assertions/gatewayclass.yaml
+        - assert:
+            file: ../common/assertions/gatewayconfiguration.yaml
+        - assert:
+            file: ../common/assertions/konnect-apiauth.yaml
+    
+    # Step 3: Assert that Kong resources are created for TLS certificates(KongCertificate, KongSNI).
+    - name: assert kong-resources for-tls-certificates
+      description: Assert that KongCertificate and KongSNI are created for TLS certificates.
+      try:
+        - script:
+            content: bash ../common/scripts/test-script.sh
+        - script:
+            content: |
+              kubectl get konnectgatewaycontrolplane -n kong -l gateway-operator.konghq.com/managed-by=gateway -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: konnectgatewaycontrolplane_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: gateway_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
+            outputs:
+              - name: gateway_namespace
+                value: ($stdout)
+              - name: namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get secret test-tls-secret -n kong -o jsonpath='{.metadata.name}'
+            outputs:
+              - name: secret_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get secret test-tls-secret -n kong -o jsonpath='{.metadata.namespace}'
+            outputs:
+              - name: secret_namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].spec.listeners[?(@.protocol=="HTTPS")].hostname}' | tr -d '[]"'
+            outputs:
+              - name: sni_hostname
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: gateway_base_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].spec.listeners[?(@.protocol=="HTTPS")].name}' | head -n1
+            outputs:
+              - name: listener_name
+                value: ($stdout)
+        # Assert Kong resources for TLS certificates.
+        - assert:
+            file: ../common/assertions/kongcertificate.yaml
+        - assert:
+            file: ../common/assertions/kongsni.yaml
+    
+    ######################################
+    ###########   Step 4   ##############
+    ######################################
+
+    # Step 4: Create HTTPRoute to route traffic via the Gateway.
+    - name: create-httproute
+      description: Create HTTPRoute to route traffic via the Gateway.
+      try:
+        - apply:
+            file: 03-httproute.yaml
+        # Collect bindings from source resources.
+        - script:
+            outputs:
+              - name: namespace
+                value: kong
+              - name: parent_name
+                value: kong-foo
+              - name: chainsaw_test_name
+                value: gateway-tls-certificates
+        # Assert HTTPRoute is accepted and programmed.
+        - assert:
+            file: ../common/assertions/httproute.yaml
+    
+    #######################################
+    ###########   Step 5   ###############
+    #######################################
+
+    # Step 5: Assert that Kong resources are created for HTTPRoute (KongRoute, KongService, KongUpstream, KongTarget).
+    - name: assert kong-resources for-httproute
+      description: Verify KongRoute, KongService, KongUpstream, and KongTarget are created
+      try:
+        # Collect bindings needed for Kong resource assertions.
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: hybrid_gateway_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
+            outputs:
+              - name: hybrid_gateway_namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get httproute -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: managedby_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get httproute -n kong -o jsonpath='{.items[0].metadata.namespace}'
+            outputs:
+              - name: managedby_namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get httproute -n kong echo -o jsonpath='{.spec.rules[*].matches[*].path.value}' | jq -Rsc 'split(" ")'
+            outputs:
+              - name: route_paths_json
+                value: ($stdout)
+        - script:
+            content: |
+              OUTPUT=$(kubectl get httproute -n kong echo -o jsonpath='{.spec.rules[*].matches[*].method}')
+              if [ -z "$OUTPUT" ]; then
+                echo '[]'
+              else
+                echo "$OUTPUT" | tr -d '\n' | jq -Rsc 'split(" ")'
+              fi
+            outputs:
+              - name: route_methods_json
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get konnectgatewaycontrolplane -n kong -l gateway-operator.konghq.com/managed-by=gateway -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: konnectgatewaycontrolplane_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get kongservice -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: kongservice_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get kongupstream -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: kongupstream_name
+                value: ($stdout)
+        - script:
+            content: echo "kong"
+            outputs:
+              - name: namespace
+                value: kong
+              - name: strip_path
+                value: true
+              - name: weight
+                value: 1
+        # Assert Kong resources using common templates
+        - assert:
+            file: ../common/assertions/kongroute.yaml
+        - assert:
+            file: ../common/assertions/kongservice.yaml
+        - assert:
+            file: ../common/assertions/kongupstream.yaml
+        - assert:
+            file: ../common/assertions/kongtarget.yaml
+
+    ########################################
+    ###########   Step 6   ################
+    ########################################
+
+    # Step 6: Verify data plane is configured, traffic can be routed, and TLS certificates are applied.
+    - name: verify tls-certificates and connectivity in dataplane
+      description: Verify that the Kong data plane is properly configured and can route traffic with TLS certificates.
+      try:
+        # Collect bindings for connectivity tests
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: hybrid_gateway_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
+            outputs:
+              - name: hybrid_gateway_namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get httproute -n kong -o jsonpath='{.items[0].spec.rules[0].matches[0].path.value}'
+            outputs:
+              - name: route_path
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].spec.listeners[?(@.protocol=="HTTPS")].hostname}' | tr -d '[]"'
+            outputs:
+              - name: sni_hostname
+                value: ($stdout)
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($hybrid_gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($hybrid_gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Test HTTPS connectivity from within the cluster using SNI hostname
+        - description: Test HTTPS connectivity from within the cluster using SNI hostname
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+              - name: SNI_HOSTNAME
+                value: ($sni_hostname)
+            content: |
+              POD_NAME="curl-test-$(date +%s)-$$"
+              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -- \
+                curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' --resolve ${SNI_HOSTNAME}:443:${PROXY_IP} https://${SNI_HOSTNAME}${ROUTE_PATH} -vv --insecure
+            check:
+              (contains($stdout, '200')): true
+        # Test HTTPS connectivity from outside the cluster using SNI hostname
+        - description: Test HTTPS connectivity from outside the cluster using SNI hostname
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+              - name: SNI_HOSTNAME
+                value: ($sni_hostname)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" --resolve ${SNI_HOSTNAME}:443:${PROXY_IP} https://${SNI_HOSTNAME}${ROUTE_PATH} -vv --insecure
+            check:
+              (contains($stdout, '200')): true
+    
+    ########################################
+    ###########   Step 7   ################
+    ########################################
+
+    # Step 7: Assert that the served TLS certificate matches the secret.
+    - name: assert served-tls-certificate
+      description: Verify that the TLS certificate served by Kong matches the TLS secret.
+      try:
+        # Collect proxy_ip, sni_hostname, and route_path
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: hybrid_gateway_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
+            outputs:
+              - name: hybrid_gateway_namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get httproute -n kong -o jsonpath='{.items[0].spec.rules[0].matches[0].path.value}'
+            outputs:
+              - name: route_path
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].spec.listeners[?(@.protocol=="HTTPS")].hostname}' | tr -d '[]"'
+            outputs:
+              - name: sni_hostname
+                value: ($stdout)
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($hybrid_gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($hybrid_gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Extract the served certificate from the dataplane endpoint and compare
+        - script:
+            timeout: 60s
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: SNI_HOSTNAME
+                value: ($sni_hostname)
+            content: |
+                bash -c '
+                  retries=5
+                  wait=3
+                  for i in $(seq 1 $retries); do
+                    # Extract server certificate fingerprint
+                    openssl s_client -connect ${PROXY_IP}:443 -servername ${SNI_HOSTNAME} </dev/null -showcerts 2>/dev/null \
+                      | awk "/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/" > /tmp/server.crt
+                    openssl x509 -in /tmp/server.crt -noout -fingerprint > /tmp/server.fingerprint
+                    # Extract secret certificate fingerprint
+                    kubectl get secret test-tls-secret -n kong -o jsonpath="{.data.tls\\.crt}" | base64 --decode > /tmp/secret.crt
+                    openssl x509 -in /tmp/secret.crt -noout -fingerprint > /tmp/secret.fingerprint
+                    # Compare fingerprints
+                    diff /tmp/server.fingerprint /tmp/secret.fingerprint
+                    status=$?
+                    if [ $status -eq 0 ]; then
+                      echo "Certificate fingerprints match."
+                      echo "Server fingerprint:"
+                      cat /tmp/server.fingerprint
+                      echo "Secret fingerprint:"
+                      cat /tmp/secret.fingerprint
+                      exit 0
+                    else
+                      echo "Attempt $i: Certificate fingerprints do not match. Retrying in $wait seconds..."
+                      sleep $wait
+                    fi
+                  done
+                  echo "ERROR: Certificate fingerprints do not match after $retries attempts!" >&2
+                  exit 1
+                '
+      
+    ########################################
+    ###########   Step 8   ################
+    ########################################
+    # Step 8: Update TLS certificate in the secret and verify Kong updates.
+    - name: update-tls-certificate-in-secret
+      description: Update the TLS certificate in the secret and verify Kong updates accordingly.
+      try:
+        - apply:
+            file: 04-update-tls-certificate-in-secret.yaml
+             # Collect proxy_ip, sni_hostname, and route_path
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: hybrid_gateway_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
+            outputs:
+              - name: hybrid_gateway_namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get httproute -n kong -o jsonpath='{.items[0].spec.rules[0].matches[0].path.value}'
+            outputs:
+              - name: route_path
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].spec.listeners[?(@.protocol=="HTTPS")].hostname}' | tr -d '[]"'
+            outputs:
+              - name: sni_hostname
+                value: ($stdout)
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($hybrid_gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($hybrid_gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Extract the served certificate from the dataplane endpoint and compare
+        - script:
+            timeout: 60s
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: SNI_HOSTNAME
+                value: ($sni_hostname)
+            content: |
+                bash -c '
+                  retries=5
+                  wait=3
+                  for i in $(seq 1 $retries); do
+                    # Extract server certificate fingerprint
+                    openssl s_client -connect ${PROXY_IP}:443 -servername ${SNI_HOSTNAME} </dev/null -showcerts 2>/dev/null \
+                      | awk "/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/" > /tmp/server.crt
+                    openssl x509 -in /tmp/server.crt -noout -fingerprint > /tmp/server.fingerprint
+                    # Extract secret certificate fingerprint
+                    kubectl get secret test-tls-secret -n kong -o jsonpath="{.data.tls\\.crt}" | base64 --decode > /tmp/secret.crt
+                    openssl x509 -in /tmp/secret.crt -noout -fingerprint > /tmp/secret.fingerprint
+                    # Compare fingerprints
+                    diff /tmp/server.fingerprint /tmp/secret.fingerprint
+                    status=$?
+                    if [ $status -eq 0 ]; then
+                      echo "Certificate fingerprints match."
+                      echo "Server fingerprint:"
+                      cat /tmp/server.fingerprint
+                      echo "Secret fingerprint:"
+                      cat /tmp/secret.fingerprint
+                      exit 0
+                    else
+                      echo "Attempt $i: Certificate fingerprints do not match. Retrying in $wait seconds..."
+                      sleep $wait
+                    fi
+                  done
+                  echo "ERROR: Certificate fingerprints do not match after $retries attempts!" >&2
+                  exit 1
+                '
+        # Test HTTPS connectivity from within the cluster using SNI hostname
+        - description: Test HTTPS connectivity from within the cluster using SNI hostname
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+              - name: SNI_HOSTNAME
+                value: ($sni_hostname)
+            content: |
+              POD_NAME="curl-test-$(date +%s)-$$"
+              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -- \
+                curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' --resolve ${SNI_HOSTNAME}:443:${PROXY_IP} https://${SNI_HOSTNAME}${ROUTE_PATH} -vv --insecure
+            check:
+              (contains($stdout, '200')): true
+        # Test HTTPS connectivity from outside the cluster using SNI hostname
+        - description: Test HTTPS connectivity from outside the cluster using SNI hostname
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+              - name: SNI_HOSTNAME
+                value: ($sni_hostname)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" --resolve ${SNI_HOSTNAME}:443:${PROXY_IP} https://${SNI_HOSTNAME}${ROUTE_PATH} -vv --insecure
+            check:
+              (contains($stdout, '200')): true
+
+    ########################################
+    ###########   Step 9   ################
+    ########################################
+    # Step 9: Update TLS certificate in gateway by referencing a different secret and verify Kong updates.
+    - name: update-tls-certificate-in-secret
+      description: Update the TLS certificate in the secret and verify Kong updates accordingly.
+      try:
+        - apply:
+            file: 05-update-tls-secret-in-gateway.yaml
+             # Collect proxy_ip, sni_hostname, and route_path
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: gateway_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
+            outputs:
+              - name: gateway_namespace
+                value: ($stdout)
+              - name: namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get konnectgatewaycontrolplane -n kong -l gateway-operator.konghq.com/managed-by=gateway -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: konnectgatewaycontrolplane_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: hybrid_gateway_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
+            outputs:
+              - name: hybrid_gateway_namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get httproute -n kong -o jsonpath='{.items[0].spec.rules[0].matches[0].path.value}'
+            outputs:
+              - name: route_path
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].spec.listeners[?(@.protocol=="HTTPS")].hostname}' | tr -d '[]"'
+            outputs:
+              - name: sni_hostname
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get secret test-tls-secret-2 -n kong -o jsonpath='{.metadata.name}'
+            outputs:
+              - name: secret_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get secret test-tls-secret-2 -n kong -o jsonpath='{.metadata.namespace}'
+            outputs:
+              - name: secret_namespace
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].spec.listeners[?(@.protocol=="HTTPS")].hostname}' | tr -d '[]"'
+            outputs:
+              - name: sni_hostname
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: gateway_base_name
+                value: ($stdout)
+        - script:
+            content: |
+              kubectl get gateway -n kong -o jsonpath='{.items[0].spec.listeners[?(@.protocol=="HTTPS")].name}' | head -n1
+            outputs:
+              - name: listener_name
+                value: ($stdout)
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($hybrid_gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($hybrid_gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        - assert:
+            file: ../common/assertions/kongcertificate.yaml
+        - assert:
+            file: ../common/assertions/kongsni.yaml
+        # Extract the served certificate from the dataplane endpoint and compare
+        - script:
+            timeout: 60s
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: SNI_HOSTNAME
+                value: ($sni_hostname)
+            content: |
+                bash -c '
+                  retries=5
+                  wait=3
+                  for i in $(seq 1 $retries); do
+                    # Extract server certificate fingerprint
+                    openssl s_client -connect ${PROXY_IP}:443 -servername ${SNI_HOSTNAME} </dev/null -showcerts 2>/dev/null \
+                      | awk "/-----BEGIN CERTIFICATE-----/,/-----END CERTIFICATE-----/" > /tmp/server.crt
+                    openssl x509 -in /tmp/server.crt -noout -fingerprint > /tmp/server.fingerprint
+                    # Extract secret certificate fingerprint
+                    kubectl get secret test-tls-secret-2 -n kong -o jsonpath="{.data.tls\\.crt}" | base64 --decode > /tmp/secret.crt
+                    openssl x509 -in /tmp/secret.crt -noout -fingerprint > /tmp/secret.fingerprint
+                    # Compare fingerprints
+                    diff /tmp/server.fingerprint /tmp/secret.fingerprint
+                    status=$?
+                    if [ $status -eq 0 ]; then
+                      echo "Certificate fingerprints match."
+                      echo "Server fingerprint:"
+                      cat /tmp/server.fingerprint
+                      echo "Secret fingerprint:"
+                      cat /tmp/secret.fingerprint
+                      exit 0
+                    else
+                      echo "Attempt $i: Certificate fingerprints do not match. Retrying in $wait seconds..."
+                      sleep $wait
+                    fi
+                  done
+                  echo "ERROR: Certificate fingerprints do not match after $retries attempts!" >&2
+                  exit 1
+                '
+        # Test HTTPS connectivity from within the cluster using SNI hostname
+        - description: Test HTTPS connectivity from within the cluster using SNI hostname
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+              - name: SNI_HOSTNAME
+                value: ($sni_hostname)
+            content: |
+              POD_NAME="curl-test-$(date +%s)-$$"
+              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -- \
+                curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' --resolve ${SNI_HOSTNAME}:443:${PROXY_IP} https://${SNI_HOSTNAME}${ROUTE_PATH} -vv --insecure
+            check:
+              (contains($stdout, '200')): true
+        # Test HTTPS connectivity from outside the cluster using SNI hostname
+        - description: Test HTTPS connectivity from outside the cluster using SNI hostname
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+              - name: SNI_HOSTNAME
+                value: ($sni_hostname)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" --resolve ${SNI_HOSTNAME}:443:${PROXY_IP} https://${SNI_HOSTNAME}${ROUTE_PATH} -vv --insecure
+            check:
+              (contains($stdout, '200')): true

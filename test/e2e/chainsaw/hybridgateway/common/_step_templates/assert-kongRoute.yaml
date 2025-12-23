@@ -1,0 +1,60 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-kong-route
+spec:
+  try:
+    - script:
+        env:
+         - name: NAMESPACE
+           value: ($namespace)
+         - name: RESOURCE_TYPE
+           value: ($resource_type)
+         - name: GATEWAY_NAME
+           value: ($gateway_name)
+         - name: GATEWAY_NAMESPACE
+           value: ($gateway_namespace)
+         - name: HTTP_ROUTE_NAME
+           value: ($http_route_name)
+         - name: HTTP_ROUTE_NAMESPACE
+           value: ($http_route_namespace)
+        content: |
+          bash ../common/scripts/kongResource_name.sh
+        outputs:
+          - name: kong_service_name
+            value: (json_parse($stdout).name)
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongRoute
+          metadata:
+            namespace: ($namespace)
+            (labels."gateway-operator.konghq.com/hybrid-gateways-name" == ($gateway_name)): true
+            (labels."gateway-operator.konghq.com/hybrid-gateways-namespace" == ($gateway_namespace)): true
+            (labels."gateway-operator.konghq.com/managed-by" == 'HTTPRoute'): true
+            (annotations."gateway-operator.konghq.com/hybrid-routes" | contains(@, join('/', [($http_route_namespace), ($http_route_name)]))): true
+            (annotations."gateway-operator.konghq.com/hybrid-gateways" == join('/', [($gateway_namespace), ($gateway_name)])): true
+          spec:
+            paths: ($route_paths)
+            strip_path: ($strip_path)
+            serviceRef:
+              namespacedRef:
+                name: ($kong_service_name)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (conditions[?type == 'KongServiceRefValid']):
+              - status: 'True'
+                reason: Valid
+            (conditions[?type == 'APIAuthResolvedRef']):
+              - status: 'True'
+                reason: ResolvedRef
+            (conditions[?type == 'APIAuthValid']):
+              - status: 'True'
+                reason: Valid
+            # Assert Konnect fields are present
+            konnect:
+              (controlPlaneID != nil): true
+              (id != nil): true
+              (serviceID != nil): true
