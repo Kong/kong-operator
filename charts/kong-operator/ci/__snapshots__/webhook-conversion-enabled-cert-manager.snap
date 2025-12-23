@@ -57048,13 +57048,11 @@ rules:
   - configuration.konghq.com
   resources:
   - kongcacertificates
-  - kongcertificates
   - kongconsumergroups
   - kongconsumers
   - kongdataplaneclientcertificates/status
   - kongkeys
   - kongkeysets
-  - kongsnis
   - kongvaults
   verbs:
   - get
@@ -57068,7 +57066,6 @@ rules:
   - kongcacertificates/finalizers
   - kongcacertificates/status
   - kongcertificates/finalizers
-  - kongcertificates/status
   - kongconsumergroups/finalizers
   - kongconsumers/finalizers
   - kongcredentialacls/finalizers
@@ -57089,7 +57086,6 @@ rules:
   - kongroutes/finalizers
   - kongservices/finalizers
   - kongsnis/finalizers
-  - kongsnis/status
   - kongtargets/finalizers
   - kongupstreams/finalizers
   - kongvaults/finalizers
@@ -57099,26 +57095,7 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - kongclusterplugins/status
-  - kongconsumergroups/status
-  - kongconsumers/status
-  - kongcustomentities/status
-  - konglicenses/status
-  - kongpluginbindings/status
-  - kongplugins/status
-  - kongroutes/status
-  - kongservices/status
-  - kongtargets/status
-  - kongupstreampolicies/status
-  - kongupstreams/status
-  - kongvaults/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
+  - kongcertificates
   - kongcredentialacls
   - kongcredentialapikeys
   - kongcredentialbasicauths
@@ -57129,6 +57106,7 @@ rules:
   - kongplugins
   - kongroutes
   - kongservices
+  - kongsnis
   - kongtargets
   - kongupstreams
   verbs:
@@ -57139,6 +57117,28 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongcertificates/status
+  - kongclusterplugins/status
+  - kongconsumergroups/status
+  - kongconsumers/status
+  - kongcustomentities/status
+  - konglicenses/status
+  - kongpluginbindings/status
+  - kongplugins/status
+  - kongroutes/status
+  - kongservices/status
+  - kongsnis/status
+  - kongtargets/status
+  - kongupstreampolicies/status
+  - kongupstreams/status
+  - kongvaults/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - coordination.k8s.io
   resources:

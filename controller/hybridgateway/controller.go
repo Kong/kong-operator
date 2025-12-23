@@ -40,6 +40,10 @@ const (
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongpluginbindings,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongpluginbindings/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcertificates,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcertificates/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongsnis,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongsnis/status,verbs=get;update;patch
 
 // HybridGatewayReconciler is a generic reconciler for handling Gateway API resources
 // in a hybrid environment. It operates on objects implementing the RootObject and
