@@ -2,7 +2,7 @@
 
 ## Table of Contents
 
-- [v2.1.0-alpha.0](#v210-alpha0)
+- [v2.1.0-beta.0](#v210-beta0)
 - [v2.0.5](#v205)
 - [v2.0.4](#v204)
 - [v2.0.3](#v203)
@@ -36,7 +36,7 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.1.0-beta.0]
 
 ### Added
 
@@ -91,29 +91,6 @@
   Similarly cross-namespace references from `HTTPRoute` to `Service` are also
   supported and require `ReferenceGrant` in place.
   [#2483](https://github.com/Kong/kong-operator/issues/2483)
-
-### Changed
-
-- `DataPlane`'s `spec.network.services.ingress.ports` now allows up to 64 ports
-  to be specified. This aligns `DataPlane` with Gateway APIs' `Gateway`.
-  [#2722](https://github.com/Kong/kong-operator/pull/2722)
-- In Konnect controllers, ignore `NotFound` errors when removing the finalizer
-  from the resource.
-  [#2911](https://github.com/Kong/kong-operator/pull/2911)
-
-### Fixed
-
-- Fixed an issue where users could set the secret of configmap label selectors
-  to empty when the other one was left non-empty.
-  [#2810](https://github.com/Kong/kong-operator/pull/2810)
-- Handle Konnect API 429 rate limit responses by requeuing resources with
-  the appropriate retry-after duration from the response header.
-  [#2856](https://github.com/Kong/kong-operator/pull/2856)
-
-## [v2.1.0-alpha.0]
-
-### Added
-
 - Hybrid Gateway support: Gateway API objects bound to `Gateway`s programmed in Konnect
   are converted into Konnect entities and used to configure the hybrid `DataPlane`.
   [#2134](https://github.com/Kong/kong-operator/pull/2134)
@@ -245,9 +222,21 @@
   [#2566](https://github.com/Kong/kong-operator/pull/2566)
 - Update Gateway API to 1.4.0 and k8s libraries to 1.34.
   [#2451](https://github.com/Kong/kong-operator/pull/2451)
+- `DataPlane`'s `spec.network.services.ingress.ports` now allows up to 64 ports
+  to be specified. This aligns `DataPlane` with Gateway APIs' `Gateway`.
+  [#2722](https://github.com/Kong/kong-operator/pull/2722)
+- In Konnect controllers, ignore `NotFound` errors when removing the finalizer
+  from the resource.
+  [#2911](https://github.com/Kong/kong-operator/pull/2911)
 
 ### Fixes
 
+- Fixed an issue where users could set the secret of configmap label selectors
+  to empty when the other one was left non-empty.
+  [#2810](https://github.com/Kong/kong-operator/pull/2810)
+- Handle Konnect API 429 rate limit responses by requeuing resources with
+  the appropriate retry-after duration from the response header.
+  [#2856](https://github.com/Kong/kong-operator/pull/2856)
 - Hybrid Gateway: generate a single KongRoute for each HTTPRoute Rule
   [#2417](https://github.com/Kong/kong-operator/pull/2417)
 - Fix issue with deletion of `KonnectExtension` when the referenced
@@ -1629,7 +1618,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
-[v2.1.0-alpha.0]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.1.0-alpha.0
+[v2.1.0-beta.0]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.1.0-beta.0
 [v2.0.5]: https://github.com/Kong/kong-operator/compare/v2.0.4..v2.0.5
 [v2.0.4]: https://github.com/Kong/kong-operator/compare/v2.0.3..v2.0.4
 [v2.0.3]: https://github.com/Kong/kong-operator/compare/v2.0.2..v2.0.3
