@@ -57050,13 +57050,11 @@ rules:
   - configuration.konghq.com
   resources:
   - kongcacertificates
-  - kongcertificates
   - kongconsumergroups
   - kongconsumers
   - kongdataplaneclientcertificates/status
   - kongkeys
   - kongkeysets
-  - kongsnis
   - kongvaults
   verbs:
   - get
@@ -57070,7 +57068,6 @@ rules:
   - kongcacertificates/finalizers
   - kongcacertificates/status
   - kongcertificates/finalizers
-  - kongcertificates/status
   - kongconsumergroups/finalizers
   - kongconsumers/finalizers
   - kongcredentialacls/finalizers
@@ -57091,7 +57088,6 @@ rules:
   - kongroutes/finalizers
   - kongservices/finalizers
   - kongsnis/finalizers
-  - kongsnis/status
   - kongtargets/finalizers
   - kongupstreams/finalizers
   - kongvaults/finalizers
@@ -57101,26 +57097,7 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - kongclusterplugins/status
-  - kongconsumergroups/status
-  - kongconsumers/status
-  - kongcustomentities/status
-  - konglicenses/status
-  - kongpluginbindings/status
-  - kongplugins/status
-  - kongroutes/status
-  - kongservices/status
-  - kongtargets/status
-  - kongupstreampolicies/status
-  - kongupstreams/status
-  - kongvaults/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
+  - kongcertificates
   - kongcredentialacls
   - kongcredentialapikeys
   - kongcredentialbasicauths
@@ -57131,6 +57108,7 @@ rules:
   - kongplugins
   - kongroutes
   - kongservices
+  - kongsnis
   - kongtargets
   - kongupstreams
   verbs:
@@ -57141,6 +57119,28 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongcertificates/status
+  - kongclusterplugins/status
+  - kongconsumergroups/status
+  - kongconsumers/status
+  - kongcustomentities/status
+  - konglicenses/status
+  - kongpluginbindings/status
+  - kongplugins/status
+  - kongroutes/status
+  - kongservices/status
+  - kongsnis/status
+  - kongtargets/status
+  - kongupstreampolicies/status
+  - kongupstreams/status
+  - kongvaults/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - coordination.k8s.io
   resources:
@@ -57738,125 +57738,6 @@ spec:
             fieldRef:
               fieldPath: metadata.labels
 ---
-# Source: kong-operator/templates/validating-webhook.yaml
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingWebhookConfiguration
-metadata:
-  annotations:
-    cert-manager.io/inject-ca-from: default/chartsnap-kong-operator-webhook-validating-serving-cert
-    cert-manager.io/secret-template: '{ "labels": { "konghq.com/secret" : "internal" } }'
-  labels:
-    app.kubernetes.io/name: kong-operator
-    helm.sh/chart: kong-operator-1.0.2
-    app.kubernetes.io/instance: "chartsnap"
-    app.kubernetes.io/version: "2.1.0-alpha.0"
-    app.kubernetes.io/component: ko
-  name: controlplane-configuration-validations
-webhooks:
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: chartsnap-kong-operator-webhook
-      namespace: default
-      port: 5443
-    caBundle: '###DYNAMIC_FIELD###'
-  failurePolicy: Fail
-  matchPolicy: Equivalent
-  name: validations.kong.konghq.com
-  rules:
-  - apiGroups:
-    - configuration.konghq.com
-    apiVersions:
-    - '*'
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - kongconsumers
-    - kongconsumergroups
-    - kongplugins
-    - kongclusterplugins
-    - kongingresses
-    - kongvaults
-    scope: '*'
-  - apiGroups:
-    - networking.k8s.io
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - ingresses
-    scope: '*'
-  - apiGroups:
-    - gateway.networking.k8s.io
-    apiVersions:
-    - v1alpha2
-    - v1beta1
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - gateways
-    - httproutes
-    scope: '*'
-  sideEffects: None
-  timeoutSeconds: 10
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: chartsnap-kong-operator-webhook
-      namespace: default
-      port: 5443
-    caBundle: '###DYNAMIC_FIELD###'
-  failurePolicy: Fail
-  matchPolicy: Equivalent
-  name: secrets.validations.kong.konghq.com
-  objectSelector:
-    matchLabels:
-      konghq.com/secret: "true"
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - secrets
-    scope: '*'
-  sideEffects: None
-  timeoutSeconds: 10
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: chartsnap-kong-operator-webhook
-      namespace: default
-      port: 5443
-    caBundle: '###DYNAMIC_FIELD###'
-  failurePolicy: Fail
-  matchPolicy: Equivalent
-  name: services.validations.kong.konghq.com
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - services
-    scope: '*'
-  sideEffects: None
-  timeoutSeconds: 10
----
 # Source: kong-operator/templates/certs-cert-manager.yaml
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -58042,3 +57923,122 @@ metadata:
 spec:
   policyName: "autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com"
   validationActions: [Warn, Audit]
+---
+# Source: kong-operator/templates/validating-webhook.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: default/chartsnap-kong-operator-webhook-validating-serving-cert
+    cert-manager.io/secret-template: '{ "labels": { "konghq.com/secret" : "internal" } }'
+  labels:
+    app.kubernetes.io/name: kong-operator
+    helm.sh/chart: kong-operator-1.0.2
+    app.kubernetes.io/instance: "chartsnap"
+    app.kubernetes.io/version: "2.1.0-alpha.0"
+    app.kubernetes.io/component: ko
+  name: controlplane-configuration-validations
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: chartsnap-kong-operator-webhook
+      namespace: default
+      port: 5443
+    caBundle: '###DYNAMIC_FIELD###'
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: validations.kong.konghq.com
+  rules:
+  - apiGroups:
+    - configuration.konghq.com
+    apiVersions:
+    - '*'
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - kongconsumers
+    - kongconsumergroups
+    - kongplugins
+    - kongclusterplugins
+    - kongingresses
+    - kongvaults
+    scope: '*'
+  - apiGroups:
+    - networking.k8s.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - ingresses
+    scope: '*'
+  - apiGroups:
+    - gateway.networking.k8s.io
+    apiVersions:
+    - v1alpha2
+    - v1beta1
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - gateways
+    - httproutes
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: chartsnap-kong-operator-webhook
+      namespace: default
+      port: 5443
+    caBundle: '###DYNAMIC_FIELD###'
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: secrets.validations.kong.konghq.com
+  objectSelector:
+    matchLabels:
+      konghq.com/secret: "true"
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - secrets
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: chartsnap-kong-operator-webhook
+      namespace: default
+      port: 5443
+    caBundle: '###DYNAMIC_FIELD###'
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: services.validations.kong.konghq.com
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - services
+    scope: '*'
+  sideEffects: None
+  timeoutSeconds: 10
