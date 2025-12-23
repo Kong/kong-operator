@@ -712,18 +712,144 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 			},
 			expected: true,
 		},
+		{
+			name: "KonnectGatewayControlPlane -> KonnectAPIAuthConfiguration - allowed",
+			krgs: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "auth-ns",
+						Name:      "allow-cp-to-auth",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(konnectv1alpha2.SchemeGroupVersion.Group),
+								Kind:      "KonnectGatewayControlPlane",
+								Namespace: "cp-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: configurationv1alpha1.Group(konnectv1alpha1.SchemeGroupVersion.Group),
+								Kind:  "KonnectAPIAuthConfiguration",
+							},
+						},
+					},
+				},
+			},
+			obj: &konnectv1alpha2.KonnectGatewayControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "cp-ns",
+					Name:      "my-cp",
+				},
+			},
+			cpRef: commonv1alpha1.KonnectNamespacedRef{
+				Namespace: "auth-ns",
+				Name:      "my-auth",
+			},
+			expected: true,
+		},
+		{
+			name: "KonnectGatewayControlPlane -> KonnectAPIAuthConfiguration - from group mismatch",
+			krgs: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "auth-ns",
+						Name:      "allow-cp-to-auth",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     "wrong.group",
+								Kind:      "KonnectGatewayControlPlane",
+								Namespace: "cp-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: configurationv1alpha1.Group(konnectv1alpha1.SchemeGroupVersion.Group),
+								Kind:  "KonnectAPIAuthConfiguration",
+							},
+						},
+					},
+				},
+			},
+			obj: &konnectv1alpha2.KonnectGatewayControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "cp-ns",
+					Name:      "my-cp",
+				},
+			},
+			cpRef: commonv1alpha1.KonnectNamespacedRef{
+				Namespace: "auth-ns",
+				Name:      "my-auth",
+			},
+			expected: false,
+		},
+		{
+			name: "KonnectGatewayControlPlane -> KonnectAPIAuthConfiguration - from kind mismatch",
+			krgs: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "auth-ns",
+						Name:      "allow-cp-to-auth",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     configurationv1alpha1.Group(konnectv1alpha2.SchemeGroupVersion.Group),
+								Kind:      "KonnectExtension",
+								Namespace: "cp-ns",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: configurationv1alpha1.Group(konnectv1alpha1.SchemeGroupVersion.Group),
+								Kind:  "KonnectAPIAuthConfiguration",
+							},
+						},
+					},
+				},
+			},
+			obj: &konnectv1alpha2.KonnectGatewayControlPlane{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "cp-ns",
+					Name:      "my-cp",
+				},
+			},
+			cpRef: commonv1alpha1.KonnectNamespacedRef{
+				Namespace: "auth-ns",
+				Name:      "my-auth",
+			},
+			expected: false,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			tc.obj.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("KongService"))
+			// Set GVK based on object type
+			switch obj := tc.obj.(type) {
+			case *configurationv1alpha1.KongService:
+				obj.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("KongService"))
+			case *konnectv1alpha2.KonnectGatewayControlPlane:
+				obj.GetObjectKind().SetGroupVersionKind(konnectv1alpha2.SchemeGroupVersion.WithKind("KonnectGatewayControlPlane"))
+			}
+
+			// Determine target GVK
+			var toGVK metav1.GroupVersionKind
+			switch tc.obj.(type) {
+			case *konnectv1alpha2.KonnectGatewayControlPlane:
+				toGVK = metav1.GroupVersionKind(konnectv1alpha1.SchemeGroupVersion.WithKind("KonnectAPIAuthConfiguration"))
+			default:
+				toGVK = metav1.GroupVersionKind(konnectv1alpha2.SchemeGroupVersion.WithKind("KonnectGatewayControlPlane"))
+			}
 
 			result := crossnamespace.ReferenceGrantsAllow(
 				tc.krgs,
 				tc.obj.GetNamespace(),
 				tc.cpRef.Name,
 				metav1.GroupVersionKind(tc.obj.GetObjectKind().GroupVersionKind()),
-				metav1.GroupVersionKind(konnectv1alpha2.SchemeGroupVersion.WithKind("KonnectGatewayControlPlane")))
+				toGVK)
 
 			require.Equal(t, tc.expected, result)
 		})
