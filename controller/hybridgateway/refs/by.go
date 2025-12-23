@@ -39,12 +39,15 @@ func GetControlPlaneRefByParentRef(ctx context.Context, logger logr.Logger, cl c
 	pRef gwtypes.ParentReference) (*commonv1alpha1.ControlPlaneRef, error) {
 
 	// Validate and get the supported Gateway for the ParentReference.
-	gw, err := GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, route.Namespace)
+	gw, found, err := GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, route.Namespace)
 	if err != nil {
 		return nil, err
 	}
+	if !found {
+		return nil, nil
+	}
 
-	konnectNamespacedRef, err := byGateway(ctx, cl, *gw)
+	konnectNamespacedRef, found, err := byGateway(ctx, cl, *gw)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get ControlPlaneRef for ParentRef %+v in route %q: %w", pRef, client.ObjectKeyFromObject(route), err)
 	}
@@ -66,7 +69,7 @@ func GetControlPlaneRefByParentRef(ctx context.Context, logger logr.Logger, cl c
 // GetControlPlaneRefByGateway retrieves the control plane reference for a given Gateway.
 // Returns an error if the Gateway does not reference a ControlPlane.
 func GetControlPlaneRefByGateway(ctx context.Context, cl client.Client, gateway *gwtypes.Gateway) (*commonv1alpha1.ControlPlaneRef, error) {
-	konnectNamespacedRef, err := byGateway(ctx, cl, *gateway)
+	konnectNamespacedRef, _, err := byGateway(ctx, cl, *gateway)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get ControlPlaneRef for Gateway %q: %w", client.ObjectKeyFromObject(gateway), err)
 	}
@@ -115,11 +118,11 @@ func byHTTPRoute(ctx context.Context, cl client.Client, httpRoute gwtypes.HTTPRo
 	namespacedRefs := map[string]GatewaysByNamespacedRef{}
 	gateways := GetGatewaysByHTTPRoute(ctx, cl, httpRoute)
 	for _, gw := range gateways {
-		ref, err := byGateway(ctx, cl, gw)
+		ref, found, err := byGateway(ctx, cl, gw)
 		if err != nil {
 			return nil, err
 		}
-		if ref == nil {
+		if !found {
 			continue
 		}
 		key := ref.Namespace + "/" + ref.Name
@@ -139,28 +142,28 @@ func byHTTPRoute(ctx context.Context, cl client.Client, httpRoute gwtypes.HTTPRo
 }
 
 // byGateway returns the KonnectNamespacedRef associated with the given Gateway, or nil if not found.
-func byGateway(ctx context.Context, cl client.Client, gateway gwtypes.Gateway) (*commonv1alpha1.KonnectNamespacedRef, error) {
+func byGateway(ctx context.Context, cl client.Client, gateway gwtypes.Gateway) (*commonv1alpha1.KonnectNamespacedRef, bool, error) {
 	extensions, err := gatewayutils.ListKonnectExtensionsForGateway(ctx, cl, &gateway)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	switch l := len(extensions); l {
 	case 0:
-		return nil, nil
+		return nil, false, nil
 	case 1:
 		return byKonnectExtension(ctx, cl, extensions[0])
 	default:
-		return nil, errors.New("multiple KonnectExtensions found for a single Gateway, which is not supported")
+		return nil, false, errors.New("multiple KonnectExtensions found for a single Gateway, which is not supported")
 	}
 }
 
 // byKonnectExtension returns the KonnectNamespacedRef from the given KonnectExtension, or empty if not present.
-func byKonnectExtension(ctx context.Context, cl client.Client, konnectExtension konnectv1alpha2.KonnectExtension) (*commonv1alpha1.KonnectNamespacedRef, error) {
+func byKonnectExtension(ctx context.Context, cl client.Client, konnectExtension konnectv1alpha2.KonnectExtension) (*commonv1alpha1.KonnectNamespacedRef, bool, error) {
 	cpRef := konnectExtension.GetControlPlaneRef()
 	// This should not happen, as the CEL validation ensures that a KonnectExtension must always reference a Konnect ControlPlane.
 	if cpRef == nil || cpRef.Type != commonv1alpha1.ControlPlaneRefKonnectNamespacedRef {
-		return nil, nil
+		return nil, false, nil
 	}
 
 	ns := konnectExtension.Namespace
@@ -170,7 +173,7 @@ func byKonnectExtension(ctx context.Context, cl client.Client, konnectExtension 
 
 	if ns != konnectExtension.Namespace {
 		// cross-namespace references are not supported
-		return nil, hybridgatewayerrors.ErrKonnectExtensionCrossNamespaceReference
+		return nil, false, hybridgatewayerrors.ErrKonnectExtensionCrossNamespaceReference
 	}
 
 	konnectGatewayControlPlane := konnectv1alpha2.KonnectGatewayControlPlane{}
@@ -179,14 +182,14 @@ func byKonnectExtension(ctx context.Context, cl client.Client, konnectExtension 
 		Namespace: ns,
 	}, &konnectGatewayControlPlane)
 	if k8serrors.IsNotFound(err) {
-		return nil, nil
+		return nil, false, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	return &commonv1alpha1.KonnectNamespacedRef{
 		Name:      cpRef.KonnectNamespacedRef.Name,
 		Namespace: ns,
-	}, nil
+	}, true, nil
 }

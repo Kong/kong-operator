@@ -81,7 +81,7 @@ func filterByGateway(ctx context.Context, cl client.Client) *predicate.Funcs {
 		}
 
 		// Check if the Gateway is supported (i.e., controlled by us).
-		supported, err := refs.IsGatewaySupported(ctx, cl, gateway)
+		supported, err := refs.IsGatewayInKonnect(ctx, cl, gateway)
 		if err != nil {
 			// For other errors (e.g., temporary API server issues), enqueue the event
 			// so the reconciler can handle it and log it if the error persists.

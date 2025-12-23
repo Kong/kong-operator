@@ -187,7 +187,7 @@ func Test_GetSupportedGatewayForParentRef(t *testing.T) {
 				clientBuilder = clientBuilder.WithInterceptorFuncs(tt.interceptorFunc)
 			}
 			cl := clientBuilder.Build()
-			gw, err := GetSupportedGatewayForParentRef(ctx, logger, cl, tt.pRef, tt.routeNS)
+			gw, _, err := GetSupportedGatewayForParentRef(ctx, logger, cl, tt.pRef, tt.routeNS)
 			if tt.wantErr != nil {
 				require.Error(t, err)
 				if errors.Is(err, hybridgatewayerrors.ErrNoGatewayFound) || errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound) || errors.Is(err, hybridgatewayerrors.ErrNoGatewayController) || errors.Is(err, hybridgatewayerrors.ErrUnsupportedKind) || errors.Is(err, hybridgatewayerrors.ErrUnsupportedGroup) {
@@ -211,7 +211,7 @@ func groupPtr(s string) *gatewayv1.Group  { g := gatewayv1.Group(s); return &g }
 func kindPtr(s string) *gatewayv1.Kind    { k := gatewayv1.Kind(s); return &k }
 func nsPtr(s string) *gatewayv1.Namespace { n := gatewayv1.Namespace(s); return &n }
 
-func TestIsGatewaySupported(t *testing.T) {
+func TestIsGatewayInKonnect(t *testing.T) {
 	ctx := context.Background()
 
 	controllerName := vars.DefaultControllerName
@@ -330,7 +330,7 @@ func TestIsGatewaySupported(t *testing.T) {
 
 			cl := clientBuilder.Build()
 
-			result, err := IsGatewaySupported(ctx, cl, tt.gateway)
+			result, err := IsGatewayInKonnect(ctx, cl, tt.gateway)
 
 			if tt.expectError {
 				require.Error(t, err)
