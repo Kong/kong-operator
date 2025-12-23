@@ -55,6 +55,14 @@ func KongCertificateReconciliationWatchOptions(cl client.Client) []func(*ctrl.Bu
 				),
 			)
 		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongReferenceGrant{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.KongCertificateList](cl),
+				),
+			)
+		},
 	}
 }
 

@@ -20440,8 +20440,6 @@ spec:
               rule: self.type != 'secretRef' || has(self.secretRef)
             - message: cert and secretRef cannot be set at the same time
               rule: '!(has(self.cert) && has(self.secretRef))'
-            - message: spec.secretRef.namespace is not allowed until ReferenceGrant support is implemented
-              rule: '!has(self.secretRef) || !has(self.secretRef.__namespace__) || self.secretRef.__namespace__.size() == 0'
           status:
             default:
               conditions:
@@ -25521,8 +25519,8 @@ spec:
                   - namespace
                   type: object
                   x-kubernetes-validations:
-                  - message: Only KongCertificate and KongService kinds are supported for 'configuration.konghq.com' group
-                    rule: .self.group != 'configuration.konghq.com' || .self.kind in ['KongService', 'KongCertificate' ]
+                  - message: Only KongCertificate, KongCACertificate, and KongService kinds are supported for 'configuration.konghq.com' group
+                    rule: .self.group != 'configuration.konghq.com' || .self.kind in ['KongService', 'KongCertificate', 'KongCACertificate' ]
                 maxItems: 16
                 minItems: 1
                 type: array

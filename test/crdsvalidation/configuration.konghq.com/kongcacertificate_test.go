@@ -197,7 +197,6 @@ func TestKongCACertificate(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("spec.secretRef.namespace is not allowed until ReferenceGrant support is implemented"),
 			},
 			{
 				Name: "valid: secretRef without namespace is allowed",

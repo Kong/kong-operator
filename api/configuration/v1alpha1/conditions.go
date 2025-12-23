@@ -5,10 +5,10 @@ const (
 	// whether a KongReferenceGrant is valid for cross-namespace references.
 	KongReferenceGrantConditionTypeResolvedRefs = "ResolvedRefs"
 
+	// KongReferenceGrantReasonResolvedRefs is the reason used when a valid
+	// KongReferenceGrant is found and it permits for a cross-namespace reference.
+	KongReferenceGrantReasonResolvedRefs = "ResolvedRefs"
 	// KongReferenceGrantReasonRefNotPermitted is the reason used when a KongReferenceGrant
 	// is invalid or missing for a cross-namespace reference.
 	KongReferenceGrantReasonRefNotPermitted = "RefNotPermitted"
-	// KongReferenceGrantReasonResolvedRefs is the reason used when a valid
-	// KongReferenceGrant is found and it permits for a cross-namespace reference.
-	KongReferenceGrantReasonResolvedRefs = "RefNotPermitted"
 )

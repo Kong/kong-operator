@@ -49,7 +49,6 @@ type KongCACertificate struct {
 // +kubebuilder:validation:XValidation:rule="self.type != 'inline' || (has(self.cert) && self.cert.size() != 0)", message="spec.cert is required when type is 'inline'"
 // +kubebuilder:validation:XValidation:rule="self.type != 'secretRef' || has(self.secretRef)", message="spec.secretRef is required when type is 'secretRef'"
 // +kubebuilder:validation:XValidation:rule="!(has(self.cert) && has(self.secretRef))", message="cert and secretRef cannot be set at the same time"
-// +kubebuilder:validation:XValidation:rule="!has(self.secretRef) || !has(self.secretRef.__namespace__) || self.secretRef.__namespace__.size() == 0", message="spec.secretRef.namespace is not allowed until ReferenceGrant support is implemented"
 // +apireference:kgo:include
 type KongCACertificateSpec struct {
 	// Type indicates the source of the CA certificate data.

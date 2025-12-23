@@ -348,9 +348,9 @@ func enqueueObjectsForKongReferenceGrant[
 			}
 			for _, ks := range lPtr.GetItems() {
 				// Note: we only care about objects that reference
-				// KonnectGatewayControlPlane but also those that do not.
+				// objects but also those that do not.
 				// This is to ensure that we reconcile all objects: those that
-				// stopped referencing KonnectGatewayControlPlane will need to have its
+				// stopped referencing objects will need to have its
 				// status conditions updated accordingly.
 
 				ksPtr := TT(&ks)
