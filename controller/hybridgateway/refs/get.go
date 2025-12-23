@@ -11,7 +11,6 @@ import (
 	hybridgatewayerrors "github.com/kong/kong-operator/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/internal/types"
-	"github.com/kong/kong-operator/pkg/vars"
 )
 
 // GetGatewaysByHTTPRoute returns Gateways referenced by the given HTTPRoute.
@@ -43,23 +42,19 @@ func GetGatewaysByHTTPRoute(ctx context.Context, cl client.Client, r gwtypes.HTT
 	return gatewayRefs
 }
 
-// IsGatewaySupported checks if the given Gateway is controlled by this controller.
+// IsGatewayInKonnect checks if the given Gateway is controlled by this controller.
 // It returns true if the Gateway's GatewayClass exists and is controlled by this controller,
 // false if the GatewayClass is not controlled by this controller.
 // Returns an error if there's a problem accessing the GatewayClass.
-func IsGatewaySupported(ctx context.Context, cl client.Client, gateway *gwtypes.Gateway) (bool, error) {
-	// Get the GatewayClass reference from the Gateway.
-	gatewayClass := gwtypes.GatewayClass{}
-	if err := cl.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
-		if k8serrors.IsNotFound(err) {
-			// GatewayClass doesn't exist, not supported.
-			return false, nil
-		}
-		return false, fmt.Errorf("failed to get gatewayClass %s: %w", gateway.Spec.GatewayClassName, err)
+func IsGatewayInKonnect(ctx context.Context, cl client.Client, gateway *gwtypes.Gateway) (bool, error) {
+	_, found, err := byGateway(ctx, cl, *gateway)
+	if k8serrors.IsNotFound(err) {
+		return false, nil
 	}
-
-	// Check if the gatewayClass is controlled by us.
-	if string(gatewayClass.Spec.ControllerName) != vars.ControllerName() {
+	if err != nil {
+		return false, fmt.Errorf("failed to determine if Gateway %q is in Konnect: %w", client.ObjectKeyFromObject(gateway), err)
+	}
+	if !found {
 		return false, nil
 	}
 
@@ -93,17 +88,17 @@ func IsGatewaySupported(ctx context.Context, cl client.Client, gateway *gwtypes.
 // - hybridgatewayerrors.ErrNoGatewayClassFound: The Gateway's GatewayClass doesn't exist.
 // - hybridgatewayerrors.ErrNoGatewayController: The GatewayClass is not controlled by this controller.
 func GetSupportedGatewayForParentRef(ctx context.Context, logger logr.Logger, cl client.Client, pRef gwtypes.ParentReference,
-	routeNamespace string) (*gwtypes.Gateway, error) {
+	routeNamespace string) (*gwtypes.Gateway, bool, error) {
 	// Only support Gateway kind.
 	if pRef.Kind != nil && *pRef.Kind != "Gateway" {
 		log.Debug(logger, "Ignoring ParentRef, unsupported kind", "pRef", pRef, "kind", *pRef.Kind)
-		return nil, hybridgatewayerrors.ErrUnsupportedKind
+		return nil, false, hybridgatewayerrors.ErrUnsupportedKind
 	}
 
 	// Only support gateway.networking.k8s.io group (or empty group which defaults to this).
 	if pRef.Group != nil && *pRef.Group != gwtypes.GroupName {
 		log.Debug(logger, "Ignoring ParentRef, unsupported group", "pRef", pRef, "group", *pRef.Group)
-		return nil, hybridgatewayerrors.ErrUnsupportedGroup
+		return nil, false, hybridgatewayerrors.ErrUnsupportedGroup
 	}
 
 	// Determine the namespace - use route's namespace if not specified.
@@ -117,26 +112,22 @@ func GetSupportedGatewayForParentRef(ctx context.Context, logger logr.Logger, cl
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: string(pRef.Name)}, &gateway); err != nil {
 		if k8serrors.IsNotFound(err) {
 			// Gateway doesn't exist, not supported.
-			return nil, hybridgatewayerrors.ErrNoGatewayFound
+			return nil, false, hybridgatewayerrors.ErrNoGatewayFound
 		}
-		return nil, fmt.Errorf("failed to get gateway for ParentRef %v: %w", pRef, err)
+		return nil, false, fmt.Errorf("failed to get gateway for ParentRef %v: %w", pRef, err)
 	}
 
-	// Check if the gatewayClass exists.
-	gatewayClass := gwtypes.GatewayClass{}
-	if err := cl.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, &gatewayClass); err != nil {
-		if k8serrors.IsNotFound(err) {
-			// GatewayClass doesn't exist, not supported.
-			return nil, hybridgatewayerrors.ErrNoGatewayClassFound
-		}
-		return nil, fmt.Errorf("failed to get gatewayClass for ParentRef %v: %w", pRef, err)
+	_, found, err := byGateway(ctx, cl, gateway)
+	if k8serrors.IsNotFound(err) {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("failed to determine if Gateway %q is in Konnect: %w", client.ObjectKeyFromObject(&gateway), err)
+	}
+	if !found {
+		return nil, false, nil
 	}
 
-	// Check if the gatewayClass is controlled by us.
-	// If not, we just ignore it and return nil.
-	if string(gatewayClass.Spec.ControllerName) != vars.ControllerName() {
-		return nil, hybridgatewayerrors.ErrNoGatewayController
-	}
 	// All checks passed, this ParentRef is supported.
-	return &gateway, nil
+	return &gateway, true, nil
 }

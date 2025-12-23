@@ -88,12 +88,12 @@ func (c *gatewayConverter) Translate(ctx context.Context, logger logr.Logger) (i
 	// It could happen when the GatewayClass is changed to an unsupported one.
 	// This check prevents the translation from proceeding in such cases and allows
 	// the reconciler to clean up any previously created resources.
-	supported, err := refs.IsGatewaySupported(ctx, c.Client, c.gateway)
+	isInKonnect, err := refs.IsGatewayInKonnect(ctx, c.Client, c.gateway)
 	if err != nil {
 		return 0, fmt.Errorf("failed to check if Gateway is supported: %w", err)
 	}
 
-	if !supported {
+	if !isInKonnect {
 		log.Debug(logger, "Gateway is not supported by this controller, skipping translation", "gateway", client.ObjectKeyFromObject(c.gateway))
 		return 0, nil
 	}

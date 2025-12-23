@@ -473,13 +473,13 @@ func referencesSupportedGateway(ctx context.Context, cl client.Client, obj clien
 	case *gwtypes.HTTPRoute:
 		// Check if any of the ParentRefs reference a supported Gateway.
 		for _, pRef := range o.Spec.ParentRefs {
-			gw, err := refs.GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, o.Namespace)
+			gw, found, err := refs.GetSupportedGatewayForParentRef(ctx, logger, cl, pRef, o.Namespace)
 			if err != nil {
 				// Log the error but continue checking other ParentRefs.
 				log.Trace(logger, "Error checking ParentRef", "parentRef", pRef, "error", err)
 				continue
 			}
-			if gw != nil {
+			if found {
 				// Found at least one supported Gateway reference.
 				log.Trace(logger, "Found supported Gateway reference", "gateway", client.ObjectKeyFromObject(gw))
 				return true
@@ -489,7 +489,7 @@ func referencesSupportedGateway(ctx context.Context, cl client.Client, obj clien
 
 	case *gwtypes.Gateway:
 		// For Gateway objects, check if they are supported by checking their GatewayClass.
-		supported, err := refs.IsGatewaySupported(ctx, cl, o)
+		supported, err := refs.IsGatewayInKonnect(ctx, cl, o)
 		if err != nil {
 			log.Debug(logger, "Error checking if Gateway is supported", "error", err)
 			return false

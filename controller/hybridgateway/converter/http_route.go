@@ -216,7 +216,7 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 	for _, pRef := range c.route.Spec.ParentRefs {
 		log.Debug(logger, "Processing ParentReference", "parentRef", pRef)
 		// Check if the parentRef belongs to a Gateway managed by us.
-		gateway, err := refs.GetSupportedGatewayForParentRef(ctx, logger, c.Client, pRef, c.route.Namespace)
+		gateway, found, err := refs.GetSupportedGatewayForParentRef(ctx, logger, c.Client, pRef, c.route.Namespace)
 		if err != nil {
 			switch {
 			case errors.Is(err, hybridgatewayerrors.ErrNoGatewayClassFound),
@@ -237,6 +237,9 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 				log.Error(logger, err, "Failed to get supported gateway for ParentReference", "parentRef", pRef)
 				return false, stop, fmt.Errorf("failed to get supported gateway for parentRef %s: %w", pRef.Name, err)
 			}
+		}
+		if !found {
+			continue
 		}
 
 		log.Debug(logger, "Building Accepted condition", "parentRef", pRef, "gateway", gateway.Name)
