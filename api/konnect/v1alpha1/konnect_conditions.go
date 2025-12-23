@@ -41,6 +41,10 @@ const (
 	// used with the APIAuthResolvedRef condition type indicating that the APIAuth
 	// configuration reference could not be resolved.
 	KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotFound = "RefNotFound"
+	// KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotPermitted is the reason
+	// used with the APIAuthResolvedRef condition type indicating that the APIAuth
+	// configuration reference is not permitted by a KongReferenceGrant.
+	KonnectEntityAPIAuthConfigurationResolvedRefReasonRefNotPermitted = "RefNotPermitted"
 	// KonnectEntityAPIAuthConfigurationResolvedRefReasonRefInvalid is the reason
 	// used with the APIAuthResolvedRef condition type indicating that the APIAuth
 	// configuration reference is invalid and could not be resolved.

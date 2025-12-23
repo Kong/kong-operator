@@ -388,7 +388,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 	log.Debug(logger, "controlPlane reference validity checked")
 
-	apiAuthRef, err := getKonnectAPIAuthRefNN(ctx, r.Client, &ext)
+	apiAuthRef, err := getKonnectAPIAuthRefNN(cp, &ext)
 	if err != nil {
 		if !k8serrors.IsNotFound(err) {
 			return ctrl.Result{}, err
@@ -399,8 +399,8 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 			// known reference and it is needed to perform all reconciliation steps.
 			apiAuthRef = types.NamespacedName{
 				Name: ext.Status.Konnect.AuthRef.Name,
-				// For now the referenced KonnectAPIAuthConfiguration is in the same namespace as the KonnectExtension.
-				Namespace: ext.Namespace,
+				// ext.Status.Konnect.AuthRef.Namespace is never nil as enforced in the status update.
+				Namespace: *ext.Status.Konnect.AuthRef.Namespace,
 			}
 		} else {
 			// Requeue until the reference becomes valid.
@@ -834,8 +834,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return res, err
 	}
 
-	authRef := konnectv1alpha2.KonnectAPIAuthConfigurationRef{
-		Name: apiAuth.Name,
+	authRef := konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+		Name:      apiAuth.Name,
+		Namespace: &apiAuth.Namespace,
 	}
 	if enforceKonnectExtensionStatus(*cp, authRef, *certificateSecret, &ext) {
 		log.Debug(logger, "updating KonnectExtension status")

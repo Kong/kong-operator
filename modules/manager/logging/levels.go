@@ -12,6 +12,7 @@ const (
 	TraceLevel Level = 2
 )
 
+// String returns the string representation of the log level.
 func (l Level) String() string {
 	switch l {
 	case InfoLevel:

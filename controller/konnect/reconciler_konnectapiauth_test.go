@@ -192,8 +192,8 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
-						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
@@ -256,7 +256,7 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 								TelemetryEndpoint:    "https://telemetry.konghq.com",
 								ControlPlaneEndpoint: "https://cp.konghq.com",
 							},
-							AuthRef: &konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+							AuthRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
@@ -281,8 +281,8 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
-						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},
@@ -339,8 +339,8 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 						Namespace: "default",
 					},
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
-						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
-							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
+							APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 								Name: "test-auth",
 							},
 						},

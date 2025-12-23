@@ -499,7 +499,7 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 					Build()
 				require.NotNil(t, cl)
 
-				f := enqueueObjectForKongReferenceGrant[configurationv1alpha1.KongServiceList](cl)
+				f := enqueueObjectsForKongReferenceGrant[configurationv1alpha1.KongServiceList](cl)
 
 				requests := f(t.Context(), tt.grant)
 				require.Len(t, requests, len(tt.expected))

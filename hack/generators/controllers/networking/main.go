@@ -379,6 +379,7 @@ type typeNeeded struct {
 	HasControlPlaneReference bool
 }
 
+// ProgrammedConditionConfiguration contains the configuration for the Programmed condition for a resource.
 type ProgrammedConditionConfiguration struct {
 	// UpdatesEnabled indicates that the controllers should manage the Programmed condition for the
 	// resource.

@@ -18,16 +18,6 @@ package v1alpha1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-// +genclient
-// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
-// +kubebuilder:object:root=true
-// +kubebuilder:resource:scope=Namespaced
-// +kubebuilder:resource:categories=kong
-// +kubebuilder:storageversion
-// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
-// +kong:channels=kong-operator
-// +apireference:kgo:include
-
 // KongReferenceGrant identifies kinds of resources in other namespaces that are
 // trusted to reference the specified kinds of resources in the same namespace
 // as the policy.
@@ -40,6 +30,16 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 //
 // KongReferenceGrant is a form of runtime verification allowing users to assert
 // which cross-namespace object references are permitted.
+//
+// +genclient
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:object:root=true
+// +kubebuilder:resource:scope=Namespaced
+// +kubebuilder:resource:categories=kong
+// +kubebuilder:storageversion
+// +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
+// +kong:channels=kong-operator
+// +apireference:kgo:include
 type KongReferenceGrant struct {
 	metav1.TypeMeta `json:",inline"`
 	// +optional
@@ -116,7 +116,7 @@ type ReferenceGrantFrom struct {
 // references.
 //
 // +kubebuilder:validation:XValidation:rule=".self.group != 'core' || .self.kind == 'Secret'",message="Only 'Secret' kind is supported for 'core' group"
-// +kubebuilder:validation:XValidation:rule=".self.group != 'konnect.konghq.com' || .self.kind == 'KonnectGatewayControlPlane'",message="Only 'KonnectGatewayControlPlane' kind is supported for 'konnect.konghq.com' group"
+// +kubebuilder:validation:XValidation:rule=".self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration']",message="Only 'KonnectGatewayControlPlane' and 'KonnectAPIAuthConfiguration' kinds are supported for 'konnect.konghq.com' group"
 type ReferenceGrantTo struct {
 	// Group is the group of the referent.
 	//

@@ -24,9 +24,11 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	secretref "github.com/kong/kong-operator/controller/pkg/secrets/ref"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
 var _ APIConverter[gwtypes.Gateway] = &gatewayConverter{}
+var _ OrphanedResourceHandler = &gatewayConverter{}
 
 // gatewayConverter is a concrete implementation of the APIConverter interface for Gateway.
 type gatewayConverter struct {
@@ -79,6 +81,23 @@ func (c *gatewayConverter) GetRootObject() gwtypes.Gateway {
 //   - int: Number of Kong resources created during translation
 //   - error: Accumulated errors from listener processing, or nil if all successful
 func (c *gatewayConverter) Translate(ctx context.Context, logger logr.Logger) (int, error) {
+	logger = logger.WithValues("phase", "gateway-translate")
+	log.Debug(logger, "Starting Gateway translation")
+
+	// Check if the gateway is handled by this controller.
+	// It could happen when the GatewayClass is changed to an unsupported one.
+	// This check prevents the translation from proceeding in such cases and allows
+	// the reconciler to clean up any previously created resources.
+	supported, err := refs.IsGatewaySupported(ctx, c.Client, c.gateway)
+	if err != nil {
+		return 0, fmt.Errorf("failed to check if Gateway is supported: %w", err)
+	}
+
+	if !supported {
+		log.Debug(logger, "Gateway is not supported by this controller, skipping translation", "gateway", client.ObjectKeyFromObject(c.gateway))
+		return 0, nil
+	}
+
 	// Get the ControlPlaneRef for this Gateway from its KonnectExtension.
 	controlPlaneRef, err := refs.GetControlPlaneRefByGateway(ctx, c.Client, c.gateway)
 	if err != nil {
@@ -178,16 +197,50 @@ func (c *gatewayConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 // UpdateRootObjectStatus updates the status of the Gateway resource.
 //
 // Parameters:
-//   - ctx: The context for API calls
-//   - logger: Logger for debugging information
+//   - ctx: The context for the operation, used for cancellation and timeouts
+//   - logger: A logger instance for recording operational information and errors
 //
 // Returns:
-//   - bool: true if the status was updated, false if no changes were made
-//   - error: Any error that occurred during status processing
-func (c *gatewayConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (bool, error) {
+//   - updated: true if the status was modified
+//   - stop: true if reconciliation should halt
+//   - err: any error encountered during status update processing
+func (c *gatewayConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
 	// TODO: implement status update logic
 
-	return false, nil
+	return false, false, nil
+}
+
+// HandleOrphanedResource implements OrphanedResourceHandler.
+//
+// Determines whether an orphaned resource should be deleted or preserved during cleanup.
+// Resources are only deleted if they are owned by this specific Gateway instance.
+// This prevents accidental deletion of resources that may be owned by other Gateways.
+//
+// Parameters:
+//   - ctx: The context for the operation
+//   - logger: Logger for structured logging
+//   - resource: The orphaned resource to evaluate
+//
+// Returns:
+//   - skipDelete: true if the resource should be preserved, false if it should be deleted
+//   - err: any error encountered during evaluation
+func (c *gatewayConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
+	// Check if the resource is owned by this gateway.
+	if k8sutils.IsOwnedByRefUID(resource, c.gateway.UID) {
+		// Resource is owned by this gateway, allow deletion.
+		log.Debug(logger, "Resource is owned by this gateway, allowing deletion",
+			"resource", resource.GetName(),
+			"kind", resource.GetKind(),
+			"gateway", c.gateway.Name)
+		return false, nil
+	}
+
+	// Resource is not owned by this gateway, skip deletion
+	log.Debug(logger, "Resource is not owned by this gateway, skipping deletion",
+		"resource", resource.GetName(),
+		"kind", resource.GetKind(),
+		"gateway", c.gateway.Name)
+	return true, nil
 }
 
 // processListenerCertificate processes a certificate reference from a listener,

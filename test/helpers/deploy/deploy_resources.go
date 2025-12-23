@@ -279,8 +279,8 @@ func KonnectGatewayControlPlane(
 			Name: name,
 		},
 		Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
-			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
-				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
+			KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 					Name: apiAuth.Name,
 				},
 			},
@@ -1275,7 +1275,8 @@ func KonnectExtension(
 	return ke
 }
 
-// KonnectExtensionReferencingKonnectGatewayControlPlane deploys a KonnectExtension attached to a Konnect CP represented by the given KonnectGatewayControlPlane.
+// KonnectExtensionReferencingKonnectGatewayControlPlane deploys a KonnectExtension
+// attached to a Konnect CP represented by the given KonnectGatewayControlPlane.
 func KonnectExtensionReferencingKonnectGatewayControlPlane(
 	t *testing.T,
 	ctx context.Context,
@@ -1305,20 +1306,6 @@ func KonnectExtensionReferencingKonnectGatewayControlPlane(
 type ObjectSupportingKonnectConfiguration interface {
 	*konnectv1alpha2.KonnectGatewayControlPlane |
 		*konnectv1alpha1.KonnectCloudGatewayNetwork
-}
-
-// WithKonnectConfiguration returns an option function that sets the `KonnectConfiguration` in the object.
-func WithKonnectConfiguration[T ObjectSupportingKonnectConfiguration](
-	konnectConfiguration konnectv1alpha2.KonnectConfiguration,
-) ObjOption {
-	return func(obj client.Object) {
-		switch o := any(obj).(type) {
-		case *konnectv1alpha2.KonnectGatewayControlPlane:
-			o.Spec.KonnectConfiguration = konnectConfiguration
-		case *konnectv1alpha1.KonnectCloudGatewayNetwork:
-			o.Spec.KonnectConfiguration = konnectConfiguration
-		}
-	}
 }
 
 // ObjectSupportingAdoption defines the interface of types supporting adoption.

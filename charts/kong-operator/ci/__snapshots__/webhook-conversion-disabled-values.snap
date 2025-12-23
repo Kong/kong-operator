@@ -19992,6 +19992,12 @@ spec:
                         description: Name is the name of the KonnectAPIAuthConfiguration resource.
                         minLength: 1
                         type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
+                          If not specified, defaults to the same namespace as the KonnectConfiguration resource.
+                        minLength: 1
+                        type: string
                     required:
                     - name
                     type: object
@@ -25583,8 +25589,8 @@ spec:
                   x-kubernetes-validations:
                   - message: Only 'Secret' kind is supported for 'core' group
                     rule: .self.group != 'core' || .self.kind == 'Secret'
-                  - message: Only 'KonnectGatewayControlPlane' kind is supported for 'konnect.konghq.com' group
-                    rule: .self.group != 'konnect.konghq.com' || .self.kind == 'KonnectGatewayControlPlane'
+                  - message: Only 'KonnectGatewayControlPlane' and 'KonnectAPIAuthConfiguration' kinds are supported for 'konnect.konghq.com' group
+                    rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration']
                 maxItems: 16
                 minItems: 1
                 type: array
@@ -29836,6 +29842,7 @@ spec:
         description: |-
           KonnectExtension is the Schema for the KonnectExtension API, and is intended to be referenced as
           extension by the DataPlane, ControlPlane or GatewayConfiguration APIs.
+
           If one of the above mentioned resources successfully refers a KonnectExtension, the underlying
           deployment(s) spec gets customized to include the konnect-related configuration.
         properties:
@@ -30121,6 +30128,12 @@ spec:
                         description: Name is the name of the KonnectAPIAuthConfiguration resource.
                         minLength: 1
                         type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
+                          If not specified, defaults to the same namespace as the KonnectConfiguration resource.
+                        minLength: 1
+                        type: string
                     required:
                     - name
                     type: object
@@ -30289,6 +30302,12 @@ spec:
                     properties:
                       name:
                         description: Name is the name of the KonnectAPIAuthConfiguration resource.
+                        minLength: 1
+                        type: string
+                      namespace:
+                        description: |-
+                          Namespace is the namespace of the KonnectAPIAuthConfiguration resource.
+                          If not specified, defaults to the same namespace as the KonnectConfiguration resource.
                         minLength: 1
                         type: string
                     required:

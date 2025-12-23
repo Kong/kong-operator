@@ -9,14 +9,19 @@ import (
 	"time"
 )
 
+// Protocol represents the protocol.
 type Protocol string
 
 const (
+	// ProtocolTCP is the TCP protocol.
 	ProtocolTCP Protocol = "tcp"
+	// ProtocolUDP is the UDP protocol.
 	ProtocolUDP Protocol = "udp"
+	// ProtocolTLS is the TLS protocol.
 	ProtocolTLS Protocol = "tls"
 )
 
+// TLSOpt holds options for TLS connections.
 type TLSOpt struct {
 	CertPool    *x509.CertPool
 	Hostname    string

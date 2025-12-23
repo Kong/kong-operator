@@ -6,6 +6,7 @@ import (
 	"github.com/samber/lo"
 )
 
+// String returns the string representation of the ControlPlaneRef.
 func (r ControlPlaneRef) String() string {
 	switch r.Type {
 	case ControlPlaneRefKonnectID:

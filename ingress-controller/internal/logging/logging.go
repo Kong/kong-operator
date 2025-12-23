@@ -68,6 +68,7 @@ func getZapLevel(level string) (zapcore.Level, error) {
 	return res, nil
 }
 
+// GetZapEncoding returns a zapcore.Encoder based on the provided type.
 func GetZapEncoding(typ string) (zapcore.Encoder, error) {
 	switch typ {
 	case "text", "console":

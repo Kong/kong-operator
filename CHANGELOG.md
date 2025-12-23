@@ -76,6 +76,11 @@
   automatically create the necessary KongCertificate and KongSNI resources to configure the data plane.
   This allows for managing TLS certificates for Gateways in a Kubernetes-native way.
   [#2915](https://github.com/Kong/kong-operator/pull/2915)
+- Cross-namespace references from `KonnectGatewayControlPlane` to
+  `KonnectAPIAuthConfiguration` are allowed now and require `KongReferenceGrant`.
+  Similarly cross-namespace references from `HTTPRoute` to `Service` are also
+  supported and require `ReferenceGrant` in place.
+  [#2483](https://github.com/Kong/kong-operator/issues/2483)
 
 ### Changed
 
@@ -91,6 +96,9 @@
 - Fixed an issue where users could set the secret of configmap label selectors
   to empty when the other one was left non-empty.
   [#2810](https://github.com/Kong/kong-operator/pull/2810)
+- Handle Konnect API 429 rate limit responses by requeuing resources with
+  the appropriate retry-after duration from the response header.
+  [#2856](https://github.com/Kong/kong-operator/pull/2856)
 
 ## [v2.1.0-alpha.0]
 

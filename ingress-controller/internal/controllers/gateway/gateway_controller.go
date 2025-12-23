@@ -891,7 +891,8 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 // -----------------------------------------------------------------------------
 
 // updateAddressesAndListenersStatus updates a unmanaged gateway's status with new addresses and listeners.
-// If the addresses and listeners provided are the same as what exists, it is assumed that reconciliation is complete and a Programmed condition is posted.
+// If the addresses and listeners provided are the same as what exists,
+// it is assumed that reconciliation is complete and a Programmed condition is posted.
 func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 	ctx context.Context,
 	log logr.Logger,

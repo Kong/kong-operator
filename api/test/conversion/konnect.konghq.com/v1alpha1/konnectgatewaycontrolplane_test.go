@@ -109,7 +109,7 @@ func TestKonnectGatewayControlPlane_ConvertTo(t *testing.T) {
 			}
 			assert.Equal(t, tc.spec.Source, dst.Spec.Source)
 			assert.Equal(t, tc.spec.Members, dst.Spec.Members)
-			assert.Equal(t, tc.spec.KonnectConfiguration, dst.Spec.KonnectConfiguration)
+			assert.Equal(t, tc.spec.KonnectConfiguration.APIAuthConfigurationRef.Name, dst.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name)
 		})
 	}
 }
@@ -127,7 +127,7 @@ func TestKonnectGatewayControlPlane_ConvertFrom(t *testing.T) {
 	labels := map[string]string{"foo": "bar"}
 	source := commonv1alpha1.EntitySourceOrigin
 	members := []corev1.LocalObjectReference{{Name: "member1"}, {Name: "member2"}}
-	konnectConfig := konnectv1alpha2.KonnectConfiguration{}
+	konnectConfig := konnectv1alpha2.ControlPlaneKonnectConfiguration{}
 
 	cases := []struct {
 		name             string
@@ -204,7 +204,7 @@ func TestKonnectGatewayControlPlane_ConvertFrom(t *testing.T) {
 			}
 			assert.Equal(t, tc.src.Source, obj.Spec.Source)
 			assert.Equal(t, tc.src.Members, obj.Spec.Members)
-			assert.Equal(t, tc.src.KonnectConfiguration, obj.Spec.KonnectConfiguration)
+			assert.Equal(t, tc.src.KonnectConfiguration.APIAuthConfigurationRef.Name, obj.Spec.KonnectConfiguration.APIAuthConfigurationRef.Name)
 		})
 	}
 }

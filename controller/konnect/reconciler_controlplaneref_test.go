@@ -18,6 +18,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	"github.com/kong/kong-operator/controller/pkg/controlplane"
+	"github.com/kong/kong-operator/internal/utils/crossnamespace"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 )
 
@@ -717,7 +718,13 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			tc.obj.GetObjectKind().SetGroupVersionKind(configurationv1alpha1.GroupVersion.WithKind("KongService"))
 
-			result := kongReferenceGrantsAllowsCPRef(tc.krgs, tc.obj, tc.cpRef)
+			result := crossnamespace.ReferenceGrantsAllow(
+				tc.krgs,
+				tc.obj.GetNamespace(),
+				tc.cpRef.Name,
+				metav1.GroupVersionKind(tc.obj.GetObjectKind().GroupVersionKind()),
+				metav1.GroupVersionKind(konnectv1alpha2.SchemeGroupVersion.WithKind("KonnectGatewayControlPlane")))
+
 			require.Equal(t, tc.expected, result)
 		})
 	}

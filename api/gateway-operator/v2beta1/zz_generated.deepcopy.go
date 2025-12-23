@@ -929,8 +929,8 @@ func (in *KonnectOptions) DeepCopyInto(out *KonnectOptions) {
 	*out = *in
 	if in.APIAuthConfigurationRef != nil {
 		in, out := &in.APIAuthConfigurationRef, &out.APIAuthConfigurationRef
-		*out = new(v1alpha2.KonnectAPIAuthConfigurationRef)
-		**out = **in
+		*out = new(v1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef)
+		(*in).DeepCopyInto(*out)
 	}
 	if in.Source != nil {
 		in, out := &in.Source, &out.Source
