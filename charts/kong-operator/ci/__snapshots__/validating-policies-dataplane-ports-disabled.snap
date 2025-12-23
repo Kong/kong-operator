@@ -57100,13 +57100,11 @@ rules:
   - configuration.konghq.com
   resources:
   - kongcacertificates
-  - kongcertificates
   - kongconsumergroups
   - kongconsumers
   - kongdataplaneclientcertificates/status
   - kongkeys
   - kongkeysets
-  - kongsnis
   - kongvaults
   verbs:
   - get
@@ -57120,7 +57118,6 @@ rules:
   - kongcacertificates/finalizers
   - kongcacertificates/status
   - kongcertificates/finalizers
-  - kongcertificates/status
   - kongconsumergroups/finalizers
   - kongconsumers/finalizers
   - kongcredentialacls/finalizers
@@ -57141,7 +57138,6 @@ rules:
   - kongroutes/finalizers
   - kongservices/finalizers
   - kongsnis/finalizers
-  - kongsnis/status
   - kongtargets/finalizers
   - kongupstreams/finalizers
   - kongvaults/finalizers
@@ -57151,26 +57147,7 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - kongclusterplugins/status
-  - kongconsumergroups/status
-  - kongconsumers/status
-  - kongcustomentities/status
-  - konglicenses/status
-  - kongpluginbindings/status
-  - kongplugins/status
-  - kongroutes/status
-  - kongservices/status
-  - kongtargets/status
-  - kongupstreampolicies/status
-  - kongupstreams/status
-  - kongvaults/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - configuration.konghq.com
-  resources:
+  - kongcertificates
   - kongcredentialacls
   - kongcredentialapikeys
   - kongcredentialbasicauths
@@ -57181,6 +57158,7 @@ rules:
   - kongplugins
   - kongroutes
   - kongservices
+  - kongsnis
   - kongtargets
   - kongupstreams
   verbs:
@@ -57191,6 +57169,28 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - configuration.konghq.com
+  resources:
+  - kongcertificates/status
+  - kongclusterplugins/status
+  - kongconsumergroups/status
+  - kongconsumers/status
+  - kongcustomentities/status
+  - konglicenses/status
+  - kongpluginbindings/status
+  - kongplugins/status
+  - kongroutes/status
+  - kongservices/status
+  - kongsnis/status
+  - kongtargets/status
+  - kongupstreampolicies/status
+  - kongupstreams/status
+  - kongvaults/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - coordination.k8s.io
   resources:
@@ -57788,6 +57788,41 @@ spec:
             fieldRef:
               fieldPath: metadata.labels
 ---
+# Source: kong-operator/templates/validation-policy-konnect.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com"
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:
+      - "konnect.konghq.com"
+      apiVersions:
+      - "v1alpha1"
+      operations:
+      - "CREATE"
+      - "UPDATE"
+      resources:
+      - "konnectcloudgatewaydataplanegroupconfigurations"
+      # NOTE: field-level deprecations via Kubebuilder annotations do not generate any warning to the
+      # users when the deprecated field is used.
+      # Until this is not fixed we need a ValidatingAdmissionPolicy to emit the warning.
+      # Upstream issue: https://github.com/kubernetes/kubernetes/issues/131817
+  validations:
+  - expression: object.spec.dataplane_groups.all(d, d.autoscale.type != "static")
+    message: '''Value "static" in spec.dataplane_groups.autoscale.type is deprecated, use "automatic" instead.'''
+---
+# Source: kong-operator/templates/validation-policy-konnect.yaml
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "biding-autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com"
+spec:
+  policyName: "autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com"
+  validationActions: [Warn, Audit]
+---
 # Source: kong-operator/templates/validating-webhook.yaml
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -57906,38 +57941,3 @@ webhooks:
     scope: '*'
   sideEffects: None
   timeoutSeconds: 10
----
-# Source: kong-operator/templates/validation-policy-konnect.yaml
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingAdmissionPolicy
-metadata:
-  name: "autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com"
-spec:
-  failurePolicy: Fail
-  matchConstraints:
-    resourceRules:
-    - apiGroups:
-      - "konnect.konghq.com"
-      apiVersions:
-      - "v1alpha1"
-      operations:
-      - "CREATE"
-      - "UPDATE"
-      resources:
-      - "konnectcloudgatewaydataplanegroupconfigurations"
-      # NOTE: field-level deprecations via Kubebuilder annotations do not generate any warning to the
-      # users when the deprecated field is used.
-      # Until this is not fixed we need a ValidatingAdmissionPolicy to emit the warning.
-      # Upstream issue: https://github.com/kubernetes/kubernetes/issues/131817
-  validations:
-  - expression: object.spec.dataplane_groups.all(d, d.autoscale.type != "static")
-    message: '''Value "static" in spec.dataplane_groups.autoscale.type is deprecated, use "automatic" instead.'''
----
-# Source: kong-operator/templates/validation-policy-konnect.yaml
-apiVersion: admissionregistration.k8s.io/v1
-kind: ValidatingAdmissionPolicyBinding
-metadata:
-  name: "biding-autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com"
-spec:
-  policyName: "autoscale.dataplanegroups.konnectclouddataplanegroupconfig.konnect.konghq.com"
-  validationActions: [Warn, Audit]
