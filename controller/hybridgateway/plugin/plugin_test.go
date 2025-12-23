@@ -176,7 +176,7 @@ func TestPluginForFilter(t *testing.T) {
 				WithRuntimeObjects(objects...).
 				Build()
 
-			plugin, _, err := PluginForFilter(ctx, logger, fakeClient, tt.httpRoute, tt.filter, tt.parentRef)
+			plugins, _, err := PluginsForFilter(ctx, logger, fakeClient, tt.httpRoute, tt.filter, tt.parentRef)
 
 			if tt.expectedError {
 				require.Error(t, err)
@@ -185,7 +185,9 @@ func TestPluginForFilter(t *testing.T) {
 			require.NoError(t, err)
 
 			if tt.validatePlugin != nil {
-				tt.validatePlugin(t, plugin)
+				for _, p := range plugins {
+					tt.validatePlugin(t, &p)
+				}
 			}
 		})
 	}
