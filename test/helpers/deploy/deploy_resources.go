@@ -154,27 +154,6 @@ func WithNamespacedKongServiceRef(svc *configurationv1alpha1.KongService) ObjOpt
 	}
 }
 
-// WithKonnectIDControlPlaneRef returns an ObjOption that sets the ControlPlaneRef on the object to a KonnectID.
-func WithKonnectIDControlPlaneRef(cp *konnectv1alpha2.KonnectGatewayControlPlane) ObjOption {
-	return func(obj client.Object) {
-		o, ok := obj.(interface {
-			GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef
-			SetControlPlaneRef(*commonv1alpha1.ControlPlaneRef)
-		})
-		if !ok {
-			// As it's only used in tests, we can panic here - it will mean test code is incorrect.
-			panic(fmt.Errorf("%T does not implement GetControlPlaneRef/SetControlPlaneRef method", obj))
-		}
-
-		o.SetControlPlaneRef(
-			&commonv1alpha1.ControlPlaneRef{
-				Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-				KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType(cp.GetKonnectStatus().GetKonnectID())),
-			},
-		)
-	}
-}
-
 // WithMirrorSource returns an ObjOption that sets the Source as Mirror and Mirror fields on the object.
 func WithMirrorSource(konnectID string) ObjOption {
 	return func(obj client.Object) {

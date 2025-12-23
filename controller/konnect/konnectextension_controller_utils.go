@@ -33,7 +33,7 @@ import (
 
 // getGatewayKonnectControlPlane retrieves the Konnect Control Plane from K8s cluster
 // based on the provided KonnectExtension specification.
-// It supports two types of ControlPlaneRef: KonnectNamespacedRef and KonnectID.
+// It the KonnectNamespacedRef of ControlPlaneRef.
 //
 // Returns:
 // - cp: The retrieved Konnect Control Plane.

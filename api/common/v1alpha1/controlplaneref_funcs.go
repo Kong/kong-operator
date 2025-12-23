@@ -2,17 +2,11 @@ package v1alpha1
 
 import (
 	"fmt"
-
-	"github.com/samber/lo"
 )
 
 // String returns the string representation of the ControlPlaneRef.
 func (r ControlPlaneRef) String() string {
 	switch r.Type {
-	case ControlPlaneRefKonnectID:
-		// It's safe to assume KonnectID is not nil as it's guarded by CEL rules, but just in case let's have a fallback.
-		konnectID := lo.FromPtrOr(r.KonnectID, "nil")
-		return fmt.Sprintf("<%s:%s>", r.Type, konnectID)
 	case ControlPlaneRefKonnectNamespacedRef:
 		if r.KonnectNamespacedRef.Namespace == "" {
 			return fmt.Sprintf("<%s:%s>", r.Type, r.KonnectNamespacedRef.Name)
