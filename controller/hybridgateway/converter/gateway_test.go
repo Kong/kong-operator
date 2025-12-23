@@ -1126,9 +1126,8 @@ func TestTranslate(t *testing.T) {
 
 				// No KonnectExtension created, gateway doesn't reference control plane.
 			},
-			expectError:   true,
+			expectError:   false, // Changed: unsupported gateways are silently skipped
 			expectedCount: 0,
-			errorContains: "does not reference a ControlPlane",
 		},
 		{
 			name: "skips missing secrets without error",

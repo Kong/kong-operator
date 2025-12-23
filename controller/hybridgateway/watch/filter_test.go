@@ -587,18 +587,46 @@ func TestFilterByGateway(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-gateway",
 					Namespace: "default",
+					UID:       "test-gateway-uid",
 				},
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
 				},
 			},
 			existingObjs: []client.Object{
-				&gwtypes.GatewayClass{
+				&konnectv1alpha2.KonnectExtension{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong",
+						Name:      "test-gateway",
+						Namespace: "default",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/managed-by": "gateway",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "gateway.networking.k8s.io/v1",
+								Kind:       "Gateway",
+								Name:       "test-gateway",
+								UID:        "test-gateway-uid",
+							},
+						},
 					},
-					Spec: gwtypes.GatewayClassSpec{
-						ControllerName: "konghq.com/gateway-operator",
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-cp",
+									},
+								},
+							},
+						},
+					},
+				},
+				&konnectv1alpha2.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cp",
+						Namespace: "default",
 					},
 				},
 			},
@@ -611,23 +639,51 @@ func TestFilterByGateway(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-gateway",
 					Namespace: "default",
+					UID:       "test-gateway-uid",
 				},
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
 				},
 			},
 			existingObjs: []client.Object{
-				&gwtypes.GatewayClass{
+				&konnectv1alpha2.KonnectExtension{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong",
+						Name:      "test-gateway",
+						Namespace: "default",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/managed-by": "gateway",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "gateway.networking.k8s.io/v1",
+								Kind:       "Gateway",
+								Name:       "test-gateway",
+								UID:        "test-gateway-uid",
+							},
+						},
 					},
-					Spec: gwtypes.GatewayClassSpec{
-						ControllerName: "konghq.com/gateway-operator",
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-cp",
+									},
+								},
+							},
+						},
+					},
+				},
+				&konnectv1alpha2.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cp",
+						Namespace: "default",
 					},
 				},
 			},
 			interceptorFuncs: &interceptor.Funcs{
-				Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+				List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
 					return errors.New("simulated API error")
 				},
 			},
@@ -680,6 +736,7 @@ func TestFilterByGateway(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-gateway",
 					Namespace: "default",
+					UID:       "test-gateway-uid",
 				},
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
@@ -689,18 +746,46 @@ func TestFilterByGateway(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-gateway",
 					Namespace: "default",
+					UID:       "test-gateway-uid",
 				},
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "non-existent",
 				},
 			},
 			existingObjs: []client.Object{
-				&gwtypes.GatewayClass{
+				&konnectv1alpha2.KonnectExtension{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong",
+						Name:      "test-gateway",
+						Namespace: "default",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/managed-by": "gateway",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "gateway.networking.k8s.io/v1",
+								Kind:       "Gateway",
+								Name:       "test-gateway",
+								UID:        "test-gateway-uid",
+							},
+						},
 					},
-					Spec: gwtypes.GatewayClassSpec{
-						ControllerName: "konghq.com/gateway-operator",
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-cp",
+									},
+								},
+							},
+						},
+					},
+				},
+				&konnectv1alpha2.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cp",
+						Namespace: "default",
 					},
 				},
 			},
@@ -713,6 +798,7 @@ func TestFilterByGateway(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-gateway",
 					Namespace: "default",
+					UID:       "test-gateway-uid",
 				},
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "non-existent",
@@ -722,18 +808,46 @@ func TestFilterByGateway(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-gateway",
 					Namespace: "default",
+					UID:       "test-gateway-uid",
 				},
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
 				},
 			},
 			existingObjs: []client.Object{
-				&gwtypes.GatewayClass{
+				&konnectv1alpha2.KonnectExtension{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong",
+						Name:      "test-gateway",
+						Namespace: "default",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/managed-by": "gateway",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "gateway.networking.k8s.io/v1",
+								Kind:       "Gateway",
+								Name:       "test-gateway",
+								UID:        "test-gateway-uid",
+							},
+						},
 					},
-					Spec: gwtypes.GatewayClassSpec{
-						ControllerName: "konghq.com/gateway-operator",
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-cp",
+									},
+								},
+							},
+						},
+					},
+				},
+				&konnectv1alpha2.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cp",
+						Namespace: "default",
 					},
 				},
 			},
@@ -771,18 +885,46 @@ func TestFilterByGateway(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-gateway",
 					Namespace: "default",
+					UID:       "test-gateway-uid",
 				},
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
 				},
 			},
 			existingObjs: []client.Object{
-				&gwtypes.GatewayClass{
+				&konnectv1alpha2.KonnectExtension{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong",
+						Name:      "test-gateway",
+						Namespace: "default",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/managed-by": "gateway",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "gateway.networking.k8s.io/v1",
+								Kind:       "Gateway",
+								Name:       "test-gateway",
+								UID:        "test-gateway-uid",
+							},
+						},
 					},
-					Spec: gwtypes.GatewayClassSpec{
-						ControllerName: "konghq.com/gateway-operator",
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-cp",
+									},
+								},
+							},
+						},
+					},
+				},
+				&konnectv1alpha2.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cp",
+						Namespace: "default",
 					},
 				},
 			},
@@ -820,18 +962,46 @@ func TestFilterByGateway(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-gateway",
 					Namespace: "default",
+					UID:       "test-gateway-uid",
 				},
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
 				},
 			},
 			existingObjs: []client.Object{
-				&gwtypes.GatewayClass{
+				&konnectv1alpha2.KonnectExtension{
 					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong",
+						Name:      "test-gateway",
+						Namespace: "default",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/managed-by": "gateway",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "gateway.networking.k8s.io/v1",
+								Kind:       "Gateway",
+								Name:       "test-gateway",
+								UID:        "test-gateway-uid",
+							},
+						},
 					},
-					Spec: gwtypes.GatewayClassSpec{
-						ControllerName: "konghq.com/gateway-operator",
+					Spec: konnectv1alpha2.KonnectExtensionSpec{
+						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+								Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+									Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+									KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+										Name: "test-cp",
+									},
+								},
+							},
+						},
+					},
+				},
+				&konnectv1alpha2.KonnectGatewayControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-cp",
+						Namespace: "default",
 					},
 				},
 			},

@@ -19,12 +19,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	finalizerconst "github.com/kong/kong-operator/controller/hybridgateway/const/finalizers"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/scheme"
 	"github.com/kong/kong-operator/pkg/consts"
-	"github.com/kong/kong-operator/pkg/vars"
 )
 
 func newUnstructured(ns, name string, gvk schema.GroupVersionKind, labels map[string]string) unstructured.Unstructured {
@@ -330,45 +331,66 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
 
-	// Create a test GatewayClass controlled by us.
-	ourGatewayClass := &gwtypes.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "our-gatewayclass",
-		},
-		Spec: gwtypes.GatewayClassSpec{
-			ControllerName: gwtypes.GatewayController(vars.ControllerName()),
-		},
-	}
-
-	// Create a test GatewayClass controlled by someone else.
-	otherGatewayClass := &gwtypes.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "other-gatewayclass",
-		},
-		Spec: gwtypes.GatewayClassSpec{
-			ControllerName: "other.controller/gateway",
-		},
-	}
-
-	// Create a test Gateway using our GatewayClass.
+	// Create a test Gateway with KonnectExtension (managed by us).
 	ourGateway := &gwtypes.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "our-gateway",
 			Namespace: "default",
+			UID:       "our-gateway-uid",
 		},
 		Spec: gwtypes.GatewaySpec{
-			GatewayClassName: "our-gatewayclass",
+			GatewayClassName: "kong",
 		},
 	}
 
-	// Create a test Gateway using other GatewayClass.
+	// KonnectExtension for our Gateway
+	ourKonnectExtension := &konnectv1alpha2.KonnectExtension{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "our-gateway",
+			Namespace: "default",
+			Labels: map[string]string{
+				"gateway-operator.konghq.com/managed-by": "gateway",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "gateway.networking.k8s.io/v1",
+					Kind:       "Gateway",
+					Name:       "our-gateway",
+					UID:        "our-gateway-uid",
+				},
+			},
+		},
+		Spec: konnectv1alpha2.KonnectExtensionSpec{
+			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "our-cp",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// KonnectGatewayControlPlane for our Gateway
+	ourControlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "our-cp",
+			Namespace: "default",
+		},
+	}
+
+	// Create a test Gateway without KonnectExtension (not managed by us).
 	otherGateway := &gwtypes.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "other-gateway",
 			Namespace: "default",
+			UID:       "other-gateway-uid",
 		},
 		Spec: gwtypes.GatewaySpec{
-			GatewayClassName: "other-gatewayclass",
+			GatewayClassName: "other-class",
 		},
 	}
 
@@ -419,7 +441,7 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 				}
 				return route
 			},
-			clientObjects:    []client.Object{ourGatewayClass, ourGateway},
+			clientObjects:    []client.Object{ourGateway, ourKonnectExtension, ourControlPlane},
 			interceptorFuncs: nil,
 			expectedResult:   true,
 			description:      "Objects without finalizer but referencing our Gateway should be processed.",
@@ -446,7 +468,7 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 				}
 				return route
 			},
-			clientObjects:    []client.Object{otherGatewayClass, otherGateway},
+			clientObjects:    []client.Object{otherGateway},
 			interceptorFuncs: nil,
 			expectedResult:   false,
 			description:      "Objects without finalizer referencing unsupported Gateway should be skipped.",
@@ -495,7 +517,7 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 				}
 				return route
 			},
-			clientObjects:    []client.Object{otherGatewayClass, otherGateway},
+			clientObjects:    []client.Object{otherGateway},
 			interceptorFuncs: nil,
 			expectedResult:   true,
 			description:      "Objects with finalizer should be processed for cleanup even if referencing other Gateway.",
@@ -522,7 +544,7 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 				}
 				return route
 			},
-			clientObjects:    []client.Object{ourGatewayClass, ourGateway, otherGatewayClass, otherGateway},
+			clientObjects:    []client.Object{ourGateway, ourKonnectExtension, ourControlPlane, otherGateway},
 			interceptorFuncs: nil,
 			expectedResult:   true,
 			description:      "Objects referencing at least one supported Gateway should be processed.",
@@ -600,6 +622,13 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 				schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version},
 				&gwtypes.HTTPRoute{}, &gwtypes.Gateway{}, &gwtypes.GatewayClass{},
 			)
+			scheme.AddKnownTypes(
+				schema.GroupVersion{Group: "konnect.konghq.com", Version: "v1alpha2"},
+				&konnectv1alpha2.KonnectExtension{},
+				&konnectv1alpha2.KonnectExtensionList{},
+				&konnectv1alpha2.KonnectGatewayControlPlane{},
+				&konnectv1alpha2.KonnectGatewayControlPlaneList{},
+			)
 			require.NoError(t, gatewayv1.Install(scheme))
 
 			builder := fake.NewClientBuilder().
@@ -620,23 +649,42 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
 
-	// Create a test GatewayClass controlled by us.
-	ourGatewayClass := &gwtypes.GatewayClass{
+	// KonnectExtension for managed Gateway
+	konnectExtension := &konnectv1alpha2.KonnectExtension{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "our-gatewayclass",
+			Name:      "test-gateway",
+			Namespace: "default",
+			Labels: map[string]string{
+				"gateway-operator.konghq.com/managed-by": "gateway",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "gateway.networking.k8s.io/v1",
+					Kind:       "Gateway",
+					Name:       "test-gateway",
+					UID:        "test-gateway-uid",
+				},
+			},
 		},
-		Spec: gwtypes.GatewayClassSpec{
-			ControllerName: gwtypes.GatewayController(vars.ControllerName()),
+		Spec: konnectv1alpha2.KonnectExtensionSpec{
+			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "test-cp",
+						},
+					},
+				},
+			},
 		},
 	}
 
-	// Create a test GatewayClass controlled by someone else.
-	otherGatewayClass := &gwtypes.GatewayClass{
+	// KonnectGatewayControlPlane for managed Gateway
+	controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "other-gatewayclass",
-		},
-		Spec: gwtypes.GatewayClassSpec{
-			ControllerName: "other.controller/gateway",
+			Name:      "test-cp",
+			Namespace: "default",
 		},
 	}
 
@@ -655,15 +703,16 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-gateway",
 						Namespace:  "default",
+						UID:        "test-gateway-uid",
 						Finalizers: []string{finalizerconst.GatewayFinalizer},
 					},
 					Spec: gwtypes.GatewaySpec{
-						GatewayClassName: "our-gatewayclass",
+						GatewayClassName: "kong",
 					},
 				}
 				return gateway
 			},
-			clientObjects:    []client.Object{ourGatewayClass},
+			clientObjects:    []client.Object{konnectExtension, controlPlane},
 			interceptorFuncs: nil,
 			expectedResult:   true,
 			description:      "Gateway with our finalizer should be processed.",
@@ -675,15 +724,16 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-gateway",
 						Namespace:  "default",
+						UID:        "test-gateway-uid",
 						Finalizers: []string{},
 					},
 					Spec: gwtypes.GatewaySpec{
-						GatewayClassName: "our-gatewayclass",
+						GatewayClassName: "kong",
 					},
 				}
 				return gateway
 			},
-			clientObjects:    []client.Object{ourGatewayClass},
+			clientObjects:    []client.Object{konnectExtension, controlPlane},
 			interceptorFuncs: nil,
 			expectedResult:   true,
 			description:      "Gateway using our GatewayClass should be processed.",
@@ -695,15 +745,16 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-gateway",
 						Namespace:  "default",
+						UID:        "test-gateway-uid",
 						Finalizers: []string{},
 					},
 					Spec: gwtypes.GatewaySpec{
-						GatewayClassName: "other-gatewayclass",
+						GatewayClassName: "other-class",
 					},
 				}
 				return gateway
 			},
-			clientObjects:    []client.Object{otherGatewayClass},
+			clientObjects:    []client.Object{},
 			interceptorFuncs: nil,
 			expectedResult:   false,
 			description:      "Gateway using other GatewayClass should be skipped.",
@@ -715,10 +766,11 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-gateway",
 						Namespace:  "default",
+						UID:        "test-gateway-uid",
 						Finalizers: []string{},
 					},
 					Spec: gwtypes.GatewaySpec{
-						GatewayClassName: "non-existent-gatewayclass",
+						GatewayClassName: "non-existent",
 					},
 				}
 				return gateway
@@ -735,21 +787,19 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-gateway",
 						Namespace:  "default",
+						UID:        "test-gateway-uid",
 						Finalizers: []string{},
 					},
 					Spec: gwtypes.GatewaySpec{
-						GatewayClassName: "test-gatewayclass",
+						GatewayClassName: "test-class",
 					},
 				}
 				return gateway
 			},
 			clientObjects: []client.Object{},
 			interceptorFuncs: &interceptor.Funcs{
-				Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-					if _, ok := obj.(*gwtypes.GatewayClass); ok {
-						return assert.AnError
-					}
-					return client.Get(ctx, key, obj, opts...)
+				List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+					return assert.AnError
 				},
 			},
 			expectedResult: false,
@@ -771,6 +821,13 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 				schema.GroupVersion{Group: gatewayv1.GroupVersion.Group, Version: gatewayv1.GroupVersion.Version},
 				&gwtypes.Gateway{}, &gwtypes.GatewayClass{},
 			)
+			scheme.AddKnownTypes(
+				schema.GroupVersion{Group: "konnect.konghq.com", Version: "v1alpha2"},
+				&konnectv1alpha2.KonnectExtension{},
+				&konnectv1alpha2.KonnectExtensionList{},
+				&konnectv1alpha2.KonnectGatewayControlPlane{},
+				&konnectv1alpha2.KonnectGatewayControlPlaneList{},
+			)
 			require.NoError(t, gatewayv1.Install(scheme))
 
 			builder := fake.NewClientBuilder().
@@ -791,38 +848,58 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
 
-	// Create a supported GatewayClass
-	supportedGatewayClass := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "kong",
-		},
-		Spec: gatewayv1.GatewayClassSpec{
-			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
-		},
-	}
-
-	// Create a supported Gateway
+	// Create a supported Gateway (managed by KonnectExtension)
 	supportedGateway := &gatewayv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "supported-gateway",
 			Namespace: "default",
+			UID:       "supported-gateway-uid",
 		},
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "kong",
 		},
 	}
 
-	// Create an unsupported GatewayClass
-	unsupportedGatewayClass := &gatewayv1.GatewayClass{
+	// KonnectExtension for the supported Gateway
+	konnectExtension := &konnectv1alpha2.KonnectExtension{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "other",
+			Name:      "supported-gateway",
+			Namespace: "default",
+			Labels: map[string]string{
+				"gateway-operator.konghq.com/managed-by": "gateway",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "gateway.networking.k8s.io/v1",
+					Kind:       "Gateway",
+					Name:       "supported-gateway",
+					UID:        "supported-gateway-uid",
+				},
+			},
 		},
-		Spec: gatewayv1.GatewayClassSpec{
-			ControllerName: "other-controller",
+		Spec: konnectv1alpha2.KonnectExtensionSpec{
+			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "supported-cp",
+						},
+					},
+				},
+			},
 		},
 	}
 
-	// Create an unsupported Gateway
+	// KonnectGatewayControlPlane for the supported Gateway
+	controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "supported-cp",
+			Namespace: "default",
+		},
+	}
+
+	// Create an unsupported Gateway (no KonnectExtension)
 	unsupportedGateway := &gatewayv1.Gateway{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "unsupported-gateway",
@@ -861,9 +938,9 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 				},
 			},
 			existingObjects: []client.Object{
-				supportedGatewayClass,
+				konnectExtension,
+				controlPlane,
 				supportedGateway,
-				unsupportedGatewayClass,
 				unsupportedGateway,
 			},
 			expectedRemoved: false,
@@ -888,9 +965,9 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 				},
 			},
 			existingObjects: []client.Object{
-				supportedGatewayClass,
+				konnectExtension,
+				controlPlane,
 				supportedGateway,
-				unsupportedGatewayClass,
 				unsupportedGateway,
 			},
 			expectedRemoved:      false,
@@ -917,9 +994,9 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 				},
 			},
 			existingObjects: []client.Object{
-				supportedGatewayClass,
+				konnectExtension,
+				controlPlane,
 				supportedGateway,
-				unsupportedGatewayClass,
 				unsupportedGateway,
 			},
 			expectedRemoved:      true,
@@ -946,9 +1023,9 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 				},
 			},
 			existingObjects: []client.Object{
-				supportedGatewayClass,
+				konnectExtension,
+				controlPlane,
 				supportedGateway,
-				unsupportedGatewayClass,
 				unsupportedGateway,
 			},
 			interceptorFuncs: &interceptor.Funcs{
@@ -978,9 +1055,9 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 				},
 			},
 			existingObjects: []client.Object{
-				supportedGatewayClass,
+				konnectExtension,
+				controlPlane,
 				supportedGateway,
-				unsupportedGatewayClass,
 				unsupportedGateway,
 			},
 			interceptorFuncs: &interceptor.Funcs{
@@ -1014,15 +1091,15 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 				},
 			},
 			existingObjects: []client.Object{
-				supportedGatewayClass,
+				konnectExtension,
+				controlPlane,
 				supportedGateway,
-				unsupportedGatewayClass,
 				unsupportedGateway,
 			},
 			expectedRemoved:      true,
 			expectError:          false,
 			verifyFinalizer:      true,
-			expectedHasFinalizer: false,
+			expectedHasFinalizer: false, // our finalizer should be removed, other finalizers remain
 		},
 	}
 
@@ -1070,23 +1147,42 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
 
-	// Create a supported GatewayClass
-	supportedGatewayClass := &gatewayv1.GatewayClass{
+	// KonnectExtension for the managed Gateway (with UID test-gateway-uid)
+	konnectExtension := &konnectv1alpha2.KonnectExtension{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "kong",
+			Name:      "test-gateway",
+			Namespace: "default",
+			Labels: map[string]string{
+				"gateway-operator.konghq.com/managed-by": "gateway",
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: "gateway.networking.k8s.io/v1",
+					Kind:       "Gateway",
+					Name:       "test-gateway",
+					UID:        "test-gateway-uid",
+				},
+			},
 		},
-		Spec: gatewayv1.GatewayClassSpec{
-			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
+		Spec: konnectv1alpha2.KonnectExtensionSpec{
+			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "test-cp",
+						},
+					},
+				},
+			},
 		},
 	}
 
-	// Create an unsupported GatewayClass
-	unsupportedGatewayClass := &gatewayv1.GatewayClass{
+	// KonnectGatewayControlPlane for the supported Gateway
+	controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "other",
-		},
-		Spec: gatewayv1.GatewayClassSpec{
-			ControllerName: "other-controller",
+			Name:      "test-cp",
+			Namespace: "default",
 		},
 	}
 
@@ -1112,8 +1208,8 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 				},
 			},
 			existingObjects: []client.Object{
-				supportedGatewayClass,
-				unsupportedGatewayClass,
+				konnectExtension,
+				controlPlane,
 			},
 			expectedRemoved: false,
 			expectError:     false,
@@ -1124,6 +1220,7 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-gateway",
 					Namespace:  "default",
+					UID:        "test-gateway-uid",
 					Finalizers: []string{finalizerconst.GatewayFinalizer},
 				},
 				Spec: gatewayv1.GatewaySpec{
@@ -1131,8 +1228,8 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 				},
 			},
 			existingObjects: []client.Object{
-				supportedGatewayClass,
-				unsupportedGatewayClass,
+				konnectExtension,
+				controlPlane,
 			},
 			expectedRemoved:      false,
 			expectError:          false,
@@ -1152,8 +1249,8 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 				},
 			},
 			existingObjects: []client.Object{
-				supportedGatewayClass,
-				unsupportedGatewayClass,
+				konnectExtension,
+				controlPlane,
 			},
 			expectedRemoved:      true,
 			expectError:          false,
@@ -1173,8 +1270,8 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 				},
 			},
 			existingObjects: []client.Object{
-				supportedGatewayClass,
-				unsupportedGatewayClass,
+				konnectExtension,
+				controlPlane,
 			},
 			interceptorFuncs: &interceptor.Funcs{
 				Patch: func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
@@ -1197,8 +1294,8 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 				},
 			},
 			existingObjects: []client.Object{
-				supportedGatewayClass,
-				unsupportedGatewayClass,
+				konnectExtension,
+				controlPlane,
 			},
 			interceptorFuncs: &interceptor.Funcs{
 				Patch: func(ctx context.Context, client client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
@@ -1225,13 +1322,13 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 				},
 			},
 			existingObjects: []client.Object{
-				supportedGatewayClass,
-				unsupportedGatewayClass,
+				konnectExtension,
+				controlPlane,
 			},
 			expectedRemoved:      true,
 			expectError:          false,
 			verifyFinalizer:      true,
-			expectedHasFinalizer: false,
+			expectedHasFinalizer: false, // our finalizer should be removed, other finalizers remain
 		},
 	}
 

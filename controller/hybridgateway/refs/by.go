@@ -47,7 +47,7 @@ func GetControlPlaneRefByParentRef(ctx context.Context, logger logr.Logger, cl c
 		return nil, nil
 	}
 
-	konnectNamespacedRef, found, err := byGateway(ctx, cl, *gw)
+	konnectNamespacedRef, _, err := byGateway(ctx, cl, *gw)
 	if err != nil {
 		return nil, fmt.Errorf("unable to get ControlPlaneRef for ParentRef %+v in route %q: %w", pRef, client.ObjectKeyFromObject(route), err)
 	}
