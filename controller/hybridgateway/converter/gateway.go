@@ -24,9 +24,11 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	secretref "github.com/kong/kong-operator/controller/pkg/secrets/ref"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
 )
 
 var _ APIConverter[gwtypes.Gateway] = &gatewayConverter{}
+var _ OrphanedResourceHandler = &gatewayConverter{}
 
 // gatewayConverter is a concrete implementation of the APIConverter interface for Gateway.
 type gatewayConverter struct {
@@ -206,6 +208,39 @@ func (c *gatewayConverter) UpdateRootObjectStatus(ctx context.Context, logger lo
 	// TODO: implement status update logic
 
 	return false, false, nil
+}
+
+// HandleOrphanedResource implements OrphanedResourceHandler.
+//
+// Determines whether an orphaned resource should be deleted or preserved during cleanup.
+// Resources are only deleted if they are owned by this specific Gateway instance.
+// This prevents accidental deletion of resources that may be owned by other Gateways.
+//
+// Parameters:
+//   - ctx: The context for the operation
+//   - logger: Logger for structured logging
+//   - resource: The orphaned resource to evaluate
+//
+// Returns:
+//   - skipDelete: true if the resource should be preserved, false if it should be deleted
+//   - err: any error encountered during evaluation
+func (c *gatewayConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
+	// Check if the resource is owned by this gateway.
+	if k8sutils.IsOwnedByRefUID(resource, c.gateway.UID) {
+		// Resource is owned by this gateway, allow deletion.
+		log.Debug(logger, "Resource is owned by this gateway, allowing deletion",
+			"resource", resource.GetName(),
+			"kind", resource.GetKind(),
+			"gateway", c.gateway.Name)
+		return false, nil
+	}
+
+	// Resource is not owned by this gateway, skip deletion
+	log.Debug(logger, "Resource is not owned by this gateway, skipping deletion",
+		"resource", resource.GetName(),
+		"kind", resource.GetKind(),
+		"gateway", c.gateway.Name)
+	return true, nil
 }
 
 // processListenerCertificate processes a certificate reference from a listener,
