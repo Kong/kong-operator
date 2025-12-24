@@ -224,7 +224,7 @@ spec:
               - name: GATEWAY_NAMESPACE
                 value: ($hybrid_gateway_namespace)
             content: |
-              set -euo pipefail
+              set -eu
               for i in $(seq 1 30); do
                 IP=$(kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}')
                 if [ -n "$IP" ]; then
@@ -440,7 +440,7 @@ spec:
         # Test the updated routes
         - script:
             content: |
-              set -euo pipefail
+              set -eu
               for i in $(seq 1 30); do
                 IP=$(kubectl get gateway -n kong -o jsonpath='{.items[0].status.addresses[0].value}')
                 if [ -n "$IP" ]; then
