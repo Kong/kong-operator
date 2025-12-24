@@ -22,7 +22,5 @@ spec:
   failFast: false
   # Number of parallel tests
   parallel: 1
-  # Exclude test directories
-  exclude: []
   # Full name to pass to the underlying test
   fullName: false
