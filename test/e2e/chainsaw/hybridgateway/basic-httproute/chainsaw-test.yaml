@@ -111,6 +111,9 @@ spec:
     - name: verify-kong-resources
       description: Verify KongRoute, KongService, KongUpstream, and KongTarget are created
       try:
+        - script:
+            content: |
+              kubectl wait --for=condition=Programmed --timeout=180s kongroute -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute
         # Collect bindings needed for Kong resource assertions
         - script:
             content: |
@@ -221,7 +224,18 @@ spec:
               - name: GATEWAY_NAMESPACE
                 value: ($hybrid_gateway_namespace)
             content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+              set -euo pipefail
+              for i in $(seq 1 30); do
+                IP=$(kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}')
+                if [ -n "$IP" ]; then
+                  echo "$IP"
+                  exit 0
+                fi
+                echo "waiting for gateway address (attempt $i/30)" >&2
+                sleep 10
+              done
+              echo "gateway address not available" >&2
+              exit 1
             outputs:
               - name: proxy_ip
                 value: ($stdout)
@@ -426,7 +440,18 @@ spec:
         # Test the updated routes
         - script:
             content: |
-              kubectl get gateway -n kong -o jsonpath='{.items[0].status.addresses[0].value}'
+              set -euo pipefail
+              for i in $(seq 1 30); do
+                IP=$(kubectl get gateway -n kong -o jsonpath='{.items[0].status.addresses[0].value}')
+                if [ -n "$IP" ]; then
+                  echo "$IP"
+                  exit 0
+                fi
+                echo "waiting for gateway address (attempt $i/30)" >&2
+                sleep 10
+              done
+              echo "gateway address not available" >&2
+              exit 1
             outputs:
               - name: proxy_ip
                 value: ($stdout)

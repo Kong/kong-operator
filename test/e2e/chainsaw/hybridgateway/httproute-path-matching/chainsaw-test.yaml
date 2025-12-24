@@ -97,7 +97,18 @@ spec:
         # Get Gateway proxy IP
         - script:
             content: |
-              kubectl get gateway kong-foo -n kong -o jsonpath='{.status.addresses[0].value}'
+              set -euo pipefail
+              for i in $(seq 1 30); do
+                IP=$(kubectl get gateway kong-foo -n kong -o jsonpath='{.status.addresses[0].value}')
+                if [ -n "$IP" ]; then
+                  echo "$IP"
+                  exit 0
+                fi
+                echo "waiting for gateway address (attempt $i/30)" >&2
+                sleep 10
+              done
+              echo "gateway address not available" >&2
+              exit 1
             outputs:
               - name: proxy_ip
                 value: ($stdout)
@@ -149,7 +160,18 @@ spec:
         # Get Gateway proxy IP
         - script:
             content: |
-              kubectl get gateway kong-foo -n kong -o jsonpath='{.status.addresses[0].value}'
+              set -euo pipefail
+              for i in $(seq 1 30); do
+                IP=$(kubectl get gateway kong-foo -n kong -o jsonpath='{.status.addresses[0].value}')
+                if [ -n "$IP" ]; then
+                  echo "$IP"
+                  exit 0
+                fi
+                echo "waiting for gateway address (attempt $i/30)" >&2
+                sleep 10
+              done
+              echo "gateway address not available" >&2
+              exit 1
             outputs:
               - name: proxy_ip
                 value: ($stdout)
@@ -207,7 +229,18 @@ spec:
         # Get Gateway proxy IP
         - script:
             content: |
-              kubectl get gateway kong-foo -n kong -o jsonpath='{.status.addresses[0].value}'
+              set -euo pipefail
+              for i in $(seq 1 30); do
+                IP=$(kubectl get gateway kong-foo -n kong -o jsonpath='{.status.addresses[0].value}')
+                if [ -n "$IP" ]; then
+                  echo "$IP"
+                  exit 0
+                fi
+                echo "waiting for gateway address (attempt $i/30)" >&2
+                sleep 10
+              done
+              echo "gateway address not available" >&2
+              exit 1
             outputs:
               - name: proxy_ip
                 value: ($stdout)
@@ -290,7 +323,18 @@ spec:
         # Get Gateway proxy IP
         - script:
             content: |
-              kubectl get gateway kong-foo -n kong -o jsonpath='{.status.addresses[0].value}'
+              set -euo pipefail
+              for i in $(seq 1 30); do
+                IP=$(kubectl get gateway kong-foo -n kong -o jsonpath='{.status.addresses[0].value}')
+                if [ -n "$IP" ]; then
+                  echo "$IP"
+                  exit 0
+                fi
+                echo "waiting for gateway address (attempt $i/30)" >&2
+                sleep 10
+              done
+              echo "gateway address not available" >&2
+              exit 1
             outputs:
               - name: proxy_ip
                 value: ($stdout)
