@@ -1,0 +1,266 @@
+# HTTPRoute header match test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-header-match
+spec:
+  description: |
+    This test validates that the hybrid gateway controller correctly
+    processes a basic HTTPRoute with matches on headers and generates
+    routes that direct traffics as expected.
+
+  timeouts:
+    apply: 120s
+    assert: 300s
+    delete: 120s
+
+  steps:
+  # Step 1: Create prerequisite resources
+  - name: create-prerequisites
+    description: Create GatewayClass, Gateway, and backend Service
+    try:
+      - apply:
+          file: 01-prerequisites.yaml # TODO: Move the prerequisites.yaml to common?
+      # Assert common Konnect and Gateway resources.
+      - assert:
+          file: ../common/assertions/konnect-apiauth.yaml
+      - assert:
+          file: ../common/assertions/gatewayclass.yaml
+      - assert:
+          file: ../common/assertions/gatewayconfiguration.yaml
+      - assert:
+          file: ../common/assertions/gateway.yaml
+      - assert:
+          file: ../common/assertions/konnect-gateway-controlplane.yaml
+      - assert:
+          file: ../common/assertions/konnect-extension.yaml
+      # Assert test-specific resources (namespaces, service, deployment)
+      - assert:
+          file: 01-assert-prerequisites.yaml
+    # Catch block: collect diagnostic info when assertions fail
+    catch:
+      - description: Get Gateway resource status
+        get:
+          apiVersion: gateway.networking.k8s.io/v1
+          kind: Gateway
+          namespace: kong
+      - description: Get DataPlane resources
+        get:
+          apiVersion: gateway-operator.konghq.com/v1beta1
+          kind: DataPlane
+          namespace: kong
+      - description: Get ControlPlane resources
+        get:
+          apiVersion: gateway-operator.konghq.com/v1beta1
+          kind: ControlPlane
+          namespace: kong
+      - description: Get Pods in kong namespace
+        get:
+          apiVersion: v1
+          kind: Pod
+          namespace: kong
+      - description: Describe Gateway
+        describe:
+          apiVersion: gateway.networking.k8s.io/v1
+          kind: Gateway
+          namespace: kong
+          showEvents: true
+      - description: Describe DataPlane
+        describe:
+          apiVersion: gateway-operator.konghq.com/v1beta1
+          kind: DataPlane
+          namespace: kong
+          showEvents: true
+      - description: Get events from kong namespace
+        events:
+          namespace: kong
+      - description: Get operator logs
+        podLogs:
+          namespace: kong-system
+          selector: control-plane=controller-manager
+          tail: 100
+      - description: Get all Pod logs in kong namespace
+        script:
+          content: |
+            echo "=== Listing all Pods in kong namespace ==="
+            kubectl get pods -n kong -o wide
+            echo ""
+            echo "=== Pod details and logs ==="
+            for pod in $(kubectl get pods -n kong -o jsonpath='{.items[*].metadata.name}'); do
+              echo "--- Pod: $pod ---"
+              kubectl describe pod $pod -n kong | tail -50
+              echo ""
+              echo "--- Logs for $pod ---"
+              kubectl logs $pod -n kong --all-containers --tail=50 2>/dev/null || echo "No logs available"
+              echo ""
+            done
+  # Step 2: Create an HTTPRoute that matches a single header and verify the routes are correctly configured
+  - name: create-httproute-single-header-match
+    description: Create an HTTPRoute that matches a single header
+    try:
+      - apply:
+          file: 02-httproute-single-header-match.yaml
+      # Assert status of HTTPRoute.
+      - assert:
+          file: 02-assert-httproute-single-header-match.yaml
+      # Collect bindings for connectivity tests
+      - script:
+          content: |
+            kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+          outputs:
+            - name: hybrid_gateway_name
+              value: ($stdout)
+      - script:
+          content: |
+            kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
+          outputs:
+            - name: hybrid_gateway_namespace
+              value: ($stdout)
+      - script:
+          env:
+            - name: GATEWAY_NAME
+              value: ($hybrid_gateway_name)
+            - name: GATEWAY_NAMESPACE
+              value: ($hybrid_gateway_namespace)
+          content: |
+            kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+          outputs:
+            - name: proxy_ip
+              value: ($stdout)
+              # Test from outside the cluster
+      # Try `curl` with expected headers.
+      - description: Accessing with matching headers
+        script:
+          env:
+            - name: PROXY_IP
+              value: ($proxy_ip)
+          content: |
+            curl --fail --retry 10 --retry-delay 5 --retry-all-errors --header "h1:v1" -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/
+          check:
+            (contains($stdout, '200')): true
+      # Try `curl` without the expected headers.
+      - description: Accessing with no given header
+        script:
+          env:
+            - name: PROXY_IP
+              value: ($proxy_ip)
+          content: |
+            curl -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/
+          check:
+            (contains($stdout, '404')): true
+       # Try `curl` without the header having an unmatched value.
+      - description: Accessing with the header having an unmatched value
+        script:
+          env:
+            - name: PROXY_IP
+              value: ($proxy_ip)
+          content: |
+            curl --header "h1:v2" -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/
+          check:
+            (contains($stdout, '404')): true
+  # Step 3: Update the HTTPRoute to match multiple headers.
+  - name: update-httproute-multiple-header-match
+    description: Update the HTTPRoute to match multilple headers (ANDed)
+    try:
+      - apply:
+          file: 03-update-httproute-multiple-header-match.yaml
+      - assert:
+          file: 03-assert-update-httproute-multiple-header-match.yaml
+ # Collect bindings for connectivity tests
+      - script:
+          content: |
+            kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+          outputs:
+            - name: hybrid_gateway_name
+              value: ($stdout)
+      - script:
+          content: |
+            kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
+          outputs:
+            - name: hybrid_gateway_namespace
+              value: ($stdout)
+      - script:
+          env:
+            - name: GATEWAY_NAME
+              value: ($hybrid_gateway_name)
+            - name: GATEWAY_NAMESPACE
+              value: ($hybrid_gateway_namespace)
+          content: |
+            kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+          outputs:
+            - name: proxy_ip
+              value: ($stdout)
+              # Test from outside the cluster
+      # Try `curl` with both two headers with matching value..
+      - description: Accessing with matching headers
+        script:
+          env:
+            - name: PROXY_IP
+              value: ($proxy_ip)
+          content: |
+            curl --fail --retry 10 --retry-delay 5 --retry-all-errors --header "h1:v1" --header "h2:v2" -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/
+          check:
+            (contains($stdout, '200')): true
+      # Try `curl` with one header matching the route but the other not matching.
+      - description: Accessing with the one haeder having matched value but the other header having an unmatched value
+        script:
+          env:
+            - name: PROXY_IP
+              value: ($proxy_ip)
+          content: |
+            curl --header "h1:v2" --header "h2:v2" -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/
+          check:
+            (contains($stdout, '404')): true
+  # Step 4: Update the HTTPRoute to regex header matching
+  - name: update-httproute-regex-header-match
+    description: Update the HTTPRoute to match headers by regular expressions
+    try:
+      - apply:
+          file: 04-update-httproute-regex-header-match.yaml
+      - assert:
+          file: 04-assert-update-httproute-regex-header-match.yaml
+ # Collect bindings for connectivity tests
+      - script:
+          content: |
+            kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
+          outputs:
+            - name: hybrid_gateway_name
+              value: ($stdout)
+      - script:
+          content: |
+            kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
+          outputs:
+            - name: hybrid_gateway_namespace
+              value: ($stdout)
+      - script:
+          env:
+            - name: GATEWAY_NAME
+              value: ($hybrid_gateway_name)
+            - name: GATEWAY_NAMESPACE
+              value: ($hybrid_gateway_namespace)
+          content: |
+            kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+          outputs:
+            - name: proxy_ip
+              value: ($stdout)
+              # Test from outside the cluster
+      # Try `curl` with headers matching the regex given in the regex.
+      - description: Accessing with matching headers
+        script:
+          env:
+            - name: PROXY_IP
+              value: ($proxy_ip)
+          content: |
+            curl --fail --retry 10 --retry-delay 5 --retry-all-errors --header "h1:abc" -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/
+          check:
+            (contains($stdout, '200')): true
+      # Try `curl` with headers not matching the regex given in the regex.
+      - description: Accessing with the one haeder having matched value but the other header having an unmatched value
+        script:
+          env:
+            - name: PROXY_IP
+              value: ($proxy_ip)
+          content: |
+            curl --header "h1:123" -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/
+          check:
+            (contains($stdout, '404')): true
