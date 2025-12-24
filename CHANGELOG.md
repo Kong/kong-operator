@@ -36,6 +36,15 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Changed
+
+- Removed the `KonnectID` type of control plane reference in CRDs for Konnect
+  entities as it is not supported.
+  [#2966](https://github.com/Kong/kong-operator/pull/2966)
+
+
 ## [v2.1.0-beta.0]
 
 ### Added
