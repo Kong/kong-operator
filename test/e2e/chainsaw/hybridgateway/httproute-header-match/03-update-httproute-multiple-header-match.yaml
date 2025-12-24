@@ -1,0 +1,22 @@
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: echo-header-match
+  namespace: kong
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: kong-foo
+  rules:
+    - matches:
+      - headers:
+        - name: h1
+          type: Exact
+          value: v1
+        - name: h2
+          type: Exact
+          value: v2
+      backendRefs:
+        - name: echo
+          port: 1027
