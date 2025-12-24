@@ -17,7 +17,7 @@ spec:
   # Timeout for the whole test suite
   timeout: 15m
   # Skip deletion of resources after tests (useful for debugging)
-  skipDelete: true
+  skipDelete: false
   # Fail fast on first error
   failFast: false
   # Number of parallel tests
