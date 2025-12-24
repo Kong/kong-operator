@@ -1,0 +1,23 @@
+---
+# HTTPRoute with strip_path annotation set to false
+# Tests that the strip-path annotation correctly configures Kong to not strip the path prefix
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: strip-path-route
+  namespace: kong
+  annotations:
+    konghq.com/strip-path: "false"
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: kong-foo
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /api
+      backendRefs:
+        - name: httpbin
+          port: 80

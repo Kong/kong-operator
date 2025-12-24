@@ -1,0 +1,27 @@
+---
+# HTTPRoute with multiple path matches in a single rule
+# Tests that multiple paths can be defined in a single rule and all are routed correctly
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: multiple-paths-route
+  namespace: kong
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: kong-foo
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /headers
+        - path:
+            type: Exact
+            value: /ip
+        - path:
+            type: PathPrefix
+            value: /anything
+      backendRefs:
+        - name: httpbin
+          port: 80
