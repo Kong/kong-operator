@@ -50,21 +50,25 @@ spec:
             apiVersion: gateway.networking.k8s.io/v1
             kind: Gateway
             namespace: kong
+            format: yaml
         - description: Get DataPlane resources
           get:
             apiVersion: gateway-operator.konghq.com/v1beta1
             kind: DataPlane
             namespace: kong
+            format: yaml
         - description: Get ControlPlane resources
           get:
             apiVersion: gateway-operator.konghq.com/v1beta1
             kind: ControlPlane
             namespace: kong
+            format: yaml
         - description: Get Pods in kong namespace
           get:
             apiVersion: v1
             kind: Pod
             namespace: kong
+            format: yaml
         - description: Describe Gateway
           describe:
             apiVersion: gateway.networking.k8s.io/v1
@@ -138,11 +142,13 @@ spec:
             apiVersion: gateway.networking.k8s.io/v1
             kind: HTTPRoute
             namespace: kong
+            format: yaml
         - description: Get KongRoute status
           get:
             apiVersion: configuration.konghq.com/v1alpha1
             kind: KongRoute
             namespace: kong
+            format: yaml
         - description: Get operator logs
           podLogs:
             namespace: kong-system
@@ -207,11 +213,13 @@ spec:
             apiVersion: gateway.networking.k8s.io/v1
             kind: HTTPRoute
             namespace: kong
+            format: yaml
         - description: Get KongRoute status
           get:
             apiVersion: configuration.konghq.com/v1alpha1
             kind: KongRoute
             namespace: kong
+            format: yaml
         - description: Get operator logs
           podLogs:
             namespace: kong-system
@@ -290,11 +298,13 @@ spec:
             apiVersion: gateway.networking.k8s.io/v1
             kind: HTTPRoute
             namespace: kong
+            format: yaml
         - description: Get KongRoute status
           get:
             apiVersion: configuration.konghq.com/v1alpha1
             kind: KongRoute
             namespace: kong
+            format: yaml
         - description: Get operator logs
           podLogs:
             namespace: kong-system
@@ -362,11 +372,13 @@ spec:
             apiVersion: gateway.networking.k8s.io/v1
             kind: HTTPRoute
             namespace: kong
+            format: yaml
         - description: Get KongRoute status
           get:
             apiVersion: configuration.konghq.com/v1alpha1
             kind: KongRoute
             namespace: kong
+            format: yaml
         - description: Get operator logs
           podLogs:
             namespace: kong-system
