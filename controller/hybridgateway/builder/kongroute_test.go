@@ -141,14 +141,19 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			match: gwtypes.HTTPRouteMatch{
 				Headers: []gatewayv1.HTTPHeaderMatch{
 					{
-						Type:  &[]gatewayv1.HeaderMatchType{gatewayv1.HeaderMatchExact}[0],
+						Type:  lo.ToPtr(gatewayv1.HeaderMatchExact),
 						Name:  "Authorization",
 						Value: "Bearer token",
 					},
 					{
-						Type:  &[]gatewayv1.HeaderMatchType{gatewayv1.HeaderMatchExact}[0],
+						Type:  nil,
 						Name:  "Content-Type",
 						Value: "application/json",
+					},
+					{
+						Type:  lo.ToPtr(gatewayv1.HeaderMatchRegularExpression),
+						Name:  "Foo",
+						Value: "(bar|baz)",
 					},
 				},
 			},
@@ -158,6 +163,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 				require.NotNil(t, route.Spec.Headers)
 				assert.Equal(t, []string{"Bearer token"}, route.Spec.Headers["Authorization"])
 				assert.Equal(t, []string{"application/json"}, route.Spec.Headers["Content-Type"])
+				assert.Equal(t, []string{"~*(bar|baz)"}, route.Spec.Headers["Foo"])
 			},
 		},
 		{
@@ -165,12 +171,12 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 			match: gwtypes.HTTPRouteMatch{
 				Headers: []gatewayv1.HTTPHeaderMatch{
 					{
-						Type:  &[]gatewayv1.HeaderMatchType{gatewayv1.HeaderMatchExact}[0],
+						Type:  lo.ToPtr(gatewayv1.HeaderMatchExact),
 						Name:  "Accept",
 						Value: "application/json",
 					},
 					{
-						Type:  &[]gatewayv1.HeaderMatchType{gatewayv1.HeaderMatchExact}[0],
+						Type:  lo.ToPtr(gatewayv1.HeaderMatchExact),
 						Name:  "Accept",
 						Value: "text/plain",
 					},
@@ -191,7 +197,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 				Method: &method,
 				Headers: []gatewayv1.HTTPHeaderMatch{
 					{
-						Type:  &[]gatewayv1.HeaderMatchType{gatewayv1.HeaderMatchExact}[0],
+						Type:  lo.ToPtr(gatewayv1.HeaderMatchExact),
 						Name:  "Authorization",
 						Value: "Bearer token",
 					},

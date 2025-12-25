@@ -19,6 +19,9 @@ import (
 const (
 	// KongPathRegexPrefix is the reserved prefix string that instructs Kong 3.0+ to interpret a path as a regex.
 	KongPathRegexPrefix = "~"
+	// KongHeaderRegexPrefix is a reserved prefix string that Kong uses to determine if it should parse a header value
+	// as a regex.
+	KongHeaderRegexPrefix = "~*"
 )
 
 // KongRouteBuilder is a builder for configurationv1alpha1.KongRoute resources.
@@ -59,7 +62,11 @@ func (b *KongRouteBuilder) WithHTTPRouteMatch(match gwtypes.HTTPRouteMatch) *Kon
 			b.route.Spec.Headers = make(map[string][]string)
 		}
 		for _, hdr := range match.Headers {
-			b.route.Spec.Headers[string(hdr.Name)] = append(b.route.Spec.Headers[string(hdr.Name)], hdr.Value)
+			value := hdr.Value
+			if hdr.Type != nil && *hdr.Type == gatewayv1.HeaderMatchRegularExpression {
+				value = KongHeaderRegexPrefix + value
+			}
+			b.route.Spec.Headers[string(hdr.Name)] = append(b.route.Spec.Headers[string(hdr.Name)], value)
 		}
 	}
 	// Note: QueryParams are not natively supported by KongRoute
