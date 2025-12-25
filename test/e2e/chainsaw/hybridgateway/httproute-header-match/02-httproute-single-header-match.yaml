@@ -11,7 +11,7 @@ spec:
   rules:
     - matches:
       - headers:
-        - name: h1
+        - name: single-header-1
           type: Exact
           value: v1
       backendRefs:

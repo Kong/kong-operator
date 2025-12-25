@@ -11,7 +11,7 @@ spec:
   rules:
     - matches:
       - headers:
-        - name: h1
+        - name: regex-header-1
           type: RegularExpression
           value: "[a-z]+"
       backendRefs:
