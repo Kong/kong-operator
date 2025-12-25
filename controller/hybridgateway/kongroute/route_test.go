@@ -16,6 +16,7 @@ import (
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
+	"github.com/kong/kong-operator/controller/hybridgateway/builder"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/pkg/consts"
 )
@@ -123,7 +124,7 @@ func TestRouteForRule(t *testing.T) {
 
 			// Verify paths from rule matches
 			if len(rule.Matches) > 0 && rule.Matches[0].Path != nil {
-				assert.Contains(t, result.Spec.Paths, *rule.Matches[0].Path.Value)
+				assert.Subset(t, result.Spec.Paths, builder.GenerateKongRoutePathFromHTTPRouteMatch(rule.Matches[0].Path))
 			}
 		})
 	}

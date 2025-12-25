@@ -19,7 +19,6 @@ metadata:
   (labels."gateway-operator.konghq.com/managed-by" == 'HTTPRoute'): true
   (annotations."gateway-operator.konghq.com/hybrid-routes" | contains(@, join('/', [($managedby_namespace), ($managedby_name)]))): true
 spec:
-  paths: (parse_json($route_paths_json))
   strip_path: ($strip_path)
   serviceRef:
     namespacedRef:
