@@ -1,0 +1,28 @@
+---
+# Assert namespaces exist
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kong
+status:
+  phase: Active
+---
+# Assert Service exists
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo
+  namespace: kong
+---
+# Assert Deployment is ready
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo
+  namespace: kong
+status:
+  # Filter conditions array to check for Available condition
+  (conditions[?type == 'Available']):
+    - status: 'True'
+  readyReplicas: 1
+  replicas: 1
