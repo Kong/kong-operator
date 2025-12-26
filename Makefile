@@ -749,10 +749,11 @@ test.e2e:
 	@$(MAKE) _test.e2e \
 		GOTESTFLAGS="$(GOTESTFLAGS)"
 
+CHAINSAW_CONFIG_DIR ?= ./test/e2e/chainsaw/hybridgateway
 CHAINSAW_TEST_DIR ?= ./test/e2e/chainsaw/hybridgateway/basic-httproute
 .PHONY: test.e2e.chainsaw
 test.e2e.chainsaw: chainsaw ## Run chainsaw e2e tests.
-	$(CHAINSAW) test --config $(CHAINSAW_TEST_DIR)/.chainsaw.yaml --test-dir $(CHAINSAW_TEST_DIR)
+	$(CHAINSAW) test --config $(CHAINSAW_CONFIG_DIR)/.chainsaw.yaml --test-dir $(CHAINSAW_TEST_DIR)
 
 NCPU := $(shell getconf _NPROCESSORS_ONLN)
 PARALLEL := $(if $(PARALLEL),$(PARALLEL),$(NCPU))
