@@ -43,6 +43,10 @@
 - HybridGateway: Fixed the logic of translating `HTTPRoute` path matches to
   paths in the generated `KongRoute`.
   [#2996](https://github.com/Kong/kong-operator/pull/2996)
+- HybridGateway: Add the `~*` prefix to mark the header should be matched by
+  regular expression in the translated `KongRoute` when the `HTTPRoute`'s header
+  match has the `RegularExpression` type.
+  [#2995](https://github.com/Kong/kong-operator/pull/2995)
 
 ## [v2.1.0-beta.0]
 
