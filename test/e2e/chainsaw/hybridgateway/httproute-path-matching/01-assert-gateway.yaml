@@ -54,21 +54,45 @@ status:
       reason: Ready
 ---
 # Assert KonnectGatewayControlPlane exists
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: konnect.konghq.com/v1alpha2
 kind: KonnectGatewayControlPlane
 metadata:
   namespace: kong
-  (labels."gateway-operator.konghq.com/managed-by" == 'gateway'): true
+  labels:
+    gateway-operator.konghq.com/managed-by: gateway
 status:
+  clusterType: CLUSTER_TYPE_CONTROL_PLANE
+  (conditions[?type == 'APIAuthResolvedRef']):
+    - status: 'True'
+      reason: ResolvedRef
+  (conditions[?type == 'APIAuthValid']):
+    - status: 'True'
+      reason: Valid
   (conditions[?type == 'Programmed']):
     - status: 'True'
       reason: Programmed
+  (id != null): true
 ---
 # Assert KonnectExtension exists
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: konnect.konghq.com/v1alpha2
 kind: KonnectExtension
 metadata:
   namespace: kong
+  labels:
+    gateway-operator.konghq.com/managed-by: gateway
 status:
-  (conditions[?type == 'KonnectGatewayControlPlaneValid']):
+  (conditions[?type == 'Ready']):
     - status: 'True'
+      reason: Ready
+  (conditions[?type == 'APIAuthResolvedRef']):
+    - status: 'True'
+      reason: ResolvedRef
+  (conditions[?type == 'APIAuthValid']):
+    - status: 'True'
+      reason: Valid
+  (conditions[?type == 'ControlPlaneRefValid']):
+    - status: 'True'
+      reason: Valid
+  (conditions[?type == 'DataPlaneCertificateProvisioned']):
+    - status: 'True'
+      reason: Provisioned
