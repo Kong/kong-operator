@@ -15,7 +15,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /status
+            value: /httpbin
       backendRefs:
         - name: httpbin
           port: 80

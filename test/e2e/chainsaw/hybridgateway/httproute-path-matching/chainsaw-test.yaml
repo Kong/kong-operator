@@ -116,24 +116,24 @@ spec:
             outputs:
               - name: proxy_ip
                 value: ($stdout)
-        # Test PathPrefix matching - /status/200 should match /status prefix
-        - description: Test PathPrefix /status matches /status/200
+        # Test PathPrefix matching - /httpbin/status/200 should match /httpbin prefix
+        - description: Test PathPrefix /httpbin matches /httpbin/status/200
           script:
             env:
               - name: PROXY_IP
                 value: ($proxy_ip)
             content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/status/200
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/httpbin/status/200
             check:
               (contains($stdout, '200')): true
-        # Test PathPrefix matching - /status/404 should also match /status prefix
-        - description: Test PathPrefix /status matches /status/404
+        # Test PathPrefix matching - /httpbin/status/404 should also match /httpbin prefix
+        - description: Test PathPrefix /httpbin matches /httpbin/status/404
           script:
             env:
               - name: PROXY_IP
                 value: ($proxy_ip)
             content: |
-              curl --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/status/404
+              curl --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/httpbin/status/404
             check:
               (contains($stdout, '404')): true
       catch:
