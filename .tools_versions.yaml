@@ -40,7 +40,7 @@ govulncheck: "1.1.4"
 # renovate: datasource=github-releases depName=jlandowner/helm-chartsnap
 chartsnap: "0.6.0"
 # renovate: datasource=github-releases depName=stackrox/kube-linter
-kube-linter: "0.7.6"
+kube-linter: "0.8.1"
 # renovate: datasource=github-tags depName=DavidAnson/markdownlint-cli2
 markdownlint-cli2: "0.20.0"
 # renovate: datasource=github-releases depName=cert-manager/cert-manager
