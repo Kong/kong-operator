@@ -31,10 +31,6 @@ spec:
     authRef:
       name: konnect-api-auth-dev-1
   dataPlaneOptions:
-    network:
-      services:
-        ingress:
-          type: LoadBalancer
     deployment:
       podTemplateSpec:
         spec:
