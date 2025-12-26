@@ -86,7 +86,54 @@ spec:
             selector: control-plane=controller-manager
             tail: 100
 
-    # Step 2: Test PathPrefix matching
+    # Step 2: Wait for DataPlane pods to be running
+    - name: wait-dataplane-pods
+      description: Wait for DataPlane proxy pods to be running before traffic tests
+      try:
+        - description: Wait for DataPlane proxy pods to be running
+          script:
+            content: |
+              echo "=== Waiting for DataPlane proxy pods ==="
+              for i in $(seq 1 60); do
+                PODS=$(kubectl get pods -n kong -l gateway-operator.konghq.com/managed-by=dataplane -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
+                if [ -n "$PODS" ]; then
+                  echo "Found DataPlane pods: $PODS"
+                  # Wait for at least one pod to be Running
+                  RUNNING=$(kubectl get pods -n kong -l gateway-operator.konghq.com/managed-by=dataplane -o jsonpath='{.items[?(@.status.phase=="Running")].metadata.name}' 2>/dev/null || true)
+                  if [ -n "$RUNNING" ]; then
+                    echo "DataPlane pod running: $RUNNING"
+                    exit 0
+                  fi
+                  echo "Pods exist but not running yet (attempt $i/60)"
+                else
+                  echo "No DataPlane pods found yet (attempt $i/60)"
+                fi
+                # Show current pods for debugging
+                kubectl get pods -n kong -o wide 2>/dev/null || true
+                sleep 10
+              done
+              echo "DataPlane pods not ready after 10 minutes"
+              kubectl get dataplane -n kong -o yaml
+              exit 1
+      catch:
+        - description: Get DataPlane status
+          get:
+            apiVersion: gateway-operator.konghq.com/v1beta1
+            kind: DataPlane
+            namespace: kong
+            format: yaml
+        - description: Get all pods in kong namespace
+          script:
+            content: |
+              echo "=== All pods in kong namespace ==="
+              kubectl get pods -n kong -o wide
+        - description: Get operator logs
+          podLogs:
+            namespace: kong-system
+            selector: control-plane=controller-manager
+            tail: 100
+
+    # Step 3: Test PathPrefix matching
     - name: test-pathprefix-matching
       description: Create HTTPRoute with PathPrefix matching and verify it works
       try:
@@ -154,7 +201,7 @@ spec:
             selector: control-plane=controller-manager
             tail: 100
 
-    # Step 3: Test PathExact matching
+    # Step 4: Test PathExact matching
     - name: test-pathexact-matching
       description: Create HTTPRoute with PathExact matching and verify it works
       try:
@@ -228,7 +275,7 @@ spec:
             selector: control-plane=controller-manager
             tail: 100
 
-    # Step 4: Test multiple path matches in single rule
+    # Step 5: Test multiple path matches in single rule
     - name: test-multiple-paths-matching
       description: Create HTTPRoute with multiple path matches and verify all paths work
       try:
@@ -316,7 +363,7 @@ spec:
             selector: control-plane=controller-manager
             tail: 100
 
-    # Step 5: Test strip_path annotation
+    # Step 6: Test strip_path annotation
     - name: test-strip-path-annotation
       description: Create HTTPRoute with strip_path annotation and verify path handling
       try:
@@ -393,7 +440,7 @@ spec:
             selector: control-plane=controller-manager
             tail: 100
 
-    # Step 6: Cleanup - delete all HTTPRoutes
+    # Step 7: Cleanup - delete all HTTPRoutes
     - name: cleanup-httproutes
       description: Clean up all test HTTPRoutes
       try:

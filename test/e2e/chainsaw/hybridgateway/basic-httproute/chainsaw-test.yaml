@@ -203,6 +203,33 @@ spec:
     - name: verify-data-plane
       description: Verify that the Kong data plane is properly configured and can route traffic
       try:
+        # Wait for DataPlane pods to be running
+        # DataPlane pods have label: gateway-operator.konghq.com/managed-by=dataplane
+        - description: Wait for DataPlane proxy pods to be running
+          script:
+            content: |
+              echo "=== Waiting for DataPlane proxy pods ==="
+              for i in $(seq 1 60); do
+                PODS=$(kubectl get pods -n kong -l gateway-operator.konghq.com/managed-by=dataplane -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
+                if [ -n "$PODS" ]; then
+                  echo "Found DataPlane pods: $PODS"
+                  # Wait for at least one pod to be Running
+                  RUNNING=$(kubectl get pods -n kong -l gateway-operator.konghq.com/managed-by=dataplane -o jsonpath='{.items[?(@.status.phase=="Running")].metadata.name}' 2>/dev/null || true)
+                  if [ -n "$RUNNING" ]; then
+                    echo "DataPlane pod running: $RUNNING"
+                    exit 0
+                  fi
+                  echo "Pods exist but not running yet (attempt $i/60)"
+                else
+                  echo "No DataPlane pods found yet (attempt $i/60)"
+                fi
+                # Show current pods for debugging
+                kubectl get pods -n kong -o wide 2>/dev/null || true
+                sleep 10
+              done
+              echo "DataPlane pods not ready after 10 minutes"
+              kubectl get dataplane -n kong -o yaml
+              exit 1
         # Collect bindings for connectivity tests
         - script:
             content: |
@@ -294,7 +321,7 @@ spec:
         - description: Get DataPlane pod logs
           podLogs:
             namespace: kong
-            selector: app=dataplane
+            selector: gateway-operator.konghq.com/managed-by=dataplane
             tail: 200
         - description: Get operator logs
           podLogs:
@@ -308,14 +335,21 @@ spec:
                 value: ($proxy_ip)
             content: |
               echo "=== Checking Kong data plane status ==="
-              kubectl get pods -n kong -l app.kubernetes.io/component=proxy -o wide
+              echo "DataPlane pods (label: gateway-operator.konghq.com/managed-by=dataplane):"
+              kubectl get pods -n kong -l gateway-operator.konghq.com/managed-by=dataplane -o wide
+              echo ""
+              echo "=== All pods in kong namespace ==="
+              kubectl get pods -n kong -o wide
+              echo ""
+              echo "=== DataPlane resources ==="
+              kubectl get dataplane -n kong -o yaml
               echo ""
               echo "=== Checking Kong routes via admin API ==="
-              POD=$(kubectl get pods -n kong -l app.kubernetes.io/component=proxy -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+              POD=$(kubectl get pods -n kong -l gateway-operator.konghq.com/managed-by=dataplane -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
               if [ -n "$POD" ]; then
                 kubectl exec -n kong $POD -- curl -s http://localhost:8001/routes 2>/dev/null || echo "Admin API not accessible"
               else
-                echo "No proxy pod found"
+                echo "No DataPlane proxy pod found"
               fi
 
     # Step 5: Update HTTPRoute
