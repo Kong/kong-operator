@@ -4,14 +4,21 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/scheme"
+)
+
+const (
+	// KongPathRegexPrefix is the reserved prefix string that instructs Kong 3.0+ to interpret a path as a regex.
+	KongPathRegexPrefix = "~"
 )
 
 // KongRouteBuilder is a builder for configurationv1alpha1.KongRoute resources.
@@ -38,7 +45,7 @@ func (b *KongRouteBuilder) WithHosts(hosts []string) *KongRouteBuilder {
 func (b *KongRouteBuilder) WithHTTPRouteMatch(match gwtypes.HTTPRouteMatch) *KongRouteBuilder {
 	// Path.
 	if match.Path != nil && match.Path.Value != nil {
-		b.route.Spec.Paths = append(b.route.Spec.Paths, *match.Path.Value)
+		b.route.Spec.Paths = append(b.route.Spec.Paths, GenerateKongRoutePathFromHTTPRouteMatch(match.Path)...)
 	}
 
 	// Method
@@ -147,4 +154,52 @@ func (b *KongRouteBuilder) MustBuild() configurationv1alpha1.KongRoute {
 		panic(fmt.Errorf("failed to build KongRoute: %w", err))
 	}
 	return route
+}
+
+// GenerateKongRoutePathFromHTTPRouteMatch translates the value in HTTPRoute's path match
+// to the path used in KongRoute.
+func GenerateKongRoutePathFromHTTPRouteMatch(pathMatch *gatewayv1.HTTPPathMatch) []string {
+	// The default match type is PathMatchPathPrefix.
+	matchType := gatewayv1.PathMatchPathPrefix
+	if pathMatch.Type != nil {
+		matchType = *pathMatch.Type
+	}
+
+	value := *pathMatch.Value
+
+	// The value in `path` on KongRoute matches the path in the request in the following manner:
+	// For normal paths, it matches the request when the value is the prefix of the path in the request.
+	// For example, '/abc' matches '/abc', '/abc/', '/abc/123' and '/abcd'.
+	// For paths starting with the prefix '~', the part after the prefix is interpreted as the regex to match the path in the request.
+	// If the prefix of the path in the request matches the request, the path is matched, as '^' prefix is added to the regex but '$' suffix is not.
+	// For example, '~/api/[a-z]+' matches '/api/a', '/api/abc', '/api/abc/123' but not '/api/', '/api/123'.
+	// So we need to translate the path match to the paths in KongRoute by its type and value.
+	switch matchType {
+	// Since the path matches request in prefix way, we need to use a regex with the '$' suffix to do the exact match.
+	case gatewayv1.PathMatchExact:
+		return []string{KongPathRegexPrefix + value + "$"}
+
+	// In HTTPRoute, the prefix match is specified in the "directory" manner but not simple string prefix.
+	// For example, '/abc' should match '/abc', '/abc/', '/abc/123' but not '/abcd'.
+	// So we split it into 2 items:
+	// - One using regex to match the exact path without the trailing '/', e.g: '~/abc$'
+	// - The other to match the prefix with the trailing '/', e.g: '/abc/'.
+	case gatewayv1.PathMatchPathPrefix:
+		// For the '/' path to match all, we just return the item in KongRoute to do the same catch-all match.
+		if value == "/" {
+			return []string{"/"}
+		}
+		paths := make([]string, 0, 2)
+		path := value
+		paths = append(paths, fmt.Sprintf("%s%s$", KongPathRegexPrefix, path))
+		if !strings.HasSuffix(path, "/") {
+			path = fmt.Sprintf("%s/", path)
+		}
+		return append(paths, path)
+
+	// For RegularExpression path match, we simply use the same regex in the paths of KongRoute.
+	case gatewayv1.PathMatchRegularExpression:
+		return []string{KongPathRegexPrefix + value}
+	}
+	return nil // Should be unreachable.
 }

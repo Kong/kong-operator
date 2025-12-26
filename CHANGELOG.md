@@ -36,6 +36,14 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- HybridGateway: Fixed the logic of translating `HTTPRoute` path matches to
+  paths in the generated `KongRoute`.
+  [#2996](https://github.com/Kong/kong-operator/pull/2996)
+
 ## [v2.1.0-beta.0]
 
 ### Added

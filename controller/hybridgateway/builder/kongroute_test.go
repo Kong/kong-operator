@@ -3,6 +3,7 @@ package builder
 import (
 	"testing"
 
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -91,7 +92,35 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 				},
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
-				assert.Equal(t, []string{"/api"}, route.Spec.Paths)
+				assert.Equal(t, []string{"~/api$", "/api/"}, route.Spec.Paths)
+				assert.Empty(t, route.Spec.Methods)
+				assert.Nil(t, route.Spec.Headers)
+			},
+		},
+		{
+			name: "with exact path",
+			match: gwtypes.HTTPRouteMatch{
+				Path: &gatewayv1.HTTPPathMatch{
+					Type:  lo.ToPtr(gatewayv1.PathMatchExact),
+					Value: &pathValue,
+				},
+			},
+			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
+				assert.Equal(t, []string{"~/api$"}, route.Spec.Paths)
+				assert.Empty(t, route.Spec.Methods)
+				assert.Nil(t, route.Spec.Headers)
+			},
+		},
+		{
+			name: "with regular expression path",
+			match: gwtypes.HTTPRouteMatch{
+				Path: &gatewayv1.HTTPPathMatch{
+					Type:  lo.ToPtr(gatewayv1.PathMatchRegularExpression),
+					Value: &pathValue,
+				},
+			},
+			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
+				assert.Equal(t, []string{"~/api"}, route.Spec.Paths)
 				assert.Empty(t, route.Spec.Methods)
 				assert.Nil(t, route.Spec.Headers)
 			},
@@ -169,7 +198,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 				},
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
-				assert.Equal(t, []string{"/api"}, route.Spec.Paths)
+				assert.Equal(t, []string{"~/api$", "/api/"}, route.Spec.Paths)
 				assert.Equal(t, []string{"GET"}, route.Spec.Methods)
 				require.NotNil(t, route.Spec.Headers)
 				assert.Equal(t, []string{"Bearer token"}, route.Spec.Headers["Authorization"])
@@ -490,7 +519,7 @@ func TestKongRouteBuilder_Chaining(t *testing.T) {
 	assert.Equal(t, "test-spec", *route.Spec.Name)
 	assert.Equal(t, true, *route.Spec.StripPath)
 	assert.Equal(t, []string{"example.com"}, route.Spec.Hosts)
-	assert.Equal(t, []string{"/api"}, route.Spec.Paths)
+	assert.Equal(t, []string{"~/api$", "/api/"}, route.Spec.Paths)
 	assert.Equal(t, []string{"GET"}, route.Spec.Methods)
 	assert.Equal(t, "test-service", route.Spec.ServiceRef.NamespacedRef.Name)
 	assert.Len(t, route.OwnerReferences, 1)
