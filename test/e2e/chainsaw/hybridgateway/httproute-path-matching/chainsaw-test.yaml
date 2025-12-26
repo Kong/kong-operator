@@ -17,6 +17,14 @@ spec:
     assert: 300s
     delete: 120s
 
+  # Define bindings for dynamic resource names
+  # TEST_ID comes from CI (github.run_id) or defaults to 'local' for local testing
+  bindings:
+    - name: test_id
+      value: (env('TEST_ID') || 'local')
+    - name: gateway_name
+      value: (join('-', ['kong', $test_id]))
+
   steps:
     # Step 1: Create prerequisite resources
     - name: create-prerequisites
@@ -26,24 +34,12 @@ spec:
             file: 01-prerequisites.yaml
         - apply:
             file: 00-httpbin.yaml
-        # Assert common Konnect and Gateway resources.
-        - assert:
-            file: ../common/assertions/konnect-apiauth.yaml
-        - assert:
-            file: ../common/assertions/gatewayclass.yaml
-        - assert:
-            file: ../common/assertions/gatewayconfiguration.yaml
-        - assert:
-            file: ../common/assertions/gateway.yaml
-        - assert:
-            file: ../common/assertions/konnect-gateway-controlplane.yaml
-        - assert:
-            file: ../common/assertions/konnect-extension.yaml
         # Assert test-specific resources (namespaces, service, deployment)
         - assert:
             file: 00-assert-httpbin.yaml
+        # Assert Gateway resources with dynamic names
         - assert:
-            file: 01-assert-prerequisites.yaml
+            file: 01-assert-gateway.yaml
       catch:
         - description: Get Gateway resource status
           get:
@@ -100,10 +96,13 @@ spec:
             file: 02-assert-pathprefix.yaml
         # Get Gateway proxy IP
         - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
             content: |
               set -eu
               for i in $(seq 1 30); do
-                IP=$(kubectl get gateway kong-foo -n kong -o jsonpath='{.status.addresses[0].value}')
+                IP=$(kubectl get gateway ${GATEWAY_NAME} -n kong -o jsonpath='{.status.addresses[0].value}')
                 if [ -n "$IP" ]; then
                   echo "$IP"
                   exit 0
@@ -165,10 +164,13 @@ spec:
             file: 03-assert-pathexact.yaml
         # Get Gateway proxy IP
         - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
             content: |
               set -eu
               for i in $(seq 1 30); do
-                IP=$(kubectl get gateway kong-foo -n kong -o jsonpath='{.status.addresses[0].value}')
+                IP=$(kubectl get gateway ${GATEWAY_NAME} -n kong -o jsonpath='{.status.addresses[0].value}')
                 if [ -n "$IP" ]; then
                   echo "$IP"
                   exit 0
@@ -236,10 +238,13 @@ spec:
             file: 04-assert-multiple-paths.yaml
         # Get Gateway proxy IP
         - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
             content: |
               set -eu
               for i in $(seq 1 30); do
-                IP=$(kubectl get gateway kong-foo -n kong -o jsonpath='{.status.addresses[0].value}')
+                IP=$(kubectl get gateway ${GATEWAY_NAME} -n kong -o jsonpath='{.status.addresses[0].value}')
                 if [ -n "$IP" ]; then
                   echo "$IP"
                   exit 0
@@ -332,10 +337,13 @@ spec:
                 strip_path: false
         # Get Gateway proxy IP
         - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
             content: |
               set -eu
               for i in $(seq 1 30); do
-                IP=$(kubectl get gateway kong-foo -n kong -o jsonpath='{.status.addresses[0].value}')
+                IP=$(kubectl get gateway ${GATEWAY_NAME} -n kong -o jsonpath='{.status.addresses[0].value}')
                 if [ -n "$IP" ]; then
                   echo "$IP"
                   exit 0

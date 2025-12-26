@@ -7,12 +7,20 @@ spec:
   description: |
     This test validates that the hybrid gateway controller correctly
     processes a basic HTTPRoute with a single service backend.
-  
+
   timeouts:
     apply: 120s
     assert: 300s
     delete: 120s
-  
+
+  # Define bindings for dynamic resource names
+  # TEST_ID comes from CI (github.run_id) or defaults to 'local' for local testing
+  bindings:
+    - name: test_id
+      value: (env('TEST_ID') || 'local')
+    - name: gateway_name
+      value: (join('-', ['basic', $test_id]))
+
   steps:
     # Step 1: Create prerequisite resources
     - name: create-prerequisites
@@ -22,24 +30,12 @@ spec:
             file: 01-prerequisites.yaml
         - apply:
             file: 00-httpbin.yaml
-        # Assert common Konnect and Gateway resources.
-        - assert:
-            file: ../common/assertions/konnect-apiauth.yaml
-        - assert:
-            file: ../common/assertions/gatewayclass.yaml
-        - assert:
-            file: ../common/assertions/gatewayconfiguration.yaml
-        - assert:
-            file: ../common/assertions/gateway.yaml
-        - assert:
-            file: ../common/assertions/konnect-gateway-controlplane.yaml
-        - assert:
-            file: ../common/assertions/konnect-extension.yaml
         # Assert test-specific resources (namespaces, service, deployment)
         - assert:
             file: 00-assert-httpbin.yaml
+        # Assert Gateway resources with dynamic names
         - assert:
-            file: 01-assert-prerequisites.yaml
+            file: 01-assert-gateway.yaml
       # Catch block: collect diagnostic info when assertions fail
       catch:
         - description: Get Gateway resource status

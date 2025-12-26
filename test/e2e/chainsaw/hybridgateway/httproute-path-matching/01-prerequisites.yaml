@@ -24,7 +24,7 @@ spec:
 kind: GatewayConfiguration
 apiVersion: gateway-operator.konghq.com/v2beta1
 metadata:
-  name: kong-foo
+  name: ($gateway_name)
   namespace: kong
 spec:
   konnect:
@@ -45,22 +45,22 @@ spec:
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
-  name: kong-foo
+  name: ($gateway_name)
 spec:
   controllerName: konghq.com/gateway-operator
   parametersRef:
     group: gateway-operator.konghq.com
     kind: GatewayConfiguration
-    name: kong-foo
+    name: ($gateway_name)
     namespace: kong
 ---
 kind: Gateway
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
-  name: kong-foo
+  name: ($gateway_name)
   namespace: kong
 spec:
-  gatewayClassName: kong-foo
+  gatewayClassName: ($gateway_name)
   listeners:
   - name: http
     protocol: HTTP

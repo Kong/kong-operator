@@ -10,7 +10,7 @@ spec:
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
-      name: kong-foo
+      name: ($gateway_name)
   rules:
     - matches:
         - path:

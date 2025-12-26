@@ -8,7 +8,7 @@ metadata:
 status:
   parents:
     - parentRef:
-        name: kong-foo
+        name: ($gateway_name)
         group: gateway.networking.k8s.io
         kind: Gateway
       controllerName: konghq.com/gateway-operator
