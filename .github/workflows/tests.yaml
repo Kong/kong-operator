@@ -803,7 +803,7 @@ jobs:
       env:
         KONNECT_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONNECT_SERVER_URL: us.api.konghq.tech
-        TEST_ID: ${{ github.run_id }}
+        TEST_ID: ${{ github.run_id }}-${{ github.run_attempt }}
 
   buildpulse-report:
     needs:
