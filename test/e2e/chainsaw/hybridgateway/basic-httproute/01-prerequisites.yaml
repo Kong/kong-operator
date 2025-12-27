@@ -24,7 +24,7 @@ spec:
 kind: GatewayConfiguration
 apiVersion: gateway-operator.konghq.com/v2beta1
 metadata:
-  name: kong-foo
+  name: (join('-', ['kong', env('TEST_ID') || 'local']))
   namespace: kong
 spec:
   konnect:
@@ -41,22 +41,22 @@ spec:
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
-  name: kong-foo
+  name: (join('-', ['kong', env('TEST_ID') || 'local']))
 spec:
   controllerName: konghq.com/gateway-operator
   parametersRef:
     group: gateway-operator.konghq.com
     kind: GatewayConfiguration
-    name: kong-foo
+    name: (join('-', ['kong', env('TEST_ID') || 'local']))
     namespace: kong
 ---
 kind: Gateway
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
-  name: kong-foo
+  name: (join('-', ['kong', env('TEST_ID') || 'local']))
   namespace: kong
 spec:
-  gatewayClassName: kong-foo
+  gatewayClassName: (join('-', ['kong', env('TEST_ID') || 'local']))
   listeners:
   - name: http
     protocol: HTTP
