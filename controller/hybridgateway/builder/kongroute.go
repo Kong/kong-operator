@@ -187,19 +187,11 @@ func GenerateKongRoutePathFromHTTPRouteMatch(pathMatch *gatewayv1.HTTPPathMatch)
 
 	// In HTTPRoute, the prefix match is specified in the "directory" manner but not simple string prefix.
 	// For example, '/abc' should match '/abc', '/abc/', '/abc/123' but not '/abcd'.
-	// We use two regex paths:
-	// - ~/abc$ matches '/abc' exactly
-	// - ~/abc/.* matches '/abc/' and '/abc/anything' (the .* matches zero or more chars)
+	// NOTE: Using simple path for now to work around potential regex issues in Konnect/hybrid mode.
+	// This matches Kong's default prefix behavior which also matches '/abcd' - not strictly Gateway API compliant.
+	// TODO: Investigate regex path support in Konnect and re-enable proper PathPrefix semantics.
 	case gatewayv1.PathMatchPathPrefix:
-		// For the '/' path to match all, we just return the item in KongRoute to do the same catch-all match.
-		if value == "/" {
-			return []string{"/"}
-		}
-		// Two regex paths to correctly implement Gateway API PathPrefix semantics
-		return []string{
-			fmt.Sprintf("%s%s$", KongPathRegexPrefix, value),   // ~/path$ for exact match
-			fmt.Sprintf("%s%s/.*", KongPathRegexPrefix, value), // ~/path/.* for subpaths
-		}
+		return []string{value}
 
 	// For RegularExpression path match, we simply use the same regex in the paths of KongRoute.
 	case gatewayv1.PathMatchRegularExpression:
