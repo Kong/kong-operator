@@ -601,7 +601,36 @@ spec:
             content: |
               kubectl run curl-test-pod --image=curlimages/curl:latest --restart=Never -- sleep 3600
               kubectl wait --for=condition=Ready pod/curl-test-pod --timeout=60s
-        
+
+        # Wait for Kong configuration to sync to data plane
+        # The KongRoute may be Programmed but the config might not have synced to the data plane yet
+        - description: Wait for Kong data plane configuration sync
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip_lb || $proxy_ip)
+            content: |
+              echo "Waiting for Kong data plane to have updated routes..."
+              # Give the data plane some time to sync the configuration
+              sleep 10
+              # Verify httpbin service is responding by checking a simple endpoint first
+              for i in $(seq 1 30); do
+                HTTP_CODE=$(curl -s -o /dev/null -w '%{http_code}' --max-time 5 http://${PROXY_IP}/get 2>/dev/null || echo "000")
+                if [ "$HTTP_CODE" = "200" ]; then
+                  echo "Kong data plane is ready and routing to httpbin (got $HTTP_CODE)"
+                  exit 0
+                fi
+                echo "Waiting for route sync (attempt $i/30, got HTTP $HTTP_CODE)..."
+                sleep 5
+              done
+              echo "Kong data plane did not sync within timeout"
+              # Debug: show Kong routes
+              echo "=== Current KongRoute resources ==="
+              kubectl get kongroute -n kong -o yaml
+              echo "=== Current KongService resources ==="
+              kubectl get kongservice -n kong -o yaml
+              exit 1
+
         # Test from within the cluster
         - description: Test GET /get endpoint from within cluster
           script:
