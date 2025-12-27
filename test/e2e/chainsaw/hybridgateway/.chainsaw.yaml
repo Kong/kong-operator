@@ -21,7 +21,7 @@ spec:
     cleanup: 120s
     delete: 120s
     error: 60s
-    exec: 30s
+    exec: 300s
   # Skip deletion of resources after tests (useful for debugging)
   skipDelete: false
   # Fail fast on first error

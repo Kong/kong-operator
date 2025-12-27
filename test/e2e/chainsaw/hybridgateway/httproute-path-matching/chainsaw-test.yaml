@@ -24,6 +24,8 @@ spec:
       value: (env('TEST_ID') || 'local')
     - name: gateway_name
       value: (join('-', ['kong', $test_id]))
+    - name: proxy_ip
+      value: ""
 
   steps:
     # Step 1: Create prerequisite resources
@@ -94,25 +96,32 @@ spec:
           script:
             content: |
               echo "=== Waiting for DataPlane proxy pods ==="
-              for i in $(seq 1 60); do
+              for i in $(seq 1 30); do
                 PODS=$(kubectl get pods -n kong -l gateway-operator.konghq.com/managed-by=dataplane -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
+                # Fallback to name prefix if labels are missing
+                if [ -z "$PODS" ]; then
+                  PODS=$(kubectl get pods -n kong -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null | grep '^dataplane-' || true)
+                fi
                 if [ -n "$PODS" ]; then
                   echo "Found DataPlane pods: $PODS"
                   # Wait for at least one pod to be Running
                   RUNNING=$(kubectl get pods -n kong -l gateway-operator.konghq.com/managed-by=dataplane -o jsonpath='{.items[?(@.status.phase=="Running")].metadata.name}' 2>/dev/null || true)
+                  if [ -z "$RUNNING" ]; then
+                    RUNNING=$(kubectl get pods -n kong -o jsonpath='{range .items[*]}{.metadata.name}{" "}{.status.phase}{"\n"}{end}' 2>/dev/null | awk '/^dataplane-/{if ($2=="Running") print $1}' || true)
+                  fi
                   if [ -n "$RUNNING" ]; then
                     echo "DataPlane pod running: $RUNNING"
                     exit 0
                   fi
-                  echo "Pods exist but not running yet (attempt $i/60)"
+                  echo "Pods exist but not running yet (attempt $i/30)"
                 else
-                  echo "No DataPlane pods found yet (attempt $i/60)"
+                  echo "No DataPlane pods found yet (attempt $i/30)"
                 fi
                 # Show current pods for debugging
                 kubectl get pods -n kong -o wide 2>/dev/null || true
                 sleep 10
               done
-              echo "DataPlane pods not ready after 10 minutes"
+              echo "DataPlane pods not ready after 5 minutes"
               kubectl get dataplane -n kong -o yaml
               exit 1
       catch:
