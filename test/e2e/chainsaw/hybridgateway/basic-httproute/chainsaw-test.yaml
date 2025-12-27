@@ -607,7 +607,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
             content: |
               kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null http://${PROXY_IP}/get
             check:
@@ -617,7 +617,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
             content: |
               kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X POST http://${PROXY_IP}/post
             check:
@@ -627,7 +627,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
             content: |
               kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X PUT http://${PROXY_IP}/put
             check:
@@ -637,7 +637,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
             content: |
               kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X PATCH http://${PROXY_IP}/patch
             check:
@@ -647,7 +647,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
             content: |
               kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X DELETE http://${PROXY_IP}/delete
             check:
@@ -663,7 +663,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip)
+                value: ($proxy_ip_lb || $proxy_ip)
             content: |
               curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get
             check:
@@ -673,7 +673,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip)
+                value: ($proxy_ip_lb || $proxy_ip)
             content: |
               curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/post
             check:
@@ -683,7 +683,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip)
+                value: ($proxy_ip_lb || $proxy_ip)
             content: |
               curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PUT http://${PROXY_IP}/put
             check:
@@ -693,7 +693,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip)
+                value: ($proxy_ip_lb || $proxy_ip)
             content: |
               curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PATCH http://${PROXY_IP}/patch
             check:
