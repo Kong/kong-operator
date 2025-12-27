@@ -1,0 +1,267 @@
+# HTTPRoute Path Matching test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-path-matching
+spec:
+  description: |
+    This test validates HTTPRoute path matching scenarios including PathPrefix,
+    PathExact, multiple path matches, and the strip-path annotation.
+
+  timeouts:
+    apply: 120s
+    assert: 300s
+    delete: 120s
+
+  steps:
+    # Step 1: Create prerequisite resources
+    - name: create-prerequisites
+      description: Create GatewayClass, Gateway, and backend Service
+      try:
+        - apply:
+            file: 01-prerequisites.yaml
+        - apply:
+            file: 00-httpbin.yaml
+        # Assert common Konnect and Gateway resources
+        - assert:
+            file: ../common/assertions/konnect-apiauth.yaml
+        - assert:
+            file: 01-assert-prerequisites.yaml
+        - assert:
+            file: 00-assert-httpbin.yaml
+      catch:
+        - description: Get Gateway resource status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: Gateway
+            namespace: kong
+        - description: Get Pods in kong namespace
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: kong
+        - description: Get operator logs
+          podLogs:
+            namespace: kong-system
+            selector: control-plane=controller-manager
+            tail: 100
+
+    # Step 2: Test PathPrefix matching
+    - name: test-pathprefix-matching
+      description: Create HTTPRoute with PathPrefix matching
+      try:
+        - apply:
+            file: 02-httproute-pathprefix.yaml
+        - assert:
+            file: 02-assert-httproute-pathprefix.yaml
+        # Get the Gateway proxy IP
+        - script:
+            content: |
+              kubectl get gateway kong-path-matching -n kong -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Test PathPrefix matching - /prefix/anything should match
+        - description: Test PathPrefix matching from within cluster
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              POD_NAME="curl-test-$(date +%s)-$$"
+              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -- \
+                curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' http://${PROXY_IP}/prefix/status/200
+            check:
+              (contains($stdout, '200')): true
+        - description: Test PathPrefix matching from host
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/prefix/status/200
+            check:
+              (contains($stdout, '200')): true
+      catch:
+        - description: Get HTTPRoute status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: kong
+        - description: Get KongRoute resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: kong
+
+    # Step 3: Test PathExact matching
+    - name: test-pathexact-matching
+      description: Update HTTPRoute to use PathExact matching
+      try:
+        - apply:
+            file: 03-httproute-pathexact.yaml
+        - assert:
+            file: 03-assert-httproute-pathexact.yaml
+        # Wait for KongRoute to be reprogrammed
+        - script:
+            content: |
+              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute
+        # Get the Gateway proxy IP
+        - script:
+            content: |
+              kubectl get gateway kong-path-matching -n kong -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Test PathExact matching - /get should match exactly
+        - description: Test PathExact matching - exact path should return 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get
+            check:
+              (contains($stdout, '200')): true
+        # Test that subpath does NOT match with Exact
+        - description: Test PathExact matching - subpath should return 404
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get/subpath)
+              echo $HTTP_CODE
+            check:
+              (contains($stdout, '404')): true
+      catch:
+        - description: Get HTTPRoute status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: kong
+        - description: Get KongRoute resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: kong
+
+    # Step 4: Test multiple path matches in single rule
+    - name: test-multiple-paths
+      description: Update HTTPRoute with multiple path matches in a single rule
+      try:
+        - apply:
+            file: 04-httproute-multipaths.yaml
+        - assert:
+            file: 04-assert-httproute-multipaths.yaml
+        # Wait for KongRoute to be reprogrammed
+        - script:
+            content: |
+              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute
+        # Get the Gateway proxy IP
+        - script:
+            content: |
+              kubectl get gateway kong-path-matching -n kong -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Test all paths
+        - description: Test /get endpoint
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get
+            check:
+              (contains($stdout, '200')): true
+        - description: Test /post endpoint
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/post
+            check:
+              (contains($stdout, '200')): true
+        - description: Test /status prefix endpoint
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/status/200
+            check:
+              (contains($stdout, '200')): true
+      catch:
+        - description: Get HTTPRoute status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: kong
+        - description: Get KongRoute resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: kong
+
+    # Step 5: Test strip-path annotation
+    - name: test-strip-path-annotation
+      description: Update HTTPRoute with strip-path annotation
+      try:
+        - apply:
+            file: 05-httproute-strippath.yaml
+        - assert:
+            file: 05-assert-httproute-strippath.yaml
+        # Wait for KongRoute to be reprogrammed
+        - script:
+            content: |
+              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute
+        # Verify KongRoute has strip_path: true
+        - script:
+            content: |
+              kubectl get kongroute -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].spec.strip_path}'
+            check:
+              ($stdout == 'true'): true
+        # Get the Gateway proxy IP
+        - script:
+            content: |
+              kubectl get gateway kong-path-matching -n kong -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Test strip-path: /api/get should route to /get on backend (path stripped)
+        - description: Test strip-path - /api/get routes to /get on backend
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/api/get
+            check:
+              (contains($stdout, '200')): true
+        - description: Test strip-path - /api/status/200 routes to /status/200 on backend
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/api/status/200
+            check:
+              (contains($stdout, '200')): true
+      catch:
+        - description: Get HTTPRoute status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: kong
+        - description: Get KongRoute resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: kong
+        - description: Describe KongRoute
+          describe:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: kong
