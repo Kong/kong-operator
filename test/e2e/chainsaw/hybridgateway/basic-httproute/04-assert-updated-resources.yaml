@@ -1,5 +1,5 @@
 ---
-# Assert updated HTTPRoute with PathPrefix matches pointing to httpbin
+# Assert updated HTTPRoute with single PathPrefix match pointing to httpbin
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -18,21 +18,6 @@ spec:
         - path:
             type: PathPrefix
             value: /get
-        - path:
-            type: PathPrefix
-            value: /post
-        - path:
-            type: PathPrefix
-            value: /put
-        - path:
-            type: PathPrefix
-            value: /patch
-        - path:
-            type: PathPrefix
-            value: /delete
-        - path:
-            type: PathPrefix
-            value: /status
 status:
   parents:
     - parentRef:

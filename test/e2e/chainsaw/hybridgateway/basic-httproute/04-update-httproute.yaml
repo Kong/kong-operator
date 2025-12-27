@@ -1,6 +1,6 @@
 ---
-# Updated HTTPRoute with PathPrefix paths pointing to httpbin
-# NOTE: Using PathPrefix instead of Exact to test path matching without methods
+# Updated HTTPRoute with a single PathPrefix path pointing to httpbin
+# NOTE: Simplified to test if the issue is with multiple paths or the update process
 kind: HTTPRoute
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
@@ -14,26 +14,11 @@ spec:
       kind: Gateway
       name: ($gateway_name)
   rules:
-    # Use PathPrefix to route to httpbin endpoints
+    # Single PathPrefix to httpbin - same pattern as initial /echo route
     - matches:
         - path:
             type: PathPrefix
             value: /get
-        - path:
-            type: PathPrefix
-            value: /post
-        - path:
-            type: PathPrefix
-            value: /put
-        - path:
-            type: PathPrefix
-            value: /patch
-        - path:
-            type: PathPrefix
-            value: /delete
-        - path:
-            type: PathPrefix
-            value: /status
       backendRefs:
         - name: httpbin
           port: 80

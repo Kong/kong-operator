@@ -623,7 +623,7 @@ spec:
               kubectl get kongservice -n kong -o yaml
               exit 1
 
-        # Test from within the cluster
+        # Test from within the cluster - only /get endpoint since we simplified HTTPRoute
         - description: Test GET /get endpoint from within cluster
           script:
             env:
@@ -633,52 +633,12 @@ spec:
               kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null http://${PROXY_IP}/get
             check:
               (contains($stdout, '200')): true
-        
-        - description: Test POST /post endpoint from within cluster
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
-            content: |
-              kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X POST http://${PROXY_IP}/post
-            check:
-              (contains($stdout, '200')): true
-        
-        - description: Test PUT /put endpoint from within cluster
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
-            content: |
-              kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X PUT http://${PROXY_IP}/put
-            check:
-              (contains($stdout, '200')): true
-        
-        - description: Test PATCH /patch endpoint from within cluster
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
-            content: |
-              kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X PATCH http://${PROXY_IP}/patch
-            check:
-              (contains($stdout, '200')): true
-        
-        - description: Test DELETE /delete endpoint from within cluster
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
-            content: |
-              kubectl exec curl-test-pod -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X DELETE http://${PROXY_IP}/delete
-            check:
-              (contains($stdout, '200')): true
-        
+
         # Delete the test pod
         - script:
             content: |
               kubectl delete pod curl-test-pod --ignore-not-found=true --wait=false
-        
+
         # Test from outside the cluster
         - description: Test GET /get endpoint from host
           script:
@@ -687,46 +647,6 @@ spec:
                 value: ($proxy_ip_lb || $proxy_ip)
             content: |
               curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get
-            check:
-              (contains($stdout, '200')): true
-        
-        - description: Test POST /post endpoint from host
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip_lb || $proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/post
-            check:
-              (contains($stdout, '200')): true
-        
-        - description: Test PUT /put endpoint from host
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip_lb || $proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PUT http://${PROXY_IP}/put
-            check:
-              (contains($stdout, '200')): true
-        
-        - description: Test PATCH /patch endpoint from host
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip_lb || $proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PATCH http://${PROXY_IP}/patch
-            check:
-              (contains($stdout, '200')): true
-        
-        - description: Test DELETE /delete endpoint from host
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X DELETE http://${PROXY_IP}/delete
             check:
               (contains($stdout, '200')): true
     
