@@ -22,6 +22,10 @@ spec:
       value: (join('-', ['basic', $test_id]))
     - name: proxy_ip
       value: ""
+    - name: proxy_ip_cluster
+      value: ""
+    - name: proxy_ip
+      value: ""
 
   steps:
     # Step 1: Create prerequisite resources
@@ -258,6 +262,25 @@ spec:
             outputs:
               - name: route_path
                 value: ($stdout)
+        # Collect ingress service details for stable in-cluster access
+        - script:
+            content: |
+              kubectl get dataplane -n kong -o jsonpath='{.items[0].status.service}'
+            outputs:
+              - name: dataplane_ingress_service
+                value: ($stdout)
+        - script:
+            env:
+              - name: DATAPLANE_INGRESS_SERVICE
+                value: ($dataplane_ingress_service)
+            content: |
+              if [ -z "${DATAPLANE_INGRESS_SERVICE}" ]; then
+                exit 0
+              fi
+              kubectl get svc ${DATAPLANE_INGRESS_SERVICE} -n kong -o jsonpath='{.spec.clusterIP}'
+            outputs:
+              - name: proxy_ip_cluster
+                value: ($stdout)
         # Get the Gateway proxy IP
         - script:
             env:
@@ -286,7 +309,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip)
               - name: ROUTE_PATH
                 value: ($route_path)
             content: |
@@ -359,6 +382,9 @@ spec:
               echo ""
               echo "=== Checking Kong routes via admin API ==="
               POD=$(kubectl get pods -n kong -l gateway-operator.konghq.com/managed-by=dataplane -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)
+              if [ -z "$POD" ]; then
+                POD=$(kubectl get pods -n kong -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' 2>/dev/null | grep '^dataplane-' | head -n1 || true)
+              fi
               if [ -n "$POD" ]; then
                 kubectl exec -n kong $POD -- curl -s http://localhost:8001/routes 2>/dev/null || echo "Admin API not accessible"
               else
