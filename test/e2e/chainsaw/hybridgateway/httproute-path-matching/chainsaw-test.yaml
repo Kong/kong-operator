@@ -28,6 +28,8 @@ spec:
       value: ""
     - name: proxy_ip_cluster
       value: ""
+    - name: proxy_ip_lb
+      value: ""
     - name: proxy_ip
       value: ""
 
@@ -189,6 +191,18 @@ spec:
               if [ -z "${DATAPLANE_INGRESS_SERVICE}" ]; then
                 exit 0
               fi
+              kubectl get svc ${DATAPLANE_INGRESS_SERVICE} -n kong -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+            outputs:
+              - name: proxy_ip_lb
+                value: ($stdout)
+        - script:
+            env:
+              - name: DATAPLANE_INGRESS_SERVICE
+                value: ($dataplane_ingress_service)
+            content: |
+              if [ -z "${DATAPLANE_INGRESS_SERVICE}" ]; then
+                exit 0
+              fi
               kubectl get svc ${DATAPLANE_INGRESS_SERVICE} -n kong -o jsonpath='{.spec.clusterIP}'
             outputs:
               - name: proxy_ip_cluster
@@ -198,7 +212,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip_cluster || $proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
             content: |
               curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/httpbin/status/200
             check:
@@ -208,7 +222,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip_cluster || $proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
             content: |
               curl --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/httpbin/status/404
             check:
@@ -266,7 +280,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip_cluster || $proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
             content: |
               curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get
             check:
@@ -276,7 +290,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip_cluster || $proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
             content: |
               HTTP_CODE=$(curl --retry 3 --retry-delay 2 -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get/subpath)
               # Expect 404 as /get/subpath should not match the exact /get route
@@ -340,7 +354,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip_cluster || $proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
             content: |
               curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/headers
             check:
@@ -350,7 +364,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip_cluster || $proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
             content: |
               curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/ip
             check:
@@ -360,7 +374,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip_cluster || $proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
             content: |
               curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/anything
             check:
@@ -370,7 +384,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip_cluster || $proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
             content: |
               curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/anything/subpath
             check:
@@ -440,7 +454,7 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip_cluster || $proxy_ip)
+                value: ($proxy_ip_cluster || $proxy_ip_lb || $proxy_ip)
             content: |
               # Request /api/anything - httpbin will see /api/anything due to strip_path=false
               RESPONSE=$(curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s http://${PROXY_IP}/api/anything)

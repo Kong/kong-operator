@@ -24,6 +24,8 @@ spec:
       value: ""
     - name: proxy_ip_cluster
       value: ""
+    - name: proxy_ip_lb
+      value: ""
     - name: proxy_ip
       value: ""
 
@@ -261,13 +263,25 @@ spec:
               kubectl get httproute -n kong -o jsonpath='{.items[0].spec.rules[0].matches[0].path.value}'
             outputs:
               - name: route_path
-                value: ($stdout)
+                value: ($stdout || '/echo')
         # Collect ingress service details for stable in-cluster access
         - script:
             content: |
               kubectl get dataplane -n kong -o jsonpath='{.items[0].status.service}'
             outputs:
               - name: dataplane_ingress_service
+                value: ($stdout)
+        - script:
+            env:
+              - name: DATAPLANE_INGRESS_SERVICE
+                value: ($dataplane_ingress_service)
+            content: |
+              if [ -z "${DATAPLANE_INGRESS_SERVICE}" ]; then
+                exit 0
+              fi
+              kubectl get svc ${DATAPLANE_INGRESS_SERVICE} -n kong -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+            outputs:
+              - name: proxy_ip_lb
                 value: ($stdout)
         - script:
             env:
@@ -323,10 +337,11 @@ spec:
           script:
             env:
               - name: PROXY_IP
-                value: ($proxy_ip)
+                value: ($proxy_ip_lb || $proxy_ip)
               - name: ROUTE_PATH
                 value: ($route_path)
             content: |
+              echo "curling ${PROXY_IP}${ROUTE_PATH} from runner"
               curl --fail --retry 30 --retry-delay 10 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}
             check:
               (contains($stdout, '200')): true
