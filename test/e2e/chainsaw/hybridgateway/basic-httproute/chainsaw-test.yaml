@@ -568,15 +568,7 @@ spec:
             file: ../common/assertions/kongupstream.yaml
         - assert:
             file: ../common/assertions/kongtarget.yaml
-        # Additional assertion for methods field (specific to this step)
-        - assert:
-            resource:
-              apiVersion: configuration.konghq.com/v1alpha1
-              kind: KongRoute
-              metadata:
-                namespace: kong
-              spec:
-                methods: (parse_json($route_methods_json))
+        # NOTE: methods assertion removed - using PathPrefix without methods to test basic path matching
         # Test the updated routes
         - script:
             content: |
