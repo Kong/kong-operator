@@ -1,10 +1,10 @@
 ---
-# Updated HTTPRoute with a single PathPrefix path pointing to httpbin
-# NOTE: Simplified to test if the issue is with multiple paths or the update process
+# HTTPRoute with strip_path annotation set to false
+# Tests that the strip-path annotation correctly configures Kong to not strip the path prefix
 kind: HTTPRoute
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
-  name: echo
+  name: strip-path-route
   namespace: kong
   annotations:
     konghq.com/strip-path: "false"
@@ -14,12 +14,10 @@ spec:
       kind: Gateway
       name: ($gateway_name)
   rules:
-    # Single PathPrefix to httpbin - same pattern as initial /echo route
     - matches:
         - path:
             type: PathPrefix
-            value: /get
+            value: /api
       backendRefs:
         - name: httpbin
           port: 80
-

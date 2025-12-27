@@ -1,0 +1,11 @@
+---
+# Assert namespaces exist
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kong
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default

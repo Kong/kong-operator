@@ -1,8 +1,10 @@
 ---
+# HTTPRoute with PathPrefix matching
+# Tests that requests with the specified prefix are routed correctly
 kind: HTTPRoute
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
-  name: echo
+  name: pathprefix-route
   namespace: kong
 spec:
   parentRefs:
@@ -13,7 +15,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /echo
+            value: /httpbin
       backendRefs:
-        - name: echo
-          port: 1027
+        - name: httpbin
+          port: 80

@@ -14,15 +14,19 @@ kind: Configuration
 metadata:
   name: hybridgateway-tests
 spec:
-  # Timeout for the whole test suite
-  timeout: 15m
+  # Global operation timeouts (overrides defaults)
+  timeouts:
+    apply: 120s
+    assert: 300s
+    cleanup: 120s
+    delete: 120s
+    error: 60s
+    exec: 300s
   # Skip deletion of resources after tests (useful for debugging)
-  skipDelete: true
+  skipDelete: false
   # Fail fast on first error
   failFast: false
   # Number of parallel tests
   parallel: 1
-  # Exclude test directories
-  exclude: []
   # Full name to pass to the underlying test
   fullName: false

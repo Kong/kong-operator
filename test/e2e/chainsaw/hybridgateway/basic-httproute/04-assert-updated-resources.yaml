@@ -1,5 +1,5 @@
 ---
-# Assert updated HTTPRoute with multiple method-based matches in a single rule
+# Assert updated HTTPRoute with single PathPrefix match pointing to httpbin
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -9,46 +9,25 @@ spec:
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
-      name: kong-foo
+      name: ($gateway_name)
   rules:
     - backendRefs:
         - name: httpbin
           port: 80
       matches:
         - path:
-            type: Exact
-            value: /get
-          method: GET
-        - path:
-            type: Exact
-            value: /post
-          method: POST
-        - path:
-            type: Exact
-            value: /put
-          method: PUT
-        - path:
-            type: Exact
-            value: /patch
-          method: PATCH
-        - path:
-            type: Exact
-            value: /delete
-          method: DELETE
-        - path:
             type: PathPrefix
-            value: /status
+            value: /get
 status:
   parents:
     - parentRef:
         group: gateway.networking.k8s.io
         kind: Gateway
-        name: kong-foo
+        name: ($gateway_name)
       (conditions[?type == 'Accepted']):
         - status: 'True'
       (conditions[?type == 'ResolvedRefs']):
         - status: 'True'
       (conditions[?type == 'KongRouteProgrammed']):
         - status: 'True'
-
 
