@@ -1,5 +1,5 @@
 apiVersion: gateway-operator.konghq.com/v2beta1
 kind: GatewayConfiguration
 metadata:
-  name: kong-foo
+  name: ($gateway_name)
   namespace: kong

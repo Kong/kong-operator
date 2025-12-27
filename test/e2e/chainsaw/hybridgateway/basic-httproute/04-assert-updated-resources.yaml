@@ -9,7 +9,7 @@ spec:
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
-      name: kong-foo
+      name: ($gateway_name)
   rules:
     - backendRefs:
         - name: httpbin
@@ -43,7 +43,7 @@ status:
     - parentRef:
         group: gateway.networking.k8s.io
         kind: Gateway
-        name: kong-foo
+        name: ($gateway_name)
       (conditions[?type == 'Accepted']):
         - status: 'True'
       (conditions[?type == 'ResolvedRefs']):
