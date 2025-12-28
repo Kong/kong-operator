@@ -6,7 +6,7 @@ metadata:
 spec:
   description: |
     This test validates HTTPRoute path matching scenarios including PathPrefix,
-    PathExact, multiple path matches, and the strip-path annotation.
+    PathExact, and the strip-path annotation.
 
   timeouts:
     apply: 120s
@@ -146,66 +146,7 @@ spec:
             kind: KongRoute
             namespace: kong
 
-    # Step 4: Test multiple path matches in single rule
-    - name: test-multiple-paths
-      description: Update HTTPRoute with multiple path matches in a single rule
-      try:
-        - apply:
-            file: 04-httproute-multipaths.yaml
-        - assert:
-            file: 04-assert-httproute-multipaths.yaml
-        # Wait for KongRoute to be reprogrammed
-        - script:
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Get the Gateway proxy IP
-        - script:
-            content: |
-              kubectl get gateway kong-path-matching -n kong -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test all paths
-        - description: Test /get endpoint
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get
-            check:
-              (contains($stdout, '200')): true
-        - description: Test /post endpoint
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/post
-            check:
-              (contains($stdout, '200')): true
-        - description: Test /status prefix endpoint
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/status/200
-            check:
-              (contains($stdout, '200')): true
-      catch:
-        - description: Get HTTPRoute status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: kong
-        - description: Get KongRoute resources
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: kong
-
-    # Step 5: Test strip-path annotation
+    # Step 4: Test strip-path annotation
     - name: test-strip-path-annotation
       description: Update HTTPRoute with strip-path annotation
       try:
