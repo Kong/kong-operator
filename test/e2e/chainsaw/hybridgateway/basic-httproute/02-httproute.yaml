@@ -2,8 +2,8 @@
 kind: HTTPRoute
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
-  name: echo
-  namespace: kong
+  name: ($httproute_name)
+  namespace: ($kong_namespace)
 spec:
   parentRefs:
     - group: gateway.networking.k8s.io

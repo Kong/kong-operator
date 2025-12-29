@@ -2,12 +2,12 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: kong
+  name: ($kong_namespace)
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
-  name: kong-path-matching
+  name: ($gateway_class_name)
 status:
   (conditions[?type == 'Accepted']):
     - status: 'True'
@@ -16,8 +16,8 @@ status:
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
-  name: kong-path-matching
-  namespace: kong
+  name: ($gateway_name)
+  namespace: ($kong_namespace)
 status:
   (conditions[?type == 'Accepted']):
     - status: 'True'

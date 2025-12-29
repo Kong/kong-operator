@@ -8,6 +8,20 @@ spec:
     This test validates HTTPRoute path matching scenarios including PathPrefix,
     PathExact, and the strip-path annotation.
 
+  bindings:
+    - name: kong_namespace
+      value: (join('-', ['kong', metadata.name, env('TEST_ID') || env('GITHUB_RUN_ID') || 'local']))
+    - name: konnect_api_auth_name
+      value: konnect-api-auth-dev-1
+    - name: gateway_class_name
+      value: kong-path-matching
+    - name: gateway_configuration_name
+      value: kong-path-matching
+    - name: gateway_name
+      value: kong-path-matching
+    - name: httproute_name
+      value: path-matching
+
   timeouts:
     apply: 120s
     assert: 300s
@@ -34,12 +48,12 @@ spec:
           get:
             apiVersion: gateway.networking.k8s.io/v1
             kind: Gateway
-            namespace: kong
+            namespace: ($kong_namespace)
         - description: Get Pods in kong namespace
           get:
             apiVersion: v1
             kind: Pod
-            namespace: kong
+            namespace: ($kong_namespace)
         - description: Get operator logs
           podLogs:
             namespace: kong-system
@@ -57,7 +71,7 @@ spec:
         # Get the Gateway proxy IP
         - script:
             content: |
-              kubectl get gateway kong-path-matching -n kong -o jsonpath='{.status.addresses[0].value}'
+              kubectl get gateway ($gateway_name) -n ($kong_namespace) -o jsonpath='{.status.addresses[0].value}'
             outputs:
               - name: proxy_ip
                 value: ($stdout)
@@ -69,7 +83,7 @@ spec:
                 value: ($proxy_ip)
             content: |
               POD_NAME="curl-test-$(date +%s)-$$"
-              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -- \
+              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -n ($kong_namespace) -- \
                 curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' http://${PROXY_IP}/prefix/status/200
             check:
               (contains($stdout, '200')): true
@@ -87,12 +101,12 @@ spec:
           get:
             apiVersion: gateway.networking.k8s.io/v1
             kind: HTTPRoute
-            namespace: kong
+            namespace: ($kong_namespace)
         - description: Get KongRoute resources
           get:
             apiVersion: configuration.konghq.com/v1alpha1
             kind: KongRoute
-            namespace: kong
+            namespace: ($kong_namespace)
 
     # Step 3: Test PathExact matching
     - name: test-pathexact-matching
@@ -105,11 +119,11 @@ spec:
         # Wait for KongRoute to be reprogrammed
         - script:
             content: |
-              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute
+              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n ($kong_namespace) -l gateway-operator.konghq.com/managed-by=HTTPRoute
         # Get the Gateway proxy IP
         - script:
             content: |
-              kubectl get gateway kong-path-matching -n kong -o jsonpath='{.status.addresses[0].value}'
+              kubectl get gateway ($gateway_name) -n ($kong_namespace) -o jsonpath='{.status.addresses[0].value}'
             outputs:
               - name: proxy_ip
                 value: ($stdout)
@@ -139,12 +153,12 @@ spec:
           get:
             apiVersion: gateway.networking.k8s.io/v1
             kind: HTTPRoute
-            namespace: kong
+            namespace: ($kong_namespace)
         - description: Get KongRoute resources
           get:
             apiVersion: configuration.konghq.com/v1alpha1
             kind: KongRoute
-            namespace: kong
+            namespace: ($kong_namespace)
 
     # Step 4: Test strip-path annotation
     - name: test-strip-path-annotation
@@ -157,17 +171,17 @@ spec:
         # Wait for KongRoute to be reprogrammed
         - script:
             content: |
-              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute
+              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n ($kong_namespace) -l gateway-operator.konghq.com/managed-by=HTTPRoute
         # Verify KongRoute has strip_path: true
         - script:
             content: |
-              kubectl get kongroute -n kong -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].spec.strip_path}'
+              kubectl get kongroute -n ($kong_namespace) -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].spec.strip_path}'
             check:
               ($stdout == 'true'): true
         # Get the Gateway proxy IP
         - script:
             content: |
-              kubectl get gateway kong-path-matching -n kong -o jsonpath='{.status.addresses[0].value}'
+              kubectl get gateway ($gateway_name) -n ($kong_namespace) -o jsonpath='{.status.addresses[0].value}'
             outputs:
               - name: proxy_ip
                 value: ($stdout)
@@ -195,14 +209,14 @@ spec:
           get:
             apiVersion: gateway.networking.k8s.io/v1
             kind: HTTPRoute
-            namespace: kong
+            namespace: ($kong_namespace)
         - description: Get KongRoute resources
           get:
             apiVersion: configuration.konghq.com/v1alpha1
             kind: KongRoute
-            namespace: kong
+            namespace: ($kong_namespace)
         - description: Describe KongRoute
           describe:
             apiVersion: configuration.konghq.com/v1alpha1
             kind: KongRoute
-            namespace: kong
+            namespace: ($kong_namespace)

@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: kong
+  name: ($kong_namespace)
 ---
 # Namespace for default resources
 apiVersion: v1
@@ -14,8 +14,8 @@ metadata:
 kind: KonnectAPIAuthConfiguration
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
-  name: konnect-api-auth-dev-1
-  namespace: kong
+  name: ($konnect_api_auth_name)
+  namespace: ($kong_namespace)
 spec:
   type: token
   token: (env('KONNECT_TOKEN'))
@@ -24,12 +24,12 @@ spec:
 kind: GatewayConfiguration
 apiVersion: gateway-operator.konghq.com/v2beta1
 metadata:
-  name: (join('-', ['kong', env('TEST_ID') || 'local']))
-  namespace: kong
+  name: ($gateway_configuration_name)
+  namespace: ($kong_namespace)
 spec:
   konnect:
     authRef:
-      name: konnect-api-auth-dev-1
+      name: ($konnect_api_auth_name)
   dataPlaneOptions:
     deployment:
       podTemplateSpec:
@@ -41,22 +41,22 @@ spec:
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
-  name: (join('-', ['kong', env('TEST_ID') || 'local']))
+  name: ($gateway_class_name)
 spec:
   controllerName: konghq.com/gateway-operator
   parametersRef:
     group: gateway-operator.konghq.com
     kind: GatewayConfiguration
-    name: (join('-', ['kong', env('TEST_ID') || 'local']))
-    namespace: kong
+    name: ($gateway_configuration_name)
+    namespace: ($kong_namespace)
 ---
 kind: Gateway
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
-  name: (join('-', ['kong', env('TEST_ID') || 'local']))
-  namespace: kong
+  name: ($gateway_name)
+  namespace: ($kong_namespace)
 spec:
-  gatewayClassName: (join('-', ['kong', env('TEST_ID') || 'local']))
+  gatewayClassName: ($gateway_class_name)
   listeners:
   - name: http
     protocol: HTTP
@@ -68,7 +68,7 @@ metadata:
   labels:
     app: echo
   name: echo
-  namespace: kong
+  namespace: ($kong_namespace)
 spec:
   ports:
     - port: 1025
@@ -96,7 +96,7 @@ metadata:
   labels:
     app: echo
   name: echo
-  namespace: kong
+  namespace: ($kong_namespace)
 spec:
   replicas: 1
   selector:
