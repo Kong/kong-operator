@@ -10,7 +10,7 @@ spec:
 
   bindings:
     - name: kong_namespace
-      value: (join('-', ['kong', metadata.name, env('TEST_ID') || env('GITHUB_RUN_ID') || 'local']))
+      value: (join('-', ['kong', 'httproute-path-matching', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
     - name: konnect_api_auth_name
       value: konnect-api-auth-dev-1
     - name: gateway_class_name

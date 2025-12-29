@@ -12,11 +12,11 @@ spec:
   # This ensures unique names in Konnect to avoid 409 conflicts
   bindings:
     - name: kong_namespace
-      value: (join('-', ['kong', metadata.name, env('TEST_ID') || env('GITHUB_RUN_ID') || 'local']))
+      value: (join('-', ['kong', 'basic-httproute', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
     - name: konnect_api_auth_name
       value: konnect-api-auth-dev-1
     - name: gateway_class_name
-      value: (join('-', ['kong', env('TEST_ID') || 'local']))
+      value: (join('-', ['kong', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
     - name: gateway_configuration_name
       value: ($gateway_class_name)
     - name: gateway_name
