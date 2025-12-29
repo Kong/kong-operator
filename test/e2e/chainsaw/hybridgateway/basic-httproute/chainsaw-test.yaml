@@ -130,52 +130,24 @@ spec:
     # Step 3: Verify generated Kong resources
     - name: verify-kong-resources
       description: Verify KongRoute, KongService, KongUpstream, and KongTarget are created
+      bindings:
+        # Map test bindings to assertion variable names
+        - name: namespace
+          value: ($kong_namespace)
+        - name: hybrid_gateway_name
+          value: ($gateway_name)
+        - name: hybrid_gateway_namespace
+          value: ($kong_namespace)
+        - name: managedby_name
+          value: ($httproute_name)
+        - name: managedby_namespace
+          value: ($kong_namespace)
+        - name: strip_path
+          value: true
+        - name: weight
+          value: 1
       try:
-        # Collect bindings needed for Kong resource assertions
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.metadata.name}'
-            outputs:
-              - name: hybrid_gateway_name
-                value: ($stdout)
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.metadata.namespace}'
-            outputs:
-              - name: hybrid_gateway_namespace
-                value: ($stdout)
-        - script:
-            env:
-              - name: HTTPROUTE_NAME
-                value: ($httproute_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get httproute ${HTTPROUTE_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.metadata.name}'
-            outputs:
-              - name: managedby_name
-                value: ($stdout)
-        - script:
-            env:
-              - name: HTTPROUTE_NAME
-                value: ($httproute_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get httproute ${HTTPROUTE_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.metadata.namespace}'
-            outputs:
-              - name: managedby_namespace
-                value: ($stdout)
+        # Get dynamic resource names and route paths from HTTPRoute
         - script:
             env:
               - name: HTTPROUTE_NAME
@@ -230,18 +202,6 @@ spec:
             outputs:
               - name: kongupstream_name
                 value: ($stdout)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: printf '%s' "${KONG_NAMESPACE}"
-            outputs:
-              - name: namespace
-                value: ($stdout)
-              - name: strip_path
-                value: true
-              - name: weight
-                value: 1
         # Wait for KongRoute to be programmed before asserting
         - script:
             env:
@@ -341,6 +301,22 @@ spec:
     # Step 5: Update HTTPRoute
     - name: update-httproute
       description: Update HTTPRoute and verify changes propagate
+      bindings:
+        # Map test bindings to assertion variable names (strip_path=false for updated route)
+        - name: namespace
+          value: ($kong_namespace)
+        - name: hybrid_gateway_name
+          value: ($gateway_name)
+        - name: hybrid_gateway_namespace
+          value: ($kong_namespace)
+        - name: managedby_name
+          value: ($httproute_name)
+        - name: managedby_namespace
+          value: ($kong_namespace)
+        - name: strip_path
+          value: false
+        - name: weight
+          value: 1
       try:
         # Collect old Kong resource names before update
         - script:
@@ -444,51 +420,7 @@ spec:
                 value: ($kong_namespace)
             content: |
               kubectl wait --for=condition=Programmed --timeout=60s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Collect bindings for Kong resource assertions
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.metadata.name}'
-            outputs:
-              - name: hybrid_gateway_name
-                value: ($stdout)
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.metadata.namespace}'
-            outputs:
-              - name: hybrid_gateway_namespace
-                value: ($stdout)
-        - script:
-            env:
-              - name: HTTPROUTE_NAME
-                value: ($httproute_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get httproute ${HTTPROUTE_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.metadata.name}'
-            outputs:
-              - name: managedby_name
-                value: ($stdout)
-        - script:
-            env:
-              - name: HTTPROUTE_NAME
-                value: ($httproute_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get httproute ${HTTPROUTE_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.metadata.namespace}'
-            outputs:
-              - name: managedby_namespace
-                value: ($stdout)
+        # Get dynamic resource names and route paths from updated HTTPRoute
         - script:
             env:
               - name: HTTPROUTE_NAME
@@ -516,18 +448,6 @@ spec:
             outputs:
               - name: route_methods_json
                 value: ($stdout)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: printf '%s' "${KONG_NAMESPACE}"
-            outputs:
-              - name: namespace
-                value: ($stdout)
-              - name: strip_path
-                value: false
-              - name: weight
-                value: 1
         # Collect Kong resource names after reconciliation
         - script:
             env:
