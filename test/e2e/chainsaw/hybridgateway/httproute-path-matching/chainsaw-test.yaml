@@ -8,8 +8,6 @@ spec:
     This test validates HTTPRoute path matching scenarios including PathPrefix,
     PathExact, and the strip-path annotation.
 
-  namespace: ($kong_namespace)
-
   bindings:
     - name: kong_namespace
       value: (join('-', ['kong', metadata.name, env('TEST_ID') || env('GITHUB_RUN_ID') || 'local']))
