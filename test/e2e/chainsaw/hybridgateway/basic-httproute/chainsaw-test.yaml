@@ -7,12 +7,18 @@ spec:
   description: |
     This test validates that the hybrid gateway controller correctly
     processes a basic HTTPRoute with a single service backend.
-  
+
+  # Define the gateway_name binding based on TEST_ID environment variable
+  # This ensures unique names in Konnect to avoid 409 conflicts
+  bindings:
+    - name: gateway_name
+      value: (join('-', ['kong', env('TEST_ID') || 'local']))
+
   timeouts:
     apply: 120s
     assert: 300s
     delete: 120s
-  
+
   steps:
     # Step 1: Create prerequisite resources
     - name: create-prerequisites

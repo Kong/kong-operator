@@ -11,7 +11,7 @@ spec:
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
-      name: kong-foo
+      name: ($gateway_name)
   rules:
     # All standard HTTP methods to their respective endpoints
     - matches:
