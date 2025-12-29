@@ -8,6 +8,9 @@ spec:
     This test validates that the hybrid gateway controller correctly
     processes a basic HTTPRoute with a single service backend.
 
+  # Use isolated namespace per test run
+  namespace: ($kong_namespace)
+
   # Define the gateway_name binding based on TEST_ID environment variable
   # This ensures unique names in Konnect to avoid 409 conflicts
   bindings:
