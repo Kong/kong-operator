@@ -1,0 +1,244 @@
+# HTTPRoute filters test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-filters
+spec:
+  description: |
+    This test validates that the hybrid gateway controller correctly
+    processes the currently supported filters in HTTPRoute, including:
+    `RequestHeaderModifier`, `ResponseHeaderModifier`, `RequestRedirect`
+    and `URLRewrite`.
+
+  bindings:
+    - name: gateway_name
+      value: (join('-', ['kong', env('TEST_ID') || 'local']))
+    - name: gateway_namespace
+      value: kong
+    - name: http_route_namespace
+      value: kong
+    - name: httpbin_service_name
+      value: httpbin
+    - name: httpbin_service_namespace
+      value: kong
+    - name: gateway_dataplane_image
+      value: "kong/kong-gateway:3.12"
+    
+  timeouts:
+    apply: 120s
+    assert: 300s
+    delete: 120s
+  
+  steps:
+    # Step 1: Create prerequisite resources
+    - name: create-prerequisites
+      description: Create GatewayClass, Gateway, and backend Service
+      try:
+        - apply:
+            file: 01-prerequisites.yaml
+        - apply:
+            file: 00-httpbin.yaml
+        # Assert common Konnect and Gateway resources.
+        #- assert:
+        #    file: ../common/assertions/konnect-apiauth.yaml
+        #- assert:
+        #    file: ../common/assertions/gatewayclass.yaml
+        #- assert:
+        #    file: ../common/assertions/gatewayconfiguration.yaml
+        #- assert:
+        #    file: ../common/assertions/gateway.yaml
+        #- assert:
+        #    file: ../common/assertions/konnect-gateway-controlplane.yaml
+        #- assert:
+        #    file: ../common/assertions/konnect-extension.yaml
+        # Assert test-specific resources (namespaces, service, deployment)
+        - assert:
+            file: 00-assert-httpbin.yaml
+        - assert:
+            file: 01-assert-prerequisites.yaml
+    # Step 2: Create the HTTPRoute for testing the request header modifier filter
+    - name: create-httproute-for-request-header-modifier-filter
+      description: Create the HTTPRoute for testing and verify that request header modifier filter works
+      bindings:
+        - name: route_path
+          value: "/httpbin-request-header-modifier"
+        - name: http_route_name
+          value:  (join('-', ['httproute-filter-request-header-modifier', env('TEST_ID') || 'local']))
+      try:
+        - apply:
+            file: 02-httproute-filter-request-header-modifier.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout) 
+        # Wait until the route works
+        - description: Test connectivity from outside the cluster
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200')): true
+        # Verify the headers 
+        - description: Verify that the request header modifier works by the /headers path
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              curl -s --header "X-Set:baz" --header "X-Remove:qux" http://${PROXY_IP}${ROUTE_PATH}/headers 
+            check:
+              (contains($stdout, 'X-Add')): true
+              (contains($stdout, 'X-Set')): true
+              (contains($stdout, 'X-Remove')): false
+    # Step 3: Create the HTTPRoute for testing response header modifier
+    - name: create-httproute-for-response-header-modifier-filter
+      description: Create the HTTPRoute for verifying that respomse header modifier filter works
+      bindings:
+        - name: route_path
+          value: "/httpbin-response-header-modifier"
+        - name: http_route_name
+          value:  (join('-', ['httproute-filter-response-header-modifier', env('TEST_ID') || 'local']))
+      try:
+        - apply:
+            file: 03-httproute-filter-response-header-modifier.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout) 
+        # Wait until the route works
+        - description: Test connectivity from outside the cluster
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200')): true
+        # Check for the response headers
+        - description: Verify that response header modifier works
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              curl -sI "http://${PROXY_IP}${ROUTE_PATH}/response-headers?x-remove=qux&x-set=baz"
+            check:
+              "(contains($stdout, '200 OK'))": true
+              "(contains($stdout, 'X-Add: bar'))": true
+              "(contains($stdout, 'X-Set: foo'))": true
+              (contains($stdout, 'X-Remove')): false
+    # Step 4: Create the HTTPRoute for testing request redirect filter
+    - name: create-httproute-for-request-redirect-filter
+      description: Create the HTTPRoute for verifying the request redirect filter
+      bindings:
+        - name: http_route_name
+          value:  (join('-', ['httproute-filter-request-redirect', env('TEST_ID') || 'local']))
+        - name: route_path_replace_full
+          value: "/httpbin-request-redirect-replace-full-path"
+        - name: redirect_host
+          value: "httpbin.test"
+      try:
+        - apply:
+            file: 04-httproute-request-redirect-filter.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout) 
+        # Verify the status code
+        - description: Verify the status code for the ReplaceFullPath filter
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_replace_full)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}
+            check:
+              (contains($stdout, '301')): true
+        - description: Verify that the redirection works for the ReplaceFullPath request redirect filter
+          script:
+            env:
+            - name: PROXY_IP
+              value: ($proxy_ip)
+            - name: ROUTE_PATH
+              value: ($route_path_replace_full)
+            - name: TEST_HOST
+              value: ($redirect_host)
+            content: |
+              curl -s -o /dev/null --location --resolve "${TEST_HOST}:80:${PROXY_IP}" -w "%{http_code}"  http://${TEST_HOST}${ROUTE_PATH}
+            # Should redirect to /redirect-target/status/200 and proxied to /status/200 of httpbin service by Kong DP.
+            check:
+              (contains($stdout, '200')): true
+    # Step 5: Create the HTTPRoute for testing URL rewrite filter
+    - name: create-httproute-for-url-rewrite-filter
+      description: Create the HTTPRoute for verifying the request redirect filter
+      bindings:
+        - name: http_route_name
+          value:  (join('-', ['httproute-filter-url-rewrite', env('TEST_ID') || 'local']))
+        - name: route_path_replace_full
+          value: "/httpbin-url-rewrite-replace-full-path"
+      try:
+        - apply:
+            file: 05-httproute-url-rewrite-filter.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout) 
+        # Verify the status code
+        - description: Verify the status code for the ReplaceFullPath URL rewrite filter
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_replace_full)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}
+            check:
+              (contains($stdout, '200')): true
+ 

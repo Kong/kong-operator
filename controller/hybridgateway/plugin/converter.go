@@ -138,7 +138,7 @@ func translateRequestModifier(filter gwtypes.HTTPRouteFilter) (transformerData, 
 	// Add for GWAPI equals "append" for Kong Plugins (it will add another instance of the header).
 	if len(filter.RequestHeaderModifier.Add) > 0 {
 		for _, v := range filter.RequestHeaderModifier.Add {
-			plugin.Append.Headers = append(plugin.Append.Headers, string(v.Name)+" :"+v.Value)
+			plugin.Append.Headers = append(plugin.Append.Headers, string(v.Name)+":"+v.Value)
 		}
 	}
 	if len(filter.RequestHeaderModifier.Remove) > 0 {
