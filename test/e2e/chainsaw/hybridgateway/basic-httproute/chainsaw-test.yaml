@@ -233,7 +233,7 @@ spec:
             env:
               - name: KONG_NAMESPACE
                 value: ($kong_namespace)
-            content: echo "${KONG_NAMESPACE}"
+            content: printf '%s' "${KONG_NAMESPACE}"
             outputs:
               - name: namespace
                 value: ($stdout)
@@ -241,6 +241,13 @@ spec:
                 value: true
               - name: weight
                 value: 1
+        # Wait for KongRoute to be programmed before asserting
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
         # Assert Kong resources using common templates
         - assert:
             file: ../common/assertions/kongroute.yaml
@@ -512,7 +519,7 @@ spec:
             env:
               - name: KONG_NAMESPACE
                 value: ($kong_namespace)
-            content: echo "${KONG_NAMESPACE}"
+            content: printf '%s' "${KONG_NAMESPACE}"
             outputs:
               - name: namespace
                 value: ($stdout)
