@@ -70,8 +70,13 @@ spec:
             file: 02-assert-httproute-pathprefix.yaml
         # Get the Gateway proxy IP
         - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($kong_namespace)
             content: |
-              kubectl get gateway ($gateway_name) -n ($kong_namespace) -o jsonpath='{.status.addresses[0].value}'
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
             outputs:
               - name: proxy_ip
                 value: ($stdout)
@@ -81,9 +86,11 @@ spec:
             env:
               - name: PROXY_IP
                 value: ($proxy_ip)
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
             content: |
               POD_NAME="curl-test-$(date +%s)-$$"
-              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -n ($kong_namespace) -- \
+              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -n ${KONG_NAMESPACE} -- \
                 curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' http://${PROXY_IP}/prefix/status/200
             check:
               (contains($stdout, '200')): true
@@ -118,12 +125,20 @@ spec:
             file: 03-assert-httproute-pathexact.yaml
         # Wait for KongRoute to be reprogrammed
         - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
             content: |
-              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n ($kong_namespace) -l gateway-operator.konghq.com/managed-by=HTTPRoute
+              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
         # Get the Gateway proxy IP
         - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($kong_namespace)
             content: |
-              kubectl get gateway ($gateway_name) -n ($kong_namespace) -o jsonpath='{.status.addresses[0].value}'
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
             outputs:
               - name: proxy_ip
                 value: ($stdout)
@@ -170,18 +185,29 @@ spec:
             file: 05-assert-httproute-strippath.yaml
         # Wait for KongRoute to be reprogrammed
         - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
             content: |
-              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n ($kong_namespace) -l gateway-operator.konghq.com/managed-by=HTTPRoute
+              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
         # Verify KongRoute has strip_path: true
         - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
             content: |
-              kubectl get kongroute -n ($kong_namespace) -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].spec.strip_path}'
+              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].spec.strip_path}'
             check:
               ($stdout == 'true'): true
         # Get the Gateway proxy IP
         - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($kong_namespace)
             content: |
-              kubectl get gateway ($gateway_name) -n ($kong_namespace) -o jsonpath='{.status.addresses[0].value}'
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
             outputs:
               - name: proxy_ip
                 value: ($stdout)
