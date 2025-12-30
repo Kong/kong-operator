@@ -12,8 +12,14 @@ spec:
   rules:
     - matches:
         - path:
+            type: Exact
+            value: /get
+        - path:
+            type: Exact
+            value: /post
+        - path:
             type: PathPrefix
-            value: /echo
+            value: /status
       backendRefs:
-        - name: echo
-          port: 1027
+        - name: httpbin
+          port: 80

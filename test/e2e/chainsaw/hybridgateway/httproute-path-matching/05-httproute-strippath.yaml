@@ -4,6 +4,8 @@ apiVersion: gateway.networking.k8s.io/v1
 metadata:
   name: ($httproute_name)
   namespace: ($kong_namespace)
+  annotations:
+    konghq.com/strip-path: "true"
 spec:
   parentRefs:
     - group: gateway.networking.k8s.io
@@ -13,7 +15,7 @@ spec:
     - matches:
         - path:
             type: PathPrefix
-            value: /echo
+            value: /api
       backendRefs:
-        - name: echo
-          port: 1027
+        - name: httpbin
+          port: 80

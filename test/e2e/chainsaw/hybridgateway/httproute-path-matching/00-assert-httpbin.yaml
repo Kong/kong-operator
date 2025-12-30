@@ -1,19 +1,16 @@
 ---
-# Assert httpbin Service exists
 apiVersion: v1
 kind: Service
 metadata:
   name: httpbin
   namespace: ($kong_namespace)
 ---
-# Assert httpbin Deployment is ready
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: httpbin
   namespace: ($kong_namespace)
 status:
-  # Filter conditions array to check for Available condition
   (conditions[?type == 'Available']):
     - status: 'True'
   readyReplicas: 1
