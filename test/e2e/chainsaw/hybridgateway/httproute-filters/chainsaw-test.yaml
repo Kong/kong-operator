@@ -29,6 +29,8 @@ spec:
       value: ($kong_namespace)
     - name: gateway_dataplane_image
       value: "kong/kong-gateway:3.12"
+    - name: operator_namespace
+      value: kong-system
     
   timeouts:
     apply: 120s
@@ -46,6 +48,24 @@ spec:
             file: 00-httpbin.yaml
         - assert:
             file: 00-assert-httpbin.yaml
+        - assert:
+            file: 01-assert-prerequisites.yaml
+      catch:
+        - description: Get Gateway resource status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: Gateway
+            namespace: ($gateway_namespace)
+        - description: Get Pods in gateway namespace
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: ($gateway_namespace)
+        - description: Get operator logs
+          podLogs:
+            namespace: ($operator_namespace)
+            selector: control-plane=controller-manager
+            tail: 100
     # Step 2: Create the HTTPRoute for testing the request header modifier filter
     - name: create-httproute-for-request-header-modifier-filter
       description: Create the HTTPRoute for testing and verify that request header modifier filter works
@@ -68,16 +88,21 @@ spec:
               kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
             outputs:
               - name: proxy_ip
-                value: ($stdout) 
+                value: ($stdout)
         # Wait until the route works
         - description: Test connectivity from outside the cluster
           script:
             env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
               - name: PROXY_IP
                 value: ($proxy_ip)
               - name: ROUTE_PATH
                 value: ($route_path)
             content: |
+              echo "Accessing gateway ${GATEWAY_NAMESPACE}/${GATEWAY_NAME} at ${PROXY_IP}"
               curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}/status/200
             check:
               (contains($stdout, '200')): true
