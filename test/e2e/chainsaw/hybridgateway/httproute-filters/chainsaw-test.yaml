@@ -35,6 +35,7 @@ spec:
   timeouts:
     apply: 120s
     assert: 300s
+    cleanup: 120s
     delete: 120s
   
   steps:
