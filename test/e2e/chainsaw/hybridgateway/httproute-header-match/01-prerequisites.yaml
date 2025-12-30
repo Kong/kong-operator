@@ -1,0 +1,149 @@
+---
+# Namespace for Kong resources
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ($kong_namespace)
+---
+# Namespace for default resources
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
+---
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-dev-1
+  namespace: ($gateway_namespace)
+spec:
+  type: token
+  token: (env('KONNECT_TOKEN'))
+  serverURL: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+---
+kind: GatewayConfiguration
+apiVersion: gateway-operator.konghq.com/v2beta1
+metadata:
+  name: ($gateway_configuration_name)
+  namespace: ($gateway_namespace)
+spec:
+  konnect:
+    authRef:
+      name: konnect-api-auth-dev-1
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            image: ($gateway_proxy_image)
+---
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($gateway_class_name)
+spec:
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: ($gateway_configuration_name)
+    namespace: ($gateway_namespace)
+---
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($gateway_name)
+  namespace: ($gateway_namespace)
+spec:
+  gatewayClassName: ($gateway_class_name)
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: echo
+  name: ($echo_service_name)
+  namespace: ($echo_service_namespace)
+spec:
+  ports:
+    - port: 1025
+      name: tcp
+      protocol: TCP
+      targetPort: 1025
+    - port: 1026
+      name: udp
+      protocol: TCP
+      targetPort: 1026
+    - port: 1027
+      name: http
+      protocol: TCP
+      targetPort: 1027
+    - port: 1030
+      name: tls
+      protocol: TCP
+      targetPort: 1030
+  selector:
+    app: echo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: echo
+  name: ($echo_service_name)
+  namespace: ($echo_service_namespace)
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: echo
+    spec:
+      containers:
+        - image: kong/go-echo:latest
+          name: echo
+          ports:
+            - containerPort: 1025
+            - containerPort: 1026
+            - containerPort: 1027
+            - containerPort: 1030
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 1027
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 210m
+              memory: 256Mi
+---
