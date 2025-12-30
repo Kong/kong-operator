@@ -5,8 +5,10 @@ metadata:
   name: httproute-method-matching
 spec:
   description: |
-    This test validates HTTPRoute method matching scenarios for single HTTP methods
-    including GET, POST, PUT, DELETE, and PATCH.
+    This test validates HTTPRoute method matching scenarios including:
+    - Single HTTP method (GET, POST, PUT, DELETE, PATCH)
+    - Multiple HTTP methods in single rule
+    - Method matching combined with path matching
 
   bindings:
     - name: kong_namespace
@@ -570,6 +572,282 @@ spec:
                 echo "FAIL"
                 exit 1
               fi
+      catch:
+        - description: Get HTTPRoute status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($kong_namespace)
+        - description: Get KongRoute resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($kong_namespace)
+        - description: Describe KongRoute
+          script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml
+
+    # Step 7: Test multiple HTTP methods in single rule
+    - name: test-multiple-methods-single-rule
+      description: Update HTTPRoute to use multiple HTTP methods (GET, POST, PUT) in a single rule
+      try:
+        # Collect old KongRoute name before update
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
+            outputs:
+              - name: old_kongroute_names
+                value: ($stdout)
+        # Apply the update
+        - apply:
+            file: 07-httproute-multiple-methods.yaml
+        - assert:
+            file: 02-assert-httproute.yaml
+        # Wait for old KongRoute to be deleted
+        - script:
+            env:
+              - name: OLD_NAMES
+                value: ($old_kongroute_names)
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              if [ -n "$OLD_NAMES" ]; then
+                for name in $OLD_NAMES; do
+                  echo "Waiting for old KongRoute $name to be deleted..."
+                  kubectl wait --for=delete kongroute/$name -n ${KONG_NAMESPACE} --timeout=60s || true
+                done
+              fi
+        # Wait for new KongRoute to be programmed
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
+        # Verify KongRoute has multiple methods
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              METHODS=$(kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].spec.methods}')
+              echo "Methods: $METHODS"
+              echo "$METHODS" | grep -q "GET" && echo "$METHODS" | grep -q "POST" && echo "$METHODS" | grep -q "PUT"
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Test GET method on /anything - should return 200
+        - description: Test GET method on /anything returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/anything
+            check:
+              (contains($stdout, '200')): true
+        # Test POST method on /anything - should return 200
+        - description: Test POST method on /anything returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/anything
+            check:
+              (contains($stdout, '200')): true
+        # Test PUT method on /anything - should return 200
+        - description: Test PUT method on /anything returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PUT http://${PROXY_IP}/anything
+            check:
+              (contains($stdout, '200')): true
+        # Test DELETE method on /anything - should return 404 or 405 (not in allowed methods)
+        - description: Test DELETE method on /anything returns non-200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X DELETE http://${PROXY_IP}/anything)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+      catch:
+        - description: Get HTTPRoute status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($kong_namespace)
+        - description: Get KongRoute resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($kong_namespace)
+        - description: Describe KongRoute
+          script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml
+
+    # Step 8: Test method matching combined with path matching
+    - name: test-method-path-combined
+      description: Update HTTPRoute to use method matching combined with different path matching
+      try:
+        # Collect old KongRoute name before update
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
+            outputs:
+              - name: old_kongroute_names
+                value: ($stdout)
+        # Apply the update
+        - apply:
+            file: 08-httproute-method-path-combined.yaml
+        - assert:
+            file: 02-assert-httproute.yaml
+        # Wait for old KongRoute to be deleted
+        - script:
+            env:
+              - name: OLD_NAMES
+                value: ($old_kongroute_names)
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              if [ -n "$OLD_NAMES" ]; then
+                for name in $OLD_NAMES; do
+                  echo "Waiting for old KongRoute $name to be deleted..."
+                  kubectl wait --for=delete kongroute/$name -n ${KONG_NAMESPACE} --timeout=60s || true
+                done
+              fi
+        # Wait for new KongRoutes to be programmed (multiple rules = multiple KongRoutes)
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Test GET /get - should return 200
+        - description: Test GET /get returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/get
+            check:
+              (contains($stdout, '200')): true
+        # Test POST /get - should return 404 or 405 (wrong method for /get path)
+        - description: Test POST /get returns non-200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/get)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+        # Test POST /post - should return 200
+        - description: Test POST /post returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/post
+            check:
+              (contains($stdout, '200')): true
+        # Test GET /post - should return 404 or 405 (wrong method for /post path)
+        - description: Test GET /post returns non-200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/post)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+        # Test GET /anything - should return 200 (any method allowed on /anything)
+        - description: Test GET /anything returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/anything
+            check:
+              (contains($stdout, '200')): true
+        # Test POST /anything - should return 200 (any method allowed on /anything)
+        - description: Test POST /anything returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/anything
+            check:
+              (contains($stdout, '200')): true
+        # Test DELETE /anything - should return 200 (any method allowed on /anything)
+        - description: Test DELETE /anything returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X DELETE http://${PROXY_IP}/anything
+            check:
+              (contains($stdout, '200')): true
       catch:
         - description: Get HTTPRoute status
           get:
