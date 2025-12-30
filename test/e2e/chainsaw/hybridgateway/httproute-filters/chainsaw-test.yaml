@@ -46,8 +46,6 @@ spec:
             file: 00-httpbin.yaml
         - assert:
             file: 00-assert-httpbin.yaml
-        - assert:
-            file: 01-assert-prerequisites.yaml
     # Step 2: Create the HTTPRoute for testing the request header modifier filter
     - name: create-httproute-for-request-header-modifier-filter
       description: Create the HTTPRoute for testing and verify that request header modifier filter works

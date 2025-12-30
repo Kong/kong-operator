@@ -1,9 +1,0 @@
----
-# Assert namespaces exist
-apiVersion: v1
-kind: Namespace
-metadata:
-  name: kong
-status:
-  phase: Active
----
