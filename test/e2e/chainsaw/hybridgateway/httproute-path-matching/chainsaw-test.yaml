@@ -14,11 +14,11 @@ spec:
     - name: konnect_api_auth_name
       value: konnect-api-auth-dev-1
     - name: gateway_class_name
-      value: kong-path-matching
+      value: (join('-', ['kong', 'httproute-path-matching', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
     - name: gateway_configuration_name
-      value: kong-path-matching
+      value: ($gateway_class_name)
     - name: gateway_name
-      value: kong-path-matching
+      value: ($gateway_class_name)
     - name: httproute_name
       value: path-matching
 
