@@ -1,0 +1,373 @@
+# HTTPRoute extenstionRef filter test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-extensionref-filter
+spec:
+  description: |
+    This test validates that the hybrid gateway controller correctly
+    processes the `extensionRef` filter to attach plugins by `KongPlugin`
+    to HTTPRoutes.
+
+  bindings:
+    - name: kong_namespace
+      value: (join('-', ['kong', 'httproute-extensionref-filter', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: gateway_class_name
+      value:  (join('-', ['kong', 'httproute-extensionref-filter', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: gateway_name
+      value: ($gateway_class_name)
+    - name: gateway_configuration_name
+      value: ($gateway_class_name)
+    - name: gateway_namespace
+      value: ($kong_namespace)
+    - name: http_route_namespace
+      value: ($kong_namespace)
+    - name: httpbin_service_name
+      value: httpbin
+    - name: httpbin_service_namespace
+      value: ($kong_namespace)
+    - name: gateway_dataplane_image
+      value: "kong/kong-gateway:3.12"
+    - name: operator_namespace
+      value: kong-system
+
+  timeouts:
+    apply: 120s
+    assert: 300s
+    cleanup: 300s
+    delete: 120s
+
+  steps:
+  # Step 1: Create prerequisite resources
+    - name: create-prerequisites
+      description: Create GatewayClass, Gateway, and backend Service
+      try:
+        - apply:
+            file: 01-prerequisites.yaml
+        - apply:
+            file: 00-httpbin.yaml
+        - assert:
+            file: 00-assert-httpbin.yaml
+        - assert:
+            file: 01-assert-prerequisites.yaml
+      catch:
+        - description: Get Gateway resource status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: Gateway
+            namespace: ($gateway_namespace)
+        - description: Get Pods in gateway namespace
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: ($gateway_namespace)
+        - description: Get operator logs
+          podLogs:
+            namespace: ($operator_namespace)
+            selector: control-plane=controller-manager
+            tail: 100
+    # Step 2: Create the HTTPRoute and attach the rate-limiting plugin to it
+    - name: create-httproute-with-rate-limiting-plugin
+      description: Create an HTTPRoute with ExtensionRef filter to attach a rate-limiting plugin
+      bindings:
+        - name: http_route_name
+          value: (join('-', ['httproute-extensionref-filter-single-plugin', env('TEST_ID') || 'local']))
+        - name: route_path
+          value: "/extension-ref-with-single-plugin"
+        - name: rate_limiting_plugin_name
+          value: rate-limit-plugin-single-filter
+        - name: rate_limiting_plugin_namespace
+          value: ($http_route_namespace)
+      try:
+        - apply: 
+            file: 02-httproute-extensionref-filter-single-plugin.yaml
+        - assert:
+            file: 02-assert-httproute-extensionref-filter-single-plugin.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Try accessing the path and check the header related to rate limiting
+        - description: Test connectivity from outside the cluster
+          script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              echo "Accessing gateway ${GATEWAY_NAMESPACE}/${GATEWAY_NAME} at ${PROXY_IP}"
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s --include http://${PROXY_IP}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200 OK')): true
+              "(contains($stdout, 'X-RateLimit-Limit-Minute: 20'))": true
+      catch:
+        # Dump HTTPRoute and related KongRoutes, KongPlugins and KongPluginBindings.
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            name: ($http_route_name)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPlugins
+          get:
+            apiVersion: configuration.konghq.com/v1
+            kind: KongPlugin
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPluginBindings
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongPluginBinding
+            namespace: ($http_route_namespace)
+    # Step 3: Create an HTTPRoute with multiple extentionRef filters with multiple plugins attached.
+    - name: create-httproute-with-multiple-plugins
+      description: Create an HTTPRoute with 2 ExtensionRef filters to attach a rate-limiting and a response-transformer plugins
+      bindings:
+        - name: http_route_name
+          value: (join('-', ['httproute-extensionref-filter-multiple-plugin', env('TEST_ID') || 'local']))
+        - name: route_path
+          value: "/extension-ref-with-multiple-plugins"
+        - name: rate_limiting_plugin_name
+          value: rate-limit-multiple-filters
+        - name: response_transformer_plugin_name
+          value: response-transformer-plugin-multiple-filters
+      try:
+        - apply:
+            file: 03-httproute-extensionref-multiple-plugins.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Try accessing the path and check the header related to rate limiting
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              echo "Accessing gateway ${GATEWAY_NAMESPACE}/${GATEWAY_NAME} at ${PROXY_IP}"
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s --include http://${PROXY_IP}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200 OK')): true
+              "(contains($stdout, 'X-RateLimit-Limit-Minute: 20'))": true
+              "(contains($stdout, 'X-Add: foo'))": true
+      catch:
+        # Dump HTTPRoute and related KongRoutes, KongPlugins and KongPluginBindings.
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            name: ($http_route_name)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPlugins
+          get:
+            apiVersion: configuration.konghq.com/v1
+            kind: KongPlugin
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPluginBindings
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongPluginBinding
+            namespace: ($http_route_namespace)
+  # Step 4: Update the KongPlugin after HTTPRoute is programmed
+    - name: update-kongplugin-for-attached-httproute
+      description: Update KongPlugin which is attached to an HTTPRoute by extensionRef filter
+      bindings:
+        - name: http_route_name
+          value: (join('-', ['httproute-extensionref-filter-update-kongplugin', env('TEST_ID') || 'local'])) 
+        - name: route_path
+          value: "/httproute-extensionref-filter-update-kongplugin"
+        - name: rate_limiting_plugin_name
+          value: rate-limit-plugin-update-kongplugin
+        - name: rate_limiting_plugin_namespace
+          value: ($http_route_namespace)
+      try:
+        - apply: 
+            file: 04-httproute-extensionref-filter-update-kongplugin-base.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              echo "Accessing gateway ${GATEWAY_NAMESPACE}/${GATEWAY_NAME} at ${PROXY_IP}"
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s --include http://${PROXY_IP}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200 OK')): true
+              "(contains($stdout, 'X-RateLimit-Limit-Minute: 20'))": true
+      # Update the KongPlugin.
+        - description: Update the KongPlugin
+          apply:
+            file: 04-httproute-extensionref-filter-update-kongplugin-patch.yaml
+      # Wait until the X-RateLimit-Limit-Minute header changes.
+        - script:
+            timeout: 90s
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              RATELIMIT_LIMIT_MINUTE_HEADER=""
+              while [ "$RATELIMIT_LIMIT_MINUTE_HEADER" != "X-RateLimit-Limit-Minute: 30" ]; do
+                RATELIMIT_LIMIT_MINUTE_HEADER=$(curl -s --include http://${PROXY_IP}${ROUTE_PATH}/status/200 | grep "X-RateLimit-Limit-Minute")
+                TIME=$(date "+%H:%M:%S")
+                echo $TIME
+                echo $RATELIMIT_LIMIT_MINUTE_HEADER
+                if [ "$RATELIMIT_LIMIT_MINUTE_HEADER" = "X-RateLimit-Limit-Minute: 30" ]; then echo OK; exit 0; fi
+                sleep 5
+              done
+              echo "FAIL"; exit 1
+            check:
+              "(contains($stdout, 'X-RateLimit-Limit-Minute: 30'))": true
+      catch:
+        # Dump HTTPRoute and related KongRoutes, KongPlugins and KongPluginBindings.
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            name: ($http_route_name)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPlugins
+          get:
+            apiVersion: configuration.konghq.com/v1
+            kind: KongPlugin
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPluginBindings
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongPluginBinding
+            namespace: ($http_route_namespace)
+    # Step 5: Add extensionRef filter to an HTTPRoute with an existing extensionRef filter
+    - name: create-httproute-with-multiple-plugins
+      description: Create an HTTPRoute with 2 ExtensionRef filters to attach a rate-limiting and a response-transformer plugins
+      bindings:
+        - name: http_route_name
+          value: (join('-', ['httproute-extensionref-filter-add-filter', env('TEST_ID') || 'local']))
+        - name: route_path
+          value: "/extension-ref-add-filter"
+        - name: rate_limiting_plugin_name
+          value: rate-limit-plugin-add-filter
+        - name: response_transformer_plugin_name
+          value: response-transformer-plugin-add-filter
+      try:
+        - apply:
+            file: 05-httproute-extensionref-add-filter-base.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Try accessing the path and check the header related to rate limiting
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              echo "Accessing gateway ${GATEWAY_NAMESPACE}/${GATEWAY_NAME} at ${PROXY_IP}"
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s --include http://${PROXY_IP}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200 OK')): true
+              "(contains($stdout, 'X-RateLimit-Limit-Minute: 30'))": true
+        # Update the HTTPRoute to add an extensionRef
+        - apply:
+            file: 05-httproute-extensionref-add-filter-patch.yaml
+        # Wait until the X-Add header appears.
+        - script:
+            timeout: 60s
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              X_ADD_HEADER=""
+              while [ "$X_ADD_HEADER" != "X-Add: foo" ]; do
+                X_ADD_HEADER=$(curl -s --include http://${PROXY_IP}${ROUTE_PATH}/status/200 | grep "X-Add")
+                TIME=$(date "+%H:%M:%S")
+                echo $TIME
+                echo $X_ADD_HEADER
+                if [ "$X_ADD_HEADER" = "X-Add: foo" ]; then echo OK; exit 0; fi
+                sleep 5
+              done
+            check:
+              "(contains($stdout, 'X-Add: foo'))": true
