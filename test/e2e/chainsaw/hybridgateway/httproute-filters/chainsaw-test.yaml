@@ -11,16 +11,22 @@ spec:
     and `URLRewrite`.
 
   bindings:
+    - name: kong_namespace
+      value: (join('-', ['kong', 'httproute-filters', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: gateway_class_name
+      value:  (join('-', ['kong', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
     - name: gateway_name
-      value: (join('-', ['kong', env('TEST_ID') || 'local']))
+      value: ($gateway_class_name)
+    - name: gateway_configuration_name
+      value: ($gateway_class_name)
     - name: gateway_namespace
-      value: kong
+      value: ($kong_namespace)
     - name: http_route_namespace
-      value: kong
+      value: ($kong_namespace)
     - name: httpbin_service_name
       value: httpbin
     - name: httpbin_service_namespace
-      value: kong
+      value: ($kong_namespace)
     - name: gateway_dataplane_image
       value: "kong/kong-gateway:3.12"
     
@@ -38,20 +44,6 @@ spec:
             file: 01-prerequisites.yaml
         - apply:
             file: 00-httpbin.yaml
-        # Assert common Konnect and Gateway resources.
-        #- assert:
-        #    file: ../common/assertions/konnect-apiauth.yaml
-        #- assert:
-        #    file: ../common/assertions/gatewayclass.yaml
-        #- assert:
-        #    file: ../common/assertions/gatewayconfiguration.yaml
-        #- assert:
-        #    file: ../common/assertions/gateway.yaml
-        #- assert:
-        #    file: ../common/assertions/konnect-gateway-controlplane.yaml
-        #- assert:
-        #    file: ../common/assertions/konnect-extension.yaml
-        # Assert test-specific resources (namespaces, service, deployment)
         - assert:
             file: 00-assert-httpbin.yaml
         - assert:
@@ -105,6 +97,33 @@ spec:
               (contains($stdout, 'X-Add')): true
               (contains($stdout, 'X-Set')): true
               (contains($stdout, 'X-Remove')): false
+        # Dump HTTPRoute and related KongRoutes, KongPlugins and KongPluginBindings.
+      catch:
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            name: ($http_route_name)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPlugins
+          get:
+            apiVersion: configuration.konghq.com/v1
+            kind: KongPlugin
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPluginBindings
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongPluginBinding
+            namespace: ($http_route_namespace)
+            format: yaml
     # Step 3: Create the HTTPRoute for testing response header modifier
     - name: create-httproute-for-response-header-modifier-filter
       description: Create the HTTPRoute for verifying that respomse header modifier filter works
@@ -155,6 +174,32 @@ spec:
               "(contains($stdout, 'X-Add: bar'))": true
               "(contains($stdout, 'X-Set: foo'))": true
               (contains($stdout, 'X-Remove')): false
+      catch:
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            name: ($http_route_name)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPlugins
+          get:
+            apiVersion: configuration.konghq.com/v1
+            kind: KongPlugin
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPluginBindings
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongPluginBinding
+            namespace: ($http_route_namespace)
+            format: yaml
     # Step 4: Create the HTTPRoute for testing request redirect filter
     - name: create-httproute-for-request-redirect-filter
       description: Create the HTTPRoute for verifying the request redirect filter
@@ -206,6 +251,32 @@ spec:
             # Should redirect to /redirect-target/status/200 and proxied to /status/200 of httpbin service by Kong DP.
             check:
               (contains($stdout, '200')): true
+      catch:
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            name: ($http_route_name)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPlugins
+          get:
+            apiVersion: configuration.konghq.com/v1
+            kind: KongPlugin
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPluginBindings
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongPluginBinding
+            namespace: ($http_route_namespace)
+            format: yaml
     # Step 5: Create the HTTPRoute for testing URL rewrite filter
     - name: create-httproute-for-url-rewrite-filter
       description: Create the HTTPRoute for verifying the request redirect filter
@@ -241,4 +312,29 @@ spec:
               curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}
             check:
               (contains($stdout, '200')): true
- 
+      catch:
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            name: ($http_route_name)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPlugins
+          get:
+            apiVersion: configuration.konghq.com/v1
+            kind: KongPlugin
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPluginBindings
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongPluginBinding
+            namespace: ($http_route_namespace)
+            format: yaml

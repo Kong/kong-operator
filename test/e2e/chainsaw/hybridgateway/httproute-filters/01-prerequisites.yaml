@@ -24,7 +24,7 @@ spec:
 kind: GatewayConfiguration
 apiVersion: gateway-operator.konghq.com/v2beta1
 metadata:
-  name: ($gateway_name)
+  name: ($gateway_configuration_name)
   namespace: ($gateway_namespace)
 spec:
   konnect:
@@ -41,7 +41,7 @@ spec:
 kind: GatewayClass
 apiVersion: gateway.networking.k8s.io/v1
 metadata:
-  name: ($gateway_name)
+  name: ($gateway_class_name)
 spec:
   controllerName: konghq.com/gateway-operator
   parametersRef:
@@ -56,7 +56,7 @@ metadata:
   name: ($gateway_name)
   namespace: ($gateway_namespace)
 spec:
-  gatewayClassName: ($gateway_name)
+  gatewayClassName: ($gateway_class_name)
   listeners:
   - name: http
     protocol: HTTP
