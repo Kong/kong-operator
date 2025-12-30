@@ -3,7 +3,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: kong
+  name: ($kong_namespace)
 status:
   phase: Active
 ---
@@ -11,18 +11,44 @@ status:
 apiVersion: v1
 kind: Service
 metadata:
-  name: echo
-  namespace: kong
+  name: ($echo_service_name)
+  namespace: ($echo_service_namespace)
 ---
 # Assert Deployment is ready
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: echo
-  namespace: kong
+  name: ($echo_service_name)
+  namespace: ($echo_service_namespace)
 status:
   # Filter conditions array to check for Available condition
   (conditions[?type == 'Available']):
     - status: 'True'
   readyReplicas: 1
   replicas: 1
+---
+# Assert Gateway is ready
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($kong_namespace)
+status:
+  (conditions[?type == 'Accepted']):
+    - status: 'True'
+      reason: Accepted
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'DataPlaneReady']):
+    - status: 'True'
+      reason: Ready
+  (conditions[?type == 'KonnectGatewayControlPlaneProgrammed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'KonnectExtensionReady']):
+    - status: 'True'
+      reason: Ready
+  (conditions[?type == 'GatewayService']):
+    - status: 'True'
+      reason: Ready

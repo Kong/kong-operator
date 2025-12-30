@@ -12,7 +12,35 @@ spec:
   timeouts:
     apply: 120s
     assert: 300s
+    cleanup: 120s
     delete: 120s
+
+  bindings:
+    - name: kong_namespace
+      value: (join('-', ['kong', 'httproute-header-match', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: konnect_api_auth_name
+      value: konnect-api-auth-dev-1
+    - name: gateway_class_name
+      value: (join('-', ['kong', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: gateway_configuration_name
+      value: ($gateway_class_name)
+    - name: gateway_name
+      value: ($gateway_class_name)
+    - name: gateway_namespace
+      value: ($kong_namespace)
+    - name: http_route_name
+      value: echo-header-match
+    - name: http_route_namespace
+      value: ($kong_namespace)
+    - name: echo_service_name
+      value: echo
+    - name: echo_service_namespace
+      value: ($kong_namespace)
+    - name: operator_namespace
+      value: kong-system
+    - name: gateway_proxy_image
+      value: kong/kong-gateway:3.12
+ 
 
   steps:
   # Step 1: Create prerequisite resources
@@ -21,19 +49,6 @@ spec:
     try:
       - apply:
           file: 01-prerequisites.yaml # TODO: Move the prerequisites.yaml to common?
-      # Assert common Konnect and Gateway resources.
-      - assert:
-          file: ../common/assertions/konnect-apiauth.yaml
-      - assert:
-          file: ../common/assertions/gatewayclass.yaml
-      - assert:
-          file: ../common/assertions/gatewayconfiguration.yaml
-      - assert:
-          file: ../common/assertions/gateway.yaml
-      - assert:
-          file: ../common/assertions/konnect-gateway-controlplane.yaml
-      - assert:
-          file: ../common/assertions/konnect-extension.yaml
       # Assert test-specific resources (namespaces, service, deployment)
       - assert:
           file: 01-assert-prerequisites.yaml
@@ -43,57 +58,42 @@ spec:
         get:
           apiVersion: gateway.networking.k8s.io/v1
           kind: Gateway
-          namespace: kong
+          namespace: ($gateway_namespace)
       - description: Get DataPlane resources
         get:
           apiVersion: gateway-operator.konghq.com/v1beta1
           kind: DataPlane
-          namespace: kong
+          namespace: ($gateway_namespace)
       - description: Get ControlPlane resources
         get:
           apiVersion: gateway-operator.konghq.com/v1beta1
           kind: ControlPlane
-          namespace: kong
-      - description: Get Pods in kong namespace
+          namespace: ($gateway_namespace)
+      - description: Get Pods in the namespace of the gateway
         get:
           apiVersion: v1
           kind: Pod
-          namespace: kong
+          namespace: ($gateway_namespace)
       - description: Describe Gateway
         describe:
           apiVersion: gateway.networking.k8s.io/v1
           kind: Gateway
-          namespace: kong
+          namespace: ($gateway_namespace)
           showEvents: true
       - description: Describe DataPlane
         describe:
           apiVersion: gateway-operator.konghq.com/v1beta1
           kind: DataPlane
-          namespace: kong
+          namespace: ($gateway_namespace)
           showEvents: true
       - description: Get events from kong namespace
         events:
-          namespace: kong
+          namespace: ($gateway_namespace)
       - description: Get operator logs
         podLogs:
-          namespace: kong-system
+          namespace: ($operator_namespace)
           selector: control-plane=controller-manager
           tail: 100
-      - description: Get all Pod logs in kong namespace
-        script:
-          content: |
-            echo "=== Listing all Pods in kong namespace ==="
-            kubectl get pods -n kong -o wide
-            echo ""
-            echo "=== Pod details and logs ==="
-            for pod in $(kubectl get pods -n kong -o jsonpath='{.items[*].metadata.name}'); do
-              echo "--- Pod: $pod ---"
-              kubectl describe pod $pod -n kong | tail -50
-              echo ""
-              echo "--- Logs for $pod ---"
-              kubectl logs $pod -n kong --all-containers --tail=50 2>/dev/null || echo "No logs available"
-              echo ""
-            done
   # Step 2: Create an HTTPRoute that matches a single header and verify the routes are correctly configured
   - name: create-httproute-single-header-match
     description: Create an HTTPRoute that matches a single header
@@ -105,23 +105,11 @@ spec:
           file: 02-assert-httproute-single-header-match.yaml
       # Collect bindings for connectivity tests
       - script:
-          content: |
-            kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
-          outputs:
-            - name: hybrid_gateway_name
-              value: ($stdout)
-      - script:
-          content: |
-            kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
-          outputs:
-            - name: hybrid_gateway_namespace
-              value: ($stdout)
-      - script:
           env:
             - name: GATEWAY_NAME
-              value: ($hybrid_gateway_name)
+              value: ($gateway_name)
             - name: GATEWAY_NAMESPACE
-              value: ($hybrid_gateway_namespace)
+              value: ($gateway_namespace)
           content: |
             kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
           outputs:
@@ -158,37 +146,20 @@ spec:
             curl --header "single-header-1:v2" -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/
           check:
             (contains($stdout, '404')): true
-    # Dump HTTPRoute status and KongService, KongRoute, KongUpstream and KongTarget for debugging.
+    # Dump HTTPRoute status and KongRoute for debugging.
     catch:
       - description: Get HTTPRoute status
         get:
           apiVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
-          namespace: kong
-          format: yaml
-      - description: Get KongService
-        get:
-          apiVersion: configuration.konghq.com/v1alpha1
-          kind: KongService
-          namespace: kong
+          namespace: ($http_route_namespace)
+          name: ($http_route_name)
           format: yaml
       - description: Get KongRoute
         get:
           apiVersion: configuration.konghq.com/v1alpha1
           kind: KongRoute
-          namespace: kong
-          format: yaml
-      - description: Get KongUpstream
-        get:
-          apiVersion: configuration.konghq.com/v1alpha1
-          kind: KongUpstream
-          namespace: kong
-          format: yaml
-      - description: Get KongTarget
-        get:
-          apiVersion: configuration.konghq.com/v1alpha1
-          kind: KongTarget
-          namespace: kong
+          namespace: ($http_route_namespace)
           format: yaml
   # Step 3: Update the HTTPRoute to match multiple headers.
   - name: update-httproute-multiple-header-match
@@ -200,23 +171,11 @@ spec:
           file: 03-assert-update-httproute-multiple-header-match.yaml
  # Collect bindings for connectivity tests
       - script:
-          content: |
-            kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
-          outputs:
-            - name: hybrid_gateway_name
-              value: ($stdout)
-      - script:
-          content: |
-            kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
-          outputs:
-            - name: hybrid_gateway_namespace
-              value: ($stdout)
-      - script:
           env:
             - name: GATEWAY_NAME
-              value: ($hybrid_gateway_name)
+              value: ($gateway_name)
             - name: GATEWAY_NAMESPACE
-              value: ($hybrid_gateway_namespace)
+              value: ($gateway_namespace)
           content: |
             kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
           outputs:
@@ -252,37 +211,20 @@ spec:
             curl --header "multiple-header-1:v2" --header "multiple-header-2:v2" -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/
           check:
             (contains($stdout, '404')): true
-    # Dump HTTPRoute status and KongServices, KongRoutes, KongUpstreams, KongTargets for debugging.
+    # Dump HTTPRoute status and KongRoute for debugging.
     catch:
       - description: Get HTTPRoute status
         get:
           apiVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
-          namespace: kong
+          namespace: ($http_route_namespace)
+          name: ($http_route_name)
           format: yaml   
-      - description: Get KongService
-        get:
-          apiVersion: configuration.konghq.com/v1alpha1
-          kind: KongService
-          namespace: kong
-          format: yaml
       - description: Get KongRoute
         get:
           apiVersion: configuration.konghq.com/v1alpha1
           kind: KongRoute
-          namespace: kong
-          format: yaml
-      - description: Get KongUpstream
-        get:
-          apiVersion: configuration.konghq.com/v1alpha1
-          kind: KongUpstream
-          namespace: kong
-          format: yaml
-      - description: Get KongTarget
-        get:
-          apiVersion: configuration.konghq.com/v1alpha1
-          kind: KongTarget
-          namespace: kong
+          namespace: ($http_route_namespace)
           format: yaml
 
   # Step 4: Update the HTTPRoute to regex header matching
@@ -295,23 +237,11 @@ spec:
           file: 04-assert-update-httproute-regex-header-match.yaml
  # Collect bindings for connectivity tests
       - script:
-          content: |
-            kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.name}'
-          outputs:
-            - name: hybrid_gateway_name
-              value: ($stdout)
-      - script:
-          content: |
-            kubectl get gateway -n kong -o jsonpath='{.items[0].metadata.namespace}'
-          outputs:
-            - name: hybrid_gateway_namespace
-              value: ($stdout)
-      - script:
           env:
             - name: GATEWAY_NAME
-              value: ($hybrid_gateway_name)
+              value: ($gateway_name)
             - name: GATEWAY_NAMESPACE
-              value: ($hybrid_gateway_namespace)
+              value: ($gateway_namespace)
           content: |
             kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
           outputs:
@@ -338,35 +268,18 @@ spec:
             curl --header "regex-header-1:123" -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/
           check:
             (contains($stdout, '404')): true
-    # Dump HTTPRoute status and KongServices, KongRoutes, KongUpstreams, KongTargets for debugging.
+    # Dump HTTPRoute status and KongRoute for debugging.
     catch:
       - description: Get HTTPRoute status
         get:
           apiVersion: gateway.networking.k8s.io/v1
           kind: HTTPRoute
-          namespace: kong
-          format: yaml
-      - description: Get KongService
-        get:
-          apiVersion: configuration.konghq.com/v1alpha1
-          kind: KongService
-          namespace: kong
+          namespace: ($http_route_namespace)
+          name: ($http_route_name)
           format: yaml
       - description: Get KongRoute
         get:
           apiVersion: configuration.konghq.com/v1alpha1
           kind: KongRoute
-          namespace: kong
-          format: yaml
-      - description: Get KongUpstream
-        get:
-          apiVersion: configuration.konghq.com/v1alpha1
-          kind: KongUpstream
-          namespace: kong
-          format: yaml
-      - description: Get KongTarget
-        get:
-          apiVersion: configuration.konghq.com/v1alpha1
-          kind: KongTarget
-          namespace: kong
+          namespace: ($http_route_namespace)
           format: yaml
