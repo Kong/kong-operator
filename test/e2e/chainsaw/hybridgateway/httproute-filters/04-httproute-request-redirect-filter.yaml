@@ -1,0 +1,44 @@
+---
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($http_route_name)
+  namespace: ($http_route_namespace)
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /httpbin-request-redirect-replace-full-path
+      filters:
+        - type: RequestRedirect
+          requestRedirect:
+            statusCode: 301
+            hostname: ($redirect_host)
+            path:
+              type: ReplaceFullPath
+              replaceFullPath: "/redirect-target/status/200"
+    # ReplacePrefixMatch request redirect filter is not supported yet: https://github.com/Kong/kong-operator/issues/2466
+    # - matches:
+    #  - path:
+    #      type: PathPrefix
+    #      value: /httpbin-request-redirect-replace-prefix-match
+    #  filters:
+    #    - type: RequestRedirect
+    #      requestRedirect:
+    #        # TODO: the redirect plugin does not support an empty host in the redirect URL which specifies to use the host in the `Host` header in the request. 
+    #        hostname: ($redirect_host)
+    #        path:
+    #         type: ReplacePrefixMatch
+    #          replacePrefixMatch: "/redirect-target"
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /redirect-target
+      backendRefs:
+        - name: ($httpbin_service_name)
+          port: 80

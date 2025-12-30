@@ -1,0 +1,364 @@
+# HTTPRoute filters test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-filters
+spec:
+  description: |
+    This test validates that the hybrid gateway controller correctly
+    processes the currently supported filters in HTTPRoute, including:
+    `RequestHeaderModifier`, `ResponseHeaderModifier`, `RequestRedirect`
+    and `URLRewrite`.
+
+  bindings:
+    - name: kong_namespace
+      value: (join('-', ['kong', 'httproute-filters', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: gateway_class_name
+      value:  (join('-', ['kong', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: gateway_name
+      value: ($gateway_class_name)
+    - name: gateway_configuration_name
+      value: ($gateway_class_name)
+    - name: gateway_namespace
+      value: ($kong_namespace)
+    - name: http_route_namespace
+      value: ($kong_namespace)
+    - name: httpbin_service_name
+      value: httpbin
+    - name: httpbin_service_namespace
+      value: ($kong_namespace)
+    - name: gateway_dataplane_image
+      value: "kong/kong-gateway:3.12"
+    - name: operator_namespace
+      value: kong-system
+    
+  timeouts:
+    apply: 120s
+    assert: 300s
+    cleanup: 120s
+    delete: 120s
+  
+  steps:
+    # Step 1: Create prerequisite resources
+    - name: create-prerequisites
+      description: Create GatewayClass, Gateway, and backend Service
+      try:
+        - apply:
+            file: 01-prerequisites.yaml
+        - apply:
+            file: 00-httpbin.yaml
+        - assert:
+            file: 00-assert-httpbin.yaml
+        - assert:
+            file: 01-assert-prerequisites.yaml
+      catch:
+        - description: Get Gateway resource status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: Gateway
+            namespace: ($gateway_namespace)
+        - description: Get Pods in gateway namespace
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: ($gateway_namespace)
+        - description: Get operator logs
+          podLogs:
+            namespace: ($operator_namespace)
+            selector: control-plane=controller-manager
+            tail: 100
+    # Step 2: Create the HTTPRoute for testing the request header modifier filter
+    - name: create-httproute-for-request-header-modifier-filter
+      description: Create the HTTPRoute for testing and verify that request header modifier filter works
+      bindings:
+        - name: route_path
+          value: "/httpbin-request-header-modifier"
+        - name: http_route_name
+          value:  (join('-', ['httproute-filter-request-header-modifier', env('TEST_ID') || 'local']))
+      try:
+        - apply:
+            file: 02-httproute-filter-request-header-modifier.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Wait until the route works
+        - description: Test connectivity from outside the cluster
+          script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              echo "Accessing gateway ${GATEWAY_NAMESPACE}/${GATEWAY_NAME} at ${PROXY_IP}"
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200')): true
+        # Verify the headers 
+        - description: Verify that the request header modifier works by the /headers path
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              curl -s --header "X-Set:baz" --header "X-Remove:qux" http://${PROXY_IP}${ROUTE_PATH}/headers 
+            check:
+              (contains($stdout, 'X-Add')): true
+              (contains($stdout, 'X-Set')): true
+              (contains($stdout, 'X-Remove')): false
+        # Dump HTTPRoute and related KongRoutes, KongPlugins and KongPluginBindings.
+      catch:
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            name: ($http_route_name)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPlugins
+          get:
+            apiVersion: configuration.konghq.com/v1
+            kind: KongPlugin
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPluginBindings
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongPluginBinding
+            namespace: ($http_route_namespace)
+            format: yaml
+    # Step 3: Create the HTTPRoute for testing response header modifier
+    - name: create-httproute-for-response-header-modifier-filter
+      description: Create the HTTPRoute for verifying that respomse header modifier filter works
+      bindings:
+        - name: route_path
+          value: "/httpbin-response-header-modifier"
+        - name: http_route_name
+          value:  (join('-', ['httproute-filter-response-header-modifier', env('TEST_ID') || 'local']))
+      try:
+        - apply:
+            file: 03-httproute-filter-response-header-modifier.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout) 
+        # Wait until the route works
+        - description: Test connectivity from outside the cluster
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200')): true
+        # Check for the response headers
+        - description: Verify that response header modifier works
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              curl -sI "http://${PROXY_IP}${ROUTE_PATH}/response-headers?x-remove=qux&x-set=baz"
+            check:
+              "(contains($stdout, '200 OK'))": true
+              "(contains($stdout, 'X-Add: bar'))": true
+              "(contains($stdout, 'X-Set: foo'))": true
+              (contains($stdout, 'X-Remove')): false
+      catch:
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            name: ($http_route_name)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPlugins
+          get:
+            apiVersion: configuration.konghq.com/v1
+            kind: KongPlugin
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPluginBindings
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongPluginBinding
+            namespace: ($http_route_namespace)
+            format: yaml
+    # Step 4: Create the HTTPRoute for testing request redirect filter
+    - name: create-httproute-for-request-redirect-filter
+      description: Create the HTTPRoute for verifying the request redirect filter
+      bindings:
+        - name: http_route_name
+          value:  (join('-', ['httproute-filter-request-redirect', env('TEST_ID') || 'local']))
+        - name: route_path_replace_full
+          value: "/httpbin-request-redirect-replace-full-path"
+        - name: redirect_host
+          value: "httpbin.test"
+      try:
+        - apply:
+            file: 04-httproute-request-redirect-filter.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout) 
+        # Verify the status code
+        - description: Verify the status code for the ReplaceFullPath filter
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_replace_full)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}
+            check:
+              (contains($stdout, '301')): true
+        - description: Verify that the redirection works for the ReplaceFullPath request redirect filter
+          script:
+            env:
+            - name: PROXY_IP
+              value: ($proxy_ip)
+            - name: ROUTE_PATH
+              value: ($route_path_replace_full)
+            - name: TEST_HOST
+              value: ($redirect_host)
+            content: |
+              curl -s -o /dev/null --location --resolve "${TEST_HOST}:80:${PROXY_IP}" -w "%{http_code}"  http://${TEST_HOST}${ROUTE_PATH}
+            # Should redirect to /redirect-target/status/200 and proxied to /status/200 of httpbin service by Kong DP.
+            check:
+              (contains($stdout, '200')): true
+      catch:
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            name: ($http_route_name)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPlugins
+          get:
+            apiVersion: configuration.konghq.com/v1
+            kind: KongPlugin
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPluginBindings
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongPluginBinding
+            namespace: ($http_route_namespace)
+            format: yaml
+    # Step 5: Create the HTTPRoute for testing URL rewrite filter
+    - name: create-httproute-for-url-rewrite-filter
+      description: Create the HTTPRoute for verifying the request redirect filter
+      bindings:
+        - name: http_route_name
+          value:  (join('-', ['httproute-filter-url-rewrite', env('TEST_ID') || 'local']))
+        - name: route_path_replace_full
+          value: "/httpbin-url-rewrite-replace-full-path"
+      try:
+        - apply:
+            file: 05-httproute-url-rewrite-filter.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout) 
+        # Verify the status code
+        - description: Verify the status code for the ReplaceFullPath URL rewrite filter
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_replace_full)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}
+            check:
+              (contains($stdout, '200')): true
+      catch:
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            name: ($http_route_name)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPlugins
+          get:
+            apiVersion: configuration.konghq.com/v1
+            kind: KongPlugin
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongPluginBindings
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongPluginBinding
+            namespace: ($http_route_namespace)
+            format: yaml

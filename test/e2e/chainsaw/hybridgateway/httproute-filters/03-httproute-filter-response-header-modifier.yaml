@@ -1,0 +1,30 @@
+---
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($http_route_name)
+  namespace: ($http_route_namespace)
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /httpbin-response-header-modifier
+      filters:
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+            - name: X-Set
+              value: "foo"
+            add:
+            - name: X-Add
+              value: "bar"
+            remove:
+            - X-Remove
+      backendRefs:
+        - name: ($httpbin_service_name)
+          port: 80
