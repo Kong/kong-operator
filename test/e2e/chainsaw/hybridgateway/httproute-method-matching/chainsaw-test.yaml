@@ -246,6 +246,33 @@ spec:
                 value: ($kong_namespace)
             content: |
               kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml
+        - description: Get httpbin pod logs
+          script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              echo "=== httpbin pod logs ==="
+              kubectl logs -n ${KONG_NAMESPACE} -l app=httpbin --tail=50 || echo "No httpbin logs"
+        - description: Get Kong data plane pod logs
+          script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              echo "=== Kong data plane pod logs ==="
+              kubectl logs -n ${KONG_NAMESPACE} -l app=proxy --tail=100 || echo "No proxy logs"
+        - description: Debug curl with verbose output
+          script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              PROXY_IP=$(kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.status.addresses[0].value}')
+              echo "=== Verbose curl to POST /post ==="
+              curl -v -X POST http://${PROXY_IP}/post 2>&1 || true
 
     # Step 4: Test PUT method matching
     - name: test-put-method-matching
