@@ -1,0 +1,118 @@
+---
+# Assert namespace exists
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ($kong_namespace)
+status:
+  phase: Active
+---
+# Assert first GatewayClass is accepted
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: ($gateway_class_name_1)
+status:
+  conditions:
+    - type: Accepted
+      status: "True"
+---
+# Assert second GatewayClass is accepted
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: ($gateway_class_name_2)
+status:
+  conditions:
+    - type: Accepted
+      status: "True"
+---
+# Assert first Gateway is ready
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name_1)
+  namespace: ($kong_namespace)
+status:
+  (conditions[?type == 'Accepted']):
+    - status: 'True'
+      reason: Accepted
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'DataPlaneReady']):
+    - status: 'True'
+      reason: Ready
+  (conditions[?type == 'KonnectGatewayControlPlaneProgrammed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'KonnectExtensionReady']):
+    - status: 'True'
+      reason: Ready
+  (conditions[?type == 'GatewayService']):
+    - status: 'True'
+      reason: Ready
+---
+# Assert second Gateway is ready
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name_2)
+  namespace: ($kong_namespace)
+status:
+  (conditions[?type == 'Accepted']):
+    - status: 'True'
+      reason: Accepted
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'DataPlaneReady']):
+    - status: 'True'
+      reason: Ready
+  (conditions[?type == 'KonnectGatewayControlPlaneProgrammed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'KonnectExtensionReady']):
+    - status: 'True'
+      reason: Ready
+  (conditions[?type == 'GatewayService']):
+    - status: 'True'
+      reason: Ready
+---
+# Assert first KonnectGatewayControlPlane is programmed
+apiVersion: konnect.konghq.com/v1alpha2
+kind: KonnectGatewayControlPlane
+metadata:
+  namespace: ($kong_namespace)
+  (labels."gateway-operator.konghq.com/gateway-name" == ($gateway_name_1)): true
+status:
+  clusterType: CLUSTER_TYPE_CONTROL_PLANE
+  (conditions[?type == 'APIAuthResolvedRef']):
+    - status: 'True'
+      reason: ResolvedRef
+  (conditions[?type == 'APIAuthValid']):
+    - status: 'True'
+      reason: Valid
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (id != null): true
+---
+# Assert second KonnectGatewayControlPlane is programmed
+apiVersion: konnect.konghq.com/v1alpha2
+kind: KonnectGatewayControlPlane
+metadata:
+  namespace: ($kong_namespace)
+  (labels."gateway-operator.konghq.com/gateway-name" == ($gateway_name_2)): true
+status:
+  clusterType: CLUSTER_TYPE_CONTROL_PLANE
+  (conditions[?type == 'APIAuthResolvedRef']):
+    - status: 'True'
+      reason: ResolvedRef
+  (conditions[?type == 'APIAuthValid']):
+    - status: 'True'
+      reason: Valid
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (id != null): true
