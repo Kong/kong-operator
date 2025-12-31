@@ -249,7 +249,7 @@ spec:
     - name: verify-kong-resources-per-controlplane
       description: Verify Kong resources have different ControlPlane IDs for each Gateway
       try:
-        # Get ControlPlane ID for Gateway 1
+        # Get ControlPlane ID for Gateway 1 (find by ownerReference)
         - script:
             env:
               - name: KONG_NAMESPACE
@@ -257,13 +257,12 @@ spec:
               - name: GATEWAY_NAME_1
                 value: ($gateway_name_1)
             content: |
-              kubectl get konnectgatewaycontrolplane -n ${KONG_NAMESPACE} \
-                -l gateway-operator.konghq.com/gateway-name=${GATEWAY_NAME_1} \
-                -o jsonpath='{.items[0].status.id}'
+              kubectl get konnectgatewaycontrolplane -n ${KONG_NAMESPACE} -o json | \
+                jq -r --arg gw "${GATEWAY_NAME_1}" '.items[] | select(.metadata.ownerReferences[]?.name == $gw) | .status.id'
             outputs:
               - name: controlplane_id_1
                 value: ($stdout)
-        # Get ControlPlane ID for Gateway 2
+        # Get ControlPlane ID for Gateway 2 (find by ownerReference)
         - script:
             env:
               - name: KONG_NAMESPACE
@@ -271,9 +270,8 @@ spec:
               - name: GATEWAY_NAME_2
                 value: ($gateway_name_2)
             content: |
-              kubectl get konnectgatewaycontrolplane -n ${KONG_NAMESPACE} \
-                -l gateway-operator.konghq.com/gateway-name=${GATEWAY_NAME_2} \
-                -o jsonpath='{.items[0].status.id}'
+              kubectl get konnectgatewaycontrolplane -n ${KONG_NAMESPACE} -o json | \
+                jq -r --arg gw "${GATEWAY_NAME_2}" '.items[] | select(.metadata.ownerReferences[]?.name == $gw) | .status.id'
             outputs:
               - name: controlplane_id_2
                 value: ($stdout)
