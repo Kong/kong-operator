@@ -1,0 +1,111 @@
+---
+# Namespace for Kong resources
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ($kong_namespace)
+---
+# Namespace for default resources
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: default
+---
+# Konnect API Auth Configuration (shared between both Gateways)
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ($konnect_api_auth_name)
+  namespace: ($kong_namespace)
+spec:
+  type: token
+  token: (env('KONNECT_TOKEN'))
+  serverURL: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+---
+# Gateway Configuration for first Gateway
+kind: GatewayConfiguration
+apiVersion: gateway-operator.konghq.com/v2beta1
+metadata:
+  name: ($gateway_configuration_name_1)
+  namespace: ($kong_namespace)
+spec:
+  konnect:
+    authRef:
+      name: ($konnect_api_auth_name)
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            image: kong/kong-gateway:3.12
+---
+# Gateway Configuration for second Gateway
+kind: GatewayConfiguration
+apiVersion: gateway-operator.konghq.com/v2beta1
+metadata:
+  name: ($gateway_configuration_name_2)
+  namespace: ($kong_namespace)
+spec:
+  konnect:
+    authRef:
+      name: ($konnect_api_auth_name)
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            image: kong/kong-gateway:3.12
+---
+# GatewayClass for first Gateway
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($gateway_class_name_1)
+spec:
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: ($gateway_configuration_name_1)
+    namespace: ($kong_namespace)
+---
+# GatewayClass for second Gateway
+kind: GatewayClass
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($gateway_class_name_2)
+spec:
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: ($gateway_configuration_name_2)
+    namespace: ($kong_namespace)
+---
+# First Gateway
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($gateway_name_1)
+  namespace: ($kong_namespace)
+spec:
+  gatewayClassName: ($gateway_class_name_1)
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80
+---
+# Second Gateway
+kind: Gateway
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($gateway_name_2)
+  namespace: ($kong_namespace)
+spec:
+  gatewayClassName: ($gateway_class_name_2)
+  listeners:
+  - name: http
+    protocol: HTTP
+    port: 80

@@ -1,0 +1,20 @@
+---
+# HTTPRoute with single ParentRef (referencing first Gateway only)
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($httproute_name)
+  namespace: ($kong_namespace)
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name_1)
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /get
+      backendRefs:
+        - name: httpbin
+          port: 80
