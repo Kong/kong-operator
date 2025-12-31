@@ -1,0 +1,42 @@
+---
+# HTTPRoute with method matching combined with different path matching
+# This tests that method + path combinations work correctly across multiple rules
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($httproute_name)
+  namespace: ($kong_namespace)
+  annotations:
+    konghq.com/strip-path: "false"
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    # Rule 1: GET requests to /get
+    - matches:
+        - method: GET
+          path:
+            type: Exact
+            value: /get
+      backendRefs:
+        - name: httpbin
+          port: 80
+    # Rule 2: POST requests to /post
+    - matches:
+        - method: POST
+          path:
+            type: Exact
+            value: /post
+      backendRefs:
+        - name: httpbin
+          port: 80
+    # Rule 3: Any method to /anything with PathPrefix
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /anything
+      backendRefs:
+        - name: httpbin
+          port: 80

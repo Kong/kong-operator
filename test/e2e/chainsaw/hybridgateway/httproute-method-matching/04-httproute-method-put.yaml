@@ -1,0 +1,22 @@
+---
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($httproute_name)
+  namespace: ($kong_namespace)
+  annotations:
+    konghq.com/strip-path: "false"
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    - matches:
+        - method: PUT
+          path:
+            type: Exact
+            value: /put
+      backendRefs:
+        - name: httpbin
+          port: 80

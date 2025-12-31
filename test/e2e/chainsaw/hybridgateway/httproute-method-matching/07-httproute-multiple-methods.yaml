@@ -1,0 +1,32 @@
+---
+# HTTPRoute with multiple HTTP methods in a single rule
+# This tests that multiple method matches in one rule work correctly
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($httproute_name)
+  namespace: ($kong_namespace)
+  annotations:
+    konghq.com/strip-path: "false"
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    - matches:
+        - method: GET
+          path:
+            type: PathPrefix
+            value: /anything
+        - method: POST
+          path:
+            type: PathPrefix
+            value: /anything
+        - method: PUT
+          path:
+            type: PathPrefix
+            value: /anything
+      backendRefs:
+        - name: httpbin
+          port: 80
