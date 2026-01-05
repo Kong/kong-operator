@@ -258,7 +258,7 @@ spec:
                 value: ($gateway_name_1)
             content: |
               kubectl get konnectgatewaycontrolplane -n ${KONG_NAMESPACE} -o json | \
-                jq -r --arg gw "${GATEWAY_NAME_1}" '.items[] | select(.metadata.ownerReferences[]?.name == $gw) | .status.id'
+                jq -r --arg gw "${GATEWAY_NAME_1}" '.items[] | select(.metadata.ownerReferences[]?.name == $gw) | .status.id' | tr -d '\n'
             outputs:
               - name: controlplane_id_1
                 value: ($stdout)
@@ -271,7 +271,7 @@ spec:
                 value: ($gateway_name_2)
             content: |
               kubectl get konnectgatewaycontrolplane -n ${KONG_NAMESPACE} -o json | \
-                jq -r --arg gw "${GATEWAY_NAME_2}" '.items[] | select(.metadata.ownerReferences[]?.name == $gw) | .status.id'
+                jq -r --arg gw "${GATEWAY_NAME_2}" '.items[] | select(.metadata.ownerReferences[]?.name == $gw) | .status.id' | tr -d '\n'
             outputs:
               - name: controlplane_id_2
                 value: ($stdout)
@@ -287,7 +287,7 @@ spec:
             content: |
               ROUTE_CP_ID=$(kubectl get kongroute -n ${KONG_NAMESPACE} \
                 -l gateway-operator.konghq.com/hybrid-gateways-name=${GATEWAY_NAME_1} \
-                -o jsonpath='{.items[0].status.konnect.controlPlaneID}')
+                -o jsonpath='{.items[0].status.konnect.controlPlaneID}' | tr -d '\n')
               if [ "$ROUTE_CP_ID" = "$CONTROLPLANE_ID_1" ]; then
                 echo "PASS: KongRoute for Gateway 1 has correct ControlPlane ID"
               else
@@ -306,7 +306,7 @@ spec:
             content: |
               ROUTE_CP_ID=$(kubectl get kongroute -n ${KONG_NAMESPACE} \
                 -l gateway-operator.konghq.com/hybrid-gateways-name=${GATEWAY_NAME_2} \
-                -o jsonpath='{.items[0].status.konnect.controlPlaneID}')
+                -o jsonpath='{.items[0].status.konnect.controlPlaneID}' | tr -d '\n')
               if [ "$ROUTE_CP_ID" = "$CONTROLPLANE_ID_2" ]; then
                 echo "PASS: KongRoute for Gateway 2 has correct ControlPlane ID"
               else
