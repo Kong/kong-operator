@@ -7,15 +7,25 @@ metadata:
 status:
   parents:
     - parentRef:
+        name: ($gateway_name)
         group: gateway.networking.k8s.io
         kind: Gateway
-        name: ($gateway_name)
-        namespace: ($kong_namespace)
       controllerName: konghq.com/gateway-operator
-      conditions:
-        - type: Accepted
-          status: "True"
+      (conditions[?type == 'Accepted']):
+        - status: "True"
           reason: Accepted
-        - type: ResolvedRefs
-          status: "True"
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "True"
           reason: ResolvedRefs
+      (conditions[?type == 'KongRouteProgrammed']):
+        - status: "True"
+          reason: KongRouteProgrammed
+      (conditions[?type == 'KongServiceProgrammed']):
+        - status: "True"
+          reason: KongServiceProgrammed
+      (conditions[?type == 'KongUpstreamProgrammed']):
+        - status: "True"
+          reason: KongUpstreamProgrammed
+      (conditions[?type == 'KongTargetProgrammed']):
+        - status: "True"
+          reason: KongTargetProgrammed
