@@ -240,9 +240,9 @@ spec:
             kind: HTTPRoute
             namespace: ($kong_namespace)
 
-    # Step 5: Test Rule 3 - /api prefix with X-Custom-Header
-    - name: test-rule3-api-prefix-with-header
-      description: Test /api prefix with X-Custom-Header:enabled
+    # Step 5: Test Rule 3 - /headers prefix with X-Custom-Header
+    - name: test-rule3-headers-prefix-with-header
+      description: Test /headers prefix with X-Custom-Header:enabled
       try:
         # Get the Gateway proxy IP
         - script:
@@ -256,34 +256,34 @@ spec:
             outputs:
               - name: proxy_ip
                 value: ($stdout)
-        # Test GET /api/anything with correct header - should return 200
-        - description: GET /api/anything with X-Custom-Header:enabled returns 200
+        # Test GET /headers with correct header - should return 200
+        - description: GET /headers with X-Custom-Header:enabled returns 200
           script:
             env:
               - name: PROXY_IP
                 value: ($proxy_ip)
             content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X GET -H "X-Custom-Header: enabled" http://${PROXY_IP}/api/anything
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X GET -H "X-Custom-Header: enabled" http://${PROXY_IP}/headers
             check:
               (contains($stdout, '200')): true
-        # Test POST /api/v1/resource with correct header - should return 200
-        - description: POST /api/v1/resource with X-Custom-Header:enabled returns 200
+        # Test POST /headers with correct header - should return 200 (httpbin /headers accepts any method)
+        - description: POST /headers with X-Custom-Header:enabled returns 200
           script:
             env:
               - name: PROXY_IP
                 value: ($proxy_ip)
             content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST -H "X-Custom-Header: enabled" http://${PROXY_IP}/api/v1/resource
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST -H "X-Custom-Header: enabled" http://${PROXY_IP}/headers
             check:
               (contains($stdout, '200')): true
-        # Test GET /api/anything without header - should return 404
-        - description: GET /api/anything without header returns 404
+        # Test GET /headers without header - should return 404
+        - description: GET /headers without header returns 404
           script:
             env:
               - name: PROXY_IP
                 value: ($proxy_ip)
             content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/api/anything)
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/headers)
               echo $HTTP_CODE
               if [ "$HTTP_CODE" = "404" ]; then
                 echo "OK"
@@ -291,14 +291,14 @@ spec:
                 echo "FAIL"
                 exit 1
               fi
-        # Test GET /api/test with wrong header value - should return 404
-        - description: GET /api/test with X-Custom-Header:disabled returns 404
+        # Test GET /headers with wrong header value - should return 404
+        - description: GET /headers with X-Custom-Header:disabled returns 404
           script:
             env:
               - name: PROXY_IP
                 value: ($proxy_ip)
             content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET -H "X-Custom-Header: disabled" http://${PROXY_IP}/api/test)
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET -H "X-Custom-Header: disabled" http://${PROXY_IP}/headers)
               echo $HTTP_CODE
               if [ "$HTTP_CODE" = "404" ]; then
                 echo "OK"

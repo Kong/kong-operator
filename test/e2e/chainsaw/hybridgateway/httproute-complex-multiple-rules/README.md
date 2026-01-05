@@ -23,7 +23,7 @@ Creates a single HTTPRoute with 5 different rules:
 
 1. **Rule 1:** GET `/get` + Header `X-Api-Version: v1`
 2. **Rule 2:** POST `/post` (no header requirement)
-3. **Rule 3:** Any method on `/api/*` prefix + Header `X-Custom-Header: enabled`
+3. **Rule 3:** Any method on `/headers` prefix + Header `X-Custom-Header: enabled`
 4. **Rule 4:** PUT or PATCH on `/anything/*` prefix
 5. **Rule 5:** DELETE `/delete` + Regex Header `X-Delete-Token: ^token-[a-z0-9]+$`
 
@@ -47,10 +47,10 @@ Creates a single HTTPRoute with 5 different rules:
 
 - **Goal:** Test PathPrefix + header combination with any method.
 - **Verification:**
-  - GET `/api/anything` with `X-Custom-Header: enabled` returns 200
-  - POST `/api/v1/resource` with `X-Custom-Header: enabled` returns 200
-  - GET `/api/anything` without header returns 404
-  - GET `/api/test` with wrong header value returns 404
+  - GET `/headers` with `X-Custom-Header: enabled` returns 200
+  - POST `/headers` with `X-Custom-Header: enabled` returns 200
+  - GET `/headers` without header returns 404
+  - GET `/headers` with wrong header value returns 404
 
 ### Step 6: Test Rule 4 - PUT/PATCH with PathPrefix
 

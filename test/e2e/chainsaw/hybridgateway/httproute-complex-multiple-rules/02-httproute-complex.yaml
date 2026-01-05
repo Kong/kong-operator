@@ -36,11 +36,11 @@ spec:
       backendRefs:
         - name: httpbin
           port: 80
-    # Rule 3: Any method to /api prefix with X-Custom-Header
+    # Rule 3: Any method to /headers prefix with X-Custom-Header
     - matches:
         - path:
             type: PathPrefix
-            value: /api
+            value: /headers
           headers:
             - name: X-Custom-Header
               type: Exact
