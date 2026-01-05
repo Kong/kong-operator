@@ -1,0 +1,517 @@
+# HTTPRoute Complex Multiple Rules test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-complex-multiple-rules
+spec:
+  description: |
+    This test validates complex HTTPRoute scenarios that combine multiple matching types:
+    - Path matching (Exact and PathPrefix)
+    - Header matching (Exact and RegularExpression)
+    - Method matching (GET, POST, PUT, PATCH, DELETE)
+    - Multiple rules with different matching criteria in a single HTTPRoute
+    - Complex routing logic verification
+
+  bindings:
+    - name: kong_namespace
+      value: (join('-', ['kong', 'httproute-complex', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: konnect_api_auth_name
+      value: konnect-api-auth-dev-1
+    - name: gateway_class_name
+      value: (join('-', ['kong', 'httproute-complex', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: gateway_configuration_name
+      value: ($gateway_class_name)
+    - name: gateway_name
+      value: ($gateway_class_name)
+    - name: httproute_name
+      value: complex-multiple-rules
+
+  timeouts:
+    apply: 120s
+    assert: 300s
+    cleanup: 120s
+    delete: 120s
+
+  steps:
+    # Step 1: Create prerequisite resources
+    - name: create-prerequisites
+      description: Create GatewayClass, Gateway, and backend Service
+      try:
+        - apply:
+            file: 01-prerequisites.yaml
+        - apply:
+            file: 00-httpbin.yaml
+        # Assert common Konnect and Gateway resources
+        - assert:
+            file: ../common/assertions/konnect-apiauth.yaml
+        - assert:
+            file: 01-assert-prerequisites.yaml
+        - assert:
+            file: 00-assert-httpbin.yaml
+      catch:
+        - description: Get Gateway resource status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: Gateway
+            namespace: ($kong_namespace)
+        - description: Get Pods in kong namespace
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: ($kong_namespace)
+        - description: Get operator logs
+          podLogs:
+            namespace: kong-system
+            selector: control-plane=controller-manager
+            tail: 100
+
+    # Step 2: Create complex HTTPRoute with multiple rules
+    - name: create-complex-httproute
+      description: Create HTTPRoute with multiple rules combining path, header, and method matching
+      try:
+        - apply:
+            file: 02-httproute-complex.yaml
+        - assert:
+            file: 02-assert-httproute-complex.yaml
+        # Wait for KongRoutes to be programmed
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+      catch:
+        - description: Get HTTPRoute status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($kong_namespace)
+        - description: Get KongRoute resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($kong_namespace)
+        - description: Get operator logs
+          podLogs:
+            namespace: kong-system
+            selector: control-plane=controller-manager
+            tail: 100
+
+    # Step 3: Test Rule 1 - GET /get with X-Api-Version header
+    - name: test-rule1-get-with-header
+      description: Test GET /get with X-Api-Version:v1 header returns 200
+      try:
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Test GET /get with correct header - should return 200
+        - description: GET /get with X-Api-Version:v1 returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X GET -H "X-Api-Version: v1" http://${PROXY_IP}/get
+            check:
+              (contains($stdout, '200')): true
+        # Test GET /get without header - should return 404
+        - description: GET /get without header returns 404
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/get)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+        # Test GET /get with wrong header value - should return 404
+        - description: GET /get with X-Api-Version:v2 returns 404
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET -H "X-Api-Version: v2" http://${PROXY_IP}/get)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+        # Test POST /get with correct header - should return 404 or 405 (wrong method)
+        - description: POST /get with X-Api-Version:v1 returns non-200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X POST -H "X-Api-Version: v1" http://${PROXY_IP}/get)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+      catch:
+        - description: Get HTTPRoute status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($kong_namespace)
+        - description: Get KongRoute resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($kong_namespace)
+
+    # Step 4: Test Rule 2 - POST /post (no header requirement)
+    - name: test-rule2-post-no-header
+      description: Test POST /post without header requirement
+      try:
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Test POST /post - should return 200
+        - description: POST /post returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/post
+            check:
+              (contains($stdout, '200')): true
+        # Test GET /post - should return 404 or 405 (wrong method)
+        - description: GET /post returns non-200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/post)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+      catch:
+        - description: Get HTTPRoute status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($kong_namespace)
+
+    # Step 5: Test Rule 3 - /api prefix with X-Custom-Header
+    - name: test-rule3-api-prefix-with-header
+      description: Test /api prefix with X-Custom-Header:enabled
+      try:
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Test GET /api/anything with correct header - should return 200
+        - description: GET /api/anything with X-Custom-Header:enabled returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X GET -H "X-Custom-Header: enabled" http://${PROXY_IP}/api/anything
+            check:
+              (contains($stdout, '200')): true
+        # Test POST /api/v1/resource with correct header - should return 200
+        - description: POST /api/v1/resource with X-Custom-Header:enabled returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST -H "X-Custom-Header: enabled" http://${PROXY_IP}/api/v1/resource
+            check:
+              (contains($stdout, '200')): true
+        # Test GET /api/anything without header - should return 404
+        - description: GET /api/anything without header returns 404
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/api/anything)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+        # Test GET /api/test with wrong header value - should return 404
+        - description: GET /api/test with X-Custom-Header:disabled returns 404
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET -H "X-Custom-Header: disabled" http://${PROXY_IP}/api/test)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+      catch:
+        - description: Get HTTPRoute status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($kong_namespace)
+
+    # Step 6: Test Rule 4 - PUT or PATCH /anything
+    - name: test-rule4-put-patch-anything
+      description: Test PUT or PATCH methods on /anything path
+      try:
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Test PUT /anything - should return 200
+        - description: PUT /anything returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PUT http://${PROXY_IP}/anything
+            check:
+              (contains($stdout, '200')): true
+        # Test PATCH /anything - should return 200
+        - description: PATCH /anything returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PATCH http://${PROXY_IP}/anything
+            check:
+              (contains($stdout, '200')): true
+        # Test PUT /anything/subpath - should return 200 (PathPrefix)
+        - description: PUT /anything/subpath returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PUT http://${PROXY_IP}/anything/subpath
+            check:
+              (contains($stdout, '200')): true
+        # Test GET /anything - should return 404 or 405 (only PUT/PATCH allowed)
+        - description: GET /anything returns non-200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/anything)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+        # Test DELETE /anything - should return 404 or 405 (only PUT/PATCH allowed)
+        - description: DELETE /anything returns non-200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X DELETE http://${PROXY_IP}/anything)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+      catch:
+        - description: Get HTTPRoute status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($kong_namespace)
+        - description: Get KongRoute resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($kong_namespace)
+
+    # Step 7: Test Rule 5 - DELETE /delete with regex header
+    - name: test-rule5-delete-with-regex-header
+      description: Test DELETE /delete with regex header matching
+      try:
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Test DELETE /delete with valid token format - should return 200
+        - description: DELETE /delete with X-Delete-Token:token-abc123 returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X DELETE -H "X-Delete-Token: token-abc123" http://${PROXY_IP}/delete
+            check:
+              (contains($stdout, '200')): true
+        # Test DELETE /delete with another valid token - should return 200
+        - description: DELETE /delete with X-Delete-Token:token-xyz789 returns 200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X DELETE -H "X-Delete-Token: token-xyz789" http://${PROXY_IP}/delete
+            check:
+              (contains($stdout, '200')): true
+        # Test DELETE /delete without header - should return 404
+        - description: DELETE /delete without header returns 404
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X DELETE http://${PROXY_IP}/delete)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+        # Test DELETE /delete with invalid token format - should return 404
+        - description: DELETE /delete with X-Delete-Token:invalid returns 404
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X DELETE -H "X-Delete-Token: invalid" http://${PROXY_IP}/delete)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+        # Test DELETE /delete with token containing uppercase - should return 404 (regex is [a-z0-9])
+        - description: DELETE /delete with X-Delete-Token:token-ABC123 returns 404
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X DELETE -H "X-Delete-Token: token-ABC123" http://${PROXY_IP}/delete)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+        # Test GET /delete with valid token - should return 404 or 405 (wrong method)
+        - description: GET /delete with valid token returns non-200
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET -H "X-Delete-Token: token-abc123" http://${PROXY_IP}/delete)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+      catch:
+        - description: Get HTTPRoute status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($kong_namespace)
+        - description: Get KongRoute resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($kong_namespace)
+        - description: Describe KongRoute
+          script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml
