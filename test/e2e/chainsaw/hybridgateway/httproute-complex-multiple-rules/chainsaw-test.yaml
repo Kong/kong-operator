@@ -467,14 +467,16 @@ spec:
                 echo "FAIL"
                 exit 1
               fi
-        # Test DELETE /delete with token containing uppercase - should return 404 (regex is [a-z0-9])
-        - description: DELETE /delete with X-Delete-Token:token-ABC123 returns 404
+        # Test DELETE /delete with token not starting with 'token-' - should return 404
+        # Note: Kong converts header values to lowercase before regex matching,
+        # so we cannot test case sensitivity. Instead, test a structurally invalid token.
+        - description: DELETE /delete with X-Delete-Token:notvalid-abc123 returns 404
           script:
             env:
               - name: PROXY_IP
                 value: ($proxy_ip)
             content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X DELETE -H "X-Delete-Token: token-ABC123" http://${PROXY_IP}/delete)
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X DELETE -H "X-Delete-Token: notvalid-abc123" http://${PROXY_IP}/delete)
               echo $HTTP_CODE
               if [ "$HTTP_CODE" = "404" ]; then
                 echo "OK"
