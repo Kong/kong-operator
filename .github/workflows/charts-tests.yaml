@@ -39,7 +39,7 @@ env:
   MISE_DEBUG: 1
   # Specify this here because these tests rely on ktf to run kind for cluster creation.
   # renovate: datasource=github-releases depName=kubernetes-sigs/kind
-  KIND_VERSION: "0.30.0"
+  KIND_VERSION: "0.31.0"
 
 jobs:
   check-docs-only:
