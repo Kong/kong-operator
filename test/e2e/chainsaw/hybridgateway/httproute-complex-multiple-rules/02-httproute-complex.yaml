@@ -1,0 +1,76 @@
+---
+# Complex HTTPRoute with multiple rules combining path, header, and method matching
+# This tests complex routing logic with different matching criteria
+kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
+metadata:
+  name: ($httproute_name)
+  namespace: ($kong_namespace)
+  annotations:
+    konghq.com/strip-path: "false"
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    # Rule 1: GET requests to /get with specific header
+    - matches:
+        - method: GET
+          path:
+            type: Exact
+            value: /get
+          headers:
+            - name: X-Api-Version
+              type: Exact
+              value: v1
+      backendRefs:
+        - name: httpbin
+          port: 80
+    # Rule 2: POST requests to /post (no header requirement)
+    - matches:
+        - method: POST
+          path:
+            type: Exact
+            value: /post
+      backendRefs:
+        - name: httpbin
+          port: 80
+    # Rule 3: Any method to /headers prefix with X-Custom-Header
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /headers
+          headers:
+            - name: X-Custom-Header
+              type: Exact
+              value: enabled
+      backendRefs:
+        - name: httpbin
+          port: 80
+    # Rule 4: PUT or PATCH requests to /anything path
+    - matches:
+        - method: PUT
+          path:
+            type: PathPrefix
+            value: /anything
+        - method: PATCH
+          path:
+            type: PathPrefix
+            value: /anything
+      backendRefs:
+        - name: httpbin
+          port: 80
+    # Rule 5: DELETE requests with regex header match
+    - matches:
+        - method: DELETE
+          path:
+            type: Exact
+            value: /delete
+          headers:
+            - name: X-Delete-Token
+              type: RegularExpression
+              value: "^token-[a-z0-9]+$"
+      backendRefs:
+        - name: httpbin
+          port: 80
