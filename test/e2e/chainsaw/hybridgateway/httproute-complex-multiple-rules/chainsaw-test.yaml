@@ -165,21 +165,25 @@ spec:
                 echo "FAIL"
                 exit 1
               fi
-        # Test POST /get with correct header - should return 404 or 405 (wrong method)
-        - description: POST /get with X-Api-Version:v1 returns non-200
+        # Test POST /get with correct header - should return 404 (route requires GET method)
+        - description: POST /get with X-Api-Version:v1 returns 404
           script:
             env:
               - name: PROXY_IP
                 value: ($proxy_ip)
             content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X POST -H "X-Api-Version: v1" http://${PROXY_IP}/get)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
+              # Retry until we get stable 404 (route fully configured)
+              for i in $(seq 1 10); do
+                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST -H "X-Api-Version: v1" http://${PROXY_IP}/get)
+                if [ "$HTTP_CODE" = "404" ]; then
+                  echo "OK: got expected 404"
+                  exit 0
+                fi
+                echo "Attempt $i: got $HTTP_CODE, expected 404, retrying..."
+                sleep 2
+              done
+              echo "FAIL: expected 404, got $HTTP_CODE"
+              exit 1
       catch:
         - description: Get HTTPRoute status
           get:
@@ -218,21 +222,25 @@ spec:
               curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/post
             check:
               (contains($stdout, '200')): true
-        # Test GET /post - should return 404 or 405 (wrong method)
-        - description: GET /post returns non-200
+        # Test GET /post - should return 404 (route requires POST method)
+        - description: GET /post returns 404
           script:
             env:
               - name: PROXY_IP
                 value: ($proxy_ip)
             content: |
-              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/post)
-              echo $HTTP_CODE
-              if [ "$HTTP_CODE" = "404" ] || [ "$HTTP_CODE" = "405" ]; then
-                echo "OK"
-              else
-                echo "FAIL"
-                exit 1
-              fi
+              # Retry until we get stable 404 (route fully configured)
+              for i in $(seq 1 10); do
+                HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}/post)
+                if [ "$HTTP_CODE" = "404" ]; then
+                  echo "OK: got expected 404"
+                  exit 0
+                fi
+                echo "Attempt $i: got $HTTP_CODE, expected 404, retrying..."
+                sleep 2
+              done
+              echo "FAIL: expected 404, got $HTTP_CODE"
+              exit 1
       catch:
         - description: Get HTTPRoute status
           get:
