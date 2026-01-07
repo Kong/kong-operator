@@ -71,10 +71,10 @@ func TestGetNodeIP(t *testing.T) {
 		ea string
 	}{
 		// empty node list
-		{testclient.NewSimpleClientset(), "demo", ""},
+		{testclient.NewClientset(), "demo", ""},
 
 		// node not exist
-		{testclient.NewSimpleClientset(&corev1.NodeList{Items: []corev1.Node{{
+		{testclient.NewClientset(&corev1.NodeList{Items: []corev1.Node{{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "demo",
 			},
@@ -89,7 +89,7 @@ func TestGetNodeIP(t *testing.T) {
 		}}}), "notexistnode", ""},
 
 		// node  exist
-		{testclient.NewSimpleClientset(&corev1.NodeList{Items: []corev1.Node{{
+		{testclient.NewClientset(&corev1.NodeList{Items: []corev1.Node{{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "demo",
 			},
@@ -104,7 +104,7 @@ func TestGetNodeIP(t *testing.T) {
 		}}}), "demo", "10.0.0.1"},
 
 		// search the correct node
-		{testclient.NewSimpleClientset(&corev1.NodeList{Items: []corev1.Node{
+		{testclient.NewClientset(&corev1.NodeList{Items: []corev1.Node{
 			{
 				ObjectMeta: metav1.ObjectMeta{
 					Name: "demo1",
@@ -134,7 +134,7 @@ func TestGetNodeIP(t *testing.T) {
 		}}), "demo2", "10.0.0.2"},
 
 		// get NodeExternalIP
-		{testclient.NewSimpleClientset(&corev1.NodeList{Items: []corev1.Node{{
+		{testclient.NewClientset(&corev1.NodeList{Items: []corev1.Node{{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "demo",
 			},
@@ -152,7 +152,7 @@ func TestGetNodeIP(t *testing.T) {
 		}}}), "demo", "10.0.0.2"},
 
 		// get NodeInternalIP
-		{testclient.NewSimpleClientset(&corev1.NodeList{Items: []corev1.Node{{
+		{testclient.NewClientset(&corev1.NodeList{Items: []corev1.Node{{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "demo",
 			},
@@ -183,29 +183,29 @@ func TestGetPodDetails(t *testing.T) {
 	// POD_NAME & POD_NAMESPACE not exist
 	t.Setenv("POD_NAME", "")
 	t.Setenv("POD_NAMESPACE", "")
-	_, err1 := GetPodDetails(ctx, testclient.NewSimpleClientset())
+	_, err1 := GetPodDetails(ctx, testclient.NewClientset())
 	assert.Error(t, err1)
 
 	// POD_NAME not exist
 	t.Setenv("POD_NAME", "")
 	t.Setenv("POD_NAMESPACE", corev1.NamespaceDefault)
-	_, err2 := GetPodDetails(ctx, testclient.NewSimpleClientset())
+	_, err2 := GetPodDetails(ctx, testclient.NewClientset())
 	assert.Error(t, err2)
 
 	// POD_NAMESPACE not exist
 	t.Setenv("POD_NAME", "testpod")
 	t.Setenv("POD_NAMESPACE", "")
-	_, err3 := GetPodDetails(ctx, testclient.NewSimpleClientset())
+	_, err3 := GetPodDetails(ctx, testclient.NewClientset())
 	assert.Error(t, err3)
 
 	// POD exists
 	t.Setenv("POD_NAME", "testpod")
 	t.Setenv("POD_NAMESPACE", corev1.NamespaceDefault)
-	_, err4 := GetPodDetails(ctx, testclient.NewSimpleClientset())
+	_, err4 := GetPodDetails(ctx, testclient.NewClientset())
 	assert.NoError(t, err4)
 
 	// success to get PodInfo
-	fkClient := testclient.NewSimpleClientset(
+	fkClient := testclient.NewClientset(
 		&corev1.PodList{Items: []corev1.Pod{{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "testpod",

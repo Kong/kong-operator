@@ -66,7 +66,7 @@ func (b *testDataPlaneBuilder) WithIngressServiceName(name string) *testDataPlan
 }
 
 // WithIngressServiceExternalTrafficPolicy sets the ExternalTrafficPolicy of the Ingress service.
-func (b *testDataPlaneBuilder) WithIngressServiceExternalTrafficPolicy(typ corev1.ServiceExternalTrafficPolicyType) *testDataPlaneBuilder {
+func (b *testDataPlaneBuilder) WithIngressServiceExternalTrafficPolicy(typ corev1.ServiceExternalTrafficPolicy) *testDataPlaneBuilder {
 	b.initIngressServiceOptions()
 	b.dataplane.Spec.Network.Services.Ingress.ExternalTrafficPolicy = typ
 	return b
