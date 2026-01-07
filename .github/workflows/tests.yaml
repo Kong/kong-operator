@@ -576,6 +576,10 @@ jobs:
         KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
         KONG_CLUSTER_VERSION: ${{ needs.matrix_k8s_node_versions.outputs.latest }}
+        # This is needed for ktf to find latest releases of addons.
+        # This could be changed so that ktf addons have their versions pinned
+        # in the test Makefile instead.
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: upload diagnostics
       if: always()
@@ -627,6 +631,10 @@ jobs:
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: integration-tests.xml
         KONG_CLUSTER_VERSION: ${{ needs.matrix_k8s_node_versions.outputs.latest }}
+        # This is needed for ktf to find latest releases of addons.
+        # This could be changed so that ktf addons have their versions pinned
+        # in the test Makefile instead.
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: upload diagnostics
       if: always()
@@ -678,6 +686,10 @@ jobs:
         GOTESTSUM_JUNITFILE: integration-tests-bluegreen.xml
         KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
         KONG_TEST_KONNECT_SERVER_URL: us.api.konghq.tech
+        # This is needed for ktf to find latest releases of addons.
+        # This could be changed so that ktf addons have their versions pinned
+        # in the test Makefile instead.
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: upload diagnostics
       if: always()
