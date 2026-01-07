@@ -1469,6 +1469,70 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 			},
 		},
 		{
+			name:      "Multiple valid backend refs should not alias BackendRef pointers",
+			httpRoute: createTestHTTPRoute("test-route", "default"),
+			backendRefs: []gwtypes.HTTPBackendRef{
+				createGlobalTestHTTPBackendRef("service-a", "", ptr.To[int32](80), ptr.To[int32](80)),
+				createGlobalTestHTTPBackendRef("service-b", "", ptr.To[int32](20), ptr.To[int32](80)),
+			},
+			fqdn: false,
+			existingServices: []corev1.Service{
+				*createTestService("service-a", "default", corev1.ServiceTypeClusterIP, "10.0.0.1", "", []corev1.ServicePort{
+					{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)},
+				}),
+				*createTestService("service-b", "default", corev1.ServiceTypeClusterIP, "10.0.0.2", "", []corev1.ServicePort{
+					{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(9090)},
+				}),
+			},
+			existingEndpointSlices: []discoveryv1.EndpointSlice{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service-a-slice",
+						Namespace: "default",
+						Labels:    map[string]string{discoveryv1.LabelServiceName: "service-a"},
+					},
+					Ports: []discoveryv1.EndpointPort{
+						{Name: ptr.To("http"), Port: ptr.To[int32](8080), Protocol: ptr.To(corev1.ProtocolTCP)},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"10.0.1.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+						},
+					},
+				},
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "service-b-slice",
+						Namespace: "default",
+						Labels:    map[string]string{discoveryv1.LabelServiceName: "service-b"},
+					},
+					Ports: []discoveryv1.EndpointPort{
+						{Name: ptr.To("http"), Port: ptr.To[int32](9090), Protocol: ptr.To(corev1.ProtocolTCP)},
+					},
+					Endpoints: []discoveryv1.Endpoint{
+						{
+							Addresses:  []string{"10.0.2.1"},
+							Conditions: discoveryv1.EndpointConditions{Ready: ptr.To(true)},
+						},
+					},
+				},
+			},
+			expectedValidCount: 2,
+			validateResults: func(t *testing.T, results []validBackendRef) {
+				require.Len(t, results, 2)
+
+				assert.Equal(t, "service-a", string(results[0].backendRef.Name))
+				assert.Equal(t, "service-b", string(results[1].backendRef.Name))
+				assert.NotSame(t, results[0].backendRef, results[1].backendRef)
+
+				require.NotNil(t, results[0].backendRef.Weight)
+				require.NotNil(t, results[1].backendRef.Weight)
+				assert.Equal(t, int32(80), *results[0].backendRef.Weight)
+				assert.Equal(t, int32(20), *results[1].backendRef.Weight)
+			},
+		},
+		{
 			name:      "FQDN mode with regular service",
 			httpRoute: createTestHTTPRoute("test-route", "default"),
 			backendRefs: []gwtypes.HTTPBackendRef{
