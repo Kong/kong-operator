@@ -51130,18 +51130,23 @@ spec:
                     group:
                       description: Group is the group of the referent.
                       maxLength: 253
+                      minLength: 1
                       pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                       type: string
                     kind:
+                      allOf:
+                      - minLength: 1
+                      - minLength: 1
                       description: Kind is the kind of the referent.
                       maxLength: 63
-                      minLength: 1
                       pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
                       type: string
                     namespace:
+                      allOf:
+                      - minLength: 1
+                      - minLength: 1
                       description: Namespace is the namespace of the referent.
                       maxLength: 63
-                      minLength: 1
                       pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
                   required:
@@ -51170,12 +51175,15 @@ spec:
                     group:
                       description: Group is the group of the referent.
                       maxLength: 253
+                      minLength: 1
                       pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
                       type: string
                     kind:
+                      allOf:
+                      - minLength: 1
+                      - minLength: 1
                       description: Kind is the kind of the referent.
                       maxLength: 63
-                      minLength: 1
                       pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
                       type: string
                     name:
