@@ -1,0 +1,408 @@
+# HTTPRoute with Multiple ParentRefs test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-multiple-parentrefs
+spec:
+  description: |
+    This test validates that the hybrid gateway controller correctly
+    processes an HTTPRoute with multiple ParentRefs, creating Kong
+    resources for each Gateway/ControlPlane.
+
+  # Define bindings for unique names to avoid conflicts
+  bindings:
+    - name: kong_namespace
+      value: (join('-', ['kong', 'multi-parentref', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: konnect_api_auth_name
+      value: konnect-api-auth-dev-1
+    # Gateway 1 bindings
+    - name: gateway_class_name_1
+      value: (join('-', ['kong', 'gw1', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: gateway_configuration_name_1
+      value: ($gateway_class_name_1)
+    - name: gateway_name_1
+      value: ($gateway_class_name_1)
+    # Gateway 2 bindings
+    - name: gateway_class_name_2
+      value: (join('-', ['kong', 'gw2', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: gateway_configuration_name_2
+      value: ($gateway_class_name_2)
+    - name: gateway_name_2
+      value: ($gateway_class_name_2)
+    # HTTPRoute binding
+    - name: httproute_name
+      value: multi-gateway-route
+
+  timeouts:
+    apply: 120s
+    assert: 300s
+    cleanup: 120s
+    delete: 120s
+
+  steps:
+    # Step 1: Create prerequisite resources (two Gateways with different ControlPlanes)
+    - name: create-prerequisites
+      description: Create two Gateways with different GatewayClasses/ControlPlanes and backend Service
+      try:
+        - apply:
+            file: 01-prerequisites.yaml
+        - apply:
+            file: 00-httpbin.yaml
+        # Assert httpbin is ready
+        - assert:
+            file: 00-assert-httpbin.yaml
+        # Assert prerequisites (two Gateways, two ControlPlanes)
+        - assert:
+            file: 01-assert-prerequisites.yaml
+      catch:
+        - description: Get Gateway 1 resource status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: Gateway
+            namespace: ($kong_namespace)
+            name: ($gateway_name_1)
+        - description: Get Gateway 2 resource status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: Gateway
+            namespace: ($kong_namespace)
+            name: ($gateway_name_2)
+        - description: Get DataPlane resources
+          get:
+            apiVersion: gateway-operator.konghq.com/v1beta1
+            kind: DataPlane
+            namespace: ($kong_namespace)
+        - description: Get ControlPlane resources
+          get:
+            apiVersion: gateway-operator.konghq.com/v1beta1
+            kind: ControlPlane
+            namespace: ($kong_namespace)
+        - description: Get KonnectGatewayControlPlane resources
+          get:
+            apiVersion: konnect.konghq.com/v1alpha2
+            kind: KonnectGatewayControlPlane
+            namespace: ($kong_namespace)
+        - description: Get Pods in kong namespace
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: ($kong_namespace)
+        - description: Describe Gateway 1
+          describe:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: Gateway
+            name: ($gateway_name_1)
+            namespace: ($kong_namespace)
+            showEvents: true
+        - description: Describe Gateway 2
+          describe:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: Gateway
+            name: ($gateway_name_2)
+            namespace: ($kong_namespace)
+            showEvents: true
+        - description: Get events from kong namespace
+          events:
+            namespace: ($kong_namespace)
+        - description: Get operator logs
+          podLogs:
+            namespace: kong-system
+            selector: control-plane=controller-manager
+            tail: 100
+
+    # Step 2: Create HTTPRoute with single ParentRef (Gateway 1 only)
+    - name: create-httproute-single-parentref
+      description: Create HTTPRoute that references only Gateway 1
+      try:
+        - apply:
+            file: 02-httproute-single-parentref.yaml
+        - assert:
+            file: 02-assert-httproute-single-parentref.yaml
+        # Wait for Kong resources to be programmed for Gateway 1
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
+        # Assert Kong resources for Gateway 1
+        - assert:
+            file: 02-assert-kong-resources-gateway1.yaml
+      catch:
+        - description: Get HTTPRoute status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($kong_namespace)
+            name: ($httproute_name)
+        - description: Get KongRoute resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($kong_namespace)
+        - description: Get KongService resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongService
+            namespace: ($kong_namespace)
+        - description: Get operator logs
+          podLogs:
+            namespace: kong-system
+            selector: control-plane=controller-manager
+            tail: 100
+
+    # Step 3: Verify traffic flows through Gateway 1
+    - name: verify-traffic-gateway1
+      description: Verify that traffic can flow through Gateway 1
+      try:
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name_1)
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip_1
+                value: ($stdout)
+        - description: Test connectivity through Gateway 1
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip_1)
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              POD_NAME="curl-test-$(date +%s)-$$"
+              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -n ${KONG_NAMESPACE} -- \
+                curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' http://${PROXY_IP}/get
+            check:
+              (contains($stdout, '200')): true
+
+    # Step 4: Update HTTPRoute to reference multiple Gateways
+    - name: update-httproute-multiple-parentrefs
+      description: Update HTTPRoute to reference both Gateway 1 and Gateway 2
+      try:
+        - apply:
+            file: 03-httproute-multiple-parentrefs.yaml
+        - assert:
+            file: 03-assert-httproute-multiple-parentrefs.yaml
+        # Wait for Kong resources to be programmed for both Gateways
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+              - name: GATEWAY_NAME_1
+                value: ($gateway_name_1)
+            content: |
+              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} \
+                -l gateway-operator.konghq.com/hybrid-gateways-name=${GATEWAY_NAME_1}
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+              - name: GATEWAY_NAME_2
+                value: ($gateway_name_2)
+            content: |
+              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} \
+                -l gateway-operator.konghq.com/hybrid-gateways-name=${GATEWAY_NAME_2}
+        # Assert Kong resources exist for both Gateways
+        - assert:
+            file: 02-assert-kong-resources-gateway1.yaml
+        - assert:
+            file: 03-assert-kong-resources-gateway2.yaml
+      catch:
+        - description: Get HTTPRoute status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($kong_namespace)
+            name: ($httproute_name)
+        - description: Get KongRoute resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($kong_namespace)
+        - description: Get KongService resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongService
+            namespace: ($kong_namespace)
+        - description: Get KongUpstream resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongUpstream
+            namespace: ($kong_namespace)
+        - description: Get KongTarget resources
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongTarget
+            namespace: ($kong_namespace)
+        - description: Get operator logs
+          podLogs:
+            namespace: kong-system
+            selector: control-plane=controller-manager
+            tail: 100
+
+    # Step 5: Verify Kong resources are created for each ControlPlane
+    - name: verify-kong-resources-per-controlplane
+      description: Verify Kong resources have different ControlPlane IDs for each Gateway
+      try:
+        # Get ControlPlane ID for Gateway 1 (find by ownerReference)
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+              - name: GATEWAY_NAME_1
+                value: ($gateway_name_1)
+            content: |
+              kubectl get konnectgatewaycontrolplane -n ${KONG_NAMESPACE} -o json | \
+                jq -r --arg gw "${GATEWAY_NAME_1}" '.items[] | select(.metadata.ownerReferences[]?.name == $gw) | .status.id' | tr -d '\n'
+            outputs:
+              - name: controlplane_id_1
+                value: ($stdout)
+        # Get ControlPlane ID for Gateway 2 (find by ownerReference)
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+              - name: GATEWAY_NAME_2
+                value: ($gateway_name_2)
+            content: |
+              kubectl get konnectgatewaycontrolplane -n ${KONG_NAMESPACE} -o json | \
+                jq -r --arg gw "${GATEWAY_NAME_2}" '.items[] | select(.metadata.ownerReferences[]?.name == $gw) | .status.id' | tr -d '\n'
+            outputs:
+              - name: controlplane_id_2
+                value: ($stdout)
+        # Verify Gateway 1 KongRoute has Gateway 1's ControlPlane ID
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+              - name: GATEWAY_NAME_1
+                value: ($gateway_name_1)
+              - name: CONTROLPLANE_ID_1
+                value: ($controlplane_id_1)
+            content: |
+              ROUTE_CP_ID=$(kubectl get kongroute -n ${KONG_NAMESPACE} \
+                -l gateway-operator.konghq.com/hybrid-gateways-name=${GATEWAY_NAME_1} \
+                -o jsonpath='{.items[0].status.konnect.controlPlaneID}' | tr -d '\n')
+              if [ "$ROUTE_CP_ID" = "$CONTROLPLANE_ID_1" ]; then
+                echo "PASS: KongRoute for Gateway 1 has correct ControlPlane ID"
+              else
+                echo "FAIL: KongRoute ControlPlane ID ($ROUTE_CP_ID) does not match Gateway 1 ControlPlane ID ($CONTROLPLANE_ID_1)"
+                exit 1
+              fi
+        # Verify Gateway 2 KongRoute has Gateway 2's ControlPlane ID
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+              - name: GATEWAY_NAME_2
+                value: ($gateway_name_2)
+              - name: CONTROLPLANE_ID_2
+                value: ($controlplane_id_2)
+            content: |
+              ROUTE_CP_ID=$(kubectl get kongroute -n ${KONG_NAMESPACE} \
+                -l gateway-operator.konghq.com/hybrid-gateways-name=${GATEWAY_NAME_2} \
+                -o jsonpath='{.items[0].status.konnect.controlPlaneID}' | tr -d '\n')
+              if [ "$ROUTE_CP_ID" = "$CONTROLPLANE_ID_2" ]; then
+                echo "PASS: KongRoute for Gateway 2 has correct ControlPlane ID"
+              else
+                echo "FAIL: KongRoute ControlPlane ID ($ROUTE_CP_ID) does not match Gateway 2 ControlPlane ID ($CONTROLPLANE_ID_2)"
+                exit 1
+              fi
+        # Verify ControlPlane IDs are different
+        - script:
+            env:
+              - name: CONTROLPLANE_ID_1
+                value: ($controlplane_id_1)
+              - name: CONTROLPLANE_ID_2
+                value: ($controlplane_id_2)
+            content: |
+              if [ "$CONTROLPLANE_ID_1" != "$CONTROLPLANE_ID_2" ]; then
+                echo "PASS: Gateway 1 and Gateway 2 have different ControlPlane IDs"
+                echo "Gateway 1 ControlPlane ID: $CONTROLPLANE_ID_1"
+                echo "Gateway 2 ControlPlane ID: $CONTROLPLANE_ID_2"
+              else
+                echo "FAIL: Gateway 1 and Gateway 2 have the same ControlPlane ID ($CONTROLPLANE_ID_1)"
+                exit 1
+              fi
+
+    # Step 6: Verify traffic flows through both Gateways
+    - name: verify-traffic-both-gateways
+      description: Verify that traffic can flow through both Gateway 1 and Gateway 2
+      try:
+        # Get Gateway 1 proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name_1)
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip_1
+                value: ($stdout)
+        # Get Gateway 2 proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name_2)
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip_2
+                value: ($stdout)
+        # Test connectivity through Gateway 1
+        - description: Test connectivity through Gateway 1
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip_1)
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              POD_NAME="curl-test-gw1-$(date +%s)-$$"
+              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -n ${KONG_NAMESPACE} -- \
+                curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' http://${PROXY_IP}/get
+            check:
+              (contains($stdout, '200')): true
+        # Test connectivity through Gateway 2
+        - description: Test connectivity through Gateway 2
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip_2)
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              POD_NAME="curl-test-gw2-$(date +%s)-$$"
+              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -n ${KONG_NAMESPACE} -- \
+                curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' http://${PROXY_IP}/get
+            check:
+              (contains($stdout, '200')): true
+        # Test from host through Gateway 1
+        - description: Test connectivity from host through Gateway 1
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip_1)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get
+            check:
+              (contains($stdout, '200')): true
+        # Test from host through Gateway 2
+        - description: Test connectivity from host through Gateway 2
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip_2)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get
+            check:
+              (contains($stdout, '200')): true
