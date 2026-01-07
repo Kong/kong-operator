@@ -273,7 +273,8 @@ func filterValidBackendRefs(
 ) ([]validBackendRef, error) {
 	var validBackendRefs []validBackendRef
 
-	for _, bRef := range backendRefs {
+	for i := range backendRefs {
+		bRef := backendRefs[i]
 		// Check if the backendRef is supported.
 		if !route.IsBackendRefSupported(bRef.Group, bRef.Kind) {
 			log.Info(logger, "skipping unsupported backendRef", "group", bRef.Group, "kind", bRef.Kind)
@@ -334,7 +335,10 @@ func filterValidBackendRefs(
 
 		// If we reach here, the BackendRef is valid and has endpoints.
 		validBackendRefs = append(validBackendRefs, validBackendRef{
-			backendRef:     &bRef,
+			// IMPORTANT: take the address of the slice element, not the loop variable.
+			// The loop variable is reused across iterations which would make all pointers
+			// alias the same BackendRef.
+			backendRef:     &backendRefs[i],
 			service:        svc,
 			servicePort:    svcPort,
 			readyEndpoints: readyEndpoints,
