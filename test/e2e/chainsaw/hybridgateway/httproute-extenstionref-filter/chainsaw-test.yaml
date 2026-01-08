@@ -139,6 +139,13 @@ spec:
             apiVersion: configuration.konghq.com/v1alpha1
             kind: KongPluginBinding
             namespace: ($http_route_namespace)
+      finally:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              namespace: ($http_route_namespace)
+              name: ($http_route_name)
     # Step 3: Create an HTTPRoute with multiple extentionRef filters with multiple plugins attached.
     - name: create-httproute-with-multiple-plugins
       description: Create an HTTPRoute with 2 ExtensionRef filters to attach a rate-limiting and a response-transformer plugins
@@ -210,6 +217,13 @@ spec:
             apiVersion: configuration.konghq.com/v1alpha1
             kind: KongPluginBinding
             namespace: ($http_route_namespace)
+      finally:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              namespace: ($http_route_namespace)
+              name: ($http_route_name)
   # Step 4: Update the KongPlugin after HTTPRoute is programmed
     - name: update-kongplugin-for-attached-httproute
       description: Update KongPlugin which is attached to an HTTPRoute by extensionRef filter
@@ -304,6 +318,13 @@ spec:
             apiVersion: configuration.konghq.com/v1alpha1
             kind: KongPluginBinding
             namespace: ($http_route_namespace)
+      finally:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              namespace: ($http_route_namespace)
+              name: ($http_route_name)
     # Step 5: Add extensionRef filter to an HTTPRoute with an existing extensionRef filter
     - name: create-httproute-with-multiple-plugins
       description: Create an HTTPRoute with 2 ExtensionRef filters to attach a rate-limiting and a response-transformer plugins
@@ -371,3 +392,10 @@ spec:
               done
             check:
               "(contains($stdout, 'X-Add: foo'))": true
+      finally:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              namespace: ($http_route_namespace)
+              name: ($http_route_name)
