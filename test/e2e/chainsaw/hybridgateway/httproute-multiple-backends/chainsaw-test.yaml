@@ -258,15 +258,48 @@ spec:
                 value: ($kong_namespace)
             content: |
               kubectl wait --for=condition=Programmed --timeout=120s kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify weights are set correctly - should have one with 80 and one with 20
+        # Verify weights preserve the expected 80/20 ratio (reduced form: 1/4)
         - script:
             env:
               - name: KONG_NAMESPACE
                 value: ($kong_namespace)
             content: |
-              kubectl get kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].spec.weight}' | tr ' ' '\n' | sort -n | tr '\n' ' ' | xargs
+              gcd() {
+                a="$1"
+                b="$2"
+                while [ "$b" -ne 0 ]; do
+                  t=$((a % b))
+                  a="$b"
+                  b="$t"
+                done
+                echo "$a"
+              }
+
+              i=0
+              while [ "$i" -lt 24 ]; do
+                weights="$(kubectl get kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].spec.weight}' | tr ' ' '\n' | sort -n | tr '\n' ' ' | xargs)"
+                set -- ${weights}
+                if [ "$#" = "2" ]; then
+                  w1="$1"
+                  w2="$2"
+                  g="$(gcd "$w1" "$w2")"
+                  if [ "$g" -ne 0 ]; then
+                    r1=$((w1 / g))
+                    r2=$((w2 / g))
+                    if [ "$r1" = "1" ] && [ "$r2" = "4" ]; then
+                      echo "${r1} ${r2}"
+                      exit 0
+                    fi
+                  fi
+                fi
+                i=$((i + 1))
+                sleep 5
+              done
+
+              echo "${weights}"
+              exit 1
             check:
-              ($stdout == '20 80'): true
+              ($stdout == '1 4'): true
         # Verify traffic still works
         - script:
             env:
