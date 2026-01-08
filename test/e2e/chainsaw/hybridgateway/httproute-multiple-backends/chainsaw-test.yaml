@@ -276,12 +276,14 @@ spec:
               }
 
               i=0
-              while [ "$i" -lt 24 ]; do
-                weights="$(kubectl get kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].spec.weight}' | tr ' ' '\n' | sort -n | tr '\n' ' ' | xargs)"
-                set -- ${weights}
-                if [ "$#" = "2" ]; then
-                  w1="$1"
-                  w2="$2"
+              while [ "$i" -lt 60 ]; do
+                weights_raw="$(kubectl get kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].spec.weight}' 2>/dev/null || true)"
+                weights_unique="$(printf '%s' "${weights_raw}" | tr ' ' '\n' | sed '/^$/d' | sort -n | uniq)"
+                weights_unique_count="$(printf '%s\n' "${weights_unique}" | sed '/^$/d' | wc -l | tr -d ' \n')"
+
+                if [ "${weights_unique_count}" = "2" ]; then
+                  w1="$(printf '%s\n' "${weights_unique}" | head -n1)"
+                  w2="$(printf '%s\n' "${weights_unique}" | tail -n1)"
                   g="$(gcd "$w1" "$w2")"
                   if [ "$g" -ne 0 ]; then
                     r1=$((w1 / g))
@@ -292,11 +294,12 @@ spec:
                     fi
                   fi
                 fi
+
                 i=$((i + 1))
                 sleep 5
               done
 
-              echo "${weights}"
+              printf 'weights=%s\nunique=%s\n' "${weights_raw}" "${weights_unique}"
               exit 1
             check:
               ($stdout == '1 4'): true
