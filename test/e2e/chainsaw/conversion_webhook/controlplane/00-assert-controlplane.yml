@@ -1,0 +1,101 @@
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: ($dataplane_name)
+  namespace: ($kong_namespace)
+status:
+  (conditions[?type == 'Ready']):
+    - status: 'True'
+      reason: Ready
+---
+
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: ControlPlane
+metadata:
+  name: ($controlplane_name)
+  namespace: ($kong_namespace)
+spec:
+  configDump:
+    dumpSensitive: disabled
+    state: disabled
+  dataplane:
+    ref:
+      name: ($dataplane_name)
+    type: ref
+  dataplaneSync:
+    reverseSync: disabled
+  ingressClass: kong
+  konnect:
+    consumersSync: enabled
+  translation:
+    combinedServicesFromDifferentHTTPRoutes: enabled
+    drainSupport: enabled
+  watchNamespaces:
+    type: list
+    list:
+    - ($kong_namespace)
+status:
+  # Assert referenced DataPlane.
+  dataPlane:
+    name: ($dataplane_name)
+  # Assert conditions.
+  (conditions[?type == 'Provisioned']):
+    - status: 'True'
+      reason: Provisioned
+  (conditions[?type == 'Ready']):
+    - status: 'True'
+      reason: Ready
+  (conditions[?type == 'WatchNamespaceGrantValid']):
+    - status: 'True'
+      reason: WatchNamespaceGrantValid
+  (conditions[?type == 'OptionsValid']):
+    - status: 'True'
+      reason: OptionsValid
+  # Assert controllers.
+  (controllers[?name == 'INGRESS_NETWORKINGV1']):
+    - state: enabled
+  (controllers[?name == 'INGRESS_CLASS_NETWORKINGV1']):
+    - state: enabled
+  (controllers[?name == 'INGRESS_CLASS_PARAMETERS']):
+    - state: enabled
+  (controllers[?name == 'GWAPI_GATEWAY']):
+    - state: disabled
+  (controllers[?name == 'GWAPI_HTTPROUTE']):
+    - state: disabled
+  (controllers[?name == 'GWAPI_GRPCROUTE']):
+    - state: disabled
+  (controllers[?name == 'GWAPI_REFERENCE_GRANT']):
+    - state: disabled
+  (controllers[?name == 'KONG_CLUSTERPLUGIN']):
+    - state: enabled
+  (controllers[?name == 'KONG_PLUGIN']):
+    - state: enabled
+  (controllers[?name == 'KONG_CONSUMER']):
+    - state: enabled
+  (controllers[?name == 'KONG_UPSTREAM_POLICY']):
+    - state: enabled
+  (controllers[?name == 'KONG_SERVICE_FACADE']):
+    - state: enabled
+  (controllers[?name == 'KONG_VAULT']):
+    - state: enabled
+  (controllers[?name == 'KONG_LICENSE']):
+    - state: enabled
+  (controllers[?name == 'KONG_CUSTOM_ENTITY']):
+    - state: enabled
+  (controllers[?name == 'SERVICE']):
+    - state: enabled
+  # Assert feature gates.
+  (featureGates[?name == 'KongCustomEntity']):
+    - state: disabled
+  (featureGates[?name == 'FillIDs']):
+    - state: enabled
+  (featureGates[?name == 'GatewayAlpha']):
+    - state: enabled
+  (featureGates[?name == 'KongServiceFacade']):
+    - state: disabled
+  (featureGates[?name == 'SanitizeKonnectConfigDumps']):
+    - state: enabled
+  (featureGates[?name == 'FallbackConfiguration']):
+    - state: disabled
+  (featureGates[?name == 'RewriteURIs']):
+    - state: enabled

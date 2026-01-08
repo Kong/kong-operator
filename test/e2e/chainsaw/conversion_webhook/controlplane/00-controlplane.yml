@@ -1,0 +1,61 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ($kong_namespace)
+---
+apiVersion: gateway-operator.konghq.com/v1alpha1
+kind: WatchNamespaceGrant
+metadata:
+  name: watchnamespacegrant
+  namespace: ($kong_namespace)
+spec:
+  from:
+  - group: gateway-operator.konghq.com
+    kind: ControlPlane
+    namespace: ($kong_namespace)
+---
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: ($dataplane_name)
+  namespace: ($kong_namespace)
+spec:
+  deployment:
+    podTemplateSpec:
+      spec:
+        containers:
+        - name: proxy
+          image: kong:3.9
+---
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: ControlPlane
+metadata:
+  name: ($controlplane_name)
+  namespace: ($kong_namespace)
+spec:
+  dataplane: ($dataplane_name)
+  gatewayClass: ($gateway_class_name)
+  watchNamespaces:
+    type: list
+    list:
+    - ($kong_namespace)
+  deployment:
+    podTemplateSpec:
+      spec:
+        containers:
+        - name: controller
+          image: kong/kubernetes-ingress-controller:3.5.0
+          env:
+          - name: CONTROLLER_FEATURE_GATES
+            value: "RewriteURIs=true,GatewayAlpha=true,KongCustomEntity=false"
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 3
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
