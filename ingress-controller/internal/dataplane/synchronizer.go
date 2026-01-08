@@ -17,7 +17,7 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	// DefaultSyncInterval indicates the time.Duration (minimum) that will occur between
+	// DefaultSyncInterval indicates the [time.Duration] (minimum) that will occur between
 	// updates to the DataplaneClient.
 	//
 	// This default was based on local testing wherein it appeared sub-second updates
@@ -73,7 +73,7 @@ func WithInitCacheSyncDuration(period time.Duration) SynchronizerOption {
 // NewSynchronizer will provide a new Synchronizer object with a specified
 // stagger time for data-plane updates to occur. Note that this starts some
 // background goroutines and the caller is resonsible for marking the provided
-// context.Context as "Done()" to shut down the background routines.
+// [context.Context] as "Done()" to shut down the background routines.
 func NewSynchronizer(logger logr.Logger, client Client, opts ...SynchronizerOption) (*Synchronizer, error) {
 	synchronizer := &Synchronizer{
 		logger:          logger,

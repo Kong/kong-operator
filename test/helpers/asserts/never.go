@@ -12,8 +12,8 @@ import (
 // within the specified waitTime, checking the condition every tickTime.
 // If the conditionFunc returns true at any point, the test fails with
 // the provided message and arguments.
-// The conditionFunc receives a context.Context which is derived from
-// the testing.T context, allowing for cancellation and timeouts.
+// The conditionFunc receives a [context.Context] which is derived from
+// the [testing.T] context, allowing for cancellation and timeouts.
 // The conditionFunc is run immediately upon entering the function,
 // in the same goroutine as the caller, thus it's a blocking call.
 func Never(

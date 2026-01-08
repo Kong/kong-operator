@@ -74,7 +74,7 @@ func WithParent(parent tls.Certificate) SelfSignedCertificateOption {
 	}
 }
 
-// MustGenerateCert generates a tls.Certificate struct to be used in TLS client/listener configurations.
+// MustGenerateCert generates a [tls.Certificate] struct to be used in TLS client/listener configurations.
 // If no parent certificate is passed using WithParent option, the certificate is self-signed thus returned cert can be
 // used as CA for it.
 func MustGenerateCert(opts ...SelfSignedCertificateOption) tls.Certificate {
@@ -152,7 +152,7 @@ func MustGenerateCertPEMFormat(opts ...SelfSignedCertificateOption) (cert []byte
 	return CertToPEMFormat(MustGenerateCert(opts...))
 }
 
-// CertToPEMFormat converts a tls.Certificate to PEM format.
+// CertToPEMFormat converts a [tls.Certificate] to PEM format.
 func CertToPEMFormat(tlsCert tls.Certificate) (cert []byte, key []byte) {
 	certBlock := &pem.Block{
 		Type:  "CERTIFICATE",
