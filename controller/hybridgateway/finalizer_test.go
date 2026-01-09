@@ -61,16 +61,16 @@ func TestFinalizerFunctionality(t *testing.T) {
 
 func TestFinalizerConstant(t *testing.T) {
 	t.Run("HTTPRoute finalizer is properly defined", func(t *testing.T) {
-		assert.Equal(t, "gateway-operator.konghq.com/httproute-cleanup", finalizerconst.HTTPRouteFinalizer)
-		assert.NotEmpty(t, finalizerconst.HTTPRouteFinalizer)
+		assert.Equal(t, "gateway-operator.konghq.com/hybrid-httproute-cleanup", finalizerconst.HybridHTTPRouteFinalizer)
+		assert.NotEmpty(t, finalizerconst.HybridHTTPRouteFinalizer)
 	})
 
 	t.Run("Gateway finalizer is properly defined", func(t *testing.T) {
-		assert.Equal(t, "gateway-operator.konghq.com/gateway-cleanup", finalizerconst.GatewayFinalizer)
-		assert.NotEmpty(t, finalizerconst.GatewayFinalizer)
+		assert.Equal(t, "gateway-operator.konghq.com/hybrid-gateway-cleanup", finalizerconst.HybridGatewayFinalizer)
+		assert.NotEmpty(t, finalizerconst.HybridGatewayFinalizer)
 	})
 
 	t.Run("different resource types have different finalizers", func(t *testing.T) {
-		assert.NotEqual(t, finalizerconst.HTTPRouteFinalizer, finalizerconst.GatewayFinalizer)
+		assert.NotEqual(t, finalizerconst.HybridHTTPRouteFinalizer, finalizerconst.HybridGatewayFinalizer)
 	})
 }

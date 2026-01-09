@@ -409,7 +409,7 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-route",
 						Namespace:  "default",
-						Finalizers: []string{finalizerconst.HTTPRouteFinalizer},
+						Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
 					},
 				}
 				return route
@@ -503,7 +503,7 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       "test-route",
 						Namespace:  "default",
-						Finalizers: []string{finalizerconst.HTTPRouteFinalizer},
+						Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
 					},
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
@@ -704,7 +704,7 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 						Name:       "test-gateway",
 						Namespace:  "default",
 						UID:        "test-gateway-uid",
-						Finalizers: []string{finalizerconst.GatewayFinalizer},
+						Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
 					},
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "kong",
@@ -952,7 +952,7 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-route",
 					Namespace:  "default",
-					Finalizers: []string{finalizerconst.HTTPRouteFinalizer},
+					Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
 				},
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
@@ -981,7 +981,7 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-route",
 					Namespace:  "default",
-					Finalizers: []string{finalizerconst.HTTPRouteFinalizer},
+					Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
 				},
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
@@ -1010,7 +1010,7 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-route",
 					Namespace:  "default",
-					Finalizers: []string{finalizerconst.HTTPRouteFinalizer},
+					Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
 				},
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
@@ -1042,7 +1042,7 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-route",
 					Namespace:  "default",
-					Finalizers: []string{finalizerconst.HTTPRouteFinalizer},
+					Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
 				},
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
@@ -1076,7 +1076,7 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 					Namespace: "default",
 					Finalizers: []string{
 						"some-other-finalizer",
-						finalizerconst.HTTPRouteFinalizer,
+						finalizerconst.HybridHTTPRouteFinalizer,
 						"yet-another-finalizer",
 					},
 				},
@@ -1137,7 +1137,7 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 				err := cl.Get(ctx, client.ObjectKeyFromObject(tt.httpRoute), updated)
 				require.NoError(t, err)
 
-				assert.Equal(t, tt.expectedHasFinalizer, slices.Contains(updated.GetFinalizers(), finalizerconst.HTTPRouteFinalizer), "finalizer presence mismatch")
+				assert.Equal(t, tt.expectedHasFinalizer, slices.Contains(updated.GetFinalizers(), finalizerconst.HybridHTTPRouteFinalizer), "finalizer presence mismatch")
 			}
 		})
 	}
@@ -1221,7 +1221,7 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 					Name:       "test-gateway",
 					Namespace:  "default",
 					UID:        "test-gateway-uid",
-					Finalizers: []string{finalizerconst.GatewayFinalizer},
+					Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
 				},
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "kong",
@@ -1242,7 +1242,7 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-gateway",
 					Namespace:  "default",
-					Finalizers: []string{finalizerconst.GatewayFinalizer},
+					Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
 				},
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "other",
@@ -1263,7 +1263,7 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-gateway",
 					Namespace:  "default",
-					Finalizers: []string{finalizerconst.GatewayFinalizer},
+					Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
 				},
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "other",
@@ -1287,7 +1287,7 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 				ObjectMeta: metav1.ObjectMeta{
 					Name:       "test-gateway",
 					Namespace:  "default",
-					Finalizers: []string{finalizerconst.GatewayFinalizer},
+					Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
 				},
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "other",
@@ -1313,7 +1313,7 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 					Namespace: "default",
 					Finalizers: []string{
 						"some-other-finalizer",
-						finalizerconst.GatewayFinalizer,
+						finalizerconst.HybridGatewayFinalizer,
 						"yet-another-finalizer",
 					},
 				},
@@ -1366,7 +1366,7 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 				err := cl.Get(ctx, client.ObjectKeyFromObject(tt.gateway), updated)
 				require.NoError(t, err)
 
-				assert.Equal(t, tt.expectedHasFinalizer, slices.Contains(updated.GetFinalizers(), finalizerconst.GatewayFinalizer), "finalizer presence mismatch")
+				assert.Equal(t, tt.expectedHasFinalizer, slices.Contains(updated.GetFinalizers(), finalizerconst.HybridGatewayFinalizer), "finalizer presence mismatch")
 
 			}
 		})
