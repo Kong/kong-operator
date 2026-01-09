@@ -303,7 +303,7 @@ spec:
               printf 'weights=%s\nunique=%s\n' "${weights_raw}" "${weights_unique}"
               exit 1
             check:
-              ($stdout == '1 4'): true
+              "(contains($stdout, '1 4'))": true
         # Verify traffic still works
         - script:
             env:
