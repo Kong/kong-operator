@@ -1,0 +1,46 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: verify-gateway-tls-fingerprint
+spec:
+  try:
+    # 1. Fetch the Gateway Proxy IP
+    - script:
+        env:
+          - name: GATEWAY_NAME
+            value: ($gateway_name)
+          - name: GATEWAY_NAMESPACE
+            value: ($gateway_namespace)
+        content: |
+          bash ../common/scripts/proxy_ip_address.sh
+        outputs:
+          - name: proxy_ip
+            value: (json_parse($stdout).proxy_ip_address)
+        check:
+          (json_parse($stdout).proxy_ip_address != null): true
+          (json_parse($stdout).proxy_ip_address != ''): true
+
+    # 2. Compare Fingerprints
+    - script:
+        timeout: 150s
+        env:
+          - name: PROXY_IP
+            value: ($proxy_ip)
+          - name: SNI_HOSTNAME
+            value: ($sni_hostname)
+          - name: SECRET_NAME
+            value: ($cert_secret_name)
+          - name: SECRET_NAMESPACE
+            value: ($cert_secret_namespace)
+        content: |
+          bash ../common/scripts/compare_tls_fingerprints.sh
+        outputs:
+          - name: fingerprint_status
+            value: (json_parse($stdout).status)
+        check:
+          (json_parse($stdout).status == 'success'): true
+          (json_parse($stdout).server_fingerprint != null): true
+          (json_parse($stdout).server_fingerprint != ''): true
+          (json_parse($stdout).secret_fingerprint != null): true
+          (json_parse($stdout).secret_fingerprint != ''): true
+          (json_parse($stdout).server_fingerprint == json_parse($stdout).secret_fingerprint): true

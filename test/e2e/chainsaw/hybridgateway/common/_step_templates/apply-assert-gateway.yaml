@@ -1,0 +1,65 @@
+# Template for creating and asserting a Gateway with TLS listener.
+#
+# Required bindings:
+#   - test_name: Test name used to compose the gateway name.
+#   - namespace: Namespace where the gateway will be created.
+#   - listener_http_port: HTTP listener port (e.g., 80).
+#   - listener_https_port: HTTPS listener port (e.g., 443).
+#   - sni_hostname: SNI hostname for the TLS listener (e.g., "*.example.com").
+#   - cert_secret_name: Name of the TLS secret.
+#   - cert_secret_namespace: Namespace of the TLS secret.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-gateway
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: gateway.networking.k8s.io/v1
+          kind: Gateway
+          metadata:
+            name: (join('-', [($test_name), 'gateway']))
+            namespace: ($namespace)
+          spec:
+            gatewayClassName: (join('-', [($test_name), 'gateway-class']))
+            listeners:
+            - name: http
+              protocol: HTTP
+              port: ($listener_http_port)
+            - name: https
+              protocol: HTTPS
+              port: ($listener_https_port)
+              hostname: ($sni_hostname)
+              tls:
+                mode: Terminate
+                certificateRefs:
+                - name: ($cert_secret_name)
+                  namespace: ($cert_secret_namespace)
+    - assert:
+        resource:
+          apiVersion: gateway.networking.k8s.io/v1
+          kind: Gateway
+          metadata:
+            name: (join('-', [($test_name), 'gateway']))
+            namespace: ($namespace)
+          status:
+            # Using your dynamic condition filtering for high resilience
+            (conditions[?type == 'Accepted']):
+              - status: 'True'
+                reason: Accepted
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (conditions[?type == 'DataPlaneReady']):
+              - status: 'True'
+                reason: Ready
+            (conditions[?type == 'KonnectGatewayControlPlaneProgrammed']):
+              - status: 'True'
+                reason: Programmed
+            (conditions[?type == 'KonnectExtensionReady']):
+              - status: 'True'
+                reason: Ready
+            (conditions[?type == 'GatewayService']):
+              - status: 'True'
+                reason: Ready

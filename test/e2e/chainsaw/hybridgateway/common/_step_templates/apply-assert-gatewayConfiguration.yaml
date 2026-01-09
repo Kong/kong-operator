@@ -1,0 +1,38 @@
+# Template for creating and asserting a GatewayConfiguration.
+#
+# Required bindings:
+#   - test_name: Test name used to compose the configuration name.
+#   - namespace: Namespace where the configuration will be created.
+#   - gateway_image: Kong Gateway image to use (e.g., "kong/kong-gateway:3.12").
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-gateway-configiuration
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: gateway-operator.konghq.com/v2beta1
+          kind: GatewayConfiguration
+          metadata:
+            name: (join('-', [($test_name), 'gateway-configuration']))
+            namespace: ($namespace)
+          spec:
+            konnect:
+              authRef:
+                # Reference the AuthConfig created by the previous template
+                name: (join('-', [($test_name), 'konnect-api-auth']))
+            dataPlaneOptions:
+              deployment:
+                podTemplateSpec:
+                  spec:
+                    containers:
+                    - name: proxy
+                      image: ($gateway_image)
+    - assert:
+        resource:
+          apiVersion: gateway-operator.konghq.com/v2beta1
+          kind: GatewayConfiguration
+          metadata:
+            name: (join('-', [($test_name), 'gateway-configuration']))
+            namespace: ($namespace)
