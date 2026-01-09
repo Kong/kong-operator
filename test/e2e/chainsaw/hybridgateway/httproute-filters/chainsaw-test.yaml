@@ -192,7 +192,22 @@ spec:
               - name: ROUTE_PATH
                 value: ($route_path)
             content: |
-              curl -sI "http://${PROXY_IP}${ROUTE_PATH}/response-headers?x-remove=qux&x-set=baz"
+              out=""
+              i=0
+              while [ "$i" -lt 60 ]; do
+                out="$(curl -sI --connect-timeout 5 --max-time 10 "http://${PROXY_IP}${ROUTE_PATH}/response-headers?x-remove=qux&x-set=baz" || true)"
+                if printf '%s' "${out}" | grep -q '200 OK' &&
+                  printf '%s' "${out}" | grep -q 'X-Add: bar' &&
+                  printf '%s' "${out}" | grep -q 'X-Set: foo' &&
+                  ! printf '%s' "${out}" | grep -q 'X-Remove'; then
+                  echo "${out}"
+                  exit 0
+                fi
+                i=$((i + 1))
+                sleep 5
+              done
+              echo "${out}"
+              exit 1
             check:
               "(contains($stdout, '200 OK'))": true
               "(contains($stdout, 'X-Add: bar'))": true

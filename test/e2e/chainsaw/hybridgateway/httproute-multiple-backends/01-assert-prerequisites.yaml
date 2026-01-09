@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ($kong_namespace)
+status:
+  phase: Active
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ($cross_namespace)
+status:
+  phase: Active
