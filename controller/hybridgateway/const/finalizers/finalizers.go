@@ -6,14 +6,14 @@ import (
 )
 
 const (
-	// HTTPRouteFinalizer is the finalizer added to HTTPRoute objects to manage cleanup of generated resources.
-	HTTPRouteFinalizer = "gateway-operator.konghq.com/httproute-cleanup"
+	// HybridHTTPRouteFinalizer is the finalizer added to HTTPRoute objects to manage cleanup of generated resources.
+	HybridHTTPRouteFinalizer = "gateway-operator.konghq.com/hybrid-httproute-cleanup"
 
-	// GatewayFinalizer is the finalizer added to Gateway objects to manage cleanup of generated resources.
-	GatewayFinalizer = "gateway-operator.konghq.com/gateway-cleanup"
+	// HybridGatewayFinalizer is the finalizer added to Gateway objects to manage cleanup of generated resources.
+	HybridGatewayFinalizer = "gateway-operator.konghq.com/hybrid-gateway-cleanup"
 
-	// DefaultFinalizer is the default finalizer for resources that don't have a specific finalizer defined.
-	DefaultFinalizer = "gateway-operator.konghq.com/resource-cleanup"
+	// HybridDefaultFinalizer is the default finalizer for resources that don't have a specific finalizer defined.
+	HybridDefaultFinalizer = "gateway-operator.konghq.com/hybrid-resource-cleanup"
 )
 
 // GetFinalizerForType returns the appropriate finalizer name for the given resource type.
@@ -21,10 +21,10 @@ const (
 func GetFinalizerForType[t converter.RootObject](obj t) string {
 	switch any(obj).(type) {
 	case gwtypes.HTTPRoute:
-		return HTTPRouteFinalizer
+		return HybridHTTPRouteFinalizer
 	case gwtypes.Gateway:
-		return GatewayFinalizer
+		return HybridGatewayFinalizer
 	default:
-		return DefaultFinalizer
+		return HybridDefaultFinalizer
 	}
 }
