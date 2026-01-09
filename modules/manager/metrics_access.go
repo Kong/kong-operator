@@ -21,7 +21,7 @@ import "fmt"
 // MetricsAccessFilter defines the access filter function for the metrics endpoint.
 type MetricsAccessFilter string
 
-// Set implements flag.Value.
+// Set implements [flag.Value].
 func (mf *MetricsAccessFilter) Set(v string) error {
 	switch v {
 	case string(MetricsAccessFilterOff), string(MetricsAccessFilterRBAC):

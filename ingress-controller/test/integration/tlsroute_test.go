@@ -721,8 +721,8 @@ func TestTLSRoutePassthrough(t *testing.T) {
 // tlsEchoResponds takes a TLS address URL and a Pod name and checks if a go-echo
 // instance is running on that Pod at that address using hostname for SNI. It sends
 // a message and checks if returned one matches. It returns an error with
-// an explanation if it is not (typical network related errors like io.EOF or
-// syscall.ECONNRESET are returned directly).
+// an explanation if it is not (typical network related errors like [io.EOF] or
+// [syscall.ECONNRESET] are returned directly).
 //
 // Deprecated: use test.EchoResponds with ProtocolTLS instead.
 func tlsEchoResponds(

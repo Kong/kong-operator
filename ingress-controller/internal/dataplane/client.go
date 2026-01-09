@@ -12,7 +12,7 @@ import (
 // -----------------------------------------------------------------------------
 
 const (
-	// DefaultTimeout indicates the time.Duration allowed for responses to
+	// DefaultTimeout indicates the [time.Duration] allowed for responses to
 	// come back from the backend data-plane API.
 	//
 	// NOTE: the current default is based on observed latency in a CI environment using

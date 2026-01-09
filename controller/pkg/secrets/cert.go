@@ -435,7 +435,7 @@ func ensureContainerImageUpdated(container *corev1.Container, imageVersionStr st
 	return updated, nil
 }
 
-// ParsePrivateKey parses a PEM block and returns a crypto.Signer and x509.SignatureAlgorithm.
+// ParsePrivateKey parses a PEM block and returns a [crypto.Signer] and [x509.SignatureAlgorithm].
 func ParsePrivateKey(pemBlock *pem.Block) (crypto.Signer, x509.SignatureAlgorithm, error) {
 	var (
 		signatureAlgorithm = x509.UnknownSignatureAlgorithm

@@ -120,7 +120,7 @@ func (c *httpRouteConverter) Translate(ctx context.Context, logger logr.Logger) 
 // - Individual conversion failures are logged and collected but don't stop processing
 // - Failed objects are excluded from the returned slice but processing continues
 // - This provides complete error visibility rather than failing on the first conversion error
-// - Returns aggregated errors using errors.Join for proper error chaining
+// - Returns aggregated errors using [errors.Join] for proper error chaining
 //
 // Parameters:
 //   - ctx: The context for the conversion operation
@@ -342,7 +342,7 @@ func (c *httpRouteConverter) HandleOrphanedResource(ctx context.Context, logger 
 //   - KongPluginBinding: Binds plugins to specific routes.
 //
 // 3. Collects translation errors instead of failing fast to maximize error visibility.
-// 4. Returns aggregated errors using errors.Join for proper error chaining.
+// 4. Returns aggregated errors using [errors.Join] for proper error chaining.
 //
 // Error Handling Strategy:
 // - Individual resource creation failures are logged and collected but don't stop processing.
