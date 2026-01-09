@@ -25549,8 +25549,8 @@ spec:
                   - namespace
                   type: object
                   x-kubernetes-validations:
-                  - message: Only KongCertificate, KongCACertificate, and KongService kinds are supported for 'configuration.konghq.com' group
-                    rule: .self.group != 'configuration.konghq.com' || .self.kind in ['KongService', 'KongCertificate', 'KongCACertificate' ]
+                  - message: Only KongCertificate, KongCACertificate, KongService, and KongUpstream kinds are supported for 'configuration.konghq.com' group
+                    rule: .self.group != 'configuration.konghq.com' || .self.kind in ['KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream' ]
                 maxItems: 16
                 minItems: 1
                 type: array
@@ -28050,8 +28050,6 @@ spec:
         x-kubernetes-validations:
         - message: controlPlaneRef is required once set
           rule: '!has(oldSelf.spec.controlPlaneRef) || has(self.spec.controlPlaneRef)'
-        - message: spec.controlPlaneRef cannot specify namespace for namespaced resource
-          rule: '(!has(self.spec.controlPlaneRef) || !has(self.spec.controlPlaneRef.konnectNamespacedRef)) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)'
         - message: spec.controlPlaneRef is immutable when an entity is already Programmed
           rule: '(!self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef'
     served: true

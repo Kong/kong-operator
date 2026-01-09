@@ -60,6 +60,14 @@ func KongUpstreamReconciliationWatchOptions(
 				),
 			)
 		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&configurationv1alpha1.KongReferenceGrant{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.KongUpstreamList](cl),
+				),
+			)
+		},
 	}
 }
 

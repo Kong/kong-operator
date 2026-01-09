@@ -293,9 +293,9 @@ func enqueueObjectsForKonnectAPIAuthConfiguration[
 }
 
 // enqueueObjectsForKongReferenceGrant returns a function that enqueues
-// reconcile.Requests for KongServices that are allowed by the KongReferenceGrant.
+// reconcile.Requests for objects that are allowed by the KongReferenceGrant.
 // This is useful for situations where a KongReferenceGrant is created/updated/deleted
-// and we need to reconcile the KongServices that are affected by it.
+// and we need to reconcile the objects that are affected by it.
 func enqueueObjectsForKongReferenceGrant[
 	TList interface {
 		GetItems() []T
