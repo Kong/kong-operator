@@ -12,17 +12,17 @@ import (
 
 func TestFinalizerConstants(t *testing.T) {
 	t.Run("HTTPRouteFinalizer is defined", func(t *testing.T) {
-		assert.Equal(t, "gateway-operator.konghq.com/httproute-cleanup", HybridHTTPRouteFinalizer)
+		assert.Equal(t, "gateway-operator.konghq.com/hybrid-httproute-cleanup", HybridHTTPRouteFinalizer)
 		assert.NotEmpty(t, HybridHTTPRouteFinalizer)
 	})
 
 	t.Run("GatewayFinalizer is defined", func(t *testing.T) {
-		assert.Equal(t, "gateway-operator.konghq.com/gateway-cleanup", HybridGatewayFinalizer)
+		assert.Equal(t, "gateway-operator.konghq.com/hybrid-gateway-cleanup", HybridGatewayFinalizer)
 		assert.NotEmpty(t, HybridGatewayFinalizer)
 	})
 
 	t.Run("DefaultFinalizer is defined", func(t *testing.T) {
-		assert.Equal(t, "gateway-operator.konghq.com/resource-cleanup", HybridDefaultFinalizer)
+		assert.Equal(t, "gateway-operator.konghq.com/hybrid-resource-cleanup", HybridDefaultFinalizer)
 		assert.NotEmpty(t, HybridDefaultFinalizer)
 	})
 
@@ -54,7 +54,7 @@ func TestGetFinalizerForType(t *testing.T) {
 		}
 		finalizer := GetFinalizerForType(route)
 		assert.Equal(t, HybridHTTPRouteFinalizer, finalizer)
-		assert.Equal(t, "gateway-operator.konghq.com/httproute-cleanup", finalizer)
+		assert.Equal(t, "gateway-operator.konghq.com/hybrid-httproute-cleanup", finalizer)
 	})
 
 	t.Run("Gateway returns GatewayFinalizer", func(t *testing.T) {
@@ -66,7 +66,7 @@ func TestGetFinalizerForType(t *testing.T) {
 		}
 		finalizer := GetFinalizerForType(gateway)
 		assert.Equal(t, HybridGatewayFinalizer, finalizer)
-		assert.Equal(t, "gateway-operator.konghq.com/gateway-cleanup", finalizer)
+		assert.Equal(t, "gateway-operator.konghq.com/hybrid-gateway-cleanup", finalizer)
 	})
 
 	t.Run("works with zero-value HTTPRoute", func(t *testing.T) {
