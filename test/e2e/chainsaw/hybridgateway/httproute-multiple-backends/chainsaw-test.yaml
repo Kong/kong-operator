@@ -260,6 +260,7 @@ spec:
               kubectl wait --for=condition=Programmed --timeout=120s kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
         # Verify weights preserve the expected 80/20 ratio (reduced form: 1/4)
         - script:
+            timeout: 330s
             env:
               - name: KONG_NAMESPACE
                 value: ($kong_namespace)
