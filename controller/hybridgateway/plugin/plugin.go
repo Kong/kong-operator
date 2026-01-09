@@ -42,6 +42,7 @@ import (
 //   - logger: Structured logger.
 //   - cl: Kubernetes client.
 //   - httpRoute: Source HTTPRoute.
+//   - rule: The HTTPRouteRule being processed.
 //   - filter: The HTTPRouteFilter being processed.
 //   - pRef: Parent (Gateway) reference.
 //
@@ -54,6 +55,7 @@ func PluginsForFilter(
 	logger logr.Logger,
 	cl client.Client,
 	httpRoute *gwtypes.HTTPRoute,
+	rule gwtypes.HTTPRouteRule,
 	filter gwtypes.HTTPRouteFilter,
 	pRef *gwtypes.ParentReference,
 ) ([]configurationv1.KongPlugin, bool, error) {
@@ -74,7 +76,7 @@ func PluginsForFilter(
 		return plugins, true, nil
 	}
 
-	pluginConfs, err := translateFromFilter(filter)
+	pluginConfs, err := translateFromFilter(rule, filter)
 	if err != nil {
 		return nil, false, fmt.Errorf("translating filter to KongPlugins: %w", err)
 	}

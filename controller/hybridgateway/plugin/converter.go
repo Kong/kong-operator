@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/samber/lo"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -22,6 +23,7 @@ import (
 //   - HTTPRouteFilterURLRewrite -> request-transformer
 //
 // Parameters:
+//   - rule: The HTTPRouteRule containing the filter.
 //   - filter: The HTTPRouteFilter to translate.
 //
 // Returns:
@@ -33,7 +35,7 @@ type kongPluginConfig struct {
 	config json.RawMessage
 }
 
-func translateFromFilter(filter gwtypes.HTTPRouteFilter) ([]kongPluginConfig, error) {
+func translateFromFilter(rule gwtypes.HTTPRouteRule, filter gwtypes.HTTPRouteFilter) ([]kongPluginConfig, error) {
 	pluginConfs := []kongPluginConfig{}
 
 	switch filter.Type {
@@ -79,7 +81,9 @@ func translateFromFilter(filter gwtypes.HTTPRouteFilter) ([]kongPluginConfig, er
 	case gatewayv1.HTTPRouteFilterURLRewrite:
 		pData := kongPluginConfig{name: "request-transformer"}
 
-		config, err := translateURLRewrite(filter)
+		path := getPathPrefixMatchValue(rule)
+
+		config, err := translateURLRewrite(filter, path)
 		if err != nil {
 			return nil, fmt.Errorf("translating URLRewrite filter: %w", err)
 		}
@@ -97,6 +101,17 @@ func translateFromFilter(filter gwtypes.HTTPRouteFilter) ([]kongPluginConfig, er
 }
 
 // internal functions and types for translating HTTPRouteFilter to KongPlugin configurations
+
+func getPathPrefixMatchValue(rule gwtypes.HTTPRouteRule) string {
+	for _, match := range rule.Matches {
+		if match.Path != nil &&
+			match.Path.Type != nil && *match.Path.Type == gatewayv1.PathMatchPathPrefix &&
+			match.Path.Value != nil {
+			return *match.Path.Value
+		}
+	}
+	return ""
+}
 
 type transformerTargetSlice struct {
 	Headers []string `json:"headers,omitempty"`
@@ -268,7 +283,7 @@ func translateRequestRedirectPathPrefixMatch(prefixMatch *string) string {
 	return "/"
 }
 
-func translateURLRewrite(filter gwtypes.HTTPRouteFilter) (transformerData, error) {
+func translateURLRewrite(filter gwtypes.HTTPRouteFilter, path string) (transformerData, error) {
 	ur := filter.URLRewrite
 	pluginConf := transformerData{}
 
@@ -287,7 +302,9 @@ func translateURLRewrite(filter gwtypes.HTTPRouteFilter) (transformerData, error
 		case gatewayv1.FullPathHTTPPathModifier:
 			pluginConf.Replace.Uri = translateURLRewritePathFullPath(ur.Path.ReplaceFullPath)
 		case gatewayv1.PrefixMatchHTTPPathModifier:
-			fallthrough
+			pluginConf.Replace.Uri = translateURLRewritePathPrefixMatch(
+				normalizePath(ur.Path.ReplacePrefixMatch),
+				normalizePath(&path))
 		default:
 			return pluginConf, fmt.Errorf("unsupported URLRewrite path modifier type: %s", ur.Path.Type)
 		}
@@ -296,9 +313,58 @@ func translateURLRewrite(filter gwtypes.HTTPRouteFilter) (transformerData, error
 	return pluginConf, nil
 }
 
+func normalizePath(path *string) string {
+	if path == nil || *path == "" || *path == "/" {
+		return "/"
+	}
+	return strings.TrimSuffix(*path, "/")
+}
+
 func translateURLRewritePathFullPath(replaceFullPath *string) string {
 	if replaceFullPath == nil || *replaceFullPath == "" {
 		return "/"
 	}
 	return *replaceFullPath
+}
+
+// translateURLRewritePathPrefixMatch generates the replacement URI for the request-transformer
+// plugin for the URLRewrite filter with a PrefixMatchHTTPPathModifier.
+// The logic here is copied from KIC's implementation to ensure consistent behavior, see:
+// https://github.com/Kong/kubernetes-ingress-controller/blob/main/internal/dataplane/translator/subtranslator/httproute.go#L1434.
+func translateURLRewritePathPrefixMatch(replacePrefixMatch string, path string) string {
+	// Trim the trailing slash from the ReplacePrefixMatch to avoid double slashes in the final URI.
+	replacePrefixMatch = strings.TrimSuffix(replacePrefixMatch, "/")
+	pathIsRoot := path == "/"
+
+	// In the case of an empty replacePrefixMatch, we need to make sure that the path will always start with a slash,
+	// even if we have no capture group from the incoming request's URI.
+	if replacePrefixMatch == "" {
+		// If path is "/", we need to add a slash before URI captures because the capture group won't include
+		// the leading slash.
+		if pathIsRoot {
+			// The below is a Lua ternary operator that checks if the captured group is nil, and if so, replaces it with
+			// a slash. Otherwise, it appends the captured group to a slash.
+			return `$(uri_captures[1] == nil and "/" or "/" .. uri_captures[1])`
+		}
+
+		// Otherwise, we do not need to add a leading slash before URI captures.
+		// The below is a Lua ternary operator that checks if the captured group is nil, and if so, replaces it with
+		// a slash. Otherwise, it returns the captured group (in this case the captured group will always have a
+		// leading slash).
+		return `$(uri_captures[1] == nil and "/" or uri_captures[1])`
+	}
+
+	// Otherwise, we concatenate the replacement URI with the captured group.
+	// If path is "/", we need to add a slash before URI captures because the capture group won't include the
+	// leading slash.
+	if pathIsRoot {
+		// The below Lua ternary operator checks if the captured group is nil, and if so, replaces it with
+		// an empty string (as we already know replacePrefixMatch is not empty so the resulting path will always have
+		// a leading slash). Otherwise, it appends the captured group to a slash (as the captured group won't
+		// have the leading slash).
+		return fmt.Sprintf(`%s$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])`, replacePrefixMatch)
+	}
+	// Simply concatenate the replacement URI with the captured group as the captured group will always have a
+	// leading slash.
+	return fmt.Sprintf(`%s$(uri_captures[1])`, replacePrefixMatch)
 }

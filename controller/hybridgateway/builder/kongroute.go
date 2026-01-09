@@ -45,10 +45,10 @@ func (b *KongRouteBuilder) WithHosts(hosts []string) *KongRouteBuilder {
 }
 
 // WithHTTPRouteMatch sets the match criteria (path, method, headers) for the KongRoute.
-func (b *KongRouteBuilder) WithHTTPRouteMatch(match gwtypes.HTTPRouteMatch) *KongRouteBuilder {
+func (b *KongRouteBuilder) WithHTTPRouteMatch(match gwtypes.HTTPRouteMatch, setCaptureGroup bool) *KongRouteBuilder {
 	// Path.
 	if match.Path != nil && match.Path.Value != nil {
-		b.route.Spec.Paths = append(b.route.Spec.Paths, GenerateKongRoutePathFromHTTPRouteMatch(match.Path)...)
+		b.route.Spec.Paths = append(b.route.Spec.Paths, GenerateKongRoutePathFromHTTPRouteMatch(match.Path, setCaptureGroup)...)
 	}
 
 	// Method
@@ -165,7 +165,7 @@ func (b *KongRouteBuilder) MustBuild() configurationv1alpha1.KongRoute {
 
 // GenerateKongRoutePathFromHTTPRouteMatch translates the value in HTTPRoute's path match
 // to the path used in KongRoute.
-func GenerateKongRoutePathFromHTTPRouteMatch(pathMatch *gatewayv1.HTTPPathMatch) []string {
+func GenerateKongRoutePathFromHTTPRouteMatch(pathMatch *gatewayv1.HTTPPathMatch, setCaptureGroup bool) []string {
 	// The default match type is PathMatchPathPrefix.
 	matchType := gatewayv1.PathMatchPathPrefix
 	if pathMatch.Type != nil {
@@ -193,12 +193,26 @@ func GenerateKongRoutePathFromHTTPRouteMatch(pathMatch *gatewayv1.HTTPPathMatch)
 	// - The other to match the prefix with the trailing '/', e.g: '/abc/'.
 	case gatewayv1.PathMatchPathPrefix:
 		// For the '/' path to match all, we just return the item in KongRoute to do the same catch-all match.
-		if value == "/" {
+		if value == "/" && !setCaptureGroup {
 			return []string{"/"}
 		}
+
 		paths := make([]string, 0, 2)
 		path := value
+		// Match the exact path without the trailing '/'.
 		paths = append(paths, fmt.Sprintf("%s%s$", KongPathRegexPrefix, path))
+
+		// In case the rule has a RequestRedirect or URLRewrite filter with a ReplacePrefixMatch path,
+		// we need to add a capture group in the KongRoute to pass the rest of the path to the filter.
+		if setCaptureGroup {
+			// If the path is "/", we have to skip capturing the slash as Kong Route's path must begin with a slash.
+			if value == "/" {
+				return append(paths, fmt.Sprintf("%s/(.*)", KongPathRegexPrefix))
+			}
+			// When there is a prefix in the route path, we capture the slash and the rest of the path after the prefix.
+			return append(paths, fmt.Sprintf("%s%s%s", KongPathRegexPrefix, path, "(/.*)"))
+		}
+
 		if !strings.HasSuffix(path, "/") {
 			path = fmt.Sprintf("%s/", path)
 		}
