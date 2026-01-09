@@ -40,6 +40,8 @@
 
 ### Fixes
 
+- Fix validation logic for dataplane ports in admission policy.
+  [#3031](https://github.com/Kong/kong-operator/pull/3031)
 - HybridGateway: Fixed the logic of translating `HTTPRoute` path matches to
   paths in the generated `KongRoute`.
   [#2996](https://github.com/Kong/kong-operator/pull/2996)
