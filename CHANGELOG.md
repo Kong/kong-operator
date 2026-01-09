@@ -38,6 +38,14 @@
 
 ## Unreleased
 
+### Added
+
+- Gateway: Added support for static naming of Gateway resources via the
+  `konghq.com/operator-static-naming` annotation. When set to `true`, the
+  DataPlane, ControlPlane, and KonnectGatewayControlPlane resources will be
+  named exactly as the Gateway resource instead of using auto-generated names.
+  [#3015](https://github.com/Kong/kong-operator/issues/3015)
+
 ### Fixes
 
 - HybridGateway: Fixed the logic of translating `HTTPRoute` path matches to

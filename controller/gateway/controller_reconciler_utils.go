@@ -53,12 +53,9 @@ func (r *Reconciler) createDataPlane(
 	gatewayConfig *GatewayConfiguration,
 	konnectExtension *konnectv1alpha2.KonnectExtension,
 ) (*operatorv1beta1.DataPlane, error) {
-	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    gateway.Namespace,
-			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)),
-		},
-	}
+	dataplane := &operatorv1beta1.DataPlane{}
+	setObjectNamespaceName(gateway, dataplane)
+
 	if gatewayConfig.Spec.DataPlaneOptions != nil {
 		dataplane.Spec.DataPlaneOptions = *gatewayConfigDataPlaneOptionsToDataPlaneOptions(gatewayConfig.Namespace, *gatewayConfig.Spec.DataPlaneOptions)
 	}
@@ -84,16 +81,14 @@ func (r *Reconciler) createControlPlane(
 	gatewayConfig *GatewayConfiguration,
 ) error {
 	controlplane := &gwtypes.ControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    gateway.Namespace,
-			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)),
-		},
 		Spec: gwtypes.ControlPlaneSpec{
 			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 				Type: gwtypes.ControlPlaneDataPlaneTargetManagedByType,
 			},
 		},
 	}
+	setObjectNamespaceName(gateway, controlplane)
+
 	if gatewayConfig.Spec.ControlPlaneOptions != nil {
 		controlplane.Spec.ControlPlaneOptions = gatewayConfig.Spec.ControlPlaneOptions.ControlPlaneOptions
 	}
@@ -114,12 +109,8 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 		return nil, fmt.Errorf("konnect configuration is required for konnect gateway controlplane")
 	}
 
-	kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    gateway.Namespace,
-			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)),
-		},
-	}
+	kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{}
+	setObjectNamespaceName(gateway, kgcp)
 
 	if gatewayConfig.Spec.Konnect.APIAuthConfigurationRef != nil {
 		kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef = *gatewayConfig.Spec.Konnect.APIAuthConfigurationRef
@@ -1348,4 +1339,26 @@ func areConditionsEqual(cond1, cond2 metav1.Condition) bool {
 		cond1.Reason == cond2.Reason &&
 		cond1.Message == cond2.Message &&
 		cond1.ObservedGeneration == cond2.ObservedGeneration
+}
+
+// setObjectNamespaceName sets the namespace and name/generateName for a Kubernetes object
+// based on the Gateway configuration.
+//
+// The namespace is always set to match the Gateway's namespace.
+//
+// For the name, there are two behaviors:
+//   - If the Gateway has the GatewayStaticNamingAnnotation set to "true", the object's
+//     name is set to exactly match the Gateway's name (static naming).
+//   - Otherwise, the object's generateName is set to "<gateway-name>-", allowing
+//     Kubernetes to append a random suffix (dynamic naming).
+//
+// This function is typically used to ensure that objects created for a Gateway follow
+// the appropriate naming convention based on the Gateway's annotations.
+func setObjectNamespaceName(gateway *gwtypes.Gateway, obj client.Object) {
+	obj.SetNamespace(gateway.Namespace)
+	if gateway.Annotations != nil && gateway.Annotations[consts.GatewayStaticNamingAnnotation] == "true" {
+		obj.SetName(gateway.Name)
+	} else {
+		obj.SetGenerateName(k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)))
+	}
 }
