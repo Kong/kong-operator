@@ -4,17 +4,6 @@ kind: Namespace
 metadata:
   name: ($kong_namespace)
 ---
-apiVersion: gateway-operator.konghq.com/v1alpha1
-kind: WatchNamespaceGrant
-metadata:
-  name: watchnamespacegrant
-  namespace: ($kong_namespace)
-spec:
-  from:
-  - group: gateway-operator.konghq.com
-    kind: ControlPlane
-    namespace: ($kong_namespace)
----
 apiVersion: gateway-operator.konghq.com/v1beta1
 kind: DataPlane
 metadata:
@@ -36,10 +25,6 @@ metadata:
 spec:
   dataplane: ($dataplane_name)
   gatewayClass: ($gateway_class_name)
-  watchNamespaces:
-    type: list
-    list:
-    - ($kong_namespace)
   deployment:
     podTemplateSpec:
       spec:
@@ -48,7 +33,7 @@ spec:
           image: kong/kubernetes-ingress-controller:3.5.0
           env:
           - name: CONTROLLER_FEATURE_GATES
-            value: "RewriteURIs=true,GatewayAlpha=true,KongCustomEntity=false"
+            value: "RewriteURIs=true,GatewayAlpha=true"
           readinessProbe:
             initialDelaySeconds: 1
             periodSeconds: 3
