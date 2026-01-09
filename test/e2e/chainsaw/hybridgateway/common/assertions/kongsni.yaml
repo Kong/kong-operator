@@ -1,0 +1,42 @@
+---
+# Template for asserting KongSNI resources
+#
+# Required bindings:
+#   - namespace: Resource namespace (e.g., "kong")
+#   - gateway_name: Gateway name (e.g., "kong-foo")
+#   - gateway_namespace: Gateway namespace (e.g., "kong")
+#   - sni_hostname: SNI hostname (e.g., "example.localdomain.dev")
+#   - certificate_name: Name of the KongCertificate this SNI references
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongSNI
+metadata:
+  namespace: ($namespace)
+  (labels."gateway-operator.konghq.com/hybrid-gateways-name" == ($gateway_name)): true
+  (labels."gateway-operator.konghq.com/hybrid-gateways-namespace" == ($gateway_namespace)): true
+  (labels."gateway-operator.konghq.com/managed-by" == 'Gateway'): true
+  (annotations."gateway-operator.konghq.com/hybrid-gateways" == join('/', [($gateway_namespace), ($gateway_name)])): true
+  ownerReferences:
+  - apiVersion: gateway.networking.k8s.io/v1
+    kind: Gateway
+    name: ($gateway_name)
+    controller: true
+spec:
+  name: ($sni_hostname)
+  certificateRef:
+    name: (join('-', [$gateway_name, $listener_name, $secret_namespace, $secret_name]))
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'KongCertificateRefValid']):
+    - status: 'True'
+      reason: Valid
+  (conditions[?type == 'ControlPlaneRefValid']):
+    - status: 'True'
+      reason: Valid
+  (conditions[?type == 'APIAuthResolvedRef']):
+    - status: 'True'
+      reason: ResolvedRef
+  (conditions[?type == 'APIAuthValid']):
+    - status: 'True'
+      reason: Valid

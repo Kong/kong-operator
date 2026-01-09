@@ -1,0 +1,36 @@
+# Template for creating and asserting a GatewayClass.
+#
+# Required bindings:
+#   - test_name: Test name used to compose the gateway class name.
+#   - namespace: Namespace where the GatewayConfiguration is located.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-gateway-class
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: gateway.networking.k8s.io/v1
+          kind: GatewayClass
+          metadata:
+            # Cluster-scoped, so no namespace here.
+            name: (join('-', [($test_name), 'gateway-class']))
+          spec:
+            controllerName: konghq.com/gateway-operator
+            parametersRef:
+              group: gateway-operator.konghq.com
+              kind: GatewayConfiguration
+              name: (join('-', [($test_name), 'gateway-configuration']))
+              namespace: ($namespace)
+    - assert:
+        resource:
+          apiVersion: gateway.networking.k8s.io/v1
+          kind: GatewayClass
+          metadata:
+            name: (join('-', [($test_name), 'gateway-class']))
+          status:
+            (conditions[?type == 'Accepted']):
+              - type: Accepted
+                status: 'True'
+                reason: Accepted

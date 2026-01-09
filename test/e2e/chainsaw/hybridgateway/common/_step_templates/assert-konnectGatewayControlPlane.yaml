@@ -1,0 +1,32 @@
+# Template for asserting a KonnectGatewayControlPlane resource.
+#
+# Required bindings:
+#   - namespace: Namespace where the KonnectGatewayControlPlane is located.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-konnect-control-plane
+spec:
+  try:
+    - assert:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha2
+          kind: KonnectGatewayControlPlane
+          metadata:
+            namespace: ($namespace)
+            labels:
+              gateway-operator.konghq.com/managed-by: gateway
+          status:
+            clusterType: CLUSTER_TYPE_CONTROL_PLANE
+            # Logic: Check all critical Konnect synchronization conditions.
+            (conditions[?type == 'APIAuthResolvedRef']):
+              - status: 'True'
+                reason: ResolvedRef
+            (conditions[?type == 'APIAuthValid']):
+              - status: 'True'
+                reason: Valid
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            # Logic: Ensure the resource has been assigned a Konnect ID (not null).
+            (id != null): true
