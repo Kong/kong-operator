@@ -1,0 +1,37 @@
+# Test converting KonnectGatewayControlPlane from v1alpha1 to v2alpha1 by webhook.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: konnect-gateway-controlplane-conversion
+spec:
+  description: |
+    This test validates that the v1alpha1 KonnectGatewayControlPlane is converted to v2alpha1.
+
+  bindings:
+    - name: kong_namespace
+      value: (join('-', ['kong', 'konnect-gateway-controlplane', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: konnect_api_auth_name
+      value: (join('-', ['kong', 'konnect-api-auth', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: konnect_gateway_controlplane_name
+      value: (join('-', ['kong', 'konnect-gateway-controlplane', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+
+  timeouts:
+    apply: 120s
+    assert: 300s
+    cleanup: 120s
+    delete: 120s
+
+  steps:
+    - name: create-konnect-resources
+      description: Create KonnectGatewayControlPlane and KonnectAPIAuthConfiguration resources
+      try:
+        - apply:
+            file: 00-konnect-gateway-controlplane.yml
+        - assert:
+            file: 00-assert-konnect-gateway-controlplane.yml
+      catch:
+        - description: Get KonnectGatewayControlPlane resource status
+          get:
+            apiVersion: konnect.konghq.com/v1alpha2
+            kind: KonnectGatewayControlPlane
+            namespace: ($kong_namespace)
