@@ -260,7 +260,7 @@ func translateRequestRedirectPath(rr *gatewayv1.HTTPRequestRedirectFilter) (stri
 	pathModifier := rr.Path
 	switch pathModifier.Type {
 	case gatewayv1.FullPathHTTPPathModifier:
-		path = translateRequestRedirectPathFullPath(pathModifier.ReplaceFullPath)
+		path = translatePathReplaceFullPath(pathModifier.ReplaceFullPath)
 	case gatewayv1.PrefixMatchHTTPPathModifier:
 		path = translateRequestRedirectPathPrefixMatch(pathModifier.ReplacePrefixMatch)
 	default:
@@ -269,7 +269,7 @@ func translateRequestRedirectPath(rr *gatewayv1.HTTPRequestRedirectFilter) (stri
 	return path, err
 }
 
-func translateRequestRedirectPathFullPath(replaceFullPath *string) string {
+func translatePathReplaceFullPath(replaceFullPath *string) string {
 	if replaceFullPath == nil || *replaceFullPath == "" {
 		return "/"
 	}
@@ -300,7 +300,7 @@ func translateURLRewrite(filter gwtypes.HTTPRouteFilter, path string) (transform
 	if ur.Path != nil {
 		switch ur.Path.Type {
 		case gatewayv1.FullPathHTTPPathModifier:
-			pluginConf.Replace.Uri = translateURLRewritePathFullPath(ur.Path.ReplaceFullPath)
+			pluginConf.Replace.Uri = translatePathReplaceFullPath(ur.Path.ReplaceFullPath)
 		case gatewayv1.PrefixMatchHTTPPathModifier:
 			pluginConf.Replace.Uri = translateURLRewritePathPrefixMatch(
 				normalizePath(ur.Path.ReplacePrefixMatch),
@@ -318,13 +318,6 @@ func normalizePath(path *string) string {
 		return "/"
 	}
 	return strings.TrimSuffix(*path, "/")
-}
-
-func translateURLRewritePathFullPath(replaceFullPath *string) string {
-	if replaceFullPath == nil || *replaceFullPath == "" {
-		return "/"
-	}
-	return *replaceFullPath
 }
 
 // translateURLRewritePathPrefixMatch generates the replacement URI for the request-transformer
