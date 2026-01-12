@@ -302,7 +302,7 @@ func translateURLRewrite(filter gwtypes.HTTPRouteFilter, path string) (transform
 		case gatewayv1.FullPathHTTPPathModifier:
 			pluginConf.Replace.Uri = translatePathReplaceFullPath(ur.Path.ReplaceFullPath)
 		case gatewayv1.PrefixMatchHTTPPathModifier:
-			pluginConf.Replace.Uri = translateURLRewritePathPrefixMatch(
+			pluginConf.Replace.Uri = translatePathReplacePrefixMatch(
 				normalizePath(ur.Path.ReplacePrefixMatch),
 				normalizePath(&path))
 		default:
@@ -320,11 +320,11 @@ func normalizePath(path *string) string {
 	return strings.TrimSuffix(*path, "/")
 }
 
-// translateURLRewritePathPrefixMatch generates the replacement URI for the request-transformer
+// translatePathReplacePrefixMatch generates the replacement URI for the request-transformer
 // plugin for the URLRewrite filter with a PrefixMatchHTTPPathModifier.
 // The logic here is copied from KIC's implementation to ensure consistent behavior, see:
 // https://github.com/Kong/kubernetes-ingress-controller/blob/main/internal/dataplane/translator/subtranslator/httproute.go#L1434.
-func translateURLRewritePathPrefixMatch(replacePrefixMatch string, path string) string {
+func translatePathReplacePrefixMatch(replacePrefixMatch string, path string) string {
 	// Trim the trailing slash from the ReplacePrefixMatch to avoid double slashes in the final URI.
 	replacePrefixMatch = strings.TrimSuffix(replacePrefixMatch, "/")
 	pathIsRoot := path == "/"
