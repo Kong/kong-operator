@@ -745,7 +745,7 @@ func getAttachedRoutesForListener(ctx context.Context, mgrc client.Client, gatew
 // When Gateway.spec.listeners has many entries (greater than 10 and has a certain relationship with the number of HTTPRoutes),
 // GatewayReconciler will fall into a loop and cannot converge to a stable state (updating status
 // will trigger a new gateway reconciler event, and the new round of reconcile will always find differences).
-// The reason here is that when using reflect.DeepEqual to compare two slice structs,
+// The reason here is that when using [reflect.DeepEqual] to compare two slice structs,
 // the order of elements will affect the result, and Gateway.status.listeners[].conditions[].lastTransitionTime
 // will always be assigned the current time in each round of reconcile, which should be excluded.
 func isEqualListenersStatus(a, b []gatewayapi.ListenerStatus) bool {

@@ -59,7 +59,7 @@ func PrepareClusterForRunningControllerManager(
 // manager on a provided test cluster.
 //
 // Controller managers started this way will run in the background in a goroutine:
-// The caller must use the provided context.Context to stop the controller manager
+// The caller must use the provided [context.Context] to stop the controller manager
 // from running when they're done with it.
 //
 // This accepts both a list of command line flags with arguments as well as config options

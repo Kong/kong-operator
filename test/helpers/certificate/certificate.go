@@ -69,7 +69,7 @@ func WithAlreadyExpired() selfSignedCertificateOption {
 	}
 }
 
-// MustGenerateSelfSignedCert generates a tls.Certificate struct to be used in TLS client/listener configurations.
+// MustGenerateSelfSignedCert generates a [tls.Certificate] struct to be used in TLS client/listener configurations.
 // Certificate is self-signed thus returned cert can be used as CA for it.
 func MustGenerateSelfSignedCert(options ...selfSignedCertificateOption) tls.Certificate {
 	// Generate a new RSA private key.

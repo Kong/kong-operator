@@ -1,0 +1,32 @@
+# Test converting ControlPlane from v1beta1 to v2beta1 by webhook.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: controlplane-conversion-from-v1beta1-to-v2beta1
+spec:
+  description: |
+    This test validates that the v1beta1 ControlPlane is converted to v2beta1.
+
+  bindings:
+    - name: kong_namespace
+      value: (join('-', ['kong', 'controlplane', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: dataplane_name
+      value: (join('-', ['kong', 'dataplane', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: controlplane_name
+      value: (join('-', ['kong', 'controlplane', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: gateway_class_name
+      value: ($controlplane_name)
+
+  timeouts:
+    apply: 120s
+    assert: 300s
+    cleanup: 120s
+    delete: 120s
+  steps:
+    - name: create-resources
+      description: Create ControlPlane v1beta1 (will be converted to v2beta1) and all other needed resources
+      try:
+        - apply:
+            file: 00-controlplane.yml
+        - assert:
+            file: 00-assert-controlplane.yml

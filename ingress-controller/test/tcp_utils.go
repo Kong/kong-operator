@@ -43,7 +43,7 @@ func WithTLSOption(hostname string, certPool *x509.CertPool, passthrough bool) T
 // a go-echo instance is running on that Pod at that address. For TLS tlsOpt is
 // required, otherwise it panics.
 // It sends a message and checks if returned one matches. It returns an error with
-// an explanation, wraps typical errors as io.EOF or syscall.ECONNRESET.
+// an explanation, wraps typical errors as [io.EOF] or [syscall.ECONNRESET].
 func EchoResponds(protocol Protocol, url string, podName string, tlsOpt ...TLSOpt) error {
 	if protocol == ProtocolTLS && len(tlsOpt) != 1 {
 		panic("TLS protocol requires TLS options (fix the code calling this function)")

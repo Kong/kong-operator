@@ -1,0 +1,75 @@
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: ($dataplane_name)
+  namespace: ($kong_namespace)
+status:
+  (conditions[?type == 'Ready']):
+    - status: 'True'
+      reason: Ready
+---
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: ControlPlane
+metadata:
+  name: ($controlplane_name)
+  namespace: ($kong_namespace)
+spec:
+  configDump:
+    dumpSensitive: disabled
+    state: disabled
+  dataplane:
+    ref:
+      name: ($dataplane_name)
+    type: ref
+  dataplaneSync:
+    reverseSync: disabled
+  ingressClass: kong
+  konnect:
+    consumersSync: enabled
+  translation:
+    combinedServicesFromDifferentHTTPRoutes: enabled
+    drainSupport: enabled
+status:
+  # Assert referenced DataPlane.
+  dataPlane:
+    name: ($dataplane_name)
+  # Assert conditions.
+  (conditions[?type == 'Provisioned']):
+    - status: 'True'
+      reason: Provisioned
+  (conditions[?type == 'Ready']):
+    - status: 'True'
+      reason: Ready
+  (conditions[?type == 'WatchNamespaceGrantValid']):
+    - status: 'True'
+      reason: WatchNamespaceGrantValid
+  (conditions[?type == 'OptionsValid']):
+    - status: 'True'
+      reason: OptionsValid
+  # Assert controllers.
+  (controllers[?name == 'INGRESS_NETWORKINGV1'] != null): true
+  (controllers[?name == 'INGRESS_CLASS_NETWORKINGV1'] != null): true
+  (controllers[?name == 'INGRESS_CLASS_PARAMETERS'] != null): true
+  (controllers[?name == 'GWAPI_GATEWAY'] != null): true
+  (controllers[?name == 'GWAPI_HTTPROUTE'] != null): true
+  (controllers[?name == 'GWAPI_GRPCROUTE'] != null): true
+  (controllers[?name == 'GWAPI_REFERENCE_GRANT'] != null): true
+  (controllers[?name == 'KONG_CLUSTERPLUGIN'] != null): true
+  (controllers[?name == 'KONG_PLUGIN'] != null): true
+  (controllers[?name == 'KONG_CONSUMER'] != null): true
+  (controllers[?name == 'KONG_UPSTREAM_POLICY'] != null): true
+  (controllers[?name == 'KONG_SERVICE_FACADE'] != null): true
+  (controllers[?name == 'KONG_VAULT'] != null): true
+  (controllers[?name == 'KONG_LICENSE'] != null): true
+  (controllers[?name == 'KONG_CUSTOM_ENTITY'] != null): true
+  (controllers[?name == 'SERVICE'] != null): true
+  # Assert feature gates.
+  (featureGates[?name == 'KongCustomEntity'] != null): true
+  (featureGates[?name == 'FillIDs'] != null): true
+  (featureGates[?name == 'GatewayAlpha']):
+    - state: enabled
+  (featureGates[?name == 'KongServiceFacade'] != null): true
+  (featureGates[?name == 'SanitizeKonnectConfigDumps'] != null): true
+  (featureGates[?name == 'FallbackConfiguration'] != null): true
+  (featureGates[?name == 'RewriteURIs']):
+    - state: enabled

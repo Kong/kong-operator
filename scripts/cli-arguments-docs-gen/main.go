@@ -119,7 +119,7 @@ func writePreamble(markdown *strings.Builder) {
 	mustWrite(markdown, "rows:\n")
 }
 
-// mustWrite writes to a strings.Builder and panics if there's an error.
+// mustWrite writes to a [strings.Builder] and panics if there's an error.
 func mustWrite(b *strings.Builder, s string) {
 	_, err := b.WriteString(s)
 	if err != nil {

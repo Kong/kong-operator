@@ -27,7 +27,7 @@ func (r *TypedEventRecorder) Event(object runtime.Object, eventtype, baseReason,
 	r.recorder.Event(object, eventtype, reason, message)
 }
 
-// Eventf is like Event, but uses fmt.Sprintf to construct the message.
+// Eventf is like Event, but uses [fmt.Sprintf] to construct the message.
 func (r *TypedEventRecorder) Eventf(object runtime.Object, eventtype, baseReason, messageFmt string, args ...any) {
 	reason := r.getTypedReason(object, baseReason)
 	r.recorder.Eventf(object, eventtype, reason, messageFmt, args...)
