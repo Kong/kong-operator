@@ -5,6 +5,9 @@ on:
     - cron: "30 4 * * *"
   workflow_dispatch: {}
 
+env:
+  NIGHTLY_CHART_NAME: nightly-kong-operator-chart
+
 permissions:
   contents: read
 
@@ -46,14 +49,12 @@ jobs:
           {
             echo "chart_version=${CHART_VERSION}"
             echo "app_version=${APP_VERSION}"
-            echo "chart_name=nightly-kong-operator-chart"
-            echo "chart_dir=${RUNNER_TEMP}/nightly-kong-operator-chart"
+            echo "chart_dir=${RUNNER_TEMP}/${NIGHTLY_CHART_NAME}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Prepare chart for publication
         env:
           CHART_DIR: ${{ steps.metadata.outputs.chart_dir }}
-          CHART_NAME: ${{ steps.metadata.outputs.chart_name }}
           CHART_VERSION: ${{ steps.metadata.outputs.chart_version }}
           APP_VERSION: ${{ steps.metadata.outputs.app_version }}
           NIGHTLY_IMAGE_REPOSITORY: ${{ vars.DOCKERHUB_NIGHTLY_IMAGE_REPOSITORY }}
@@ -67,7 +68,7 @@ jobs:
           chart_dir = pathlib.Path(os.environ["CHART_DIR"])
           chart_path = chart_dir / "Chart.yaml"
           chart = yaml.safe_load(chart_path.read_text())
-          chart["name"] = os.environ["CHART_NAME"]
+          chart["name"] = os.environ["NIGHTLY_CHART_NAME"]
           chart["version"] = os.environ["CHART_VERSION"]
           chart["appVersion"] = os.environ["APP_VERSION"]
           chart_path.write_text(yaml.safe_dump(chart, sort_keys=False))
