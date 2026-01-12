@@ -1,4 +1,3 @@
----
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingAdmissionPolicy
 metadata:
@@ -72,7 +71,7 @@ spec:
       expression: |
         variables.envPortMaps != null ?
         variables.envPortMaps.split(',').map(s,
-          s.split(':')[1].trim()
+          s.substring(s.lastIndexOf(':') + 1).trim()
         ) : []
 
   # NOTE: Rules below do not validate the ports from the spec.network.services.ingress.ports
