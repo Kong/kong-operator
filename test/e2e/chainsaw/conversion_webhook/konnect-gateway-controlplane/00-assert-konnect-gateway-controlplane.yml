@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ($kong_namespace)
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectAPIAuthConfiguration
+metadata:
+  name: ($konnect_api_auth_name)
+  namespace: ($kong_namespace)
+status:
+  conditions:
+    - type: APIAuthValid
+      status: "True"
+---
+apiVersion: konnect.konghq.com/v1alpha2
+kind: KonnectGatewayControlPlane
+metadata:
+  name: ($konnect_gateway_controlplane_name)
+  namespace: ($kong_namespace)
+spec:
+  createControlPlaneRequest:
+    name: ($konnect_gateway_controlplane_name)
+  konnect:
+    authRef:
+      name: ($konnect_api_auth_name)
+  source: Origin
+status:
+  clusterType: CLUSTER_TYPE_CONTROL_PLANE
+  (conditions[?type == 'APIAuthResolvedRef']):
+    - status: 'True'
+      reason: ResolvedRef
+  (conditions[?type == 'APIAuthValid']):
+    - status: 'True'
+      reason: Valid
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (id != null): true
+  (konnectEndpoints.controlPlane != null): true
+  (konnectEndpoints.telemetry != null): true
+  (organizationID != null): true
+  (serverURL != null): true
+---
