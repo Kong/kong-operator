@@ -116,7 +116,22 @@ spec:
               - name: ROUTE_PATH
                 value: ($route_path)
             content: |
-              curl -s --header "X-Set:baz" --header "X-Remove:qux" http://${PROXY_IP}${ROUTE_PATH}/headers 
+              out=""
+              i=0
+              while [ "$i" -lt 60 ]; do
+                out="$(curl -s --header "X-Set:baz" --header "X-Remove:qux" "http://${PROXY_IP}${ROUTE_PATH}/headers" || true)"
+                if printf '%s' "${out}" | grep -q '"X-Add"' &&
+                   printf '%s' "${out}" | grep -q '"X-Set": \[' &&
+                   printf '%s' "${out}" | grep -q '"foo"' &&
+                   ! printf '%s' "${out}" | grep -q '"X-Remove"'; then
+                  echo "${out}"
+                  exit 0
+                fi
+                i=$((i + 1))
+                sleep 5
+              done
+              echo "${out}"
+              exit 1
             check:
               (contains($stdout, 'X-Add')): true
               (contains($stdout, 'X-Set')): true

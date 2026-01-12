@@ -1,0 +1,627 @@
+# HTTPRoute Shared BackendRefs test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-shared-backendrefs
+spec:
+  description: |
+    This test validates that the Hybrid Gateway controller correctly reuses KongService
+    resources when multiple HTTPRoutes share the same backendRefs set and properly updates
+    the gateway-operator.konghq.com/hybrid-routes annotation when routes are deleted or updated.
+
+  bindings:
+    - name: kong_namespace
+      value: (join('-', ['kong', 'shared-backendrefs', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: konnect_api_auth_name
+      value: konnect-api-auth-dev-1
+    - name: gateway_class_name
+      value: (join('-', ['kong', 'shared-backendrefs', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: gateway_configuration_name
+      value: ($gateway_class_name)
+    - name: gateway_name
+      value: ($gateway_class_name)
+
+    - name: httproute_one_name
+      value: shared-backends-one
+    - name: httproute_two_name
+      value: shared-backends-two
+    - name: httproute_three_name
+      value: shared-backends-three
+    - name: httproute_one_path
+      value: /shared-backends-one
+    - name: httproute_two_path
+      value: /shared-backends-two
+    - name: httproute_three_path
+      value: /shared-backends-three
+
+  timeouts:
+    apply: 120s
+    assert: 300s
+    cleanup: 120s
+    delete: 120s
+
+  steps:
+    - name: create-prerequisites
+      description: Create GatewayClass, Gateway, and backend Services
+      try:
+        - apply:
+            file: 01-prerequisites.yaml
+        - apply:
+            file: 00-backends.yaml
+        - assert:
+            file: ../common/assertions/konnect-apiauth.yaml
+        - assert:
+            file: ../common/assertions/gatewayclass.yaml
+        - assert:
+            file: ../common/assertions/gatewayconfiguration.yaml
+        - assert:
+            file: ../common/assertions/gateway.yaml
+        - assert:
+            file: ../common/assertions/konnect-gateway-controlplane.yaml
+        - assert:
+            file: ../common/assertions/konnect-extension.yaml
+        - assert:
+            file: 01-assert-prerequisites.yaml
+        - assert:
+            file: 00-assert-backends.yaml
+      catch:
+        - description: Get Gateway resource status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: Gateway
+            namespace: ($kong_namespace)
+        - description: Get Pods in kong namespace
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: ($kong_namespace)
+        - description: Get operator logs
+          podLogs:
+            namespace: kong-system
+            selector: control-plane=controller-manager
+            tail: 100
+
+    - name: create-httproutes-shared-backendrefs
+      description: Create 3 HTTPRoutes sharing the same backendRefs set
+      try:
+        - apply:
+            file: 02-httproutes.yaml
+        - assert:
+            file: 02-assert-httproutes.yaml
+      catch:
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($kong_namespace)
+            format: yaml
+        - description: Get operator logs
+          podLogs:
+            namespace: kong-system
+            selector: control-plane=controller-manager
+            tail: 100
+
+    - name: verify-shared-kongservice
+      description: Verify KongService is shared and annotation includes all routes
+      bindings:
+        - name: namespace
+          value: ($kong_namespace)
+        - name: hybrid_gateway_name
+          value: ($gateway_name)
+        - name: hybrid_gateway_namespace
+          value: ($kong_namespace)
+        - name: managedby_name
+          value: ($httproute_one_name)
+        - name: managedby_namespace
+          value: ($kong_namespace)
+        - name: strip_path
+          value: true
+      try:
+        - script:
+            timeout: 330s
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              for i in $(seq 1 60); do
+                name="$(kubectl get konnectgatewaycontrolplane -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=gateway -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+                if [ -n "${name}" ]; then
+                  printf '%s' "${name}"
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "timed out waiting for KonnectGatewayControlPlane" >&2
+              exit 1
+            outputs:
+              - name: konnectgatewaycontrolplane_name
+                value: ($stdout)
+        - script:
+            timeout: 330s
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              for i in $(seq 1 60); do
+                count="$(kubectl get kongservice -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o json | jq -r '.items | length')"
+                if [ "${count}" = "1" ]; then
+                  printf '%s' "$(kubectl get kongservice -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].metadata.name}')"
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "timed out waiting for exactly 1 KongService" >&2
+              kubectl get kongservice -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o json >&2 || true
+              exit 1
+            outputs:
+              - name: shared_kongservice_name
+                value: ($stdout)
+        - script:
+            timeout: 330s
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+              - name: ROUTE_ONE
+                value: ($httproute_one_name)
+              - name: ROUTE_TWO
+                value: ($httproute_two_name)
+              - name: ROUTE_THREE
+                value: ($httproute_three_name)
+              - name: SHARED_KONGSERVICE
+                value: ($shared_kongservice_name)
+            content: |
+              expected_routes_sorted() {
+                printf "%s\n" "${KONG_NAMESPACE}/${ROUTE_ONE}" "${KONG_NAMESPACE}/${ROUTE_TWO}" "${KONG_NAMESPACE}/${ROUTE_THREE}" \
+                  | sort \
+                  | tr '\n' ',' \
+                  | sed 's/,$//'
+              }
+
+              for i in $(seq 1 60); do
+                svc_count="$(kubectl get kongservice -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o json | jq -r '.items | length')"
+                route_count="$(kubectl get kongroute -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o json | jq -r '.items | length')"
+                if [ "${svc_count}" != "1" ] || [ "${route_count}" != "3" ]; then
+                  sleep 5
+                  continue
+                fi
+
+                actual_routes="$(kubectl get kongservice "${SHARED_KONGSERVICE}" -n "${KONG_NAMESPACE}" -o json \
+                  | jq -r '.metadata.annotations["gateway-operator.konghq.com/hybrid-routes"] | split(",") | sort | join(",")')"
+                expected_routes="$(expected_routes_sorted)"
+                if [ "${actual_routes}" != "${expected_routes}" ]; then
+                  sleep 5
+                  continue
+                fi
+
+                for route in "${ROUTE_ONE}" "${ROUTE_TWO}" "${ROUTE_THREE}"; do
+                  svc_ref="$(kubectl get kongroute -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o json \
+                    | jq -r --arg route "${KONG_NAMESPACE}/${route}" '.items[] | select(.metadata.annotations["gateway-operator.konghq.com/hybrid-routes"] | contains($route)) | .spec.serviceRef.namespacedRef.name' \
+                    | head -n1)"
+                  if [ -z "${svc_ref}" ] || [ "${svc_ref}" != "${SHARED_KONGSERVICE}" ]; then
+                    echo "KongRoute for ${route} does not reference shared KongService ${SHARED_KONGSERVICE} (got '${svc_ref}')" >&2
+                    exit 1
+                  fi
+                done
+
+                exit 0
+              done
+
+              echo "timed out waiting for shared KongService annotation and KongRoute serviceRefs to converge" >&2
+              echo "expected routes: $(expected_routes_sorted)" >&2
+              kubectl get kongservice "${SHARED_KONGSERVICE}" -n "${KONG_NAMESPACE}" -o yaml >&2 || true
+              kubectl get kongroute -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml >&2 || true
+              exit 1
+        - script:
+            timeout: 400s
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl wait --for=condition=Programmed --timeout=180s kongservice -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute
+              kubectl wait --for=condition=Programmed --timeout=180s kongroute -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+              - name: SHARED_KONGSERVICE
+                value: ($shared_kongservice_name)
+            content: |
+              printf '%s' "${SHARED_KONGSERVICE}"
+            outputs:
+              - name: kongservice_name
+                value: ($stdout)
+        - assert:
+            file: ../common/assertions/kongservice.yaml
+        - assert:
+            file: ../common/assertions/kongroute.yaml
+
+    - name: verify-traffic-initial
+      description: Verify all 3 routes serve traffic
+      try:
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get gateway "${GATEWAY_NAME}" -n "${KONG_NAMESPACE}" -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        - script:
+            timeout: 90s
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($httproute_one_path)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" "http://${PROXY_IP}${ROUTE_PATH}"
+            check:
+              ($stdout == '200'): true
+        - script:
+            timeout: 90s
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($httproute_two_path)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" "http://${PROXY_IP}${ROUTE_PATH}"
+            check:
+              ($stdout == '200'): true
+        - script:
+            timeout: 90s
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($httproute_three_path)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" "http://${PROXY_IP}${ROUTE_PATH}"
+            check:
+              ($stdout == '200'): true
+
+    - name: delete-one-httproute
+      description: Delete one HTTPRoute and verify shared KongService annotation is updated
+      try:
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get kongservice -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].metadata.name}'
+            outputs:
+              - name: shared_kongservice_name
+                value: ($stdout)
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              namespace: ($kong_namespace)
+              name: ($httproute_two_name)
+        - script:
+            timeout: 330s
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+              - name: ROUTE
+                value: ($httproute_two_name)
+            content: |
+              for i in $(seq 1 60); do
+                if ! kubectl get httproute "${ROUTE}" -n "${KONG_NAMESPACE}" >/dev/null 2>&1; then
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "timed out waiting for HTTPRoute ${KONG_NAMESPACE}/${ROUTE} to be deleted" >&2
+              kubectl get httproute "${ROUTE}" -n "${KONG_NAMESPACE}" -o yaml >&2 || true
+              exit 1
+        - script:
+            timeout: 330s
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+              - name: ROUTE_ONE
+                value: ($httproute_one_name)
+              - name: ROUTE_TWO
+                value: ($httproute_two_name)
+              - name: ROUTE_THREE
+                value: ($httproute_three_name)
+              - name: SHARED_KONGSERVICE
+                value: ($shared_kongservice_name)
+            content: |
+              expected_routes_sorted() {
+                printf "%s\n" "${KONG_NAMESPACE}/${ROUTE_ONE}" "${KONG_NAMESPACE}/${ROUTE_THREE}" \
+                  | sort \
+                  | tr '\n' ',' \
+                  | sed 's/,$//'
+              }
+
+              for i in $(seq 1 60); do
+                svc_count="$(kubectl get kongservice -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o json | jq -r '.items | length')"
+                if [ "${svc_count}" != "1" ]; then
+                  sleep 5
+                  continue
+                fi
+
+                actual_routes="$(kubectl get kongservice "${SHARED_KONGSERVICE}" -n "${KONG_NAMESPACE}" -o json \
+                  | jq -r '.metadata.annotations["gateway-operator.konghq.com/hybrid-routes"] | split(",") | sort | join(",")')"
+                expected_routes="$(expected_routes_sorted)"
+                if [ "${actual_routes}" = "${expected_routes}" ]; then
+                  exit 0
+                fi
+                sleep 5
+              done
+
+              echo "timed out waiting for shared KongService annotation update after deleting ${KONG_NAMESPACE}/${ROUTE_TWO}" >&2
+              echo "expected routes: $(expected_routes_sorted)" >&2
+              kubectl get kongservice "${SHARED_KONGSERVICE}" -n "${KONG_NAMESPACE}" -o yaml >&2 || true
+              exit 1
+        - script:
+            timeout: 330s
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get gateway "${GATEWAY_NAME}" -n "${KONG_NAMESPACE}" -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip_after_delete
+                value: ($stdout)
+        - script:
+            timeout: 330s
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip_after_delete)
+              - name: DELETED_PATH
+                value: ($httproute_two_path)
+            content: |
+              for i in $(seq 1 60); do
+                code="$(curl -s -o /dev/null -w "%{http_code}" "http://${PROXY_IP}${DELETED_PATH}" || true)"
+                if [ "${code}" = "404" ]; then
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "timed out waiting for deleted route path to return 404, last code: ${code}" >&2
+              exit 1
+        - script:
+            timeout: 90s
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip_after_delete)
+              - name: ROUTE_PATH
+                value: ($httproute_one_path)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" "http://${PROXY_IP}${ROUTE_PATH}"
+            check:
+              ($stdout == '200'): true
+        - script:
+            timeout: 90s
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip_after_delete)
+              - name: ROUTE_PATH
+                value: ($httproute_three_path)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" "http://${PROXY_IP}${ROUTE_PATH}"
+            check:
+              ($stdout == '200'): true
+
+    - name: update-remaining-httproute-backendrefs
+      description: Update one remaining HTTPRoute to use a different backendRefs set
+      try:
+        - apply:
+            file: 04-update-httproute.yaml
+        - assert:
+            file: 04-assert-updated-httproute.yaml
+      catch:
+        - description: Dump HTTPRoute
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($kong_namespace)
+            name: ($httproute_three_name)
+            format: yaml
+        - description: Dump KongServices
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongService
+            namespace: ($kong_namespace)
+            format: yaml
+
+    - name: verify-new-dedicated-kongservice
+      description: Verify new KongService is created and the old one is updated
+      bindings:
+        - name: namespace
+          value: ($kong_namespace)
+        - name: hybrid_gateway_name
+          value: ($gateway_name)
+        - name: hybrid_gateway_namespace
+          value: ($kong_namespace)
+        - name: managedby_name
+          value: ($httproute_three_name)
+        - name: managedby_namespace
+          value: ($kong_namespace)
+        - name: strip_path
+          value: true
+      try:
+        - script:
+            timeout: 330s
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              for i in $(seq 1 60); do
+                name="$(kubectl get konnectgatewaycontrolplane -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=gateway -o jsonpath='{.items[0].metadata.name}' 2>/dev/null || true)"
+                if [ -n "${name}" ]; then
+                  printf '%s' "${name}"
+                  exit 0
+                fi
+                sleep 5
+              done
+              echo "timed out waiting for KonnectGatewayControlPlane" >&2
+              exit 1
+            outputs:
+              - name: konnectgatewaycontrolplane_name
+                value: ($stdout)
+        - script:
+            timeout: 150s
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+              - name: ROUTE_ONE
+                value: ($httproute_one_name)
+            content: |
+              # Find the shared KongService by looking for the one that has route_one in its hybrid-routes annotation
+              for i in $(seq 1 60); do
+                for svc in $(kubectl get kongservice -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'); do
+                  routes="$(kubectl get kongservice "${svc}" -n "${KONG_NAMESPACE}" -o jsonpath='{.metadata.annotations.gateway-operator\.konghq\.com/hybrid-routes}')"
+                  if echo "${routes}" | grep -q "${KONG_NAMESPACE}/${ROUTE_ONE}"; then
+                    printf '%s' "${svc}"
+                    exit 0
+                  fi
+                done
+                sleep 2
+              done
+              echo "timed out waiting for shared KongService containing ${KONG_NAMESPACE}/${ROUTE_ONE}" >&2
+              exit 1
+            outputs:
+              - name: shared_kongservice_name
+                value: ($stdout)
+        - script:
+            timeout: 330s
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+              - name: SHARED_KONGSERVICE
+                value: ($shared_kongservice_name)
+            content: |
+              for i in $(seq 1 60); do
+                count="$(kubectl get kongservice -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o json | jq -r '.items | length')"
+                if [ "${count}" = "2" ]; then
+                  dedicated="$(kubectl get kongservice -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o json \
+                    | jq -r --arg shared "${SHARED_KONGSERVICE}" '.items[] | select(.metadata.name != $shared) | .metadata.name' \
+                    | head -n1)"
+                  if [ -n "${dedicated}" ]; then
+                    printf '%s' "${dedicated}"
+                    exit 0
+                  fi
+                fi
+                sleep 5
+              done
+              echo "timed out waiting for a second (dedicated) KongService to appear" >&2
+              kubectl get kongservice -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml >&2 || true
+              exit 1
+            outputs:
+              - name: dedicated_kongservice_name
+                value: ($stdout)
+        - script:
+            timeout: 330s
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+              - name: ROUTE_ONE
+                value: ($httproute_one_name)
+              - name: ROUTE_THREE
+                value: ($httproute_three_name)
+              - name: SHARED_KONGSERVICE
+                value: ($shared_kongservice_name)
+              - name: DEDICATED_KONGSERVICE
+                value: ($dedicated_kongservice_name)
+            content: |
+              expected_sorted() {
+                printf "%s\n" "$@" | sort | tr '\n' ',' | sed 's/,$//'
+              }
+
+              expected_shared="$(expected_sorted "${KONG_NAMESPACE}/${ROUTE_ONE}")"
+              expected_dedicated="$(expected_sorted "${KONG_NAMESPACE}/${ROUTE_THREE}")"
+
+              for i in $(seq 1 60); do
+                shared_routes="$(kubectl get kongservice "${SHARED_KONGSERVICE}" -n "${KONG_NAMESPACE}" -o json \
+                  | jq -r '.metadata.annotations["gateway-operator.konghq.com/hybrid-routes"] | split(",") | sort | join(",")')"
+                dedicated_routes="$(kubectl get kongservice "${DEDICATED_KONGSERVICE}" -n "${KONG_NAMESPACE}" -o json \
+                  | jq -r '.metadata.annotations["gateway-operator.konghq.com/hybrid-routes"] | split(",") | sort | join(",")')"
+
+                if [ "${shared_routes}" != "${expected_shared}" ] || [ "${dedicated_routes}" != "${expected_dedicated}" ]; then
+                  sleep 5
+                  continue
+                fi
+
+                shared_ref="$(kubectl get kongroute -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o json \
+                  | jq -r --arg route "${KONG_NAMESPACE}/${ROUTE_ONE}" '.items[] | select(.metadata.annotations["gateway-operator.konghq.com/hybrid-routes"] | contains($route)) | .spec.serviceRef.namespacedRef.name' \
+                  | head -n1)"
+                dedicated_ref="$(kubectl get kongroute -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o json \
+                  | jq -r --arg route "${KONG_NAMESPACE}/${ROUTE_THREE}" '.items[] | select(.metadata.annotations["gateway-operator.konghq.com/hybrid-routes"] | contains($route)) | .spec.serviceRef.namespacedRef.name' \
+                  | head -n1)"
+
+                if [ "${shared_ref}" != "${SHARED_KONGSERVICE}" ] || [ "${dedicated_ref}" != "${DEDICATED_KONGSERVICE}" ]; then
+                  echo "unexpected KongRoute serviceRef: shared=${shared_ref} dedicated=${dedicated_ref}" >&2
+                  exit 1
+                fi
+
+                exit 0
+              done
+
+              echo "timed out waiting for KongService/KongRoute updates after backendRefs change" >&2
+              echo "expected shared routes: ${expected_shared}" >&2
+              echo "expected dedicated routes: ${expected_dedicated}" >&2
+              kubectl get kongservice "${SHARED_KONGSERVICE}" -n "${KONG_NAMESPACE}" -o yaml >&2 || true
+              kubectl get kongservice "${DEDICATED_KONGSERVICE}" -n "${KONG_NAMESPACE}" -o yaml >&2 || true
+              kubectl get kongroute -n "${KONG_NAMESPACE}" -l gateway-operator.konghq.com/managed-by=HTTPRoute -o yaml >&2 || true
+              exit 1
+        - script:
+            env:
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+              - name: DEDICATED_KONGSERVICE
+                value: ($dedicated_kongservice_name)
+            content: |
+              printf '%s' "${DEDICATED_KONGSERVICE}"
+            outputs:
+              - name: kongservice_name
+                value: ($stdout)
+        - assert:
+            file: ../common/assertions/kongservice.yaml
+        - assert:
+            file: ../common/assertions/kongroute.yaml
+
+    - name: verify-traffic-after-update
+      description: Verify remaining routes still serve traffic
+      try:
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: KONG_NAMESPACE
+                value: ($kong_namespace)
+            content: |
+              kubectl get gateway "${GATEWAY_NAME}" -n "${KONG_NAMESPACE}" -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip_final
+                value: ($stdout)
+        - script:
+            timeout: 90s
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip_final)
+              - name: ROUTE_PATH
+                value: ($httproute_one_path)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" "http://${PROXY_IP}${ROUTE_PATH}"
+            check:
+              ($stdout == '200'): true
+        - script:
+            timeout: 90s
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip_final)
+              - name: ROUTE_PATH
+                value: ($httproute_three_path)
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" "http://${PROXY_IP}${ROUTE_PATH}"
+            check:
+              ($stdout == '200'): true
