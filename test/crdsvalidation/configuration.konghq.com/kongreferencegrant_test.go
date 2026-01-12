@@ -229,4 +229,54 @@ func TestKongReferenceGrant(t *testing.T) {
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
+
+	t.Run("KongCertificate to KonnectGatewayControlPlane reference", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
+			{
+				Name: "without a name works",
+				TestObject: &configurationv1alpha1.KongReferenceGrant{
+					TypeMeta:   typeMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Namespace: configurationv1alpha1.Namespace("other"),
+								Kind:      "KongCertificate",
+								Group:     "configuration.konghq.com",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "with a name works",
+				TestObject: &configurationv1alpha1.KongReferenceGrant{
+					TypeMeta:   typeMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Namespace: configurationv1alpha1.Namespace("other"),
+								Kind:      "KongCertificate",
+								Group:     "configuration.konghq.com",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-control-plane")),
+							},
+						},
+					},
+				},
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
 }
