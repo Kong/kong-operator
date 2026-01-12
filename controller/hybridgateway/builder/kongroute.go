@@ -6,6 +6,7 @@ import (
 	"maps"
 	"strings"
 
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -48,7 +49,14 @@ func (b *KongRouteBuilder) WithHosts(hosts []string) *KongRouteBuilder {
 func (b *KongRouteBuilder) WithHTTPRouteMatch(match gwtypes.HTTPRouteMatch, setCaptureGroup bool) *KongRouteBuilder {
 	// Path.
 	if match.Path != nil && match.Path.Value != nil {
-		b.route.Spec.Paths = append(b.route.Spec.Paths, GenerateKongRoutePathFromHTTPRouteMatch(match.Path, setCaptureGroup)...)
+		paths, setRegexPriority := GenerateKongRoutePathFromHTTPRouteMatch(match.Path, setCaptureGroup)
+		b.route.Spec.Paths = append(b.route.Spec.Paths, paths...)
+		if setRegexPriority {
+			// setRegexPriority is set to true when the match path is a prefix match, is not root ("/") and requires a
+			// capture group for filters. We need to set regex_priority > 1 to ensure that a root path match ("/") in
+			// another KongRoute does not take precedence becoming a catch-all rule.
+			b.route.Spec.RegexPriority = ptr.To[int64](1)
+		}
 	}
 
 	// Method
@@ -164,8 +172,11 @@ func (b *KongRouteBuilder) MustBuild() configurationv1alpha1.KongRoute {
 }
 
 // GenerateKongRoutePathFromHTTPRouteMatch translates the value in HTTPRoute's path match
-// to the path used in KongRoute.
-func GenerateKongRoutePathFromHTTPRouteMatch(pathMatch *gatewayv1.HTTPPathMatch, setCaptureGroup bool) []string {
+// to the path used in KongRoute and returns whether to set RegexPriority for the KongRoute.
+// RegexPriority must be set in the KongRoute when the HTTPRoute match is a prefix match,
+// is not root ("/") and requires a capture group for filters to ensure that a root path
+// match ("/") in another KongRoute does not take precedence.
+func GenerateKongRoutePathFromHTTPRouteMatch(pathMatch *gatewayv1.HTTPPathMatch, setCaptureGroup bool) (paths []string, setRegexPriority bool) {
 	// The default match type is PathMatchPathPrefix.
 	matchType := gatewayv1.PathMatchPathPrefix
 	if pathMatch.Type != nil {
@@ -184,7 +195,7 @@ func GenerateKongRoutePathFromHTTPRouteMatch(pathMatch *gatewayv1.HTTPPathMatch,
 	switch matchType {
 	// Since the path matches request in prefix way, we need to use a regex with the '$' suffix to do the exact match.
 	case gatewayv1.PathMatchExact:
-		return []string{KongPathRegexPrefix + value + "$"}
+		return []string{KongPathRegexPrefix + value + "$"}, false
 
 	// In HTTPRoute, the prefix match is specified in the "directory" manner but not simple string prefix.
 	// For example, '/abc' should match '/abc', '/abc/', '/abc/123' but not '/abcd'.
@@ -194,7 +205,7 @@ func GenerateKongRoutePathFromHTTPRouteMatch(pathMatch *gatewayv1.HTTPPathMatch,
 	case gatewayv1.PathMatchPathPrefix:
 		// For the '/' path to match all, we just return the item in KongRoute to do the same catch-all match.
 		if value == "/" && !setCaptureGroup {
-			return []string{"/"}
+			return []string{"/"}, false
 		}
 
 		paths := make([]string, 0, 2)
@@ -207,20 +218,20 @@ func GenerateKongRoutePathFromHTTPRouteMatch(pathMatch *gatewayv1.HTTPPathMatch,
 		if setCaptureGroup {
 			// If the path is "/", we have to skip capturing the slash as Kong Route's path must begin with a slash.
 			if value == "/" {
-				return append(paths, fmt.Sprintf("%s/(.*)", KongPathRegexPrefix))
+				return append(paths, fmt.Sprintf("%s/(.*)", KongPathRegexPrefix)), false
 			}
 			// When there is a prefix in the route path, we capture the slash and the rest of the path after the prefix.
-			return append(paths, fmt.Sprintf("%s%s%s", KongPathRegexPrefix, path, "(/.*)"))
+			return append(paths, fmt.Sprintf("%s%s%s", KongPathRegexPrefix, path, "(/.*)")), true
 		}
 
 		if !strings.HasSuffix(path, "/") {
 			path = fmt.Sprintf("%s/", path)
 		}
-		return append(paths, path)
+		return append(paths, path), false
 
 	// For RegularExpression path match, we simply use the same regex in the paths of KongRoute.
 	case gatewayv1.PathMatchRegularExpression:
-		return []string{KongPathRegexPrefix + value}
+		return []string{KongPathRegexPrefix + value}, false
 	}
-	return nil // Should be unreachable.
+	return nil, false // Should never be reached.
 }
