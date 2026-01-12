@@ -1,0 +1,124 @@
+# Template for creating and asserting an echo service.
+#
+# Required bindings:
+#   - test_name: Test name used to compose the service name.
+#   - namespace: Namespace where the service will be created.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: create-echo-service
+spec:
+  try:
+    # 1. Apply the Service.
+    - apply:
+        resource:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            labels:
+              app: (join('-', [($test_name), 'echo']))
+            name: (join('-', [($test_name), 'echo']))
+            namespace: ($namespace)
+          spec:
+            ports:
+              - port: 1025
+                name: tcp
+                protocol: TCP
+                targetPort: 1025
+              - port: 1026
+                name: udp
+                protocol: TCP
+                targetPort: 1026
+              - port: 1027
+                name: http
+                protocol: TCP
+                targetPort: 1027
+              - port: 1030
+                name: tls
+                protocol: TCP
+                targetPort: 1030
+            selector:
+              app: (join('-', [($test_name), 'echo']))
+
+    # 2. Apply the Deployment.
+    - apply:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            labels:
+              app: (join('-', [($test_name), 'echo']))
+            name: (join('-', [($test_name), 'echo']))
+            namespace: ($namespace)
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: (join('-', [($test_name), 'echo']))
+            template:
+              metadata:
+                labels:
+                  app: (join('-', [($test_name), 'echo']))
+              spec:
+                containers:
+                  - image: kong/go-echo:latest
+                    name: echo
+                    ports:
+                      - containerPort: 1025
+                      - containerPort: 1026
+                      - containerPort: 1027
+                      - containerPort: 1030
+                    env:
+                      - name: NODE_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: spec.nodeName
+                      - name: POD_NAME
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.name
+                      - name: POD_NAMESPACE
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: metadata.namespace
+                      - name: POD_IP
+                        valueFrom:
+                          fieldRef:
+                            fieldPath: status.podIP
+                    readinessProbe:
+                      httpGet:
+                        path: /
+                        port: 1027
+                      initialDelaySeconds: 5
+                      periodSeconds: 5
+                    resources:
+                      requests:
+                        cpu: 100m
+                        memory: 128Mi
+                      limits:
+                        cpu: 210m
+                        memory: 256Mi
+
+    # 3. Assert Deployment Readiness.
+    - assert:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: (join('-', [($test_name), 'echo']))
+            namespace: ($namespace)
+          status:
+            availableReplicas: 1
+            readyReplicas: 1
+
+    # 4. Assert Service existence and configuration.
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: (join('-', [($test_name), 'echo']))
+            namespace: ($namespace)
+          spec:
+            selector:
+              app: (join('-', [($test_name), 'echo']))

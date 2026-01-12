@@ -46,4 +46,4 @@ markdownlint-cli2: "0.20.0"
 # renovate: datasource=github-releases depName=cert-manager/cert-manager
 cert-manager: "1.19.2"
 # renovate: datasource=github-releases depName=kyverno/chainsaw
-chainsaw: "0.2.14"
+chainsaw: "v0.2.15-beta.1"

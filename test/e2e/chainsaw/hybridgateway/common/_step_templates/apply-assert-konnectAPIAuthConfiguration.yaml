@@ -1,0 +1,37 @@
+# Template for creating and asserting a KonnectAPIAuthConfiguration.
+#
+# Required bindings:
+#   - test_name: Test name used to compose the auth configuration name.
+#   - namespace: Namespace where the auth configuration will be created.
+#   - konnect_token: Konnect API token.
+#   - konnect_url: Konnect server URL (e.g., "eu.api.konghq.tech").
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-konnect-auth
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: KonnectAPIAuthConfiguration
+          metadata:
+            name: (join('-', [($test_name), 'konnect-api-auth']))
+            namespace: ($namespace)
+          spec:
+            type: token
+            token: ($konnect_token)
+            serverURL: ($konnect_url)
+    - assert:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: KonnectAPIAuthConfiguration
+          metadata:
+            name: (join('-', [($test_name), 'konnect-api-auth']))
+            namespace: ($namespace)
+          # Assert that the resource was accepted (adjust based on actual status field)
+          status:
+            (conditions[?type == 'APIAuthValid']):
+              - status: 'True'
+                reason: Valid
+            serverURL: (join('', ['https://', ($konnect_url)]))
