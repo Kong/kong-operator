@@ -1,4 +1,3 @@
-
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
@@ -41,5 +40,3 @@ spec:
       backendRefs:
         - name: ($httpbin_service_name)
           port: 80
-
-              
