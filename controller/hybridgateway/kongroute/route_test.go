@@ -124,7 +124,8 @@ func TestRouteForRule(t *testing.T) {
 
 			// Verify paths from rule matches
 			if len(rule.Matches) > 0 && rule.Matches[0].Path != nil {
-				assert.Subset(t, result.Spec.Paths, builder.GenerateKongRoutePathFromHTTPRouteMatch(rule.Matches[0].Path))
+				paths, _ := builder.GenerateKongRoutePathFromHTTPRouteMatch(rule.Matches[0].Path, false)
+				assert.Subset(t, result.Spec.Paths, paths)
 			}
 		})
 	}

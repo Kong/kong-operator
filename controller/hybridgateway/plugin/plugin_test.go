@@ -10,6 +10,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -126,6 +127,7 @@ func TestPluginForFilter(t *testing.T) {
 	tests := []struct {
 		name           string
 		filter         gwtypes.HTTPRouteFilter
+		rule           gwtypes.HTTPRouteRule
 		existingPlugin *configurationv1.KongPlugin
 		httpRoute      *gwtypes.HTTPRoute
 		parentRef      *gwtypes.ParentReference
@@ -139,6 +141,16 @@ func TestPluginForFilter(t *testing.T) {
 				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
 					Set: []gatewayv1.HTTPHeader{
 						{Name: "X-Custom-Header", Value: "custom-value"},
+					},
+				},
+			},
+			rule: gwtypes.HTTPRouteRule{
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type:  ptr.To(gatewayv1.PathMatchPathPrefix),
+							Value: ptr.To("/test"),
+						},
 					},
 				},
 			},
@@ -176,7 +188,7 @@ func TestPluginForFilter(t *testing.T) {
 				WithRuntimeObjects(objects...).
 				Build()
 
-			plugins, _, err := PluginsForFilter(ctx, logger, fakeClient, tt.httpRoute, tt.filter, tt.parentRef)
+			plugins, _, err := PluginsForFilter(ctx, logger, fakeClient, tt.httpRoute, tt.rule, tt.filter, tt.parentRef)
 
 			if tt.expectedError {
 				require.Error(t, err)

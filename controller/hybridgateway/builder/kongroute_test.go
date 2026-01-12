@@ -235,7 +235,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			builder := NewKongRoute().WithHTTPRouteMatch(tt.match)
+			builder := NewKongRoute().WithHTTPRouteMatch(tt.match, false)
 
 			route, err := builder.Build()
 			require.NoError(t, err)
@@ -513,7 +513,7 @@ func TestKongRouteBuilder_Chaining(t *testing.T) {
 		WithSpecName("test-spec").
 		WithStripPath(true).
 		WithHosts([]string{"example.com"}).
-		WithHTTPRouteMatch(match).
+		WithHTTPRouteMatch(match, false).
 		WithKongService("test-service").
 		WithOwner(httpRoute).
 		WithLabels(httpRoute, parentRef).
