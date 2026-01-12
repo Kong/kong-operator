@@ -147,7 +147,7 @@ func TestKongReferenceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Only KongCertificate, KongCACertificate, and KongService kinds are supported for 'configuration.konghq.com' group"),
+				ExpectedErrorMessage: lo.ToPtr("Only KongCertificate, KongCACertificate, KongService, and KongUpstream kinds are supported for 'configuration.konghq.com' group"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
@@ -175,7 +175,57 @@ func TestKongReferenceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Only KongCertificate, KongCACertificate, and KongService kinds are supported for 'configuration.konghq.com' group"),
+				ExpectedErrorMessage: lo.ToPtr("Only KongCertificate, KongCACertificate, KongService, and KongUpstream kinds are supported for 'configuration.konghq.com' group"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("KongUpstream to KonnectGatewayControlPlane reference", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
+			{
+				Name: "without a name works",
+				TestObject: &configurationv1alpha1.KongReferenceGrant{
+					TypeMeta:   typeMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Namespace: configurationv1alpha1.Namespace("other"),
+								Kind:      "KongUpstream",
+								Group:     "configuration.konghq.com",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "with a name works",
+				TestObject: &configurationv1alpha1.KongReferenceGrant{
+					TypeMeta:   typeMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Namespace: configurationv1alpha1.Namespace("other"),
+								Kind:      "KongUpstream",
+								Group:     "configuration.konghq.com",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-control-plane")),
+							},
+						},
+					},
+				},
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
