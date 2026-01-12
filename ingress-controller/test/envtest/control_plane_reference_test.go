@@ -20,6 +20,7 @@ import (
 	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/test/helpers/conditions"
+	"github.com/kong/kong-operator/test/helpers/asserts"
 )
 
 // TestControlPlaneReferenceHandling tests ControlPlaneReference handling in controllers supporting it.
@@ -188,7 +189,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 					))
 				}, waitTime, tickDuration, "expected object to be programmed")
 			} else {
-				require.Never(t, func() bool {
+				asserts.Never(t, func(ctx context.Context) bool {
 					require.NoError(t, ctrlClient.Get(ctx, client.ObjectKeyFromObject(tc.object), tc.object))
 
 					return conditions.Contain(
@@ -196,7 +197,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 						conditions.WithType(string(configurationv1.ConditionProgrammed)),
 						conditions.WithStatus(metav1.ConditionTrue),
 					)
-				}, waitTime, tickDuration, "expected object to be programmed")
+				}, waitTime, tickDuration, "expected object not to be programmed")
 			}
 		})
 	}
