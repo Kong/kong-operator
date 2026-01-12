@@ -1,0 +1,159 @@
+# Scenario for HTTPRoute referencing Service as backendRef in another namespace granted by ReferenceGrant
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: httproute-backendref-cross-namespace-reference
+spec:
+  description: |
+    The case validates the scenario where an HTTPRoute can reference a
+    Service as its backendRef when granted by proper ReferenceGrant.
+
+  # Define the gateway_name binding based on TEST_ID environment variable
+  # This ensures unique names in Konnect to avoid 409 conflicts
+  bindings:
+    - name: gateway_namespace
+      # Name of namespace cannot exceed 63 characters, so we shortened the name.
+      value: (join('-', ['kong', 'httproute-backendref-x-ns-gateway', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: konnect_api_auth_name
+      value: konnect-api-auth-dev-1
+    - name: gateway_class_name
+      value: (join('-', ['kong', 'httproute-backendref-cross-namespace', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: gateway_configuration_name
+      value: ($gateway_class_name)
+    - name: gateway_name
+      value: ($gateway_class_name)
+    - name: http_route_name
+      value: (join('-', ['kong', 'httproute-backendref-cross-namespace-ref', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: http_route_namespace
+      value: ($gateway_namespace)
+    - name: reference_grant_name
+      value: (join('-', ['kong', 'httproute-backendref-cross-namespace-ref-service', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: httpbin_service_name
+      value: httpbin
+    - name: httpbin_service_namespace
+      value: (join('-', ['kong', 'httproute-backendref-x-ns-backend', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: operator_namespace
+      value: kong-system
+    - name: gateway_proxy_image
+      value: kong/kong-gateway:3.12
+  
+  timeouts:
+    apply: 120s
+    assert: 300s
+    cleanup: 120s
+    delete: 120s
+
+  steps:
+    # Step 01: Create backend service and gateway in different namespaces.
+    - name: create-prerequisites
+      description: Create GatewayClass, Gateway, and backend Service in different namespaces.
+      try:
+        - apply:
+            file: 00-httpbin.yaml
+        - apply:
+            file: 01-prerequisites.yaml
+        - assert:
+            file: 00-assert-httpbin.yaml
+        - assert:
+            file: 01-assert-prerequisites.yaml
+      catch:
+        - description: Get Gateway resource status
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: Gateway
+            namespace: ($gateway_namespace)
+        - description: Get Pods in gateway namespace
+          get:
+            apiVersion: v1
+            kind: Pod
+            namespace: ($gateway_namespace)
+        - description: Get operator logs
+          podLogs:
+            namespace: ($operator_namespace)
+            selector: control-plane=controller-manager
+            tail: 100
+    # Step 02: Create HTTPRoute and ReferenceGrant in the namepace of the Gateway, then verify the connectivity.
+    - name: create-httproute-with-cross-namespace-reference-to-backendRef
+      description: Create an HTTPRoute in another namespace with a cross-namespace backendRef with ReferenceGrant
+      bindings:
+        - name: route_path
+          value: "/httproute-cross-namespace-reference-to-backendref"
+      try:
+        - apply:
+            file: 02-httproute-backendref-cross-namespace-reference.yaml
+        - assert:
+            file: 02-assert-httproute-backendref-cross-namespace-reference.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Wait until the route works
+        - description: Test connectivity from outside the cluster
+          script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+            content: |
+              echo "Accessing gateway ${GATEWAY_NAMESPACE}/${GATEWAY_NAME} at ${PROXY_IP}"
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200')): true
+      catch:
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump ReferenceGrants
+          get:
+            apiVersion: gateway.networking.k8s.io/v1bata1
+            kind: ReferenceGrant
+            namespace: ($httpbin_service_namespace)
+            format: yaml
+        - description: dump KongServices
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongService
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongUpstreams
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongUpstream
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongTargets
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongTarget
+            namespace: ($http_route_namespace)
+            format: yaml        
+      finally:
+        - description: Delete HTTPRoute
+          delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              namespace: ($http_route_namespace)
+              name: ($http_route_name)
