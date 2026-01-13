@@ -7,11 +7,13 @@ set -o pipefail
 # Variables (from environment):
 #   FQDN: The fully qualified domain name to test.
 #   PROXY_IP: The IP address of the proxy to connect to.
+#   METHOD: The HTTP method to use (e.g., 'GET', 'POST', 'PUT').
 #   ROUTE_PATH: (optional) The HTTP path to test. Default: '/'.
 #   INSECURE: (optional) If 'true', disables TLS verification. Default: 'true'.
 
 FQDN="${FQDN}"
 PROXY_IP="${PROXY_IP}"
+METHOD="${METHOD}"
 ROUTE_PATH="${ROUTE_PATH:-/}"
 INSECURE="${INSECURE:-true}"
 
@@ -23,6 +25,7 @@ fi
 
 # Capture curl output, and handle failures gracefully
 if ! OUTPUT=$(curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' \
+  -X "$METHOD" \
   --resolve "${FQDN}:443:${PROXY_IP}" \
   "https://${FQDN}${ROUTE_PATH}" \
   -vv $INSECURE_FLAG 2>&1); then
@@ -32,6 +35,7 @@ if ! OUTPUT=$(curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /d
   "error": "Curl command failed",
   "fqdn": "$FQDN",
   "proxy_ip": "$PROXY_IP",
+  "method": "$METHOD",
   "route_path": "$ROUTE_PATH",
   "insecure": "$INSECURE",
   "curl_output": $(echo "$OUTPUT" | jq -Rs .)
@@ -58,6 +62,7 @@ if [[ "$HTTP_CODE" != "200" ]]; then
 {
   "http_status": $HTTP_CODE,
   "certificate_match": false,
+  "method": "$METHOD",
   "error": "Request failed with status $HTTP_CODE",
   "curl_output": $(echo "$OUTPUT" | jq -Rs .)
 }
@@ -101,6 +106,7 @@ cat <<EOF
   "certificate_match": $CERTIFICATE_MATCH,
   "resolved_hostname": "$ACTUAL_HOSTNAME",
   "fqdn": "$FQDN",
+  "method": "$METHOD",
   "message": "$MESSAGE"
 }
 EOF

@@ -1,0 +1,101 @@
+# Template for creating and asserting an httpbin service.
+#
+# Required bindings:
+#   - test_name: Test name used to compose the service name.
+#   - namespace: Namespace where the service will be created.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: create-httpbin-service
+spec:
+  try:
+    # 1. Apply the Deployment.
+    - apply:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: (join('-', [($test_name), 'httpbin']))
+            namespace: ($namespace)
+            labels:
+              app: (join('-', [($test_name), 'httpbin']))
+          spec:
+            replicas: 1
+            selector:
+              matchLabels:
+                app: (join('-', [($test_name), 'httpbin']))
+            template:
+              metadata:
+                labels:
+                  app: (join('-', [($test_name), 'httpbin']))
+              spec:
+                containers:
+                  - name: httpbin
+                    image: ghcr.io/mccutchen/go-httpbin:2.19
+                    ports:
+                      - name: http
+                        containerPort: 8080
+                        protocol: TCP
+                    livenessProbe:
+                      httpGet:
+                        path: /status/200
+                        port: http
+                    readinessProbe:
+                      httpGet:
+                        path: /status/200
+                        port: http
+                    resources:
+                      requests:
+                        cpu: 50m
+                        memory: 64Mi
+                      limits:
+                        cpu: 100m
+                        memory: 128Mi
+                    securityContext:
+                      runAsNonRoot: true
+
+    # 2. Apply the Service.
+    - apply:
+        resource:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: (join('-', [($test_name), 'httpbin']))
+            namespace: ($namespace)
+            labels:
+              app: (join('-', [($test_name), 'httpbin']))
+          spec:
+            selector:
+              app: (join('-', [($test_name), 'httpbin']))
+            ports:
+              - port: 80
+                targetPort: http
+                protocol: TCP
+                name: http
+                appProtocol: http
+
+    # 3. Assert Deployment Readiness.
+    - assert:
+        resource:
+          apiVersion: apps/v1
+          kind: Deployment
+          metadata:
+            name: (join('-', [($test_name), 'httpbin']))
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Available']):
+              - status: 'True'
+            readyReplicas: 1
+            replicas: 1
+
+    # 4. Assert Service existence and configuration.
+    - assert:
+        resource:
+          apiVersion: v1
+          kind: Service
+          metadata:
+            name: (join('-', [($test_name), 'httpbin']))
+            namespace: ($namespace)
+          spec:
+            selector:
+              app: (join('-', [($test_name), 'httpbin']))
