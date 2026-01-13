@@ -410,7 +410,7 @@ CONFIG_RBAC_ROLE_DIR = $(CONFIG_DIR)/rbac/role
 
 
 .PHONY: manifests
-manifests: manifests.conversion-webhook manifests.validating-webhook manifests.versions manifests.crds manifests.role manifests.charts ## Generate ClusterRole and CustomResourceDefinition objects.
+manifests: manifests.conversion-webhook manifests.validating-webhook manifests.validating-policy manifests.versions manifests.crds manifests.role manifests.charts ## Generate ClusterRole and CustomResourceDefinition objects.
 
 .PHONY: manifests.conversion-webhook
 manifests.conversion-webhook: kustomize
@@ -419,6 +419,10 @@ manifests.conversion-webhook: kustomize
 .PHONY: manifests.validating-webhook
 manifests.validating-webhook: kustomize
 	KUSTOMIZE_BIN=$(KUSTOMIZE) go run hack/generators/validating-webhook/main.go
+
+.PHONY: manifests.validating-policy
+manifests.validating-policy: kustomize
+	KUSTOMIZE_BIN=$(KUSTOMIZE) go run hack/generators/validating-policy/main.go
 
 .PHONY: manifests.crds
 manifests.crds: controller-gen ## Generate CustomResourceDefinition objects.
