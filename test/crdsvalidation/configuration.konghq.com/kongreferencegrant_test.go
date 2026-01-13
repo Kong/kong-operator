@@ -74,56 +74,6 @@ func TestKongReferenceGrant(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
-	t.Run("KongService to KonnectGatewayControlPlane reference", func(t *testing.T) {
-		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
-			{
-				Name: "without a name works",
-				TestObject: &configurationv1alpha1.KongReferenceGrant{
-					TypeMeta:   typeMeta,
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: configurationv1alpha1.KongReferenceGrantSpec{
-						From: []configurationv1alpha1.ReferenceGrantFrom{
-							{
-								Namespace: configurationv1alpha1.Namespace("other"),
-								Kind:      "KongService",
-								Group:     "configuration.konghq.com",
-							},
-						},
-						To: []configurationv1alpha1.ReferenceGrantTo{
-							{
-								Group: "konnect.konghq.com",
-								Kind:  "KonnectGatewayControlPlane",
-							},
-						},
-					},
-				},
-			},
-			{
-				Name: "with a name works",
-				TestObject: &configurationv1alpha1.KongReferenceGrant{
-					TypeMeta:   typeMeta,
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: configurationv1alpha1.KongReferenceGrantSpec{
-						From: []configurationv1alpha1.ReferenceGrantFrom{
-							{
-								Namespace: configurationv1alpha1.Namespace("other"),
-								Kind:      "KongService",
-								Group:     "configuration.konghq.com",
-							},
-						},
-						To: []configurationv1alpha1.ReferenceGrantTo{
-							{
-								Group: "konnect.konghq.com",
-								Kind:  "KonnectGatewayControlPlane",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-control-plane")),
-							},
-						},
-					},
-				},
-			},
-		}.RunWithConfig(t, cfg, scheme)
-	})
-
 	t.Run("KongRoute to KonnectGatewayControlPlane reference", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
 			{
@@ -182,101 +132,91 @@ func TestKongReferenceGrant(t *testing.T) {
 
 	t.Run("KongUpstream to KonnectGatewayControlPlane reference", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
-			{
-				Name: "without a name works",
-				TestObject: &configurationv1alpha1.KongReferenceGrant{
-					TypeMeta:   typeMeta,
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: configurationv1alpha1.KongReferenceGrantSpec{
-						From: []configurationv1alpha1.ReferenceGrantFrom{
-							{
-								Namespace: configurationv1alpha1.Namespace("other"),
-								Kind:      "KongUpstream",
-								Group:     "configuration.konghq.com",
-							},
-						},
-						To: []configurationv1alpha1.ReferenceGrantTo{
-							{
-								Group: "konnect.konghq.com",
-								Kind:  "KonnectGatewayControlPlane",
-							},
-						},
-					},
-				},
-			},
-			{
-				Name: "with a name works",
-				TestObject: &configurationv1alpha1.KongReferenceGrant{
-					TypeMeta:   typeMeta,
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: configurationv1alpha1.KongReferenceGrantSpec{
-						From: []configurationv1alpha1.ReferenceGrantFrom{
-							{
-								Namespace: configurationv1alpha1.Namespace("other"),
-								Kind:      "KongUpstream",
-								Group:     "configuration.konghq.com",
-							},
-						},
-						To: []configurationv1alpha1.ReferenceGrantTo{
-							{
-								Group: "konnect.konghq.com",
-								Kind:  "KonnectGatewayControlPlane",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-control-plane")),
-							},
-						},
-					},
-				},
-			},
+			kongReferenceGrantCase(withName, typeMeta, ns.Name, "KongUpstream"),
+			kongReferenceGrantCase(withoutName, typeMeta, ns.Name, "KongUpstream"),
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
 	t.Run("KongCertificate to KonnectGatewayControlPlane reference", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
-			{
-				Name: "without a name works",
-				TestObject: &configurationv1alpha1.KongReferenceGrant{
-					TypeMeta:   typeMeta,
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: configurationv1alpha1.KongReferenceGrantSpec{
-						From: []configurationv1alpha1.ReferenceGrantFrom{
-							{
-								Namespace: configurationv1alpha1.Namespace("other"),
-								Kind:      "KongCertificate",
-								Group:     "configuration.konghq.com",
-							},
-						},
-						To: []configurationv1alpha1.ReferenceGrantTo{
-							{
-								Group: "konnect.konghq.com",
-								Kind:  "KonnectGatewayControlPlane",
-							},
-						},
-					},
-				},
-			},
-			{
-				Name: "with a name works",
-				TestObject: &configurationv1alpha1.KongReferenceGrant{
-					TypeMeta:   typeMeta,
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: configurationv1alpha1.KongReferenceGrantSpec{
-						From: []configurationv1alpha1.ReferenceGrantFrom{
-							{
-								Namespace: configurationv1alpha1.Namespace("other"),
-								Kind:      "KongCertificate",
-								Group:     "configuration.konghq.com",
-							},
-						},
-						To: []configurationv1alpha1.ReferenceGrantTo{
-							{
-								Group: "konnect.konghq.com",
-								Kind:  "KonnectGatewayControlPlane",
-								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-control-plane")),
-							},
-						},
-					},
-				},
-			},
+			kongReferenceGrantCase(withName, typeMeta, ns.Name, "KongCertificate"),
+			kongReferenceGrantCase(withoutName, typeMeta, ns.Name, "KongCertificate"),
 		}.RunWithConfig(t, cfg, scheme)
 	})
+
+	t.Run("KongCACertificate to KonnectGatewayControlPlane reference", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
+			kongReferenceGrantCase(withName, typeMeta, ns.Name, "KongCACertificate"),
+			kongReferenceGrantCase(withoutName, typeMeta, ns.Name, "KongCACertificate"),
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("KongService to KonnectGatewayControlPlane reference", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
+			kongReferenceGrantCase(withName, typeMeta, ns.Name, "KongService"),
+			kongReferenceGrantCase(withoutName, typeMeta, ns.Name, "KongService"),
+		}.RunWithConfig(t, cfg, scheme)
+	})
+}
+
+type typeOfKongReferenceGrantCase byte
+
+const (
+	withoutName typeOfKongReferenceGrantCase = iota
+	withName
+)
+
+func kongReferenceGrantCase(
+	typ typeOfKongReferenceGrantCase,
+	typeMeta metav1.TypeMeta,
+	ns string,
+	fromKind string,
+) common.TestCase[*configurationv1alpha1.KongReferenceGrant] {
+	from := []configurationv1alpha1.ReferenceGrantFrom{
+		{
+			Namespace: configurationv1alpha1.Namespace("other"),
+			Kind:      configurationv1alpha1.Kind(fromKind),
+			Group:     "configuration.konghq.com",
+		},
+	}
+
+	switch typ {
+	case withoutName:
+		return common.TestCase[*configurationv1alpha1.KongReferenceGrant]{
+			Name: "without a name works",
+			TestObject: &configurationv1alpha1.KongReferenceGrant{
+				TypeMeta:   typeMeta,
+				ObjectMeta: common.CommonObjectMeta(ns),
+				Spec: configurationv1alpha1.KongReferenceGrantSpec{
+					From: from,
+					To: []configurationv1alpha1.ReferenceGrantTo{
+						{
+							Group: "konnect.konghq.com",
+							Kind:  "KonnectGatewayControlPlane",
+						},
+					},
+				},
+			},
+		}
+	case withName:
+		return common.TestCase[*configurationv1alpha1.KongReferenceGrant]{
+			Name: "with a name works",
+			TestObject: &configurationv1alpha1.KongReferenceGrant{
+				TypeMeta:   typeMeta,
+				ObjectMeta: common.CommonObjectMeta(ns),
+				Spec: configurationv1alpha1.KongReferenceGrantSpec{
+					From: from,
+					To: []configurationv1alpha1.ReferenceGrantTo{
+						{
+							Group: "konnect.konghq.com",
+							Kind:  "KonnectGatewayControlPlane",
+							Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-control-plane")),
+						},
+					},
+				},
+			},
+		}
+	default:
+		panic("should not happen")
+	}
 }
