@@ -159,11 +159,11 @@ func (r DataPlaneOwnedResourceFinalizerReconciler[T, PT]) Reconcile(ctx context.
 			Namespace: obj.GetNamespace(),
 			Name:      ownerRef.Name,
 		}, ownerDataPlane)
+		// If the DataPlane is not found or gone, or has been re-created (different UID), we consider it gone.
+		if k8serrors.IsNotFound(getOwnerErr) || k8serrors.IsGone(getOwnerErr) || ownerDataPlane.UID != ownerRef.UID {
+			return true, nil
+		}
 		if getOwnerErr != nil {
-			// If the DataPlane is not found or gone, we consider it gone.
-			if k8serrors.IsNotFound(getOwnerErr) || k8serrors.IsGone(getOwnerErr) {
-				return true, nil
-			}
 			return false, getOwnerErr
 		}
 

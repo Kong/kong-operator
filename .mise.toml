@@ -35,4 +35,4 @@ macos-arm64 = { url = "https://get.helm.sh/helm-v{version}-darwin-arm64.tar.gz" 
 
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
-version = "d42ba1d7b50cbabd4551821737dbc1b76003b030"
+version = "26b2f4fe13b493c7c0a1bff33235dcc8721ac5ad"

@@ -1,0 +1,111 @@
+name: charts nightly
+
+on:
+  schedule:
+    - cron: "30 4 * * *"
+  workflow_dispatch: {}
+
+env:
+  NIGHTLY_CHART_NAME: nightly-kong-operator-chart
+
+permissions:
+  contents: read
+
+jobs:
+  publish-nightly-chart:
+    name: Publish nightly Helm chart
+    runs-on: ubuntu-latest
+    env:
+      HELM_EXPERIMENTAL_OCI: 1
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@20cf305ff2072d973412fa9b1e3a4f227bda3c76 # v2.14.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: Setup Python
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: "3.13"
+
+      - name: Setup toolchain
+        uses: jdx/mise-action@146a28175021df8ca24f8ee1828cc2a60f980bd5 # v3.5.1
+        with:
+          install: true
+
+      - name: Install PyYAML
+        run: python -m pip install --upgrade "pyyaml>=6.0"
+
+      - name: Compute nightly chart metadata
+        id: metadata
+        run: |
+          DATE=$(date -u +%Y%m%d)
+          SHORT_SHA=$(git rev-parse --short "${GITHUB_SHA}")
+          CHART_VERSION="0.0.0-nightly.${DATE}.sha.${SHORT_SHA}"
+          APP_VERSION="$(cat VERSION)-nightly.${DATE}.${SHORT_SHA}"
+          {
+            echo "chart_version=${CHART_VERSION}"
+            echo "app_version=${APP_VERSION}"
+            echo "chart_dir=${RUNNER_TEMP}/${NIGHTLY_CHART_NAME}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Prepare chart for publication
+        env:
+          CHART_DIR: ${{ steps.metadata.outputs.chart_dir }}
+          CHART_VERSION: ${{ steps.metadata.outputs.chart_version }}
+          APP_VERSION: ${{ steps.metadata.outputs.app_version }}
+          NIGHTLY_IMAGE_REPOSITORY: ${{ vars.DOCKERHUB_NIGHTLY_IMAGE_REPOSITORY }}
+        run: |
+          rsync -a charts/kong-operator/ "${CHART_DIR}/"
+          python - <<'PY'
+          import os
+          import pathlib
+          import yaml
+
+          chart_dir = pathlib.Path(os.environ["CHART_DIR"])
+          chart_path = chart_dir / "Chart.yaml"
+          chart = yaml.safe_load(chart_path.read_text())
+          chart["name"] = os.environ["NIGHTLY_CHART_NAME"]
+          chart["version"] = os.environ["CHART_VERSION"]
+          chart["appVersion"] = os.environ["APP_VERSION"]
+          chart_path.write_text(yaml.safe_dump(chart, sort_keys=False))
+
+          values_path = chart_dir / "values.yaml"
+          values = yaml.safe_load(values_path.read_text())
+          values.setdefault("image", {})
+          values["image"]["repository"] = os.environ["NIGHTLY_IMAGE_REPOSITORY"]
+          values["image"]["tag"] = "nightly"
+          values_path.write_text(yaml.safe_dump(values, sort_keys=False))
+          PY
+
+      - name: Package chart
+        id: package
+        env:
+          CHART_DIR: ${{ steps.metadata.outputs.chart_dir }}
+        run: |
+          PACKAGE_DIR="${RUNNER_TEMP}/chart-packages"
+          mkdir -p "${PACKAGE_DIR}"
+          helm package "${CHART_DIR}" --destination "${PACKAGE_DIR}"
+          PACKAGE_PATH=$(ls "${PACKAGE_DIR}"/*.tgz)
+          echo "package_path=${PACKAGE_PATH}" >> "${GITHUB_OUTPUT}"
+
+      - name: Log in to Docker Hub
+        env:
+          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_PUSH_USERNAME_NIGHTLY }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO_CHART_NIGHTLY }}
+        run: |
+          if [ -z "${DOCKERHUB_USERNAME}" ] || [ -z "${DOCKERHUB_TOKEN}" ]; then
+            echo "Docker Hub credentials are missing."
+            exit 1
+          fi
+          echo "${DOCKERHUB_TOKEN}" | helm registry login registry-1.docker.io \
+            --username "${DOCKERHUB_USERNAME}" --password-stdin
+
+      - name: Push nightly chart
+        env:
+          PACKAGE: ${{ steps.package.outputs.package_path }}
+        run: |
+          helm push "${PACKAGE}" oci://registry-1.docker.io/kong

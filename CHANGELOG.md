@@ -38,6 +38,14 @@
 
 ## Unreleased
 
+### Added
+
+- Gateway: Added support for static naming of Gateway resources via the
+  `konghq.com/operator-static-naming` annotation. When set to `true`, the
+  DataPlane, ControlPlane, and KonnectGatewayControlPlane resources will be
+  named exactly as the Gateway resource instead of using auto-generated names.
+  [#3015](https://github.com/Kong/kong-operator/issues/3015)
+
 ### Fixes
 
 - Fix validation logic for dataplane ports in admission policy.
@@ -79,12 +87,16 @@
 
   - `KongService`
   - `KongRoute`
+  - `KongUpstream`
+  - `KongCertificate`
 
   To allow these references, users need to define a `KongReferenceGrant` resource
   in the namespace of the referenced resource, allowing access to the
   `KonnectGatewayControlPlane`.
   [#2892](https://github.com/Kong/kong-operator/pull/2892)
   [#2913](https://github.com/Kong/kong-operator/pull/2913)
+  [#3033](https://github.com/Kong/kong-operator/pull/3033)
+  [#3040](https://github.com/Kong/kong-operator/pull/3040)
 - Added support for cross namespace references between the following Konnect
   entities and `core` `Secret`
 

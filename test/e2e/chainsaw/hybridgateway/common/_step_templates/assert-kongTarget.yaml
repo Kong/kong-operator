@@ -1,0 +1,72 @@
+# Template for asserting a KongTarget resource.
+#
+# Required bindings:
+#   - namespace: Namespace where the KongTarget is located.
+#   - gateway_name: Name of the Gateway.
+#   - gateway_namespace: Namespace of the Gateway.
+#   - http_route_name: Name of the HTTPRoute.
+#   - http_route_namespace: Namespace of the HTTPRoute.
+#   - resource_type: Type of resource to query (e.g., "kongupstreams.configuration.konghq.com").
+#   - target_weight: Weight value for the target (e.g., 1).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-kong-target
+spec:
+  try:
+    - script:
+        env:
+         - name: NAMESPACE
+           value: ($namespace)
+         - name: RESOURCE_TYPE
+           value: ($resource_type)
+         - name: GATEWAY_NAME
+           value: ($gateway_name)
+         - name: GATEWAY_NAMESPACE
+           value: ($gateway_namespace)
+         - name: HTTP_ROUTE_NAME
+           value: ($http_route_name)
+         - name: HTTP_ROUTE_NAMESPACE
+           value: ($http_route_namespace)
+        content: |
+          bash ../common/scripts/kongResource_name.sh
+        outputs:
+          - name: kong_upstream_name
+            value: (json_parse($stdout).name)
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongTarget
+          metadata:
+            namespace: ($namespace)
+            (labels."gateway-operator.konghq.com/hybrid-gateways-name" == ($gateway_name)): true
+            (labels."gateway-operator.konghq.com/hybrid-gateways-namespace" == ($gateway_namespace)): true
+            (labels."gateway-operator.konghq.com/managed-by" == 'HTTPRoute'): true
+            (annotations."gateway-operator.konghq.com/hybrid-routes" | contains(@, join('/', [($http_route_namespace), ($http_route_name)]))): true
+            (annotations."gateway-operator.konghq.com/hybrid-gateways" == join('/', [($gateway_namespace), ($gateway_name)])): true
+          spec:
+           weight: ($target_weight)
+           upstreamRef:
+               name: ($kong_upstream_name)
+           (target != null): true
+          status:
+            # Filter conditions to check for required status
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (conditions[?type == 'KongUpstreamRefValid']):
+              - status: 'True'
+                reason: Valid
+            (conditions[?type == 'ControlPlaneRefValid']):
+              - status: 'True'
+                reason: Valid
+            (conditions[?type == 'APIAuthResolvedRef']):
+              - status: 'True'
+                reason: ResolvedRef
+            (conditions[?type == 'APIAuthValid']):
+              - status: 'True'
+                reason: Valid
+            # Assert Konnect integration fields are populated
+            (konnect.controlPlaneID != null): true
+            (konnect.id != null): true
+            (konnect.upstreamID != null): true

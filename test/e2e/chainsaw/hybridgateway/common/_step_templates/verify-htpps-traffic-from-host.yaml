@@ -1,0 +1,46 @@
+# Template for verifying HTTPS traffic from the host to the gateway.
+#
+# Required bindings:
+#   - gateway_name: Name of the Gateway.
+#   - gateway_namespace: Namespace of the Gateway.
+#   - fqdn: Fully qualified domain name for the request (e.g., "echo.example.com").
+#   - route_path: HTTP path to test (e.g., "/echo").
+#   - insecure: Whether to disable TLS verification ("true" or "false").
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: verify-https-traffic-from-host
+spec:
+  try:
+    # 1. Dynamically discover the Gateway's Proxy IP
+    - script:
+        env:
+          - name: GATEWAY_NAME
+            value: ($gateway_name)
+          - name: GATEWAY_NAMESPACE
+            value: ($gateway_namespace)
+        content: |
+          bash ../common/scripts/proxy_ip_address.sh
+        outputs:
+          - name: proxy_ip
+            value: (json_parse($stdout).proxy_ip_address)
+        check:
+          (json_parse($stdout).proxy_ip_address != null): true
+          (json_parse($stdout).proxy_ip_address != ''): true
+
+    # 2. Perform the HTTPS connectivity and TLS check
+    - script:
+        env:
+          - name: PROXY_IP
+            value: ($proxy_ip)
+          - name: FQDN
+            value: ($fqdn)
+          - name: ROUTE_PATH
+            value: ($route_path)
+          - name: INSECURE
+            value: ($insecure)
+        content: |
+          bash ../common/scripts/host_connectivity_test_with_hostname_tls_check.sh
+        check:
+          (to_string(json_parse($stdout).http_status) == '200'): true
+          (to_string(json_parse($stdout).certificate_match) == 'true'): true

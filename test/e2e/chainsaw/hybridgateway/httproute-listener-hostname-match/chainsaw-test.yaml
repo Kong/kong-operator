@@ -1,0 +1,471 @@
+# Gateway with listener hostnames test scenario
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: "httproute-listener-hostname-match"
+spec:
+  description: |
+    This test validates that the hybrid gateway controller correctly
+    processes the hostname specified in listener of Gateway. The
+    hostname of listener should be translated to hostname matches
+    in the routes when the HTTPRoute references the listener as its parent.
+
+  timeouts:
+    apply: 120s
+    assert: 300s
+    cleanup: 300s
+    delete: 120s
+
+  bindings:
+    - name: kong_namespace
+      value: (join('-', ['kong', 'httproute-listener-hostname-match', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: gateway_class_name
+      value: (join('-', ['kong', 'httproute-listener-hostname-match', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: konnect_api_auth_name
+      value: konnect-api-auth-dev-1
+    - name: gateway_configuration_name
+      value: ($gateway_class_name)
+    - name: gateway_namespace
+      value: ($kong_namespace)
+    - name: gateway_name_wildcard_listener_hostname
+      value: (join('-', ['kong', 'wildcard-hostname-listener', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: gateway_name_exact_listener_hostname
+      value: (join('-', ['kong', 'exact-hostname-listener', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+    - name: http_route_namespace
+      value: ($kong_namespace)
+    - name: httpbin_service_name
+      value: httpbin
+    - name: httpbin_service_namespace
+      value: ($kong_namespace)
+    - name: gateway_dataplane_image
+      value: "kong/kong-gateway:3.12"
+    - name: operator_namespace
+      value: kong-system
+  
+  steps:
+    # Step 1: Create prerequisite resources
+    - name: create-prerequisites
+      description: Create GatewayClass, KonnectAPIAuthConfiguration, and backend Service
+      try:
+        - apply:
+            file: 01-prerequisites.yaml
+        - apply:
+            file: 00-httpbin.yaml
+        - assert:
+            file: 00-assert-httpbin.yaml
+        - assert:
+            file: 01-assert-prerequisites.yaml
+    # Step 2: Create an HTTPRoute attached to the gateway with wildcard listener hostname.
+    # Both httproutes with the same wildcard hostname and exact name matching the wildcard should be able to attach.
+    - name: create-httproute-attached-to-gateway-with-wildcard-hostname-listener
+      description: Create HTTPRoutes attached to the Gateway with wildcard hostname listener
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_wildcard_listener_hostname)
+        - name: http_route_name_wildcard_hostname
+          value: (join('-', ['kong', 'wildcard-hostname', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+        - name: route_path_wildcard_hostname
+          value: "/wildcard-hostname-match"
+        - name: http_route_name_exact_hostname
+          value: (join('-', ['kong', 'exact-hostname', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+        - name: route_path_exact_hostname
+          value: "/exact-hostname-match"
+      try:
+        - apply:
+            file: 02-httproutes-attached-to-gateway-with-wildcard-hostname-listener.yaml
+        - assert:
+            file: 02-assert-httproutes-attached-to-gateway-with-wildcard-hostname-listener.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Wait until the route works
+        - description: Test connectivity from outside the cluster with the matching hostname
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_wildcard_hostname)
+              - name: TEST_HOST
+                value: "foo.httpbin.test"
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors  --resolve "${TEST_HOST}:80:${PROXY_IP}" -s -o /dev/null -w "%{http_code}" http://${TEST_HOST}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200')): true
+        - description: Verify that request with another hostname matching the sane wildcard matches
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_wildcard_hostname)
+              - name: TEST_HOST
+                value: "bar.httpbin.test"
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors  --resolve "${TEST_HOST}:80:${PROXY_IP}" -s -o /dev/null -w "%{http_code}" http://${TEST_HOST}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200')): true       
+        - description: Verify that request with not matching hostname is not matched
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_wildcard_hostname)
+              - name: TEST_HOST
+                value: "foo.httpbin-1.test"
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s --resolve "${TEST_HOST}:80:${PROXY_IP}" -o /dev/null -w "%{http_code}" -X GET http://${TEST_HOST}${ROUTE_PATH}/status/200)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+        - description: Verify that request without hostname is not matched
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_wildcard_hostname)
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s -o /dev/null -w "%{http_code}" -X GET http://${PROXY_IP}${ROUTE_PATH}/status/200)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+        - description: Verify the HTTPRoute with exact hostname matches the exact same hostname
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_exact_hostname)
+              - name: TEST_HOST
+                value: "exact.httpbin.test"
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors  --resolve "${TEST_HOST}:80:${PROXY_IP}" -s -o /dev/null -w "%{http_code}" http://${TEST_HOST}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200')): true
+        - description: Verify that the HTTPRoute with exact hostname does not match different hostname
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_exact_hostname)
+              - name: TEST_HOST
+                value: "not-exact.httpbin.test"
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s --resolve "${TEST_HOST}:80:${PROXY_IP}" -o /dev/null -w "%{http_code}" -X GET http://${TEST_HOST}${ROUTE_PATH}/status/200)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi             
+      catch:
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongServices
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongService
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongUpstreams
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongUpstream
+            namespace: ($http_route_namespace)
+            format: yaml 
+        - description: Dump KongTargets
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongTarget
+            namespace: ($http_route_namespace)
+            format: yaml                  
+      finally:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              namespace: ($http_route_namespace)
+              name: ($http_route_name_exact_hostname)
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              namespace: ($http_route_namespace)
+              name: ($http_route_name_wildcard_hostname) 
+    # Step 3: Create HTTPRoutes to attach to the Gateway with exact listener hostname.
+    - name: create-httproutes-attached-to-gateway-with-exact-hostname
+      description: Create an HTTPRoute attached to the gateway with exact listener hostname.
+      bindings:
+        - name: http_route_name
+          value: (join('-', ['kong', 'exact-listener-hostname', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+        - name: route_path
+          value: "/gateway-exact-listener-hostname"
+      try:
+        - apply:
+            file: 03-httproute-attached-to-gateway-with-exact-listener-hostname.yaml
+        - assert:
+            file: 03-assert-httproute-attached-to-gateway-with-exact-listener-hostname.yaml
+        # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name_exact_listener_hostname)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Wait until the route works
+        - description: Test connectivity from outside the cluster with the matching hostname
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+              - name: TEST_HOST
+                value: "exact.httpbin-2.test"
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors  --resolve "${TEST_HOST}:80:${PROXY_IP}" -s -o /dev/null -w "%{http_code}" http://${TEST_HOST}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200')): true
+        - description: Verify that request with not matching hostname cannot be matched 
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path)
+              - name: TEST_HOST
+                value: "not-exact.httpbin-2.test"
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s --resolve "${TEST_HOST}:80:${PROXY_IP}" -o /dev/null -w "%{http_code}" -X GET http://${TEST_HOST}${ROUTE_PATH}/status/200)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+      catch:
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongServices
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongService
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongUpstreams
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongUpstream
+            namespace: ($http_route_namespace)
+            format: yaml 
+        - description: Dump KongTargets
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongTarget
+            namespace: ($http_route_namespace)
+            format: yaml                  
+      finally:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              namespace: ($http_route_namespace)
+              name: ($http_route_name)
+    # Step 4: Create HTTPRoutes attached to the gateway with wildcard hostname listener, where only partial hostname in HTTPRoute matches the listener
+    - name: httproute-partial-hostname-match-wildcard-listener-hostname
+      description: Create HTTPRoutes with some of hostnames in their spec matching the listeners' hostname of their parent Gateways, where the parent gateway has wildcard hostname listener
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name_wildcard_listener_hostname)
+        - name: http_route_name_wildcard_hostname
+          value: (join('-', ['kong', 'partial-hostname-match-wildcard', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+        - name: route_path_wildcard_hostname
+          value: "/wildcard-hostname-match"
+        - name: http_route_name_exact_hostname
+          value: (join('-', ['kong', 'partial-hostname-match-exact', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+        - name: route_path_exact_hostname
+          value: "/exact-hostname-match"
+      try:
+        - apply:
+            file: 04-httproutes-partial-hostname-match-wildcard.yaml
+        - assert:
+            file: 04-assert-httproutes-partial-hostname-match-wildcard.yaml
+      # Get the Gateway proxy IP
+        - script:
+            env:
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+            content: |
+              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
+            outputs:
+              - name: proxy_ip
+                value: ($stdout)
+        # Wait until the route works
+        - description: Test connectivity from outside the cluster with the matching hostname
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_wildcard_hostname)
+              - name: TEST_HOST
+                value: "a.foo.httpbin.test"
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors  --resolve "${TEST_HOST}:80:${PROXY_IP}" -s -o /dev/null -w "%{http_code}" http://${TEST_HOST}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200')): true
+        - description: Verify that request with another hostname matching the sane wildcard matches
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_wildcard_hostname)
+              - name: TEST_HOST
+                value: "b.foo.httpbin.test"
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors  --resolve "${TEST_HOST}:80:${PROXY_IP}" -s -o /dev/null -w "%{http_code}" http://${TEST_HOST}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200')): true       
+        - description: Verify that request with hostname included in the HTTPRoute but not in the listeners is not matched
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_wildcard_hostname)
+              - name: TEST_HOST
+                value: "a.foo.httpbin.example"
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s --resolve "${TEST_HOST}:80:${PROXY_IP}" -o /dev/null -w "%{http_code}" -X GET http://${TEST_HOST}${ROUTE_PATH}/status/200)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi
+        - description: Verify the HTTPRoute with exact hostname matches the exact same hostname
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_exact_hostname)
+              - name: TEST_HOST
+                value: "exact.httpbin.test"
+            content: |
+              curl --fail --retry 10 --retry-delay 5 --retry-all-errors  --resolve "${TEST_HOST}:80:${PROXY_IP}" -s -o /dev/null -w "%{http_code}" http://${TEST_HOST}${ROUTE_PATH}/status/200
+            check:
+              (contains($stdout, '200')): true
+        - description: Verify that the HTTPRoute with exact hostname does not match hostname in HTTPRoute but not in listener
+          script:
+            env:
+              - name: PROXY_IP
+                value: ($proxy_ip)
+              - name: ROUTE_PATH
+                value: ($route_path_exact_hostname)
+              - name: TEST_HOST
+                value: "exact.httpbin.example"
+            content: |
+              HTTP_CODE=$(curl --retry 5 --retry-delay 3 -s --resolve "${TEST_HOST}:80:${PROXY_IP}" -o /dev/null -w "%{http_code}" -X GET http://${TEST_HOST}${ROUTE_PATH}/status/200)
+              echo $HTTP_CODE
+              if [ "$HTTP_CODE" = "404" ]; then
+                echo "OK"
+              else
+                echo "FAIL"
+                exit 1
+              fi           
+      catch:
+        - description: Dump HTTPRoutes
+          get:
+            apiVersion: gateway.networking.k8s.io/v1
+            kind: HTTPRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongServices
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongService
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongRoutes
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongRoute
+            namespace: ($http_route_namespace)
+            format: yaml
+        - description: Dump KongUpstreams
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongUpstream
+            namespace: ($http_route_namespace)
+            format: yaml 
+        - description: Dump KongTargets
+          get:
+            apiVersion: configuration.konghq.com/v1alpha1
+            kind: KongTarget
+            namespace: ($http_route_namespace)
+            format: yaml                  
+      finally:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              namespace: ($http_route_namespace)
+              name: ($http_route_name_exact_hostname)
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: HTTPRoute
+              namespace: ($http_route_namespace)
+              name: ($http_route_name_wildcard_hostname)

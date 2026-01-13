@@ -1,0 +1,32 @@
+# Template for creating and asserting a namespace.
+#
+# Required bindings:
+#   - namespace: Name of the namespace to create.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-namespace
+spec:
+  try:
+    - apply:
+        resource:
+          # Create Namespace
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: ($namespace)
+    - assert:
+        resource:
+          # Assert Namespace is Active
+          apiVersion: v1
+          kind: Namespace
+          metadata:
+            name: ($namespace)
+          status:
+            phase: Active
+  # This runs only if the try block fails
+  catch:
+    - script:
+        content: |
+          echo "Namespace ($namespace) failed to reach Active state."
+          kubectl describe ns ($namespace)
