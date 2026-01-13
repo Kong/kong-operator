@@ -101,8 +101,8 @@ spec:
                       'KongUpstream', 'KongKeySet', 'KongVault']
                   - message: namespace must be empty for KongVault and non-empty for
                       other kinds
-                    rule: '.self.kind == ''KongVault'' ? .self.namespace == "" : .self.namespace
-                      != ""'
+                    rule: '.self.kind == ''KongVault'' ? .self.namespace == "" :
+                      .self.namespace != ""'
                 maxItems: 16
                 minItems: 1
                 type: array
