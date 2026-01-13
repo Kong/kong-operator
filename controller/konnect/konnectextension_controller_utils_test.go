@@ -13,7 +13,7 @@ import (
 )
 
 func TestEnforceKonnectExtensionStatus(t *testing.T) {
-	cp := konnectv1alpha2.KonnectGatewayControlPlane{
+	cp := &konnectv1alpha2.KonnectGatewayControlPlane{
 		Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "cp-id",
@@ -162,5 +162,43 @@ func TestEnforceKonnectExtensionStatus(t *testing.T) {
 		assert.Equal(t, "my-auth-config", ext.Status.Konnect.AuthRef.Name)
 		assert.Equal(t, "cp-id", ext.Status.Konnect.ControlPlaneID)
 		assert.Equal(t, konnectv1alpha2.ClusterTypeControlPlane, ext.Status.Konnect.ClusterType)
+	})
+
+	t.Run("clears Konnect status when cp is nil", func(t *testing.T) {
+		konnectStatus := &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
+			ControlPlaneID: "cp-id",
+			ClusterType:    konnectv1alpha2.ClusterTypeControlPlane,
+			AuthRef:        &apiAuthRef,
+			Endpoints: konnectv1alpha2.KonnectEndpoints{
+				ControlPlaneEndpoint: "cp-endpoint",
+				TelemetryEndpoint:    "telemetry-endpoint",
+			},
+		}
+		ext := &konnectv1alpha2.KonnectExtension{
+			Status: konnectv1alpha2.KonnectExtensionStatus{
+				Konnect:             konnectStatus,
+				DataPlaneClientAuth: nil,
+			},
+		}
+		updated := enforceKonnectExtensionStatus(nil, apiAuthRef, certificateSecret, ext)
+		assert.True(t, updated)
+		assert.Nil(t, ext.Status.Konnect)
+		require.NotNil(t, ext.Status.DataPlaneClientAuth)
+		assert.Equal(t, "my-secret", ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name)
+	})
+
+	t.Run("does not update when cp is nil and Konnect status is already nil", func(t *testing.T) {
+		dataPlaneClientAuth := &konnectv1alpha2.DataPlaneClientAuthStatus{
+			CertificateSecretRef: &konnectv1alpha2.SecretRef{Name: "my-secret"},
+		}
+		ext := &konnectv1alpha2.KonnectExtension{
+			Status: konnectv1alpha2.KonnectExtensionStatus{
+				Konnect:             nil,
+				DataPlaneClientAuth: dataPlaneClientAuth,
+			},
+		}
+		updated := enforceKonnectExtensionStatus(nil, apiAuthRef, certificateSecret, ext)
+		assert.False(t, updated)
+		assert.Nil(t, ext.Status.Konnect)
 	})
 }

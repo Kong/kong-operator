@@ -838,7 +838,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		Name:      apiAuth.Name,
 		Namespace: &apiAuth.Namespace,
 	}
-	if enforceKonnectExtensionStatus(*cp, authRef, *certificateSecret, &ext) {
+	if enforceKonnectExtensionStatus(cp, authRef, *certificateSecret, &ext) {
 		log.Debug(logger, "updating KonnectExtension status")
 		err := r.Client.Status().Update(ctx, &ext)
 		if k8serrors.IsConflict(err) {
