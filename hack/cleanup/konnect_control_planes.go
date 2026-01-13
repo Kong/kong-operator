@@ -15,6 +15,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 
+	"github.com/kong/kong-operator/controller/konnect/ops"
 	"github.com/kong/kong-operator/test"
 )
 
@@ -23,7 +24,6 @@ const (
 	timeUntilControlPlaneOrphaned = time.Hour
 
 	testIDLabel                       = "operator-test-id"
-	k8sKindLabel                      = "k8s-kind"
 	k8sKindKonnectGatewayControlPlane = "KonnectGatewayControlPlane"
 )
 
@@ -105,7 +105,7 @@ func findOrphanedControlPlanes(
 	// 2. Control planes managed by KO (with `k8s-kind:KonnectGatewayControlPlane` label)
 	labelFilters := []string{
 		testIDLabel,
-		fmt.Sprintf("%s:%s", k8sKindLabel, k8sKindKonnectGatewayControlPlane),
+		fmt.Sprintf("%s:%s", ops.KubernetesKindLabelKey, k8sKindKonnectGatewayControlPlane),
 	}
 
 	seenCPIDs := make(map[string]struct{})
