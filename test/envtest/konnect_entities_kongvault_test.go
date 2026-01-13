@@ -47,18 +47,72 @@ func TestKongVault(t *testing.T) {
 	}
 	StartReconcilers(ctx, t, mgr, logs, reconcilers...)
 
+	ns2 := deploy.Namespace(t, ctx, mgr.GetClient())
+
 	t.Log("Setting up clients")
 	cl, err := client.NewWithWatch(mgr.GetConfig(), client.Options{
 		Scheme: scheme.Get(),
 	})
 	require.NoError(t, err)
 	clientNamespaced := client.NewNamespacedClient(mgr.GetClient(), ns.Name)
+	clientNamespaced2 := client.NewNamespacedClient(mgr.GetClient(), ns2.Name)
 
 	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane")
 	apiAuth := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced)
 	cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
 
+	t.Log("Creating KonnectAPIAuthConfiguration and KonnectGatewayControlPlane in a second namespace")
+	apiAuth2 := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, clientNamespaced2)
+	cp2 := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced2, apiAuth2)
+
+	t.Log("Creating KongReferenceGrant for KongVault -> KonnectGatewayControlPlane")
+	_ = deploy.KongReferenceGrant(t, ctx, clientNamespaced,
+		deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
+			Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+			Kind:      "KongVault",
+			Namespace: configurationv1alpha1.Namespace(""),
+		}),
+		deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
+			Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+			Kind:  "KonnectGatewayControlPlane",
+		}),
+	)
+
 	vaultWatch := setupWatch[configurationv1alpha1.KongVaultList](t, ctx, cl)
+
+	t.Run("Cross namespace ref KongVault -> KonnectNamespacedRefControlPlane yields ResolvedRefs=False without KongReferenceGrant", func(t *testing.T) {
+		const (
+			vaultBackend   = "env-no-grant"
+			vaultPrefix    = "env-vault-no-grant"
+			vaultRawConfig = `{"prefix":"env_vault_no_grant"}`
+		)
+
+		createdVault := deploy.KongVaultAttachedToCP(t, ctx, cl, vaultBackend, vaultPrefix, []byte(vaultRawConfig), cp2)
+
+		t.Log("Waiting for KongVault to get ResolvedRefs condition with status=False")
+		watchFor(t, ctx, vaultWatch, apiwatch.Modified, func(kv *configurationv1alpha1.KongVault) bool {
+			if kv.GetName() != createdVault.GetName() {
+				return false
+			}
+
+			cpRef := kv.GetControlPlaneRef()
+			if cpRef == nil {
+				return false
+			}
+
+			if cpRef.Type != configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef ||
+				cpRef.KonnectNamespacedRef == nil ||
+				cpRef.KonnectNamespacedRef.Name != cp2.GetName() ||
+				cpRef.KonnectNamespacedRef.Namespace != cp2.GetNamespace() {
+				return false
+			}
+
+			return k8sutils.HasConditionFalse(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs, kv)
+		}, "KongVault didn't get ResolvedRefs status condition set to False")
+
+		require.NoError(t, cl.Delete(ctx, createdVault))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdVault, waitTime, tickTime)
+	})
 
 	t.Run("should create, update and delete vault successfully", func(t *testing.T) {
 		const (

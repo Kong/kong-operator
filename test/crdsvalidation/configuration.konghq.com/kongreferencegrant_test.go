@@ -97,7 +97,7 @@ func TestKongReferenceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Only KongConsumerGroup, KongCertificate, KongCACertificate, KongService, KongUpstream and KongKeySet kinds are supported for 'configuration.konghq.com' group"),
+				ExpectedErrorMessage: lo.ToPtr("Only KongConsumerGroup, KongCertificate, KongCACertificate, KongService, KongUpstream, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
@@ -125,7 +125,80 @@ func TestKongReferenceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Only KongConsumerGroup, KongCertificate, KongCACertificate, KongService, KongUpstream and KongKeySet kinds are supported for 'configuration.konghq.com' group"),
+				ExpectedErrorMessage: lo.ToPtr("Only KongConsumerGroup, KongCertificate, KongCACertificate, KongService, KongUpstream, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("KongVault to KonnectGatewayControlPlane reference", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
+			{
+				Name: "without a name works",
+				TestObject: &configurationv1alpha1.KongReferenceGrant{
+					TypeMeta:   typeMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Namespace: configurationv1alpha1.Namespace(""),
+								Kind:      "KongVault",
+								Group:     "configuration.konghq.com",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "with a name works",
+				TestObject: &configurationv1alpha1.KongReferenceGrant{
+					TypeMeta:   typeMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Namespace: configurationv1alpha1.Namespace(""),
+								Kind:      "KongVault",
+								Group:     "configuration.konghq.com",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-control-plane")),
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "non-empty namespace is rejected",
+				TestObject: &configurationv1alpha1.KongReferenceGrant{
+					TypeMeta:   typeMeta,
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Namespace: configurationv1alpha1.Namespace("default"),
+								Kind:      "KongVault",
+								Group:     "configuration.konghq.com",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: lo.ToPtr("namespace must be empty for KongVault and non-empty for other kinds"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})

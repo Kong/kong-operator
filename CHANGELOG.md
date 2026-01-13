@@ -102,6 +102,7 @@
   - `KongCACertificate`
   - `KongConsumerGroup`
   - `KongKeySet`
+  - `KongVault`
 
   To allow these references, users need to define a `KongReferenceGrant` resource
   in the namespace of the referenced resource, allowing access to the
