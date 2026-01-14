@@ -91,7 +91,7 @@ type KongReferenceGrantSpec struct {
 
 // ReferenceGrantFrom describes trusted namespaces and kinds.
 //
-// +kubebuilder:validation:XValidation:rule=".self.group != 'configuration.konghq.com' || .self.kind in ['KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream' ]",message="Only KongCertificate, KongCACertificate, KongService, and KongUpstream kinds are supported for 'configuration.konghq.com' group"
+// +kubebuilder:validation:XValidation:rule=".self.group != 'configuration.konghq.com' || .self.kind in ['KongConsumerGroup', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream' ]",message="Only KongConsumerGroup, KongCertificate, KongCACertificate, KongService, and KongUpstream kinds are supported for 'configuration.konghq.com' group"
 type ReferenceGrantFrom struct {
 	// Group is the group of the referent.
 	//

@@ -97,7 +97,7 @@ func TestKongReferenceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Only KongCertificate, KongCACertificate, KongService, and KongUpstream kinds are supported for 'configuration.konghq.com' group"),
+				ExpectedErrorMessage: lo.ToPtr("Only KongConsumerGroup, KongCertificate, KongCACertificate, KongService, and KongUpstream kinds are supported for 'configuration.konghq.com' group"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
@@ -125,7 +125,7 @@ func TestKongReferenceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Only KongCertificate, KongCACertificate, KongService, and KongUpstream kinds are supported for 'configuration.konghq.com' group"),
+				ExpectedErrorMessage: lo.ToPtr("Only KongConsumerGroup, KongCertificate, KongCACertificate, KongService, and KongUpstream kinds are supported for 'configuration.konghq.com' group"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
@@ -155,6 +155,13 @@ func TestKongReferenceGrant(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
 			kongReferenceGrantCase(withName, typeMeta, ns.Name, "KongService"),
 			kongReferenceGrantCase(withoutName, typeMeta, ns.Name, "KongService"),
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("KongConsumerGroup to KonnectGatewayControlPlane reference", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
+			kongReferenceGrantCase(withName, typeMeta, ns.Name, "KongConsumerGroup"),
+			kongReferenceGrantCase(withoutName, typeMeta, ns.Name, "KongConsumerGroup"),
 		}.RunWithConfig(t, cfg, scheme)
 	})
 }
