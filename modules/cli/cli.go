@@ -25,8 +25,6 @@ func New(m metadata.Info) *CLI {
 	cfg := manager.Config{
 		// set default values for MetricsAccessFilter
 		MetricsAccessFilter: manager.MetricsAccessFilterOff,
-		// set default values for ClusterCAKeyType
-		ClusterCAKeyType: mgrconfig.ECDSA,
 	}
 	var deferCfg flagsForFurtherEvaluation
 
@@ -53,8 +51,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.StringVar(&cfg.ControllerName, "controller-name", "", "Custom controller name, required only in multi-tenant setups.")
 	flagSet.StringVar(&cfg.ClusterCASecretName, "cluster-ca-secret", "kong-operator-ca", "Specifies the Secret name that contains the cluster CA certificate.")
 	flagSet.StringVar(&deferCfg.ClusterCASecretNamespace, "cluster-ca-secret-namespace", "", "Specifies the namespace of the Secret that contains the cluster CA certificate.")
-	flagSet.Var(&cfg.ClusterCAKeyType, "cluster-ca-key-type", "Type of the key used for the cluster CA certificate (possible values: ecdsa, rsa). Default: ecdsa.")
-	flagSet.IntVar(&cfg.ClusterCAKeySize, "cluster-ca-key-size", mgrconfig.DefaultClusterCAKeySize, "Size (in bits) of the key used for the cluster CA certificate. Only used for RSA keys.")
+
 	flagSet.DurationVar(&cfg.CacheSyncTimeout, "cache-sync-timeout", 0, "Sets the time limit for syncing controller caches. Defaults to the controller-runtime value if set to `0`.")
 	flagSet.StringVar(&cfg.ClusterDomain, "cluster-domain", ingressmgrconfig.DefaultClusterDomain, "The cluster domain. This is used e.g. in generating addresses for upstream services.")
 	flagSet.BoolVar(&cfg.FQDNModeEnabled, "enable-fqdn-mode", ingressmgrconfig.DefaultFQDNModeEnabled, "Enable FQDN mode for the operator. FQDNMode indicates whether to use FQDN endpoints for service discovery.")

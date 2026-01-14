@@ -38,7 +38,6 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/op"
 	"github.com/kong/kong-operator/controller/pkg/patch"
-	"github.com/kong/kong-operator/controller/pkg/secrets"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/internal/utils/index"
 	"github.com/kong/kong-operator/modules/manager/logging"
@@ -56,7 +55,6 @@ type KonnectExtensionReconciler struct {
 	SyncPeriod               time.Duration
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
-	ClusterCAKeyConfig       secrets.KeyConfig
 	SecretLabelSelector      string
 }
 

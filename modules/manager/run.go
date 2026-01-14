@@ -78,8 +78,6 @@ type Config struct {
 	CacheSyncTimeout         time.Duration
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
-	ClusterCAKeyType         mgrconfig.KeyType
-	ClusterCAKeySize         int
 	LoggerOpts               *zap.Options
 	EnforceConfig            bool
 	ClusterDomain            string
@@ -251,30 +249,6 @@ func Run(
 		return err
 	}
 
-	keyType, err := KeyTypeToX509PublicKeyAlgorithm(cfg.ClusterCAKeyType)
-	if err != nil {
-		return fmt.Errorf("unsupported cluster CA key type: %w", err)
-	}
-
-	caMgr := &caManager{
-		Logger:          ctrl.Log.WithName("ca_manager"),
-		Client:          mgr.GetClient(),
-		SecretName:      cfg.ClusterCASecretName,
-		SecretNamespace: cfg.ClusterCASecretNamespace,
-		KeyConfig: secrets.KeyConfig{
-			Type: keyType,
-			Size: cfg.ClusterCAKeySize,
-		},
-	}
-	if cfg.SecretLabelSelector != "" {
-		caMgr.SecretLabels = map[string]string{
-			cfg.SecretLabelSelector: mgrconfig.LabelValueForSelectorInternal,
-		}
-	}
-	if err = mgr.Add(caMgr); err != nil {
-		return fmt.Errorf("unable to start manager: %w", err)
-	}
-
 	ctx := context.Background()
 
 	if err := SetupCacheIndexes(ctx, mgr, cfg); err != nil {
@@ -360,6 +334,19 @@ func Run(
 		return fmt.Errorf("problem running manager: %w", err)
 	}
 
+	// Do it after the manager is started to ensure the cache is started and objects can be read.
+	if err := checkExistenceOfCertificateAuthoritySecret(
+		ctx,
+		setupLog,
+		mgr.GetClient(),
+		client.ObjectKey{
+			Namespace: cfg.ClusterCASecretNamespace,
+			Name:      cfg.ClusterCASecretName,
+		},
+	); err != nil {
+		return fmt.Errorf("failed checking existence of cluster CA certificate: %w", err)
+	}
+
 	return nil
 }
 
@@ -389,46 +376,29 @@ func warnIfLegacyDevelopmentModeEnabled(log logr.Logger) {
 	}
 }
 
-// caManager is a manager responsible for creating a cluster CA certificate.
-type caManager struct {
-	Logger          logr.Logger
-	Client          client.Client
-	SecretName      string
-	SecretNamespace string
-	SecretLabels    map[string]string
-	KeyConfig       secrets.KeyConfig
-}
-
-// Start starts the CA manager.
-func (m *caManager) Start(ctx context.Context) error {
-	if m.SecretName == "" {
-		return fmt.Errorf("cannot use an empty secret name when creating a CA secret")
-	}
-	if m.SecretNamespace == "" {
-		return fmt.Errorf("cannot use an empty secret namespace when creating a CA secret")
-	}
-	return m.maybeCreateCACertificate(ctx)
-}
-
-func (m *caManager) maybeCreateCACertificate(ctx context.Context) error {
-	// TODO https://github.com/kong/kong-operator/issues/199 this also needs to check if the CA is expired and
-	// managed, and needs to reissue it (and all issued certificates) if so
+func checkExistenceOfCertificateAuthoritySecret(
+	ctx context.Context, log logr.Logger, c client.Client, certObjectKey client.ObjectKey,
+) error {
 	ctx, cancel := context.WithTimeout(ctx, time.Second*30)
 	defer cancel()
 
 	var (
-		ca        corev1.Secret
-		objectKey = client.ObjectKey{Namespace: m.SecretNamespace, Name: m.SecretName}
+		ca corev1.Secret
 	)
 
-	if err := m.Client.Get(ctx, objectKey, &ca); err != nil {
+	if err := c.Get(ctx, certObjectKey, &ca); err != nil {
 		if k8serrors.IsNotFound(err) {
-			m.Logger.Info(fmt.Sprintf("no CA certificate Secret %s found, generating CA certificate", objectKey))
-			return secrets.CreateClusterCACertificate(ctx, m.Logger, m.Client, objectKey, m.SecretLabels, m.KeyConfig)
+			return fmt.Errorf("cluster CA certificate not found")
 		}
 
 		return err
 	}
+
+	if !secrets.IsTLSSecretValid(&ca) {
+		return fmt.Errorf("cluster CA certificate in %s is invalid", certObjectKey)
+	}
+
+	log.Info("found cluster CA certificate", "namespace", certObjectKey.Namespace, "name", certObjectKey.Name)
 	return nil
 }
 

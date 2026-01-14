@@ -4,7 +4,6 @@ import (
 	"os"
 
 	"github.com/kong/kong-operator/modules/manager"
-	mgrconfig "github.com/kong/kong-operator/modules/manager/config"
 	"github.com/kong/kong-operator/modules/manager/logging"
 )
 
@@ -36,7 +35,6 @@ func DefaultControllerConfigForTests(opts ...ControllerConfigOption) manager.Con
 	cfg.AIGatewayControllerEnabled = true
 	cfg.AnonymousReports = false
 	cfg.KonnectControllersEnabled = true
-	cfg.ClusterCAKeyType = mgrconfig.ECDSA
 	cfg.GatewayAPIExperimentalEnabled = true
 	cfg.EnforceConfig = true
 	cfg.ServiceAccountToImpersonate = ServiceAccountToImpersonate

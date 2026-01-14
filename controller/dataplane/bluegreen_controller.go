@@ -32,7 +32,6 @@ import (
 	extensionskonnect "github.com/kong/kong-operator/controller/pkg/extensions/konnect"
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/op"
-	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/modules/manager/logging"
 	"github.com/kong/kong-operator/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/pkg/utils/kubernetes"
@@ -63,7 +62,6 @@ type BlueGreenReconciler struct {
 	// certificate data which will be used when generating certificates for DataPlane's
 	// Deployment.
 	ClusterCASecretNamespace string
-	ClusterCAKeyConfig       secrets.KeyConfig
 
 	SecretLabelSelector string
 
@@ -186,7 +184,6 @@ func (r *BlueGreenReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			Name:      dataplaneAdminService.Name,
 		},
 		r.SecretLabelSelector,
-		r.ClusterCAKeyConfig,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
