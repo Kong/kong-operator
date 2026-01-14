@@ -66,12 +66,27 @@ func translateFromFilter(rule gwtypes.HTTPRouteRule, filter gwtypes.HTTPRouteFil
 		pData.config = configJSON
 		pluginConfs = append(pluginConfs, pData)
 	case gatewayv1.HTTPRouteFilterRequestRedirect:
-		pData := kongPluginConfig{name: "redirect"}
+		var pluginName string
+		var config any
+		var err error
+		rr := filter.RequestRedirect
 
-		config, err := translateRequestRedirect(filter)
+		// Decide which plugin to use based on the path modifier type.
+		// If it's a PrefixMatch, we need to use a custom Lua pre-function to handle the redirect properly
+		// otherwise we can use the standard redirect plugin.
+		if rr.Path != nil && rr.Path.Type == gatewayv1.PrefixMatchHTTPPathModifier {
+			config, err = translateRequestRedirectPreFunction(filter, rule)
+			pluginName = "pre-function"
+		} else {
+			config, err = translateRequestRedirect(filter)
+			pluginName = "redirect"
+		}
+
+		// From here on
 		if err != nil {
 			return nil, fmt.Errorf("translating RequestRedirect filter: %w", err)
 		}
+		pData := kongPluginConfig{name: pluginName}
 		configJSON, err := json.Marshal(config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal %q plugin config: %w", pData.name, err)
@@ -199,6 +214,85 @@ func translateResponseModifier(filter gwtypes.HTTPRouteFilter) (transformerData,
 	return plugin, err
 }
 
+type accessPreFunctionConfig struct {
+	Access []string `json:"access"`
+}
+
+func translateRequestRedirectPreFunction(filter gwtypes.HTTPRouteFilter, rule gwtypes.HTTPRouteRule) (accessPreFunctionConfig, error) {
+	rr := filter.RequestRedirect
+
+	if rr == nil {
+		return accessPreFunctionConfig{}, errors.New("RequestRedirect filter config is missing")
+	}
+
+	// Kong does not have a direct equivalent for prefix match replacement in redirects.
+	// We need to deal it with a custom pre-function so that we can access the captured groups.
+	sourcePathPrefix := getPathPrefixMatchValue(rule)
+	targetPathPrefix := lo.FromPtrOr(rr.Path.ReplacePrefixMatch, "")
+	targetHost := string(lo.FromPtrOr(rr.Hostname, ""))
+	customScheme := ""
+	if rr.Scheme != nil && *rr.Scheme != "" {
+		customScheme = *rr.Scheme
+	}
+	customCode := 302
+	if rr.StatusCode != nil {
+		customCode = *rr.StatusCode
+	}
+
+	funcBody := translateRequestRedirectGenerateFunctionBody(
+		sourcePathPrefix,
+		targetPathPrefix,
+		targetHost,
+		customScheme,
+		customCode)
+	return accessPreFunctionConfig{Access: []string{funcBody}}, nil
+}
+
+func translateRequestRedirectGenerateFunctionBody(
+	sourcePathPrefix, targetPathPrefix, targetHost, customScheme string,
+	customCode int) string {
+	return fmt.Sprintf(`
+-- Inputs
+local match_prefix = [[%s]]
+local custom_prefix = [[%s]]
+local custom_host = [[%s]]
+local custom_scheme = [[%s]]
+local code = %d
+
+-- Scheme: use custom_scheme if provided, else preserve original
+local scheme = custom_scheme
+if not scheme or scheme == "" then
+  scheme = kong.request.get_scheme() or "http"
+end
+
+-- Host: use custom_host if provided, else preserve original
+local host = custom_host
+
+-- Prefer forwarded host if present (more accurate in proxied setups)
+if not host or host == "" then
+  host = kong.request.get_forwarded_host() or kong.request.get_host()
+end
+
+-- Get request path and raw query string
+local path = kong.request.get_path() or "/"
+local qs = kong.request.get_raw_query()
+if path:sub(1, #match_prefix) == match_prefix then
+  local remainder = path:sub(#match_prefix + 1)
+  if remainder == "" then
+    remainder = "/"
+  end
+  -- Build redirect target
+  local new_path = custom_prefix .. remainder
+  local location = scheme .. "://" .. host .. new_path
+  if qs and qs ~= "" then
+    location = location .. "?" .. qs
+  end
+  -- Issue redirect
+  return kong.response.exit(code, "", { ["Location"] = location })
+end
+`, sourcePathPrefix, targetPathPrefix, targetHost, customScheme, customCode)
+}
+
 type requestRedirectConfig struct {
 	KeepIncomingPath bool   `json:"keep_incoming_path"`
 	Location         string `json:"location"`
@@ -250,23 +344,25 @@ func translateRequestRedirectHostname(rr *gatewayv1.HTTPRequestRedirectFilter) s
 }
 
 func translateRequestRedirectPath(rr *gatewayv1.HTTPRequestRedirectFilter) (string, error) {
-	path := ""
+	pluginPath := ""
 	var err error
 
 	if rr.Path == nil {
-		return path, nil
+		return pluginPath, nil
 	}
 
 	pathModifier := rr.Path
 	switch pathModifier.Type {
 	case gatewayv1.FullPathHTTPPathModifier:
-		path = translatePathReplaceFullPath(pathModifier.ReplaceFullPath)
+		pluginPath = translatePathReplaceFullPath(pathModifier.ReplaceFullPath)
+
 	case gatewayv1.PrefixMatchHTTPPathModifier:
-		path = translateRequestRedirectPathPrefixMatch(pathModifier.ReplacePrefixMatch)
+		// Nothing to do here, handled in translateFromFilter to allow proper ordering of plugins.
+		pluginPath = ""
 	default:
 		err = errors.New("unsupported RequestRedirect path modifier type: " + string(pathModifier.Type))
 	}
-	return path, err
+	return pluginPath, err
 }
 
 func translatePathReplaceFullPath(replaceFullPath *string) string {
@@ -274,13 +370,6 @@ func translatePathReplaceFullPath(replaceFullPath *string) string {
 		return "/"
 	}
 	return *replaceFullPath
-}
-
-func translateRequestRedirectPathPrefixMatch(prefixMatch *string) string {
-	// Not implemented yet - Kong does not have a direct equivalent for prefix match replacement.
-	// KIC in Konnect just ignores PrefixMatch filters, let's do the same.
-	// Tracker: https://github.com/Kong/kong-operator/issues/2466
-	return "/"
 }
 
 func translateURLRewrite(filter gwtypes.HTTPRouteFilter, path string) (transformerData, error) {
