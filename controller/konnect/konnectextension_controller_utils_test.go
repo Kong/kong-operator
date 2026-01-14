@@ -201,4 +201,35 @@ func TestEnforceKonnectExtensionStatus(t *testing.T) {
 		assert.False(t, updated)
 		assert.Nil(t, ext.Status.Konnect)
 	})
+
+	t.Run("clears Konnect status when cp.Status.Endpoints is nil", func(t *testing.T) {
+		cpWithNilEndpoints := &konnectv1alpha2.KonnectGatewayControlPlane{
+			Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
+				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+					ID: "cp-id",
+				},
+				Endpoints: nil,
+			},
+		}
+		konnectStatus := &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
+			ControlPlaneID: "cp-id",
+			ClusterType:    konnectv1alpha2.ClusterTypeControlPlane,
+			AuthRef:        &apiAuthRef,
+			Endpoints: konnectv1alpha2.KonnectEndpoints{
+				ControlPlaneEndpoint: "cp-endpoint",
+				TelemetryEndpoint:    "telemetry-endpoint",
+			},
+		}
+		ext := &konnectv1alpha2.KonnectExtension{
+			Status: konnectv1alpha2.KonnectExtensionStatus{
+				Konnect:             konnectStatus,
+				DataPlaneClientAuth: nil,
+			},
+		}
+		updated := enforceKonnectExtensionStatus(cpWithNilEndpoints, apiAuthRef, certificateSecret, ext)
+		assert.True(t, updated)
+		assert.Nil(t, ext.Status.Konnect)
+		require.NotNil(t, ext.Status.DataPlaneClientAuth)
+		assert.Equal(t, "my-secret", ext.Status.DataPlaneClientAuth.CertificateSecretRef.Name)
+	})
 }
