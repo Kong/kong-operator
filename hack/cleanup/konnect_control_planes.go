@@ -15,6 +15,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
 
+	"github.com/kong/kong-operator/controller/konnect/ops"
 	"github.com/kong/kong-operator/test"
 )
 
@@ -22,7 +23,8 @@ const (
 	konnectControlPlanesLimit     = int64(100)
 	timeUntilControlPlaneOrphaned = time.Hour
 
-	testIDLabel = "operator-test-id"
+	testIDLabel                       = "operator-test-id"
+	k8sKindKonnectGatewayControlPlane = "KonnectGatewayControlPlane"
 )
 
 // cleanupKonnectControlPlanes deletes orphaned control planes created by the tests and their roles.
@@ -98,36 +100,53 @@ func findOrphanedControlPlanes(
 	log logr.Logger,
 	c *sdkkonnectgo.ControlPlanes,
 ) ([]string, error) {
-	response, err := c.ListControlPlanes(ctx, sdkkonnectops.ListControlPlanesRequest{
-		PageSize: lo.ToPtr(konnectControlPlanesLimit),
-		// Filter the control planes created in the KO integration tests by existence of label `konghq.com/test-id`
-		FilterLabels: lo.ToPtr(testIDLabel),
-	})
-	if err != nil {
-		return nil, fmt.Errorf("failed to list control planes: %w", err)
-	}
-	if response.ListControlPlanesResponse == nil {
-		body, err := io.ReadAll(response.RawResponse.Body)
-		if err != nil {
-			body = []byte(err.Error())
-		}
-		return nil, fmt.Errorf("failed to list control planes, status: %d, body: %s", response.GetStatusCode(), body)
+	// We need to query control planes with two different label filters:
+	// 1. Control planes created by integration tests (with `operator-test-id` label)
+	// 2. Control planes managed by KO (with `k8s-kind:KonnectGatewayControlPlane` label)
+	labelFilters := []string{
+		testIDLabel,
+		fmt.Sprintf("%s:%s", ops.KubernetesKindLabelKey, k8sKindKonnectGatewayControlPlane),
 	}
 
+	seenCPIDs := make(map[string]struct{})
 	var orphanedControlPlanes []string
-	for _, ControlPlane := range response.ListControlPlanesResponse.Data {
-		if ControlPlane.CreatedAt.IsZero() {
-			log.Info("Control plane has no creation timestamp, skipping", "name", ControlPlane.Name)
-			continue
+
+	for _, labelFilter := range labelFilters {
+		response, err := c.ListControlPlanes(ctx, sdkkonnectops.ListControlPlanesRequest{
+			PageSize:     lo.ToPtr(konnectControlPlanesLimit),
+			FilterLabels: lo.ToPtr(labelFilter),
+		})
+		if err != nil {
+			return nil, fmt.Errorf("failed to list control planes with label %s: %w", labelFilter, err)
 		}
-		orphanedAfter := ControlPlane.CreatedAt.Add(timeUntilControlPlaneOrphaned)
-		if !time.Now().After(orphanedAfter) {
-			log.Info("Control plane is not old enough to be considered orphaned, skipping",
-				"name", ControlPlane.Name, "created_at", ControlPlane.CreatedAt,
-			)
-			continue
+		if response.ListControlPlanesResponse == nil {
+			body, err := io.ReadAll(response.RawResponse.Body)
+			if err != nil {
+				body = []byte(err.Error())
+			}
+			return nil, fmt.Errorf("failed to list control planes, status: %d, body: %s", response.GetStatusCode(), body)
 		}
-		orphanedControlPlanes = append(orphanedControlPlanes, ControlPlane.ID)
+
+		for _, ControlPlane := range response.ListControlPlanesResponse.Data {
+			// Skip if we've already processed this control plane
+			if _, seen := seenCPIDs[ControlPlane.ID]; seen {
+				continue
+			}
+			seenCPIDs[ControlPlane.ID] = struct{}{}
+
+			if ControlPlane.CreatedAt.IsZero() {
+				log.Info("Control plane has no creation timestamp, skipping", "name", ControlPlane.Name)
+				continue
+			}
+			orphanedAfter := ControlPlane.CreatedAt.Add(timeUntilControlPlaneOrphaned)
+			if !time.Now().After(orphanedAfter) {
+				log.Info("Control plane is not old enough to be considered orphaned, skipping",
+					"name", ControlPlane.Name, "created_at", ControlPlane.CreatedAt,
+				)
+				continue
+			}
+			orphanedControlPlanes = append(orphanedControlPlanes, ControlPlane.ID)
+		}
 	}
 	return orphanedControlPlanes, nil
 }
