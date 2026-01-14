@@ -79,6 +79,7 @@ func Suite(m *testing.M) {
 	helpers.SetDefaultDataPlaneBaseImage(consts.DefaultDataPlaneBaseImage)
 
 	cfg := testutils.DefaultControllerConfigForTests(testutils.WithBlueGreenController(blueGreenController))
+	controllerNamespace := cfg.ControllerNamespace
 
 	var cancel context.CancelFunc
 	ctx, cancel = context.WithCancel(context.Background())
@@ -112,7 +113,7 @@ func Suite(m *testing.M) {
 	exitOnErr(err)
 
 	// Normally this is obtained from the downward API, fake it here for testing.
-	err = os.Setenv("POD_NAMESPACE", "kong-system")
+	err = os.Setenv("POD_NAMESPACE", controllerNamespace)
 	exitOnErr(err)
 	err = os.Setenv("POD_NAME", "kong-operator-controller-manager")
 	exitOnErr(err)
@@ -133,7 +134,7 @@ func Suite(m *testing.M) {
 
 	fmt.Println("INFO: configuring validating webhook")
 	checkConnectivityToWebhook, cleanupWebhook, err := webhook.EnsureValidatingWebhookRegistration(
-		GetCtx(), clients.K8sClient,
+		GetCtx(), clients.K8sClient, controllerNamespace,
 	)
 	exitOnErr(err)
 	defer cleanupWebhook()

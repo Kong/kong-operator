@@ -36,7 +36,7 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
 	managercfg "github.com/kong/kong-operator/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/scheme"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
+	"github.com/kong/kong-operator/test/helpers/certificate"
 )
 
 func TestGlobalPlugin(t *testing.T) {

@@ -28,10 +28,10 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/ingress-controller/test"
 	"github.com/kong/kong-operator/ingress-controller/test/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
 	testutils "github.com/kong/kong-operator/ingress-controller/test/util"
 	"github.com/kong/kong-operator/pkg/clientset"
+	"github.com/kong/kong-operator/test/helpers/certificate"
 )
 
 const testTranslationFailuresObjectsPrefix = "translation-failures-"

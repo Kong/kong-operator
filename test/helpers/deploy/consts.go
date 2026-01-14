@@ -2,7 +2,7 @@ package deploy
 
 import "github.com/kong/kong-operator/test/helpers/certificate"
 
-var testValidCertPEM, testValidCertKeyPEM = certificate.MustGenerateSelfSignedCertPEMFormat()
+var testValidCertPEM, testValidCertKeyPEM = certificate.MustGenerateCertPEMFormat()
 
 // TestValidCertPEM is a valid certificate PEM to be used in tests.
 var TestValidCertPEM = string(testValidCertPEM)
