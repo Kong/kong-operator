@@ -12,10 +12,10 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	kogateway "github.com/kong/kong-operator/controller/gateway"
-	certhelper "github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
 	managerscheme "github.com/kong/kong-operator/modules/manager/scheme"
 	testutils "github.com/kong/kong-operator/pkg/utils/test"
 	"github.com/kong/kong-operator/pkg/vars"
+	certhelper "github.com/kong/kong-operator/test/helpers/certificate"
 )
 
 func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {

@@ -25,10 +25,10 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/internal/controllers/configuration"
 	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
 	"github.com/kong/kong-operator/ingress-controller/test/integration/consts"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/testlabels"
 	"github.com/kong/kong-operator/pkg/clientset"
+	"github.com/kong/kong-operator/test/helpers/certificate"
 )
 
 // TestIngressVerifyUpstreamTLS tests that user-provided annotations for TLS verification are respected accordingly.

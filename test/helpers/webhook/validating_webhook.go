@@ -22,7 +22,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kong-operator/ingress-controller/pkg/validation/consts"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
+	"github.com/kong/kong-operator/test/helpers/certificate"
 	"github.com/kong/kong-operator/test/helpers/kcfg"
 )
 
@@ -31,7 +31,7 @@ import (
 // to the webhook (should be called after bootstrapping the controller) and a cleanup function to remove
 // the webhook registration and associated resources. When an error is returned, no resources are created.
 func EnsureValidatingWebhookRegistration(
-	ctx context.Context, client *kubernetes.Clientset,
+	ctx context.Context, client *kubernetes.Clientset, controllerNamespace string,
 ) (checkConnectivityToWebhook func() error, cleanup func(), err error) {
 	webhookKustomize, err := kubectl.RunKustomize(kcfg.ValidatingWebhookPath())
 	if err != nil {
@@ -49,7 +49,10 @@ func EnsureValidatingWebhookRegistration(
 		Namespace: webhookConfig.Webhooks[0].ClientConfig.Service.Namespace,
 	}
 
-	cert, key := certificate.GetKongSystemSelfSignedCerts()
+	cert, key := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName(fmt.Sprintf("*.%s.svc", controllerNamespace)),
+		certificate.WithDNSNames(fmt.Sprintf("*.%s.svc", controllerNamespace)),
+	)
 	for i := range webhookConfig.Webhooks {
 		webhookConfig.Webhooks[i].ClientConfig.CABundle = cert
 	}

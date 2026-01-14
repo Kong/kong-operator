@@ -31,8 +31,8 @@ import (
 	"github.com/kong/kong-operator/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/ingress-controller/internal/util/builder"
 	"github.com/kong/kong-operator/ingress-controller/test"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
 	"github.com/kong/kong-operator/ingress-controller/test/internal/helpers"
+	"github.com/kong/kong-operator/test/helpers/certificate"
 )
 
 var tlsMutex = sync.Mutex{}

@@ -144,7 +144,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	}
 
 	const host = "integration.tests.org"
-	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat(certificate.WithDNSNames(host))
+	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithDNSNames(host))
 
 	secret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{

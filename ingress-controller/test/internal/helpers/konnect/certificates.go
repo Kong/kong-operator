@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kong-operator/ingress-controller/internal/konnect/sdk"
-	"github.com/kong/kong-operator/ingress-controller/test/helpers/certificate"
+	"github.com/kong/kong-operator/test/helpers/certificate"
 )
 
 // CreateClientCertificate creates a TLS client certificate and POSTs it to Konnect Control Plane configuration API

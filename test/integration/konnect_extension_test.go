@@ -327,7 +327,7 @@ type KonnectExtensionTestCaseParams struct {
 }
 
 func konnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCaseParams) {
-	cert, key := certificate.MustGenerateSelfSignedCertPEMFormat()
+	cert, key := certificate.MustGenerateCertPEMFormat()
 
 	t.Run("KonnectExtension with KonnectNamespacedRef control plane ref", func(t *testing.T) {
 		t.Run("manual secret provisioning", func(t *testing.T) {

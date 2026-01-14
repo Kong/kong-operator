@@ -13,16 +13,14 @@ import (
 	"time"
 )
 
-// NOTE: Copy-pasted from https://github.com/Kong/kubernetes-ingress-controller/blob/81c651b285337c03d9249db611fb924e0da3ef4a/test/helpers/certificate/certificate.go
-// Enhanced with WithIPAdresses option. Helpers for dealing with certificates in KGO in tests should be merged into a single package and that package can be used
-// in both KIC and KGO tests.
-
 type selfSignedCertificateOptions struct {
-	CommonName  string
-	DNSNames    []string
-	IPAddresses []net.IP
-	CATrue      bool
-	Expired     bool
+	CommonName        string
+	DNSNames          []string
+	IPAddresses       []net.IP
+	CATrue            bool
+	Expired           bool
+	MaxPathLen        int
+	ParentCertificate *tls.Certificate
 }
 
 type selfSignedCertificateOption func(selfSignedCertificateOptions) selfSignedCertificateOptions
@@ -69,9 +67,27 @@ func WithAlreadyExpired() selfSignedCertificateOption {
 	}
 }
 
-// MustGenerateSelfSignedCert generates a [tls.Certificate] struct to be used in TLS client/listener configurations.
-// Certificate is self-signed thus returned cert can be used as CA for it.
-func MustGenerateSelfSignedCert(options ...selfSignedCertificateOption) tls.Certificate {
+// WithMaxPathLen sets the MaxPathLen constraint in the certificate.
+func WithMaxPathLen(maxLen int) selfSignedCertificateOption {
+	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
+		opts.MaxPathLen = maxLen
+		return opts
+	}
+}
+
+// WithParent allows to sign the certificate with a parent certificate.
+// When not provided, the certificate is self-signed.
+func WithParent(parent tls.Certificate) selfSignedCertificateOption {
+	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
+		opts.ParentCertificate = &parent
+		return opts
+	}
+}
+
+// MustGenerateCert generates a [tls.Certificate] struct to be used in TLS client/listener configurations.
+// If no parent certificate is passed using WithParent option, the certificate is self-signed thus
+// returned cert can be used as CA for it.
+func MustGenerateCert(options ...selfSignedCertificateOption) tls.Certificate {
 	// Generate a new RSA private key.
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
@@ -108,8 +124,22 @@ func MustGenerateSelfSignedCert(options ...selfSignedCertificateOption) tls.Cert
 		IPAddresses:           certOptions.IPAddresses,
 		BasicConstraintsValid: true,
 		IsCA:                  certOptions.CATrue,
+		MaxPathLen:            certOptions.MaxPathLen,
 	}
-	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
+
+	// If ParentCertificate is not provided, create a self-signed certificate.
+	var (
+		parent     = template
+		signingKey = privateKey
+	)
+	if certOptions.ParentCertificate != nil {
+		parent, err = x509.ParseCertificate(certOptions.ParentCertificate.Certificate[0])
+		if err != nil {
+			panic(fmt.Sprintf("Failed to parse parent certificate: %s", err))
+		}
+		signingKey = certOptions.ParentCertificate.PrivateKey.(*rsa.PrivateKey)
+	}
+	derBytes, err := x509.CreateCertificate(rand.Reader, template, parent, &privateKey.PublicKey, signingKey)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create x509 certificate: %s", err))
 	}
@@ -123,12 +153,15 @@ func MustGenerateSelfSignedCert(options ...selfSignedCertificateOption) tls.Cert
 	return certificate
 }
 
-// MustGenerateSelfSignedCertPEMFormat generates self-signed certificate
-// and returns certificate and key in PEM format. Certificate is self-signed
-// thus returned cert can be used as CA for it.
-func MustGenerateSelfSignedCertPEMFormat(options ...selfSignedCertificateOption) (cert []byte, key []byte) {
-	tlsCert := MustGenerateSelfSignedCert(options...)
+// MustGenerateCertPEMFormat generates a certificate and returns certificate and key in PEM format.
+// If no parent certificate is passed using WithParent option, the certificate is self-signed thus
+// returned cert can be used as CA for it.
+func MustGenerateCertPEMFormat(opts ...selfSignedCertificateOption) (cert []byte, key []byte) {
+	return CertToPEMFormat(MustGenerateCert(opts...))
+}
 
+// CertToPEMFormat converts a [tls.Certificate] to PEM format.
+func CertToPEMFormat(tlsCert tls.Certificate) (cert []byte, key []byte) {
 	certBlock := &pem.Block{
 		Type:  "CERTIFICATE",
 		Bytes: tlsCert.Certificate[0],
