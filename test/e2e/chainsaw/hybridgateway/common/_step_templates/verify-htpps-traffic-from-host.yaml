@@ -5,6 +5,7 @@
 #   - gateway_namespace: Namespace of the Gateway.
 #   - fqdn: Fully qualified domain name for the request (e.g., "echo.example.com").
 #   - route_path: HTTP path to test (e.g., "/echo").
+#   - http_method: HTTP method to use (e.g., "GET", "POST", "PUT").
 #   - insecure: Whether to disable TLS verification ("true" or "false").
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
@@ -35,6 +36,8 @@ spec:
             value: ($proxy_ip)
           - name: FQDN
             value: ($fqdn)
+          - name: METHOD
+            value: ($http_method)
           - name: ROUTE_PATH
             value: ($route_path)
           - name: INSECURE

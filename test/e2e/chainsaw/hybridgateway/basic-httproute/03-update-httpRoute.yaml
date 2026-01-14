@@ -1,20 +1,23 @@
 ---
-# Assert updated HTTPRoute with multiple method-based matches in a single rule
-apiVersion: gateway.networking.k8s.io/v1
+# Updated HTTPRoute with multiple HTTP method rules pointing to httpbin.
 kind: HTTPRoute
+apiVersion: gateway.networking.k8s.io/v1
 metadata:
-  name: ($httproute_name)
-  namespace: ($kong_namespace)
+  name: (join('-', [($test_name), 'echo-route']))
+  namespace: ($namespace)
+  labels:
+    chainsaw/test: ($test_name)
+  annotations:
+    konghq.com/strip-path: "false"
 spec:
+  hostnames: ($route_hosts)
   parentRefs:
     - group: gateway.networking.k8s.io
       kind: Gateway
       name: ($gateway_name)
   rules:
-    - backendRefs:
-        - name: httpbin
-          port: 80
-      matches:
+    # All standard HTTP methods to their respective endpoints
+    - matches:
         - path:
             type: Exact
             value: /get
@@ -38,16 +41,6 @@ spec:
         - path:
             type: PathPrefix
             value: /status
-status:
-  parents:
-    - parentRef:
-        group: gateway.networking.k8s.io
-        kind: Gateway
-        name: ($gateway_name)
-      (conditions[?type == 'Accepted']):
-        - status: 'True'
-      (conditions[?type == 'ResolvedRefs']):
-        - status: 'True'
-      (conditions[?type == 'KongRouteProgrammed']):
-        - status: 'True'
-
+      backendRefs:
+        - name: (join('-', [($test_name), 'httpbin']))
+          port: 80

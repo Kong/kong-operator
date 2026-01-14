@@ -1,17 +1,17 @@
-# Template for verifying HTTPS traffic from within the cluster to the gateway.
+# Template for verifying HTTP traffic from within the cluster to the gateway.
 #
 # Required bindings:
 #   - gateway_name: Name of the Gateway.
 #   - gateway_namespace: Namespace of the Gateway.
-#   - fqdn: Fully qualified domain name for the request (e.g., "echo.example.com").
 #   - route_path: HTTP path to test (e.g., "/echo").
-#   - http_method: HTTP method to use (e.g., "GET", "POST", "PUT").
-#   - insecure: Whether to disable TLS verification ("true" or "false").
 #   - namespace: Namespace where the test pod will be created.
+#   - http_method: HTTP method to use (e.g., "GET", "POST").
+#   - listener_http_port: (optional) HTTP port to test. Default: 80.
+#   - host_header: (optional) Host header to send with the request.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
-  name: verify-https-traffic-from-cluster
+  name: verify-http-traffic-from-cluster
 spec:
   try:
     # 1. Dynamically discover the Gateway's Proxy IP.
@@ -30,23 +30,23 @@ spec:
           (json_parse($stdout).proxy_ip_address != null): true
           (json_parse($stdout).proxy_ip_address != ''): true
 
-    # 2. Perform the HTTPS connectivity check from within the cluster.
+    # 2. Perform the HTTP connectivity check from within the cluster.
     - script:
         env:
           - name: PROXY_IP
             value: ($proxy_ip)
-          - name: FQDN
-            value: ($fqdn)
-          - name: METHOD
-            value: ($http_method)
           - name: ROUTE_PATH
             value: ($route_path)
-          - name: INSECURE
-            value: ($insecure)
+          - name: PROXY_PORT
+            value: ($listener_http_port)
+          - name: HOST
+            value: ($host_header)
+          - name: METHOD
+            value: ($http_method)
           - name: POD_NAMESPACE
             value: ($namespace)
         content: |
-          bash ../common/scripts/pod_connectivity_test_with_hostname_tls_check.sh
+          bash ../common/scripts/pod_connectivity_test_http.sh
         check:
           (to_string(json_parse($stdout).http_status) == '200'): true
-          (to_string(json_parse($stdout).certificate_match) == 'true'): true
+          (to_string(json_parse($stdout).success) == 'true'): true
