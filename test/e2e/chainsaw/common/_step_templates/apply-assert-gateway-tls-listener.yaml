@@ -1,8 +1,7 @@
 # Template for creating and asserting a Gateway with TLS listener.
 #
 # Required bindings:
-#   - gateway_name: Name of the gateway to create.
-#   - test_name: Test name used to compose the gateway class name.
+#   - test_name: Test name used to compose the gateway name.
 #   - namespace: Namespace where the gateway will be created.
 #   - listener_http_port: HTTP listener port (e.g., 80).
 #   - listener_https_port: HTTPS listener port (e.g., 443).
@@ -20,7 +19,7 @@ spec:
           apiVersion: gateway.networking.k8s.io/v1
           kind: Gateway
           metadata:
-            name: ($gateway_name)
+            name: (join('-', [($test_name), 'gateway']))
             namespace: ($namespace)
           spec:
             gatewayClassName: (join('-', [($test_name), 'gateway-class']))
@@ -28,12 +27,21 @@ spec:
             - name: http
               protocol: HTTP
               port: ($listener_http_port)
+            - name: https
+              protocol: HTTPS
+              port: ($listener_https_port)
+              hostname: ($sni_hostname)
+              tls:
+                mode: Terminate
+                certificateRefs:
+                - name: ($cert_secret_name)
+                  namespace: ($cert_secret_namespace)
     - assert:
         resource:
           apiVersion: gateway.networking.k8s.io/v1
           kind: Gateway
           metadata:
-            name: ($gateway_name)
+            name: (join('-', [($test_name), 'gateway']))
             namespace: ($namespace)
           status:
             # Using your dynamic condition filtering for high resilience
