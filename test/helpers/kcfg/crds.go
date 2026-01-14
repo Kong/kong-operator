@@ -42,6 +42,10 @@ func ValidatingWebhookPath() string {
 	return filepath.Join(cfgPath, "default", "validating_webhook")
 }
 
+func ValidatingPoliciesPath() string {
+	return validatingPolicies
+}
+
 func IngressControllerIncubatorCRDsPath() string {
 	return filepath.Join(crdPath, "ingress-controller-incubator")
 }

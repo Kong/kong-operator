@@ -18,8 +18,9 @@ main
 # Personal TODO lists
 TODO
 
-# VSCode user settings folder
+# VSCode and intellij user settings folder
 .vscode/
+.idea/
 
 # Environment variables file
 .env
