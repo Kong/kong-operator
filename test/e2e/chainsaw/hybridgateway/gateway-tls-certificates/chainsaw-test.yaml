@@ -84,7 +84,7 @@ spec:
     - name: Create-gateway
       description: Create Gateway with TLS listener for the test.
       use:
-        template: ../common/_step_templates/apply-assert-gateway.yaml
+        template: ../common/_step_templates/apply-assert-gateway-tls-listener.yaml
 
     # Step 6: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
     - name: Assert-konnect-gateway-control-plane
