@@ -1354,7 +1354,7 @@ _Appears in:_
 #### KongLicenseStatus
 
 
-KongLicenseStatus stores the status of the KongLicense being processesed in each controller that reconciles it.
+KongLicenseStatus stores the status of the KongLicense being processed in each controller that reconciles it.
 
 
 
