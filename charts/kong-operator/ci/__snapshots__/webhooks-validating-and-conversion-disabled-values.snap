@@ -20315,13 +20315,6 @@ spec:
               controlPlaneRef:
                 description: ControlPlaneRef references the Konnect Control Plane that this KongCACertificate should be created in.
                 properties:
-                  konnectID:
-                    description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
-                    pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
-                    type: string
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
@@ -20348,13 +20341,11 @@ spec:
                     default: kic
                     description: |-
                       Type indicates the type of the control plane being referenced. Allowed values:
-                      - konnectID
                       - konnectNamespacedRef
                       - kic
 
                       The default is kic, which implies that the Control Plane is KIC.
                     enum:
-                    - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
@@ -20364,18 +20355,8 @@ spec:
                   rule: self.type != 'konnectID'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
-                - message: when type is konnectNamespacedRef, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID) : true'
-                - message: when type is konnectID, konnectNamespacedRef must not be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is kic, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is unset, konnectID must not be set
-                  rule: '!has(self.type) ? !has(self.konnectID) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               secretRef:
@@ -20668,13 +20649,6 @@ spec:
               controlPlaneRef:
                 description: ControlPlaneRef references the Konnect Control Plane that this KongCertificate should be created in.
                 properties:
-                  konnectID:
-                    description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
-                    pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
-                    type: string
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
@@ -20701,13 +20675,11 @@ spec:
                     default: kic
                     description: |-
                       Type indicates the type of the control plane being referenced. Allowed values:
-                      - konnectID
                       - konnectNamespacedRef
                       - kic
 
                       The default is kic, which implies that the Control Plane is KIC.
                     enum:
-                    - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
@@ -20717,18 +20689,8 @@ spec:
                   rule: self.type != 'konnectID'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
-                - message: when type is konnectNamespacedRef, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID) : true'
-                - message: when type is konnectID, konnectNamespacedRef must not be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is kic, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is unset, konnectID must not be set
-                  rule: '!has(self.type) ? !has(self.konnectID) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               key:
@@ -21358,13 +21320,6 @@ spec:
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a ControlPlane this ConsumerGroup is associated with.
                 properties:
-                  konnectID:
-                    description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
-                    pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
-                    type: string
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
@@ -21391,13 +21346,11 @@ spec:
                     default: kic
                     description: |-
                       Type indicates the type of the control plane being referenced. Allowed values:
-                      - konnectID
                       - konnectNamespacedRef
                       - kic
 
                       The default is kic, which implies that the Control Plane is KIC.
                     enum:
-                    - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
@@ -21407,18 +21360,8 @@ spec:
                   rule: self.type != 'konnectID'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
-                - message: when type is konnectNamespacedRef, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID) : true'
-                - message: when type is konnectID, konnectNamespacedRef must not be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is kic, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is unset, konnectID must not be set
-                  rule: '!has(self.type) ? !has(self.konnectID) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               name:
@@ -21688,13 +21631,6 @@ spec:
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a ControlPlane this Consumer is associated with.
                 properties:
-                  konnectID:
-                    description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
-                    pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
-                    type: string
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
@@ -21721,13 +21657,11 @@ spec:
                     default: kic
                     description: |-
                       Type indicates the type of the control plane being referenced. Allowed values:
-                      - konnectID
                       - konnectNamespacedRef
                       - kic
 
                       The default is kic, which implies that the Control Plane is KIC.
                     enum:
-                    - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
@@ -21737,18 +21671,8 @@ spec:
                   rule: self.type != 'konnectID'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
-                - message: when type is konnectNamespacedRef, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID) : true'
-                - message: when type is konnectID, konnectNamespacedRef must not be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is kic, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is unset, konnectID must not be set
-                  rule: '!has(self.type) ? !has(self.konnectID) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               tags:
@@ -23452,13 +23376,6 @@ spec:
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a Konnect ControlPlane this KongDataPlaneClientCertificate is associated with.
                 properties:
-                  konnectID:
-                    description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
-                    pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
-                    type: string
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
@@ -23485,13 +23402,11 @@ spec:
                     default: kic
                     description: |-
                       Type indicates the type of the control plane being referenced. Allowed values:
-                      - konnectID
                       - konnectNamespacedRef
                       - kic
 
                       The default is kic, which implies that the Control Plane is KIC.
                     enum:
-                    - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
@@ -23501,18 +23416,8 @@ spec:
                   rule: self.type != 'konnectID'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
-                - message: when type is konnectNamespacedRef, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID) : true'
-                - message: when type is konnectID, konnectNamespacedRef must not be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is kic, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is unset, konnectID must not be set
-                  rule: '!has(self.type) ? !has(self.konnectID) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
             required:
@@ -23741,13 +23646,6 @@ spec:
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a Konnect ControlPlane this KongKey is associated with.
                 properties:
-                  konnectID:
-                    description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
-                    pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
-                    type: string
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
@@ -23774,13 +23672,11 @@ spec:
                     default: kic
                     description: |-
                       Type indicates the type of the control plane being referenced. Allowed values:
-                      - konnectID
                       - konnectNamespacedRef
                       - kic
 
                       The default is kic, which implies that the Control Plane is KIC.
                     enum:
-                    - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
@@ -23790,18 +23686,8 @@ spec:
                   rule: self.type != 'konnectID'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
-                - message: when type is konnectNamespacedRef, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID) : true'
-                - message: when type is konnectID, konnectNamespacedRef must not be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is kic, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is unset, konnectID must not be set
-                  rule: '!has(self.type) ? !has(self.konnectID) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               jwk:
@@ -24117,13 +24003,6 @@ spec:
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a Konnect ControlPlane with which KongKeySet is associated.
                 properties:
-                  konnectID:
-                    description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
-                    pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
-                    type: string
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
@@ -24150,13 +24029,11 @@ spec:
                     default: kic
                     description: |-
                       Type indicates the type of the control plane being referenced. Allowed values:
-                      - konnectID
                       - konnectNamespacedRef
                       - kic
 
                       The default is kic, which implies that the Control Plane is KIC.
                     enum:
-                    - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
@@ -24166,18 +24043,8 @@ spec:
                   rule: self.type != 'konnectID'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
-                - message: when type is konnectNamespacedRef, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID) : true'
-                - message: when type is konnectID, konnectNamespacedRef must not be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is kic, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is unset, konnectID must not be set
-                  rule: '!has(self.type) ? !has(self.konnectID) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               name:
@@ -24622,13 +24489,6 @@ spec:
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a ControlPlane this KongPluginBinding is associated with.
                 properties:
-                  konnectID:
-                    description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
-                    pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
-                    type: string
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
@@ -24655,13 +24515,11 @@ spec:
                     default: kic
                     description: |-
                       Type indicates the type of the control plane being referenced. Allowed values:
-                      - konnectID
                       - konnectNamespacedRef
                       - kic
 
                       The default is kic, which implies that the Control Plane is KIC.
                     enum:
-                    - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
@@ -24671,18 +24529,8 @@ spec:
                   rule: self.type != 'konnectID'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
-                - message: when type is konnectNamespacedRef, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID) : true'
-                - message: when type is konnectID, konnectNamespacedRef must not be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is kic, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is unset, konnectID must not be set
-                  rule: '!has(self.type) ? !has(self.konnectID) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               pluginRef:
@@ -25698,13 +25546,6 @@ spec:
                   Route can either specify a ControlPlaneRef and be 'serviceless' route or
                   specify a ServiceRef and be associated with a Service.
                 properties:
-                  konnectID:
-                    description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
-                    pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
-                    type: string
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
@@ -25731,13 +25572,11 @@ spec:
                     default: kic
                     description: |-
                       Type indicates the type of the control plane being referenced. Allowed values:
-                      - konnectID
                       - konnectNamespacedRef
                       - kic
 
                       The default is kic, which implies that the Control Plane is KIC.
                     enum:
-                    - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
@@ -25747,18 +25586,8 @@ spec:
                   rule: self.type != 'konnectID'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
-                - message: when type is konnectNamespacedRef, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID) : true'
-                - message: when type is konnectID, konnectNamespacedRef must not be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is kic, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is unset, konnectID must not be set
-                  rule: '!has(self.type) ? !has(self.konnectID) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               destinations:
@@ -26123,13 +25952,6 @@ spec:
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a ControlPlane this KongService is associated with.
                 properties:
-                  konnectID:
-                    description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
-                    pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
-                    type: string
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
@@ -26156,13 +25978,11 @@ spec:
                     default: kic
                     description: |-
                       Type indicates the type of the control plane being referenced. Allowed values:
-                      - konnectID
                       - konnectNamespacedRef
                       - kic
 
                       The default is kic, which implies that the Control Plane is KIC.
                     enum:
-                    - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
@@ -26172,18 +25992,8 @@ spec:
                   rule: self.type != 'konnectID'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
-                - message: when type is konnectNamespacedRef, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID) : true'
-                - message: when type is konnectID, konnectNamespacedRef must not be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is kic, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is unset, konnectID must not be set
-                  rule: '!has(self.type) ? !has(self.konnectID) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               enabled:
@@ -27655,13 +27465,6 @@ spec:
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a ControlPlane this KongUpstream is associated with.
                 properties:
-                  konnectID:
-                    description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
-                    pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
-                    type: string
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
@@ -27688,13 +27491,11 @@ spec:
                     default: kic
                     description: |-
                       Type indicates the type of the control plane being referenced. Allowed values:
-                      - konnectID
                       - konnectNamespacedRef
                       - kic
 
                       The default is kic, which implies that the Control Plane is KIC.
                     enum:
-                    - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
@@ -27704,18 +27505,8 @@ spec:
                   rule: self.type != 'konnectID'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
-                - message: when type is konnectNamespacedRef, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID) : true'
-                - message: when type is konnectID, konnectNamespacedRef must not be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is kic, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is unset, konnectID must not be set
-                  rule: '!has(self.type) ? !has(self.konnectID) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               hash_fallback:
@@ -28171,13 +27962,6 @@ spec:
               controlPlaneRef:
                 description: ControlPlaneRef is a reference to a Konnect ControlPlane this KongVault is associated with.
                 properties:
-                  konnectID:
-                    description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
-                    pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
-                    type: string
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
@@ -28204,13 +27988,11 @@ spec:
                     default: kic
                     description: |-
                       Type indicates the type of the control plane being referenced. Allowed values:
-                      - konnectID
                       - konnectNamespacedRef
                       - kic
 
                       The default is kic, which implies that the Control Plane is KIC.
                     enum:
-                    - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
@@ -28220,18 +28002,8 @@ spec:
                   rule: self.type != 'konnectID'
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
-                - message: when type is konnectNamespacedRef, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID) : true'
-                - message: when type is konnectID, konnectNamespacedRef must not be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is kic, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is unset, konnectID must not be set
-                  rule: '!has(self.type) ? !has(self.konnectID) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               description:
@@ -28707,13 +28479,6 @@ spec:
                   ControlPlaneRef is a reference to a ControlPlane which DataPlanes from this
                   configuration will connect to.
                 properties:
-                  konnectID:
-                    description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
-                    pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
-                    type: string
                   konnectNamespacedRef:
                     description: |-
                       KonnectNamespacedRef is a reference to a Konnect Control Plane entity inside the cluster.
@@ -28740,13 +28505,11 @@ spec:
                     default: kic
                     description: |-
                       Type indicates the type of the control plane being referenced. Allowed values:
-                      - konnectID
                       - konnectNamespacedRef
                       - kic
 
                       The default is kic, which implies that the Control Plane is KIC.
                     enum:
-                    - konnectID
                     - konnectNamespacedRef
                     - kic
                     type: string
@@ -28754,18 +28517,8 @@ spec:
                 x-kubernetes-validations:
                 - message: when type is konnectNamespacedRef, konnectNamespacedRef must be set
                   rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? has(self.konnectNamespacedRef) : true'
-                - message: when type is konnectNamespacedRef, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''konnectNamespacedRef'') ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? has(self.konnectID) : true'
-                - message: when type is konnectID, konnectNamespacedRef must not be set
-                  rule: '(has(self.type) && self.type == ''konnectID'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is kic, konnectID must not be set
-                  rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectID) : true'
                 - message: when type is kic, konnectNamespacedRef must not be set
                   rule: '(has(self.type) && self.type == ''kic'') ? !has(self.konnectNamespacedRef) : true'
-                - message: when type is unset, konnectID must not be set
-                  rule: '!has(self.type) ? !has(self.konnectID) : true'
                 - message: when type is unset, konnectNamespacedRef must not be set
                   rule: '!has(self.type) ? !has(self.konnectNamespacedRef) : true'
               dataplane_groups:

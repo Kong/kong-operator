@@ -3,7 +3,6 @@ package utils_test
 import (
 	"testing"
 
-	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
@@ -42,16 +41,6 @@ func TestGenerateCPReferenceMatchesPredicate(t *testing.T) {
 				},
 			},
 			expected: true,
-		},
-		{
-			name: "control plane reference is set to konnect",
-			obj: objectWithCPRefType{
-				cpRef: &commonv1alpha1.ControlPlaneRef{
-					Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-					KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("konnect-id")),
-				},
-			},
-			expected: false,
 		},
 		{
 			name: "control plane reference is set to konnect namespaced reference",

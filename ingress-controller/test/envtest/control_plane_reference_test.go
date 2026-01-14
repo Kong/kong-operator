@@ -20,6 +20,7 @@ import (
 	configurationv1beta1 "github.com/kong/kong-operator/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/ingress-controller/test/helpers/conditions"
+	"github.com/kong/kong-operator/test/helpers/asserts"
 )
 
 // TestControlPlaneReferenceHandling tests ControlPlaneReference handling in controllers supporting it.
@@ -55,8 +56,10 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 			Type: commonv1alpha1.ControlPlaneRefKIC,
 		}
 		konnectCPRef = &commonv1alpha1.ControlPlaneRef{
-			Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-			KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("konnect-id")),
+			Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+			KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+				Name: "test-cp",
+			},
 		}
 
 		validConsumer = func() *configurationv1.KongConsumer {
@@ -110,53 +113,59 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 			GetConditions() []metav1.Condition
 			SetControlPlaneRef(*commonv1alpha1.ControlPlaneRef)
 		}
-		controlPlaneRef                 *commonv1alpha1.ControlPlaneRef
-		expectedErrorOnCreationContains string
+		controlPlaneRef     *commonv1alpha1.ControlPlaneRef
+		shouldSetProgrammed bool
 	}{
 		{
-			name:   "KongConsumer - without ControlPlaneRef",
-			object: validConsumer(),
+			name:                "KongConsumer - without ControlPlaneRef",
+			object:              validConsumer(),
+			shouldSetProgrammed: true,
 		},
 		{
-			name:            "KongConsumer - with ControlPlaneRef == kic",
-			object:          validConsumer(),
-			controlPlaneRef: kicCPRef,
+			name:                "KongConsumer - with ControlPlaneRef == kic",
+			object:              validConsumer(),
+			controlPlaneRef:     kicCPRef,
+			shouldSetProgrammed: true,
 		},
 		{
-			name:                            "KongConsumer - with ControlPlaneRef != kic",
-			object:                          validConsumer(),
-			controlPlaneRef:                 konnectCPRef,
-			expectedErrorOnCreationContains: "'konnectID' type is not supported",
+			name:                "KongConsumer - with ControlPlaneRef != kic",
+			object:              validConsumer(),
+			controlPlaneRef:     konnectCPRef,
+			shouldSetProgrammed: false,
 		},
 		{
-			name:   "KongConsumerGroup - without ControlPlaneRef",
-			object: validConsumerGroup(),
+			name:                "KongConsumerGroup - without ControlPlaneRef",
+			object:              validConsumerGroup(),
+			shouldSetProgrammed: true,
 		},
 		{
-			name:            "KongConsumerGroup - with ControlPlaneRef == kic",
-			object:          validConsumerGroup(),
-			controlPlaneRef: kicCPRef,
+			name:                "KongConsumerGroup - with ControlPlaneRef == kic",
+			object:              validConsumerGroup(),
+			controlPlaneRef:     kicCPRef,
+			shouldSetProgrammed: true,
 		},
 		{
-			name:                            "KongConsumerGroup - with ControlPlaneRef != kic",
-			object:                          validConsumerGroup(),
-			controlPlaneRef:                 konnectCPRef,
-			expectedErrorOnCreationContains: "'konnectID' type is not supported",
+			name:                "KongConsumerGroup - with ControlPlaneRef != kic",
+			object:              validConsumerGroup(),
+			controlPlaneRef:     konnectCPRef,
+			shouldSetProgrammed: false,
 		},
 		{
-			name:   "KongVault - without ControlPlaneRef",
-			object: validVault(),
+			name:                "KongVault - without ControlPlaneRef",
+			object:              validVault(),
+			shouldSetProgrammed: true,
 		},
 		{
-			name:            "KongVault - with ControlPlaneRef == kic",
-			object:          validVault(),
-			controlPlaneRef: kicCPRef,
+			name:                "KongVault - with ControlPlaneRef == kic",
+			object:              validVault(),
+			controlPlaneRef:     kicCPRef,
+			shouldSetProgrammed: true,
 		},
 		{
-			name:                            "KongVault - with ControlPlaneRef != kic",
-			object:                          validVault(),
-			controlPlaneRef:                 konnectCPRef,
-			expectedErrorOnCreationContains: "'konnectID' type is not supported",
+			name:                "KongVault - with ControlPlaneRef != kic",
+			object:              validVault(),
+			controlPlaneRef:     konnectCPRef,
+			shouldSetProgrammed: false,
 		},
 	}
 
@@ -166,26 +175,30 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 				tc.object.SetControlPlaneRef(tc.controlPlaneRef)
 			}
 			err := ctrlClient.Create(ctx, tc.object)
-			if tc.expectedErrorOnCreationContains != "" {
-				require.ErrorContains(
-					t,
-					err,
-					tc.expectedErrorOnCreationContains,
-				)
-				return
-			}
 			require.NoError(t, err)
 
-			require.EventuallyWithT(t, func(t *assert.CollectT) {
-				if !assert.NoError(t, ctrlClient.Get(ctx, client.ObjectKeyFromObject(tc.object), tc.object)) {
-					return
-				}
-				assert.True(t, conditions.Contain(
-					tc.object.GetConditions(),
-					conditions.WithType(string(configurationv1.ConditionProgrammed)),
-					conditions.WithStatus(metav1.ConditionTrue),
-				))
-			}, waitTime, tickDuration, "expected object to be programmed")
+			if tc.shouldSetProgrammed {
+				require.EventuallyWithT(t, func(t *assert.CollectT) {
+					if !assert.NoError(t, ctrlClient.Get(ctx, client.ObjectKeyFromObject(tc.object), tc.object)) {
+						return
+					}
+					assert.True(t, conditions.Contain(
+						tc.object.GetConditions(),
+						conditions.WithType(string(configurationv1.ConditionProgrammed)),
+						conditions.WithStatus(metav1.ConditionTrue),
+					))
+				}, waitTime, tickDuration, "expected object to be programmed")
+			} else {
+				asserts.Never(t, func(ctx context.Context) bool {
+					require.NoError(t, ctrlClient.Get(ctx, client.ObjectKeyFromObject(tc.object), tc.object))
+
+					return conditions.Contain(
+						tc.object.GetConditions(),
+						conditions.WithType(string(configurationv1.ConditionProgrammed)),
+						conditions.WithStatus(metav1.ConditionTrue),
+					)
+				}, waitTime, tickDuration, "expected object not to be programmed")
+			}
 		})
 	}
 }
