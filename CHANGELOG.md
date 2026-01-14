@@ -55,6 +55,8 @@
   regular expression in the translated `KongRoute` when the `HTTPRoute`'s header
   match has the `RegularExpression` type.
   [#2995](https://github.com/Kong/kong-operator/pull/2995)
+- Fixes a panic in KonnectExtension controller when Control Plane is not found.
+  [#3054](https://github.com/Kong/kong-operator/pull/3054)
 
 ## [v2.1.0-beta.0]
 

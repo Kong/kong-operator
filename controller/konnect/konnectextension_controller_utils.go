@@ -265,7 +265,7 @@ func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, e
 }
 
 func enforceKonnectExtensionStatus(
-	cp konnectv1alpha2.KonnectGatewayControlPlane,
+	cp *konnectv1alpha2.KonnectGatewayControlPlane,
 	apiAuthRef konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef,
 	certificateSecret corev1.Secret,
 	ext *konnectv1alpha2.KonnectExtension,
@@ -274,7 +274,8 @@ func enforceKonnectExtensionStatus(
 
 	// The Status schema requires non-empty endpoints; updating with empty values triggers validation errors.
 	// When endpoints are unavailable, clear the entire Konnect status struct.
-	if cp.Status.Endpoints == nil ||
+	if cp == nil ||
+		cp.Status.Endpoints == nil ||
 		cp.Status.Endpoints.ControlPlaneEndpoint == "" ||
 		cp.Status.Endpoints.TelemetryEndpoint == "" {
 		if ext.Status.Konnect != nil {
