@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Changed
+
+- Bootstrapping CA certificate is done automatically by Helm.
+  The existing certificate can be referenced by setting options
+  `certificateAuthority.secretName` and `certificateAuthority.secretNamespace`.
+  [#3084](https://github.com/Kong/kong-operator/pull/3084)
+
 ## 1.1.0
 
 ### Changed

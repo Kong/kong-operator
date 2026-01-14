@@ -79,6 +79,11 @@
 - Removed the `KonnectID` type of control plane reference in CRDs for Konnect
   entities as it is not supported.
   [#2966](https://github.com/Kong/kong-operator/pull/2966)
+- Move management of bootstrapping CA certificate to Helm Chart, remove flags
+  `--cluster-ca-key-type` and  `--cluster-ca-key-size` now those values are
+  inferred automatically based on the CA certificate Secret. Read more in
+  Helm Chart release notes.
+  [#3084](https://github.com/Kong/kong-operator/pull/3084)
 
 ## [v2.1.0-beta.0]
 

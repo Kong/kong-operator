@@ -170,19 +170,6 @@ func TestParse(t *testing.T) {
 			},
 		},
 		{
-			name: "cluster CA key type argument is set",
-			args: []string{
-				"--cluster-ca-key-type=rsa",
-				"--cluster-ca-key-size=2048",
-			},
-			expectedCfg: func() manager.Config {
-				cfg := expectedDefaultCfg()
-				cfg.ClusterCAKeySize = 2048
-				cfg.ClusterCAKeyType = mgrconfig.RSA
-				return cfg
-			},
-		},
-		{
 			name: "cluster domain argument is set",
 			args: []string{
 				"--cluster-domain=foo.bar",
@@ -309,8 +296,6 @@ func expectedDefaultCfg() manager.Config {
 		ConfigMapLabelSelector:                   mgrconfig.DefaultConfigMapLabelSelector,
 		ClusterCASecretName:                      "kong-operator-ca",
 		ClusterCASecretNamespace:                 "kong-system",
-		ClusterCAKeyType:                         mgrconfig.ECDSA,
-		ClusterCAKeySize:                         mgrconfig.DefaultClusterCAKeySize,
 		GatewayControllerEnabled:                 true,
 		ControlPlaneControllerEnabled:            true,
 		DataPlaneControllerEnabled:               true,
