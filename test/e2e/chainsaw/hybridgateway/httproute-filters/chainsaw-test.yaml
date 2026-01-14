@@ -4,6 +4,7 @@ kind: Test
 metadata:
   name: httproute-filters
 spec:
+  concurrent: false
   description: |
     This test validates that the hybrid gateway controller correctly
     processes the currently supported filters in HTTPRoute, including:
