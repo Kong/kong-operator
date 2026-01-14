@@ -1,9 +1,8 @@
-# Template for verifying HTTPS traffic from the host to the gateway.
+# Template for verifying HTTP traffic from the host to the gateway by IP.
 #
 # Required bindings:
 #   - gateway_name: Name of the Gateway.
 #   - gateway_namespace: Namespace of the Gateway.
-#   - fqdn: Fully qualified domain name for the request (e.g., "echo.example.com").
 #   - route_path: HTTP path to test (e.g., "/echo").
 #   - insecure: Whether to disable TLS verification ("true" or "false").
 apiVersion: chainsaw.kyverno.io/v1alpha1
