@@ -19,7 +19,7 @@ spec:
           port: 1027
           weight: 1
         - name: echo-secondary
-          port: 80
+          port: 1027
           weight: 1
 ---
 kind: HTTPRoute
@@ -42,7 +42,7 @@ spec:
           port: 1027
           weight: 1
         - name: echo-secondary
-          port: 80
+          port: 1027
           weight: 1
 ---
 kind: HTTPRoute
@@ -65,6 +65,5 @@ spec:
           port: 1027
           weight: 1
         - name: echo-secondary
-          port: 80
+          port: 1027
           weight: 1
-
