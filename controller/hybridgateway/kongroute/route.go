@@ -104,7 +104,6 @@ func needsCaptureGroup(rule gwtypes.HTTPRouteRule) bool {
 			filter.RequestRedirect.Path.ReplacePrefixMatch != nil:
 			return true
 		}
-
 	}
 	return false
 }
