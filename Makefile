@@ -750,9 +750,10 @@ test.e2e:
 		GOTESTFLAGS="$(GOTESTFLAGS)"
 
 CHAINSAW_TEST_DIR ?= ./test/e2e/chainsaw/hybridgateway,./test/e2e/chainsaw/conversion_webhook
+CHAINSAW_TEST_PARALLELISM ?= 4
 .PHONY: test.e2e.chainsaw
 test.e2e.chainsaw: chainsaw ## Run chainsaw e2e tests.
-	$(CHAINSAW) test --test-dir $(CHAINSAW_TEST_DIR)
+	$(CHAINSAW) test --quiet --parallel $(CHAINSAW_TEST_PARALLELISM) --test-dir $(CHAINSAW_TEST_DIR)
 
 NCPU := $(shell getconf _NPROCESSORS_ONLN)
 PARALLEL := $(if $(PARALLEL),$(PARALLEL),$(NCPU))
