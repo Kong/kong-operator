@@ -8,152 +8,324 @@ spec:
     The case validates the scenario where an HTTPRoute can reference a
     Service as its backendRef when granted by proper ReferenceGrant.
 
-  # Define the gateway_name binding based on TEST_ID environment variable
-  # This ensures unique names in Konnect to avoid 409 conflicts
   bindings:
-    - name: gateway_namespace
-      # Name of namespace cannot exceed 63 characters, so we shortened the name.
-      value: (join('-', ['kong', 'httproute-backendref-x-ns-gateway', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
-    - name: konnect_api_auth_name
-      value: konnect-api-auth-dev-1
-    - name: gateway_class_name
-      value: (join('-', ['kong', 'httproute-backendref-cross-namespace', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
-    - name: gateway_configuration_name
-      value: ($gateway_class_name)
+    # Common bindings.
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: sni_hostname
+      value: (join('.', ['*', ($test_name), 'example.com']))
+    - name: fqdn
+      value: (join('.', ['echo', ($test_name), 'example.com']))
+    - name: cert_secret_name
+      value: test-tls-secret
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: listener_https_port
+      value: 443
+    - name: listener_http_port
+      value: 80
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
     - name: gateway_name
-      value: ($gateway_class_name)
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
     - name: http_route_name
-      value: (join('-', ['kong', 'httproute-backendref-cross-namespace-ref', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+      value: (join('-', [($test_name), 'echo-route']))
     - name: http_route_namespace
-      value: ($gateway_namespace)
+      value: ($namespace)
+    - name: echo_service_name
+      value: (join('-', [($test_name), 'echo']))
+    - name: echo_service_namespace
+      value: (join('-', [($namespace), 'echo-backend']))
+    - name: echo_deployment_namespace
+      value: ($echo_service_namespace)
+    - name: http_method
+      value: "GET"
     - name: reference_grant_name
-      value: (join('-', ['kong', 'httproute-backendref-cross-namespace-ref-service', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
-    - name: httpbin_service_name
-      value: httpbin
-    - name: httpbin_service_namespace
-      value: (join('-', ['kong', 'httproute-backendref-x-ns-backend', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
-    - name: operator_namespace
-      value: kong-system
-    - name: gateway_proxy_image
-      value: kong/kong-gateway:3.12
-  
+      value: "echo-service-reference-grant"
+    - name: reference_grant_namespace
+      value: ($echo_service_namespace)
+
   timeouts:
     apply: 120s
-    assert: 300s
+    assert: 120s
     cleanup: 120s
     delete: 120s
 
   steps:
-    # Step 01: Create backend service and gateway in different namespaces.
-    - name: create-prerequisites
-      description: Create GatewayClass, Gateway, and backend Service in different namespaces.
-      try:
-        - apply:
-            file: 00-httpbin.yaml
-        - apply:
-            file: 01-prerequisites.yaml
-        - assert:
-            file: 00-assert-httpbin.yaml
-        - assert:
-            file: 01-assert-prerequisites.yaml
-      catch:
-        - description: Get Gateway resource status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: Gateway
-            namespace: ($gateway_namespace)
-        - description: Get Pods in gateway namespace
-          get:
-            apiVersion: v1
-            kind: Pod
-            namespace: ($gateway_namespace)
-        - description: Get operator logs
-          podLogs:
-            namespace: ($operator_namespace)
-            selector: control-plane=controller-manager
-            tail: 100
-    # Step 02: Create HTTPRoute and ReferenceGrant in the namepace of the Gateway, then verify the connectivity.
-    - name: create-httproute-with-cross-namespace-reference-to-backendRef
-      description: Create an HTTPRoute in another namespace with a cross-namespace backendRef with ReferenceGrant
+    # Step 1: Create the TLS secret that will be referenced by the Gateway TLS listener.
+    - name: Create-tls-secret
+      description: Create TLS Secret for the Gateway TLS listener.
+      use:
+        template: ../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    # Step 2: Create the KonnectAPIAuthConfiguration to authenticate with Konnect.
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    # Step 3: Create the GatewayConfiguration that defines the hybrid gateway setup.
+    - name: Create-gateway-configuration
+      description: Create GatewayConfiguration for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    # Step 4: Create the GatewayClass that will be used by the Gateway.
+    - name: Create-gateway-class
+      description: Create GatewayClass for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    # Step 5: Create the Gateway with a TLS listener that references the TLS secret.
+    - name: Create-gateway
+      description: Create Gateway with TLS listener for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-gateway.yaml
+
+    # Step 6: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
+    - name: Assert-konnect-gateway-control-plane
+      description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
+      use:
+        template: ../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    # Step 7: Verify that the KongCertificate resource is created from the TLS secret.
+    - name: Assert-kong-certificate
+      description: Assert that the KongCertificate resource is created for the TLS secret.
+      use:
+       template: ../common/_step_templates/assert-kongCertificate.yaml
+  
+    # Step 8: Verify that the KongSNI resource is created for the SNI hostname.
+    - name: Assert-kong-sni
+      description: Assert that the KongSNI resource is created for the SNI hostname.
+      use:
+       template: ../common/_step_templates/assert-kongSNI.yaml
+  
+    # Step 9: Create namespace for backend service.
+    - name: Create-backend-namespace
+      description: Create a separate namespace for the backend service.
+      use:
+        template: ../common/_step_templates/apply-assert-namespace.yaml
       bindings:
-        - name: route_path
-          value: "/httproute-cross-namespace-reference-to-backendref"
+        - name: namespace_name
+          value: ($echo_service_namespace)
+
+    # Step 10: Create the echo service that will receive the routed traffic.
+    - name: Create-echo-service
+      description: Create and assert an echo service to route traffic to.
+      use:
+        template: ../common/_step_templates/apply-assert-echoService.yaml
+
+    
+    # Step 11: Create HTTPRoute that routes traffic to the echo service in another namespace and ReferenceGrant.
+    - name: Create-httproute-with-cross-namespace-reference-to-backendRef
+      description: Create an HTTPRoute with a cross-namespace backendRef with ReferenceGrant
       try:
         - apply:
-            file: 02-httproute-backendref-cross-namespace-reference.yaml
+            file: 01-httproute-backendref-cross-namespace-reference.yaml
         - assert:
             file: 02-assert-httproute-backendref-cross-namespace-reference.yaml
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Wait until the route works
-        - description: Test connectivity from outside the cluster
-          script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path)
-            content: |
-              echo "Accessing gateway ${GATEWAY_NAMESPACE}/${GATEWAY_NAME} at ${PROXY_IP}"
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}/status/200
-            check:
-              (contains($stdout, '200')): true
-      catch:
-        - description: Dump HTTPRoutes
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump ReferenceGrants
-          get:
-            apiVersion: gateway.networking.k8s.io/v1bata1
-            kind: ReferenceGrant
-            namespace: ($httpbin_service_namespace)
-            format: yaml
-        - description: dump KongServices
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongService
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongRoutes
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongUpstreams
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongUpstream
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongTargets
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongTarget
-            namespace: ($http_route_namespace)
-            format: yaml        
-      finally:
-        - description: Delete HTTPRoute
-          delete:
-            ref:
-              apiVersion: gateway.networking.k8s.io/v1
-              kind: HTTPRoute
-              namespace: ($http_route_namespace)
-              name: ($http_route_name)
+
+    # Step 12: Verify that the HTTPRoute is translated into a KongRoute resource.
+    - name: Assert-kong-route
+      description: Assert that the KongRoute resource is created for the HTTPRoute.
+      use:
+        template: ../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value: 
+            - "~/echo$"
+            - "/echo/"
+        - name: strip_path
+          value: true
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+    
+    # Step 13: Verify that the HTTPRoute backend is translated into a KongService resource.
+    - name: Assert-kong-service
+      description: Assert that the KongService resource is created for the HTTPRoute.
+      use:
+        template: ../common/_step_templates/assert-kongService.yaml
+
+    # Step 14: Verify that the HTTPRoute backend is translated into a KongUpstream resource.
+    - name: Assert-kong-upstream
+      description: Assert that the KongUpstream resource is created for the HTTPRoute.
+      use:
+        template: ../common/_step_templates/assert-kongUstream.yaml
+    
+    # Step 15: Verify that the KongUpstream has KongTarget resources created for it.
+    - name: Assert-kong-target
+      description: Assert that the KongTarget resource is created for the KongUpstream.
+      use:
+        template: ../common/_step_templates/assert-kongTarget.yaml
+      bindings:
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: target_weight
+          value: 1
+
+    # Step 16: Verify that the TLS certificate deployed to the dataplane matches the TLS secret.
+    - name: Verify-TLS-Fingerprint
+      description: Verify that the TLS certificate deployed to the dataplane matches the TLS secret.
+      use:
+        template: ../common/_step_templates/verify-gateway-tls-fingerprint.yaml
+
+    # Step 17: Verify that the dataplane is configured, traffic can be routed, and TLS certificates are working.
+    # The verification is done by sending an HTTPS request to the gateway and checking the response from the host.
+    - name: Verify-HTTPS-traffic-from-host
+      description: Verify that HTTPS traffic can be routed through the gateway to the echo service from the host.
+      use:
+        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/echo"
+        - name: insecure
+          value: "true"
+   
+    # Step 18: Verify that the dataplane is configured, traffic can be routed, and TLS certificates are working.
+    # The verification is done by sending an HTTPS request to the gateway and checking the response from within the cluster.
+    - name: Verify-HTTPS-traffic-from-cluster
+      description: Verify that HTTPS traffic can be routed through the gateway to the echo service from the cluster.
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/echo"
+        - name: insecure
+          value: "true"
+
+    # Step 19: Verify that HTTP traffic can be routed through the gateway to the echo service from the host.
+    - name: Verify-HTTP-traffic-from-host
+      description: Verify that HTTP traffic can be routed through the gateway to the echo service from the host.
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/echo"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+
+    # Step 20: Verify that HTTP traffic can be routed through the gateway to the echo service from within the cluster.
+    - name: Verify-HTTP-traffic-from-cluster
+      description: Verify that HTTP traffic can be routed through the gateway to the echo service from the cluster.
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/echo"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+
+  # Global catch block, runs on any step failure to help debug.
+  catch:
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: GatewayClass
+        name: (join('-', [($test_name), 'gateway-class']))
+        showEvents: true
+    
+    - describe:
+        apiVersion: gateway-operator.konghq.com/v2beta1
+        kind: GatewayConfiguration
+        name: (join('-', [($test_name), 'gateway-configuration']))
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: gateway-operator.konghq.com/v1alpha1
+        kind: KonnectAPIAuthConfiguration
+        name: (join('-', [($test_name), 'konnect-api-auth']))
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: gateway-operator.konghq.com/v1beta1
+        kind: KonnectGatewayControlPlane
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: Gateway
+        name: (join('-', [($test_name), 'gateway']))
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: apps/v1
+        kind: Deployment
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: v1
+        kind: Pod
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        name: (join('-', [($test_name), 'echo-route']))
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1beta1
+        kind: ReferenceGrant
+        name: ($reference_grant_name)
+        namespace: ($reference_grant_namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongService
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongRoute
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongUpstream
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongCertificate
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongSNI
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: v1
+        kind: Secret
+        name: ($cert_secret_name)
+        namespace: ($cert_secret_namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: v1
+        kind: Service
+        name: ($echo_service_name)
+        namespace: ($echo_service_namespace)
+        showEvents: true
