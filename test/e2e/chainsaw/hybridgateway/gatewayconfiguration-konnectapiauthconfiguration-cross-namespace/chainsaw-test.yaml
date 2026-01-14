@@ -3,21 +3,20 @@ apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
   name: gwconf-apiauthconf-cross-namespace
+
 spec:
   description: |
     This test validates that the hybrid gateway controller correctly
     processes cross namespace reference from GatewayConfiguration to
     KonnectAPIAuthConfiguration when KongReferenceGrant grants the reference.
- 
-  # Namespace that will be created by chainsaw for the test.
-  #namespace: kong
 
   timeouts:
     apply: 120s
     assert: 120s
     delete: 120s
     exec: 120s
-  
+    cleanup: 120s
+
   bindings:
     - name: test_name
       value: gwconf-apiauthconf-cross-namespace
@@ -52,18 +51,23 @@ spec:
   # Step 2: Create KonnectAPIAuthConfiguration in a namespace
     - name: create-konnect-api-auth-confugration
       description: Create a KonnectAPIAuthConfiguration in a namespace
-      use:
-        template: ../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
-  # Step 3: Create a KongReferenceGrant to allow GatewayConfiguration in the other namespace to reference the KonnectAPIAuthConfiguration
-    - name: create-kong-reference-grant
-      description: Create a KongReferenceGrant to allow GatewayConfigurations in another namespace to reference the KonnectAPIAuthConfiguration
       bindings:
         - name: namespace
           value: ($konnect_api_auth_namespace)
+      use:
+        template: ../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+    # Step 3: Create a KongReferenceGrant to allow KonnectGatewayControlPlane in the other namespace to reference the KonnectAPIAuthConfiguration
+    - name: create-kong-reference-grant-konnect-cp
+      description: Create a KongReferenceGrant to allow KonnectGatewayControlPlane in the other namespace to reference the KonnectAPIAuthConfiguration
+      bindings:
+        - name: test_name
+          value: gwconf-apiauthconf-cross-namespace-for-konnectcp
+        - name: namespace
+          value: ($konnect_api_auth_namespace)
         - name: from_group
-          value: gateway-operator.konghq.com
+          value: konnect.konghq.com
         - name: from_kind
-          value: GatewayConfiguration
+          value: KonnectGatewayControlPlane
         - name: from_namespace
           value: ($gateway_namespace)
         - name: to_group
@@ -175,7 +179,7 @@ spec:
     - describe:
         apiVersion: gateway-operator.konghq.com/v1beta1
         kind: KonnectGatewayControlPlane
-        namespace: ($konnect_api_auth_namespace)
+        namespace: ($gateway_namespace)
         showEvents: true
     
     - describe:
@@ -188,7 +192,6 @@ spec:
     - describe:
         apiVersion: configuration.konghq.com/v1alpha1
         kind: KongReferenceGrant
-        name: (join('-', [($test_name), 'kong-reference-grant']))
         namespace: ($konnect_api_auth_namespace)
     
     - describe:

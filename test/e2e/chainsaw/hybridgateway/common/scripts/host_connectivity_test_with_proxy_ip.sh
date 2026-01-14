@@ -12,8 +12,7 @@ PROXY_IP="${PROXY_IP}"
 ROUTE_PATH="${ROUTE_PATH:-/}"
 
 # Capture curl output, and handle failures gracefully
-if ! OUTPUT=$(curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' \
-  "http://${PROXY_IP}${ROUTE_PATH}"
+if ! OUTPUT=$(curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' "http://${PROXY_IP}${ROUTE_PATH}")
   then
   # Curl failed - output the full debug info
   cat <<EOF
@@ -45,6 +44,6 @@ fi
 # Output JSON result
 cat <<EOF
 {
-  "http_status": $HTTP_CODE,
+  "http_status": $HTTP_CODE
 }
 EOF
