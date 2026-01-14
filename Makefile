@@ -195,7 +195,9 @@ HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["http:helm"].version' < $(M
 HELM = helm
 .PHONY: download.helm
 download.helm: mise yq ## Download helm locally if necessary.
-	$(MAKE) mise-install-global DEP_VER=http:helm
+# TODO: Re-enable once helm installation issue is resolved.
+# x-ref: https://kongstrong.slack.com/archives/C011RQPHDC7/p1768387019326359
+# 	$(MAKE) mise-install-global DEP_VER=http:helm
 
 KUBE_API_LINTER_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"].version' < $(MISE_FILE))
 KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter
@@ -643,7 +645,7 @@ test.api: gotestsum
 	./api/test/...
 
 .PHONY: _test.integration
-_test.integration: gotestsum download.telepresence
+_test.integration: gotestsum download.telepresence download.helm
 	KUBECONFIG=$(KUBECONFIG) \
 	TELEPRESENCE_BIN=$(TELEPRESENCE) \
 	GOFLAGS=$(GOFLAGS) \
