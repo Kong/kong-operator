@@ -1,10 +1,14 @@
 ---
-# Assert HTTPRoute is accepted and programmed
+# Assert HTTPRoute is accepted and programmed.
+#
+# Required bindings:
+#   - test_name: The test name label to match (e.g., "gateway-tls-certificates").
+#   - test_name: The test name used to construct the Gateway name (e.g., "gateway-tls-certificates").
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
-  name: ($httproute_name)
-  namespace: ($kong_namespace)
+  (labels."chainsaw/test" == ($test_name)): true
+  namespace: ($namespace)
 status:
   parents:
     - parentRef:
@@ -12,7 +16,7 @@ status:
         group: gateway.networking.k8s.io
         kind: Gateway
       controllerName: konghq.com/gateway-operator
-      # Filter conditions array to check for all required conditions
+      # Filter conditions array to check for all required conditions.
       (conditions[?type == 'Accepted']):
         - status: "True"
           reason: Accepted

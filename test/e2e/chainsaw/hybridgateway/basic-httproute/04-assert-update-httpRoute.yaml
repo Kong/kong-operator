@@ -1,0 +1,66 @@
+---
+# Assert updated HTTPRoute with multiple method-based matches in a single rule.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  (labels."chainsaw/test" == ($test_name)): true
+  namespace: ($namespace)
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    - backendRefs:
+        - name: (join('-', [($test_name), 'httpbin']))
+          port: 80
+      matches:
+        - path:
+            type: Exact
+            value: /get
+          method: GET
+        - path:
+            type: Exact
+            value: /post
+          method: POST
+        - path:
+            type: Exact
+            value: /put
+          method: PUT
+        - path:
+            type: Exact
+            value: /patch
+          method: PATCH
+        - path:
+            type: Exact
+            value: /delete
+          method: DELETE
+        - path:
+            type: PathPrefix
+            value: /status
+status:
+  parents:
+    - parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: ($gateway_name)
+      # Filter conditions array to check for all required conditions
+      (conditions[?type == 'Accepted']):
+        - status: "True"
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "True"
+          reason: ResolvedRefs
+      (conditions[?type == 'KongRouteProgrammed']):
+        - status: "True"
+          reason: KongRouteProgrammed
+      (conditions[?type == 'KongServiceProgrammed']):
+        - status: "True"
+          reason: KongServiceProgrammed
+      (conditions[?type == 'KongUpstreamProgrammed']):
+        - status: "True"
+          reason: KongUpstreamProgrammed
+      (conditions[?type == 'KongTargetProgrammed']):
+        - status: "True"
+          reason: KongTargetProgrammed
+

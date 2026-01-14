@@ -50,6 +50,8 @@ spec:
       value: ($namespace)
     - name: echo_service_name
       value: (join('-', [($test_name), 'echo']))
+    - name: http_method
+      value: "GET"
 
   steps:
     # Step 1: Create the TLS secret that will be referenced by the Gateway TLS listener.

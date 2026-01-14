@@ -69,7 +69,7 @@ TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong'
 #
 # Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/3754
 .PHONY: _test.integration
-_test.integration:
+_test.integration: mise yq
 	TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
 	TEST_DATABASE_MODE="$(DBMODE)" \
 	GOFLAGS="-tags=$(GOTAGS)" \

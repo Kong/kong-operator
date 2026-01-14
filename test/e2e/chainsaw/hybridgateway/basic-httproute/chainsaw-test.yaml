@@ -1,4 +1,4 @@
-# Basic HTTPRoute test scenario
+# Basic HTTPRoute test scenario.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
@@ -7,632 +7,678 @@ spec:
   description: |
     This test validates that the hybrid gateway controller correctly
     processes a basic HTTPRoute with a single service backend.
-
-  # Define the gateway_name binding based on TEST_ID environment variable
-  # This ensures unique names in Konnect to avoid 409 conflicts
-  bindings:
-    - name: kong_namespace
-      value: (join('-', ['kong', 'basic-httproute', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
-    - name: konnect_api_auth_name
-      value: konnect-api-auth-dev-1
-    - name: gateway_class_name
-      value: (join('-', ['kong', 'basic-httproute', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
-    - name: gateway_configuration_name
-      value: ($gateway_class_name)
-    - name: gateway_name
-      value: ($gateway_class_name)
-    - name: httproute_name
-      value: echo
-
   timeouts:
     apply: 120s
-    assert: 300s
-    cleanup: 120s
+    assert: 120s
     delete: 120s
+    exec: 120s
+
+  bindings:
+    # Common bindings.
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: sni_hostname
+      value: (join('.', ['*', ($test_name), 'example.com']))
+    - name: fqdn
+      value: (join('.', ['echo', ($test_name), 'example.com']))
+    - name: cert_secret_name
+      value: test-tls-secret
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: listener_https_port
+      value: 443
+    - name: listener_http_port
+      value: 80
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: http_route_name
+      value: (join('-', [($test_name), 'echo-route']))
+    - name: http_route_namespace
+      value: ($namespace)
+    - name: echo_service_name
+      value: (join('-', [($test_name), 'echo']))
+    - name: http_method
+      value: "GET"
 
   steps:
-    # Step 1: Create prerequisite resources
-    - name: create-prerequisites
-      description: Create GatewayClass, Gateway, and backend Service
+    # Step 1: Create the TLS secret that will be referenced by the Gateway TLS listener.
+    - name: Create-tls-secret
+      description: Create TLS Secret for the Gateway TLS listener.
+      use:
+        template: ../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    # Step 2: Create the KonnectAPIAuthConfiguration to authenticate with Konnect.
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    # Step 3: Create the GatewayConfiguration that defines the hybrid gateway setup.
+    - name: Create-gateway-configuration
+      description: Create GatewayConfiguration for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    # Step 4: Create the GatewayClass that will be used by the Gateway.
+    - name: Create-gateway-class
+      description: Create GatewayClass for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    # Step 5: Create the Gateway with a TLS listener that references the TLS secret.
+    - name: Create-gateway
+      description: Create Gateway with TLS listener for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-gateway.yaml
+
+    # Step 6: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
+    - name: Assert-konnect-gateway-control-plane
+      description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
+      use:
+        template: ../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    # Step 7: Verify that the KongCertificate resource is created from the TLS secret.
+    - name: Assert-kong-certificate
+      description: Assert that the KongCertificate resource is created for the TLS secret.
+      use:
+       template: ../common/_step_templates/assert-kongCertificate.yaml
+  
+    # Step 8: Verify that the KongSNI resource is created for the SNI hostname.
+    - name: Assert-kong-sni
+      description: Assert that the KongSNI resource is created for the SNI hostname.
+      use:
+       template: ../common/_step_templates/assert-kongSNI.yaml
+  
+    # Step 9: Create the echo service that will receive the routed traffic.
+    - name: Create-echo-service
+      description: Create and assert an echo service to route traffic to.
+      use:
+        template: ../common/_step_templates/apply-assert-echoService.yaml
+
+    # Step 10: Create HTTPRoute to route traffic to the echo service.
+    # The HTTPRoute is not templated because it is specific to this test case.
+    - name: Create-httproute-echo
+      description: Create HTTPRoute to route traffic to the echo service.
       try:
         - apply:
-            file: 01-prerequisites.yaml
-        - apply:
-            file: 00-httpbin.yaml
-        # Assert common Konnect and Gateway resources.
+            file: 01-httpRoute-echo.yaml
         - assert:
-            file: ../common/assertions/konnect-apiauth.yaml
-        - assert:
-            file: ../common/assertions/gatewayclass.yaml
-        - assert:
-            file: ../common/assertions/gatewayconfiguration.yaml
-        - assert:
-            file: ../common/assertions/gateway.yaml
-        - assert:
-            file: ../common/assertions/konnect-gateway-controlplane.yaml
-        - assert:
-            file: ../common/assertions/konnect-extension.yaml
-        # Assert test-specific resources (namespaces, service, deployment)
-        - assert:
-            file: 00-assert-httpbin.yaml
-        - assert:
-            file: 01-assert-prerequisites.yaml
-      # Catch block: collect diagnostic info when assertions fail
-      catch:
-        - description: Get Gateway resource status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: Gateway
-            namespace: ($kong_namespace)
-        - description: Get DataPlane resources
-          get:
-            apiVersion: gateway-operator.konghq.com/v1beta1
-            kind: DataPlane
-            namespace: ($kong_namespace)
-        - description: Get ControlPlane resources
-          get:
-            apiVersion: gateway-operator.konghq.com/v1beta1
-            kind: ControlPlane
-            namespace: ($kong_namespace)
-        - description: Get Pods in kong namespace
-          get:
-            apiVersion: v1
-            kind: Pod
-            namespace: ($kong_namespace)
-        - description: Describe Gateway
-          describe:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: Gateway
-            namespace: ($kong_namespace)
-            showEvents: true
-        - description: Describe DataPlane
-          describe:
-            apiVersion: gateway-operator.konghq.com/v1beta1
-            kind: DataPlane
-            namespace: ($kong_namespace)
-            showEvents: true
-        - description: Get events from kong namespace
-          events:
-            namespace: ($kong_namespace)
-        - description: Get operator logs
-          podLogs:
-            namespace: kong-system
-            selector: control-plane=controller-manager
-            tail: 100
-        - description: Get all Pod logs in kong namespace
-          script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              echo "=== Listing all Pods in kong namespace ==="
-              kubectl get pods -n ${KONG_NAMESPACE} -o wide
-              echo ""
-              echo "=== Pod details and logs ==="
-              for pod in $(kubectl get pods -n ${KONG_NAMESPACE} -o jsonpath='{.items[*].metadata.name}'); do
-                echo "--- Pod: $pod ---"
-                kubectl describe pod $pod -n ${KONG_NAMESPACE} | tail -50
-                echo ""
-                echo "--- Logs for $pod ---"
-                kubectl logs $pod -n ${KONG_NAMESPACE} --all-containers --tail=50 2>/dev/null || echo "No logs available"
-                echo ""
-              done
-    
-    # Step 2: Create HTTPRoute
-    - name: create-httproute
-      description: Create HTTPRoute that references the Gateway
-      try:
-        - apply:
-            file: 02-httproute.yaml
-        - assert:
-            file: 02-assert-httproute.yaml
-    
-    # Step 3: Verify generated Kong resources
-    - name: verify-kong-resources
-      description: Verify KongRoute, KongService, KongUpstream, and KongTarget are created
+            file: 02-httpRoute-echo-assert.yaml
       bindings:
-        # Map test bindings to assertion variable names
-        - name: namespace
-          value: ($kong_namespace)
-        - name: hybrid_gateway_name
-          value: ($gateway_name)
-        - name: hybrid_gateway_namespace
-          value: ($kong_namespace)
-        - name: managedby_name
-          value: ($httproute_name)
-        - name: managedby_namespace
-          value: ($kong_namespace)
+        - name: route_hosts
+          value:
+            - ($fqdn)
+    
+    # Step 11: Verify that the HTTPRoute is translated into a KongRoute resource.
+    - name: Assert-kong-route
+      description: Assert that the KongRoute resource is created for the HTTPRoute.
+      use:
+        template: ../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value: 
+            - "~/echo$"
+            - "/echo/"
         - name: strip_path
           value: true
-        - name: weight
-          value: 1
-      try:
-        # Get dynamic resource names and route paths from HTTPRoute
-        - script:
-            env:
-              - name: HTTPROUTE_NAME
-                value: ($httproute_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get httproute ${HTTPROUTE_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.spec.rules[*].matches[*].path.value}' | jq -Rsc 'split(" ")'
-            outputs:
-              - name: route_paths_json
-                value: ($stdout)
-        - script:
-            env:
-              - name: HTTPROUTE_NAME
-                value: ($httproute_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              OUTPUT=$(kubectl get httproute ${HTTPROUTE_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.spec.rules[*].matches[*].method}')
-              if [ -z "$OUTPUT" ]; then
-                echo '[]'
-              else
-                echo "$OUTPUT" | tr -d '\n' | jq -Rsc 'split(" ")'
-              fi
-            outputs:
-              - name: route_methods_json
-                value: ($stdout)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get konnectgatewaycontrolplane -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=gateway -o jsonpath='{.items[0].metadata.name}'
-            outputs:
-              - name: konnectgatewaycontrolplane_name
-                value: ($stdout)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongservice -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].metadata.name}'
-            outputs:
-              - name: kongservice_name
-                value: ($stdout)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongupstream -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].metadata.name}'
-            outputs:
-              - name: kongupstream_name
-                value: ($stdout)
-        # Wait for KongRoute to be programmed before asserting
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=120s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Assert Kong resources using common templates
-        - assert:
-            file: ../common/assertions/kongroute.yaml
-        - assert:
-            file: ../common/assertions/kongservice.yaml
-        - assert:
-            file: ../common/assertions/kongupstream.yaml
-        - assert:
-            file: ../common/assertions/kongtarget.yaml
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
     
-    # Step 4: Verify data plane is configured and traffic flows
-    - name: verify-data-plane
-      description: Verify that the Kong data plane is properly configured and can route traffic
-      try:
-        # Collect bindings for connectivity tests
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.metadata.name}'
-            outputs:
-              - name: hybrid_gateway_name
-                value: ($stdout)
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.metadata.namespace}'
-            outputs:
-              - name: hybrid_gateway_namespace
-                value: ($stdout)
-        - script:
-            env:
-              - name: HTTPROUTE_NAME
-                value: ($httproute_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get httproute ${HTTPROUTE_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.spec.rules[0].matches[0].path.value}'
-            outputs:
-              - name: route_path
-                value: ($stdout)
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($hybrid_gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($hybrid_gateway_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Test from within the cluster
-        - description: Test connectivity from within the cluster
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              POD_NAME="curl-test-$(date +%s)-$$"
-              kubectl run ${POD_NAME} --image=curlimages/curl:latest --rm -i --restart=Never -n ${KONG_NAMESPACE} -- \
-                curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w '%{http_code}' http://${PROXY_IP}${ROUTE_PATH}
-            check:
-              (contains($stdout, '200')): true
-        # Test from outside the cluster
-        - description: Test connectivity from outside the cluster
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}
-            check:
-              (contains($stdout, '200')): true
+    # Step 12: Verify that the HTTPRoute backend is translated into a KongService resource.
+    - name: Assert-kong-service
+      description: Assert that the KongService resource is created for the HTTPRoute.
+      use:
+        template: ../common/_step_templates/assert-kongService.yaml
+
+    # Step 13: Verify that the HTTPRoute backend is translated into a KongUpstream resource.
+    - name: Assert-kong-upstream
+      description: Assert that the KongUpstream resource is created for the HTTPRoute.
+      use:
+        template: ../common/_step_templates/assert-kongUstream.yaml
     
-    # Step 5: Update HTTPRoute
-    - name: update-httproute
-      description: Update HTTPRoute and verify changes propagate
+    # Step 14: Verify that the KongUpstream has KongTarget resources created for it.
+    - name: Assert-kong-target
+      description: Assert that the KongTarget resource is created for the KongUpstream.
+      use:
+        template: ../common/_step_templates/assert-kongTarget.yaml
       bindings:
-        # Map test bindings to assertion variable names (strip_path=false for updated route)
-        - name: namespace
-          value: ($kong_namespace)
-        - name: hybrid_gateway_name
-          value: ($gateway_name)
-        - name: hybrid_gateway_namespace
-          value: ($kong_namespace)
-        - name: managedby_name
-          value: ($httproute_name)
-        - name: managedby_namespace
-          value: ($kong_namespace)
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: target_weight
+          value: 1
+    # Step 15: Verify that the TLS certificate deployed to the dataplane matches the TLS secret.
+    - name: Verify-TLS-Fingerprint
+      description: Verify that the TLS certificate deployed to the dataplane matches the TLS secret.
+      use:
+        template: ../common/_step_templates/verify-gateway-tls-fingerprint.yaml
+
+    # Step 16: Verify that the dataplane is configured, traffic can be routed, and TLS certificates are working.
+    # The verification is done by sending an HTTPS request to the gateway and checking the response from the host.
+    - name: Verify-HTTPS-traffic-from-host
+      description: Verify that HTTPS traffic can be routed through the gateway to the echo service from the host.
+      use:
+        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/echo"
+        - name: insecure
+          value: "true"
+   
+    # Step 17: Verify that the dataplane is configured, traffic can be routed, and TLS certificates are working.
+    # The verification is done by sending an HTTPS request to the gateway and checking the response from within the cluster.
+    - name: Verify-HTTPS-traffic-from-cluster
+      description: Verify that HTTPS traffic can be routed through the gateway to the echo service from the cluster.
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/echo"
+        - name: insecure
+          value: "true"
+
+    # Step 18: Verify that HTTP traffic can be routed through the gateway to the echo service from the host.
+    - name: Verify-HTTP-traffic-from-host
+      description: Verify that HTTP traffic can be routed through the gateway to the echo service from the host.
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/echo"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+
+    # Step 19: Verify that HTTP traffic can be routed through the gateway to the echo service from within the cluster.
+    - name: Verify-HTTP-traffic-from-cluster
+      description: Verify that HTTP traffic can be routed through the gateway to the echo service from the cluster.
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/echo"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+    
+    # Step 20: Create the httpbin service that will receive the routed traffic.
+    - name: Create-httpbin-service
+      description: Create and assert an httpbin service to route traffic to.
+      use:
+        template: ../common/_step_templates/apply-assert-httpbinService.yaml
+    
+    # Step 21: Get current Kong resources, update HTTPRoute, and verify old resources are deleted.
+    - name: Update-httproute-and-verify-cleanup
+      description: Get current Kong resource names, update HTTPRoute to httpbin backend, and verify old echo resources are deleted.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+              - name: GATEWAY_NAMESPACE
+                value: ($gateway_namespace)
+              - name: HTTP_ROUTE_NAME
+                value: ($http_route_name)
+              - name: HTTP_ROUTE_NAMESPACE
+                value: ($http_route_namespace)
+              - name: RESOURCE_TYPES
+                value: "kongservices.configuration.konghq.com,kongroutes.configuration.konghq.com,kongupstreams.configuration.konghq.com,kongtargets.configuration.konghq.com"
+            content: |
+              bash ../common/scripts/get_kong_resources.sh
+            outputs:
+              - name: old_resources
+                value: (json_parse($stdout))
+        - apply:
+            file: 03-update-httpRoute.yaml
+        - script:
+            env:
+              - name: RESOURCES_JSON
+                value: (to_string($old_resources))
+              - name: TIMEOUT
+                value: "60"
+            content: |
+              bash ../common/scripts/wait_for_kong_resources_deletion.sh
+        - assert:
+            file: 04-assert-update-httpRoute.yaml
+      bindings:
+        - name: route_hosts
+          value:
+            - ($fqdn)
+    
+    # Step 22: Verify that the HTTPRoute backend is translated into a KongService resource for httpbin.
+    - name: Assert-kong-service-httpbin
+      description: Assert that the KongService resource is created for the httpbin backend.
+      use:
+        template: ../common/_step_templates/assert-kongService.yaml
+    
+    # Step 23: Verify that the updated HTTPRoute is translated into a KongRoute resource.
+    - name: Assert-kong-route-updated
+      description: Assert that the KongRoute resource is updated for the HTTPRoute.
+      use:
+        template: ../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value: 
+            - "~/get$"
+            - "~/post$"
+            - "~/put$"
+            - "~/patch$"
+            - "~/delete$"
+            - "~/status$"
+            - "/status/"
+        - name: route_methods
+          value:
+            - "GET"
+            - "POST"
+            - "PUT"
+            - "PATCH"
+            - "DELETE"
         - name: strip_path
           value: false
-        - name: weight
-          value: 1
-      try:
-        # Collect old Kong resource names before update
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
-            outputs:
-              - name: old_kongroute_names
-                value: ($stdout)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongservice -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
-            outputs:
-              - name: old_kongservice_names
-                value: ($stdout)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongupstream -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
-            outputs:
-              - name: old_kongupstream_names
-                value: ($stdout)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}'
-            outputs:
-              - name: old_kongtarget_names
-                value: ($stdout)
-        # Apply the update
-        - apply:
-            file: 04-update-httproute.yaml
-        - assert:
-            file: 04-assert-updated-resources.yaml
-        # Wait for old resources to be deleted
-        - script:
-            env:
-              - name: OLD_NAMES
-                value: ($old_kongroute_names)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              if [ -n "$OLD_NAMES" ]; then
-                for name in $OLD_NAMES; do
-                  echo "Waiting for old KongRoute $name to be deleted..."
-                  kubectl wait --for=delete kongroute/$name -n ${KONG_NAMESPACE} --timeout=60s || true
-                done
-              fi
-        - script:
-            env:
-              - name: OLD_NAMES
-                value: ($old_kongservice_names)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              if [ -n "$OLD_NAMES" ]; then
-                for name in $OLD_NAMES; do
-                  echo "Waiting for old KongService $name to be deleted..."
-                  kubectl wait --for=delete kongservice/$name -n ${KONG_NAMESPACE} --timeout=60s || true
-                done
-              fi
-        - script:
-            env:
-              - name: OLD_NAMES
-                value: ($old_kongupstream_names)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              if [ -n "$OLD_NAMES" ]; then
-                for name in $OLD_NAMES; do
-                  echo "Waiting for old KongUpstream $name to be deleted..."
-                  kubectl wait --for=delete kongupstream/$name -n ${KONG_NAMESPACE} --timeout=60s || true
-                done
-              fi
-        - script:
-            env:
-              - name: OLD_NAMES
-                value: ($old_kongtarget_names)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              if [ -n "$OLD_NAMES" ]; then
-                for name in $OLD_NAMES; do
-                  echo "Waiting for old KongTarget $name to be deleted..."
-                  kubectl wait --for=delete kongtarget/$name -n ${KONG_NAMESPACE} --timeout=60s || true
-                done
-              fi
-        # Wait for new KongRoute to be programmed
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl wait --for=condition=Programmed --timeout=60s kongroute -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Get dynamic resource names and route paths from updated HTTPRoute
-        - script:
-            env:
-              - name: HTTPROUTE_NAME
-                value: ($httproute_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get httproute ${HTTPROUTE_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.spec.rules[*].matches[*].path.value}' | jq -Rsc 'split(" ")'
-            outputs:
-              - name: route_paths_json
-                value: ($stdout)
-        - script:
-            env:
-              - name: HTTPROUTE_NAME
-                value: ($httproute_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              OUTPUT=$(kubectl get httproute ${HTTPROUTE_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.spec.rules[*].matches[*].method}')
-              if [ -z "$OUTPUT" ]; then
-                echo '[]'
-              else
-                echo "$OUTPUT" | tr -d '\n' | jq -Rsc 'split(" ")'
-              fi
-            outputs:
-              - name: route_methods_json
-                value: ($stdout)
-        # Collect Kong resource names after reconciliation
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get konnectgatewaycontrolplane -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=gateway -o jsonpath='{.items[0].metadata.name}'
-            outputs:
-              - name: konnectgatewaycontrolplane_name
-                value: ($stdout)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongservice -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].metadata.name}'
-            outputs:
-              - name: kongservice_name
-                value: ($stdout)
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get kongupstream -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[0].metadata.name}'
-            outputs:
-              - name: kongupstream_name
-                value: ($stdout)
-        # Verify Kong resources are updated
-        - assert:
-            file: ../common/assertions/kongroute.yaml
-        - assert:
-            file: ../common/assertions/kongservice.yaml
-        - assert:
-            file: ../common/assertions/kongupstream.yaml
-        - assert:
-            file: ../common/assertions/kongtarget.yaml
-        # Additional assertion for methods field (specific to this step)
-        - assert:
-            resource:
-              apiVersion: configuration.konghq.com/v1alpha1
-              kind: KongRoute
-              metadata:
-                namespace: ($kong_namespace)
-              spec:
-                methods: (parse_json($route_methods_json))
-        # Test the updated routes
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${KONG_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
 
-        # Create a test pod for in-cluster tests
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl run curl-test-pod --image=curlimages/curl:latest --restart=Never -n ${KONG_NAMESPACE} -- sleep 3600
-              kubectl wait --for=condition=Ready pod/curl-test-pod -n ${KONG_NAMESPACE} --timeout=60s
-
-        # Test from within the cluster
-        - description: Test GET /get endpoint from within cluster
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl exec curl-test-pod -n ${KONG_NAMESPACE} -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null http://${PROXY_IP}/get
-            check:
-              (contains($stdout, '200')): true
-
-        - description: Test POST /post endpoint from within cluster
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl exec curl-test-pod -n ${KONG_NAMESPACE} -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X POST http://${PROXY_IP}/post
-            check:
-              (contains($stdout, '200')): true
-
-        - description: Test PUT /put endpoint from within cluster
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl exec curl-test-pod -n ${KONG_NAMESPACE} -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X PUT http://${PROXY_IP}/put
-            check:
-              (contains($stdout, '200')): true
-
-        - description: Test PATCH /patch endpoint from within cluster
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl exec curl-test-pod -n ${KONG_NAMESPACE} -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X PATCH http://${PROXY_IP}/patch
-            check:
-              (contains($stdout, '200')): true
-
-        - description: Test DELETE /delete endpoint from within cluster
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl exec curl-test-pod -n ${KONG_NAMESPACE} -- curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -w '%{http_code}' -o /dev/null -X DELETE http://${PROXY_IP}/delete
-            check:
-              (contains($stdout, '200')): true
-
-        # Delete the test pod
-        - script:
-            env:
-              - name: KONG_NAMESPACE
-                value: ($kong_namespace)
-            content: |
-              kubectl delete pod curl-test-pod -n ${KONG_NAMESPACE} --ignore-not-found=true --wait=false
-        
-        # Test from outside the cluster
-        - description: Test GET /get endpoint from host
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/get
-            check:
-              (contains($stdout, '200')): true
-        
-        - description: Test POST /post endpoint from host
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X POST http://${PROXY_IP}/post
-            check:
-              (contains($stdout, '200')): true
-        
-        - description: Test PUT /put endpoint from host
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PUT http://${PROXY_IP}/put
-            check:
-              (contains($stdout, '200')): true
-        
-        - description: Test PATCH /patch endpoint from host
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X PATCH http://${PROXY_IP}/patch
-            check:
-              (contains($stdout, '200')): true
-        
-        - description: Test DELETE /delete endpoint from host
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" -X DELETE http://${PROXY_IP}/delete
-            check:
-              (contains($stdout, '200')): true
+    # Step 24: Verify that the HTTPRoute backend is translated into a KongUpstream resource for httpbin.
+    - name: Assert-kong-upstream-httpbin
+      description: Assert that the KongUpstream resource is created for the httpbin backend.
+      use:
+        template: ../common/_step_templates/assert-kongUstream.yaml
     
+    # Step 25: Verify that the KongUpstream has KongTarget resources created for httpbin.
+    - name: Assert-kong-target-httpbin
+      description: Assert that the KongTarget resource is created for the httpbin KongUpstream.
+      use:
+        template: ../common/_step_templates/assert-kongTarget.yaml
+      bindings:
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: target_weight
+          value: 1
+    
+    # Step 26: Test GET /get endpoint from host.
+    - name: Verify-GET-traffic-from-host
+      description: Verify that GET requests to /get work from the host.
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+    
+    # Step 27: Test POST /post endpoint from host.
+    - name: Verify-POST-traffic-from-host
+      description: Verify that POST requests to /post work from the host.
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/post"
+        - name: http_method
+          value: "POST"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+    
+    # Step 28: Test PUT /put endpoint from host.
+    - name: Verify-PUT-traffic-from-host
+      description: Verify that PUT requests to /put work from the host.
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/put"
+        - name: http_method
+          value: "PUT"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+    
+    # Step 29: Test PATCH /patch endpoint from host.
+    - name: Verify-PATCH-traffic-from-host
+      description: Verify that PATCH requests to /patch work from the host.
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/patch"
+        - name: http_method
+          value: "PATCH"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+    
+    # Step 30: Test DELETE /delete endpoint from host.
+    - name: Verify-DELETE-traffic-from-host
+      description: Verify that DELETE requests to /delete work from the host.
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/delete"
+        - name: http_method
+          value: "DELETE"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+    
+    # Step 31: Test GET /get endpoint from cluster.
+    - name: Verify-GET-traffic-from-cluster
+      description: Verify that GET requests to /get work from within the cluster.
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+    
+    # Step 32: Test POST /post endpoint from cluster.
+    - name: Verify-POST-traffic-from-cluster
+      description: Verify that POST requests to /post work from within the cluster.
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/post"
+        - name: http_method
+          value: "POST"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+    
+    # Step 33: Test PUT /put endpoint from cluster.
+    - name: Verify-PUT-traffic-from-cluster
+      description: Verify that PUT requests to /put work from within the cluster.
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/put"
+        - name: http_method
+          value: "PUT"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+    
+    # Step 34: Test PATCH /patch endpoint from cluster.
+    - name: Verify-PATCH-traffic-from-cluster
+      description: Verify that PATCH requests to /patch work from within the cluster.
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/patch"
+        - name: http_method
+          value: "PATCH"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+    
+    # Step 35: Test DELETE /delete endpoint from cluster.
+    - name: Verify-DELETE-traffic-from-cluster
+      description: Verify that DELETE requests to /delete work from within the cluster.
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/delete"
+        - name: http_method
+          value: "DELETE"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+    
+    # Step 36: Test GET /get endpoint from host via HTTPS.
+    - name: Verify-GET-HTTPS-traffic-from-host
+      description: Verify that GET requests to /get work from the host via HTTPS.
+      use:
+        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: insecure
+          value: "true"
+    
+    # Step 37: Test POST /post endpoint from host via HTTPS.
+    - name: Verify-POST-HTTPS-traffic-from-host
+      description: Verify that POST requests to /post work from the host via HTTPS.
+      use:
+        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/post"
+        - name: http_method
+          value: "POST"
+        - name: insecure
+          value: "true"
+    
+    # Step 38: Test PUT /put endpoint from host via HTTPS.
+    - name: Verify-PUT-HTTPS-traffic-from-host
+      description: Verify that PUT requests to /put work from the host via HTTPS.
+      use:
+        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/put"
+        - name: http_method
+          value: "PUT"
+        - name: insecure
+          value: "true"
+    
+    # Step 39: Test PATCH /patch endpoint from host via HTTPS.
+    - name: Verify-PATCH-HTTPS-traffic-from-host
+      description: Verify that PATCH requests to /patch work from the host via HTTPS.
+      use:
+        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/patch"
+        - name: http_method
+          value: "PATCH"
+        - name: insecure
+          value: "true"
+    
+    # Step 40: Test DELETE /delete endpoint from host via HTTPS.
+    - name: Verify-DELETE-HTTPS-traffic-from-host
+      description: Verify that DELETE requests to /delete work from the host via HTTPS.
+      use:
+        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+      bindings:
+        - name: route_path
+          value: "/delete"
+        - name: http_method
+          value: "DELETE"
+        - name: insecure
+          value: "true"
+    
+    # Step 41: Test GET /get endpoint from cluster via HTTPS.
+    - name: Verify-GET-HTTPS-traffic-from-cluster
+      description: Verify that GET requests to /get work from within the cluster via HTTPS.
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: insecure
+          value: "true"
+    
+    # Step 42: Test POST /post endpoint from cluster via HTTPS.
+    - name: Verify-POST-HTTPS-traffic-from-cluster
+      description: Verify that POST requests to /post work from within the cluster via HTTPS.
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/post"
+        - name: http_method
+          value: "POST"
+        - name: insecure
+          value: "true"
+    
+    # Step 43: Test PUT /put endpoint from cluster via HTTPS.
+    - name: Verify-PUT-HTTPS-traffic-from-cluster
+      description: Verify that PUT requests to /put work from within the cluster via HTTPS.
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/put"
+        - name: http_method
+          value: "PUT"
+        - name: insecure
+          value: "true"
+    
+    # Step 44: Test PATCH /patch endpoint from cluster via HTTPS.
+    - name: Verify-PATCH-HTTPS-traffic-from-cluster
+      description: Verify that PATCH requests to /patch work from within the cluster via HTTPS.
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/patch"
+        - name: http_method
+          value: "PATCH"
+        - name: insecure
+          value: "true"
+    
+    # Step 45: Test DELETE /delete endpoint from cluster via HTTPS.
+    - name: Verify-DELETE-HTTPS-traffic-from-cluster
+      description: Verify that DELETE requests to /delete work from within the cluster via HTTPS.
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/delete"
+        - name: http_method
+          value: "DELETE"
+        - name: insecure
+          value: "true"
+  # Global catch block - runs on any step failure to help debug.
+  catch:
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: GatewayClass
+        name: (join('-', [($test_name), 'gateway-class']))
+        showEvents: true
+    
+    - describe:
+        apiVersion: gateway-operator.konghq.com/v2beta1
+        kind: GatewayConfiguration
+        name: (join('-', [($test_name), 'gateway-configuration']))
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: gateway-operator.konghq.com/v1alpha1
+        kind: KonnectAPIAuthConfiguration
+        name: (join('-', [($test_name), 'konnect-api-auth']))
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: gateway-operator.konghq.com/v1beta1
+        kind: KonnectGatewayControlPlane
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: Gateway
+        name: (join('-', [($test_name), 'gateway']))
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: apps/v1
+        kind: Deployment
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: v1
+        kind: Pod
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        name: (join('-', [($test_name), 'echo-route']))
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongService
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongRoute
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongUpstream
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongCertificate
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongSNI
+        namespace: ($namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: v1
+        kind: Secret
+        name: ($cert_secret_name)
+        namespace: ($cert_secret_namespace)
+        showEvents: true
+    
+    - describe:
+        apiVersion: v1
+        kind: Service
+        name: (join('-', [($test_name), 'echo']))
+        namespace: ($namespace)
+        showEvents: true

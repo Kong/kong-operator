@@ -195,7 +195,9 @@ HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["http:helm"].version' < $(M
 HELM = helm
 .PHONY: download.helm
 download.helm: mise yq ## Download helm locally if necessary.
-	$(MAKE) mise-install-global DEP_VER=http:helm
+# TODO: Re-enable once helm installation issue is resolved.
+# x-ref: https://kongstrong.slack.com/archives/C011RQPHDC7/p1768387019326359
+# 	$(MAKE) mise-install-global DEP_VER=http:helm
 
 KUBE_API_LINTER_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"].version' < $(MISE_FILE))
 KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter
@@ -410,7 +412,7 @@ CONFIG_RBAC_ROLE_DIR = $(CONFIG_DIR)/rbac/role
 
 
 .PHONY: manifests
-manifests: manifests.conversion-webhook manifests.validating-webhook manifests.versions manifests.crds manifests.role manifests.charts ## Generate ClusterRole and CustomResourceDefinition objects.
+manifests: manifests.conversion-webhook manifests.validating-webhook manifests.validating-policy manifests.versions manifests.crds manifests.role manifests.charts ## Generate ClusterRole and CustomResourceDefinition objects.
 
 .PHONY: manifests.conversion-webhook
 manifests.conversion-webhook: kustomize
@@ -419,6 +421,10 @@ manifests.conversion-webhook: kustomize
 .PHONY: manifests.validating-webhook
 manifests.validating-webhook: kustomize
 	KUSTOMIZE_BIN=$(KUSTOMIZE) go run hack/generators/validating-webhook/main.go
+
+.PHONY: manifests.validating-policy
+manifests.validating-policy: kustomize
+	KUSTOMIZE_BIN=$(KUSTOMIZE) go run hack/generators/validating-policy/main.go
 
 .PHONY: manifests.crds
 manifests.crds: controller-gen ## Generate CustomResourceDefinition objects.
@@ -643,7 +649,7 @@ test.api: gotestsum
 	./api/test/...
 
 .PHONY: _test.integration
-_test.integration: gotestsum download.telepresence
+_test.integration: gotestsum download.telepresence download.helm
 	KUBECONFIG=$(KUBECONFIG) \
 	TELEPRESENCE_BIN=$(TELEPRESENCE) \
 	GOFLAGS=$(GOFLAGS) \
@@ -750,9 +756,10 @@ test.e2e:
 		GOTESTFLAGS="$(GOTESTFLAGS)"
 
 CHAINSAW_TEST_DIR ?= ./test/e2e/chainsaw/hybridgateway,./test/e2e/chainsaw/conversion_webhook
+CHAINSAW_TEST_PARALLELISM ?= 4
 .PHONY: test.e2e.chainsaw
 test.e2e.chainsaw: chainsaw ## Run chainsaw e2e tests.
-	$(CHAINSAW) test --test-dir $(CHAINSAW_TEST_DIR)
+	$(CHAINSAW) test --quiet --parallel $(CHAINSAW_TEST_PARALLELISM) --test-dir $(CHAINSAW_TEST_DIR)
 
 NCPU := $(shell getconf _NPROCESSORS_ONLN)
 PARALLEL := $(if $(PARALLEL),$(PARALLEL),$(NCPU))
