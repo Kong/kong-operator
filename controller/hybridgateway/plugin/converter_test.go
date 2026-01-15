@@ -365,3 +365,223 @@ func TestTranslateRequestRedirectPath(t *testing.T) {
 		})
 	}
 }
+
+func TestTranslateURLRewrite(t *testing.T) {
+	tests := []struct {
+		name          string
+		filter        gwtypes.HTTPRouteFilter
+		path          string
+		expected      transformerData
+		expectedError string
+	}{
+		{
+			name: "missing URLRewrite config",
+			filter: gwtypes.HTTPRouteFilter{
+				Type:       gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: nil,
+			},
+			path:          "/api",
+			expectedError: "URLRewrite filter config is missing",
+		},
+		{
+			name: "hostname rewrite only",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Hostname: lo.ToPtr(gatewayv1.PreciseHostname("new-host.example.com")),
+				},
+			},
+			path: "/api",
+			expected: transformerData{
+				Add: transformerTargetSlice{
+					Headers: []string{"host:new-host.example.com"},
+				},
+				Replace: transformerTargetSliceReplace{
+					transformerTargetSlice: transformerTargetSlice{
+						Headers: []string{"host:new-host.example.com"},
+					},
+				},
+			},
+		},
+		{
+			name: "full path rewrite only",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:            gatewayv1.FullPathHTTPPathModifier,
+						ReplaceFullPath: lo.ToPtr("/new-path"),
+					},
+				},
+			},
+			path: "/api",
+			expected: transformerData{
+				Replace: transformerTargetSliceReplace{
+					Uri: "/new-path",
+				},
+			},
+		},
+		{
+			name: "full path rewrite with empty string",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:            gatewayv1.FullPathHTTPPathModifier,
+						ReplaceFullPath: lo.ToPtr(""),
+					},
+				},
+			},
+			path: "/api",
+			expected: transformerData{
+				Replace: transformerTargetSliceReplace{
+					Uri: "/",
+				},
+			},
+		},
+		{
+			name: "prefix match rewrite - root path with non-root prefix",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: lo.ToPtr("/api/v2"),
+					},
+				},
+			},
+			path: "/",
+			expected: transformerData{
+				Replace: transformerTargetSliceReplace{
+					Uri: `/api/v2$(uri_captures[1] == nil and "" or "/" .. uri_captures[1])`,
+				},
+			},
+		},
+		{
+			name: "prefix match rewrite - non-root path with non-root prefix",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: lo.ToPtr("/api/v2"),
+					},
+				},
+			},
+			path: "/api/v1",
+			expected: transformerData{
+				Replace: transformerTargetSliceReplace{
+					Uri: `/api/v2$(uri_captures[1])`,
+				},
+			},
+		},
+		{
+			name: "prefix match rewrite - root path with empty prefix",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: lo.ToPtr(""),
+					},
+				},
+			},
+			path: "/",
+			expected: transformerData{
+				Replace: transformerTargetSliceReplace{
+					Uri: `$(uri_captures[1] == nil and "/" or "/" .. uri_captures[1])`,
+				},
+			},
+		},
+		{
+			name: "prefix match rewrite - non-root path with empty prefix",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: lo.ToPtr(""),
+					},
+				},
+			},
+			path: "/api/v1",
+			expected: transformerData{
+				Replace: transformerTargetSliceReplace{
+					Uri: `$(uri_captures[1] == nil and "/" or uri_captures[1])`,
+				},
+			},
+		},
+		{
+			name: "prefix match rewrite - path with trailing slash",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: lo.ToPtr("/new/api/"),
+					},
+				},
+			},
+			path: "/old/api/",
+			expected: transformerData{
+				Replace: transformerTargetSliceReplace{
+					Uri: `/new/api$(uri_captures[1])`,
+				},
+			},
+		},
+		{
+			name: "hostname and path rewrite combined",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Hostname: lo.ToPtr(gatewayv1.PreciseHostname("new-host.example.com")),
+					Path: &gatewayv1.HTTPPathModifier{
+						Type:               gatewayv1.PrefixMatchHTTPPathModifier,
+						ReplacePrefixMatch: lo.ToPtr("/api/v2"),
+					},
+				},
+			},
+			path: "/api/v1",
+			expected: transformerData{
+				Add: transformerTargetSlice{
+					Headers: []string{"host:new-host.example.com"},
+				},
+				Replace: transformerTargetSliceReplace{
+					transformerTargetSlice: transformerTargetSlice{
+						Headers: []string{"host:new-host.example.com"},
+					},
+					Uri: `/api/v2$(uri_captures[1])`,
+				},
+			},
+		},
+		{
+			name: "unsupported path modifier type",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterURLRewrite,
+				URLRewrite: &gatewayv1.HTTPURLRewriteFilter{
+					Path: &gatewayv1.HTTPPathModifier{
+						Type: "UnsupportedType",
+					},
+				},
+			},
+			path:          "/api",
+			expectedError: "unsupported URLRewrite path modifier type: UnsupportedType",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := translateURLRewrite(tt.filter, tt.path)
+
+			if tt.expectedError != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expected.Add.Headers, result.Add.Headers)
+				assert.Equal(t, tt.expected.Replace.Headers, result.Replace.Headers)
+				assert.Equal(t, tt.expected.Replace.Uri, result.Replace.Uri)
+			}
+		})
+	}
+}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/api/configuration/v1alpha1"
@@ -65,9 +66,13 @@ func RouteForRule(
 		WithStripPath(metadata.ExtractStripPath(httpRoute.Annotations)).
 		WithKongService(serviceName)
 
+	// Check if the rule contains a URLRewrite or RequestRedirect filter with ReplacePrefixMatch:
+	// if so, we need to set a capture group on the KongRoute paths.
+	setCaptureGroup := needsCaptureGroup(rule)
+
 	// Add HTTPRoute matches
 	for _, match := range rule.Matches {
-		routeBuilder = routeBuilder.WithHTTPRouteMatch(match)
+		routeBuilder = routeBuilder.WithHTTPRouteMatch(match, setCaptureGroup)
 	}
 	newRoute, err := routeBuilder.Build()
 	if err != nil {
@@ -80,4 +85,25 @@ func RouteForRule(
 	}
 
 	return &newRoute, nil
+}
+
+// needsCaptureGroup checks if the given HTTPRoute rule requires a capture group
+// in the KongRoute paths based on the presence of URLRewrite or RequestRedirect
+// filters with ReplacePrefixMatch.
+func needsCaptureGroup(rule gwtypes.HTTPRouteRule) bool {
+	for _, filter := range rule.Filters {
+		switch {
+		case filter.Type == gatewayv1.HTTPRouteFilterURLRewrite &&
+			filter.URLRewrite != nil &&
+			filter.URLRewrite.Path != nil &&
+			filter.URLRewrite.Path.ReplacePrefixMatch != nil:
+			return true
+		case filter.Type == gatewayv1.HTTPRouteFilterRequestRedirect &&
+			filter.RequestRedirect != nil &&
+			filter.RequestRedirect.Path != nil &&
+			filter.RequestRedirect.Path.ReplacePrefixMatch != nil:
+			return true
+		}
+	}
+	return false
 }
