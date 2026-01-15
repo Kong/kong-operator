@@ -26,4 +26,4 @@ macos-arm64 = { asset_pattern = "telepresence-darwin-arm64" }
 
 [tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
-version = "26b2f4fe13b493c7c0a1bff33235dcc8721ac5ad"
+version = "18147eee9c4990d4b87e32849f6d50be5d5a59d4"
