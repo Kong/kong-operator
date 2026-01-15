@@ -100,6 +100,7 @@
   - `KongUpstream`
   - `KongCertificate`
   - `KongCACertificate`
+  - `KongConsumerGroup`
 
   To allow these references, users need to define a `KongReferenceGrant` resource
   in the namespace of the referenced resource, allowing access to the
@@ -109,6 +110,7 @@
   [#3033](https://github.com/Kong/kong-operator/pull/3033)
   [#3040](https://github.com/Kong/kong-operator/pull/3040)
   [#3044](https://github.com/Kong/kong-operator/pull/3044)
+  [#3064](https://github.com/Kong/kong-operator/pull/3064)
 - Added support for cross namespace references between the following Konnect
   entities and `core` `Secret`
 
