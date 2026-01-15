@@ -4,6 +4,7 @@ kind: Test
 metadata:
   name: httproute-complex-multiple-rules
 spec:
+  concurrent: false
   description: |
     This test validates complex HTTPRoute scenarios that combine multiple matching types:
     - Path matching (Exact and PathPrefix)

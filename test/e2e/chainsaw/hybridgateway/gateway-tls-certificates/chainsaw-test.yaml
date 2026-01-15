@@ -4,6 +4,7 @@ kind: Test
 metadata:
   name: gateway-tls-certificates
 spec:
+  concurrent: false
   description: |
     This test validates that the hybrid gateway controller correctly
     processes Gateway TLS listeners and creates KongCertificate and KongSNI

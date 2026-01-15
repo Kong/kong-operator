@@ -4,6 +4,7 @@ kind: Test
 metadata:
   name: httproute-multiple-backends
 spec:
+  concurrent: false
   description: |
     This test validates that the hybrid gateway controller correctly
     processes HTTPRoute with multiple backend references including:

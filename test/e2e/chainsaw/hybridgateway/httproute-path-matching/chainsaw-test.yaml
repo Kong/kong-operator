@@ -4,6 +4,7 @@ kind: Test
 metadata:
   name: httproute-path-matching
 spec:
+  concurrent: false
   description: |
     This test validates HTTPRoute path matching scenarios including PathPrefix,
     PathExact, multiple path matches in single rule, and the strip-path annotation.

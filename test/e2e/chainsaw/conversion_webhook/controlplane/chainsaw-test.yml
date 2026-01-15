@@ -4,6 +4,7 @@ kind: Test
 metadata:
   name: controlplane-conversion-from-v1beta1-to-v2beta1
 spec:
+  concurrent: false
   description: |
     This test validates that the v1beta1 ControlPlane is converted to v2beta1.
 

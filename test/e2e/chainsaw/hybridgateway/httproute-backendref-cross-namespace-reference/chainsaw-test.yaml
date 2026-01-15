@@ -4,6 +4,7 @@ kind: Test
 metadata:
   name: httproute-backendref-cross-namespace-reference
 spec:
+  concurrent: false
   description: |
     The case validates the scenario where an HTTPRoute can reference a
     Service as its backendRef when granted by proper ReferenceGrant.

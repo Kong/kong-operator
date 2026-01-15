@@ -4,6 +4,7 @@ kind: Test
 metadata:
   name: httproute-method-matching
 spec:
+  concurrent: false
   description: |
     This test validates HTTPRoute method matching scenarios including:
     - Single HTTP method (GET, POST, PUT, DELETE, PATCH)

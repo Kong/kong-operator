@@ -4,6 +4,7 @@ kind: Test
 metadata:
   name: httproute-header-match
 spec:
+  concurrent: false
   description: |
     This test validates that the hybrid gateway controller correctly
     processes a basic HTTPRoute with matches on headers and generates

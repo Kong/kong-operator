@@ -4,6 +4,7 @@ kind: Test
 metadata:
   name: httproute-multiple-parentrefs
 spec:
+  concurrent: false
   description: |
     This test validates that the hybrid gateway controller correctly
     processes an HTTPRoute with multiple ParentRefs, creating Kong
