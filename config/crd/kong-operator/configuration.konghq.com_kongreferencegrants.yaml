@@ -97,11 +97,11 @@ spec:
                   type: object
                   x-kubernetes-validations:
                   - message: Only KongConsumerGroup, KongCertificate, KongCACertificate,
-                      KongService, and KongUpstream kinds are supported for 'configuration.konghq.com'
-                      group
+                      KongService, KongUpstream and KongKeySet kinds are supported
+                      for 'configuration.konghq.com' group
                     rule: .self.group != 'configuration.konghq.com' || .self.kind
                       in ['KongConsumerGroup', 'KongService', 'KongCertificate', 'KongCACertificate',
-                      'KongUpstream' ]
+                      'KongUpstream', 'KongKeySet']
                 maxItems: 16
                 minItems: 1
                 type: array
