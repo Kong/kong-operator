@@ -21,6 +21,7 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	gwtypes "github.com/kong/kong-operator/internal/types"
+	"github.com/kong/kong-operator/test/helpers/certificate"
 	"github.com/kong/kong-operator/test/mocks/metricsmocks"
 )
 
@@ -410,47 +411,16 @@ type mockConsumer struct{}
 func (mc *mockConsumer) Consume(_ context.Context, _ Metrics) error { return nil }
 
 func TestMetricsScrapeManager_Start(t *testing.T) {
+	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
 	caSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "ca-secret",
 			Namespace: "kong-system",
 		},
 		Data: map[string][]byte{
-			"ca.crt": []byte(`` +
-				`-----BEGIN CERTIFICATE-----` + "\n" +
-				`MIIBwTCCAWigAwIBAgIIKs87j5BiGj4wCgYIKoZIzj0EAwIwRTELMAkGA1UEBhMC` +
-				`VVMxEzARBgNVBAoTCktvbmcsIEluYy4xITAfBgNVBAMTGEtvbmcgR2F0ZXdheSBP` +
-				`cGVyYXRvciBDQTAeFw0yNDAyMTIxMDM3NDRaFw0zNDAyMDkyMTQ0MjRaMEUxCzAJ` +
-				`BgNVBAYTAlVTMRMwEQYDVQQKEwpLb25nLCBJbmMuMSEwHwYDVQQDExhLb25nIEdh` +
-				`dGV3YXkgT3BlcmF0b3IgQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQLj/6b` +
-				`NM6qJFqnFcv+MZeamXilwpI0y7SbKfaSu1IrbMSL/anHaqRTDTHuuft9AuMj00W2` +
-				`T3iQyVLT5cf7dqzxo0IwQDAOBgNVHQ8BAf8EBAMCAqQwDwYDVR0TAQH/BAUwAwEB` +
-				`/zAdBgNVHQ4EFgQUXcm63z6XvW7V2QurDH2gesszVpAwCgYIKoZIzj0EAwIDRwAw` +
-				`RAIgUXfDI3Touxkhv1TQtU9piBDoaVMg2iVlvkXdJOdoBnICIBvwJLbX3u6Yr+ap` +
-				`WHQ15pbL+bpfn7O3LfGp7YpUWDv3` + "\n" +
-				`-----END CERTIFICATE-----`,
-			),
-			"tls.crt": []byte(`` +
-				`-----BEGIN CERTIFICATE-----` + "\n" +
-				`MIIBwTCCAWigAwIBAgIIKs87j5BiGj4wCgYIKoZIzj0EAwIwRTELMAkGA1UEBhMC` +
-				`VVMxEzARBgNVBAoTCktvbmcsIEluYy4xITAfBgNVBAMTGEtvbmcgR2F0ZXdheSBP` +
-				`cGVyYXRvciBDQTAeFw0yNDAyMTIxMDM3NDRaFw0zNDAyMDkyMTQ0MjRaMEUxCzAJ` +
-				`BgNVBAYTAlVTMRMwEQYDVQQKEwpLb25nLCBJbmMuMSEwHwYDVQQDExhLb25nIEdh` +
-				`dGV3YXkgT3BlcmF0b3IgQ0EwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAAQLj/6b` +
-				`NM6qJFqnFcv+MZeamXilwpI0y7SbKfaSu1IrbMSL/anHaqRTDTHuuft9AuMj00W2` +
-				`T3iQyVLT5cf7dqzxo0IwQDAOBgNVHQ8BAf8EBAMCAqQwDwYDVR0TAQH/BAUwAwEB` +
-				`/zAdBgNVHQ4EFgQUXcm63z6XvW7V2QurDH2gesszVpAwCgYIKoZIzj0EAwIDRwAw` +
-				`RAIgUXfDI3Touxkhv1TQtU9piBDoaVMg2iVlvkXdJOdoBnICIBvwJLbX3u6Yr+ap` +
-				`WHQ15pbL+bpfn7O3LfGp7YpUWDv3` + "\n" +
-				`-----END CERTIFICATE-----`,
-			),
-			"tls.key": []byte(`` +
-				`-----BEGIN EC PRIVATE KEY-----` + "\n" +
-				`MHcCAQEEIHj7JB7holIu7giiCIhKlQcRX6Xvst+EklaFANbAy6L2oAoGCCqGSM49` +
-				`AwEHoUQDQgAEC4/+mzTOqiRapxXL/jGXmpl4pcKSNMu0myn2krtSK2zEi/2px2qk` +
-				`Uw0x7rn7fQLjI9NFtk94kMlS0+XH+3as8Q==` + "\n" +
-				`-----END EC PRIVATE KEY-----`,
-			),
+			"ca.crt":  cert,
+			"tls.crt": cert,
+			"tls.key": key,
 		},
 	}
 
