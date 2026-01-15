@@ -22,6 +22,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/modules/manager/scheme"
+	"github.com/kong/kong-operator/test/helpers/certificate"
 )
 
 func TestNewGatewayConverter(t *testing.T) {
@@ -321,6 +322,8 @@ func TestBuildKongSNI(t *testing.T) {
 }
 
 func TestProcessListenerCertificate(t *testing.T) {
+	cert, key := certificate.MustGenerateCertPEMFormat()
+
 	tests := []struct {
 		name            string
 		gateway         *gwtypes.Gateway
@@ -357,15 +360,8 @@ func TestProcessListenerCertificate(t *testing.T) {
 					},
 					Type: corev1.SecretTypeTLS,
 					Data: map[string][]byte{
-						"tls.crt": []byte(`-----BEGIN CERTIFICATE-----
-MIICljCCAX4CCQCKz8Zr8vLwRTANBgkqhkiG9w0BAQsFADANMQswCQYDVQQGEwJV
-UzAeFw0yMzAxMDEwMDAwMDBaFw0yNDAxMDEwMDAwMDBaMA0xCzAJBgNVBAYTAlVT
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z5UmZKWmN6DXQT0x1xN
------END CERTIFICATE-----`),
-						"tls.key": []byte(`-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRnlSZkpaY3oNd
-BPTHXE0wDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANGeVJmSlpjeg10E9Mdc
------END PRIVATE KEY-----`),
+						"tls.crt": cert,
+						"tls.key": key,
 					},
 				}
 				require.NoError(t, cl.Create(context.Background(), secret))
@@ -546,13 +542,8 @@ BPTHXE0wDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBANGeVJmSlpjeg10E9Mdc
 					},
 					Type: corev1.SecretTypeTLS,
 					Data: map[string][]byte{
-						"tls.crt": []byte(`-----BEGIN CERTIFICATE-----
-MIICljCCAX4CCQCKz8Zr8vLwRTANBgkqhkiG9w0BAQsFADANMQswCQYDVQQGEwJV
-UzAeFw0yMzAxMDEwMDAwMDBaFw0yNDAxMDEwMDAwMDBaMA0xCzAJBgNVBAYTAlVT
------END CERTIFICATE-----`),
-						"tls.key": []byte(`-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRnlSZkpaY3oNd
------END PRIVATE KEY-----`),
+						"tls.crt": cert,
+						"tls.key": key,
 					},
 				}
 				require.NoError(t, cl.Create(context.Background(), secret))
@@ -592,13 +583,8 @@ MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRnlSZkpaY3oNd
 					},
 					Type: corev1.SecretTypeTLS,
 					Data: map[string][]byte{
-						"tls.crt": []byte(`-----BEGIN CERTIFICATE-----
-MIICljCCAX4CCQCKz8Zr8vLwRTANBgkqhkiG9w0BAQsFADANMQswCQYDVQQGEwJV
-UzAeFw0yMzAxMDEwMDAwMDBaFw0yNDAxMDEwMDAwMDBaMA0xCzAJBgNVBAYTAlVT
------END CERTIFICATE-----`),
-						"tls.key": []byte(`-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRnlSZkpaY3oNd
------END PRIVATE KEY-----`),
+						"tls.crt": cert,
+						"tls.key": key,
 					},
 				}
 				// No ReferenceGrant created, so access should be denied
@@ -677,13 +663,8 @@ MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRnlSZkpaY3oNd
 					},
 					Type: corev1.SecretTypeTLS,
 					Data: map[string][]byte{
-						"tls.crt": []byte(`-----BEGIN CERTIFICATE-----
-MIICljCCAX4CCQCKz8Zr8vLwRTANBgkqhkiG9w0BAQsFADANMQswCQYDVQQGEwJV
-UzAeFw0yMzAxMDEwMDAwMDBaFw0yNDAxMDEwMDAwMDBaMA0xCzAJBgNVBAYTAlVT
------END CERTIFICATE-----`),
-						"tls.key": []byte(`-----BEGIN PRIVATE KEY-----
-MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRnlSZkpaY3oNd
------END PRIVATE KEY-----`),
+						"tls.crt": cert,
+						"tls.key": key,
 					},
 				}
 				require.NoError(t, cl.Create(context.Background(), secret))
@@ -742,10 +723,16 @@ MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDRnlSZkpaY3oNd
 }
 
 func TestTranslate(t *testing.T) {
-	httpsPort := gatewayv1.PortNumber(443)
-	tlsModeTerm := gatewayv1.TLSModeTerminate
-	httpsProtocol := gatewayv1.HTTPSProtocolType
-	httpProtocol := gatewayv1.HTTPProtocolType
+	const (
+		httpsPort     = gatewayv1.PortNumber(443)
+		httpsProtocol = gatewayv1.HTTPSProtocolType
+		httpProtocol  = gatewayv1.HTTPProtocolType
+	)
+	var (
+		testCert    = []byte("-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----")
+		testKey     = []byte("-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----")
+		tlsModeTerm = gatewayv1.TLSModeTerminate
+	)
 
 	tests := []struct {
 		name           string
@@ -844,8 +831,8 @@ func TestTranslate(t *testing.T) {
 					},
 					Type: corev1.SecretTypeTLS,
 					Data: map[string][]byte{
-						"tls.crt": []byte("-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"),
-						"tls.key": []byte("-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----"),
+						"tls.crt": testCert,
+						"tls.key": testKey,
 					},
 				}
 				require.NoError(t, cl.Create(context.Background(), secret))
@@ -971,8 +958,8 @@ func TestTranslate(t *testing.T) {
 						},
 						Type: corev1.SecretTypeTLS,
 						Data: map[string][]byte{
-							"tls.crt": []byte("-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"),
-							"tls.key": []byte("-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----"),
+							"tls.crt": testCert,
+							"tls.key": testKey,
 						},
 					}
 					require.NoError(t, cl.Create(context.Background(), secret))
@@ -1075,8 +1062,8 @@ func TestTranslate(t *testing.T) {
 					},
 					Type: corev1.SecretTypeTLS,
 					Data: map[string][]byte{
-						"tls.crt": []byte("-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"),
-						"tls.key": []byte("-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----"),
+						"tls.crt": testCert,
+						"tls.key": testKey,
 					},
 				}
 				require.NoError(t, cl.Create(context.Background(), secret))
@@ -1322,8 +1309,8 @@ func TestTranslate(t *testing.T) {
 					},
 					Type: corev1.SecretTypeTLS,
 					Data: map[string][]byte{
-						"tls.crt": []byte("-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"),
-						"tls.key": []byte("-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----"),
+						"tls.crt": testCert,
+						"tls.key": testKey,
 					},
 				}
 				require.NoError(t, cl.Create(context.Background(), secret))
@@ -1542,8 +1529,8 @@ func TestTranslate(t *testing.T) {
 					},
 					Type: corev1.SecretTypeTLS,
 					Data: map[string][]byte{
-						"tls.crt": []byte("-----BEGIN CERTIFICATE-----\ntest\n-----END CERTIFICATE-----"),
-						"tls.key": []byte("-----BEGIN PRIVATE KEY-----\ntest\n-----END PRIVATE KEY-----"),
+						"tls.crt": testCert,
+						"tls.key": testKey,
 					},
 				}
 				require.NoError(t, cl.Create(context.Background(), validSecret))

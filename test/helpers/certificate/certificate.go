@@ -1,6 +1,9 @@
 package certificate
 
 import (
+	"crypto"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -13,7 +16,14 @@ import (
 	"time"
 )
 
-type selfSignedCertificateOptions struct {
+type KeyType string
+
+const (
+	RSA   KeyType = "rsa"
+	ECDSA KeyType = "ecdsa"
+)
+
+type certificateOptions struct {
 	CommonName        string
 	DNSNames          []string
 	IPAddresses       []net.IP
@@ -21,29 +31,30 @@ type selfSignedCertificateOptions struct {
 	Expired           bool
 	MaxPathLen        int
 	ParentCertificate *tls.Certificate
+	KeyType           KeyType
 }
 
-type selfSignedCertificateOption func(selfSignedCertificateOptions) selfSignedCertificateOptions
+type certificateOption func(certificateOptions) certificateOptions
 
 // WithCommonName sets the CommonName field of the certificate.
-func WithCommonName(commonName string) selfSignedCertificateOption {
-	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
+func WithCommonName(commonName string) certificateOption {
+	return func(opts certificateOptions) certificateOptions {
 		opts.CommonName = commonName
 		return opts
 	}
 }
 
 // WithDNSNames sets DNS names for the certificate.
-func WithDNSNames(dnsNames ...string) selfSignedCertificateOption {
-	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
+func WithDNSNames(dnsNames ...string) certificateOption {
+	return func(opts certificateOptions) certificateOptions {
 		opts.DNSNames = append(opts.DNSNames, dnsNames...)
 		return opts
 	}
 }
 
 // WithIPAdresses sets IP addresses for the certificate.
-func WithIPAdresses(ipAddresses ...string) selfSignedCertificateOption {
-	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
+func WithIPAdresses(ipAddresses ...string) certificateOption {
+	return func(opts certificateOptions) certificateOptions {
 		for _, ip := range ipAddresses {
 			opts.IPAddresses = append(opts.IPAddresses, net.ParseIP(ip))
 		}
@@ -52,24 +63,24 @@ func WithIPAdresses(ipAddresses ...string) selfSignedCertificateOption {
 }
 
 // WithCATrue allows to use returned certificate to sign other certificates (uses BasicConstraints extension).
-func WithCATrue() selfSignedCertificateOption {
-	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
+func WithCATrue() certificateOption {
+	return func(opts certificateOptions) certificateOptions {
 		opts.CATrue = true
 		return opts
 	}
 }
 
 // WithAlreadyExpired sets the certificate to be already expired.
-func WithAlreadyExpired() selfSignedCertificateOption {
-	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
+func WithAlreadyExpired() certificateOption {
+	return func(opts certificateOptions) certificateOptions {
 		opts.Expired = true
 		return opts
 	}
 }
 
 // WithMaxPathLen sets the MaxPathLen constraint in the certificate.
-func WithMaxPathLen(maxLen int) selfSignedCertificateOption {
-	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
+func WithMaxPathLen(maxLen int) certificateOption {
+	return func(opts certificateOptions) certificateOptions {
 		opts.MaxPathLen = maxLen
 		return opts
 	}
@@ -77,26 +88,46 @@ func WithMaxPathLen(maxLen int) selfSignedCertificateOption {
 
 // WithParent allows to sign the certificate with a parent certificate.
 // When not provided, the certificate is self-signed.
-func WithParent(parent tls.Certificate) selfSignedCertificateOption {
-	return func(opts selfSignedCertificateOptions) selfSignedCertificateOptions {
+func WithParent(parent tls.Certificate) certificateOption {
+	return func(opts certificateOptions) certificateOptions {
 		opts.ParentCertificate = &parent
+		return opts
+	}
+}
+
+// WithKeyType sets the key type for certificate generation (RSA or ECDSA). Defaults to RSA.
+func WithKeyType(keyType KeyType) certificateOption {
+	return func(opts certificateOptions) certificateOptions {
+		opts.KeyType = keyType
 		return opts
 	}
 }
 
 // MustGenerateCert generates a [tls.Certificate] struct to be used in TLS client/listener configurations.
 // If no parent certificate is passed using WithParent option, the certificate is self-signed thus
-// returned cert can be used as CA for it.
-func MustGenerateCert(options ...selfSignedCertificateOption) tls.Certificate {
-	// Generate a new RSA private key.
-	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to generate RSA key: %s", err))
-	}
-
-	var certOptions selfSignedCertificateOptions
+// returned cert can be used as CA for it. Default is RSA key type unless overridden using WithKeyType option.
+func MustGenerateCert(options ...certificateOption) tls.Certificate {
+	var certOptions certificateOptions
+	certOptions.KeyType = RSA
 	for _, option := range options {
 		certOptions = option(certOptions)
+	}
+
+	// Generate private key based on key type
+	var privateKey crypto.PrivateKey
+	switch certOptions.KeyType {
+	case ECDSA:
+		key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to generate ECDSA key: %s", err))
+		}
+		privateKey = key
+	default:
+		key, err := rsa.GenerateKey(rand.Reader, 2048)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to generate RSA key: %s", err))
+		}
+		privateKey = key
 	}
 
 	notBefore := time.Now()
@@ -133,13 +164,15 @@ func MustGenerateCert(options ...selfSignedCertificateOption) tls.Certificate {
 		signingKey = privateKey
 	)
 	if certOptions.ParentCertificate != nil {
+		var err error
 		parent, err = x509.ParseCertificate(certOptions.ParentCertificate.Certificate[0])
 		if err != nil {
 			panic(fmt.Sprintf("Failed to parse parent certificate: %s", err))
 		}
-		signingKey = certOptions.ParentCertificate.PrivateKey.(*rsa.PrivateKey)
+		signingKey = certOptions.ParentCertificate.PrivateKey
 	}
-	derBytes, err := x509.CreateCertificate(rand.Reader, template, parent, &privateKey.PublicKey, signingKey)
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, template, parent, getPublicKey(privateKey), signingKey)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to create x509 certificate: %s", err))
 	}
@@ -153,10 +186,21 @@ func MustGenerateCert(options ...selfSignedCertificateOption) tls.Certificate {
 	return certificate
 }
 
+func getPublicKey(privateKey crypto.PrivateKey) crypto.PublicKey {
+	switch key := privateKey.(type) {
+	case *rsa.PrivateKey:
+		return &key.PublicKey
+	case *ecdsa.PrivateKey:
+		return &key.PublicKey
+	default:
+		panic("Unsupported private key type")
+	}
+}
+
 // MustGenerateCertPEMFormat generates a certificate and returns certificate and key in PEM format.
 // If no parent certificate is passed using WithParent option, the certificate is self-signed thus
-// returned cert can be used as CA for it.
-func MustGenerateCertPEMFormat(opts ...selfSignedCertificateOption) (cert []byte, key []byte) {
+// returned cert can be used as CA for it. Default is RSA key type unless overridden using WithKeyType option.
+func MustGenerateCertPEMFormat(opts ...certificateOption) (cert []byte, key []byte) {
 	return CertToPEMFormat(MustGenerateCert(opts...))
 }
 
@@ -167,13 +211,24 @@ func CertToPEMFormat(tlsCert tls.Certificate) (cert []byte, key []byte) {
 		Bytes: tlsCert.Certificate[0],
 	}
 
-	privateKey, ok := tlsCert.PrivateKey.(*rsa.PrivateKey)
-	if !ok {
-		panic("Private Key should be convertible to *rsa.PrivateKey")
-	}
-	keyBlock := &pem.Block{
-		Type:  "RSA PRIVATE KEY",
-		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+	var keyBlock *pem.Block
+	switch privateKey := tlsCert.PrivateKey.(type) {
+	case *rsa.PrivateKey:
+		keyBlock = &pem.Block{
+			Type:  "RSA PRIVATE KEY",
+			Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
+		}
+	case *ecdsa.PrivateKey:
+		keyBytes, err := x509.MarshalECPrivateKey(privateKey)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to marshal ECDSA private key: %s", err))
+		}
+		keyBlock = &pem.Block{
+			Type:  "EC PRIVATE KEY",
+			Bytes: keyBytes,
+		}
+	default:
+		panic("Unsupported private key type")
 	}
 
 	return pem.EncodeToMemory(certBlock), pem.EncodeToMemory(keyBlock)
