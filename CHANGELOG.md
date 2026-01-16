@@ -47,6 +47,8 @@
   [#3015](https://github.com/Kong/kong-operator/issues/3015)
 - HybridGateway: Added support to PathPrefixMatch for the `URLRewrite` `HTTPRoute` filter.
   [#3039](https://github.com/Kong/kong-operator/pull/3039)
+- HybridGateway: Added support to PathPrefixMatch for the `RequestRedirect` `HTTPRoute` filter.
+  [#3065](https://github.com/Kong/kong-operator/pull/3065)
 
 ### Fixes
 
