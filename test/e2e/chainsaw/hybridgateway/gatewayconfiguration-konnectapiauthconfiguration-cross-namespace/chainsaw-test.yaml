@@ -103,7 +103,7 @@ spec:
         - name: namespace
           value: ($gateway_namespace)
       use:
-        template: ../common/_step_templates/apply-assert-gateway.yaml
+        template: ../common/_step_templates/apply-assert-gateway-only-http-listener.yaml
     
     # Step 7: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
     - name: Assert-konnect-gateway-control-plane
@@ -151,12 +151,16 @@ spec:
     - name: Verify-HTTP-traffic-from-host
       description: Verify that HTTP traffic can be routed through the gateway to the echo service from the host.
       use:
-        template: ../common/_step_templates/verify-http-traffic-from-host-by-ip.yaml
+        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: gateway_name
           value: (join('-', [($test_name), 'gateway']))
         - name: route_path
           value: "/echo-x-ns-gwconf-konnect-api-auth"
+        - name: hostname
+          value: ""
+        - name: http_method
+          value: GET
         
   # Global catch block - runs on any step failure to help debug.
   catch:
