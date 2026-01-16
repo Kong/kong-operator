@@ -17,8 +17,9 @@ endif
 # Configuration - Build
 # ------------------------------------------------------------------------------
 
+# Some sensible Make defaults: https://tech.davis-hansson.com/p/make/
 SHELL = bash
-.SHELLFLAGS = -ec -o pipefail
+.SHELLFLAGS = -euc -o pipefail
 
 IMG ?= docker.io/kong/kong-operator
 KUSTOMIZE_IMG_NAME = docker.io/kong/kong-operator
@@ -195,9 +196,7 @@ HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["http:helm"].version' < $(M
 HELM = helm
 .PHONY: download.helm
 download.helm: mise yq ## Download helm locally if necessary.
-# TODO: Re-enable once helm installation issue is resolved.
-# x-ref: https://kongstrong.slack.com/archives/C011RQPHDC7/p1768387019326359
-# 	$(MAKE) mise-install-global DEP_VER=http:helm
+	$(MAKE) mise-install-global DEP_VER=http:helm
 
 KUBE_API_LINTER_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"].version' < $(MISE_FILE))
 KUBE_API_LINTER = $(PROJECT_DIR)/bin/installs/go-sigs-k8s-io-kube-api-linter-cmd-golangci-lint-kube-api-linter/$(KUBE_API_LINTER_VERSION)/bin/golangci-lint-kube-api-linter
@@ -566,6 +565,8 @@ CONFORMANCE_TEST_TIMEOUT ?= "20m"
 E2E_TEST_TIMEOUT ?= "20m"
 _CLUSTER_VERSION ?= $(shell $(YQ) eval -r -o=json '.[0] | sub("^v"; "")' .github/supported_k8s_node_versions.yaml)
 CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))
+TEST_KONG_HELM_CHART_VERSION ?= $(shell $(YQ) -ojson -r '.integration.helm.kong' < ./test/test_dependencies.yaml)
+KONG_CONTROLLER_FEATURE_GATES ?= GatewayAlpha=true
 
 .PHONY: test
 test: test.unit
@@ -661,11 +662,11 @@ _test.integration: gotestsum download.telepresence download.helm
 	-coverprofile=$(COVERPROFILE) \
 	$(GOTESTPATH)
 
-.PHONY: test.integration
-test.integration:
+.PHONY: test.integration-ko
+test.integration-ko:
 	@$(MAKE) _test.integration \
 		GOTESTFLAGS="-skip='BlueGreen|TestAdmissionWebhook_' $(GOTESTFLAGS)" \
-		COVERPROFILE="coverage.integration.out" \
+		COVERPROFILE="coverage.integration.ko.out" \
 		GOTESTPATH=./test/integration/
 
 # Prevent the following data race by not running via gotestsum:
@@ -740,6 +741,48 @@ test.integration_validatingwebhook: download.telepresence
 	-race -v \
 	-coverprofile="coverage.integration-validatingwebhook.out" \
 	./test/integration/validatingwebhook/
+
+PKG_LIST_KIC = ./pkg/...,./internal/...
+
+# Integration tests don't use gotestsum because there's a data race issue
+# when go toolchain is writing to os.Stderr which is being read in go-kong
+# https://github.com/Kong/go-kong/blob/c71247b5c8aae2/kong/client.go#L182
+# which in turn produces a data race becuase gotestsum needs go test invoked with
+# -json which enables the problematic branch in go toolchain (that writes to os.Stderr).
+#
+# Related issue: https://github.com/Kong/kubernetes-ingress-controller/issues/3754
+.PHONY: _test.integration-kic
+_test.integration-kic: mise yq
+	cd ingress-controller && \
+	TEST_KONG_HELM_CHART_VERSION="$(TEST_KONG_HELM_CHART_VERSION)" \
+	TEST_DATABASE_MODE="$(DBMODE)" \
+	GOFLAGS="-tags=integration_tests" \
+	KONG_CONTROLLER_FEATURE_GATES="$(KONG_CONTROLLER_FEATURE_GATES)" \
+	go test $(GOTESTFLAGS) \
+	-v \
+	-timeout $(INTEGRATION_TEST_TIMEOUT) \
+	-parallel $(NCPU) \
+	-race \
+	-ldflags="$(LDFLAGS_COMMON)" \
+	-covermode=atomic \
+	-coverpkg=$(PKG_LIST_KIC) \
+	-coverprofile=$(COVERAGE_OUT) \
+	./test/integration
+
+.PHONY: test.integration-kic.dbless
+test.integration-kic.dbless:
+	@$(MAKE) _test.integration-kic \
+		DBMODE=off \
+		COVERAGE_OUT=coverage.integration.kic.out
+
+.PHONY: test.integration-kic.postgres
+test.integration-kic.postgres:
+	@$(MAKE) _test.integration-kic \
+		DBMODE=postgres \
+		COVERAGE_OUT=coverage.integration.kic.out
+
+.PHONY: test.integration-kic
+test.integration-kic: test.integration-kic.dbless test.integration-kic.postgres
 
 .PHONY: _test.e2e
 _test.e2e: gotestsum
