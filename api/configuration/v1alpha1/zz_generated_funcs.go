@@ -1185,3 +1185,72 @@ func (obj *KongDataPlaneClientCertificate) SetControlPlaneRef(ref *commonv1alpha
 func (obj *KongDataPlaneClientCertificate) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
 	return obj.Spec.ControlPlaneRef
 }
+
+func (obj *KongMCPRunner) initKonnectStatus() {
+	obj.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{}
+}
+
+// GetKonnectStatus returns the Konnect status contained in the KongMCPRunner status.
+func (obj *KongMCPRunner) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
+	if obj.Status.Konnect == nil {
+		return nil
+	}
+	return &obj.Status.Konnect.KonnectEntityStatus
+}
+
+// GetKonnectID returns the Konnect ID in the KongMCPRunner status.
+func (obj *KongMCPRunner) GetKonnectID() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.ID
+}
+
+// SetKonnectID sets the Konnect ID in the KongMCPRunner status.
+func (obj *KongMCPRunner) SetKonnectID(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ID = id
+}
+
+// GetControlPlaneID returns the ControlPlane ID in the KongMCPRunner status.
+func (obj *KongMCPRunner) GetControlPlaneID() string {
+	if obj.Status.Konnect == nil {
+		return ""
+	}
+	return obj.Status.Konnect.ControlPlaneID
+}
+
+// SetControlPlaneID sets the ControlPlane ID in the KongMCPRunner status.
+func (obj *KongMCPRunner) SetControlPlaneID(id string) {
+	if obj.Status.Konnect == nil {
+		obj.initKonnectStatus()
+	}
+	obj.Status.Konnect.ControlPlaneID = id
+}
+
+// GetTypeName returns the KongMCPRunner Kind name
+func (obj KongMCPRunner) GetTypeName() string {
+	return "KongMCPRunner"
+}
+
+// GetConditions returns the Status Conditions
+func (obj *KongMCPRunner) GetConditions() []metav1.Condition {
+	return obj.Status.Conditions
+}
+
+// SetConditions sets the Status Conditions
+func (obj *KongMCPRunner) SetConditions(conditions []metav1.Condition) {
+	obj.Status.Conditions = conditions
+}
+
+// SetControlPlaneRef sets the ControlPlaneRef.
+func (obj *KongMCPRunner) SetControlPlaneRef(ref *commonv1alpha1.ControlPlaneRef) {
+	obj.Spec.ControlPlaneRef = ref
+}
+
+// GetControlPlaneRef returns the ControlPlaneRef.
+func (obj *KongMCPRunner) GetControlPlaneRef() *commonv1alpha1.ControlPlaneRef {
+	return obj.Spec.ControlPlaneRef
+}
