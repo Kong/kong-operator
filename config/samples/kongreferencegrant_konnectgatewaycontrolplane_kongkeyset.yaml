@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kong
+---
+# KongReferenceGrant that allows KongKeySet in default namespace
+# to reference the KonnectGatewayControlPlane in kong namespace.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-kongupstream-to-konnectgatewaycontrolplane
+  namespace: kong
+spec:
+  from:
+    - group: configuration.konghq.com
+      kind: KongKeySet
+      namespace: default
+  to:
+    - group: konnect.konghq.com
+      kind: KonnectGatewayControlPlane
+      # Optionally specify a specific KonnectGatewayControlPlane name
+      # name: my-control-plane
+---
+kind: KonnectGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha2
+metadata:
+  name: my-control-plane
+  namespace: kong
+spec:
+  createControlPlaneRequest:
+    name: my-control-plane
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+kind: KongKeySet
+apiVersion: configuration.konghq.com/v1alpha1
+metadata:
+  name: key-set-1
+  namespace: default
+spec:
+  name: key-set-1
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: my-control-plane
+      namespace: kong
