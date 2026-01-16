@@ -20332,6 +20332,7 @@ spec:
                           Currently the following resources are allowed to set this:
                           - cluster scoped resources (KongVault)
                           - KongService
+                          - KongDataPlaneClientCertificate
                         maxLength: 253
                         type: string
                     required:
@@ -20666,6 +20667,7 @@ spec:
                           Currently the following resources are allowed to set this:
                           - cluster scoped resources (KongVault)
                           - KongService
+                          - KongDataPlaneClientCertificate
                         maxLength: 253
                         type: string
                     required:
@@ -21337,6 +21339,7 @@ spec:
                           Currently the following resources are allowed to set this:
                           - cluster scoped resources (KongVault)
                           - KongService
+                          - KongDataPlaneClientCertificate
                         maxLength: 253
                         type: string
                     required:
@@ -21646,6 +21649,7 @@ spec:
                           Currently the following resources are allowed to set this:
                           - cluster scoped resources (KongVault)
                           - KongService
+                          - KongDataPlaneClientCertificate
                         maxLength: 253
                         type: string
                     required:
@@ -23391,6 +23395,7 @@ spec:
                           Currently the following resources are allowed to set this:
                           - cluster scoped resources (KongVault)
                           - KongService
+                          - KongDataPlaneClientCertificate
                         maxLength: 253
                         type: string
                     required:
@@ -23525,8 +23530,6 @@ spec:
           rule: '!has(self.spec.controlPlaneRef) ? true : (!self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef'
         - message: spec.cert is immutable when an entity is already Programmed
           rule: '(!self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : oldSelf.spec.cert == self.spec.cert'
-        - message: spec.controlPlaneRef cannot specify namespace for namespaced resource
-          rule: '(!has(self.spec.controlPlaneRef) || !has(self.spec.controlPlaneRef.konnectNamespacedRef)) ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)'
     served: true
     storage: true
     subresources:
@@ -23661,6 +23664,7 @@ spec:
                           Currently the following resources are allowed to set this:
                           - cluster scoped resources (KongVault)
                           - KongService
+                          - KongDataPlaneClientCertificate
                         maxLength: 253
                         type: string
                     required:
@@ -24018,6 +24022,7 @@ spec:
                           Currently the following resources are allowed to set this:
                           - cluster scoped resources (KongVault)
                           - KongService
+                          - KongDataPlaneClientCertificate
                         maxLength: 253
                         type: string
                     required:
@@ -24501,6 +24506,7 @@ spec:
                           Currently the following resources are allowed to set this:
                           - cluster scoped resources (KongVault)
                           - KongService
+                          - KongDataPlaneClientCertificate
                         maxLength: 253
                         type: string
                     required:
@@ -25360,8 +25366,8 @@ spec:
                   - namespace
                   type: object
                   x-kubernetes-validations:
-                  - message: Only KongConsumerGroup, KongCertificate, KongCACertificate, KongService, KongUpstream, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group
-                    rule: self.group != 'configuration.konghq.com' || self.kind in ['KongConsumerGroup', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream', 'KongKeySet', 'KongVault']
+                  - message: Only KongConsumerGroup, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group
+                    rule: self.group != 'configuration.konghq.com' || self.kind in ['KongConsumerGroup', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongDataPlaneClientCertificate', 'KongUpstream', 'KongKeySet', 'KongVault']
                   - message: namespace must be empty for KongVault and non-empty for other kinds
                     rule: 'self.kind == ''KongVault'' ? self.__namespace__ == "" : self.__namespace__ != ""'
                 maxItems: 16
@@ -25557,6 +25563,7 @@ spec:
                           Currently the following resources are allowed to set this:
                           - cluster scoped resources (KongVault)
                           - KongService
+                          - KongDataPlaneClientCertificate
                         maxLength: 253
                         type: string
                     required:
@@ -25963,6 +25970,7 @@ spec:
                           Currently the following resources are allowed to set this:
                           - cluster scoped resources (KongVault)
                           - KongService
+                          - KongDataPlaneClientCertificate
                         maxLength: 253
                         type: string
                     required:
@@ -27476,6 +27484,7 @@ spec:
                           Currently the following resources are allowed to set this:
                           - cluster scoped resources (KongVault)
                           - KongService
+                          - KongDataPlaneClientCertificate
                         maxLength: 253
                         type: string
                     required:
@@ -27973,6 +27982,7 @@ spec:
                           Currently the following resources are allowed to set this:
                           - cluster scoped resources (KongVault)
                           - KongService
+                          - KongDataPlaneClientCertificate
                         maxLength: 253
                         type: string
                     required:
@@ -28490,6 +28500,7 @@ spec:
                           Currently the following resources are allowed to set this:
                           - cluster scoped resources (KongVault)
                           - KongService
+                          - KongDataPlaneClientCertificate
                         maxLength: 253
                         type: string
                     required:
@@ -29651,6 +29662,7 @@ spec:
                                   Currently the following resources are allowed to set this:
                                   - cluster scoped resources (KongVault)
                                   - KongService
+                                  - KongDataPlaneClientCertificate
                                 maxLength: 253
                                 type: string
                             required:

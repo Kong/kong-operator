@@ -87,6 +87,7 @@ type KonnectNamespacedRef struct {
 	// Currently the following resources are allowed to set this:
 	// - cluster scoped resources (KongVault)
 	// - KongService
+	// - KongDataPlaneClientCertificate
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
