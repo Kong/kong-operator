@@ -7,14 +7,11 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
-	"math"
-	"math/big"
+	"strings"
 	"testing"
-	"time"
 
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
@@ -32,6 +29,7 @@ import (
 	"github.com/kong/kong-operator/controller/pkg/log"
 	"github.com/kong/kong-operator/controller/pkg/op"
 	k8sresources "github.com/kong/kong-operator/pkg/utils/kubernetes/resources"
+	"github.com/kong/kong-operator/test/helpers/certificate"
 )
 
 func Test_ensureContainerImageUpdated(t *testing.T) {
@@ -213,241 +211,192 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 
 	type NN = types.NamespacedName
 
-	testCases := []struct {
-		name                     string
-		dataPlane                *operatorv1beta1.DataPlane
-		subject                  string
-		mtlsCASecretNN           NN
-		keyConfig                KeyConfig
-		additionalMatchingLabels client.MatchingLabels
-		expectedResult           op.Result
-		expectedError            error
-		objectList               client.ObjectList
-	}{
-		{
-			name:      "no certificate secret exists and gets created as expected",
-			dataPlane: createDataPlane(NN{Name: "dp-1", Namespace: "ns"}),
-			subject:   "test-subject",
-			mtlsCASecretNN: NN{
-				Name:      "test-mtls-secret",
-				Namespace: "ns",
-			},
-			additionalMatchingLabels: nil,
-			keyConfig: KeyConfig{
-				Type: x509.ECDSA,
-			},
-			expectedResult: op.Created,
-			expectedError:  nil,
-		},
-		{
-			name:      "existing secret certificate gets deleted and re-created with it doesn't have the expected contents",
-			dataPlane: createDataPlane(NN{Name: "dp-1", Namespace: "ns"}, WithUUID(types.UID("1234"))),
-			subject:   "test-subject",
-			mtlsCASecretNN: NN{
-				Name:      "test-mtls-secret",
-				Namespace: "ns",
-			},
-			additionalMatchingLabels: nil,
-			keyConfig: KeyConfig{
-				Type: x509.ECDSA,
-			},
-			objectList: &corev1.SecretList{
-				Items: []corev1.Secret{
-					func() corev1.Secret {
-						dp := createDataPlane(NN{Name: "dp-1", Namespace: "ns"}, WithUUID(types.UID("1234")))
-
-						labels := k8sresources.GetManagedLabelForOwner(dp)
-						return corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "secret-1",
-								Namespace: "ns",
-								Labels:    labels,
-								OwnerReferences: []metav1.OwnerReference{
-									{
-										Kind:       "DataPlane",
-										APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
-										UID:        types.UID("1234"),
-									},
-								},
-							},
-						}
-					}(),
+	for _, keyType := range []certificate.KeyType{certificate.RSA, certificate.ECDSA} {
+		t.Run("TestMaybeCreateCertificateSecret for key type "+string(keyType), func(t *testing.T) {
+			testCases := []struct {
+				name                     string
+				dataPlane                *operatorv1beta1.DataPlane
+				subject                  string
+				mtlsCASecretNN           NN
+				additionalMatchingLabels client.MatchingLabels
+				expectedResult           op.Result
+				expectedError            error
+				objectList               client.ObjectList
+			}{
+				{
+					name:      "no certificate secret exists and gets created as expected",
+					dataPlane: createDataPlane(NN{Name: "dp-1", Namespace: "ns"}),
+					subject:   "test-subject",
+					mtlsCASecretNN: NN{
+						Name:      "test-mtls-secret",
+						Namespace: "ns",
+					},
+					additionalMatchingLabels: nil,
+					expectedResult:           op.Created,
+					expectedError:            nil,
 				},
-			},
-			expectedResult: op.Created,
-			expectedError:  nil,
-		},
-		{
-			name:      "when more than 1 secret exists, secrets are reduced",
-			dataPlane: createDataPlane(NN{Name: "dp-1", Namespace: "ns"}, WithUUID(types.UID("1234"))),
-			subject:   "test-subject",
-			mtlsCASecretNN: NN{
-				Name:      "test-mtls-secret",
-				Namespace: "ns",
-			},
-			additionalMatchingLabels: nil,
-			keyConfig: KeyConfig{
-				Type: x509.ECDSA,
-			},
-			objectList: &corev1.SecretList{
-				Items: []corev1.Secret{
-					func() corev1.Secret {
-						dp := createDataPlane(NN{Name: "dp-1", Namespace: "ns"}, WithUUID(types.UID("1234")))
+				{
+					name:      "existing secret certificate gets deleted and re-created with it doesn't have the expected contents",
+					dataPlane: createDataPlane(NN{Name: "dp-1", Namespace: "ns"}, WithUUID(types.UID("1234"))),
+					subject:   "test-subject",
+					mtlsCASecretNN: NN{
+						Name:      "test-mtls-secret",
+						Namespace: "ns",
+					},
+					additionalMatchingLabels: nil,
+					objectList: &corev1.SecretList{
+						Items: []corev1.Secret{
+							func() corev1.Secret {
+								dp := createDataPlane(NN{Name: "dp-1", Namespace: "ns"}, WithUUID(types.UID("1234")))
 
-						labels := k8sresources.GetManagedLabelForOwner(dp)
-						return corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "secret-1",
-								Namespace: "ns",
-								Labels:    labels,
-								OwnerReferences: []metav1.OwnerReference{
-									{
-										Kind:       "DataPlane",
-										APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
-										UID:        types.UID("1234"),
+								labels := k8sresources.GetManagedLabelForOwner(dp)
+								return corev1.Secret{
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      "secret-1",
+										Namespace: "ns",
+										Labels:    labels,
+										OwnerReferences: []metav1.OwnerReference{
+											{
+												Kind:       "DataPlane",
+												APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
+												UID:        types.UID("1234"),
+											},
+										},
 									},
-								},
-							},
-						}
-					}(),
-					func() corev1.Secret {
-						dp := createDataPlane(NN{Name: "dp-1", Namespace: "ns"}, WithUUID(types.UID("1234")))
+								}
+							}(),
+						},
+					},
+					expectedResult: op.Created,
+					expectedError:  nil,
+				},
+				{
+					name:      "when more than 1 secret exists, secrets are reduced",
+					dataPlane: createDataPlane(NN{Name: "dp-1", Namespace: "ns"}, WithUUID(types.UID("1234"))),
+					subject:   "test-subject",
+					mtlsCASecretNN: NN{
+						Name:      "test-mtls-secret",
+						Namespace: "ns",
+					},
+					additionalMatchingLabels: nil,
+					objectList: &corev1.SecretList{
+						Items: []corev1.Secret{
+							func() corev1.Secret {
+								dp := createDataPlane(NN{Name: "dp-1", Namespace: "ns"}, WithUUID(types.UID("1234")))
 
-						labels := k8sresources.GetManagedLabelForOwner(dp)
-						return corev1.Secret{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "secret-2",
-								Namespace: "ns",
-								Labels:    labels,
-								OwnerReferences: []metav1.OwnerReference{
-									{
-										Kind:       "DataPlane",
-										APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
-										UID:        types.UID("1234"),
+								labels := k8sresources.GetManagedLabelForOwner(dp)
+								return corev1.Secret{
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      "secret-1",
+										Namespace: "ns",
+										Labels:    labels,
+										OwnerReferences: []metav1.OwnerReference{
+											{
+												Kind:       "DataPlane",
+												APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
+												UID:        types.UID("1234"),
+											},
+										},
 									},
-								},
-							},
-						}
-					}(),
+								}
+							}(),
+							func() corev1.Secret {
+								dp := createDataPlane(NN{Name: "dp-1", Namespace: "ns"}, WithUUID(types.UID("1234")))
+
+								labels := k8sresources.GetManagedLabelForOwner(dp)
+								return corev1.Secret{
+									ObjectMeta: metav1.ObjectMeta{
+										Name:      "secret-2",
+										Namespace: "ns",
+										Labels:    labels,
+										OwnerReferences: []metav1.OwnerReference{
+											{
+												Kind:       "DataPlane",
+												APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
+												UID:        types.UID("1234"),
+											},
+										},
+									},
+								}
+							}(),
+						},
+					},
+					expectedResult: op.Noop,
+					expectedError:  errors.New("number of secrets reduced"),
 				},
-			},
-			expectedResult: op.Noop,
-			expectedError:  errors.New("number of secrets reduced"),
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			ctx := t.Context()
-
-			scheme := runtime.NewScheme()
-			require.NoError(t, corev1.AddToScheme(scheme))
-			require.NoError(t, certificatesv1.AddToScheme(scheme))
-			require.NoError(t, operatorv1beta1.AddToScheme(scheme))
-
-			builder := fakectrlruntimeclient.
-				NewClientBuilder().
-				WithScheme(scheme).
-				WithObjects(tc.dataPlane)
-			if tc.objectList != nil {
-				builder.WithLists(tc.objectList)
-			}
-			fakeClient := builder.Build()
-
-			caSecret, err := generateCACert(tc.mtlsCASecretNN)
-			require.NoError(t, err)
-			require.NoError(t, fakeClient.Create(ctx, caSecret))
-
-			res, secret, err := EnsureCertificate(
-				ctx,
-				tc.dataPlane,
-				tc.subject,
-				tc.mtlsCASecretNN,
-				[]certificatesv1.KeyUsage{
-					certificatesv1.UsageServerAuth,
-				},
-				tc.keyConfig,
-				fakeClient,
-				tc.additionalMatchingLabels,
-			)
-
-			if tc.expectedError != nil {
-				require.Error(t, err)
-				require.EqualError(t, tc.expectedError, "number of secrets reduced")
-				return
 			}
 
-			require.Equal(t, tc.expectedResult, res)
-			require.Equal(t, caSecret.Data["tls.crt"], secret.Data["ca.crt"], "created secret 'ca.crt' should be equal to CA cert's 'tls.crt'")
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					ctx := t.Context()
 
-			_, ok := secret.Data["tls.crt"]
-			require.True(t, ok, "generated secret does not contain 'tls.crt'")
+					scheme := runtime.NewScheme()
+					require.NoError(t, corev1.AddToScheme(scheme))
+					require.NoError(t, certificatesv1.AddToScheme(scheme))
+					require.NoError(t, operatorv1beta1.AddToScheme(scheme))
 
-			key, ok := secret.Data["tls.key"]
-			require.True(t, ok, "generated secret does not contain 'tls.key'")
-			tlsKeyPemBlock, _ := pem.Decode(key)
-			require.NotNil(t, tlsKeyPemBlock)
-			_, err = x509.ParseECPrivateKey(tlsKeyPemBlock.Bytes)
-			require.NoError(t, err)
+					builder := fakectrlruntimeclient.
+						NewClientBuilder().
+						WithScheme(scheme).
+						WithObjects(tc.dataPlane)
+					if tc.objectList != nil {
+						builder.WithLists(tc.objectList)
+					}
+					fakeClient := builder.Build()
+
+					cert, key := certificate.MustGenerateCertPEMFormat(
+						certificate.WithCommonName("Kong Operator CA"),
+						certificate.WithCATrue(),
+						certificate.WithKeyType(keyType),
+					)
+					caSecret := &corev1.Secret{
+						ObjectMeta: metav1.ObjectMeta{
+							Name:      tc.mtlsCASecretNN.Name,
+							Namespace: tc.mtlsCASecretNN.Namespace,
+						},
+						Data: map[string][]byte{
+							"tls.crt": cert,
+							"tls.key": key,
+						},
+					}
+					require.NoError(t, fakeClient.Create(ctx, caSecret))
+
+					res, secret, err := EnsureCertificate(
+						ctx,
+						tc.dataPlane,
+						tc.subject,
+						tc.mtlsCASecretNN,
+						[]certificatesv1.KeyUsage{
+							certificatesv1.UsageServerAuth,
+						},
+						fakeClient,
+						tc.additionalMatchingLabels,
+					)
+
+					if tc.expectedError != nil {
+						require.Error(t, err)
+						require.EqualError(t, tc.expectedError, "number of secrets reduced")
+						return
+					}
+
+					require.Equal(t, tc.expectedResult, res)
+					require.Equal(t, caSecret.Data["tls.crt"], secret.Data["ca.crt"], "created secret 'ca.crt' should be equal to CA cert's 'tls.crt'")
+
+					_, ok := secret.Data["tls.crt"]
+					require.True(t, ok, "generated secret does not contain 'tls.crt'")
+
+					key, ok = secret.Data["tls.key"]
+					require.True(t, ok, "generated secret does not contain 'tls.key'")
+					tlsKeyPemBlock, _ := pem.Decode(key)
+					require.NotNil(t, tlsKeyPemBlock)
+					_, algorithm, err := parsePrivateKey(tlsKeyPemBlock)
+					require.NoError(t, err)
+					require.Contains(t, strings.ToLower(algorithm.String()), keyType, "generated private key algorithm is not as expected")
+				})
+			}
 		})
 	}
-}
 
-func generateCACert(nn types.NamespacedName) (*corev1.Secret, error) {
-	serial, err := rand.Int(rand.Reader, big.NewInt(math.MaxInt64))
-	if err != nil {
-		return nil, err
-	}
-
-	template := x509.Certificate{
-		Subject: pkix.Name{
-			CommonName:   "Kong Operator CA",
-			Organization: []string{"Kong, Inc."},
-			Country:      []string{"US"},
-		},
-		SerialNumber:          serial,
-		SignatureAlgorithm:    x509.ECDSAWithSHA256,
-		NotBefore:             time.Now(),
-		NotAfter:              time.Now().Add(time.Second * 315400000),
-		KeyUsage:              x509.KeyUsageCertSign + x509.KeyUsageKeyEncipherment + x509.KeyUsageDigitalSignature,
-		BasicConstraintsValid: true,
-		IsCA:                  true,
-	}
-
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		return nil, err
-	}
-	privDer, err := x509.MarshalECPrivateKey(priv)
-	if err != nil {
-		return nil, err
-	}
-
-	der, err := x509.CreateCertificate(rand.Reader, &template, &template, priv.Public(), priv)
-	if err != nil {
-		return nil, err
-	}
-
-	signedSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: nn.Namespace,
-			Name:      nn.Name,
-		},
-		Type: corev1.SecretTypeTLS,
-		Data: map[string][]byte{
-			"tls.crt": pem.EncodeToMemory(&pem.Block{
-				Type:  "CERTIFICATE",
-				Bytes: der,
-			}),
-
-			"tls.key": pem.EncodeToMemory(&pem.Block{
-				Type:  "EC PRIVATE KEY",
-				Bytes: privDer,
-			}),
-		},
-	}
-
-	return signedSecret, nil
 }
 
 func Test_parsePrivateKey(t *testing.T) {
@@ -456,6 +405,7 @@ func Test_parsePrivateKey(t *testing.T) {
 		keyType          x509.PublicKeyAlgorithm
 		expectedAlg      x509.SignatureAlgorithm
 		expectedKeyType  any
+		rsaFormatPKCS8   bool
 		expectedErrorMsg string
 	}{
 		{
@@ -465,8 +415,15 @@ func Test_parsePrivateKey(t *testing.T) {
 			expectedKeyType: &ecdsa.PrivateKey{},
 		},
 		{
-			name:            "valid RSA private key",
+			name:            "valid RSA private key PKCS1 format",
 			keyType:         x509.RSA,
+			expectedAlg:     x509.SHA256WithRSA,
+			expectedKeyType: &rsa.PrivateKey{},
+		},
+		{
+			name:            "valid RSA private key PKCS8 format",
+			keyType:         x509.RSA,
+			rsaFormatPKCS8:  true,
 			expectedAlg:     x509.SHA256WithRSA,
 			expectedKeyType: &rsa.PrivateKey{},
 		},
@@ -491,17 +448,26 @@ func Test_parsePrivateKey(t *testing.T) {
 			case x509.RSA:
 				privKey, err := rsa.GenerateKey(rand.Reader, 2048)
 				require.NoError(t, err)
-				privKeyBytes = x509.MarshalPKCS1PrivateKey(privKey)
+				if tt.rsaFormatPKCS8 {
+					privKeyBytes, err = x509.MarshalPKCS8PrivateKey(privKey)
+					require.NoError(t, err)
+				} else {
+					privKeyBytes = x509.MarshalPKCS1PrivateKey(privKey)
+				}
 			default:
 				privKeyBytes = []byte{}
 			}
 
+			pemBlockType := tt.keyType.String() + " PRIVATE KEY"
+			if tt.rsaFormatPKCS8 {
+				pemBlockType = "PRIVATE KEY"
+			}
 			pemBlock := &pem.Block{
-				Type:  tt.keyType.String() + " PRIVATE KEY",
+				Type:  pemBlockType,
 				Bytes: privKeyBytes,
 			}
 
-			priv, alg, err := ParsePrivateKey(pemBlock)
+			priv, alg, err := parsePrivateKey(pemBlock)
 			if tt.expectedErrorMsg != "" {
 				require.Error(t, err)
 				assert.Equal(t, tt.expectedErrorMsg, err.Error())

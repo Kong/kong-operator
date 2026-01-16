@@ -948,6 +948,16 @@ endif
 .PHONY: _ensure-kong-system-namespace
 _ensure-kong-system-namespace:
 	@kubectl create ns kong-system 2>/dev/null || true
+	@kubectl get secret kong-operator-ca -n kong-system >/dev/null 2>&1 || \
+		(openssl genrsa -out /tmp/ko-makefile-ca.key 4096 2>/dev/null && \
+		openssl req -x509 -new -key /tmp/ko-makefile-ca.key -days 3650 -out /tmp/ko-makefile-ca.crt -subj "/CN=Kong Operator CA" 2>/dev/null && \
+		kubectl create secret tls kong-operator-ca \
+			--cert=/tmp/ko-makefile-ca.crt \
+			--key=/tmp/ko-makefile-ca.key \
+			--namespace kong-system \
+			--dry-run=client -o yaml | \
+			kubectl label -f - konghq.com/secret=internal --overwrite --local -o yaml | \
+			kubectl apply -f -)
 
 # Run a controller from your host.
 # TODO: https://github.com/Kong/kong-operator/issues/1989
@@ -1011,7 +1021,7 @@ _skaffold: skaffold
 		$(SKAFFOLD) $(CMD) --port-forward=pods --profile=$(SKAFFOLD_PROFILE) $(SKAFFOLD_FLAGS)
 
 .PHONY: run.skaffold
-run.skaffold:
+run.skaffold: _ensure-kong-system-namespace
 	TAG=$(TAG) REPO_INFO=$(REPO_INFO) COMMIT=$(COMMIT) \
 		CMD=dev \
 		SKAFFOLD_PROFILE=$(SKAFFOLD_RUN_PROFILE) \

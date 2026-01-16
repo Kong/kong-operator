@@ -85,9 +85,11 @@ func TestMain(m *testing.M) {
 	clients, err = testutils.NewK8sClients(env)
 	exitOnErr(err)
 
-	// Normally this is obtained from the downward API. The tests fake it.
-	err = os.Setenv("POD_NAMESPACE", "kong-system")
+	controllerNamespace := testutils.DefaultControllerConfigForTests().ControllerNamespace
+
+	cleanupControllerResources, err := helpers.SetupControllerOperatorResources(ctx, controllerNamespace, clients.MgrClient)
 	exitOnErr(err)
+	defer cleanupControllerResources()
 
 	fmt.Println("INFO: Deploying all required Kubernetes Configuration (RBAC, CRDs, etc.) for the operator")
 	exitOnErr(kcfg.DeployKubernetesConfiguration(ctx, env.Cluster()))

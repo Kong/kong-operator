@@ -2,7 +2,7 @@ package metricsscraper
 
 import (
 	"context"
-	"crypto/x509"
+	"fmt"
 	"net/http"
 	"sync/atomic"
 	"testing"
@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	operatorv1beta1 "github.com/kong/kong-operator/api/gateway-operator/v1beta1"
-	"github.com/kong/kong-operator/controller/pkg/secrets"
 	gwtypes "github.com/kong/kong-operator/internal/types"
 	"github.com/kong/kong-operator/test/helpers/certificate"
 	"github.com/kong/kong-operator/test/mocks/metricsmocks"
@@ -34,10 +33,6 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 	const (
 		interval = time.Second
 	)
-	clusterCAKeyType := secrets.KeyConfig{
-		Type: x509.ECDSA,
-		Size: 1024,
-	}
 
 	tests := []struct {
 		name                 string
@@ -252,7 +247,7 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().Build()
-			msm := NewManager(logr.Discard(), interval, fakeClient, types.NamespacedName{}, clusterCAKeyType)
+			msm := NewManager(logr.Discard(), interval, fakeClient, types.NamespacedName{})
 			for _, pipeline := range tt.pairs {
 				msm.Add(pipeline.controlplane, pipeline.pipeline)
 			}
@@ -268,11 +263,6 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 
 func TestMetricsScrapeManager_RemoveForControlPlaneNN(t *testing.T) {
 	const interval = time.Second
-
-	clusterCAKeyType := secrets.KeyConfig{
-		Type: x509.ECDSA,
-		Size: 1024,
-	}
 
 	tests := []struct {
 		name                 string
@@ -366,7 +356,7 @@ func TestMetricsScrapeManager_RemoveForControlPlaneNN(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().Build()
-			msm := NewManager(logr.Discard(), interval, fakeClient, types.NamespacedName{}, clusterCAKeyType)
+			msm := NewManager(logr.Discard(), interval, fakeClient, types.NamespacedName{})
 			for _, pair := range tt.addPairs {
 				msm.Add(pair.controlplane, pair.pipeline)
 			}
@@ -411,74 +401,69 @@ type mockConsumer struct{}
 func (mc *mockConsumer) Consume(_ context.Context, _ Metrics) error { return nil }
 
 func TestMetricsScrapeManager_Start(t *testing.T) {
-	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
-	caSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ca-secret",
-			Namespace: "kong-system",
-		},
-		Data: map[string][]byte{
-			"ca.crt":  cert,
-			"tls.crt": cert,
-			"tls.key": key,
-		},
-	}
-
-	tests := []struct {
-		name                 string
-		addPairs             []pair
-		expectedCpNNToDPUID  map[types.NamespacedName]types.UID
-		expectedScrapersUIDs []types.UID
-	}{
-		{
-			name: "add 2 ControlPlanes",
-			addPairs: []pair{
-				{
-					controlplane: &gwtypes.ControlPlane{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "cp1",
-							Namespace: "ns1",
-						},
-						Spec: gwtypes.ControlPlaneSpec{
-							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-								Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-									Name: "dp1",
-								},
+	addPairsCommon := func() []pair {
+		return []pair{
+			{
+				controlplane: &gwtypes.ControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cp1",
+						Namespace: "ns1",
+					},
+					Spec: gwtypes.ControlPlaneSpec{
+						DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+							Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+							Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+								Name: "dp1",
 							},
 						},
-					},
-
-					pipeline: metricsPipeline{
-						MetricsScraper: &mockScraper{
-							uid: "dp-uid1",
-						},
-						MetricsEnricher: &mockConsumer{},
 					},
 				},
-				{
-					controlplane: &gwtypes.ControlPlane{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "cp2",
-							Namespace: "ns1",
-						},
-						Spec: gwtypes.ControlPlaneSpec{
-							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
-								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
-								Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
-									Name: "dp2",
-								},
-							},
-						},
+
+				pipeline: metricsPipeline{
+					MetricsScraper: &mockScraper{
+						uid: "dp-uid1",
 					},
-					pipeline: metricsPipeline{
-						MetricsScraper: &mockScraper{
-							uid: "dp-uid2",
-						},
-						MetricsEnricher: &mockConsumer{},
-					},
+					MetricsEnricher: &mockConsumer{},
 				},
 			},
+			{
+				controlplane: &gwtypes.ControlPlane{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "cp2",
+						Namespace: "ns1",
+					},
+					Spec: gwtypes.ControlPlaneSpec{
+						DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
+							Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
+							Ref: &gwtypes.ControlPlaneDataPlaneTargetRef{
+								Name: "dp2",
+							},
+						},
+					},
+				},
+				pipeline: metricsPipeline{
+					MetricsScraper: &mockScraper{
+						uid: "dp-uid2",
+					},
+					MetricsEnricher: &mockConsumer{},
+				},
+			},
+		}
+	}
+	tests := []struct {
+		name     string
+		addPairs []pair
+		keyType  certificate.KeyType
+	}{
+		{
+			name:     "add 2 ControlPlanes",
+			addPairs: addPairsCommon(),
+			keyType:  certificate.RSA,
+		},
+		{
+			name:     "add 2 ControlPlanes",
+			addPairs: addPairsCommon(),
+			keyType:  certificate.ECDSA,
 		},
 	}
 
@@ -486,17 +471,25 @@ func TestMetricsScrapeManager_Start(t *testing.T) {
 		waitTime     = time.Second
 		intervalTime = 100 * time.Microsecond
 	)
-	clusterCAKeyType := secrets.KeyConfig{
-		Type: x509.ECDSA,
-		Size: 1024,
-	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+	for _, tc := range tests {
+		t.Run(fmt.Sprintf("%s (CA key type %s)", tc.name, tc.keyType), func(t *testing.T) {
+			cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(tc.keyType))
+			caSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "ca-secret",
+					Namespace: "kong-system",
+				},
+				Data: map[string][]byte{
+					"ca.crt":  cert,
+					"tls.crt": cert,
+					"tls.key": key,
+				},
+			}
 			fakeClient := fake.NewClientBuilder().WithObjects(caSecret).Build()
 
-			msm := NewManager(logr.Discard(), intervalTime, fakeClient, client.ObjectKeyFromObject(caSecret), clusterCAKeyType)
-			for _, pair := range tt.addPairs {
+			msm := NewManager(logr.Discard(), intervalTime, fakeClient, client.ObjectKeyFromObject(caSecret))
+			for _, pair := range tc.addPairs {
 				msm.Add(pair.controlplane, pair.pipeline)
 			}
 

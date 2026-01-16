@@ -113,8 +113,8 @@ func (r *Reconciler) ensureAdminMTLSCertificateSecret(
 	if r.SecretLabelSelector != "" {
 		matchingLabels[r.SecretLabelSelector] = "true"
 	}
-	// this subject is arbitrary. data planes only care that client certificates are signed by the trusted CA, and will
-	// accept a certificate with any subject
+	// This subject is arbitrary. data planes only care that client certificates are signed by the trusted CA, and will
+	// accept a certificate with any subject.
 	return secrets.EnsureCertificate(ctx,
 		cp,
 		fmt.Sprintf("%s.%s", cp.Name, cp.Namespace),
@@ -123,7 +123,6 @@ func (r *Reconciler) ensureAdminMTLSCertificateSecret(
 			Name:      r.ClusterCASecretName,
 		},
 		usages,
-		r.ClusterCAKeyConfig,
 		r.Client,
 		matchingLabels,
 	)
@@ -138,7 +137,7 @@ func (r *Reconciler) validateWatchNamespaceGrants(
 	}
 
 	switch cp.Spec.WatchNamespaces.Type {
-	// NOTE: We currentlty do not require any ReferenceGrants or other permission
+	// NOTE: We currently do not require any ReferenceGrants or other permission
 	// granting resources for the "All" case.
 	case operatorv2beta1.WatchNamespacesTypeAll:
 		return nil, nil

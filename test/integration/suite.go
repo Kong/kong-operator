@@ -112,11 +112,9 @@ func Suite(m *testing.M) {
 	clients, err = testutils.NewK8sClients(GetEnv())
 	exitOnErr(err)
 
-	// Normally this is obtained from the downward API, fake it here for testing.
-	err = os.Setenv("POD_NAMESPACE", controllerNamespace)
+	cleanupControllerResources, err := helpers.SetupControllerOperatorResources(GetCtx(), controllerNamespace, clients.MgrClient)
 	exitOnErr(err)
-	err = os.Setenv("POD_NAME", "kong-operator-controller-manager")
-	exitOnErr(err)
+	defer cleanupControllerResources()
 
 	fmt.Println("INFO: Deploying all required Kubernetes Configuration (RBAC, CRDs, etc.) for the operator")
 	exitOnErr(kcfg.DeployKubernetesConfiguration(GetCtx(), env.Cluster()))

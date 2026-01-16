@@ -3,7 +3,9 @@ package secrets
 import (
 	"context"
 	"crypto"
+	"crypto/ecdsa"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -136,7 +138,7 @@ func signCertificate(
 		return nil, fmt.Errorf("failed decoding 'tls.key' data from secret %s", ca.Name)
 	}
 
-	priv, signatureAlgorithm, err := ParsePrivateKey(caKeyBlock)
+	priv, signatureAlgorithm, err := parsePrivateKey(caKeyBlock)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +189,6 @@ func EnsureCertificate[
 	subject string,
 	mtlsCASecretNN types.NamespacedName,
 	usages []certificatesv1.KeyUsage,
-	keyConfig KeyConfig,
 	cl client.Client,
 	additionalMatchingLabels client.MatchingLabels,
 ) (op.Result, *corev1.Secret, error) {
@@ -211,10 +212,9 @@ func EnsureCertificate[
 	secretOpts := append(getSecretOpts(owner), matchingLabelsToSecretOpt(matchingLabels))
 
 	generatedSecret := k8sresources.GenerateNewTLSSecret(owner, secretOpts...)
-
 	// If there are no secrets yet, then create one.
 	if count == 0 {
-		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, keyConfig, cl)
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl)
 	}
 
 	// Otherwise there is already 1 certificate matching specified selectors.
@@ -227,7 +227,7 @@ func EnsureCertificate[
 			return op.Noop, nil, err
 		}
 
-		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, keyConfig, cl)
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl)
 	}
 
 	// Check if existing certificate is for a different subject.
@@ -241,7 +241,7 @@ func EnsureCertificate[
 			return op.Noop, nil, err
 		}
 
-		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, keyConfig, cl)
+		return generateTLSDataSecret(ctx, generatedSecret, owner, subject, mtlsCASecretNN, usages, cl)
 	}
 
 	var updated bool
@@ -308,9 +308,18 @@ func generateTLSDataSecret(
 	subject string,
 	mtlsCASecret types.NamespacedName,
 	usages []certificatesv1.KeyUsage,
-	keyConfig KeyConfig,
 	k8sClient client.Client,
 ) (op.Result, *corev1.Secret, error) {
+
+	var ca corev1.Secret
+	if err := k8sClient.Get(ctx, mtlsCASecret, &ca); err != nil {
+		return op.Noop, nil, err
+	}
+	keyConfig, err := DetectCertType(ca.Data["tls.crt"])
+	if err != nil {
+		return op.Noop, nil, err
+	}
+
 	priv, pemBlock, signatureAlgorithm, err := CreatePrivateKey(keyConfig)
 	if err != nil {
 		return op.Noop, nil, err
@@ -339,7 +348,7 @@ func generateTLSDataSecret(
 	// recognize that certificates have expired (ideally without permissions to read Secrets across the cluster) and
 	// to get Deployments to acknowledge them. For Kong, this requires a restart, as there's no way to force a reload
 	// of updated files on disk.
-	expiration := int32(315400000)
+	expiration := int32(315400000) // 10 years in seconds.
 
 	csr := certificatesv1.CertificateSigningRequest{
 		ObjectMeta: metav1.ObjectMeta{
@@ -355,12 +364,6 @@ func generateTLSDataSecret(
 			ExpirationSeconds: &expiration,
 			Usages:            usages,
 		},
-	}
-
-	var ca corev1.Secret
-	err = k8sClient.Get(ctx, mtlsCASecret, &ca)
-	if err != nil {
-		return op.Noop, nil, err
 	}
 
 	signed, err := signCertificate(csr, &ca)
@@ -380,6 +383,34 @@ func generateTLSDataSecret(
 	}
 
 	return op.Created, generatedSecret, nil
+}
+
+// DetectCertType inspects a PEM-encoded certificate and returns its KeyConfig.
+func DetectCertType(certPEM []byte) (KeyConfig, error) {
+	block, _ := pem.Decode(certPEM)
+	if block == nil {
+		return KeyConfig{}, fmt.Errorf("failed to parse certificate PEM")
+	}
+
+	cert, err := x509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return KeyConfig{}, err
+	}
+
+	switch pub := cert.PublicKey.(type) {
+	case *rsa.PublicKey:
+		return KeyConfig{
+			Type: cert.PublicKeyAlgorithm,
+			Size: pub.N.BitLen(),
+		}, nil
+	case *ecdsa.PublicKey:
+		return KeyConfig{
+			Type: cert.PublicKeyAlgorithm,
+			Size: pub.Curve.Params().BitSize,
+		}, nil
+	default:
+		return KeyConfig{}, fmt.Errorf("unknown certificate type")
+	}
 }
 
 // GetManagedLabelForServiceSecret returns a label selector for the ServiceSecret.
@@ -435,15 +466,15 @@ func ensureContainerImageUpdated(container *corev1.Container, imageVersionStr st
 	return updated, nil
 }
 
-// ParsePrivateKey parses a PEM block and returns a [crypto.Signer] and [x509.SignatureAlgorithm].
-func ParsePrivateKey(pemBlock *pem.Block) (crypto.Signer, x509.SignatureAlgorithm, error) {
+// parsePrivateKey parses a PEM block and returns a [crypto.Signer] and [x509.SignatureAlgorithm].
+func parsePrivateKey(pemBlock *pem.Block) (crypto.Signer, x509.SignatureAlgorithm, error) {
 	var (
 		signatureAlgorithm = x509.UnknownSignatureAlgorithm
 		priv               crypto.Signer
 		err                error
 	)
 	switch pemBlock.Type {
-
+	// XXX: TODO
 	case "EC PRIVATE KEY", "ECDSA PRIVATE KEY":
 		priv, err = x509.ParseECPrivateKey(pemBlock.Bytes)
 		if err != nil {
@@ -457,7 +488,16 @@ func ParsePrivateKey(pemBlock *pem.Block) (crypto.Signer, x509.SignatureAlgorith
 			return nil, signatureAlgorithm, err
 		}
 		return priv, x509.SHA256WithRSA, nil
-
+	case "PRIVATE KEY":
+		privAny, err := x509.ParsePKCS8PrivateKey(pemBlock.Bytes)
+		if err != nil {
+			return nil, signatureAlgorithm, err
+		}
+		rsaKey, ok := privAny.(*rsa.PrivateKey)
+		if !ok {
+			return nil, signatureAlgorithm, fmt.Errorf("unsupported private key type in PKCS#8 wrapping: %T", privAny)
+		}
+		return rsaKey, x509.SHA256WithRSA, nil
 	default:
 		return nil, signatureAlgorithm, fmt.Errorf("unsupported key type: %s", pemBlock.Type)
 	}
