@@ -1,0 +1,48 @@
+# Template for creating and asserting a KongReferenceGrant.
+# 
+# Required bindings:
+#   - test_name: Test name used to compose the KongReferenceGrant name.
+#   - namespace: Namespace where the reference grant will be created. Also, this is the namespace where the resource grants reference permission to resource in another namespace.
+#   - from_group: The group of the resource in the "from" that is allowed to reference the resource specified in "to".
+#   - from_kind: The kind of the resource in the "from" that is allowed to reference the resource specified in "to".
+#   - from_namespace: The namespace of resource that is allowed to reference the resource specified in "to" 
+#   - to_group: The group of the referent resource in the "to" that is allowed to be referenced by the resource in "from".
+#   - to_kind: The kind wof the referent resource in the "to" that is allowed to be referenced by the resource in "from".
+# 
+
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-kong-reference-grant
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongReferenceGrant
+          metadata:
+            name: (join('-', [($test_name), 'kong-reference-grant']))
+            namespace: ($namespace)
+          spec:
+            from:
+            - group: ($from_group)
+              kind: ($from_kind)
+              namespace: ($from_namespace)
+            to:
+            - group: ($to_group)
+              kind: ($to_kind)
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongReferenceGrant
+          metadata:
+            name: (join('-', [($test_name), 'kong-reference-grant']))
+            namespace: ($namespace)
+          spec:
+            from:
+            - group: ($from_group)
+              kind: ($from_kind)
+              namespace: ($from_namespace)
+            to:
+            - group: ($to_group)
+              kind: ($to_kind)
