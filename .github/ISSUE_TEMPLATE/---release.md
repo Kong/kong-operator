@@ -29,14 +29,7 @@ If the troubleshooting section does not contain the answer to the problem you en
   - [ ] Check the [releases][releases] page. The release has to be marked manually as `latest` if this is the case.
   - [ ] Check the `release/N.M.x` release branch exists.
 - [ ] Update the official documentation at [https://github.com/Kong/developer.konghq.com/][docs_repo]
-  - [ ] Run post processing script for `${KUBERNETES_CONFIGURATION_REPO}/docs/gateway-operator-api-reference.md`, providing a tagged version of CRD reference from docs repo as an argument, e.g. `app/_src/gateway-operator/reference/custom-resources/1.2.x.md`.
-    This will add the necessary skaffolding so that the reference is rendered correctly on docs.konghq.com.
-
-    Example:
-
-    ```sh
-    ${KUBERNETES_CONFIGURATION_REPO}/scripts/apidocs-gen/post-process-for-konghq.sh ${KUBERNETES_CONFIGURATION_REPO}/docs/gateway-operator-api-reference.md ${KONGHQ_DOCS_REPO}/app/_src/gateway-operator/reference/custom-resources/1.2.x.md
-    ```
+  - **CLI configuration options** and **CRD reference**: Automatically synced by the release workflow. A PR will be created in the docs repo. Review and merge it when ready.
 
 ## Conformance tests report
 
