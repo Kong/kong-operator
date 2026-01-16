@@ -28,6 +28,15 @@ spec:
             - name: http
               protocol: HTTP
               port: ($listener_http_port)
+            - name: https
+              protocol: HTTPS
+              port: ($listener_https_port)
+              hostname: ($sni_hostname)
+              tls:
+                mode: Terminate
+                certificateRefs:
+                - name: ($cert_secret_name)
+                  namespace: ($cert_secret_namespace)
     - assert:
         resource:
           apiVersion: gateway.networking.k8s.io/v1
