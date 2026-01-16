@@ -91,3 +91,8 @@ func (obj KongSNIList) GetItems() []KongSNI {
 func (obj KongDataPlaneClientCertificateList) GetItems() []KongDataPlaneClientCertificate {
 	return obj.Items
 }
+
+// GetItems returns the list of KongMCPRunner items.
+func (obj KongMCPRunnerList) GetItems() []KongMCPRunner {
+	return obj.Items
+}

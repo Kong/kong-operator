@@ -18,6 +18,7 @@ resources:
   - configuration.konghq.com_kongkeys.yaml
   - configuration.konghq.com_kongkeysets.yaml
   - configuration.konghq.com_konglicenses.yaml
+  - configuration.konghq.com_kongmcprunners.yaml
   - configuration.konghq.com_kongpluginbindings.yaml
   - configuration.konghq.com_kongplugins.yaml
   - configuration.konghq.com_kongreferencegrants.yaml

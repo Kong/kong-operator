@@ -283,6 +283,7 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [KongKey](#configuration-konghq-com-v1alpha1-kongkey)
 - [KongKeySet](#configuration-konghq-com-v1alpha1-kongkeyset)
 - [KongLicense](#configuration-konghq-com-v1alpha1-konglicense)
+- [KongMCPRunner](#configuration-konghq-com-v1alpha1-kongmcprunner)
 - [KongPluginBinding](#configuration-konghq-com-v1alpha1-kongpluginbinding)
 - [KongReferenceGrant](#configuration-konghq-com-v1alpha1-kongreferencegrant)
 - [KongRoute](#configuration-konghq-com-v1alpha1-kongroute)
@@ -486,6 +487,21 @@ KongLicense stores a Kong enterprise license to apply to managed Kong gateway in
 | `rawLicenseString` _string_ | RawLicenseString is a string with the raw content of the license. |
 | `enabled` _bool_ | Enabled is set to true to let controllers (like KIC or KGO) to reconcile it. Default value is true to apply the license by default. |
 | `status` _[KongLicenseStatus](#configuration-konghq-com-v1alpha1-types-konglicensestatus)_ | Status is the status of the KongLicense being processed by controllers. |
+
+### KongMCPRunner
+
+
+KongMCPRunner is the schema for MCP Runners API which defines an MCP Runner.
+
+<!-- kong_mcp_runner description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
+| `kind` _string_ | `KongMCPRunner`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KongMCPRunnerSpec](#configuration-konghq-com-v1alpha1-types-kongmcprunnerspec)_ |  |
+| `status` _[KongMCPRunnerStatus](#configuration-konghq-com-v1alpha1-types-kongmcprunnerstatus)_ |  |
 
 ### KongPluginBinding
 
@@ -1360,6 +1376,38 @@ _Appears in:_
 
 - [KongLicense](#configuration-konghq-com-v1alpha1-konglicense)
 
+#### KongMCPRunnerSpec
+
+
+KongMCPRunnerSpec defines specification of an MCP Runner.
+
+
+
+| Field | Description |
+| --- | --- |
+| `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this MCPRunner is associated with. |
+| `mirror` _[MirrorSpec](#configuration-konghq-com-v1alpha1-types-mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for MCPRunners that are created as Mirrors. |
+
+_Appears in:_
+
+- [KongMCPRunner](#configuration-konghq-com-v1alpha1-kongmcprunner)
+
+#### KongMCPRunnerStatus
+
+
+KongMCPRunnerStatus represents the current status of the MCP Runner resource.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
+
+_Appears in:_
+
+- [KongMCPRunner](#configuration-konghq-com-v1alpha1-kongmcprunner)
+
 #### KongPluginBindingScope
 
 _Underlying type:_ `string`
@@ -1831,6 +1879,36 @@ _Appears in:_
 - [KongVault](#configuration-konghq-com-v1alpha1-kongvault)
 
 
+
+#### MirrorKonnect
+
+
+MirrorKonnect contains the Konnect Mirror configuration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `id` _[KonnectIDType](#common-konghq-com-v1alpha1-types-konnectidtype)_ | ID is the ID of the Konnect entity. It can be set only in case the MCPRunner type is Mirror. |
+
+_Appears in:_
+
+- [MirrorSpec](#configuration-konghq-com-v1alpha1-types-mirrorspec)
+
+#### MirrorSpec
+
+
+MirrorSpec contains the Konnect Mirror configuration.
+
+
+
+| Field | Description |
+| --- | --- |
+| `konnect` _[MirrorKonnect](#configuration-konghq-com-v1alpha1-types-mirrorkonnect)_ | Konnect contains the KonnectID of the MCPRunner that is mirrored. |
+
+_Appears in:_
+
+- [KongMCPRunnerSpec](#configuration-konghq-com-v1alpha1-types-kongmcprunnerspec)
 
 #### Namespace
 
