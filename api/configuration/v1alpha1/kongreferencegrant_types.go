@@ -91,8 +91,8 @@ type KongReferenceGrantSpec struct {
 
 // ReferenceGrantFrom describes trusted namespaces and kinds.
 //
-// +kubebuilder:validation:XValidation:rule=".self.group != 'configuration.konghq.com' || .self.kind in ['KongConsumerGroup', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream', 'KongKeySet', 'KongVault']",message="Only KongConsumerGroup, KongCertificate, KongCACertificate, KongService, KongUpstream, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group"
-// +kubebuilder:validation:XValidation:rule=".self.kind == 'KongVault' ? .self.namespace == \"\" : .self.namespace != \"\"",message="namespace must be empty for KongVault and non-empty for other kinds"
+// +kubebuilder:validation:XValidation:rule="self.group != 'configuration.konghq.com' || self.kind in ['KongConsumerGroup', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream', 'KongKeySet', 'KongVault']",message="Only KongConsumerGroup, KongCertificate, KongCACertificate, KongService, KongUpstream, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group"
+// +kubebuilder:validation:XValidation:rule="self.kind == 'KongVault' ? self.__namespace__ == \"\" : self.__namespace__ != \"\"",message="namespace must be empty for KongVault and non-empty for other kinds"
 type ReferenceGrantFrom struct {
 	// Group is the group of the referent.
 	//
