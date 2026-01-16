@@ -4,6 +4,7 @@ kind: Test
 metadata:
   name: httproute-extensionref-filter
 spec:
+  concurrent: false
   description: |
     This test validates that the hybrid gateway controller correctly
     processes the `extensionRef` filter to attach plugins by `KongPlugin`
