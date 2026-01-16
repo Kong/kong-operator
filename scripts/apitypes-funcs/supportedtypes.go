@@ -178,6 +178,12 @@ var supportedKonnectTypesWithControlPlaneConfig = []supportedTypesT{
 				GetKonnectStatusReturnType: "*konnectv1alpha2.KonnectEntityStatus",
 				ControlPlaneRefType:        "commonv1alpha1.ControlPlaneRef",
 			},
+			{
+				Type:                       "KongMCPRunner",
+				KonnectStatusType:          "*konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef",
+				GetKonnectStatusReturnType: "*konnectv1alpha2.KonnectEntityStatus",
+				ControlPlaneRefType:        "commonv1alpha1.ControlPlaneRef",
+			},
 		},
 	},
 }
