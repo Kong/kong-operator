@@ -116,7 +116,7 @@ spec:
               - name: ROUTE_PATH
                 value: ($route_path)
             content: |
-              curl -s --header "X-Set:baz" --header "X-Remove:qux" http://${PROXY_IP}${ROUTE_PATH}/headers 
+              bash ../common/scripts/wait_for_request_header_modifier.sh
             check:
               (contains($stdout, 'X-Add')): true
               (contains($stdout, 'X-Set')): true
@@ -192,22 +192,7 @@ spec:
               - name: ROUTE_PATH
                 value: ($route_path)
             content: |
-              out=""
-              i=0
-              while [ "$i" -lt 60 ]; do
-                out="$(curl -sI --connect-timeout 5 --max-time 10 "http://${PROXY_IP}${ROUTE_PATH}/response-headers?x-remove=qux&x-set=baz" || true)"
-                if printf '%s' "${out}" | grep -q '200 OK' &&
-                  printf '%s' "${out}" | grep -q 'X-Add: bar' &&
-                  printf '%s' "${out}" | grep -q 'X-Set: foo' &&
-                  ! printf '%s' "${out}" | grep -q 'X-Remove'; then
-                  echo "${out}"
-                  exit 0
-                fi
-                i=$((i + 1))
-                sleep 5
-              done
-              echo "${out}"
-              exit 1
+              bash ../common/scripts/wait_for_response_header_modifier.sh
             check:
               "(contains($stdout, '200 OK'))": true
               "(contains($stdout, 'X-Add: bar'))": true
