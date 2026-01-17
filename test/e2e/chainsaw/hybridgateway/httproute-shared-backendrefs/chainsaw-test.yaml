@@ -195,6 +195,8 @@ spec:
       bindings:
         - name: route_path
           value: ($httproute_one_path)
+        - name: listener_http_port
+          value: "80"
 
     # Step 16: Verify traffic for route two.
     - name: verify-traffic-route-two
@@ -204,6 +206,8 @@ spec:
       bindings:
         - name: route_path
           value: ($httproute_two_path)
+        - name: listener_http_port
+          value: "80"
 
     # Step 17: Verify traffic for route three.
     - name: verify-traffic-route-three
@@ -213,6 +217,8 @@ spec:
       bindings:
         - name: route_path
           value: ($httproute_three_path)
+        - name: listener_http_port
+          value: "80"
 
     # Step 18: Delete one HTTPRoute and verify traffic still works for remaining routes.
     - name: delete-httproute-two
@@ -241,6 +247,8 @@ spec:
       bindings:
         - name: route_path
           value: ($httproute_one_path)
+        - name: listener_http_port
+          value: "80"
 
     # Step 20: Verify route three still serves traffic after deletion.
     - name: verify-traffic-after-delete-route-three
@@ -250,6 +258,8 @@ spec:
       bindings:
         - name: route_path
           value: ($httproute_three_path)
+        - name: listener_http_port
+          value: "80"
 
     # Step 21: Update route three to use different backendRefs.
     - name: update-remaining-httproute-backendrefs
@@ -304,6 +314,8 @@ spec:
       bindings:
         - name: route_path
           value: ($httproute_one_path)
+        - name: listener_http_port
+          value: "80"
 
     # Step 25: Verify route three still serves traffic after update.
     - name: verify-traffic-final-route-three
@@ -313,3 +325,5 @@ spec:
       bindings:
         - name: route_path
           value: ($httproute_three_path)
+        - name: listener_http_port
+          value: "80"
