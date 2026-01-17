@@ -23,6 +23,25 @@ spec:
     authRef:
       name: konnect-api-auth-dev-1
 ---
+# KongReferenceGrant that allows a cluster-scoped KongVault to reference
+# the KonnectGatewayControlPlane in the "default" namespace.
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongReferenceGrant
+metadata:
+  name: allow-kongvault-to-konnectgatewaycontrolplane
+  namespace: default
+spec:
+  from:
+    - group: configuration.konghq.com
+      kind: KongVault
+      # KongVault is cluster scoped, so this must be empty.
+      namespace: ""
+  to:
+    - group: konnect.konghq.com
+      kind: KonnectGatewayControlPlane
+      # Optionally specify a specific KonnectGatewayControlPlane name
+      # name: test1
+---
 kind: KongVault
 apiVersion: configuration.konghq.com/v1alpha1
 metadata:
@@ -36,5 +55,5 @@ spec:
     type: konnectNamespacedRef
     konnectNamespacedRef:
       name: test1
-      # KongVault is cluster scoped currently, so we need to specify namespace of Konnect control plane.
+      # KongVault is cluster scoped, so we need to specify namespace of Konnect control plane.
       namespace: default
