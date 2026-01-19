@@ -38,6 +38,7 @@ import (
 	"github.com/kong/kong-operator/controller/konnect"
 	"github.com/kong/kong-operator/controller/konnect/constraints"
 	sdkops "github.com/kong/kong-operator/controller/konnect/ops/sdk"
+	"github.com/kong/kong-operator/controller/mcprunner"
 	"github.com/kong/kong-operator/controller/pkg/secrets"
 	"github.com/kong/kong-operator/controller/specialized"
 	"github.com/kong/kong-operator/ingress-controller/pkg/manager/multiinstance"
@@ -645,6 +646,10 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain),
 			)
 		}
+
+		if c.MCPRunnerControllersEnabled {
+			controllers = append(controllers, newMCPRunnerController(mgr))
+		}
 	}
 
 	return controllers, nil
@@ -694,6 +699,13 @@ func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootOb
 	return ControllerDef{
 		Enabled:    true,
 		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr, fqdnMode, clusterDomain),
+	}
+}
+
+func newMCPRunnerController(mgr ctrl.Manager) ControllerDef {
+	return ControllerDef{
+		Enabled:    true,
+		Controller: mcprunner.NewMCPRunnerReconciler(mgr),
 	}
 }
 

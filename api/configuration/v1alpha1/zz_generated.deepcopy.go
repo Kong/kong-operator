@@ -1827,6 +1827,11 @@ func (in *KongMCPRunnerSpec) DeepCopyInto(out *KongMCPRunnerSpec) {
 		*out = new(commonv1alpha1.ControlPlaneRef)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Source != nil {
+		in, out := &in.Source, &out.Source
+		*out = new(commonv1alpha1.EntitySource)
+		**out = **in
+	}
 	if in.Mirror != nil {
 		in, out := &in.Mirror, &out.Mirror
 		*out = new(MirrorSpec)
@@ -1850,6 +1855,11 @@ func (in *KongMCPRunnerStatus) DeepCopyInto(out *KongMCPRunnerStatus) {
 	if in.Konnect != nil {
 		in, out := &in.Konnect, &out.Konnect
 		*out = new(v1alpha2.KonnectEntityStatusWithControlPlaneRef)
+		**out = **in
+	}
+	if in.Version != nil {
+		in, out := &in.Version, &out.Version
+		*out = new(string)
 		**out = **in
 	}
 	if in.Conditions != nil {

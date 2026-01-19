@@ -1386,6 +1386,7 @@ KongMCPRunnerSpec defines specification of an MCP Runner.
 | Field | Description |
 | --- | --- |
 | `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this MCPRunner is associated with. |
+| `source` _[EntitySource](#common-konghq-com-v1alpha1-types-entitysource)_ | Source represents the source type of the Konnect entity. |
 | `mirror` _[MirrorSpec](#configuration-konghq-com-v1alpha1-types-mirrorspec)_ | Mirror is the Konnect Mirror configuration. It is only applicable for MCPRunners that are created as Mirrors. |
 
 _Appears in:_
@@ -1402,6 +1403,7 @@ KongMCPRunnerStatus represents the current status of the MCP Runner resource.
 | Field | Description |
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
+| `version` _*string_ | Version is the version of the MCP Runner as seen in Konnect. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
 
 _Appears in:_

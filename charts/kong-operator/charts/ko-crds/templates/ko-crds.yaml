@@ -53321,6 +53321,13 @@ spec:
                 required:
                 - konnect
                 type: object
+              source:
+                default: Origin
+                description: Source represents the source type of the Konnect entity.
+                enum:
+                - Origin
+                - Mirror
+                type: string
             required:
             - controlPlaneRef
             - mirror
@@ -53329,6 +53336,8 @@ spec:
             - message: KIC is not supported as control plane
               rule: '!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type
                 != ''kic'''
+            - message: source must be Mirror
+              rule: '!has(self.source) || self.source == ''Mirror'''
           status:
             default:
               conditions:

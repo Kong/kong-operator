@@ -124,6 +124,9 @@ type Config struct {
 	// Controllers for Konnect APIs.
 	KonnectControllersEnabled bool
 
+	// Controllers for MCP runner APIs.
+	MCPRunnerControllersEnabled bool
+
 	// Webhook options.
 	ConversionWebhookEnabled bool
 	ValidatingWebhookEnabled bool

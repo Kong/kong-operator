@@ -58,12 +58,20 @@ type KongMCPRunnerList struct {
 
 // KongMCPRunnerSpec defines specification of an MCP Runner.
 // +kubebuilder:validation:XValidation:rule="!has(self.controlPlaneRef) ? true : self.controlPlaneRef.type != 'kic'", message="KIC is not supported as control plane"
+// +kubebuilder:validation:XValidation:rule="!has(self.source) || self.source == 'Mirror'", message="source must be Mirror"
 // +apireference:kgo:include
 type KongMCPRunnerSpec struct {
 	// ControlPlaneRef is a reference to a ControlPlane this MCPRunner is associated with.
 	// +kubebuilder:validation:XValidation:message="'konnectID' type is not supported", rule="self.type != 'konnectID'"
 	// +required
 	ControlPlaneRef *commonv1alpha1.ControlPlaneRef `json:"controlPlaneRef"`
+
+	// Source represents the source type of the Konnect entity.
+	//
+	// +kubebuilder:validation:Enum=Origin;Mirror
+	// +optional
+	// +kubebuilder:default=Origin
+	Source *commonv1alpha1.EntitySource `json:"source,omitempty"`
 
 	// Mirror is the Konnect Mirror configuration.
 	// It is only applicable for MCPRunners that are created as Mirrors.
@@ -79,6 +87,10 @@ type KongMCPRunnerStatus struct {
 	// Konnect contains the Konnect entity status.
 	// +optional
 	Konnect *konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef `json:"konnect,omitempty"`
+
+	// Version is the version of the MCP Runner as seen in Konnect.
+	// +optional
+	Version *string `json:"version,omitempty"`
 
 	// Conditions describe the status of the Konnect entity.
 	// +listType=map
