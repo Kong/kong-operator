@@ -97,7 +97,7 @@ func TestKongReferenceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Only KongConsumerGroup, KongCertificate, KongCACertificate, KongService, KongUpstream, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group"),
+				ExpectedErrorMessage: lo.ToPtr("Only KongConsumerGroup, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
@@ -125,7 +125,7 @@ func TestKongReferenceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Only KongConsumerGroup, KongCertificate, KongCACertificate, KongService, KongUpstream, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group"),
+				ExpectedErrorMessage: lo.ToPtr("Only KongConsumerGroup, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
