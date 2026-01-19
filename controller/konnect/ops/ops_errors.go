@@ -403,7 +403,6 @@ func IgnoreUnrecoverableAPIErr(err error, logger logr.Logger) error {
 	// We cannot recover from this error as this requires user to change object's
 	// manifest. The entity's status is already updated with the error.
 	if ErrorIsSDKBadRequestError(err) ||
-		ErrorIsSDKError400(err) ||
 		ErrorIsForbiddenError(err) ||
 		ErrorIsConflictError(err) {
 		log.Debug(logger, "ignoring unrecoverable API error, consult object's status for details", "err", err)

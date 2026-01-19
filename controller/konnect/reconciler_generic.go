@@ -492,6 +492,18 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 		obj := ent.DeepCopyObject().(client.Object)
 
 		_, err := ops.Create(ctx, sdk, r.Client, r.MetricRecorder, ent)
+		if err != nil {
+			// If the error is a rate limit error, requeue after the retry-after duration
+			// instead of returning an error.
+			var rateLimitErr ops.RateLimitError
+			if errors.As(err, &rateLimitErr) {
+				return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
+			}
+			return ctrl.Result{}, ops.FailedKonnectOpError[T]{
+				Op:  ops.CreateOp,
+				Err: err,
+			}
+		}
 
 		// TODO: this is actually not 100% error prone because when status
 		// update fails we don't store the Konnect ID and hence the reconciler
@@ -522,19 +534,6 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(
 			return ctrl.Result{}, fmt.Errorf("failed to update status after creating object: %w", err)
 		} else if res != op.Noop {
 			return ctrl.Result{}, nil
-		}
-
-		if err != nil {
-			// If the error is a rate limit error, requeue after the retry-after duration
-			// instead of returning an error.
-			var rateLimitErr ops.RateLimitError
-			if errors.As(err, &rateLimitErr) {
-				return ctrl.Result{RequeueAfter: rateLimitErr.RetryAfter}, nil
-			}
-			return ctrl.Result{}, ops.FailedKonnectOpError[T]{
-				Op:  ops.CreateOp,
-				Err: err,
-			}
 		}
 
 		// NOTE: we don't need to requeue here because the object update will trigger another reconciliation.
