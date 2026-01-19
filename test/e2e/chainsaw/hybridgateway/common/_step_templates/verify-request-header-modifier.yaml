@@ -1,0 +1,61 @@
+# Template for verifying RequestHeaderModifier filter functionality.
+#
+# Required bindings:
+#   - gateway_name: Name of the Gateway.
+#   - gateway_namespace: Namespace of the Gateway.
+#   - route_path: HTTP path to test (must be an endpoint that echoes headers, e.g., /get for httpbin).
+#   - namespace: Namespace where the test runs.
+#   - host_header: Host header to send with the request.
+#   - proxy_port: Port to connect to (e.g., 80 for HTTP, 443 for HTTPS).
+#   - headers_to_send: Headers to send with the request, format: 'Header1:value1,Header2:value2'.
+#   - expected_headers_present: Headers that must be present in the backend response, format: 'Header1:value1,Header2:value2'.
+#   - expected_headers_absent: Headers that must NOT be present in the backend response, format: 'Header1,Header2'.
+#   - protocol: Protocol to use: 'http' or 'https'.
+#   - insecure: Set to 'true' to use --insecure flag for HTTPS with self-signed certificates, 'false' otherwise.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: verify-request-header-modifier
+spec:
+  try:
+    # 1. Dynamically discover the Gateway's Proxy IP.
+    - script:
+        env:
+          - name: GATEWAY_NAME
+            value: ($gateway_name)
+          - name: GATEWAY_NAMESPACE
+            value: ($gateway_namespace)
+        content: |
+          bash ../common/scripts/proxy_ip_address.sh
+        outputs:
+          - name: proxy_ip
+            value: (json_parse($stdout).proxy_ip_address)
+        check:
+          (json_parse($stdout).proxy_ip_address != null): true
+          (json_parse($stdout).proxy_ip_address != ''): true
+
+    # 2. Validate RequestHeaderModifier filter by checking headers received by backend.
+    - script:
+        env:
+          - name: PROXY_IP
+            value: ($proxy_ip)
+          - name: ROUTE_PATH
+            value: ($route_path)
+          - name: PROXY_PORT
+            value: ($proxy_port)
+          - name: HOST
+            value: ($host_header)
+          - name: HEADERS_TO_SEND
+            value: ($headers_to_send)
+          - name: EXPECTED_HEADERS_PRESENT
+            value: ($expected_headers_present)
+          - name: EXPECTED_HEADERS_ABSENT
+            value: ($expected_headers_absent)
+          - name: PROTOCOL
+            value: ($protocol)
+          - name: INSECURE
+            value: ($insecure)
+        content: |
+          bash ../common/scripts/request_header_modifier_filter_test.sh
+        check:
+          (json_parse($stdout).success): true

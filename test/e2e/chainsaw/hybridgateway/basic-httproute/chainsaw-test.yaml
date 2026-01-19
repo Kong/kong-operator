@@ -45,6 +45,14 @@ spec:
       value: ($namespace)
     - name: echo_service_name
       value: (join('-', [($test_name), 'echo']))
+    - name: echo_service_namespace
+      value: ($namespace)
+    - name: echo_deployment_namespace
+      value: ($namespace)
+    - name: httpbin_deployment_name
+      value: (join('-', [($test_name), 'httpbin']))
+    - name: httpbin_deployment_namespace
+      value: ($namespace)
     - name: http_method
       value: "GET"
 
