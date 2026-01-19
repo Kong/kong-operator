@@ -30,6 +30,8 @@ spec:
       value: (join('-', [($test_name), 'gateway']))
     - name: gateway_namespace
       value: ($namespace)
+    - name: gateway_class_name
+      value: (join('-', [($test_name), 'gateway-class']))
     - name: gateway_image
       value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
     - name: listener_http_port
