@@ -1,0 +1,33 @@
+# Asserts that a KongPlugin resource exists with the expected
+# labels, annotations, plugin type, and configuration for a given HTTPRoute and Gateway.
+#
+# Required bindings:
+#   - namespace: Namespace where the KongPlugin should exist
+#   - gateway_name: Name of the Gateway
+#   - gateway_namespace: Namespace of the Gateway
+#   - http_route_name: Name of the HTTPRoute
+#   - http_route_namespace: Namespace of the HTTPRoute
+#   - plugin_type: Type of the Kong plugin (e.g., 'request-transformer')
+#   - plugin_config: JSON string of the plugin configuration
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-kong-plugin
+spec:
+  try:
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1
+          kind: KongPlugin
+          metadata:
+            namespace: ($namespace)
+            # Dynamic Label and Annotation Assertions
+            (labels."gateway-operator.konghq.com/hybrid-gateways-name"): ($gateway_name)
+            (labels."gateway-operator.konghq.com/hybrid-gateways-namespace"): ($gateway_namespace)
+            (labels."gateway-operator.konghq.com/managed-by"): 'HTTPRoute'
+            (annotations."gateway-operator.konghq.com/hybrid-routes" | contains(@, join('/', [($http_route_namespace), ($http_route_name)]))): true
+            (annotations."gateway-operator.konghq.com/hybrid-gateways"): (join('/', [($gateway_namespace), ($gateway_name)]))
+          # Parameterized plugin type (e.g., 'request-transformer').
+          plugin: ($plugin_type)
+          # The entire config structure is passed as a single object.
+          (config): (json_parse($plugin_config))

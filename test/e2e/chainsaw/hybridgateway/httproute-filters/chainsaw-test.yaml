@@ -7,358 +7,911 @@ spec:
   description: |
     This test validates that the hybrid gateway controller correctly
     processes the currently supported filters in HTTPRoute, including:
-    `RequestHeaderModifier`, `ResponseHeaderModifier`, `RequestRedirect`
-    and `URLRewrite`.
+    `RequestHeaderModifier`, `ResponseHeaderModifier`.
+  
+  namespace: kong
 
-  bindings:
-    - name: kong_namespace
-      value: (join('-', ['kong', 'httproute-filters', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
-    - name: gateway_class_name
-      value: (join('-', ['kong', 'httproute-filters', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
-    - name: gateway_name
-      value: ($gateway_class_name)
-    - name: gateway_configuration_name
-      value: ($gateway_class_name)
-    - name: gateway_namespace
-      value: ($kong_namespace)
-    - name: http_route_namespace
-      value: ($kong_namespace)
-    - name: httpbin_service_name
-      value: httpbin
-    - name: httpbin_service_namespace
-      value: ($kong_namespace)
-    - name: gateway_dataplane_image
-      value: "kong/kong-gateway:3.12"
-    - name: operator_namespace
-      value: kong-system
-    
   timeouts:
     apply: 120s
-    assert: 300s
-    cleanup: 120s
+    assert: 120s
     delete: 120s
-  
+    exec: 120s
+
+  bindings:
+    # Common bindings.
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: sni_hostname
+      value: (join('.', ['*', ($test_name), 'example.com']))
+    - name: fqdn
+      value: (join('.', ['httpbin', ($test_name), 'example.com']))
+    - name: response_filter_fqdn
+      value: (join('.', ['httpbin-response', ($test_name), 'example.com']))
+    - name: cert_secret_name
+      value: test-tls-secret
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: listener_https_port
+      value: 443
+    - name: listener_http_port
+      value: 80
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
+    - name: gateway_namespace
+      value: ($namespace)
+    - name: http_route_name
+      value: (join('-', [($test_name), 'httpbin-request-header-modifier']))
+    - name: http_route_namespace
+      value: ($namespace)
+    - name: http_route_response_filter_name
+      value: (join('-', [($test_name), 'httpbin-response-header-modifier']))
+    - name: http_route_response_filter_namespace
+      value: ($namespace)
+    - name: combined_filters_fqdn
+      value: (join('.', ['httpbin-combined', ($test_name), 'example.com']))
+    - name: http_route_combined_filters_name
+      value: (join('-', [($test_name), 'httpbin-combined-filters']))
+    - name: http_route_combined_filters_namespace
+      value: ($namespace)
+    - name: httpbin_deployment_name
+      value: (join('-', [($test_name), 'httpbin']))
+    - name: httpbin_deployment_namespace
+      value: ($namespace)
+    - name: http_method
+      value: "GET"
+
   steps:
-    # Step 1: Create prerequisite resources
-    - name: create-prerequisites
-      description: Create GatewayClass, Gateway, and backend Service
+    # Step 1: Create the TLS secret that will be referenced by the Gateway TLS listener.
+    - name: Create-tls-secret
+      description: Create TLS Secret for the Gateway TLS listener.
+      use:
+        template: ../common/_step_templates/apply-assert-tlsSecret.yaml
+
+    # Step 2: Create the KonnectAPIAuthConfiguration to authenticate with Konnect.
+    - name: Create-konnect-api-auth
+      description: Create KonnectAPIAuthConfiguration for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    # Step 3: Create the GatewayConfiguration that defines the hybrid gateway setup.
+    - name: Create-gateway-configuration
+      description: Create GatewayConfiguration for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-gatewayConfiguration.yaml
+
+    # Step 4: Create the GatewayClass that will be used by the Gateway.
+    - name: Create-gateway-class
+      description: Create GatewayClass for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-gatewayClass.yaml
+
+    # Step 5: Create the Gateway with a TLS listener that references the TLS secret.
+    - name: Create-gateway
+      description: Create Gateway with TLS listener for the test.
+      use:
+        template: ../common/_step_templates/apply-assert-gateway.yaml
+
+    # Step 6: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
+    - name: Assert-konnect-gateway-control-plane
+      description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
+      use:
+        template: ../common/_step_templates/assert-konnectGatewayControlPlane.yaml
+
+    # Step 7: Verify that the KongCertificate resource is created from the TLS secret.
+    - name: Assert-kong-certificate
+      description: Assert that the KongCertificate resource is created for the TLS secret.
+      use:
+       template: ../common/_step_templates/assert-kongCertificate.yaml
+  
+    # Step 8: Verify that the KongSNI resource is created for the SNI hostname.
+    - name: Assert-kong-sni
+      description: Assert that the KongSNI resource is created for the SNI hostname.
+      use:
+       template: ../common/_step_templates/assert-kongSNI.yaml
+  
+    # Step 9: Create the httpbin service that will receive the routed traffic.
+    - name: Create-httpbin-service
+      description: Create and assert the httpbin service to route traffic to.
+      use:
+        template: ../common/_step_templates/apply-assert-httpbinService.yaml
+
+    # Step 10: Create the HTTPRoute with the RequestHeaderModifier filter.
+    - name: Create-httproute-with-request-header-modifier
+      description: Create HTTPRoute with RequestHeaderModifier filter.
       try:
         - apply:
-            file: 01-prerequisites.yaml
-        - apply:
-            file: 00-httpbin.yaml
+            file: 01-httproute-filter-request-header-modifier.yaml
         - assert:
-            file: 00-assert-httpbin.yaml
-        - assert:
-            file: 01-assert-prerequisites.yaml
-      catch:
-        - description: Get Gateway resource status
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: Gateway
-            namespace: ($gateway_namespace)
-        - description: Get Pods in gateway namespace
-          get:
-            apiVersion: v1
-            kind: Pod
-            namespace: ($gateway_namespace)
-        - description: Get operator logs
-          podLogs:
-            namespace: ($operator_namespace)
-            selector: control-plane=controller-manager
-            tail: 100
-    # Step 2: Create the HTTPRoute for testing the request header modifier filter
-    - name: create-httproute-for-request-header-modifier-filter
-      description: Create the HTTPRoute for testing and verify that request header modifier filter works
+            file: 02-httproute-filter-request-header-modifier-assert.yaml
+      bindings:
+        - name: route_hosts
+          value: 
+            - ($fqdn)
+    # Step 11: Assert that the HTTPRoute is translated into a KongRoute resource (RequestHeaderModifier).
+    - name: Assert-kong-route-request-header-modifier
+      description: Assert that the KongRoute resource is created for the HTTPRoute with RequestHeaderModifier.
+      use:
+        template: ../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_hosts
+          value: ($fqdn)
+        - name: route_paths
+          value: 
+            - "~/get$"
+            - "/get/"
+            - "~/post$"
+            - "~/put$"
+            - "~/patch$"
+            - "~/delete$"
+            - "~/status$"
+            - "/status/"
+        - name: route_methods
+          value:
+            - "GET"
+            - "POST"
+            - "PUT"
+            - "PATCH"
+            - "DELETE"
+        - name: strip_path
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+    
+    # Step 12: Assert that the HTTPRoute backend is translated into a KongService resource (RequestHeaderModifier).
+    - name: Assert-kong-service-request-header-modifier
+      description: Assert that the KongService resource is created for the HTTPRoute with RequestHeaderModifier.
+      use:
+        template: ../common/_step_templates/assert-kongService.yaml
+
+    # Step 13: Assert that the HTTPRoute backend is translated into a KongUpstream resource (RequestHeaderModifier).
+    - name: Assert-kong-upstream-request-header-modifier
+      description: Assert that the KongUpstream resource is created for the HTTPRoute with RequestHeaderModifier.
+      use:
+        template: ../common/_step_templates/assert-kongUstream.yaml
+    
+    # Step 14: Assert that the KongUpstream has KongTarget resources created for it (RequestHeaderModifier).
+    - name: Assert-kong-target-request-header-modifier
+      description: Assert that the KongTarget resource is created for the KongUpstream (RequestHeaderModifier).
+      use:
+        template: ../common/_step_templates/assert-kongTarget.yaml
+      bindings:
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: target_weight
+          value: 1
+    
+    # Step 15: Assert that the Request Transformer plugin is created with the expected configuration (RequestHeaderModifier).
+    - name: Assert-Request-Transformer-Plugin-for-RequestHeaderModifier
+      description: Assert that the Request Transformer plugin is created with the expected configuration (RequestHeaderModifier).
+      use:
+        template: ../common/_step_templates/assert-kongPlugin.yaml
+      bindings:
+        - name: namespace
+          value: kong
+        - name: gateway_name
+          value: kong-gateway
+        - name: plugin_type
+          value: request-transformer
+        - name: plugin_config
+          # Use '|' to handle the JSON string properly without quote conflicts
+          value: '{"add":{"headers":["X-Set:foo"]},"append":{"headers":["X-Add:bar"]},"remove":{"headers":["X-Remove"]},"replace":{"headers":["X-Set:foo"]}}'
+   
+    # Step 16: Assert that the KongPluginBinding resource is created to bind the plugin to the route (RequestHeaderModifier).
+    - name: Assert-KongPluginBinding-for-Request-Transformer-Plugin-RequestHeaderModifier
+      description: Assert that the KongPluginBinding resource is created to bind the request transformer plugin to the route (RequestHeaderModifier).
+      use:
+        template: ../common/_step_templates/assert-kongPluginBinding.yaml
+  
+    # Step 17: Test GET /get endpoint from the host (RequestHeaderModifier).
+    - name: Verify-GET-traffic-from-host-request-header-modifier
+      description: Verify that GET requests to /get work from the host (RequestHeaderModifier).
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
       bindings:
         - name: route_path
-          value: "/httpbin-request-header-modifier"
-        - name: http_route_name
-          value:  (join('-', ['httproute-filter-request-header-modifier', env('TEST_ID') || 'local']))
-      try:
-        - apply:
-            file: 02-httproute-filter-request-header-modifier.yaml
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout)
-        # Wait until the route works
-        - description: Test connectivity from outside the cluster
-          script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path)
-            content: |
-              echo "Accessing gateway ${GATEWAY_NAMESPACE}/${GATEWAY_NAME} at ${PROXY_IP}"
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}/status/200
-            check:
-              (contains($stdout, '200')): true
-        # Verify the headers 
-        - description: Verify that the request header modifier works by the /headers path
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path)
-            content: |
-              bash ../common/scripts/wait_for_request_header_modifier.sh
-            check:
-              (contains($stdout, 'X-Add')): true
-              (contains($stdout, 'X-Set')): true
-              (contains($stdout, 'X-Remove')): false
-        # Dump HTTPRoute and related KongRoutes, KongPlugins and KongPluginBindings.
-      catch:
-        - description: Dump HTTPRoutes
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($http_route_namespace)
-            name: ($http_route_name)
-            format: yaml
-        - description: Dump KongRoutes
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongPlugins
-          get:
-            apiVersion: configuration.konghq.com/v1
-            kind: KongPlugin
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongPluginBindings
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongPluginBinding
-            namespace: ($http_route_namespace)
-            format: yaml
-    # Step 3: Create the HTTPRoute for testing response header modifier
-    - name: create-httproute-for-response-header-modifier-filter
-      description: Create the HTTPRoute for verifying that respomse header modifier filter works
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+    
+    # Step 18: Test GET /get endpoint from the host via HTTPS (RequestHeaderModifier).
+    - name: Verify-GET-HTTPS-traffic-from-host-request-header-modifier
+      description: Verify that GET requests to /get work from the host via HTTPS (RequestHeaderModifier).
+      use:
+        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
       bindings:
         - name: route_path
-          value: "/httpbin-response-header-modifier"
-        - name: http_route_name
-          value:  (join('-', ['httproute-filter-response-header-modifier', env('TEST_ID') || 'local']))
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: insecure
+          value: "true"
+    # Step 19: Test GET /get endpoint from within the cluster (RequestHeaderModifier).
+    - name: Verify-GET-traffic-from-cluster-request-header-modifier
+      description: Verify that GET requests to /get work from within the cluster (RequestHeaderModifier).
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($fqdn)
+    # Step 20: Test GET /get endpoint from within the cluster via HTTPS (RequestHeaderModifier).
+    - name: Verify-GET-HTTPS-traffic-from-cluster-request-header-modifier
+      description: Verify that GET requests to /get work from within the cluster via HTTPS (RequestHeaderModifier).
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: insecure
+          value: "true"
+
+    # Step 21: Validate the RequestHeaderModifier filter over HTTP.
+    - name: Verify-request-header-modifier-over-http
+      description: Validate that the RequestHeaderModifier filter modifies headers correctly over HTTP.
+      use:
+        template: ../common/_step_templates/verify-request-header-modifier.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name)
+        - name: gateway_namespace
+          value: ($gateway_namespace)
+        - name: route_path
+          value: "/get"
+        - name: namespace
+          value: ($http_route_namespace)
+        - name: host_header
+          value: ($fqdn)
+        - name: proxy_port
+          value: "80"
+        - name: headers_to_send
+          value: "X-Remove:to-be-removed,X-Set:existing-value"
+        - name: expected_headers_present
+          value: "X-Set:foo,X-Add:bar"
+        - name: expected_headers_absent
+          value: "X-Remove,X-Set:existing-value"
+        - name: protocol
+          value: "http"
+        - name: insecure
+          value: "false"
+
+    # Step 22: Validate the RequestHeaderModifier filter over HTTPS.
+    - name: Verify-request-header-modifier-over-https
+      description: Validate that the RequestHeaderModifier filter modifies headers correctly over HTTPS.
+      use:
+        template: ../common/_step_templates/verify-request-header-modifier.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name)
+        - name: gateway_namespace 
+          value: ($gateway_namespace)
+        - name: route_path
+          value: "/get"
+        - name: namespace
+          value: ($http_route_namespace)
+        - name: host_header
+          value: ($fqdn)
+        - name: proxy_port
+          value: "443"
+        - name: headers_to_send
+          value: "X-Remove:to-be-removed,X-Set:existing-value"
+        - name: expected_headers_present
+          value: "X-Set:foo,X-Add:bar"
+        - name: expected_headers_absent
+          value: "X-Remove,X-Set:existing-value"
+        - name: protocol
+          value: "https"
+        - name: insecure
+          value: "true"
+
+    # Step 23: Create the HTTPRoute with the ResponseHeaderModifier filter.
+    - name: Create-httproute-with-response-header-modifier
+      description: Create HTTPRoute with ResponseHeaderModifier filter.
       try:
         - apply:
             file: 03-httproute-filter-response-header-modifier.yaml
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout) 
-        # Wait until the route works
-        - description: Test connectivity from outside the cluster
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}/status/200
-            check:
-              (contains($stdout, '200')): true
-        # Check for the response headers
-        - description: Verify that response header modifier works
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path)
-            content: |
-              bash ../common/scripts/wait_for_response_header_modifier.sh
-            check:
-              "(contains($stdout, '200 OK'))": true
-              "(contains($stdout, 'X-Add: bar'))": true
-              "(contains($stdout, 'X-Set: foo'))": true
-              (contains($stdout, 'X-Remove')): false
-      catch:
-        - description: Dump HTTPRoutes
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($http_route_namespace)
-            name: ($http_route_name)
-            format: yaml
-        - description: Dump KongRoutes
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongPlugins
-          get:
-            apiVersion: configuration.konghq.com/v1
-            kind: KongPlugin
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongPluginBindings
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongPluginBinding
-            namespace: ($http_route_namespace)
-            format: yaml
-    # Step 4: Create the HTTPRoute for testing request redirect filter
-    - name: create-httproute-for-request-redirect-filter
-      description: Create the HTTPRoute for verifying the request redirect filter
+        - assert:
+            file: 04-httproute-filter-response-header-modifier-assert.yaml
       bindings:
         - name: http_route_name
-          value:  (join('-', ['httproute-filter-request-redirect', env('TEST_ID') || 'local']))
-        - name: route_path_replace_full
-          value: "/httpbin-request-redirect-replace-full-path"
-        - name: redirect_host
-          value: "httpbin.test"
-      try:
-        - apply:
-            file: 04-httproute-request-redirect-filter.yaml
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout) 
-        # Verify the status code
-        - description: Verify the status code for the ReplaceFullPath filter
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path_replace_full)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}
-            check:
-              (contains($stdout, '301')): true
-        - description: Verify that the redirection works for the ReplaceFullPath request redirect filter
-          script:
-            env:
-            - name: PROXY_IP
-              value: ($proxy_ip)
-            - name: ROUTE_PATH
-              value: ($route_path_replace_full)
-            - name: TEST_HOST
-              value: ($redirect_host)
-            content: |
-              curl -s -o /dev/null --location --resolve "${TEST_HOST}:80:${PROXY_IP}" -w "%{http_code}"  http://${TEST_HOST}${ROUTE_PATH}
-            # Should redirect to /redirect-target/status/200 and proxied to /status/200 of httpbin service by Kong DP.
-            check:
-              (contains($stdout, '200')): true
-      catch:
-        - description: Dump HTTPRoutes
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($http_route_namespace)
-            name: ($http_route_name)
-            format: yaml
-        - description: Dump KongRoutes
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongPlugins
-          get:
-            apiVersion: configuration.konghq.com/v1
-            kind: KongPlugin
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongPluginBindings
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongPluginBinding
-            namespace: ($http_route_namespace)
-            format: yaml
-    # Step 5: Create the HTTPRoute for testing URL rewrite filter
-    - name: create-httproute-for-url-rewrite-filter
-      description: Create the HTTPRoute for verifying the request redirect filter
+          value: (join('-', [($test_name), 'httpbin-response-header-modifier']))
+        - name: http_route_namespace
+          value: ($namespace)
+        - name: route_hosts
+          value: 
+            - ($response_filter_fqdn)
+    # Step 24: Assert that the HTTPRoute is translated into a KongRoute resource (ResponseHeaderModifier).
+    - name: Assert-kong-route-response-header-modifier
+      description: Assert that the KongRoute resource is created for the HTTPRoute with ResponseHeaderModifier.
+      use:
+        template: ../common/_step_templates/assert-kongRoute.yaml
       bindings:
         - name: http_route_name
-          value:  (join('-', ['httproute-filter-url-rewrite', env('TEST_ID') || 'local']))
-        - name: route_path_replace_full
-          value: "/httpbin-url-rewrite-replace-full-path"
+          value: ($http_route_response_filter_name)
+        - name: http_route_namespace
+          value: ($http_route_response_filter_namespace)
+        - name: route_hosts
+          value: ($response_filter_fqdn)
+        - name: route_paths
+          value: 
+            - "~/get$"
+        - name: route_methods
+          value:
+            - "GET"
+        - name: strip_path
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+    
+    # Step 25: Assert that the HTTPRoute backend is translated into a KongService resource (ResponseHeaderModifier).
+    - name: Assert-kong-service-response-header-modifier
+      description: Assert that the KongService resource is created for the HTTPRoute with ResponseHeaderModifier.
+      use:
+        template: ../common/_step_templates/assert-kongService.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_response_filter_name)
+        - name: http_route_namespace
+          value: ($http_route_response_filter_namespace)
+
+    # Step 26: Assert that the HTTPRoute backend is translated into a KongUpstream resource (ResponseHeaderModifier).
+    - name: Assert-kong-upstream-response-header-modifier
+      description: Assert that the KongUpstream resource is created for the HTTPRoute with ResponseHeaderModifier.
+      use:
+        template: ../common/_step_templates/assert-kongUstream.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_response_filter_name)
+        - name: http_route_namespace
+          value: ($http_route_response_filter_namespace)
+    
+    # Step 27: Assert that the KongUpstream has KongTarget resources created for it (ResponseHeaderModifier).
+    - name: Assert-kong-target-response-header-modifier
+      description: Assert that the KongTarget resource is created for the KongUpstream (ResponseHeaderModifier).
+      use:
+        template: ../common/_step_templates/assert-kongTarget.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_response_filter_name)
+        - name: http_route_namespace
+          value: ($http_route_response_filter_namespace)
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: target_weight
+          value: 1
+
+    # Step 28: Assert that the Response Transformer plugin is created with the expected configuration (ResponseHeaderModifier).
+    - name: Assert-Response-Transformer-Plugin
+      description: Assert that the Response Transformer plugin is created with the expected configuration (ResponseHeaderModifier).
+      use:
+        template: ../common/_step_templates/assert-kongPlugin.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_response_filter_name)
+        - name: http_route_namespace
+          value: ($http_route_response_filter_namespace)
+        - name: namespace
+          value: kong
+        - name: gateway_name
+          value: kong-gateway
+        - name: plugin_type
+          value: response-transformer
+        - name: plugin_config
+          # Use '|' to handle the JSON string properly without quote conflicts
+          value: '{"add":{"headers":["X-Set-Response:foo"]},"append":{"headers":["X-Add-Response:bar"]},"remove":{"headers":["X-Remove-Response"]},"replace":{"headers":["X-Set-Response:foo"]}}'
+   
+    # Step 29: Assert that the KongPluginBinding resource is created to bind the plugin to the route (ResponseHeaderModifier).
+    - name: Assert-KongPluginBinding-for-Response-Transformer-Plugin
+      description: Assert that the KongPluginBinding resource is created to bind the response transformer plugin to the route (ResponseHeaderModifier).
+      use:
+        template: ../common/_step_templates/assert-kongPluginBinding.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_response_filter_name)
+        - name: http_route_namespace
+          value: ($http_route_response_filter_namespace)
+      
+  
+    # Step 30: Test GET /get endpoint from the host (ResponseHeaderModifier).
+    - name: Verify-GET-traffic-from-host-response-header-modifier
+      description: Verify that GET requests to /get work from the host (ResponseHeaderModifier).
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_response_filter_name)
+        - name: http_route_namespace
+          value: ($http_route_response_filter_namespace)
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($response_filter_fqdn)
+    
+    # Step 31: Test GET /get endpoint from the host via HTTPS (ResponseHeaderModifier).
+    - name: Verify-GET-HTTPS-traffic-from-host-response-header-modifier
+      description: Verify that GET requests to /get work from the host via HTTPS (ResponseHeaderModifier).
+      use:
+        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_response_filter_name)
+        - name: http_route_namespace
+          value: ($http_route_response_filter_namespace)
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: insecure
+          value: "true"
+        - name: fqdn
+          value: ($response_filter_fqdn)
+
+    # Step 32: Test GET /get endpoint from within the cluster (ResponseHeaderModifier).
+    - name: Verify-GET-traffic-from-cluster-response-header-modifier
+      description: Verify that GET requests to /get work from within the cluster (ResponseHeaderModifier).
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-cluster.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_response_filter_name)
+        - name: http_route_namespace
+          value: ($http_route_response_filter_namespace)
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($response_filter_fqdn)
+
+    # Step 33: Test GET /get endpoint from within the cluster via HTTPS (ResponseHeaderModifier).
+    - name: Verify-GET-HTTPS-traffic-from-cluster-response-header-modifier
+      description: Verify that GET requests to /get work from within the cluster via HTTPS (ResponseHeaderModifier).
+      use:
+        template: ../common/_step_templates/verify-https-traffic-from-cluster.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_response_filter_name)
+        - name: http_route_namespace
+          value: ($http_route_response_filter_namespace)
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: insecure
+          value: "true"
+        - name: fqdn
+          value: ($response_filter_fqdn)
+
+    # Step 34: Validate the ResponseHeaderModifier filter over HTTP.
+    - name: Verify-response-header-modifier-over-http
+      description: Validate that the ResponseHeaderModifier filter modifies headers correctly over HTTP.
+      use:
+        template: ../common/_step_templates/verify-response-header-modifier.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name)
+        - name: gateway_namespace
+          value: ($gateway_namespace)
+        - name: route_path
+          value: "/get"
+        - name: namespace
+          value: ($http_route_namespace)
+        - name: host_header
+          value: ($response_filter_fqdn)
+        - name: proxy_port
+          value: "80"
+        - name: headers_to_send
+          value: "X-Remove-Response:to-be-removed,X-Set-Response:existing-value"
+        - name: expected_headers_present
+          value: "X-Set-Response:foo,X-Add-Response:bar"
+        - name: expected_headers_absent
+          value: "X-Remove-Response,X-Set-Response:existing-value"
+        - name: protocol
+          value: "http"
+        - name: insecure
+          value: "false"
+
+    # Step 35: Validate the ResponseHeaderModifier filter over HTTPS.
+    - name: Verify-response-header-modifier-over-https
+      description: Validate that the ResponseHeaderModifier filter modifies headers correctly over HTTPS.
+      use:
+        template: ../common/_step_templates/verify-response-header-modifier.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name)
+        - name: gateway_namespace 
+          value: ($gateway_namespace)
+        - name: route_path
+          value: "/get"
+        - name: namespace
+          value: ($http_route_namespace)
+        - name: host_header
+          value: ($response_filter_fqdn)
+        - name: proxy_port
+          value: "443"
+        - name: headers_to_send
+          value: "X-Remove-Response:to-be-removed,X-Set-Response:existing-value"
+        - name: expected_headers_present
+          value: "X-Set-Response:foo,X-Add-Response:bar"
+        - name: expected_headers_absent
+          value: "X-Remove-Response,X-Set-Response:existing-value"
+        - name: protocol
+          value: "https"
+        - name: insecure
+          value: "true"
+
+    # Step 36: Create the HTTPRoute with combined filters (RequestHeaderModifier and ResponseHeaderModifier).
+    - name: Create-httproute-with-combined-filters
+      description: Create HTTPRoute with both RequestHeaderModifier and ResponseHeaderModifier filters.
       try:
         - apply:
-            file: 05-httproute-url-rewrite-filter.yaml
-        # Get the Gateway proxy IP
-        - script:
-            env:
-              - name: GATEWAY_NAME
-                value: ($gateway_name)
-              - name: GATEWAY_NAMESPACE
-                value: ($gateway_namespace)
-            content: |
-              kubectl get gateway ${GATEWAY_NAME} -n ${GATEWAY_NAMESPACE} -o jsonpath='{.status.addresses[0].value}'
-            outputs:
-              - name: proxy_ip
-                value: ($stdout) 
-        # Verify the status code
-        - description: Verify the status code for the ReplaceFullPath URL rewrite filter
-          script:
-            env:
-              - name: PROXY_IP
-                value: ($proxy_ip)
-              - name: ROUTE_PATH
-                value: ($route_path_replace_full)
-            content: |
-              curl --fail --retry 10 --retry-delay 5 --retry-all-errors -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}${ROUTE_PATH}
-            check:
-              (contains($stdout, '200')): true
-      catch:
-        - description: Dump HTTPRoutes
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($http_route_namespace)
-            name: ($http_route_name)
-            format: yaml
-        - description: Dump KongRoutes
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongRoute
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongPlugins
-          get:
-            apiVersion: configuration.konghq.com/v1
-            kind: KongPlugin
-            namespace: ($http_route_namespace)
-            format: yaml
-        - description: Dump KongPluginBindings
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongPluginBinding
-            namespace: ($http_route_namespace)
-            format: yaml
+            file: 05-httproute-filter-combined-filters.yaml
+        - assert:
+            file: 06-httproute-filter-combined-filters-assert.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_combined_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_combined_filters_namespace)
+        - name: route_hosts
+          value: 
+            - ($combined_filters_fqdn)
+
+    # Step 37: Assert that the HTTPRoute is translated into a KongRoute resource (combined filters).
+    - name: Assert-kong-route-combined-filters
+      description: Assert that the KongRoute resource is created for the HTTPRoute with combined filters.
+      use:
+        template: ../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_combined_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_combined_filters_namespace)
+        - name: route_hosts
+          value: ($combined_filters_fqdn)
+        - name: route_paths
+          value: 
+            - "~/get$"
+        - name: route_methods
+          value:
+            - "GET"
+        - name: strip_path
+          value: false
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+    
+    # Step 38: Assert that the HTTPRoute backend is translated into a KongService resource (combined filters).
+    - name: Assert-kong-service-combined-filters
+      description: Assert that the KongService resource is created for the HTTPRoute with combined filters.
+      use:
+        template: ../common/_step_templates/assert-kongService.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_combined_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_combined_filters_namespace)
+
+    # Step 39: Assert that the HTTPRoute backend is translated into a KongUpstream resource (combined filters).
+    - name: Assert-kong-upstream-combined-filters
+      description: Assert that the KongUpstream resource is created for the HTTPRoute with combined filters.
+      use:
+        template: ../common/_step_templates/assert-kongUstream.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_combined_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_combined_filters_namespace)
+    
+    # Step 40: Assert that the KongUpstream has KongTarget resources created for it (combined filters).
+    - name: Assert-kong-target-combined-filters
+      description: Assert that the KongTarget resource is created for the KongUpstream (combined filters).
+      use:
+        template: ../common/_step_templates/assert-kongTarget.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_combined_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_combined_filters_namespace)
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: target_weight
+          value: 1
+
+    # Step 41: Assert that the Request Transformer plugin is created with the expected configuration (combined filters).
+    - name: Assert-Request-Transformer-Plugin-for-Combined-Filters
+      description: Assert that the Request Transformer plugin is created with the expected configuration (combined filters).
+      use:
+        template: ../common/_step_templates/assert-kongPlugin.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_combined_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_combined_filters_namespace)
+        - name: namespace
+          value: kong
+        - name: gateway_name
+          value: kong-gateway
+        - name: plugin_type
+          value: request-transformer
+        - name: plugin_config
+          value: '{"add":{"headers":["X-Request-Set:request-foo"]},"append":{"headers":["X-Request-Add:request-bar"]},"remove":{"headers":["X-Request-Remove"]},"replace":{"headers":["X-Request-Set:request-foo"]}}'
+   
+    # Step 42: Assert that the Response Transformer plugin is created with the expected configuration (combined filters).
+    - name: Assert-Response-Transformer-Plugin-for-Combined-Filters
+      description: Assert that the Response Transformer plugin is created with the expected configuration (combined filters).
+      use:
+        template: ../common/_step_templates/assert-kongPlugin.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_combined_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_combined_filters_namespace)
+        - name: namespace
+          value: kong
+        - name: gateway_name
+          value: kong-gateway
+        - name: plugin_type
+          value: response-transformer
+        - name: plugin_config
+          value: '{"add":{"headers":["X-Response-Set:response-foo"]},"append":{"headers":["X-Response-Add:response-bar"]},"remove":{"headers":["X-Response-Remove"]},"replace":{"headers":["X-Response-Set:response-foo"]}}'
+   
+    # Step 43: Assert that the KongPluginBinding resources are created to bind both plugins to the route (combined filters).
+    - name: Assert-KongPluginBinding-for-Combined-Filters
+      description: Assert that the KongPluginBinding resources are created to bind both transformer plugins to the route (combined filters).
+      use:
+        template: ../common/_step_templates/assert-kongPluginBinding.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_combined_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_combined_filters_namespace)
+  
+    # Step 44: Verify GET /get endpoint from the host (combined filters).
+    - name: Verify-GET-traffic-from-host-combined-filters
+      description: Verify that GET requests to /get work from the host (combined filters).
+      use:
+        template: ../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_combined_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_combined_filters_namespace)
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($combined_filters_fqdn)
+    
+    # Step 45: Verify GET /get endpoint from the host via HTTPS (combined filters).
+    - name: Verify-GET-HTTPS-traffic-from-host-combined-filters
+      description: Verify that GET requests to /get work from the host via HTTPS (combined filters).
+      use:
+        template: ../common/_step_templates/verify-htpps-traffic-from-host.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_combined_filters_name)
+        - name: http_route_namespace
+          value: ($http_route_combined_filters_namespace)
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: insecure
+          value: "true"
+        - name: fqdn
+          value: ($combined_filters_fqdn)
+
+    # Step 46: Validate the RequestHeaderModifier filter in combined filters over HTTP.
+    - name: Verify-request-header-modifier-combined-filters-over-http
+      description: Validate that the RequestHeaderModifier filter modifies headers correctly in combined filters over HTTP.
+      use:
+        template: ../common/_step_templates/verify-request-header-modifier.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name)
+        - name: gateway_namespace
+          value: ($gateway_namespace)
+        - name: route_path
+          value: "/get"
+        - name: namespace
+          value: ($http_route_combined_filters_namespace)
+        - name: host_header
+          value: ($combined_filters_fqdn)
+        - name: proxy_port
+          value: "80"
+        - name: headers_to_send
+          value: "X-Request-Remove:to-be-removed,X-Request-Set:existing-value"
+        - name: expected_headers_present
+          value: "X-Request-Set:request-foo,X-Request-Add:request-bar"
+        - name: expected_headers_absent
+          value: "X-Request-Remove,X-Request-Set:existing-value"
+        - name: protocol
+          value: "http"
+        - name: insecure
+          value: "false"
+
+    # Step 47: Validate the ResponseHeaderModifier filter in combined filters over HTTP.
+    - name: Verify-response-header-modifier-combined-filters-over-http
+      description: Validate that the ResponseHeaderModifier filter modifies headers correctly in combined filters over HTTP.
+      use:
+        template: ../common/_step_templates/verify-response-header-modifier.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name)
+        - name: gateway_namespace
+          value: ($gateway_namespace)
+        - name: route_path
+          value: "/get"
+        - name: namespace
+          value: ($http_route_combined_filters_namespace)
+        - name: host_header
+          value: ($combined_filters_fqdn)
+        - name: proxy_port
+          value: "80"
+        - name: headers_to_send
+          value: "X-Response-Remove:to-be-removed,X-Response-Set:existing-value"
+        - name: expected_headers_present
+          value: "X-Response-Set:response-foo,X-Response-Add:response-bar"
+        - name: expected_headers_absent
+          value: "X-Response-Remove,X-Response-Set:existing-value"
+        - name: protocol
+          value: "http"
+        - name: insecure
+          value: "false"
+
+    # Step 48: Validate the RequestHeaderModifier filter in combined filters over HTTPS.
+    - name: Verify-request-header-modifier-combined-filters-over-https
+      description: Validate that the RequestHeaderModifier filter modifies headers correctly in combined filters over HTTPS.
+      use:
+        template: ../common/_step_templates/verify-request-header-modifier.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name)
+        - name: gateway_namespace 
+          value: ($gateway_namespace)
+        - name: route_path
+          value: "/get"
+        - name: namespace
+          value: ($http_route_combined_filters_namespace)
+        - name: host_header
+          value: ($combined_filters_fqdn)
+        - name: proxy_port
+          value: "443"
+        - name: headers_to_send
+          value: "X-Request-Remove:to-be-removed,X-Request-Set:existing-value"
+        - name: expected_headers_present
+          value: "X-Request-Set:request-foo,X-Request-Add:request-bar"
+        - name: expected_headers_absent
+          value: "X-Request-Remove,X-Request-Set:existing-value"
+        - name: protocol
+          value: "https"
+        - name: insecure
+          value: "true"
+
+    # Step 49: Validate the ResponseHeaderModifier filter in combined filters over HTTPS.
+    - name: Verify-response-header-modifier-combined-filters-over-https
+      description: Validate that the ResponseHeaderModifier filter modifies headers correctly in combined filters over HTTPS.
+      use:
+        template: ../common/_step_templates/verify-response-header-modifier.yaml
+      bindings:
+        - name: gateway_name
+          value: ($gateway_name)
+        - name: gateway_namespace 
+          value: ($gateway_namespace)
+        - name: route_path
+          value: "/get"
+        - name: namespace
+          value: ($http_route_combined_filters_namespace)
+        - name: host_header
+          value: ($combined_filters_fqdn)
+        - name: proxy_port
+          value: "443"
+        - name: headers_to_send
+          value: "X-Response-Remove:to-be-removed,X-Response-Set:existing-value"
+        - name: expected_headers_present
+          value: "X-Response-Set:response-foo,X-Response-Add:response-bar"
+        - name: expected_headers_absent
+          value: "X-Response-Remove,X-Response-Set:existing-value"
+        - name: protocol
+          value: "https"
+        - name: insecure
+          value: "true"
+
+  catch:
+    # Capture and describe all relevant Kubernetes resources for debugging on test failure.
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: Gateway
+        name: ($gateway_name)
+        namespace: ($gateway_namespace)
+    
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KonnectGatewayControlPlane
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongService
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongRoute
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1beta1
+        kind: KongUpstream
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1beta1
+        kind: KongTarget
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1
+        kind: KongPlugin
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongPluginBinding
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongCertificate
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongSNI
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: v1
+        kind: Service
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: v1
+        kind: Pod
+        namespace: ($namespace)
+    
+    - describe:
+        apiVersion: v1
+        kind: Secret
+        name: ($cert_secret_name)
+        namespace: ($cert_secret_namespace)

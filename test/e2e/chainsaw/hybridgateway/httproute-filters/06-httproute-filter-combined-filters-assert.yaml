@@ -1,0 +1,81 @@
+---
+# Assert HTTPRoute with combined filters is accepted and programmed.
+#
+# Required bindings:
+#   - test_name: The test name label to match (used for labels)
+#   - http_route_name: Name of the HTTPRoute resource
+#   - http_route_namespace: Namespace of the HTTPRoute resource
+#   - gateway_name: Name of the Gateway parent resource
+#   - httpbin_service_name: Name of the httpbin backend service
+#   - httpbin_service_namespace: Namespace of the httpbin backend service
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  (labels."chainsaw/test" == ($test_name)): true
+  name: ($http_route_name)
+  namespace: ($http_route_namespace)
+spec:
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    - backendRefs:
+        - name: ($httpbin_deployment_name)
+          namespace: ($httpbin_deployment_namespace)
+          port: 80
+      matches:
+        - path:
+            type: Exact
+            value: /get
+          method: GET
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            set:
+            - name: X-Request-Set
+              value: "request-foo"
+            add:
+            - name: X-Request-Add
+              value: "request-bar"
+            remove:
+            - X-Request-Remove
+        - type: ResponseHeaderModifier
+          responseHeaderModifier:
+            set:
+            - name: X-Response-Set
+              value: "response-foo"
+            add:
+            - name: X-Response-Add
+              value: "response-bar"
+            remove:
+            - X-Response-Remove
+status:
+  parents:
+    - parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: ($gateway_name)
+      # Filter conditions array to check for all required conditions.
+      (conditions[?type == 'Accepted']):
+        - status: "True"
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "True"
+          reason: ResolvedRefs
+      (conditions[?type == 'KongRouteProgrammed']):
+        - status: "True"
+          reason: KongRouteProgrammed
+      (conditions[?type == 'KongServiceProgrammed']):
+        - status: "True"
+          reason: KongServiceProgrammed
+      (conditions[?type == 'KongUpstreamProgrammed']):
+        - status: "True"
+          reason: KongUpstreamProgrammed
+      (conditions[?type == 'KongTargetProgrammed']):
+        - status: "True"
+          reason: KongTargetProgrammed
+      (conditions[?type == 'KongPluginBindingProgrammed']):
+        - status: "True"
+          reason: KongPluginBindingProgrammed

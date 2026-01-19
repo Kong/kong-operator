@@ -15,19 +15,19 @@ spec:
           apiVersion: apps/v1
           kind: Deployment
           metadata:
-            name: (join('-', [($test_name), 'httpbin']))
-            namespace: ($namespace)
+            name: ($httpbin_deployment_name)
+            namespace: ($httpbin_deployment_namespace)
             labels:
-              app: (join('-', [($test_name), 'httpbin']))
+              app: ($httpbin_deployment_name)
           spec:
             replicas: 1
             selector:
               matchLabels:
-                app: (join('-', [($test_name), 'httpbin']))
+                app: ($httpbin_deployment_name)
             template:
               metadata:
                 labels:
-                  app: (join('-', [($test_name), 'httpbin']))
+                  app: ($httpbin_deployment_name)
               spec:
                 containers:
                   - name: httpbin
@@ -60,13 +60,13 @@ spec:
           apiVersion: v1
           kind: Service
           metadata:
-            name: (join('-', [($test_name), 'httpbin']))
-            namespace: ($namespace)
+            name: ($httpbin_deployment_name)
+            namespace: ($httpbin_deployment_namespace)
             labels:
-              app: (join('-', [($test_name), 'httpbin']))
+              app: ($httpbin_deployment_name)
           spec:
             selector:
-              app: (join('-', [($test_name), 'httpbin']))
+              app: ($httpbin_deployment_name)
             ports:
               - port: 80
                 targetPort: http
@@ -80,8 +80,8 @@ spec:
           apiVersion: apps/v1
           kind: Deployment
           metadata:
-            name: (join('-', [($test_name), 'httpbin']))
-            namespace: ($namespace)
+            name: ($httpbin_deployment_name)
+            namespace: ($httpbin_deployment_namespace)
           status:
             (conditions[?type == 'Available']):
               - status: 'True'
@@ -94,8 +94,8 @@ spec:
           apiVersion: v1
           kind: Service
           metadata:
-            name: (join('-', [($test_name), 'httpbin']))
-            namespace: ($namespace)
+            name: ($httpbin_deployment_name)
+            namespace: ($httpbin_deployment_namespace)
           spec:
             selector:
               app: (join('-', [($test_name), 'httpbin']))

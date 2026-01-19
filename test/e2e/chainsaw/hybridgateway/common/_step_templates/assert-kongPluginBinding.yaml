@@ -1,0 +1,95 @@
+# Asserts that a KongPluginBinding resource exists and is correctly bound to the expected 
+# KongPlugin and KongRoute for a given HTTPRoute and Gateway, with the correct
+# control plane reference and status.
+#
+# Required bindings:
+#   - namespace: Namespace where the KongPluginBinding should exist
+#   - gateway_name: Name of the Gateway
+#   - gateway_namespace: Namespace of the Gateway
+#   - http_route_name: Name of the HTTPRoute
+#   - http_route_namespace: Namespace of the HTTPRoute
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-kong-plugin-binding
+spec:
+  try:
+    # 1. Bulk resolve all required resource names.
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: GATEWAY_NAME
+            value: ($gateway_name)
+          - name: GATEWAY_NAMESPACE
+            value: ($gateway_namespace)
+          - name: HTTP_ROUTE_NAME
+            value: ($http_route_name)
+          - name: HTTP_ROUTE_NAMESPACE
+            value: ($http_route_namespace)
+          # We include all types needed for the Binding assertion.
+          - name: RESOURCE_TYPES
+            value: "kongplugins.configuration.konghq.com,kongroutes.configuration.konghq.com"
+        content: |
+          bash ../common/scripts/get_kong_resources.sh
+        outputs:
+          - name: kong_resources
+            value: (json_parse($stdout))
+          # We filter the list, select the 'name' fields, and join them into one string.
+          - name: kong_plugin_name
+            value: (join('', json_parse($stdout).resources[?(@.type == 'kongplugins.configuration.konghq.com')].name))
+          - name: kong_route_name
+            value: (join('', json_parse($stdout).resources[?(@.type == 'kongroutes.configuration.konghq.com')].name))
+
+    # 2. Get the konnect gateway control plane name.
+    - script:
+        env:
+         - name: NAMESPACE
+           value: ($namespace)
+         - name: GATEWAY_NAME
+           value: ($gateway_name)
+         - name: GATEWAY_NAMESPACE
+           value: ($gateway_namespace)
+         - name: HTTP_ROUTE_NAME
+           value: ($http_route_name)
+         - name: HTTP_ROUTE_NAMESPACE
+           value: ($http_route_namespace)
+        content: |
+          bash ../common/scripts/konnecGatewayControlplane_name.sh
+        outputs:
+          - name: konnectgatewaycontrolplane_name
+            value: (json_parse($stdout).cp_name)
+
+    # 2. Final Assertion using CEL to find names in the discovery list.
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: KongPluginBinding
+          metadata:
+            namespace: ($namespace)
+            (labels."gateway-operator.konghq.com/hybrid-gateways-name"): ($gateway_name)
+            (labels."gateway-operator.konghq.com/hybrid-gateways-namespace"): ($gateway_namespace)
+            (labels."gateway-operator.konghq.com/managed-by"): 'HTTPRoute'
+            (annotations."gateway-operator.konghq.com/hybrid-routes" | contains(@, join('/', [($http_route_namespace), ($http_route_name)]))): true
+            (annotations."gateway-operator.konghq.com/hybrid-gateways"): (join('/', [($gateway_namespace), ($gateway_name)]))
+          spec:
+            controlPlaneRef:
+              konnectNamespacedRef:
+                name: ($konnectgatewaycontrolplane_name)
+              type: konnectNamespacedRef
+            pluginRef:
+              kind: KongPlugin
+              name: ($kong_plugin_name)
+            scope: OnlyTargets
+            targets:
+              routeRef:
+                group: configuration.konghq.com
+                kind: KongRoute
+                name: ($kong_route_name)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            konnect:
+              (controlPlaneID != null): true
+              (id != null): true
