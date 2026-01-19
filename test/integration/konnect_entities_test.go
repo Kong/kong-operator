@@ -84,6 +84,19 @@ func TestKonnectEntities(t *testing.T) {
 			"status.clusterType must be set to "+sdkkonnectcomp.ControlPlaneClusterTypeClusterTypeControlPlane)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
+	// Create KongReferenceGrant to allow KongVault (cluster-scoped) to reference KonnectGatewayControlPlane (namespace-scoped).
+	_ = deploy.KongReferenceGrant(t, GetCtx(), clientNamespaced,
+		deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
+			Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+			Kind:      "KongVault",
+			Namespace: configurationv1alpha1.Namespace(""),
+		}),
+		deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
+			Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+			Kind:  "KonnectGatewayControlPlane",
+		}),
+	)
+
 	t.Run("with Origin ControlPlane", func(t *testing.T) {
 		KonnectEntitiesTestCase(t, konnectEntitiesTestCaseParams{
 			cp:     cp,

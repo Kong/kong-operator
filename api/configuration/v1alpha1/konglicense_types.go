@@ -73,8 +73,7 @@ type Group string
 type Kind string
 
 // Namespace refers to a Kubernetes namespace. It must be a RFC 1123 label.
-// +kubebuilder:validation:Pattern=`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
-// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:Pattern=`^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`
 // +kubebuilder:validation:MaxLength=63
 // +apireference:kgo:include
 type Namespace string

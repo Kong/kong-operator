@@ -53140,8 +53140,7 @@ spec:
                             Namespace is the namespace of the referent.
                             It should be empty if the referent is cluster scoped.
                           maxLength: 63
-                          minLength: 1
-                          pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                          pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                           type: string
                       required:
                       - name
@@ -54200,12 +54199,9 @@ spec:
                       pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
                       type: string
                     namespace:
-                      allOf:
-                      - minLength: 1
-                      - minLength: 1
                       description: Namespace is the namespace of the referent.
                       maxLength: 63
-                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                      pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
                       type: string
                   required:
                   - group
@@ -54214,11 +54210,15 @@ spec:
                   type: object
                   x-kubernetes-validations:
                   - message: Only KongConsumerGroup, KongCertificate, KongCACertificate,
-                      KongService, KongUpstream and KongKeySet kinds are supported
-                      for 'configuration.konghq.com' group
-                    rule: .self.group != 'configuration.konghq.com' || .self.kind
-                      in ['KongConsumerGroup', 'KongService', 'KongCertificate', 'KongCACertificate',
-                      'KongUpstream', 'KongKeySet']
+                      KongService, KongUpstream, KongKeySet, and KongVault kinds are
+                      supported for 'configuration.konghq.com' group
+                    rule: self.group != 'configuration.konghq.com' || self.kind in
+                      ['KongConsumerGroup', 'KongService', 'KongCertificate', 'KongCACertificate',
+                      'KongUpstream', 'KongKeySet', 'KongVault']
+                  - message: namespace must be empty for KongVault and non-empty for
+                      other kinds
+                    rule: 'self.kind == ''KongVault'' ? self.__namespace__ == "" :
+                      self.__namespace__ != ""'
                 maxItems: 16
                 minItems: 1
                 type: array

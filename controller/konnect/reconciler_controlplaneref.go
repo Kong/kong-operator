@@ -6,7 +6,6 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -137,9 +136,15 @@ func ensureKongReferenceGrant[
 	ent TEnt,
 	cpRef commonv1alpha1.ControlPlaneRef,
 ) (ctrl.Result, error) {
+	fromNamespace := ent.GetNamespace()
+	toNamespace := ""
+	if cpRef.KonnectNamespacedRef != nil {
+		toNamespace = cpRef.KonnectNamespacedRef.Namespace
+	}
+
 	if cpRef.Type != commonv1alpha1.ControlPlaneRefKonnectNamespacedRef ||
-		cpRef.KonnectNamespacedRef.Namespace == "" ||
-		cpRef.KonnectNamespacedRef.Name == ent.GetNamespace() {
+		toNamespace == "" ||
+		toNamespace == fromNamespace {
 		if res, errStatus := patch.StatusWithoutCondition(
 			ctx, cl, ent,
 			configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
@@ -149,30 +154,11 @@ func ensureKongReferenceGrant[
 		return ctrl.Result{}, nil
 	}
 
-	// Only check KongReferenceGrants for namespaced resources.
-	gvk := ent.GetObjectKind().GroupVersionKind()
-	mapping, err := cl.RESTMapper().RESTMapping(gvk.GroupKind(), gvk.Version)
-	if err != nil {
-		return ctrl.Result{}, fmt.Errorf(
-			"failed to get REST mapping for %s %s: %w",
-			gvk.String(), client.ObjectKeyFromObject(ent), err,
-		)
-	}
-	if mapping.Scope.Name() != meta.RESTScopeNameNamespace {
-		if res, errStatus := patch.StatusWithoutCondition(
-			ctx, cl, ent,
-			configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs,
-		); errStatus != nil || !res.IsZero() {
-			return res, errStatus
-		}
-		return ctrl.Result{}, nil
-	}
-
-	err = crossnamespace.CheckKongReferenceGrantForResource(
+	err := crossnamespace.CheckKongReferenceGrantForResource(
 		ctx,
 		cl,
-		ent.GetNamespace(),
-		cpRef.KonnectNamespacedRef.Namespace,
+		fromNamespace,
+		toNamespace,
 		cpRef.KonnectNamespacedRef.Name,
 		metav1.GroupVersionKind(ent.GetObjectKind().GroupVersionKind()),
 		metav1.GroupVersionKind(konnectv1alpha2.SchemeGroupVersion.WithKind("KonnectGatewayControlPlane")),

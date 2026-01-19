@@ -113,6 +113,47 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			expected: true,
 		},
 		{
+			name: "grant allows reference from cluster-scoped KongVault to KonnectGatewayControlPlane",
+			grants: []configurationv1alpha1.KongReferenceGrant{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "allow-vault-to-cp",
+						Namespace: "cp-ns",
+					},
+					Spec: configurationv1alpha1.KongReferenceGrantSpec{
+						From: []configurationv1alpha1.ReferenceGrantFrom{
+							{
+								Group:     "configuration.konghq.com",
+								Kind:      "KongVault",
+								Namespace: "",
+							},
+						},
+						To: []configurationv1alpha1.ReferenceGrantTo{
+							{
+								Group: "konnect.konghq.com",
+								Kind:  "KonnectGatewayControlPlane",
+								Name:  lo.ToPtr(configurationv1alpha1.ObjectName("my-cp")),
+							},
+						},
+					},
+				},
+			},
+			fromNamespace: "",
+			toNamespace:   "cp-ns",
+			toName:        "my-cp",
+			fromGVK: metav1.GroupVersionKind{
+				Group:   "configuration.konghq.com",
+				Version: "v1alpha1",
+				Kind:    "KongVault",
+			},
+			toGVK: metav1.GroupVersionKind{
+				Group:   "konnect.konghq.com",
+				Version: "v1alpha2",
+				Kind:    "KonnectGatewayControlPlane",
+			},
+			expected: true,
+		},
+		{
 			name:          "no grant exists - denies reference",
 			fromNamespace: "cert-ns",
 			toNamespace:   "secret-ns",
