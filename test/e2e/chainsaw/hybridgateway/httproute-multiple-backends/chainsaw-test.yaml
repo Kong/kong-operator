@@ -362,13 +362,23 @@ spec:
                 value: ($kong_namespace)
             content: |
               kubectl wait --for=condition=Programmed --timeout=120s kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute
-        # Verify there are 2 KongTarget resources with different ports
+        # Wait for stale KongTargets to be cleaned up and verify there are exactly 2
         - script:
+            timeout: 120s
             env:
               - name: KONG_NAMESPACE
                 value: ($kong_namespace)
             content: |
-              kubectl get kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' \n'
+              for i in $(seq 1 30); do
+                count=$(kubectl get kongtarget -n ${KONG_NAMESPACE} -l gateway-operator.konghq.com/managed-by=HTTPRoute -o jsonpath='{.items[*].metadata.name}' | wc -w | tr -d ' \n')
+                if [ "$count" = "2" ]; then
+                  echo "2"
+                  exit 0
+                fi
+                sleep 2
+              done
+              echo "$count"
+              exit 1
             check:
               ($stdout == '2'): true
 
