@@ -27,7 +27,7 @@ spec:
     - name: konnect_url
       value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
     - name: gateway_namespace
-      value: (join('-', ['kong', 'gwconf-apiauthconf-x-ns-gateway', (env('GITHUB_RUN_ID') || env('TEST_ID') || 'local')]))
+      value: ($namespace)
     - name: gateway_image
       value: (env('GATEWAY_IMAGE') || 'kong/kong-gateway:3.12')
     - name: listener_http_port
@@ -40,14 +40,15 @@ spec:
       value: (join('-', [($test_name), 'echo']))
 
   steps:
-  # Step 1: Create 2 namespaces where KonnectAPIAuthConfiguration and GatewayConfiguration are in separately
-    - name: create-namespaces
-      description: Create 2 namespaces for KonnectAPIAuthConfiguration and GatewayConfiguration
-      try:
-        - apply:
-            file: 00-namespaces.yaml
-        - assert:
-           file: 00-namespaces.yaml
+  # Step 1: Create a namespace other than the chainsaw test namespace for KonnectAPIAuthConfiguration 
+    - name: create-konnect-api-auth-configuration-namespace
+      description: Create a namespace other than the test namespace for KonnectAPIAuthConfiguration
+      bindings:
+        - name: namespace
+          value: ($konnect_api_auth_namespace)
+      use:
+        template: ../common/_step_templates/apply-assert-namespace.yaml
+        
   # Step 2: Create KonnectAPIAuthConfiguration in a namespace
     - name: create-konnect-api-auth-confugration
       description: Create a KonnectAPIAuthConfiguration in a namespace
@@ -81,36 +82,24 @@ spec:
     # Step 4: Create the GatewayConfiguration that defines the hybrid gateway setup  in the other namespace.
     - name: create-gateway-configuration
       description: Create GatewayConfiguration for the test.
-      bindings:
-        - name: namespace
-          value: ($gateway_namespace)
       use:
         template: ../common/_step_templates/apply-assert-gatewayConfiguration.yaml
 
     # Step 5: Create the GatewayClass that will be used by the Gateway.
     - name: create-gateway-class
       description: Create GatewayClass for the test.
-      bindings:
-        - name: namespace
-          value: ($gateway_namespace)
       use:
         template: ../common/_step_templates/apply-assert-gatewayClass.yaml
     
     # Step 6: Create the Gateway in the namespace of GatewayConfiguration.
     - name: Create-gateway
       description: Create Gateway in the namespace of GatewayConfiguration for the test.
-      bindings:
-        - name: namespace
-          value: ($gateway_namespace)
       use:
         template: ../common/_step_templates/apply-assert-gateway-only-http-listener.yaml
     
     # Step 7: Verify that the KonnectGatewayControlPlane is created and synchronized with Konnect.
     - name: Assert-konnect-gateway-control-plane
       description: Assert that the KonnectGatewayControlplane resource is created and synchronized.
-      bindings:
-        - name: namespace
-          value: ($gateway_namespace)
       use:
         template: ../common/_step_templates/assert-konnectGatewayControlPlane.yaml
 
@@ -118,11 +107,6 @@ spec:
     # Step 8: Create echo services and deployments as the backend of HTTPRoute.
     - name: Create-echo-service
       description: Create and assert an echo service to route traffic to.
-      bindings:
-        - name: echo_service_namespace
-          value: ($gateway_namespace)
-        - name: echo_deployment_namespace
-          value: ($gateway_namespace)
       use:
         template: ../common/_step_templates/apply-assert-echoService.yaml
 
@@ -130,8 +114,8 @@ spec:
     - name: Create-httproute-echo
       description: Create HTTPRoute to route traffic to the echo service.
       bindings:
-        - name: namespace
-          value: ($gateway_namespace)
+        - name: gateway_name
+          value: (join('-', [($test_name), 'gateway']))
         - name: route_path
           value: "/echo-x-ns-gwconf-konnect-api-auth"
       try:
@@ -157,7 +141,7 @@ spec:
           value: (join('-', [($test_name), 'gateway']))
         - name: route_path
           value: "/echo-x-ns-gwconf-konnect-api-auth"
-        - name: hostname
+        - name: host_header
           value: ""
         - name: http_method
           value: GET
@@ -178,14 +162,7 @@ spec:
         showEvents: true
     
     - describe:
-        apiVersion: gateway-operator.konghq.com/v1alpha1
-        kind: KonnectAPIAuthConfiguration
-        name: (join('-', [($test_name), 'konnect-api-auth']))
-        namespace: ($konnect_api_auth_namespace)
-        showEvents: true
-    
-    - describe:
-        apiVersion: gateway-operator.konghq.com/v1beta1
+        apiVersion: konnect.konghq.com/v1alpha2
         kind: KonnectGatewayControlPlane
         namespace: ($gateway_namespace)
         showEvents: true
@@ -217,7 +194,7 @@ spec:
     - describe:
         apiVersion: gateway.networking.k8s.io/v1
         kind: HTTPRoute
-        name: (join('-', [($test_name), 'echo-route']))
+        name: ($http_route_name)
         namespace: ($gateway_namespace)
         showEvents: true
     
@@ -248,6 +225,6 @@ spec:
     - describe:
         apiVersion: v1
         kind: Service
-        name: (join('-', [($test_name), 'echo']))
+        name: ($echo_service_name)
         namespace: ($gateway_namespace)
         showEvents: true

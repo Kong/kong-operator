@@ -37,7 +37,7 @@ spec:
           - name: ROUTE_PATH
             value: ($route_path)
           - name: PROXY_PORT
-            value: ($listener_http_port)
+            value: (to_string($listener_http_port))
           - name: HOST
             value: ($host_header)
           - name: METHOD
