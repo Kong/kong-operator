@@ -1,21 +1,14 @@
 # Template for creating and asserting an echo service.
 #
 # Required bindings:
-#   - test_name: Test name used to compose the service name.
+#   - echo_service_name: Service/Deployment name (and app label/selector).
 #   - echo_service_namespace: Namespace where the service will be created.
 #   - echo_deployment_namespace: Namespace where the deployment will be created.
-# Optional bindings:
-#   - echo_service_name: Override for Service/Deployment name (and app label/selector).
-#                        Default: join('-', [($test_name), 'echo'])
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
   name: create-echo-service
 spec:
-  # Default bindings - can be overridden by the caller
-  bindings:
-    - name: echo_service_name
-      value: (join('-', [($test_name), 'echo']))
   try:
     # 1. Apply the Service.
     - apply:

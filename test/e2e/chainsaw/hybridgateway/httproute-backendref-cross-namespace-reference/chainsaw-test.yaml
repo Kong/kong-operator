@@ -120,9 +120,6 @@ spec:
       description: Create and assert an echo service to route traffic to.
       use:
         template: ../common/_step_templates/apply-assert-echoService.yaml
-      bindings:
-        - name: namespace
-          value: ($echo_service_namespace)
 
     
     # Step 11: Create HTTPRoute that routes traffic to the echo service in another namespace and ReferenceGrant.

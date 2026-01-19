@@ -4,7 +4,6 @@ kind: Test
 metadata:
   name: konnect-gateway-controlplane-conversion
 spec:
-  concurrent: false
   description: |
     This test validates that the v1alpha1 KonnectGatewayControlPlane is converted to v2alpha1.
 
