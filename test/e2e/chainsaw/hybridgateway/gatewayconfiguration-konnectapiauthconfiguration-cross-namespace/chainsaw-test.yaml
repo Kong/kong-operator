@@ -26,6 +26,8 @@ spec:
       value: (env('KONNECT_TOKEN'))
     - name: konnect_url
       value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: gateway_name
+      value: (join('-', [($test_name), 'gateway']))
     - name: gateway_namespace
       value: ($namespace)
     - name: gateway_image
@@ -130,8 +132,47 @@ spec:
             kind: HTTPRoute
             namespace: ($namespace)
             format: yaml
+
+    # Step 10: Verify that the HTTPRoute backend is translated into a KongService resource.
+    - name: Assert-kong-service
+      description: Assert that the KongService resource is created for the HTTPRoute.
+      use:
+        template: ../common/_step_templates/assert-kongService.yaml
+
+    # Step 11: Verify that the HTTPRoute is translated into a KongRoute resource.
+    - name: Assert-kong-route
+      description: Assert that the KongRoute resource is created for the HTTPRoute.
+      use:
+        template: ../common/_step_templates/assert-kongRoute.yaml
+      bindings:
+        - name: route_paths
+          value: 
+            - "~/echo-x-ns-gwconf-konnect-api-auth$"
+            - "/echo-x-ns-gwconf-konnect-api-auth/"
+        - name: strip_path
+          value: true
+        - name: resource_type
+          value: "kongservices.configuration.konghq.com"
+    
+
+    # Step 11: Verify that the HTTPRoute backend is translated into a KongUpstream resource.
+    - name: Assert-kong-upstream
+      description: Assert that the KongUpstream resource is created for the HTTPRoute.
+      use:
+        template: ../common/_step_templates/assert-kongUstream.yaml
+    
+    # Step 12: Verify that the KongUpstream has KongTarget resources created for it.
+    - name: Assert-kong-target
+      description: Assert that the KongTarget resource is created for the KongUpstream.
+      use:
+        template: ../common/_step_templates/assert-kongTarget.yaml
+      bindings:
+        - name: resource_type
+          value: "kongupstreams.configuration.konghq.com"
+        - name: target_weight
+          value: 1
             
-    # Step 10: Verify connectivity from host.
+    # Step 13: Verify connectivity from host.
     - name: Verify-HTTP-traffic-from-host
       description: Verify that HTTP traffic can be routed through the gateway to the echo service from the host.
       use:
