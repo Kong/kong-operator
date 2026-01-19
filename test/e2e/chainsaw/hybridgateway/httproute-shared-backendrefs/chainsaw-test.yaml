@@ -125,18 +125,20 @@ spec:
       description: Create and assert an echo service to route traffic to.
       use:
         template: ../common/_step_templates/apply-assert-echoService.yaml
-      bindings:
-        - name: echo_service_name
-          value: echo
+        with:
+          bindings:
+            - name: echo_service_name
+              value: echo
 
     # Step 10: Create the secondary echo service for shared backends.
     - name: Create-echo-secondary-service
       description: Create and assert a secondary echo service.
       use:
         template: ../common/_step_templates/apply-assert-echoService.yaml
-      bindings:
-        - name: echo_service_name
-          value: echo-secondary
+        with:
+          bindings:
+            - name: echo_service_name
+              value: echo-secondary
 
     # Step 11: Create 3 HTTPRoutes sharing the same backendRefs set.
     - name: create-httproutes-shared-backendrefs
