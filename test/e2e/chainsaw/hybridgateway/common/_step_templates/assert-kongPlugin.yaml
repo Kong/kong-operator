@@ -1,3 +1,14 @@
+# Asserts that a KongPlugin resource exists with the expected
+# labels, annotations, plugin type, and configuration for a given HTTPRoute and Gateway.
+#
+# Required bindings:
+#   - namespace: Namespace where the KongPlugin should exist
+#   - gateway_name: Name of the Gateway
+#   - gateway_namespace: Namespace of the Gateway
+#   - http_route_name: Name of the HTTPRoute
+#   - http_route_namespace: Namespace of the HTTPRoute
+#   - plugin_type: Type of the Kong plugin (e.g., 'request-transformer')
+#   - plugin_config: JSON string of the plugin configuration
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:

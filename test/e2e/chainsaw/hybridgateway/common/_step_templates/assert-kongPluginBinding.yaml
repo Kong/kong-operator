@@ -1,3 +1,13 @@
+# Asserts that a KongPluginBinding resource exists and is correctly bound to the expected 
+# KongPlugin and KongRoute for a given HTTPRoute and Gateway, with the correct
+# control plane reference and status.
+#
+# Required bindings:
+#   - namespace: Namespace where the KongPluginBinding should exist
+#   - gateway_name: Name of the Gateway
+#   - gateway_namespace: Namespace of the Gateway
+#   - http_route_name: Name of the HTTPRoute
+#   - http_route_namespace: Namespace of the HTTPRoute
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
