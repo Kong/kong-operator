@@ -87,6 +87,11 @@ type KonnectNamespacedRef struct {
 	// Currently the following resources are allowed to set this:
 	// - cluster scoped resources (KongVault)
 	// - KongService
+	// - KongCertificate
+	// - KongCACertificate
+	// - KongConsumerGroup
+	// - KongUpstream
+	// - KongKeySet
 	// - KongDataPlaneClientCertificate
 	//
 	// +optional

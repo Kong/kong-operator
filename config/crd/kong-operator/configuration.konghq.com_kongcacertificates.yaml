@@ -136,6 +136,11 @@ spec:
                           Currently the following resources are allowed to set this:
                           - cluster scoped resources (KongVault)
                           - KongService
+                          - KongCertificate
+                          - KongCACertificate
+                          - KongConsumerGroup
+                          - KongUpstream
+                          - KongKeySet
                           - KongDataPlaneClientCertificate
                         maxLength: 253
                         type: string
