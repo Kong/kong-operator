@@ -10,26 +10,26 @@ spec:
   try:
     - apply:
         resource:
-          # Create Namespace.
+          # Create Namespace
           apiVersion: v1
           kind: Namespace
           metadata:
-            name: ($namespace_name)
+            name: ($namespace)
     - assert:
         resource:
-          # Assert Namespace is Active.
+          # Assert Namespace is Active
           apiVersion: v1
           kind: Namespace
           metadata:
-            name: ($namespace_name)
+            name: ($namespace)
           status:
             phase: Active
-  # This runs only if the try block fails.
+  # This runs only if the try block fails
   catch:
     - script:
         env:
-          - name: NAMESPACE_NAME
-            value: ($namespace_name)
+          - name: NAMESPACE
+            value: ($namespace)
         content: |
-          echo "Namespace $NAMESPACE_NAME failed to reach Active state."
-          kubectl describe ns $NAMESPACE_NAME
+          echo "Namespace ${NAMESPACE} failed to reach Active state."
+          kubectl describe ns "${NAMESPACE}"

@@ -1,0 +1,120 @@
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ($httproute_one_name)
+  namespace: ($kong_namespace)
+spec:
+  rules:
+    - backendRefs:
+        - name: echo
+          port: 1027
+          weight: 1
+        - name: echo-secondary
+          port: 1027
+          weight: 1
+status:
+  parents:
+    - parentRef:
+        name: ($gateway_name)
+        group: gateway.networking.k8s.io
+        kind: Gateway
+      controllerName: konghq.com/gateway-operator
+      (conditions[?type == 'Accepted']):
+        - status: "True"
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "True"
+          reason: ResolvedRefs
+      (conditions[?type == 'KongRouteProgrammed']):
+        - status: "True"
+          reason: KongRouteProgrammed
+      (conditions[?type == 'KongServiceProgrammed']):
+        - status: "True"
+          reason: KongServiceProgrammed
+      (conditions[?type == 'KongUpstreamProgrammed']):
+        - status: "True"
+          reason: KongUpstreamProgrammed
+      (conditions[?type == 'KongTargetProgrammed']):
+        - status: "True"
+          reason: KongTargetProgrammed
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ($httproute_two_name)
+  namespace: ($kong_namespace)
+spec:
+  rules:
+    - backendRefs:
+        - name: echo
+          port: 1027
+          weight: 1
+        - name: echo-secondary
+          port: 1027
+          weight: 1
+status:
+  parents:
+    - parentRef:
+        name: ($gateway_name)
+        group: gateway.networking.k8s.io
+        kind: Gateway
+      controllerName: konghq.com/gateway-operator
+      (conditions[?type == 'Accepted']):
+        - status: "True"
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "True"
+          reason: ResolvedRefs
+      (conditions[?type == 'KongRouteProgrammed']):
+        - status: "True"
+          reason: KongRouteProgrammed
+      (conditions[?type == 'KongServiceProgrammed']):
+        - status: "True"
+          reason: KongServiceProgrammed
+      (conditions[?type == 'KongUpstreamProgrammed']):
+        - status: "True"
+          reason: KongUpstreamProgrammed
+      (conditions[?type == 'KongTargetProgrammed']):
+        - status: "True"
+          reason: KongTargetProgrammed
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ($httproute_three_name)
+  namespace: ($kong_namespace)
+spec:
+  rules:
+    - backendRefs:
+        - name: echo
+          port: 1027
+          weight: 1
+        - name: echo-secondary
+          port: 1027
+          weight: 1
+status:
+  parents:
+    - parentRef:
+        name: ($gateway_name)
+        group: gateway.networking.k8s.io
+        kind: Gateway
+      controllerName: konghq.com/gateway-operator
+      (conditions[?type == 'Accepted']):
+        - status: "True"
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "True"
+          reason: ResolvedRefs
+      (conditions[?type == 'KongRouteProgrammed']):
+        - status: "True"
+          reason: KongRouteProgrammed
+      (conditions[?type == 'KongServiceProgrammed']):
+        - status: "True"
+          reason: KongServiceProgrammed
+      (conditions[?type == 'KongUpstreamProgrammed']):
+        - status: "True"
+          reason: KongUpstreamProgrammed
+      (conditions[?type == 'KongTargetProgrammed']):
+        - status: "True"
+          reason: KongTargetProgrammed
