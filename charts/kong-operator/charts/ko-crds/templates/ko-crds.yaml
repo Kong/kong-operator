@@ -52688,9 +52688,6 @@ spec:
         - message: spec.controlPlaneRef is immutable when an entity is already Programmed
           rule: '(!self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
             == ''True'')) ? true : oldSelf.spec.controlPlaneRef == self.spec.controlPlaneRef'
-        - message: spec.controlPlaneRef cannot specify namespace for namespaced resource
-          rule: '(!has(self.spec.controlPlaneRef) || !has(self.spec.controlPlaneRef.konnectNamespacedRef))
-            ? true : !has(self.spec.controlPlaneRef.konnectNamespacedRef.__namespace__)'
     served: true
     storage: true
     subresources:
@@ -54255,13 +54252,13 @@ spec:
                   type: object
                   x-kubernetes-validations:
                   - message: Only KongConsumerGroup, KongCertificate, KongCACertificate,
-                      KongDataPlaneClientCertificate, KongService, KongUpstream, KongKeySet,
-                      and KongVault kinds are supported for 'configuration.konghq.com'
+                      KongDataPlaneClientCertificate, KongService, KongUpstream, KongKey,
+                      KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com'
                       group
                     rule: self.group != 'configuration.konghq.com' || self.kind in
                       ['KongConsumerGroup', 'KongService', 'KongCertificate', 'KongCACertificate',
-                      'KongDataPlaneClientCertificate', 'KongUpstream', 'KongKeySet',
-                      'KongVault']
+                      'KongDataPlaneClientCertificate', 'KongUpstream', 'KongKey',
+                      'KongKeySet', 'KongVault']
                   - message: namespace must be empty for KongVault and non-empty for
                       other kinds
                     rule: 'self.kind == ''KongVault'' ? self.__namespace__ == "" :

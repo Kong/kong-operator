@@ -97,7 +97,7 @@ func TestKongReferenceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Only KongConsumerGroup, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group"),
+				ExpectedErrorMessage: lo.ToPtr("Only KongConsumerGroup, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongKey, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
@@ -125,7 +125,7 @@ func TestKongReferenceGrant(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: lo.ToPtr("Only KongConsumerGroup, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group"),
+				ExpectedErrorMessage: lo.ToPtr("Only KongConsumerGroup, KongCertificate, KongCACertificate, KongDataPlaneClientCertificate, KongService, KongUpstream, KongKey, KongKeySet, and KongVault kinds are supported for 'configuration.konghq.com' group"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
@@ -157,6 +157,13 @@ func TestKongReferenceGrant(t *testing.T) {
 				},
 				ExpectedErrorMessage: lo.ToPtr("namespace must be empty for KongVault and non-empty for other kinds"),
 			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("KongKey to KonnectGatewayControlPlane reference", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongReferenceGrant]{
+			kongReferenceGrantCase(withName, typeMeta, ns.Name, "other", "KongKey"),
+			kongReferenceGrantCase(withoutName, typeMeta, ns.Name, "other", "KongKey"),
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
