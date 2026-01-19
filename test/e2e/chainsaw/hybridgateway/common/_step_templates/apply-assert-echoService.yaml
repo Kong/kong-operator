@@ -2,14 +2,20 @@
 #
 # Required bindings:
 #   - test_name: Test name used to compose the service name.
-#   - namespace: Namespace where the service will be created.
+#   - echo_service_namespace: Namespace where the service will be created.
+#   - echo_deployment_namespace: Namespace where the deployment will be created.
 # Optional bindings:
 #   - echo_service_name: Override for Service/Deployment name (and app label/selector).
+#                        Default: join('-', [($test_name), 'echo'])
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
   name: create-echo-service
 spec:
+  # Default bindings - can be overridden by the caller
+  bindings:
+    - name: echo_service_name
+      value: (join('-', [($test_name), 'echo']))
   try:
     # 1. Apply the Service.
     - apply:
@@ -18,9 +24,9 @@ spec:
           kind: Service
           metadata:
             labels:
-              app: ($echo_service_name || join('-', [($test_name), 'echo']))
-            name: ($echo_service_name || join('-', [($test_name), 'echo']))
-            namespace: ($namespace)
+              app: ($echo_service_name)
+            name: ($echo_service_name)
+            namespace: ($echo_service_namespace)
           spec:
             ports:
               - port: 1025
@@ -40,7 +46,7 @@ spec:
                 protocol: TCP
                 targetPort: 1030
             selector:
-              app: ($echo_service_name || join('-', [($test_name), 'echo']))
+              app: ($echo_service_name)
 
     # 2. Apply the Deployment.
     - apply:
@@ -49,18 +55,18 @@ spec:
           kind: Deployment
           metadata:
             labels:
-              app: ($echo_service_name || join('-', [($test_name), 'echo']))
-            name: ($echo_service_name || join('-', [($test_name), 'echo']))
-            namespace: ($namespace)
+              app: ($echo_service_name)
+            name: ($echo_service_name)
+            namespace: ($echo_deployment_namespace)
           spec:
             replicas: 1
             selector:
               matchLabels:
-                app: ($echo_service_name || join('-', [($test_name), 'echo']))
+                app: ($echo_service_name)
             template:
               metadata:
                 labels:
-                  app: ($echo_service_name || join('-', [($test_name), 'echo']))
+                  app: ($echo_service_name)
               spec:
                 containers:
                   - image: kong/go-echo:latest
@@ -107,8 +113,8 @@ spec:
           apiVersion: apps/v1
           kind: Deployment
           metadata:
-            name: ($echo_service_name || join('-', [($test_name), 'echo']))
-            namespace: ($namespace)
+            name: ($echo_service_name)
+            namespace: ($echo_deployment_namespace)
           status:
             availableReplicas: 1
             readyReplicas: 1
@@ -119,8 +125,8 @@ spec:
           apiVersion: v1
           kind: Service
           metadata:
-            name: ($echo_service_name || join('-', [($test_name), 'echo']))
-            namespace: ($namespace)
+            name: ($echo_service_name)
+            namespace: ($echo_service_namespace)
           spec:
             selector:
-              app: ($echo_service_name || join('-', [($test_name), 'echo']))
+              app: ($echo_service_name)

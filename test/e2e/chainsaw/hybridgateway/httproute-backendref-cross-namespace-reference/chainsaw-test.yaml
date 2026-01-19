@@ -112,7 +112,7 @@ spec:
       use:
         template: ../common/_step_templates/apply-assert-namespace.yaml
       bindings:
-        - name: namespace
+        - name: namespace_name
           value: ($echo_service_namespace)
 
     # Step 10: Create the echo service that will receive the routed traffic.
