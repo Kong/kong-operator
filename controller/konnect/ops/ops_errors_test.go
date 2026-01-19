@@ -108,6 +108,114 @@ func TestErrorIsSDKBadRequestError(t *testing.T) {
 	}
 }
 
+func TestErrorIsSDKError400(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "error is not SDKError",
+			err:  errors.New("some other error"),
+			want: false,
+		},
+		{
+			name: "SDKError with non-400 status code",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: 500,
+				Body:       `{"code": 13, "message": "internal error"}`,
+			},
+			want: false,
+		},
+		{
+			name: "SDKError with 400 status code and invalid JSON body",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: 400,
+				Body:       `invalid json`,
+			},
+			want: true,
+		},
+		{
+			name: "SDKError with 400 status code and empty details",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: 400,
+				Body:       `{"code": 3, "message": "validation error", "details": []}`,
+			},
+			want: true,
+		},
+		{
+			name: "SDKError with 400 status code and non-reference error type",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: 400,
+				Body: `{
+					"code": 3,
+					"message": "validation error",
+					"details": [
+						{
+							"@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
+							"type": "ERROR_TYPE_FIELD",
+							"field": "name",
+							"messages": ["name is required"]
+						}
+					]
+				}`,
+			},
+			want: true,
+		},
+		{
+			name: "SDKError with 400 status code and ERROR_TYPE_REFERENCE should be recoverable",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: 400,
+				Body: `{
+					"code": 3,
+					"message": "data constraint error",
+					"details": [
+						{
+							"@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
+							"type": "ERROR_TYPE_REFERENCE",
+							"field": "service.id",
+							"messages": ["service.id (type: foreign) constraint failed"]
+						}
+					]
+				}`,
+			},
+			want: false,
+		},
+		{
+			name: "SDKError with 400 status code and multiple details including ERROR_TYPE_REFERENCE",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: 400,
+				Body: `{
+					"code": 3,
+					"message": "data constraint error",
+					"details": [
+						{
+							"@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
+							"type": "ERROR_TYPE_FIELD",
+							"field": "name",
+							"messages": ["name is invalid"]
+						},
+						{
+							"@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
+							"type": "ERROR_TYPE_REFERENCE",
+							"field": "service.id",
+							"messages": ["service.id (type: foreign) constraint failed"]
+						}
+					]
+				}`,
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ErrorIsSDKError400(tt.err)
+			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func TestErrorIsCreateConflict(t *testing.T) {
 	tests := []struct {
 		name string
