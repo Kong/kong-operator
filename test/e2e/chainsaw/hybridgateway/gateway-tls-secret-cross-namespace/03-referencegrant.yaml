@@ -1,0 +1,14 @@
+kind: ReferenceGrant
+apiVersion: gateway.networking.k8s.io/v1beta1
+metadata:
+  name: ($reference_grant_name)
+  namespace: ($reference_grant_namespace)
+spec:
+  from:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    namespace: ($gateway_namespace)
+  to:
+  - group: ""
+    kind: Secret
+    name: ($cert_secret_name)
