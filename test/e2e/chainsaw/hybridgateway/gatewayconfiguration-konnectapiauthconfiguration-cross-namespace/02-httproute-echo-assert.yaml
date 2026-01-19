@@ -12,7 +12,7 @@ metadata:
 status:
   parents:
     - parentRef:
-        name: (join('-', [($test_name), 'gateway']))
+        name: ($gateway_name)
         group: gateway.networking.k8s.io
         kind: Gateway
       controllerName: konghq.com/gateway-operator
