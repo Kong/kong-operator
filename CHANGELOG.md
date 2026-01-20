@@ -100,7 +100,9 @@
   - `KongUpstream`
   - `KongCertificate`
   - `KongCACertificate`
+  - `KongConsumer`
   - `KongConsumerGroup`
+  - `KongKey`
   - `KongKeySet`
   - `KongVault`
   - `KongDataPlaneClientCertificate`
@@ -117,6 +119,7 @@
   [#3069](https://github.com/Kong/kong-operator/pull/3069)
   [#3052](https://github.com/Kong/kong-operator/pull/3052)
   [#3082](https://github.com/Kong/kong-operator/pull/3082)
+  [#3086](https://github.com/Kong/kong-operator/pull/3086)
 - Added support for cross namespace references between the following Konnect
   entities and `core` `Secret`
 
