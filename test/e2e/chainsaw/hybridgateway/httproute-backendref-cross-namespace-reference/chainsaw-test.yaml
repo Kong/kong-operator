@@ -40,16 +40,14 @@ spec:
       value: ($namespace)
     - name: echo_service_name
       value: (join('-', [($test_name), 'echo']))
-    - name: echo_service_namespace
-      value: (join('-', [($namespace), 'echo-backend']))
     - name: echo_deployment_namespace
-      value: ($echo_service_namespace)
+      value: (join('-', [($namespace), 'echo-backend']))
     - name: http_method
       value: "GET"
     - name: reference_grant_name
       value: "echo-service-reference-grant"
     - name: reference_grant_namespace
-      value: ($echo_service_namespace)
+      value: ($echo_deployment_namespace)
 
   timeouts:
     apply: 120s
@@ -113,7 +111,7 @@ spec:
         template: ../common/_step_templates/apply-assert-namespace.yaml
       bindings:
         - name: namespace_name
-          value: ($echo_service_namespace)
+          value: ($echo_deployment_namespace)
 
     # Step 10: Create the echo service that will receive the routed traffic.
     - name: Create-echo-service
@@ -327,5 +325,5 @@ spec:
         apiVersion: v1
         kind: Service
         name: ($echo_service_name)
-        namespace: ($echo_service_namespace)
+        namespace: ($echo_deployment_namespace)
         showEvents: true

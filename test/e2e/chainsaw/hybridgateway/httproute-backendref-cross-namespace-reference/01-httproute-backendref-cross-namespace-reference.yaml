@@ -17,7 +17,7 @@ spec:
       backendRefs:
         - name: ($echo_service_name)
           port: 1027
-          namespace: ($echo_service_namespace)
+          namespace: ($echo_deployment_namespace)
 ---
 kind: ReferenceGrant
 apiVersion: gateway.networking.k8s.io/v1beta1

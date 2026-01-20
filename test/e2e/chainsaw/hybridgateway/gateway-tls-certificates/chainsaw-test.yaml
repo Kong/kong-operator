@@ -50,8 +50,6 @@ spec:
       value: ($namespace)
     - name: echo_service_name
       value: (join('-', [($test_name), 'echo']))
-    - name: echo_service_namespace
-      value: ($namespace)
     - name: echo_deployment_namespace
       value: ($namespace)
     - name: http_method

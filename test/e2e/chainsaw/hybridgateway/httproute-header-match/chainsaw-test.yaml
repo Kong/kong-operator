@@ -34,7 +34,7 @@ spec:
       value: ($kong_namespace)
     - name: echo_service_name
       value: echo
-    - name: echo_service_namespace
+    - name: echo_deployment_namespace
       value: ($kong_namespace)
     - name: operator_namespace
       value: kong-system

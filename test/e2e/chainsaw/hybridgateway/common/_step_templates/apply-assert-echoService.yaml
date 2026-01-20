@@ -2,8 +2,7 @@
 #
 # Required bindings:
 #   - echo_service_name: Service/Deployment name (and app label/selector).
-#   - echo_service_namespace: Namespace where the service will be created.
-#   - echo_deployment_namespace: Namespace where the deployment will be created.
+#   - echo_deployment_namespace: Namespace where the service and deployment will be created.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
@@ -19,7 +18,7 @@ spec:
             labels:
               app: ($echo_service_name)
             name: ($echo_service_name)
-            namespace: ($echo_service_namespace)
+            namespace: ($echo_deployment_namespace)
           spec:
             ports:
               - port: 1025
@@ -119,7 +118,7 @@ spec:
           kind: Service
           metadata:
             name: ($echo_service_name)
-            namespace: ($echo_service_namespace)
+            namespace: ($echo_deployment_namespace)
           spec:
             selector:
               app: ($echo_service_name)
