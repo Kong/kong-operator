@@ -298,4 +298,250 @@ func TestKongCertificate(t *testing.T) {
 		require.NoError(t, clientNamespaced.Delete(ctx, createdCert))
 		eventually.WaitForObjectToNotExist(t, ctx, cl, createdCert, waitTime, tickTime)
 	})
+
+	t.Run("cross-namespace SecretRef with KongReferenceGrant", func(t *testing.T) {
+		const certID = "cert-xns-123"
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cpID := cp.GetKonnectStatus().GetKonnectID()
+
+		t.Log("Creating a Secret in a different namespace")
+		secretNS := deploy.Namespace(t, ctx, cl)
+		secret := deploy.Secret(t, ctx, cl,
+			map[string][]byte{
+				"tls.crt": []byte(deploy.TestValidCertPEM),
+				"tls.key": []byte(deploy.TestValidCertKeyPEM),
+			},
+			func(obj client.Object) {
+				obj.SetNamespace(secretNS.Name)
+			},
+		)
+
+		w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Creating KongCertificate with cross-namespace SecretRef (no grant yet)")
+		certType := configurationv1alpha1.KongCertificateSourceTypeSecretRef
+		createdCert := &configurationv1alpha1.KongCertificate{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "cert-xns-",
+				Namespace:    ns.Name,
+			},
+			Spec: configurationv1alpha1.KongCertificateSpec{
+				Type: &certType,
+				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+						Name: cp.GetName(),
+					},
+				},
+				SecretRef: &commonv1alpha1.NamespacedRef{
+					Name:      secret.Name,
+					Namespace: lo.ToPtr(secretNS.Name),
+				},
+			},
+		}
+		require.NoError(t, clientNamespaced.Create(ctx, createdCert))
+
+		t.Log("Waiting for KongCertificate to have RefNotPermitted condition (no grant)")
+		watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongCertificate) bool {
+			if c.GetName() != createdCert.GetName() {
+				return false
+			}
+			return lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs &&
+					condition.Status == metav1.ConditionFalse &&
+					condition.Reason == configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted
+			})
+		}, "KongCertificate should have RefNotPermitted condition without KongReferenceGrant")
+
+		t.Log("Creating KongReferenceGrant to allow the cross-namespace reference")
+		deploy.KongReferenceGrant(t, ctx, cl,
+			func(obj client.Object) {
+				obj.SetNamespace(secretNS.Name)
+			},
+			deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
+				Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:      "KongCertificate",
+				Namespace: configurationv1alpha1.Namespace(ns.Name),
+			}),
+			deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
+				Group: "core",
+				Kind:  "Secret",
+				Name:  lo.ToPtr(configurationv1alpha1.ObjectName(secret.Name)),
+			}),
+		)
+
+		t.Log("Setting up SDK expectations for certificate creation after grant")
+		sdk.CertificatesSDK.EXPECT().
+			ListCertificate(mock.Anything,
+				mock.MatchedBy(func(input sdkkonnectops.ListCertificateRequest) bool {
+					return input.ControlPlaneID == cpID
+				}),
+			).
+			Return(&sdkkonnectops.ListCertificateResponse{
+				Object: &sdkkonnectops.ListCertificateResponseBody{},
+			}, nil)
+
+		sdk.CertificatesSDK.EXPECT().
+			CreateCertificate(mock.Anything, cpID,
+				mock.MatchedBy(func(input sdkkonnectcomp.Certificate) bool {
+					return input.Cert == deploy.TestValidCertPEM &&
+						input.Key == deploy.TestValidCertKeyPEM
+				}),
+			).
+			Return(&sdkkonnectops.CreateCertificateResponse{
+				Certificate: &sdkkonnectcomp.Certificate{
+					ID: lo.ToPtr(certID),
+				},
+			}, nil)
+
+		t.Log("Waiting for KongCertificate to be programmed after grant is created")
+		watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongCertificate) bool {
+			if c.GetName() != createdCert.GetName() {
+				return false
+			}
+			hasResolvedRefs := lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs &&
+					condition.Status == metav1.ConditionTrue &&
+					condition.Reason == configurationv1alpha1.KongReferenceGrantReasonResolvedRefs
+			})
+			hasProgrammed := lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					condition.Status == metav1.ConditionTrue
+			})
+			return hasResolvedRefs && hasProgrammed
+		}, "KongCertificate should have ResolvedRefs=True and be Programmed after KongReferenceGrant is created")
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.CertificatesSDK, waitTime, tickTime)
+
+		t.Log("Setting up SDK expectations for certificate deletion")
+		sdk.CertificatesSDK.EXPECT().DeleteCertificate(mock.Anything, cpID, certID).Return(nil, nil)
+
+		t.Logf("Deleting KongCertificate %s and waiting for it to disappear", client.ObjectKeyFromObject(createdCert))
+		require.NoError(t, cl.Delete(ctx, createdCert))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdCert, waitTime, tickTime)
+	})
+
+	t.Run("cross-namespace SecretRefAlt with KongReferenceGrant", func(t *testing.T) {
+		const certID = "cert-xns-alt-123"
+		cp := deploy.KonnectGatewayControlPlaneWithID(t, ctx, clientNamespaced, apiAuth)
+		cpID := cp.GetKonnectStatus().GetKonnectID()
+
+		t.Log("Creating Secrets in different namespaces")
+		secretNS := deploy.Namespace(t, ctx, cl)
+		secret := deploy.Secret(t, ctx, cl,
+			map[string][]byte{
+				"tls.crt": []byte(deploy.TestValidCertPEM),
+				"tls.key": []byte(deploy.TestValidCertKeyPEM),
+			},
+			func(obj client.Object) {
+				obj.SetNamespace(secretNS.Name)
+			},
+		)
+		secretAlt := deploy.Secret(t, ctx, cl,
+			map[string][]byte{
+				"tls.crt": []byte(deploy.TestValidCertPEM),
+				"tls.key": []byte(deploy.TestValidCertKeyPEM),
+			},
+			func(obj client.Object) {
+				obj.SetNamespace(secretNS.Name)
+			},
+		)
+
+		t.Log("Creating KongReferenceGrant to allow the cross-namespace references")
+		grant := deploy.KongReferenceGrant(t, ctx, cl,
+			func(obj client.Object) {
+				obj.SetNamespace(secretNS.Name)
+			},
+			deploy.KongReferenceGrantFroms(configurationv1alpha1.ReferenceGrantFrom{
+				Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
+				Kind:      "KongCertificate",
+				Namespace: configurationv1alpha1.Namespace(ns.Name),
+			}),
+			deploy.KongReferenceGrantTos(configurationv1alpha1.ReferenceGrantTo{
+				Group: "core",
+				Kind:  "Secret",
+				// Allow all secrets by not specifying Name
+			}),
+		)
+		_ = grant
+
+		w := setupWatch[configurationv1alpha1.KongCertificateList](t, ctx, cl, client.InNamespace(ns.Name))
+
+		t.Log("Setting up SDK expectations for certificate creation")
+		sdk.CertificatesSDK.EXPECT().
+			ListCertificate(mock.Anything,
+				mock.MatchedBy(func(input sdkkonnectops.ListCertificateRequest) bool {
+					return input.ControlPlaneID == cpID
+				}),
+			).
+			Return(&sdkkonnectops.ListCertificateResponse{
+				Object: &sdkkonnectops.ListCertificateResponseBody{},
+			}, nil)
+
+		sdk.CertificatesSDK.EXPECT().
+			CreateCertificate(mock.Anything, cpID,
+				mock.MatchedBy(func(input sdkkonnectcomp.Certificate) bool {
+					return input.Cert == deploy.TestValidCertPEM &&
+						input.Key == deploy.TestValidCertKeyPEM
+				}),
+			).
+			Return(&sdkkonnectops.CreateCertificateResponse{
+				Certificate: &sdkkonnectcomp.Certificate{
+					ID: lo.ToPtr(certID),
+				},
+			}, nil)
+
+		t.Log("Creating KongCertificate with cross-namespace SecretRef and SecretRefAlt")
+		certType := configurationv1alpha1.KongCertificateSourceTypeSecretRef
+		createdCert := &configurationv1alpha1.KongCertificate{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "cert-xns-alt-",
+				Namespace:    ns.Name,
+			},
+			Spec: configurationv1alpha1.KongCertificateSpec{
+				Type: &certType,
+				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+					KonnectNamespacedRef: &configurationv1alpha1.KonnectNamespacedRef{
+						Name: cp.GetName(),
+					},
+				},
+				SecretRef: &commonv1alpha1.NamespacedRef{
+					Name:      secret.Name,
+					Namespace: lo.ToPtr(secretNS.Name),
+				},
+				SecretRefAlt: &commonv1alpha1.NamespacedRef{
+					Name:      secretAlt.Name,
+					Namespace: lo.ToPtr(secretNS.Name),
+				},
+			},
+		}
+		require.NoError(t, clientNamespaced.Create(ctx, createdCert))
+
+		t.Log("Waiting for KongCertificate to be programmed with ResolvedRefs=True")
+		watchFor(t, ctx, w, apiwatch.Modified, func(c *configurationv1alpha1.KongCertificate) bool {
+			if c.GetName() != createdCert.GetName() {
+				return false
+			}
+			hasResolvedRefs := lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs &&
+					condition.Status == metav1.ConditionTrue &&
+					condition.Reason == configurationv1alpha1.KongReferenceGrantReasonResolvedRefs
+			})
+			hasProgrammed := lo.ContainsBy(c.Status.Conditions, func(condition metav1.Condition) bool {
+				return condition.Type == konnectv1alpha1.KonnectEntityProgrammedConditionType &&
+					condition.Status == metav1.ConditionTrue
+			})
+			return hasResolvedRefs && hasProgrammed
+		}, "KongCertificate should have ResolvedRefs=True and be Programmed with both SecretRef and SecretRefAlt")
+
+		eventuallyAssertSDKExpectations(t, factory.SDK.CertificatesSDK, waitTime, tickTime)
+
+		t.Log("Setting up SDK expectations for certificate deletion")
+		sdk.CertificatesSDK.EXPECT().DeleteCertificate(mock.Anything, cpID, certID).Return(nil, nil)
+
+		t.Logf("Deleting KongCertificate %s and waiting for it to disappear", client.ObjectKeyFromObject(createdCert))
+		require.NoError(t, cl.Delete(ctx, createdCert))
+		eventually.WaitForObjectToNotExist(t, ctx, cl, createdCert, waitTime, tickTime)
+	})
 }
