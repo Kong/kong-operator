@@ -43,7 +43,7 @@ spec:
       value: (join('-', [($test_name), 'echo-route']))
     - name: http_route_namespace
       value: ($namespace)
-    - name: echo_service_name
+    - name: echo_deployment_name
       value: (join('-', [($test_name), 'echo']))
     - name: echo_deployment_namespace
       value: ($namespace)

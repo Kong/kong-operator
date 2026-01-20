@@ -32,7 +32,7 @@ spec:
       value: echo-header-match
     - name: http_route_namespace
       value: ($kong_namespace)
-    - name: echo_service_name
+    - name: echo_deployment_name
       value: echo
     - name: echo_deployment_namespace
       value: ($kong_namespace)

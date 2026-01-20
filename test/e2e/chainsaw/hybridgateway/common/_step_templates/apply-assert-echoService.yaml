@@ -1,7 +1,7 @@
 # Template for creating and asserting an echo service.
 #
 # Required bindings:
-#   - echo_service_name: Service/Deployment name (and app label/selector).
+#   - echo_deployment_name: Service/Deployment name (and app label/selector).
 #   - echo_deployment_namespace: Namespace where the service and deployment will be created.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
@@ -16,8 +16,8 @@ spec:
           kind: Service
           metadata:
             labels:
-              app: ($echo_service_name)
-            name: ($echo_service_name)
+              app: ($echo_deployment_name)
+            name: ($echo_deployment_name)
             namespace: ($echo_deployment_namespace)
           spec:
             ports:
@@ -38,7 +38,7 @@ spec:
                 protocol: TCP
                 targetPort: 1030
             selector:
-              app: ($echo_service_name)
+              app: ($echo_deployment_name)
 
     # 2. Apply the Deployment.
     - apply:
@@ -47,18 +47,18 @@ spec:
           kind: Deployment
           metadata:
             labels:
-              app: ($echo_service_name)
-            name: ($echo_service_name)
+              app: ($echo_deployment_name)
+            name: ($echo_deployment_name)
             namespace: ($echo_deployment_namespace)
           spec:
             replicas: 1
             selector:
               matchLabels:
-                app: ($echo_service_name)
+                app: ($echo_deployment_name)
             template:
               metadata:
                 labels:
-                  app: ($echo_service_name)
+                  app: ($echo_deployment_name)
               spec:
                 containers:
                   - image: kong/go-echo:latest
@@ -105,7 +105,7 @@ spec:
           apiVersion: apps/v1
           kind: Deployment
           metadata:
-            name: ($echo_service_name)
+            name: ($echo_deployment_name)
             namespace: ($echo_deployment_namespace)
           status:
             availableReplicas: 1
@@ -117,8 +117,8 @@ spec:
           apiVersion: v1
           kind: Service
           metadata:
-            name: ($echo_service_name)
+            name: ($echo_deployment_name)
             namespace: ($echo_deployment_namespace)
           spec:
             selector:
-              app: ($echo_service_name)
+              app: ($echo_deployment_name)

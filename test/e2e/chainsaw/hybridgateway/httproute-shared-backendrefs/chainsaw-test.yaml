@@ -125,7 +125,7 @@ spec:
         template: ../common/_step_templates/apply-assert-echoService.yaml
         with:
           bindings:
-            - name: echo_service_name
+            - name: echo_deployment_name
               value: echo
 
     # Step 10: Create the secondary echo service for shared backends.
@@ -135,7 +135,7 @@ spec:
         template: ../common/_step_templates/apply-assert-echoService.yaml
         with:
           bindings:
-            - name: echo_service_name
+            - name: echo_deployment_name
               value: echo-secondary
 
     # Step 11: Create 3 HTTPRoutes sharing the same backendRefs set.

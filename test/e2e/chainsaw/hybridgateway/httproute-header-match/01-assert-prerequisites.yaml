@@ -11,14 +11,14 @@ status:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ($echo_service_name)
+  name: ($echo_deployment_name)
   namespace: ($echo_deployment_namespace)
 ---
 # Assert Deployment is ready
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ($echo_service_name)
+  name: ($echo_deployment_name)
   namespace: ($echo_deployment_namespace)
 status:
   # Filter conditions array to check for Available condition
