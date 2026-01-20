@@ -100,6 +100,7 @@
   - `KongUpstream`
   - `KongCertificate`
   - `KongCACertificate`
+  - `KongConsumer`
   - `KongConsumerGroup`
   - `KongKey`
   - `KongKeySet`
