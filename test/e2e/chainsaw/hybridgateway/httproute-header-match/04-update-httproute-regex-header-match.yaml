@@ -15,5 +15,5 @@ spec:
           type: RegularExpression
           value: "[a-z]+"
       backendRefs:
-        - name: ($echo_service_name)
+        - name: ($echo_deployment_name)
           port: 1027

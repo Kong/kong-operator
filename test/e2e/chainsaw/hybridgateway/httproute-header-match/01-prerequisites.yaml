@@ -67,8 +67,8 @@ kind: Service
 metadata:
   labels:
     app: echo
-  name: ($echo_service_name)
-  namespace: ($echo_service_namespace)
+  name: ($echo_deployment_name)
+  namespace: ($echo_deployment_namespace)
 spec:
   ports:
     - port: 1025
@@ -95,8 +95,8 @@ kind: Deployment
 metadata:
   labels:
     app: echo
-  name: ($echo_service_name)
-  namespace: ($echo_service_namespace)
+  name: ($echo_deployment_name)
+  namespace: ($echo_deployment_namespace)
 spec:
   replicas: 1
   selector:

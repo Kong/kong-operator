@@ -18,5 +18,5 @@ spec:
           type: Exact
           value: v2
       backendRefs:
-        - name: ($echo_service_name)
+        - name: ($echo_deployment_name)
           port: 1027

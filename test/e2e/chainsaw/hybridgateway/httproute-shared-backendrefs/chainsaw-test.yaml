@@ -66,6 +66,9 @@ spec:
     - name: operator_namespace
       value: kong-system
 
+    - name: echo_deployment_namespace
+      value: ($namespace)
+
   steps:
     # Step 1: Create the TLS secret that will be referenced by the Gateway TLS listener.
     - name: Create-tls-secret
@@ -120,39 +123,29 @@ spec:
       description: Create and assert an echo service to route traffic to.
       use:
         template: ../common/_step_templates/apply-assert-echoService.yaml
-      bindings:
-        - name: echo_service_name
-          value: echo
+        with:
+          bindings:
+            - name: echo_deployment_name
+              value: echo
 
     # Step 10: Create the secondary echo service for shared backends.
     - name: Create-echo-secondary-service
       description: Create and assert a secondary echo service.
       use:
         template: ../common/_step_templates/apply-assert-echoService.yaml
-      bindings:
-        - name: echo_service_name
-          value: echo-secondary
+        with:
+          bindings:
+            - name: echo_deployment_name
+              value: echo-secondary
 
     # Step 11: Create 3 HTTPRoutes sharing the same backendRefs set.
     - name: create-httproutes-shared-backendrefs
       description: Create 3 HTTPRoutes sharing the same backendRefs set
       try:
         - apply:
-            file: 02-httproutes.yaml
+            file: 01-httproutes.yaml
         - assert:
             file: 02-assert-httproutes.yaml
-      catch:
-        - description: Dump HTTPRoutes
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-            format: yaml
-        - description: Get operator logs
-          podLogs:
-            namespace: ($operator_namespace)
-            selector: control-plane=controller-manager
-            tail: 100
 
     # Step 12: Assert KongService for route one.
     - name: assert-kongservice-route-one
@@ -230,14 +223,6 @@ spec:
               kind: HTTPRoute
               namespace: ($kong_namespace)
               name: ($httproute_two_name)
-      catch:
-        - description: Dump HTTPRoute
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-            name: ($httproute_two_name)
-            format: yaml
 
     # Step 19: Verify route one still serves traffic after deletion.
     - name: verify-traffic-after-delete-route-one
@@ -266,23 +251,9 @@ spec:
       description: Update route three to use a different backendRefs set
       try:
         - apply:
-            file: 04-update-httproute.yaml
+            file: 03-update-httproute.yaml
         - assert:
             file: 04-assert-updated-httproute.yaml
-      catch:
-        - description: Dump HTTPRoute
-          get:
-            apiVersion: gateway.networking.k8s.io/v1
-            kind: HTTPRoute
-            namespace: ($kong_namespace)
-            name: ($httproute_three_name)
-            format: yaml
-        - description: Dump KongServices
-          get:
-            apiVersion: configuration.konghq.com/v1alpha1
-            kind: KongService
-            namespace: ($kong_namespace)
-            format: yaml
 
     # Step 22: Assert KongService for route one after update.
     - name: assert-kongservice-route-one-after-update
@@ -327,3 +298,62 @@ spec:
           value: ($httproute_three_path)
         - name: listener_http_port
           value: "80"
+
+  catch:
+    # Capture and describe all relevant Kubernetes resources for debugging on test failure.
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: Gateway
+        name: ($gateway_name)
+        namespace: ($gateway_namespace)
+
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        namespace: ($kong_namespace)
+
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KonnectGatewayControlPlane
+        namespace: ($kong_namespace)
+
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongService
+        namespace: ($kong_namespace)
+
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongRoute
+        namespace: ($kong_namespace)
+
+    - describe:
+        apiVersion: configuration.konghq.com/v1beta1
+        kind: KongUpstream
+        namespace: ($kong_namespace)
+
+    - describe:
+        apiVersion: configuration.konghq.com/v1beta1
+        kind: KongTarget
+        namespace: ($kong_namespace)
+
+    - describe:
+        apiVersion: v1
+        kind: Service
+        namespace: ($kong_namespace)
+
+    - describe:
+        apiVersion: v1
+        kind: Pod
+        namespace: ($kong_namespace)
+
+    - describe:
+        apiVersion: v1
+        kind: Secret
+        name: ($cert_secret_name)
+        namespace: ($cert_secret_namespace)
+
+    - podLogs:
+        namespace: ($operator_namespace)
+        selector: control-plane=controller-manager
+        tail: 100
