@@ -204,6 +204,31 @@ func TestErrorIsSDKError400(t *testing.T) {
 					]
 				}`,
 			},
+			want: true,
+		},
+		{
+			name: "SDKError with 400 status code and multiple details, all ERROR_TYPE_REFERENCE",
+			err: &sdkkonnecterrs.SDKError{
+				StatusCode: 400,
+				Body: `{
+					"code": 3,
+					"message": "data constraint error",
+					"details": [
+						{
+							"@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
+							"type": "ERROR_TYPE_REFERENCE",
+							"field": "service.uuid",
+							"messages": ["service.uuid (type: primary) constraint failed"]
+						},
+						{
+							"@type": "type.googleapis.com/kong.admin.model.v1.ErrorDetail",
+							"type": "ERROR_TYPE_REFERENCE",
+							"field": "service.id",
+							"messages": ["service.id (type: foreign) constraint failed"]
+						}
+					]
+				}`,
+			},
 			want: false,
 		},
 	}

@@ -162,7 +162,8 @@ func ErrorIsForbiddenError(err error) bool {
 
 // ErrorIsSDKError400 returns true if the provided error is a 400 BadRequestError.
 // This can happen when the requested entity fails the validation.
-// It returns false for errors of type ERROR_TYPE_REFERENCE since those depend on
+// It returns false when the error can be parsed as SDK error and all sub errors
+// are of type ERROR_TYPE_REFERENCE since those depend on
 // other entities that can be independently created/deleted in Konnect.
 func ErrorIsSDKError400(err error) bool {
 	var errSDK *sdkkonnecterrs.SDKError
@@ -183,10 +184,18 @@ func ErrorIsSDKError400(err error) bool {
 		return true
 	}
 
+	seenErrorReferenceError := false
+	allErrorReferenceErrors := true
 	for _, detail := range sdkErrBody.Details {
-		if detail.Type == "ERROR_TYPE_REFERENCE" {
-			return false
+		switch detail.Type {
+		case "ERROR_TYPE_REFERENCE":
+			seenErrorReferenceError = true
+		default:
+			allErrorReferenceErrors = false
 		}
+	}
+	if seenErrorReferenceError && allErrorReferenceErrors {
+		return false
 	}
 
 	return true
