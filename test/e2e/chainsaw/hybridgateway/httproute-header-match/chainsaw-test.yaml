@@ -52,48 +52,7 @@ spec:
       # Assert test-specific resources (namespaces, service, deployment)
       - assert:
           file: 01-assert-prerequisites.yaml
-    # Catch block: collect diagnostic info when assertions fail
-    catch:
-      - description: Get Gateway resource status
-        get:
-          apiVersion: gateway.networking.k8s.io/v1
-          kind: Gateway
-          namespace: ($gateway_namespace)
-      - description: Get DataPlane resources
-        get:
-          apiVersion: gateway-operator.konghq.com/v1beta1
-          kind: DataPlane
-          namespace: ($gateway_namespace)
-      - description: Get ControlPlane resources
-        get:
-          apiVersion: gateway-operator.konghq.com/v1beta1
-          kind: ControlPlane
-          namespace: ($gateway_namespace)
-      - description: Get Pods in the namespace of the gateway
-        get:
-          apiVersion: v1
-          kind: Pod
-          namespace: ($gateway_namespace)
-      - description: Describe Gateway
-        describe:
-          apiVersion: gateway.networking.k8s.io/v1
-          kind: Gateway
-          namespace: ($gateway_namespace)
-          showEvents: true
-      - description: Describe DataPlane
-        describe:
-          apiVersion: gateway-operator.konghq.com/v1beta1
-          kind: DataPlane
-          namespace: ($gateway_namespace)
-          showEvents: true
-      - description: Get events from kong namespace
-        events:
-          namespace: ($gateway_namespace)
-      - description: Get operator logs
-        podLogs:
-          namespace: ($operator_namespace)
-          selector: control-plane=controller-manager
-          tail: 100
+
   # Step 2: Create an HTTPRoute that matches a single header and verify the routes are correctly configured
   - name: create-httproute-single-header-match
     description: Create an HTTPRoute that matches a single header
@@ -146,21 +105,7 @@ spec:
             curl --header "single-header-1:v2" -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/
           check:
             (contains($stdout, '404')): true
-    # Dump HTTPRoute status and KongRoute for debugging.
-    catch:
-      - description: Get HTTPRoute status
-        get:
-          apiVersion: gateway.networking.k8s.io/v1
-          kind: HTTPRoute
-          namespace: ($http_route_namespace)
-          name: ($http_route_name)
-          format: yaml
-      - description: Get KongRoute
-        get:
-          apiVersion: configuration.konghq.com/v1alpha1
-          kind: KongRoute
-          namespace: ($http_route_namespace)
-          format: yaml
+
   # Step 3: Update the HTTPRoute to match multiple headers.
   - name: update-httproute-multiple-header-match
     description: Update the HTTPRoute to match multilple headers (ANDed)
@@ -211,21 +156,6 @@ spec:
             curl --header "multiple-header-1:v2" --header "multiple-header-2:v2" -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/
           check:
             (contains($stdout, '404')): true
-    # Dump HTTPRoute status and KongRoute for debugging.
-    catch:
-      - description: Get HTTPRoute status
-        get:
-          apiVersion: gateway.networking.k8s.io/v1
-          kind: HTTPRoute
-          namespace: ($http_route_namespace)
-          name: ($http_route_name)
-          format: yaml   
-      - description: Get KongRoute
-        get:
-          apiVersion: configuration.konghq.com/v1alpha1
-          kind: KongRoute
-          namespace: ($http_route_namespace)
-          format: yaml
 
   # Step 4: Update the HTTPRoute to regex header matching
   - name: update-httproute-regex-header-match
@@ -268,18 +198,45 @@ spec:
             curl --header "regex-header-1:123" -s -o /dev/null -w "%{http_code}" http://${PROXY_IP}/
           check:
             (contains($stdout, '404')): true
-    # Dump HTTPRoute status and KongRoute for debugging.
-    catch:
-      - description: Get HTTPRoute status
-        get:
-          apiVersion: gateway.networking.k8s.io/v1
-          kind: HTTPRoute
-          namespace: ($http_route_namespace)
-          name: ($http_route_name)
-          format: yaml
-      - description: Get KongRoute
-        get:
-          apiVersion: configuration.konghq.com/v1alpha1
-          kind: KongRoute
-          namespace: ($http_route_namespace)
-          format: yaml
+
+  catch:
+    # Capture and describe all relevant Kubernetes resources for debugging on test failure.
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: Gateway
+        namespace: ($gateway_namespace)
+        showEvents: true
+
+    - describe:
+        apiVersion: gateway.networking.k8s.io/v1
+        kind: HTTPRoute
+        namespace: ($http_route_namespace)
+
+    - describe:
+        apiVersion: gateway-operator.konghq.com/v1beta1
+        kind: DataPlane
+        namespace: ($gateway_namespace)
+        showEvents: true
+
+    - describe:
+        apiVersion: gateway-operator.konghq.com/v1beta1
+        kind: ControlPlane
+        namespace: ($gateway_namespace)
+
+    - describe:
+        apiVersion: configuration.konghq.com/v1alpha1
+        kind: KongRoute
+        namespace: ($http_route_namespace)
+
+    - describe:
+        apiVersion: v1
+        kind: Pod
+        namespace: ($gateway_namespace)
+
+    - events:
+        namespace: ($gateway_namespace)
+
+    - podLogs:
+        namespace: ($operator_namespace)
+        selector: control-plane=controller-manager
+        tail: 100
