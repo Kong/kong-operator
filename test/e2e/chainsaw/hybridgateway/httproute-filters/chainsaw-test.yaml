@@ -8,8 +8,6 @@ spec:
     This test validates that the hybrid gateway controller correctly
     processes the currently supported filters in HTTPRoute, including:
     `RequestHeaderModifier`, `ResponseHeaderModifier`.
-  
-  namespace: kong
 
   timeouts:
     apply: 120s
@@ -193,9 +191,9 @@ spec:
         template: ../common/_step_templates/assert-kongPlugin.yaml
       bindings:
         - name: namespace
-          value: kong
+          value: ($namespace)
         - name: gateway_name
-          value: kong-gateway
+          value: ($gateway_name)
         - name: plugin_type
           value: request-transformer
         - name: plugin_config
@@ -407,9 +405,9 @@ spec:
         - name: http_route_namespace
           value: ($http_route_response_filter_namespace)
         - name: namespace
-          value: kong
+          value: ($namespace)
         - name: gateway_name
-          value: kong-gateway
+          value: ($gateway_name)
         - name: plugin_type
           value: response-transformer
         - name: plugin_config
@@ -650,9 +648,9 @@ spec:
         - name: http_route_namespace
           value: ($http_route_combined_filters_namespace)
         - name: namespace
-          value: kong
+          value: ($namespace)
         - name: gateway_name
-          value: kong-gateway
+          value: ($gateway_name)
         - name: plugin_type
           value: request-transformer
         - name: plugin_config
@@ -669,9 +667,9 @@ spec:
         - name: http_route_namespace
           value: ($http_route_combined_filters_namespace)
         - name: namespace
-          value: kong
+          value: ($namespace)
         - name: gateway_name
-          value: kong-gateway
+          value: ($gateway_name)
         - name: plugin_type
           value: response-transformer
         - name: plugin_config
